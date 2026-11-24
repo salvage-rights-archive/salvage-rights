@@ -19,7 +19,8 @@ export interface EquipmentRow {
   tons: number | string; // a string names a formula
   slots: number | string;
   availability: Span[];
-  locations?: LocationCode[]; // where the book says the item may be placed; absent means anywhere
+  locations?: LocationCode[]; // where the book says the item may be placed (the biped rule); absent means anywhere
+  locationsQuad?: LocationCode[]; // the quad rule, where the book's rule differs from the biped one; [] means not allowed
   splittable?: boolean; // true only where the book lets the item span adjacent locations
   needs?: string; // what the item must be paired with, in the same location: "launcher", "machine-gun"
   /** True when `availability` is not a year the book prints for this tech base (a dash in the book's table, or one date
@@ -29,7 +30,7 @@ export interface EquipmentRow {
   perMech?: number;
   /** A non-missile direct-fire or pulse weapon: its weight counts toward a targeting computer (TechManual p. 238). */
   directFire?: true;
-  editions?: Record<string, Partial<Pick<EquipmentRow, "tons" | "slots" | "availability" | "locations">>>;
+  editions?: Record<string, Partial<Pick<EquipmentRow, "tons" | "slots" | "availability" | "locations" | "locationsQuad">>>;
   cite: { book: string; page: number };
   checked: "page" | "text";
 }

@@ -6,8 +6,10 @@
 // the p. 291-292 table, which carry the same Inner Sphere years as the p. 296 ammunition lines.
 // Special munitions are one row per munition and launcher family, as the table lists them (Artemis-capable and the others
 // for LRM, SRM or MML; Inferno, Harpoon and Tear Gas for SRM; Swarm and the Thunder variants for LRM). Not tabulated:
-// torpedo and multi-purpose missiles (maritime and battle armor), the Narc and iNarc pod variants (battle armor table),
-// and nail and rivet gun ammunition.
+// torpedoes (the book calls them maritime-only, almost never seen on BattleMechs), multi-purpose missiles (Clan battle
+// armor suits) and remote sensor dispenser ammunition (p. 296 gives a date but the Heavy Weapon Ammunition table has no
+// tech base line for it). The Narc and iNarc pods are lines of the p. 346 table (Inner Sphere), dated on p. 296; nail and
+// rivet gun ammunition is that table's Inner Sphere / Clan line, p. 296 giving pre-spaceflight.
 
 import type { EquipmentGroup } from "../../rules/catalog";
 
@@ -93,6 +95,15 @@ export const AMMUNITION: EquipmentGroup[] = [
       { id: "ammo-thunder-inferno-is", name: "Thunder-Inferno LRM Ammo", availability: [{ from: 3056 }] },
       { id: "ammo-thunder-vibrabomb-is", name: "Thunder-Vibrabomb LRM Ammo", availability: [{ from: 3057 }] },
       { id: "ammo-thunder-active-is", name: "Thunder-Active LRM Ammo", availability: [{ from: 3058 }] },
+      // Narc and iNarc pods (Inner Sphere)
+      { id: "ammo-narc-explosive-is", name: "Narc Missile Beacon (Explosive) Ammo", aliases: ["Narc Explosive Ammo"], availability: [{ from: 3060 }] },
+      { id: "ammo-improved-narc-ecm-is", name: "Improved Narc Launcher (ECM) Ammo", aliases: ["iNarc ECM Ammo"], availability: [{ from: 3062 }] },
+      { id: "ammo-improved-narc-explosive-is", name: "Improved Narc Launcher (Explosive) Ammo", aliases: ["iNarc Explosive Ammo"], availability: [{ from: 3062 }] },
+      { id: "ammo-improved-narc-haywire-is", name: "Improved Narc Launcher (Haywire) Ammo", aliases: ["iNarc Haywire Ammo"], availability: [{ from: 3062 }] },
+      { id: "ammo-improved-narc-nemesis-is", name: "Improved Narc Launcher (Nemesis) Ammo", aliases: ["iNarc Nemesis Ammo"], availability: [{ from: 3062 }] },
+      // Nail and rivet gun ammunition (Inner Sphere); the Clan year is the Clan weapon's, the table prints a dash
+      { id: "ammo-nail-rivet-gun-is", name: "Nail/Rivet Gun Ammo", availability: [{ from: 1950 }] },
+      { id: "ammo-nail-rivet-gun-half-is", name: "Nail/Rivet Gun Ammo (Half Ton)", tons: 0.5, availability: [{ from: 1950 }] },
     ],
   },
   {
@@ -164,6 +175,9 @@ export const AMMUNITION: EquipmentGroup[] = [
       { id: "ammo-tear-gas-clan", name: "Tear Gas SRM Ammo", availability: [{ from: 2824 }] },
       { id: "ammo-swarm-clan", name: "Swarm LRM Ammo", availability: [{ from: 2824 }] },
       { id: "ammo-thunder-clan", name: "Thunder LRM Ammo", availability: [{ from: 2824 }] },
+      // Nail and rivet gun ammunition (Clan); the Clan year is the Clan weapon's, the table prints a dash
+      { id: "ammo-nail-rivet-gun-clan", name: "Nail/Rivet Gun Ammo", availability: [{ from: 1950 }] },
+      { id: "ammo-nail-rivet-gun-half-clan", name: "Nail/Rivet Gun Ammo (Half Ton)", tons: 0.5, availability: [{ from: 1950 }] },
     ],
   },
 ];

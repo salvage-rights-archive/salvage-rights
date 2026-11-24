@@ -26,17 +26,18 @@
 // that is the row's weight and slots; the row is checked "text" because the figures are derived, not printed. It needs its
 // launcher in the same location. Dates are the Artemis IV line of the table on p. 291.
 //
-// Clan CASE (p. 210 text: Clan CASE is weightless): 0 tons, 0 slots, so a Clan design's CASE matches a row; the year is
-// the p. 291 table's, and the row is checked "text" because the Clan table lists no weight.
+// Clan CASE: 0 tons, 0 slots, so a Clan design's CASE matches a row. Printed p. 58 (the Gladiator Prime example) says
+// Clan CASE comes free in tonnage and critical space and p. 210 says it is weightless; the year is the p. 291 table's.
 //
 // Industrial equipment: the items of the Industrial Equipment table (pp. 344-345, years pp. 292-293) whose entries
 // (pp. 241-249) allow a BattleMech and give a fixed weight and slot count. The book's dates are printed for the Inner
 // Sphere only (the Clan column is a dash), so the Clan rows are marked. Placement: an asterisk on the slot count means the
 // entry's special construction rule; for the backhoe, chainsaw, combine, dual saw, pile driver, mining drill, rock cutter
-// and spot welder that rule is arms on a humanoid 'Mech (the hand actuator removed) or side torsos on a quad, so
-// `locations` lists the arms and side torsos (the data cannot tell the two configurations apart); the wrecking ball and
-// salvage arm are humanoid arms only; the lift hoist is arms and torsos; the bridgelayer is torsos (quad 'Mechs only).
-// Not tabulated: the mounted searchlight (a BattleMech's first one is free), tracks (weight is a tenth of the 'Mech split
+// and spot welder that rule is arms on a humanoid 'Mech (the hand actuator removed) or side torsos on a quad:
+// `locations` holds the biped rule and `locationsQuad` the quad rule. The wrecking ball and salvage arm are humanoid arms
+// only (`locationsQuad: []`, none); the bridgelayer is quad torsos only (`locations: []`); the lift hoist is arms and
+// torsos for both. The sprayer and light fluid suction system `need` liquid cargo space (their entries).
+// Not tabulated: the mounted searchlight (a BattleMech's first one is free, so a mount has no fixed weight), tracks (weight is a tenth of the 'Mech split
 // over its legs), ladders, cargo bays and communications equipment (variable), and the items the entries bar from
 // BattleMechs (manipulators, fluid suction systems, paramedic equipment, MASH, dumpers, quarters and the like).
 
@@ -101,14 +102,14 @@ export const OTHER: EquipmentGroup[] = [
     defaults: { kind: "weapon", techBase: "inner-sphere", cite: { book: "TechManual", page: 344 }, checked: "page" },
     items: [
       // Industrial equipment a BattleMech may mount (Inner Sphere)
-      { id: "backhoe-is", name: "Backhoe", tons: 5, slots: 6, availability: [{ from: 1950 }], locations: ["LA", "RA", "LT", "RT"] },
-      { id: "chainsaw-is", name: "Chainsaw", tons: 5, slots: 5, availability: [{ from: 1950 }], locations: ["LA", "RA", "LT", "RT"] },
-      { id: "combine-is", name: "Combine", tons: 2.5, slots: 4, availability: [{ from: 1950 }], locations: ["LA", "RA", "LT", "RT"] },
-      { id: "dual-saw-is", name: "Dual Saw", tons: 7, slots: 7, availability: [{ from: 1950 }], locations: ["LA", "RA", "LT", "RT"] },
-      { id: "heavy-duty-pile-driver-is", name: "Heavy Duty Pile-Driver", aliases: ["Pile Driver"], tons: 10, slots: 8, availability: [{ from: 1950 }], locations: ["LA", "RA", "LT", "RT"] },
-      { id: "mining-drill-is", name: "Mining Drill", tons: 3, slots: 4, availability: [{ from: 1950 }], locations: ["LA", "RA", "LT", "RT"] },
-      { id: "rock-cutter-is", name: "Rock-Cutter", aliases: ["Rock Cutter"], tons: 5, slots: 5, availability: [{ from: 1950 }], locations: ["LA", "RA", "LT", "RT"] },
-      { id: "spot-welder-is", name: "Spot Welder", tons: 2, slots: 1, availability: [{ from: 2320 }], locations: ["LA", "RA", "LT", "RT"] },
+      { id: "backhoe-is", name: "Backhoe", tons: 5, slots: 6, availability: [{ from: 1950 }], locations: ["LA", "RA"], locationsQuad: ["LT", "RT"] },
+      { id: "chainsaw-is", name: "Chainsaw", tons: 5, slots: 5, availability: [{ from: 1950 }], locations: ["LA", "RA"], locationsQuad: ["LT", "RT"] },
+      { id: "combine-is", name: "Combine", tons: 2.5, slots: 4, availability: [{ from: 1950 }], locations: ["LA", "RA"], locationsQuad: ["LT", "RT"] },
+      { id: "dual-saw-is", name: "Dual Saw", tons: 7, slots: 7, availability: [{ from: 1950 }], locations: ["LA", "RA"], locationsQuad: ["LT", "RT"] },
+      { id: "heavy-duty-pile-driver-is", name: "Heavy Duty Pile-Driver", aliases: ["Pile Driver"], tons: 10, slots: 8, availability: [{ from: 1950 }], locations: ["LA", "RA"], locationsQuad: ["LT", "RT"] },
+      { id: "mining-drill-is", name: "Mining Drill", tons: 3, slots: 4, availability: [{ from: 1950 }], locations: ["LA", "RA"], locationsQuad: ["LT", "RT"] },
+      { id: "rock-cutter-is", name: "Rock-Cutter", aliases: ["Rock Cutter"], tons: 5, slots: 5, availability: [{ from: 1950 }], locations: ["LA", "RA"], locationsQuad: ["LT", "RT"] },
+      { id: "spot-welder-is", name: "Spot Welder", tons: 2, slots: 1, availability: [{ from: 2320 }], locations: ["LA", "RA"], locationsQuad: ["LT", "RT"] },
       { id: "nail-rivet-gun-is", name: "Nail/Rivet Gun", aliases: ["Nail Gun", "Rivet Gun"], tons: 0.5, slots: 1, availability: [{ from: 2310 }] },
     ],
   },
@@ -116,21 +117,21 @@ export const OTHER: EquipmentGroup[] = [
     defaults: { kind: "weapon", techBase: "inner-sphere", cite: { book: "TechManual", page: 345 }, checked: "page" },
     items: [
       // Industrial equipment a BattleMech may mount (Inner Sphere)
-      { id: "wrecking-ball-is", name: "Wrecking Ball", tons: 4, slots: 5, availability: [{ from: 1950 }], locations: ["LA", "RA"] },
+      { id: "wrecking-ball-is", name: "Wrecking Ball", tons: 4, slots: 5, availability: [{ from: 1950 }], locations: ["LA", "RA"], locationsQuad: [] },
     ],
   },
   {
     defaults: { kind: "other", techBase: "inner-sphere", cite: { book: "TechManual", page: 344 }, checked: "page" },
     items: [
       // Industrial equipment a BattleMech may mount (Inner Sphere)
-      { id: "salvage-arm-is", name: "Salvage Arm", tons: 3, slots: 2, availability: [{ from: 2415 }], locations: ["LA", "RA"] },
-      { id: "sprayer-is", name: "Sprayer", tons: 0.5, slots: 1, availability: [{ from: 2300 }] },
-      { id: "light-fluid-suction-system-is", name: "Light Fluid Suction System", tons: 0.5, slots: 1, availability: [{ from: 1950 }] },
+      { id: "salvage-arm-is", name: "Salvage Arm", tons: 3, slots: 2, availability: [{ from: 2415 }], locations: ["LA", "RA"], locationsQuad: [] },
+      { id: "sprayer-is", name: "Sprayer", tons: 0.5, slots: 1, availability: [{ from: 2300 }], needs: "liquid-cargo" },
+      { id: "light-fluid-suction-system-is", name: "Light Fluid Suction System", tons: 0.5, slots: 1, availability: [{ from: 1950 }], needs: "liquid-cargo" },
       { id: "remote-sensor-dispenser-is", name: "Remote Sensor Dispenser", tons: 0.5, slots: 1, availability: [{ from: 2200 }] },
       { id: "lift-hoist-is", name: "Lift Hoist", tons: 3, slots: 3, availability: [{ from: 1950 }], locations: ["LA", "RA", "CT", "LT", "RT"] },
-      { id: "bridgelayer-light-is", name: "Bridgelayer (Light)", aliases: ["Light Bridgelayer"], tons: 1, slots: 2, availability: [{ from: 1950 }], locations: ["CT", "LT", "RT"] },
-      { id: "bridgelayer-medium-is", name: "Bridgelayer (Medium)", aliases: ["Medium Bridgelayer"], tons: 2, slots: 4, availability: [{ from: 1950 }], locations: ["CT", "LT", "RT"] },
-      { id: "bridgelayer-heavy-is", name: "Bridgelayer (Heavy)", aliases: ["Heavy Bridgelayer"], tons: 6, slots: 12, availability: [{ from: 1950 }], locations: ["CT", "LT", "RT"] },
+      { id: "bridgelayer-light-is", name: "Bridgelayer (Light)", aliases: ["Light Bridgelayer"], tons: 1, slots: 2, availability: [{ from: 1950 }], locations: [], locationsQuad: ["CT", "LT", "RT"] },
+      { id: "bridgelayer-medium-is", name: "Bridgelayer (Medium)", aliases: ["Medium Bridgelayer"], tons: 2, slots: 4, availability: [{ from: 1950 }], locations: [], locationsQuad: ["CT", "LT", "RT"] },
+      { id: "bridgelayer-heavy-is", name: "Bridgelayer (Heavy)", aliases: ["Heavy Bridgelayer"], tons: 6, slots: 12, availability: [{ from: 1950 }], locations: [], locationsQuad: ["CT", "LT", "RT"] },
     ],
   },
   {
@@ -176,10 +177,10 @@ export const OTHER: EquipmentGroup[] = [
     ],
   },
   {
-    defaults: { kind: "other", techBase: "clan", cite: { book: "TechManual", page: 210 }, checked: "page" },
+    defaults: { kind: "other", techBase: "clan", cite: { book: "TechManual", page: 58 }, checked: "page" },
     items: [
-      // Clan CASE: weightless, no critical slot (p. 210 text); the Clan table does not list it
-      { id: "case-clan", name: "CASE", tons: 0, slots: 0, availability: [{ from: 2825 }], checked: "text" },
+      // Clan CASE: comes free in tonnage and critical space (p. 58, the Gladiator Prime example; p. 210 says weightless); the Clan table lists none
+      { id: "case-clan", name: "CASE", tons: 0, slots: 0, availability: [{ from: 2825 }] },
     ],
   },
   {
@@ -200,14 +201,14 @@ export const OTHER: EquipmentGroup[] = [
     defaults: { kind: "weapon", techBase: "clan", cite: { book: "TechManual", page: 344 }, checked: "page", yearsInferred: true },
     items: [
       // Industrial equipment a BattleMech may mount (Clan)
-      { id: "backhoe-clan", name: "Backhoe", tons: 5, slots: 6, availability: [{ from: 1950 }], locations: ["LA", "RA", "LT", "RT"] },
-      { id: "chainsaw-clan", name: "Chainsaw", tons: 5, slots: 5, availability: [{ from: 1950 }], locations: ["LA", "RA", "LT", "RT"] },
-      { id: "combine-clan", name: "Combine", tons: 2.5, slots: 4, availability: [{ from: 1950 }], locations: ["LA", "RA", "LT", "RT"] },
-      { id: "dual-saw-clan", name: "Dual Saw", tons: 7, slots: 7, availability: [{ from: 1950 }], locations: ["LA", "RA", "LT", "RT"] },
-      { id: "heavy-duty-pile-driver-clan", name: "Heavy Duty Pile-Driver", aliases: ["Pile Driver"], tons: 10, slots: 8, availability: [{ from: 1950 }], locations: ["LA", "RA", "LT", "RT"] },
-      { id: "mining-drill-clan", name: "Mining Drill", tons: 3, slots: 4, availability: [{ from: 1950 }], locations: ["LA", "RA", "LT", "RT"] },
-      { id: "rock-cutter-clan", name: "Rock-Cutter", aliases: ["Rock Cutter"], tons: 5, slots: 5, availability: [{ from: 1950 }], locations: ["LA", "RA", "LT", "RT"] },
-      { id: "spot-welder-clan", name: "Spot Welder", tons: 2, slots: 1, availability: [{ from: 2320 }], locations: ["LA", "RA", "LT", "RT"] },
+      { id: "backhoe-clan", name: "Backhoe", tons: 5, slots: 6, availability: [{ from: 1950 }], locations: ["LA", "RA"], locationsQuad: ["LT", "RT"] },
+      { id: "chainsaw-clan", name: "Chainsaw", tons: 5, slots: 5, availability: [{ from: 1950 }], locations: ["LA", "RA"], locationsQuad: ["LT", "RT"] },
+      { id: "combine-clan", name: "Combine", tons: 2.5, slots: 4, availability: [{ from: 1950 }], locations: ["LA", "RA"], locationsQuad: ["LT", "RT"] },
+      { id: "dual-saw-clan", name: "Dual Saw", tons: 7, slots: 7, availability: [{ from: 1950 }], locations: ["LA", "RA"], locationsQuad: ["LT", "RT"] },
+      { id: "heavy-duty-pile-driver-clan", name: "Heavy Duty Pile-Driver", aliases: ["Pile Driver"], tons: 10, slots: 8, availability: [{ from: 1950 }], locations: ["LA", "RA"], locationsQuad: ["LT", "RT"] },
+      { id: "mining-drill-clan", name: "Mining Drill", tons: 3, slots: 4, availability: [{ from: 1950 }], locations: ["LA", "RA"], locationsQuad: ["LT", "RT"] },
+      { id: "rock-cutter-clan", name: "Rock-Cutter", aliases: ["Rock Cutter"], tons: 5, slots: 5, availability: [{ from: 1950 }], locations: ["LA", "RA"], locationsQuad: ["LT", "RT"] },
+      { id: "spot-welder-clan", name: "Spot Welder", tons: 2, slots: 1, availability: [{ from: 2320 }], locations: ["LA", "RA"], locationsQuad: ["LT", "RT"] },
       { id: "nail-rivet-gun-clan", name: "Nail/Rivet Gun", aliases: ["Nail Gun", "Rivet Gun"], tons: 0.5, slots: 1, availability: [{ from: 2310 }] },
     ],
   },
@@ -215,21 +216,21 @@ export const OTHER: EquipmentGroup[] = [
     defaults: { kind: "weapon", techBase: "clan", cite: { book: "TechManual", page: 345 }, checked: "page", yearsInferred: true },
     items: [
       // Industrial equipment a BattleMech may mount (Clan)
-      { id: "wrecking-ball-clan", name: "Wrecking Ball", tons: 4, slots: 5, availability: [{ from: 1950 }], locations: ["LA", "RA"] },
+      { id: "wrecking-ball-clan", name: "Wrecking Ball", tons: 4, slots: 5, availability: [{ from: 1950 }], locations: ["LA", "RA"], locationsQuad: [] },
     ],
   },
   {
     defaults: { kind: "other", techBase: "clan", cite: { book: "TechManual", page: 344 }, checked: "page", yearsInferred: true },
     items: [
       // Industrial equipment a BattleMech may mount (Clan)
-      { id: "salvage-arm-clan", name: "Salvage Arm", tons: 3, slots: 2, availability: [{ from: 2415 }], locations: ["LA", "RA"] },
-      { id: "sprayer-clan", name: "Sprayer", tons: 0.5, slots: 1, availability: [{ from: 2300 }] },
-      { id: "light-fluid-suction-system-clan", name: "Light Fluid Suction System", tons: 0.5, slots: 1, availability: [{ from: 1950 }] },
+      { id: "salvage-arm-clan", name: "Salvage Arm", tons: 3, slots: 2, availability: [{ from: 2415 }], locations: ["LA", "RA"], locationsQuad: [] },
+      { id: "sprayer-clan", name: "Sprayer", tons: 0.5, slots: 1, availability: [{ from: 2300 }], needs: "liquid-cargo" },
+      { id: "light-fluid-suction-system-clan", name: "Light Fluid Suction System", tons: 0.5, slots: 1, availability: [{ from: 1950 }], needs: "liquid-cargo" },
       { id: "remote-sensor-dispenser-clan", name: "Remote Sensor Dispenser", tons: 0.5, slots: 1, availability: [{ from: 2200 }] },
       { id: "lift-hoist-clan", name: "Lift Hoist", tons: 3, slots: 3, availability: [{ from: 1950 }], locations: ["LA", "RA", "CT", "LT", "RT"] },
-      { id: "bridgelayer-light-clan", name: "Bridgelayer (Light)", aliases: ["Light Bridgelayer"], tons: 1, slots: 2, availability: [{ from: 1950 }], locations: ["CT", "LT", "RT"] },
-      { id: "bridgelayer-medium-clan", name: "Bridgelayer (Medium)", aliases: ["Medium Bridgelayer"], tons: 2, slots: 4, availability: [{ from: 1950 }], locations: ["CT", "LT", "RT"] },
-      { id: "bridgelayer-heavy-clan", name: "Bridgelayer (Heavy)", aliases: ["Heavy Bridgelayer"], tons: 6, slots: 12, availability: [{ from: 1950 }], locations: ["CT", "LT", "RT"] },
+      { id: "bridgelayer-light-clan", name: "Bridgelayer (Light)", aliases: ["Light Bridgelayer"], tons: 1, slots: 2, availability: [{ from: 1950 }], locations: [], locationsQuad: ["CT", "LT", "RT"] },
+      { id: "bridgelayer-medium-clan", name: "Bridgelayer (Medium)", aliases: ["Medium Bridgelayer"], tons: 2, slots: 4, availability: [{ from: 1950 }], locations: [], locationsQuad: ["CT", "LT", "RT"] },
+      { id: "bridgelayer-heavy-clan", name: "Bridgelayer (Heavy)", aliases: ["Heavy Bridgelayer"], tons: 6, slots: 12, availability: [{ from: 1950 }], locations: [], locationsQuad: ["CT", "LT", "RT"] },
     ],
   },
 ];

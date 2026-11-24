@@ -60,8 +60,17 @@ describe("expand", () => {
   });
 
   it("keeps perMech, yearsInferred and directFire on the expanded row", () => {
-    const [row] = expand([{ defaults: { ...OK, yearsInferred: true, directFire: true }, items: [{ id: "tsm-is", name: "TSM", perMech: 6 }] }] as unknown as EquipmentGroup[]);
-    expect(row).toMatchObject({ perMech: 6, yearsInferred: true, directFire: true });
+    const groups = [
+      {
+        defaults: { ...OK, yearsInferred: true, directFire: true },
+        items: [{ id: "tsm-is", name: "TSM", perMech: 6, locations: ["LA"], locationsQuad: ["LT"], editions: { other: { locationsQuad: [] } } }],
+      },
+    ] as unknown as EquipmentGroup[];
+    const rows = expand(groups);
+    expect(rows[0]).toMatchObject({ perMech: 6, yearsInferred: true, directFire: true, locations: ["LA"], locationsQuad: ["LT"] });
+    const seen = createCatalog(rows);
+    expect(seen.offered("other", { techBase: "clan", year: null })[0]?.locationsQuad).toEqual([]);
+    expect(seen.offered("core-2026", { techBase: "clan", year: null })[0]?.locationsQuad).toEqual(["LT"]);
   });
 });
 
