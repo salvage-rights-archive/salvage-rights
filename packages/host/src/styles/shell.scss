@@ -121,3 +121,72 @@ h1:focus {
     max-width: 60rem;
   }
 }
+
+.sr-settings {
+  &__warning {
+    padding: var(--sr-space-2) var(--sr-space-3);
+    background: var(--sr-surface);
+    border: var(--sr-border) solid var(--sr-line-strong);
+    border-left: 6px solid var(--sr-hazard);
+    border-radius: var(--sr-radius);
+  }
+
+  &__group {
+    margin: 0 0 var(--sr-space-4);
+    padding: var(--sr-space-2) var(--sr-space-3) var(--sr-space-3);
+    background: var(--sr-surface);
+    border: var(--sr-border) solid var(--sr-line);
+    border-radius: var(--sr-radius);
+
+    legend {
+      padding: 0 var(--sr-space-2);
+      font-family: var(--sr-font-stencil);
+      font-size: 1.2rem;
+    }
+  }
+
+  &__choice {
+    display: flex;
+    align-items: center;
+    gap: var(--sr-space-2);
+    min-height: 44px;
+
+    input[type="radio"],
+    input[type="checkbox"] {
+      flex: none;
+      width: 1.5rem;
+      height: 1.5rem;
+      margin: 0;
+      accent-color: var(--sr-accent);
+    }
+
+    &--game {
+      padding-left: var(--sr-space-5);
+    }
+  }
+
+  &__file input {
+    min-height: 44px;
+    padding: var(--sr-space-2) 0;
+  }
+
+  &__hint {
+    color: var(--sr-ink-muted);
+  }
+
+  &__button {
+    min-height: 44px;
+    margin-bottom: var(--sr-space-2);
+    padding: 0 var(--sr-space-4);
+    background: var(--sr-accent-bg);
+    color: var(--sr-on-accent);
+    border: 0;
+    border-radius: var(--sr-radius);
+    font: inherit;
+    cursor: pointer;
+
+    &:hover {
+      background: var(--sr-accent-bg-hover);
+    }
+  }
+}

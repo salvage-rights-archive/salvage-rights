@@ -1,7 +1,14 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
-import { DEFAULT_SETTINGS, loadSettings, openStore, saveSettings } from "@salvage-rights/shared";
-import type { Settings, Store } from "@salvage-rights/shared";
+import {
+  DEFAULT_SETTINGS,
+  exportStore,
+  importStore,
+  loadSettings,
+  openStore,
+  saveSettings,
+} from "@salvage-rights/shared";
+import type { ExportFile, Settings, Store } from "@salvage-rights/shared";
 
 export interface SettingsValue {
   settings: Settings;
@@ -12,6 +19,10 @@ export interface SettingsValue {
   /** True once the stored settings have been read (or could not be), so a first paint can wait for them. */
   loaded: boolean;
   saveFailed: boolean;
+  /** Everything in the host store, ready to save as a file. */
+  exportSettings(): Promise<ExportFile>;
+  /** Imports a parsed file into the host store. Returns the problems; on success the settings are re-read. */
+  importSettings(file: unknown): Promise<string[]>;
 }
 
 const SettingsContext = createContext<SettingsValue | null>(null);
@@ -59,9 +70,24 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     [storePromise],
   );
 
+  const exportSettings = useCallback(async () => exportStore(await storePromise), [storePromise]);
+
+  const importSettings = useCallback(
+    async (file: unknown) => {
+      const store = await storePromise;
+      const { problems } = await importStore(store, file);
+      if (problems.length === 0) {
+        changedBeforeLoad.current = true;
+        setSettings(await loadSettings(store));
+      }
+      return problems;
+    },
+    [storePromise],
+  );
+
   const value = useMemo(
-    () => ({ settings, update, persistent, loaded, saveFailed }),
-    [settings, update, persistent, loaded, saveFailed],
+    () => ({ settings, update, persistent, loaded, saveFailed, exportSettings, importSettings }),
+    [settings, update, persistent, loaded, saveFailed, exportSettings, importSettings],
   );
   return <SettingsContext.Provider value={value}>{children}</SettingsContext.Provider>;
 }
