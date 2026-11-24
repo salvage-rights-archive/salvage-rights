@@ -12,14 +12,16 @@ npm run check
 
 ## Tests
 
-`npm run check` runs the type check, lint, the unit tests and the edition checks. It does not run the browser tests.
+`npm run check` runs the type check, lint, the unit tests and the edition checks, and builds both shipped editions
+(`free` and `ten-thousand-fleets`). It does not run the browser tests.
 
 - `npm run test:e2e` builds the `dev` and `free` editions, serves each the way GitHub Pages does and runs the
   Playwright specs in `packages/host/e2e/` in Chromium. The first time, run `npx playwright install chromium`.
 - `npm run test:e2e:all` also runs Firefox and WebKit. It needs `npx playwright install` first.
 
-On Windows, run the tests from a path with a capital drive letter (`C:\...`, not `c:\...`). With a lowercase drive
-letter Vitest fails with "failed to find the current suite".
+On Windows, `npm test` works from any path. Calling `npx vitest` directly, or an editor's Vitest extension, can still
+fail with "failed to find the current suite" when the folder was opened with a lowercase drive letter (`c:\...`). The
+fix is to open it as `C:\...`.
 
 ## Editions
 
@@ -39,7 +41,7 @@ Build one with `npm run build:free`, `npm run build:tkf` or `npm run build:dev`.
 | --- | --- |
 | `packages/shared` | Apache-2.0 |
 | `packages/host` | Apache-2.0 |
-| `packages/family-ten-thousand-fleets` | Apache-2.0 |
+| `packages/family-ten-thousand-fleets` | Apache-2.0 (its `content/` folder is all rights reserved and is not under the Apache license) |
 | `packages/family-example` | Apache-2.0 |
 | `packages/family-battletech` | GPL-3.0-or-later |
 

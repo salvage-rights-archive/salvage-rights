@@ -17,7 +17,8 @@
     "test:e2e:all": "npm run build:dev && npm run build:free && playwright test -c packages/host/playwright.config.ts",
     "typecheck": "tsc -b",
     "lint": "eslint .",
-    "test": "vitest run",
+    "test": "node scripts/vitest.mjs run",
+    "test:watch": "node scripts/vitest.mjs",
     "check:editions": "node scripts/check-edition.mjs free && node scripts/check-edition.mjs ten-thousand-fleets && node scripts/check-edition.mjs dev",
     "check": "npm run typecheck && npm run lint && npm test && npm run check:editions && npm run build:free && npm run build:tkf"
   },
