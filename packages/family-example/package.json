@@ -7,5 +7,12 @@
   "license": "Apache-2.0",
   "dependencies": {
     "@salvage-rights/shared": "*"
+  },
+  "salvageRights": {
+    "familyId": "example",
+    "familyName": "Example Yard"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0"
   }
 }

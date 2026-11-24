@@ -3,11 +3,12 @@
   "compilerOptions": {
     "composite": true,
     "outDir": "dist",
-    "rootDir": "src",
+    "rootDir": ".",
     "tsBuildInfoFile": "dist/.tsbuildinfo"
   },
   "include": [
-    "src"
+    "src",
+    "vite"
   ],
   "references": [
     {

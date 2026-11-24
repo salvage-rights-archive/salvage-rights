@@ -1,0 +1,21 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "outDir": "dist",
+    "rootDir": ".",
+    "tsBuildInfoFile": "dist/.tsbuildinfo"
+  },
+  "include": [
+    "."
+  ],
+  "exclude": [
+    "dist"
+  ],
+  "references": [
+    { "path": "../packages/shared" },
+    { "path": "../packages/family-battletech" },
+    { "path": "../packages/family-ten-thousand-fleets" },
+    { "path": "../packages/family-example" }
+  ]
+}

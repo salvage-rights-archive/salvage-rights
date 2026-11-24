@@ -1,0 +1,5 @@
+{
+  "id": "free",
+  "families": ["battletech", "ten-thousand-fleets"],
+  "allowLicenses": ["Apache-2.0", "GPL-3.0-or-later"]
+}
