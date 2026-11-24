@@ -10,6 +10,7 @@ import {
   saveSettings,
 } from "@salvage-rights/shared";
 import type { ExportFile, Settings, Store } from "@salvage-rights/shared";
+import { clearPending, readPending, writePending } from "./pending-settings";
 
 export interface SettingsValue {
   settings: Settings;
@@ -48,31 +49,14 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const changedThisSession = useRef(false);
   const current = useRef<Settings>(DEFAULT_SETTINGS);
 
-  useEffect(() => {
-    let cancelled = false;
-    void Promise.all([storePromise, readPromise]).then(([store, stored]) => {
-      if (cancelled) return;
-      setPersistent(store.persistent);
-      if (stored && !changedThisSession.current) {
-        current.current = stored;
-        setSettings(stored);
-      }
-      setLoaded(true);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [storePromise, readPromise]);
-
-  const update = useCallback(
-    (next: Settings) => {
-      changedThisSession.current = true;
-      current.current = next;
-      setSettings(next);
+  // Saves to the store; the pending note (written at `at`) goes once that has worked, and stays if it fails.
+  const save = useCallback(
+    (next: Settings, at: number) => {
       storePromise
         .then((store) => saveSettings(store, next))
         .then(
           () => {
+            clearPending(at);
             setSaveFailed(false);
           },
           () => {
@@ -81,6 +65,42 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         );
     },
     [storePromise],
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    void Promise.all([storePromise, readPromise]).then(([store, stored]) => {
+      if (cancelled) return;
+      setPersistent(store.persistent);
+      if (!changedThisSession.current) {
+        // A note means a save was cut off last time: it is newer than whatever the store holds.
+        const note = readPending();
+        if (note) {
+          const noted = readSettings(note.settings);
+          changedThisSession.current = true; // so an export carries what is shown, not the older stored value
+          current.current = noted;
+          setSettings(noted);
+          save(noted, note.at);
+        } else if (stored) {
+          current.current = stored;
+          setSettings(stored);
+        }
+      }
+      setLoaded(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [storePromise, readPromise, save]);
+
+  const update = useCallback(
+    (next: Settings) => {
+      changedThisSession.current = true;
+      current.current = next;
+      setSettings(next);
+      save(next, writePending(next));
+    },
+    [save],
   );
 
   // Settings never changed are not in the store yet, and a file without them could not be imported again.
