@@ -2,13 +2,19 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "composite": true,
+    "rewriteRelativeImportExtensions": true,
     "outDir": "dist",
     "rootDir": ".",
-    "tsBuildInfoFile": "dist/.tsbuildinfo"
+    "tsBuildInfoFile": "dist/.tsbuildinfo",
+    "types": [
+      "node",
+      "vite/client"
+    ]
   },
   "include": [
     "src",
-    "vite"
+    "vite",
+    "vite.config.mts"
   ],
   "references": [
     {

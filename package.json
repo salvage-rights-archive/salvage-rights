@@ -9,22 +9,29 @@
     "node": "^22.22.0 || >=24"
   },
   "scripts": {
+    "dev": "vite packages/host --mode dev",
+    "build:free": "vite build packages/host --mode free && node scripts/check-edition.mjs free --require-dist",
+    "build:tkf": "vite build packages/host --mode ten-thousand-fleets && node scripts/check-edition.mjs ten-thousand-fleets --require-dist",
     "typecheck": "tsc -b",
     "lint": "eslint .",
     "test": "vitest run",
     "check:editions": "node scripts/check-edition.mjs free && node scripts/check-edition.mjs ten-thousand-fleets && node scripts/check-edition.mjs dev",
-    "check": "npm run typecheck && npm run lint && npm test && npm run check:editions"
+    "check": "npm run typecheck && npm run lint && npm test && npm run check:editions && npm run build:free && npm run build:tkf"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@testing-library/react": "^16.3.3",
+    "@testing-library/user-event": "^14.6.13",
     "@types/node": "^22.20.5",
     "@types/react": "^19.3.1",
     "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.3.0",
     "eslint": "^10.15.0",
     "eslint-plugin-react-hooks": "^7.1.1",
     "fake-indexeddb": "^6.2.8",
     "globals": "^17.14.0",
     "happy-dom": "^21.0.4",
+    "sass": "^1.108.2",
     "typescript": "~6.0.3",
     "typescript-eslint": "^8.74.0",
     "vite": "^8.3.8",

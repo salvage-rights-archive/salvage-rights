@@ -1,0 +1,115 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--sr-bg);
+  color: var(--sr-ink);
+  font-family: var(--sr-font-body);
+  line-height: 1.5;
+}
+
+a {
+  color: var(--sr-accent);
+
+  &:hover {
+    color: var(--sr-accent-hover);
+  }
+}
+
+:focus-visible {
+  outline: 3px solid var(--sr-focus);
+  outline-offset: 2px;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--sr-font-stencil);
+  line-height: 1.2;
+}
+
+.sr-frame {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.sr-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sr-space-2) var(--sr-space-4);
+  padding: var(--sr-space-2) var(--sr-space-3);
+  background: var(--sr-header-bg);
+  color: var(--sr-header-ink);
+  border-bottom: 4px solid var(--sr-header-line);
+
+  &__name {
+    font-family: var(--sr-font-stencil);
+    font-size: 1.5rem;
+    letter-spacing: .08em;
+  }
+
+  &__nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sr-space-2);
+
+    a {
+      display: inline-flex;
+      align-items: center;
+      min-height: 44px;
+      padding: 0 var(--sr-space-3);
+      color: var(--sr-header-link);
+      text-decoration: none;
+      border-radius: var(--sr-radius);
+
+      &:hover {
+        text-decoration: underline;
+      }
+
+      &.active {
+        color: var(--sr-header-ink);
+        box-shadow: inset 0 -3px 0 var(--sr-header-line);
+      }
+    }
+  }
+}
+
+.sr-content {
+  flex: 1;
+}
+
+.sr-page {
+  display: block;
+  max-width: 60rem;
+  margin: 0 auto;
+  padding: var(--sr-space-4) var(--sr-space-3);
+}
+
+.sr-credits {
+  margin-bottom: var(--sr-space-3);
+  padding: var(--sr-space-2) var(--sr-space-3);
+  background: var(--sr-surface);
+  border: var(--sr-border) solid var(--sr-line);
+  border-radius: var(--sr-radius);
+}
+
+.sr-footer {
+  padding: var(--sr-space-3);
+  background: var(--sr-surface-sunk);
+  color: var(--sr-ink-muted);
+  font-family: var(--sr-font-tag);
+  font-size: .9rem;
+  text-align: center;
+
+  p {
+    margin: 0 auto;
+    max-width: 60rem;
+  }
+}

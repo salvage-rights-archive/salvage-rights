@@ -1,0 +1,140 @@
+// Salvage Rights design tokens. Apache-2.0.
+//
+// Everything the chrome is painted with is a CSS custom property set here.
+//
+// Themes (the Settings page puts the class on <body>):
+//   (none)        follows the device: light or dark
+//   light / dark  one or the other, whatever the device says
+//
+// Contrast: text and links are at least 4.5:1 on every surface they are used on (WCAG AA); the pairs are
+// checked in tokens.test.ts.
+
+@font-face {
+  font-family: "Stardos Stencil";
+  src: url("../fonts/StardosStencil-Bold.woff2") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Special Elite";
+  src: url("../fonts/SpecialElite-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  // Type
+  --sr-font-body: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --sr-font-stencil: "Stardos Stencil", "Rockwell", "Courier New", serif;
+  --sr-font-tag: "Special Elite", "Courier New", Courier, monospace;
+  --sr-font-mono: ui-monospace, Menlo, Monaco, Consolas, "Courier New", monospace;
+
+  // Shape and rhythm
+  --sr-radius: 3px;
+  --sr-radius-tag: 2px;
+  --sr-border: 1px;
+  --sr-space-1: .25rem;
+  --sr-space-2: .5rem;
+  --sr-space-3: 1rem;
+  --sr-space-4: 1.5rem;
+  --sr-space-5: 2.5rem;
+
+  // The header is a strip of dark steel in every theme.
+  --sr-header-bg: #171a19;
+  --sr-header-ink: #ece5d3;          // 14.6:1 on header-bg
+  --sr-header-link: #e9a56b;         // 8.3:1 on header-bg
+  --sr-header-line: #c8622d;
+  --sr-hazard-a: #e2b33c;
+  --sr-hazard-b: #171a19;
+}
+
+// Night shift in the yard: oxidized steel, rust, verdigris.
+@mixin sr-dark {
+  color-scheme: dark;
+  --sr-bg: #1c1f1e;                  // the yard floor
+  --sr-surface: #262a28;             // a panel
+  --sr-surface-alt: #303533;         // every other table row, raised bits
+  --sr-surface-sunk: #151716;        // panel headings, table heads, modal bars
+  --sr-ink: #ece5d3;                 // 13.0:1 on bg, 11.5:1 on surface
+  --sr-ink-muted: #b9b19d;           // 7.6:1 on bg, 6.7:1 on surface
+  --sr-ink-disabled: #8d8779;
+  --sr-line: #4b514c;
+  --sr-line-strong: #6b726b;
+  --sr-accent: #e9a56b;              // links: 7.7:1 on bg, 6.8:1 on surface
+  --sr-accent-hover: #f5c79c;
+  --sr-accent-bg: #cf6a33;           // primary buttons, current tabs
+  --sr-accent-bg-hover: #e58146;
+  --sr-on-accent: #14100c;           // 5.3:1 on accent-bg
+  --sr-secondary-bg: #3c5c55;        // secondary buttons: verdigris
+  --sr-secondary-bg-hover: #4a7068;
+  --sr-on-secondary: #f3eee0;        // 6.4:1 on secondary-bg
+  --sr-patina: #6fc2af;              // 7.9:1 on bg
+  --sr-hazard: #e2b33c;              // 8.6:1 on bg
+  --sr-danger: #ff9d92;              // 8.2:1 on bg
+  --sr-ok: #7ed67e;                  // 9.5:1 on bg
+  --sr-info: #8ab4ff;                // 8.0:1 on bg
+  --sr-field-bg: #f3ecd9;            // inputs stay paper, as a filled-in form
+  --sr-field-bg-focus: #fffdf6;
+  --sr-field-ink: #1d1a15;
+  --sr-field-line: #0d0e0d;
+  --sr-focus: #ffd35c;               // focus ring: 11.6:1 on bg
+  --sr-shadow: 0 1px 0 rgba(255, 255, 255, .04) inset, 0 2px 6px rgba(0, 0, 0, .45);
+  --sr-grain-opacity: .22;
+  --sr-paper-ink: #d9d1bd;
+}
+
+// Day shift in the survey tent: worn paper, catalog cards, rust-brown ink.
+@mixin sr-light {
+  color-scheme: light;
+  --sr-bg: #e6dfcc;
+  --sr-surface: #f5f0e3;
+  --sr-surface-alt: #e9e2cf;
+  --sr-surface-sunk: #d9d0b9;
+  --sr-ink: #24211c;                 // 11.9:1 on bg, 14.0:1 on surface
+  --sr-ink-muted: #575044;           // 5.9:1 on bg, 6.9:1 on surface
+  --sr-ink-disabled: #7c7566;
+  --sr-line: #b5aa90;
+  --sr-line-strong: #8a7f67;
+  --sr-accent: #8f3a10;              // links: 6.0:1 on bg, 7.1:1 on surface
+  --sr-accent-hover: #6b2a09;
+  --sr-accent-bg: #a8481a;
+  --sr-accent-bg-hover: #8f3a10;
+  --sr-on-accent: #fff8ec;           // 5.6:1 on accent-bg
+  --sr-secondary-bg: #2f5a52;
+  --sr-secondary-bg-hover: #24463f;
+  --sr-on-secondary: #f7f3e8;        // 7.0:1 on secondary-bg
+  --sr-patina: #1f6557;              // 5.2:1 on bg
+  --sr-hazard: #7a5600;              // 5.1:1 on bg
+  --sr-danger: #a3271c;              // 5.6:1 on bg
+  --sr-ok: #175c17;                  // 6.2:1 on bg
+  --sr-info: #1b3fae;                // 6.6:1 on bg
+  --sr-field-bg: #fffdf6;
+  --sr-field-bg-focus: #ffffff;
+  --sr-field-ink: #1d1a15;
+  --sr-field-line: #6f6652;
+  --sr-focus: #7a3b00;
+  --sr-shadow: 0 1px 0 rgba(255, 255, 255, .6) inset, 0 1px 4px rgba(60, 45, 20, .25);
+  --sr-grain-opacity: .35;
+  --sr-paper-ink: #24211c;
+}
+
+:root {
+  @include sr-dark;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    @include sr-light;
+  }
+}
+
+body.dark {
+  @include sr-dark;
+}
+
+body.light {
+  @include sr-light;
+}

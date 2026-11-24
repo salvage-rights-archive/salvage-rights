@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Salvage Rights</title>
+    <script>
+      // Static hosting has no route for deep links. Remember the address and let the app restore it.
+      try {
+        sessionStorage.setItem("sr-redirect", location.pathname + location.search + location.hash);
+      } catch (e) {
+        // Without session storage the visitor lands on the start page.
+      }
+      location.replace("%BASE_URL%");
+    </script>
+  </head>
+  <body>
+    <p><a href="%BASE_URL%">Salvage Rights</a></p>
+  </body>
+</html>
