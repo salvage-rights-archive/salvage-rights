@@ -3,3 +3,8 @@ node_modules/
 dist/
 test-results/
 playwright-report/
+
+# Local secrets (API keys for testing). Never commit.
+.env
+.env.*
+!.env.example
