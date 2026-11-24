@@ -1,17 +1,19 @@
 import "fake-indexeddb/auto";
 import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
-import { afterEach, describe, expect, it } from "vitest";
+import userEvent from "@testing-library/user-event";
+import { IDBFactory } from "fake-indexeddb";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { openStore, saveSettings, DEFAULT_SETTINGS } from "@salvage-rights/shared";
 import type { FamilyManifest, FamilyRoute } from "@salvage-rights/shared";
 import { App } from "./App";
 
 function FixturePage() {
-  return (
-    <main>
-      <h1>Fixture page</h1>
-    </main>
-  );
+  return <h1>Fixture page</h1>;
+}
+
+function BrokenPage(): never {
+  throw new Error("fixture failure");
 }
 
 const playRoute: FamilyRoute = {
@@ -21,13 +23,17 @@ const playRoute: FamilyRoute = {
   load: () => Promise.resolve({ default: FixturePage }),
 };
 
+const brokenRoute: FamilyRoute = { ...playRoute, path: "broken", load: () => Promise.resolve({ default: BrokenPage }) };
+
+const slowRoute: FamilyRoute = { ...playRoute, path: "slow", load: () => new Promise(() => undefined) };
+
 const testbed: FamilyManifest = {
   id: "testbed",
   name: "Testbed Family",
   blurb: "A made-up family for host tests.",
   accent: "rust",
   games: [
-    { id: "ready", shortName: "Ready", fullName: "Testbed Ready", ready: true, routes: [playRoute] },
+    { id: "ready", shortName: "Ready", fullName: "Testbed Ready", ready: true, routes: [playRoute, brokenRoute, slowRoute] },
     { id: "pending", shortName: "Pending", fullName: "Testbed Pending", ready: false, routes: [playRoute] },
   ],
   unitTypes: [],
@@ -45,8 +51,13 @@ function renderAt(path: string) {
   );
 }
 
+beforeEach(() => {
+  globalThis.indexedDB = new IDBFactory();
+});
+
 afterEach(() => {
   cleanup();
+  document.title = "";
   document.body.className = "";
 });
 
@@ -88,6 +99,29 @@ describe("host frame", () => {
   it("shows the not-found page for a family that is not in the edition", () => {
     renderAt("/elsewhere/ready/play");
     expect(screen.getByRole("heading", { name: "Nothing here" })).toBeTruthy();
+  });
+
+  it("shows a way back when a family page throws", async () => {
+    const quiet = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    renderAt("/testbed/ready/broken");
+    expect(await screen.findByRole("heading", { name: "Something went wrong" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Back to the landing page" }).getAttribute("href")).toBe("/");
+    quiet.mockRestore();
+  });
+
+  it("announces a page that is still loading as a status", () => {
+    renderAt("/testbed/ready/slow");
+    expect(screen.getByRole("status").textContent).toBe("Loading…");
+  });
+
+  it("moves focus to the heading and sets the title when navigating", async () => {
+    renderAt("/");
+    await userEvent.click(screen.getByRole("link", { name: "About" }));
+    const heading = await screen.findByRole("heading", { name: "About Salvage Rights" });
+    await waitFor(() => {
+      expect(document.activeElement).toBe(heading);
+    });
+    expect(document.title).toBe("About Salvage Rights · Salvage Rights");
   });
 
   it("puts the chosen theme on the body", async () => {

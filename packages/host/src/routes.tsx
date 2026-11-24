@@ -7,17 +7,17 @@ import { NotFound } from "./pages/NotFound";
 // The landing page (Task 7) and the Settings page (Task 8) replace these two.
 function Landing() {
   return (
-    <main className="sr-page">
+    <div className="sr-page">
       <h1>Salvage Rights</h1>
-    </main>
+    </div>
   );
 }
 
 function SettingsPage() {
   return (
-    <main className="sr-page">
+    <div className="sr-page">
       <h1>Settings</h1>
-    </main>
+    </div>
   );
 }
 

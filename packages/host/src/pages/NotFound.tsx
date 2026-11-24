@@ -2,11 +2,11 @@ import { Link } from "react-router";
 
 export function NotFound() {
   return (
-    <main className="sr-page">
+    <div className="sr-page">
       <h1>Nothing here</h1>
       <p>
         <Link to="/">Back to the landing page</Link>
       </p>
-    </main>
+    </div>
   );
 }

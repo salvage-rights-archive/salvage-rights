@@ -45,12 +45,12 @@ class PageErrorBoundary extends Component<{ children: ReactNode }, BoundaryState
   override render() {
     if (!this.state.failed) return this.props.children;
     return (
-      <main className="sr-page">
+      <div className="sr-page">
         <h1>Something went wrong</h1>
         <p>
           <Link to="/">Back to the landing page</Link>
         </p>
-      </main>
+      </div>
     );
   }
 }
@@ -63,7 +63,7 @@ export function FamilyRoutePage({ families }: { families: FamilyManifest[] }) {
   if (!route) return <NotFound />;
   return (
     <PageErrorBoundary key={pathname}>
-      <Suspense fallback={<p className="sr-page">Loading…</p>}>{createElement(pageOf(route))}</Suspense>
+      <Suspense fallback={<p role="status" className="sr-page">Loading…</p>}>{createElement(pageOf(route))}</Suspense>
     </PageErrorBoundary>
   );
 }

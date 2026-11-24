@@ -43,6 +43,7 @@ const PAIRS: [string, string][] = [
   ["--sr-on-accent", "--sr-accent-bg"],
   ["--sr-header-ink", "--sr-header-bg"],
   ["--sr-header-link", "--sr-header-bg"],
+  ["--sr-header-focus", "--sr-header-bg"],
 ];
 
 describe("token contrast", () => {

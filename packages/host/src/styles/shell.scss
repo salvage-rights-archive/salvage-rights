@@ -38,6 +38,10 @@ h3 {
   min-height: 100vh;
 }
 
+h1:focus {
+  outline: none;
+}
+
 .sr-header {
   display: flex;
   flex-wrap: wrap;
@@ -48,6 +52,10 @@ h3 {
   background: var(--sr-header-bg);
   color: var(--sr-header-ink);
   border-bottom: 4px solid var(--sr-header-line);
+
+  :focus-visible {
+    outline-color: var(--sr-header-focus);
+  }
 
   &__name {
     font-family: var(--sr-font-stencil);

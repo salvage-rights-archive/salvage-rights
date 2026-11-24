@@ -17,7 +17,7 @@ const FONTS = [
 
 export function About({ families }: { families: FamilyManifest[] }) {
   return (
-    <main className="sr-page">
+    <div className="sr-page">
       <h1>About Salvage Rights</h1>
       <p>
         Salvage Rights is a fan project, not affiliated with or endorsed by the owners of the games it covers.
@@ -49,6 +49,6 @@ export function About({ families }: { families: FamilyManifest[] }) {
           </li>
         ))}
       </ul>
-    </main>
+    </div>
   );
 }
