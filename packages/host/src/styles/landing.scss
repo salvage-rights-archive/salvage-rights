@@ -115,9 +115,21 @@
     color: var(--sr-ink);
   }
 
-  // The clip would cut an outside outline, so the ring is drawn inside the tile.
+  // Focus rings: anything on the page background uses --sr-focus; anything on the dark --sr-header-bg panel
+  // (the single layout's text and game links) keeps --sr-header-focus.
+  // The clip would cut an outside outline, so the whole-tile ring is an overlay inside the edge: a --sr-focus
+  // line over a solid --sr-bg band, visible whatever the artwork looks like.
   &:focus-visible {
-    outline-offset: -5px;
+    outline: none;
+
+    &::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border: 3px solid var(--sr-focus);
+      box-shadow: inset 0 0 0 3px var(--sr-bg);
+      pointer-events: none;
+    }
   }
 
   &__panel {
@@ -174,6 +186,22 @@
     outline-offset: -5px;
   }
 
+  // A ready game with no page yet: text, not a box.
+  &__game--plain {
+    background: none;
+    border: 0;
+    color: var(--sr-ink-muted);
+  }
+
+  &__hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
   // One family fills the row: the text sits on a solid steel panel beside the artwork.
   &[data-size="single"] {
     flex-wrap: wrap;
@@ -193,7 +221,7 @@
     }
 
     .sr-tile__blurb {
-      color: var(--sr-paper-ink-on-steel, #d9d1bd);
+      color: var(--sr-header-ink);
       font-size: 1.1rem;
     }
 
@@ -207,9 +235,12 @@
       border-color: var(--sr-header-line);
     }
 
-    a:focus-visible,
-    &:focus-visible {
+    a.sr-tile__game:focus-visible {
       outline-color: var(--sr-header-focus);
+    }
+
+    .sr-tile__game--plain {
+      color: color-mix(in srgb, var(--sr-header-ink) 75%, var(--sr-header-bg));
     }
   }
 

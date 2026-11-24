@@ -34,7 +34,8 @@ describe("landing page", () => {
     for (const name of ["Workshop", "Play", "Archive"]) {
       expect(screen.getByRole("heading", { name })).toBeTruthy();
     }
-    expect(screen.getByText("The first game is on its way. There is nothing to open yet.")).toBeTruthy();
+    expect(await screen.findByText("The first game is on its way. There is nothing to open yet.")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Games" })).toBeTruthy();
     expect(screen.queryAllByTestId("family-tile")).toHaveLength(0);
   });
 
@@ -49,8 +50,10 @@ describe("landing page", () => {
     const tile = tiles[0] as HTMLElement;
     expect(within(tile).getByRole("heading", { name: "Family alpha" })).toBeTruthy();
     expect(within(tile).getByText("Blurb of alpha.")).toBeTruthy();
-    const links = within(tile).getAllByRole("link");
-    expect(links.map((link) => link.textContent)).toEqual(["Alpha One", "Alpha Two"]);
+    const list = within(tile).getByRole("list", { name: "Family alpha" });
+    const links = within(list).getAllByRole("link");
+    expect(links.map((link) => link.textContent)).toEqual(["Alpha One, Family alpha", "Alpha Two, Family alpha"]);
+    expect(within(list).getByRole("link", { name: /^Alpha One\s*,\s*Family alpha$/ })).toBe(links[0]);
     expect(links[0]?.getAttribute("href")).toBe("/alpha/one/play");
     expect(within(tile).queryByText("Alpha Late")).toBeNull();
     expect(screen.getByRole("heading", { name: "Choose your games" })).toBeTruthy();
@@ -63,6 +66,7 @@ describe("landing page", () => {
     expect(tile.tagName).toBe("A");
     expect(tile.getAttribute("href")).toBe("/alpha/main/play");
     expect(within(tile).getByRole("heading", { name: "Family alpha" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Family alpha" })).toBe(tile);
   });
 
   it("shows a single tile large, with its artwork and credit", async () => {
@@ -101,6 +105,7 @@ describe("landing page", () => {
 
   it("falls to the single layout when one of two families is hidden", async () => {
     await renderLanding([fixtureFamily("alpha"), fixtureFamily("beta")], { hiddenFamilies: ["alpha"] });
+    expect(screen.queryAllByTestId("family-tile")).toHaveLength(0); // nothing flashes before the settings load
     await waitFor(() => {
       expect(screen.getAllByTestId("family-tile")).toHaveLength(1);
     });

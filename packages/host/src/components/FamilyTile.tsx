@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import type { ReactNode } from "react";
 import { Link } from "react-router";
 import type { FamilyManifest, GameManifest } from "@salvage-rights/shared";
@@ -17,13 +17,17 @@ export function FamilyTile({
   games: GameManifest[];
   size: "grid" | "single";
 }) {
+  const nameId = useId();
+  const blurbId = useId();
   const [artworkFailed, setArtworkFailed] = useState(false);
   const artwork = size === "single" && !artworkFailed ? family.artwork : undefined;
 
   const text = (
     <div className="sr-tile__text">
-      <h3 className="sr-tile__name">{family.name}</h3>
-      <p className="sr-tile__blurb">{family.blurb}</p>
+      <h3 id={nameId} className="sr-tile__name">
+        {family.name}
+      </h3>
+      <p id={blurbId} className="sr-tile__blurb">{family.blurb}</p>
     </div>
   );
   const picture = artwork && (
@@ -64,8 +68,12 @@ export function FamilyTile({
 
   if (onlyPath !== null) {
     return (
-      <Link {...common} to={onlyPath}>
-        {body(<span className="sr-tile__open">Open &rarr;</span>)}
+      <Link {...common} to={onlyPath} aria-labelledby={nameId} aria-describedby={blurbId}>
+        {body(
+          <span className="sr-tile__open" aria-hidden="true">
+            Open &rarr;
+          </span>,
+        )}
       </Link>
     );
   }
@@ -73,16 +81,17 @@ export function FamilyTile({
   return (
     <div {...common}>
       {body(
-        <ul className="sr-tile__games">
+        <ul className="sr-tile__games" aria-labelledby={nameId}>
           {games.map((game) => {
             const path = firstPath(family, game);
             return (
               <li key={game.id}>
                 {path === null ? (
-                  <span className="sr-tile__game">{game.shortName}</span>
+                  <span className="sr-tile__game sr-tile__game--plain">{game.shortName}</span>
                 ) : (
                   <Link className="sr-tile__game" to={path}>
                     {game.shortName}
+                    <span className="sr-tile__hidden">, {family.name}</span>
                   </Link>
                 )}
               </li>

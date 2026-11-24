@@ -1,6 +1,6 @@
 import { Link } from "react-router";
 import type { FamilyManifest } from "@salvage-rights/shared";
-import { shownFamilies, tileLayout } from "@salvage-rights/shared";
+import { listedGames, shownFamilies, tileLayout } from "@salvage-rights/shared";
 import { TileGrid } from "../components/TileGrid";
 import { useSettings } from "../settings-context";
 
@@ -17,9 +17,13 @@ const OPTIONS = [
 ];
 
 export function Landing({ families }: { families: FamilyManifest[] }) {
-  const { settings } = useSettings();
+  const { settings, loaded } = useSettings();
   const layout = tileLayout(families, settings);
   const shown = shownFamilies(families, settings);
+  const only = shown.length === 1 ? shown[0] : undefined;
+  let gamesHeading = "Games";
+  if (layout === "grid") gamesHeading = "Choose your games";
+  if (layout === "single") gamesHeading = only && listedGames(only, settings).length === 1 ? "Your game" : "Your games";
 
   return (
     <div className="sr-landing">
@@ -47,16 +51,20 @@ export function Landing({ families }: { families: FamilyManifest[] }) {
         </div>
       </section>
 
-      <section className="sr-landing__section" aria-labelledby="games-heading">
-        <h2 id="games-heading">{layout === "single" ? "Your game" : "Choose your games"}</h2>
-        {layout === "none-ready" && <p>The first game is on its way. There is nothing to open yet.</p>}
-        {layout === "all-hidden" && (
-          <p>
-            You have hidden every game. <Link to="/settings">Choose games in Settings</Link>
-          </p>
-        )}
-        {(layout === "single" || layout === "grid") && <TileGrid families={shown} settings={settings} />}
-      </section>
+      {loaded && (
+        <section className="sr-landing__section" aria-labelledby="games-heading">
+          <h2 id="games-heading">{gamesHeading}</h2>
+          {layout === "none-ready" && <p>The first game is on its way. There is nothing to open yet.</p>}
+          {layout === "all-hidden" && (
+            <p>
+              You have hidden every game. <Link to="/settings">Choose games in Settings</Link>
+            </p>
+          )}
+          {(layout === "single" || layout === "grid") && (
+            <TileGrid families={shown} settings={settings} layout={layout} />
+          )}
+        </section>
+      )}
     </div>
   );
 }
