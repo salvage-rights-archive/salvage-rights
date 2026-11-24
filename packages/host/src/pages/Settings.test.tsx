@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { IDBFactory } from "fake-indexeddb";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DEFAULT_SETTINGS, loadSettings, openStore, saveSettings } from "@salvage-rights/shared";
-import type { ExportFile, FamilyManifest, Settings } from "@salvage-rights/shared";
+import type { FamilyManifest, Settings } from "@salvage-rights/shared";
 import { SettingsProvider } from "../settings-context";
 import { fixtureFamily, fixtureGame } from "../test-fixtures";
 import { SettingsPage } from "./Settings";
@@ -48,6 +48,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
+  vi.unstubAllGlobals();
 });
 
 describe("settings page", () => {
@@ -70,10 +71,10 @@ describe("settings page", () => {
     await renderSettings([alpha, beta, waiting], { hiddenFamilies: ["alpha"], hiddenGames: ["alpha/two"] });
     const games = screen.getByRole("group", { name: "Show these games" });
     expect(within(games).getAllByRole("checkbox").map((box) => box.parentElement?.textContent)).toEqual([
-      "Family alpha",
+      "Show Family alpha",
       "Alpha One",
       "Alpha Two",
-      "Family beta",
+      "Show Family beta",
     ]);
     // Games of a hidden family are unticked and disabled, and their stored state is kept.
     for (const name of ["Alpha One", "Alpha Two"]) {
@@ -87,7 +88,7 @@ describe("settings page", () => {
   it("hides and shows families and games, leaving ids it does not know alone", async () => {
     await renderSettings([alpha, beta], { hiddenFamilies: ["gone"], hiddenGames: ["gone/game"] });
     const games = screen.getByRole("group", { name: "Show these games" });
-    await userEvent.click(within(games).getByRole("checkbox", { name: "Family beta" }));
+    await userEvent.click(within(games).getByRole("checkbox", { name: "Show Family beta" }));
     await userEvent.click(within(games).getByRole("checkbox", { name: "Alpha Two" }));
     await waitFor(async () => {
       expect(await storedSettings()).toMatchObject({
@@ -95,7 +96,7 @@ describe("settings page", () => {
         hiddenGames: ["gone/game", "alpha/two"],
       });
     });
-    await userEvent.click(within(games).getByRole("checkbox", { name: "Family beta" }));
+    await userEvent.click(within(games).getByRole("checkbox", { name: "Show Family beta" }));
     await userEvent.click(within(games).getByRole("checkbox", { name: "Alpha Two" }));
     await waitFor(async () => {
       expect(await storedSettings()).toMatchObject({ hiddenFamilies: ["gone"], hiddenGames: ["gone/game"] });
@@ -109,7 +110,7 @@ describe("settings page", () => {
   });
 
   it("says so when the browser is not letting us save", async () => {
-    globalThis.indexedDB = undefined as unknown as IDBFactory;
+    vi.stubGlobal("indexedDB", undefined);
     await renderSettings([beta]);
     expect(
       screen.getByText("This browser is not letting us save. Your choices last until you close this tab."),
@@ -128,35 +129,37 @@ describe("settings page", () => {
     expect(screen.getByText("Hiding a game hides its tile and its menus. Nothing you built is deleted.")).toBeTruthy();
   });
 
-  it("exports the host settings, and refuses a file for another namespace without changing anything", async () => {
-    await renderSettings([beta], { theme: "light" });
-    let blob: Blob | undefined;
-    vi.stubGlobal("URL", {
-      createObjectURL: (value: Blob) => {
-        blob = value;
-        return "blob:settings";
-      },
-      revokeObjectURL: () => undefined,
+  it("imports only the settings of a host file and shows them", async () => {
+    await renderSettings([alpha, beta]);
+    const file = {
+      app: "salvage-rights",
+      version: 1,
+      namespace: "host",
+      exportedAt: "",
+      entries: { settings: { theme: "dark", hiddenFamilies: ["beta"], hiddenGames: [] }, other: 1 },
+    };
+    await userEvent.upload(
+      screen.getByLabelText("Import settings"),
+      new File([JSON.stringify(file)], "settings.json", { type: "application/json" }),
+    );
+    expect((await screen.findByRole("status", { name: "Import result" })).textContent).toBe("Settings imported.");
+    expect((screen.getByRole("radio", { name: "Dark" }) as HTMLInputElement).checked).toBe(true);
+    expect((screen.getByRole("checkbox", { name: "Show Family beta" }) as HTMLInputElement).checked).toBe(false);
+    await waitFor(async () => {
+      expect(await storedSettings()).toMatchObject({ theme: "dark", hiddenFamilies: ["beta"] });
     });
-    const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => undefined);
-    await userEvent.click(screen.getByRole("button", { name: "Export settings" }));
-    await waitFor(() => {
-      expect(click).toHaveBeenCalled();
-    });
-    const link = click.mock.contexts[0] as HTMLAnchorElement;
-    expect(link.download).toBe("salvage-rights-settings.json");
-    const file = JSON.parse((await blob?.text()) ?? "null") as ExportFile;
-    expect(file.namespace).toBe("host");
-    expect(file.entries.settings).toMatchObject({ theme: "light" });
-    vi.unstubAllGlobals();
+  });
 
+  it("refuses a file for another namespace and changes nothing", async () => {
+    await renderSettings([beta], { theme: "light" });
     const other = { app: "salvage-rights", version: 1, namespace: "elsewhere", exportedAt: "", entries: {} };
     await userEvent.upload(
       screen.getByLabelText("Import settings"),
       new File([JSON.stringify(other)], "other.json", { type: "application/json" }),
     );
     expect((await screen.findByRole("alert")).textContent).toContain("different namespace");
-    expect(screen.getByRole("status").textContent).toBe("");
+    expect(screen.getByRole("status", { name: "Import result" }).textContent).toBe("");
+    expect((screen.getByRole("radio", { name: "Light" }) as HTMLInputElement).checked).toBe(true);
     expect(await storedSettings()).toMatchObject({ theme: "light" });
   });
 });

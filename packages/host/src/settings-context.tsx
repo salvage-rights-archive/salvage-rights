@@ -3,8 +3,9 @@ import type { ReactNode } from "react";
 import {
   DEFAULT_SETTINGS,
   exportStore,
-  importStore,
   loadSettings,
+  readExportFile,
+  readSettings,
   openStore,
   saveSettings,
 } from "@salvage-rights/shared";
@@ -21,8 +22,8 @@ export interface SettingsValue {
   saveFailed: boolean;
   /** Everything in the host store, ready to save as a file. */
   exportSettings(): Promise<ExportFile>;
-  /** Imports a parsed file into the host store. Returns the problems; on success the settings are re-read. */
-  importSettings(file: unknown): Promise<string[]>;
+  /** Applies the settings entry of a parsed export file, as `update` does. Returns the problems; nothing changes if any. */
+  importSettings(file: unknown): string[];
 }
 
 const SettingsContext = createContext<SettingsValue | null>(null);
@@ -73,16 +74,14 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const exportSettings = useCallback(async () => exportStore(await storePromise), [storePromise]);
 
   const importSettings = useCallback(
-    async (file: unknown) => {
-      const store = await storePromise;
-      const { problems } = await importStore(store, file);
-      if (problems.length === 0) {
-        changedBeforeLoad.current = true;
-        setSettings(await loadSettings(store));
-      }
-      return problems;
+    (file: unknown): string[] => {
+      const read = readExportFile(file, "host");
+      if (!read.entries) return read.problems;
+      if (!("settings" in read.entries)) return ["That file has no settings in it."];
+      update(readSettings(read.entries.settings));
+      return [];
     },
-    [storePromise],
+    [update],
   );
 
   const value = useMemo(

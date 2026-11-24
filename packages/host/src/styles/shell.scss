@@ -145,6 +145,17 @@ h1:focus {
     }
   }
 
+  &__family {
+    margin: 0 0 var(--sr-space-2);
+    padding: 0 var(--sr-space-2);
+    border: var(--sr-border) solid var(--sr-line);
+    border-radius: var(--sr-radius);
+
+    legend {
+      font-size: 1rem;
+    }
+  }
+
   &__choice {
     display: flex;
     align-items: center;

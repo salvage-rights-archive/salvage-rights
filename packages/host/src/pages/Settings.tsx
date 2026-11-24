@@ -10,6 +10,8 @@ const THEMES: { value: Theme; label: string }[] = [
   { value: "dark", label: "Dark" },
 ];
 
+const MAX_IMPORT_BYTES = 1024 * 1024;
+
 function without(ids: string[], id: string): string[] {
   return ids.filter((item) => item !== id);
 }
@@ -29,25 +31,42 @@ export function SettingsPage({ families }: { families: FamilyManifest[] }) {
   };
 
   const download = async () => {
-    const file = await exportSettings();
-    const url = URL.createObjectURL(new Blob([JSON.stringify(file, null, 2)], { type: "application/json" }));
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "salvage-rights-settings.json";
-    link.click();
-    URL.revokeObjectURL(url);
+    setProblems([]);
+    setImported(false);
+    try {
+      const file = await exportSettings();
+      const url = URL.createObjectURL(new Blob([JSON.stringify(file, null, 2)], { type: "application/json" }));
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "salvage-rights-settings.json";
+      document.body.append(link);
+      link.click();
+      link.remove();
+      setTimeout(() => {
+        URL.revokeObjectURL(url);
+      }, 1000);
+    } catch {
+      setProblems(["We could not make the export file."]);
+    }
   };
 
   const upload = async (event: ChangeEvent<HTMLInputElement>) => {
     const input = event.target;
     const chosen = input.files?.[0];
     if (!chosen) return;
+    setProblems([]);
     setImported(false);
     let found: string[];
-    try {
-      found = await importSettings(JSON.parse(await chosen.text()));
-    } catch {
-      found = ["That file is not a Salvage Rights settings file."];
+    if (chosen.size > MAX_IMPORT_BYTES) {
+      found = ["That file is too large to be a settings file."];
+    } else {
+      const text = await chosen.text();
+      try {
+        found = importSettings(JSON.parse(text));
+      } catch (error) {
+        if (!(error instanceof SyntaxError)) throw error;
+        found = ["That file is not a Salvage Rights settings file."];
+      }
     }
     setProblems(found);
     setImported(found.length === 0);
@@ -57,16 +76,18 @@ export function SettingsPage({ families }: { families: FamilyManifest[] }) {
   return (
     <div className="sr-page sr-settings">
       <h1>Settings</h1>
+      <div role="status" aria-label="Saving">
+        {loaded && !persistent && (
+          <p className="sr-settings__warning">
+            This browser is not letting us save. Your choices last until you close this tab.
+          </p>
+        )}
+        {loaded && persistent && saveFailed && (
+          <p className="sr-settings__warning">We could not save that change. It will last until you close this tab.</p>
+        )}
+      </div>
       {loaded && (
         <>
-          {!persistent && (
-            <p className="sr-settings__warning">
-              This browser is not letting us save. Your choices last until you close this tab.
-            </p>
-          )}
-          {persistent && saveFailed && (
-            <p className="sr-settings__warning">We could not save that change. It will last until you close this tab.</p>
-          )}
 
           <fieldset className="sr-settings__group">
             <legend>Theme</legend>
@@ -94,7 +115,8 @@ export function SettingsPage({ families }: { families: FamilyManifest[] }) {
                 const familyHidden = settings.hiddenFamilies.includes(family.id);
                 const readyGames = family.games.filter((game) => game.ready);
                 return (
-                  <div key={family.id} className="sr-settings__family">
+                  <fieldset key={family.id} className="sr-settings__family">
+                    <legend>{family.name}</legend>
                     <label className="sr-settings__choice">
                       <input
                         type="checkbox"
@@ -103,8 +125,13 @@ export function SettingsPage({ families }: { families: FamilyManifest[] }) {
                           change({ hiddenFamilies: toggled(settings.hiddenFamilies, family.id, !event.target.checked) });
                         }}
                       />
-                      {family.name}
+                      {`Show ${family.name}`}
                     </label>
+                    {readyGames.length > 1 && familyHidden && (
+                      <p id={`hint-${family.id}`} className="sr-settings__hint">
+                        {`Show ${family.name} to choose its games.`}
+                      </p>
+                    )}
                     {readyGames.length > 1 &&
                       readyGames.map((game) => {
                         const id = `${family.id}/${game.id}`;
@@ -113,6 +140,7 @@ export function SettingsPage({ families }: { families: FamilyManifest[] }) {
                             <input
                               type="checkbox"
                               disabled={familyHidden}
+                              aria-describedby={familyHidden ? `hint-${family.id}` : undefined}
                               checked={!familyHidden && !settings.hiddenGames.includes(id)}
                               onChange={(event) => {
                                 change({ hiddenGames: toggled(settings.hiddenGames, id, !event.target.checked) });
@@ -122,7 +150,7 @@ export function SettingsPage({ families }: { families: FamilyManifest[] }) {
                           </label>
                         );
                       })}
-                  </div>
+                  </fieldset>
                 );
               })}
               <p className="sr-settings__hint">
@@ -152,7 +180,7 @@ export function SettingsPage({ families }: { families: FamilyManifest[] }) {
                 }}
               />
             </label>
-            <div role="status">{imported && "Settings imported."}</div>
+            <div role="status" aria-label="Import result">{imported && "Settings imported."}</div>
             <div role="alert">
               {problems.map((problem) => (
                 <p key={problem}>{problem}</p>
