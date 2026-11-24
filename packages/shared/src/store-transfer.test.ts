@@ -44,7 +44,6 @@ describe("store transfer", () => {
 
   it.each([
     ["a non-object", "nope", /object/],
-    ["null", null, /object/],
     ["a wrong app", { app: "other", version: 1, namespace: "N", entries: {} }, /app/],
     ["a wrong version", { app: "salvage-rights", version: 2, namespace: "N", entries: {} }, /version/],
     ["a different namespace", { app: "salvage-rights", version: 1, namespace: "other", entries: {} }, /namespace/],

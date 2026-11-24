@@ -46,7 +46,7 @@ const testbed: FamilyManifest = {
 function renderAt(path: string) {
   return render(
     <MemoryRouter initialEntries={[path]}>
-      <App families={[testbed]} />
+      <App families={[testbed]} editionId="testbed-edition" />
     </MemoryRouter>,
   );
 }
@@ -75,9 +75,16 @@ describe("host frame", () => {
   it("lists one credits block per family on the About page", () => {
     renderAt("/about");
     expect(screen.getByRole("heading", { name: "About Salvage Rights" })).toBeTruthy();
-    const block = screen.getByRole("region", { name: "Credits: Testbed Family" });
+    const block = screen.getByRole("region", { name: "Testbed Family" });
     expect(within(block).getByText(/Fixture Owner Ltd/)).toBeTruthy();
-    expect(screen.getAllByRole("region", { name: /^Credits:/ })).toHaveLength(1);
+    const credits = screen.getByRole("region", { name: "Credits" });
+    expect(credits.id).toBe("credits");
+    expect(within(credits).getAllByRole("region")).toHaveLength(1);
+  });
+
+  it("shows the edition id on the About page", () => {
+    renderAt("/about");
+    expect(screen.getByText("Edition: testbed-edition")).toBeTruthy();
   });
 
   it("shows the not-found page with a link to the landing page for an unknown path", () => {

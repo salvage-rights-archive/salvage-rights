@@ -1,11 +1,12 @@
 import { resolve } from "node:path";
 import { defineConfig, devices } from "@playwright/test";
+import { BASE_PATH, DEV_ORIGIN, FREE_ORIGIN } from "./e2e/urls";
 
 const repoRoot = resolve(import.meta.dirname, "../..");
 
 // One static server per edition, each behaving like GitHub Pages. `npm run test:e2e` builds both editions first.
-export const DEV_URL = "http://127.0.0.1:4173";
-export const FREE_URL = "http://127.0.0.1:4174";
+const DEV_PORT = new URL(DEV_ORIGIN).port;
+const FREE_PORT = new URL(FREE_ORIGIN).port;
 
 export default defineConfig({
   testDir: "e2e",
@@ -21,15 +22,15 @@ export default defineConfig({
   ],
   webServer: [
     {
-      command: "node packages/host/e2e/serve-pages.mjs dist/dev 4173",
+      command: `node packages/host/e2e/serve-pages.mjs dist/dev ${DEV_PORT}`,
       cwd: repoRoot,
-      url: `${DEV_URL}/salvage-rights/`,
+      url: `${DEV_ORIGIN}${BASE_PATH}/`,
       reuseExistingServer: false,
     },
     {
-      command: "node packages/host/e2e/serve-pages.mjs dist/free 4174",
+      command: `node packages/host/e2e/serve-pages.mjs dist/free ${FREE_PORT}`,
       cwd: repoRoot,
-      url: `${FREE_URL}/salvage-rights/`,
+      url: `${FREE_ORIGIN}${BASE_PATH}/`,
       reuseExistingServer: false,
     },
   ],

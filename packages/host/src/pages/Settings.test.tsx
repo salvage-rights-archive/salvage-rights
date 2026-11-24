@@ -123,6 +123,8 @@ describe("settings page", () => {
     control.failSaves = true;
     await userEvent.click(screen.getByRole("radio", { name: "Light" }));
     expect(await screen.findByText("We could not save that change. It will last until you close this tab.")).toBeTruthy();
+    // The choice stays as made, in memory.
+    expect((screen.getByRole("radio", { name: "Light" }) as HTMLInputElement).checked).toBe(true);
   });
 
   it("explains that hiding deletes nothing", async () => {

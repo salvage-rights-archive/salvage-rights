@@ -26,6 +26,7 @@ export class AppErrorBoundary extends Component<{ children: ReactNode }, State> 
           <p>
             <button
               type="button"
+              className="sr-action"
               onClick={() => {
                 window.location.reload();
               }}

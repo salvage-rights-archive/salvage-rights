@@ -100,6 +100,13 @@ h1:focus {
   padding: var(--sr-space-4) var(--sr-space-3);
 }
 
+// A link or button that stands alone on its line, so it gets a full-size touch target.
+.sr-action {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}
+
 .sr-credits {
   margin-bottom: var(--sr-space-3);
   padding: var(--sr-space-2) var(--sr-space-3);

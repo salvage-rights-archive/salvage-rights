@@ -1,7 +1,7 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router";
-import { families } from "virtual:families";
+import { editionId, families } from "virtual:families";
 import { App } from "./App";
 import { restoredPath } from "./restore-path";
 import { startupProblems } from "./startup";
@@ -42,7 +42,7 @@ if (problems.length > 0) {
   createRoot(container).render(
     <StrictMode>
       <BrowserRouter basename={import.meta.env.BASE_URL}>
-        <App families={families} />
+        <App families={families} editionId={editionId} />
       </BrowserRouter>
     </StrictMode>,
   );

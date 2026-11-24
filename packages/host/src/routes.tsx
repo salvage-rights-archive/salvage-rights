@@ -6,11 +6,11 @@ import { Landing } from "./pages/Landing";
 import { NotFound } from "./pages/NotFound";
 import { SettingsPage } from "./pages/Settings";
 
-export function AppRoutes({ families }: { families: FamilyManifest[] }) {
+export function AppRoutes({ families, editionId }: { families: FamilyManifest[]; editionId: string }) {
   return (
     <Routes>
       <Route path="/" element={<Landing families={families} />} />
-      <Route path="/about" element={<About families={families} />} />
+      <Route path="/about" element={<About families={families} editionId={editionId} />} />
       <Route path="/settings" element={<SettingsPage families={families} />} />
       <Route path="/:family/*" element={<FamilyRoutePage families={families} />} />
       <Route path="*" element={<NotFound />} />

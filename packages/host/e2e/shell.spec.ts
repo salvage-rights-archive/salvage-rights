@@ -2,19 +2,23 @@ import { readFile } from "node:fs/promises";
 import { DEV, FREE, expect, tabTo, test } from "./fixtures";
 
 test.describe("dev edition", () => {
-  test("the landing page shows the example tile and a game link opens its page", async ({ page }) => {
+  test("the landing page shows one tile and its first game link opens that game's page", async ({ page }) => {
     await page.goto(`${DEV}/`);
     await expect(page.getByRole("heading", { level: 1 })).toHaveText("Archaeology for mecha tabletop games.");
     await expect(page.getByRole("heading", { name: "Your games" })).toBeVisible();
-    await expect(page.getByTestId("family-tile")).toHaveCount(1);
-    await page.getByRole("link", { name: "Alpha, Example Yard" }).click();
-    await expect(page.getByRole("heading", { name: "Example page" })).toBeVisible();
-    await expect(page).toHaveTitle("Example page · Salvage Rights");
+    const tile = page.getByTestId("family-tile");
+    await expect(tile).toHaveCount(1);
+    await tile.getByRole("link").first().click();
+    await expect(page).toHaveURL(/\/salvage-rights\/[a-z0-9-]+\/[a-z0-9-]+\/[a-z0-9-/]+$/);
+    const heading = page.getByRole("heading", { level: 1 });
+    await expect(heading).toBeVisible();
+    await expect(page).toHaveTitle(`${(await heading.textContent()) ?? ""} · Salvage Rights`);
   });
 
   test("hiding the family shows the all-hidden line and the choice survives a reload", async ({ page }) => {
     await page.goto(`${DEV}/settings`);
-    await page.getByRole("checkbox", { name: "Show Example Yard" }).uncheck();
+    // The first "Show ..." checkbox is the family's own.
+    await page.getByRole("checkbox", { name: /^Show / }).first().uncheck();
     await page.getByRole("link", { name: "Games" }).click();
     await expect(page.getByText("You have hidden every game.")).toBeVisible();
     // Reload at once: a change just made must not be lost.
@@ -68,11 +72,18 @@ test.describe("dev edition", () => {
   test("Tab reaches every link in order and each shows a focus outline", async ({ page, browserName }) => {
     await page.goto(`${DEV}/`);
     await expect(page.getByTestId("family-tile")).toBeVisible();
-    const expected = ["Games", "About", "Settings", "Alpha, Example Yard", "Bravo, Example Yard"];
-    for (const name of expected) {
-      await tabTo(page, browserName, page.getByRole("link", { name, exact: true }));
+    const gameLinks = page.getByTestId("family-tile").getByRole("link");
+    const expected = ["Games", "About", "Settings"].map((name) => ({
+      name,
+      link: page.getByRole("link", { name, exact: true }),
+    }));
+    const gameCount = await gameLinks.count();
+    expect(gameCount).toBeGreaterThan(0);
+    for (let i = 0; i < gameCount; i += 1) expected.push({ name: `game link ${String(i + 1)}`, link: gameLinks.nth(i) });
+    for (const { name, link } of expected) {
+      await tabTo(page, browserName, link);
+      await expect(link).toBeFocused();
       const focused = page.locator(":focus");
-      await expect(focused).toHaveAccessibleName(name);
       // The header and the single tile's panel are dark, so their links use the header ring colour.
       const ring = await focused.evaluate(
         (element, token) => {
@@ -94,7 +105,8 @@ test.describe("dev edition", () => {
 
   test("a tile that is one link shows the project's focus ring only while focused", async ({ page, browserName }) => {
     await page.goto(`${DEV}/settings`);
-    await page.getByRole("checkbox", { name: "Bravo" }).uncheck();
+    // The family checkbox comes first, then one per game: hiding the last game leaves a tile with one link.
+    await page.getByRole("checkbox").last().uncheck();
     await page.goto(`${DEV}/`);
     const tile = page.getByTestId("family-tile");
     await expect(tile).toBeVisible();
@@ -111,7 +123,8 @@ test.describe("dev edition", () => {
       });
 
     expect((await ringOf()).content).toBe("none");
-    for (let i = 0; i < 4; i += 1) await tabTo(page, browserName, tile);
+    // Three header links come first, then the tile.
+    await tabTo(page, browserName, tile, 4);
     await expect(tile).toBeFocused();
     const focused = await ringOf();
     expect(focused.content).not.toBe("none");

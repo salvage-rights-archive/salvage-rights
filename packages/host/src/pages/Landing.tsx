@@ -56,9 +56,14 @@ export function Landing({ families }: { families: FamilyManifest[] }) {
           <h2 id="games-heading">{gamesHeading}</h2>
           {layout === "none-ready" && <p>The first game is on its way. There is nothing to open yet.</p>}
           {layout === "all-hidden" && (
-            <p>
-              You have hidden every game. <Link to="/settings">Choose games in Settings</Link>
-            </p>
+            <>
+              <p>You have hidden every game.</p>
+              <p>
+                <Link className="sr-action" to="/settings">
+                  Choose games in Settings
+                </Link>
+              </p>
+            </>
           )}
           {(layout === "single" || layout === "grid") && (
             <TileGrid families={shown} settings={settings} layout={layout} />

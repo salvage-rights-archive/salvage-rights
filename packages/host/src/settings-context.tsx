@@ -45,7 +45,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     });
     return { storePromise: opened, readPromise: read };
   });
-  const changedBeforeLoad = useRef(false);
+  const changedThisSession = useRef(false);
   const current = useRef<Settings>(DEFAULT_SETTINGS);
 
   useEffect(() => {
@@ -53,7 +53,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     void Promise.all([storePromise, readPromise]).then(([store, stored]) => {
       if (cancelled) return;
       setPersistent(store.persistent);
-      if (stored && !changedBeforeLoad.current) {
+      if (stored && !changedThisSession.current) {
         current.current = stored;
         setSettings(stored);
       }
@@ -66,7 +66,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
   const update = useCallback(
     (next: Settings) => {
-      changedBeforeLoad.current = true;
+      changedThisSession.current = true;
       current.current = next;
       setSettings(next);
       storePromise
@@ -88,7 +88,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const exportSettings = useCallback(async () => {
     const stored = await readPromise;
     const file = await exportStore(await storePromise);
-    const mine = changedBeforeLoad.current ? current.current : (stored ?? DEFAULT_SETTINGS);
+    const mine = changedThisSession.current ? current.current : (stored ?? DEFAULT_SETTINGS);
     return { ...file, entries: { ...file.entries, settings: mine } };
   }, [storePromise, readPromise]);
 

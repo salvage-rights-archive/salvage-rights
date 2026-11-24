@@ -15,7 +15,7 @@ const FONTS = [
   },
 ];
 
-export function About({ families }: { families: FamilyManifest[] }) {
+export function About({ families, editionId }: { families: FamilyManifest[]; editionId: string }) {
   return (
     <div className="sr-page">
       <h1>About Salvage Rights</h1>
@@ -24,22 +24,24 @@ export function About({ families }: { families: FamilyManifest[] }) {
       </p>
       <p>These tools are built with AI assistance.</p>
 
-      <h2>Credits</h2>
-      {families.map((family) => (
-        <section key={family.id} aria-label={`Credits: ${family.name}`} className="sr-credits">
-          <h3>{family.name}</h3>
-          <p>
-            Owner: {family.credits.owner}. License: {family.credits.license}.
-          </p>
-          {family.credits.notes.length > 0 && (
-            <ul>
-              {family.credits.notes.map((note) => (
-                <li key={note}>{note}</li>
-              ))}
-            </ul>
-          )}
-        </section>
-      ))}
+      <section id="credits" aria-labelledby="credits-heading">
+        <h2 id="credits-heading">Credits</h2>
+        {families.map((family) => (
+          <section key={family.id} aria-labelledby={`credits-${family.id}`} className="sr-credits">
+            <h3 id={`credits-${family.id}`}>{family.name}</h3>
+            <p>
+              Owner: {family.credits.owner}. License: {family.credits.license}.
+            </p>
+            {family.credits.notes.length > 0 && (
+              <ul>
+                {family.credits.notes.map((note) => (
+                  <li key={note}>{note}</li>
+                ))}
+              </ul>
+            )}
+          </section>
+        ))}
+      </section>
 
       <h2>Fonts</h2>
       <ul>
@@ -49,6 +51,8 @@ export function About({ families }: { families: FamilyManifest[] }) {
           </li>
         ))}
       </ul>
+
+      <p className="sr-edition">Edition: {editionId}</p>
     </div>
   );
 }

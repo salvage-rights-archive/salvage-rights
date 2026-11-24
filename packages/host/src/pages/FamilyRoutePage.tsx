@@ -48,7 +48,7 @@ class PageErrorBoundary extends Component<{ children: ReactNode }, BoundaryState
       <div className="sr-page">
         <h1>Something went wrong</h1>
         <p>
-          <Link to="/">Back to the landing page</Link>
+          <Link className="sr-action" to="/">Back to the landing page</Link>
         </p>
       </div>
     );

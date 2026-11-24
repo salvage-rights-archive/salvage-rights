@@ -9,7 +9,7 @@ import { SettingsProvider, useSettings } from "./settings-context";
 
 const SITE_NAME = "Salvage Rights";
 
-function Frame({ families }: { families: FamilyManifest[] }) {
+function Frame({ families, editionId }: { families: FamilyManifest[]; editionId: string }) {
   const { settings } = useSettings();
   const { pathname, key } = useLocation();
   const main = useRef<HTMLElement>(null);
@@ -49,7 +49,7 @@ function Frame({ families }: { families: FamilyManifest[] }) {
     <div className="sr-frame">
       <Header />
       <main ref={main} className="sr-content">
-        <AppRoutes families={families} />
+        <AppRoutes families={families} editionId={editionId} />
       </main>
       <Footer />
     </div>
@@ -57,11 +57,11 @@ function Frame({ families }: { families: FamilyManifest[] }) {
 }
 
 /** The app frame. The caller supplies the router, so tests can use a memory router. */
-export function App({ families }: { families: FamilyManifest[] }) {
+export function App({ families, editionId }: { families: FamilyManifest[]; editionId: string }) {
   return (
     <AppErrorBoundary>
       <SettingsProvider>
-        <Frame families={families} />
+        <Frame families={families} editionId={editionId} />
       </SettingsProvider>
     </AppErrorBoundary>
   );
