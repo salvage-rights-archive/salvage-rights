@@ -8,3 +8,6 @@ playwright-report/
 .env
 .env.*
 !.env.example
+
+# Designs and plans are kept in the private archive, not here.
+docs/superpowers/
