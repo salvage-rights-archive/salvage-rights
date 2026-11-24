@@ -43,12 +43,25 @@ describe("expand", () => {
     expect(row("gauss-rifle-is").slots).toBe(7);
   });
 
+  const OK = { kind: "weapon", techBase: "clan", tons: 1, slots: 1, cite: TM, checked: "page", availability: [{ from: 1 }] };
   it.each([
-    ["a duplicate id", [{ defaults: GROUPS[0]?.defaults ?? {}, items: [{ id: "x-is", name: "X", tons: 1, availability: [{ from: 1 }] }, { id: "x-is", name: "Y", tons: 1, availability: [{ from: 1 }] }] }], "x-is"],
-    ["a missing tons", [{ defaults: GROUPS[0]?.defaults ?? {}, items: [{ id: "no-tons-is", name: "No Tons", availability: [{ from: 1 }] }] }], "no-tons-is"],
-    ["a missing cite", [{ defaults: { kind: "weapon", techBase: "clan", tons: 1, slots: 1, checked: "page", availability: [{ from: 1 }] }, items: [{ id: "no-cite-clan", name: "No Cite" }] }], "no-cite-clan"],
-  ] as const)("throws naming the id for %s", (_label, groups, id) => {
+    ["a duplicate id", { id: "dup-is" }, "dup-is"],
+    ["a missing tons", { id: "no-tons-is", tons: undefined }, "no-tons-is"],
+    ["a missing cite", { id: "no-cite-is", cite: undefined }, "no-cite-is"],
+    ["a formula that is not registered", { id: "formula-is", tons: "no-such-formula" }, "formula-is"],
+    ["an empty availability", { id: "empty-is", availability: [] }, "empty-is"],
+    ["a span that ends before it starts", { id: "span-is", availability: [{ from: 3000, to: 2999 }] }, "span-is"],
+    ["an invalid tech base", { id: "base-is", techBase: "mixed" }, "base-is"],
+    ["an invalid kind", { id: "kind-is", kind: "gadget" }, "kind-is"],
+  ])("throws naming the id for %s", (_label, change, id) => {
+    const item = { ...OK, name: "Item", ...change };
+    const groups = [{ defaults: {}, items: [{ ...OK, id: "dup-is", name: "First" }, item] }];
     expect(() => expand(groups as unknown as EquipmentGroup[])).toThrow(id);
+  });
+
+  it("keeps perMech, yearsInferred and directFire on the expanded row", () => {
+    const [row] = expand([{ defaults: { ...OK, yearsInferred: true, directFire: true }, items: [{ id: "tsm-is", name: "TSM", perMech: 6 }] }] as unknown as EquipmentGroup[]);
+    expect(row).toMatchObject({ perMech: 6, yearsInferred: true, directFire: true });
   });
 });
 
@@ -91,6 +104,32 @@ describe("offered and available", () => {
     const ppcMount = mount("p", "ppc-is", "RA", 0);
     expect(catalog.factsOf(ppcMount, bipedRecord({ editionId: "test-ed" }))).toEqual({ tons: 8, slots: 3 });
     expect(catalog.factsOf(ppcMount, bipedRecord({ editionId: "core-2026" }))).toEqual({ tons: 7, slots: 3 });
+  });
+});
+
+describe("targeting computer", () => {
+  const laser = { kind: "weapon", techBase: "inner-sphere", cite: TM, checked: "page", slots: 2 } as const;
+  const tc = createCatalog(
+    expand([
+      { defaults: { ...laser, directFire: true }, items: [{ id: "laser-is", name: "Laser", tons: 7, availability: [{ from: 1 }] }] },
+      { defaults: laser, items: [{ id: "mg-is", name: "MG", tons: 0.5, slots: 1, availability: [{ from: 1 }] }] },
+      {
+        defaults: { kind: "other", techBase: "inner-sphere", cite: TM, checked: "page", availability: [{ from: 1 }] },
+        items: [
+          { id: "tc-is", name: "TC", tons: "targeting-computer-is", slots: "targeting-computer-is" },
+          { id: "tc-clan", name: "TC", techBase: "clan", tons: "targeting-computer-clan", slots: "targeting-computer-clan" },
+        ],
+      },
+    ]),
+  );
+
+  it("weighs the record's direct-fire weapons over 4 or 5, rounded up, ignoring the rest", () => {
+    const record = bipedRecord({
+      mounts: [mount("a", "laser-is", "RA", 0), mount("b", "laser-is", "LA", 0), mount("c", "mg-is", "RT", 0), mount("d", null, "LT", 0), mount("t", "tc-is", "CT", 0)],
+    });
+    expect(tc.factsOf(mount("t", "tc-is", "CT", 0), record)).toEqual({ tons: 4, slots: 4 }); // 14 / 4 = 3.5
+    expect(tc.factsOf(mount("t", "tc-clan", "CT", 0), record)).toEqual({ tons: 3, slots: 3 }); // 14 / 5 = 2.8
+    expect(tc.factsOf(mount("t", "tc-is", "CT", 0), bipedRecord({ mounts: [mount("c", "mg-is", "RT", 0)] }))).toEqual({ tons: 0, slots: 0 });
   });
 });
 

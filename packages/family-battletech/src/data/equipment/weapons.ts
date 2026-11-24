@@ -5,26 +5,30 @@
 // Where each value came from. Tons and slots (the M column, critical slots) are the Weapons and Equipment tables,
 // printed pp. 341-343; the group's cite names that page. Years are the Heavy Weapons and Equipment cost and availability
 // table, printed pp. 290-292, whose Introduced, Extinction and Reintroduced columns give an Inner Sphere and a Clan year.
-// Every page named here was read against the page image, so these rows are checked "page", except the retractable blade
-// (its dates are on p. 293 and were read from the text extract only). Conventions for the years:
+// Every page named here was read against the page image, so the rows are checked "page". Conventions for the years:
 //  - A span runs from the introduction year to the extinction year inclusive, as the book prints them; a reintroduction
 //    year starts a second span. No extinction means the span is open.
-//  - "PS" (pre-spaceflight, 1950 or sooner) is written as 1950, the latest year the book allows it to mean.
-//  - A Clan introduction of "—" means the item pre-existed and was never introduced separately; the Clan row then starts
-//    at the Inner Sphere introduction year. Items the Clan table does not list (standard ACs, PPCs, medium and large
-//    lasers, CASE) have no Clan row.
-//  - Where errata v8.0 differs from the printing, the erratum wins: the Large Laser's introduction is 2300 (erratum to
-//    the p. 291 table; the printing, like the p. 227 text, says 2316), so its cite is p. 291. The Snub-Nose PPC follows the
-//    p. 234 text as amended by the errata (introduced 2784, extinct 2790, recovered 3067); the p. 291 table only lists 3067.
+//  - "PS" (pre-spaceflight, 1950 or sooner) is written as 1950 and "ES" (early spaceflight, 1951 to 2200) as 2200, the
+//    latest year the book allows each to mean; circa years are written as printed.
+//  - `yearsInferred: true` marks a row whose years are not printed for its tech base. Where the Clan introduction column
+//    prints a dash the book means the item pre-existed, not that the Clan year equals the Inner Sphere one; the row then
+//    takes the Inner Sphere year (weapons) or its Clan weapon's year (Clan ammunition), and is marked. Clan items the
+//    table lists with a year are not marked. A marked row keeps checked "page" for its tons and slots; only its years
+//    carry the caveat. Items the Clan table does not list (standard ACs, PPCs, medium and large lasers) have no Clan row.
+//  - Where errata v8.0 differs from the printing the erratum wins, except the Large Laser: the erratum's p. 291 entry
+//    says 2300 and its p. 227 entry says 2316, so the printed 2316 stands (see the row). The Snub-Nose PPC follows the
+//    p. 234 text as amended by the errata (introduced 2784, extinct 2790, recovered 3067); the p. 291 table lists only 3067.
 // Placement limits (`locations`) and splitting follow the item entries on pp. 204-238 and the ranged-weapon rule on p. 57:
 // a ranged weapon of 8 or more slots may be split between two adjacent locations other than the legs.
+// `directFire` marks the weapons whose weight counts toward a targeting computer (p. 238): non-missile pulse and
+// direct-fire heavy weapons, not machine guns, flamers or TAG.
 // A formula name (a string in `tons` or `slots`) is defined in rules/catalog.ts.
 
 import type { EquipmentGroup } from "../../rules/catalog";
 
 export const WEAPONS: EquipmentGroup[] = [
   {
-    defaults: { kind: "weapon", techBase: "inner-sphere", cite: { book: "TechManual", page: 341 }, checked: "page" },
+    defaults: { kind: "weapon", techBase: "inner-sphere", cite: { book: "TechManual", page: 341 }, checked: "page", directFire: true },
     items: [
       // Autocannons (Inner Sphere)
       { id: "ac-2-is", name: "Autocannon/2", aliases: ["AC/2"], tons: 6, slots: 1, availability: [{ from: 2300 }] },
@@ -47,19 +51,14 @@ export const WEAPONS: EquipmentGroup[] = [
       { id: "light-gauss-rifle-is", name: "Light Gauss Rifle", tons: 12, slots: 5, availability: [{ from: 3056 }] },
       { id: "gauss-rifle-is", name: "Gauss Rifle", tons: 15, slots: 7, availability: [{ from: 2590, to: 2865 }, { from: 3040 }] },
       { id: "heavy-gauss-rifle-is", name: "Heavy Gauss Rifle", tons: 18, slots: 11, availability: [{ from: 3061 }], locations: ["CT", "LT", "RT"], splittable: true },
-      // Machine guns and flamers (Inner Sphere)
-      { id: "light-machine-gun-is", name: "Light Machine Gun", tons: 0.5, slots: 1, availability: [{ from: 3068 }] },
-      { id: "machine-gun-is", name: "Machine Gun", aliases: ["MG"], tons: 0.5, slots: 1, availability: [{ from: 1950 }] },
-      { id: "heavy-machine-gun-is", name: "Heavy Machine Gun", tons: 1, slots: 1, availability: [{ from: 3068 }] },
-      { id: "flamer-is", name: "Flamer", tons: 1, slots: 1, availability: [{ from: 2025 }] },
-      { id: "vehicle-flamer-is", name: "Flamer (Vehicle)", aliases: ["Vehicle Flamer"], tons: 0.5, slots: 1, availability: [{ from: 1950 }] },
       // Lasers (Inner Sphere)
       { id: "er-small-laser-is", name: "ER Small Laser", tons: 0.5, slots: 1, availability: [{ from: 3058 }] },
       { id: "er-medium-laser-is", name: "ER Medium Laser", tons: 1, slots: 1, availability: [{ from: 3058 }] },
       { id: "er-large-laser-is", name: "ER Large Laser", tons: 5, slots: 2, availability: [{ from: 2620, to: 2950 }, { from: 3037 }] },
       { id: "small-laser-is", name: "Small Laser", tons: 0.5, slots: 1, availability: [{ from: 2300 }] },
       { id: "medium-laser-is", name: "Medium Laser", tons: 1, slots: 1, availability: [{ from: 2300 }] },
-      { id: "large-laser-is", name: "Large Laser", tons: 5, slots: 2, availability: [{ from: 2300 }], cite: { book: "TechManual", page: 291 } },
+      // Errata v8.0 contradicts itself on this year (2300 in its p. 291 entry, 2316 in its p. 227 entry); the printed table and text both say 2316.
+      { id: "large-laser-is", name: "Large Laser", tons: 5, slots: 2, availability: [{ from: 2316 }], cite: { book: "TechManual", page: 227 } },
       { id: "small-pulse-laser-is", name: "Small Pulse Laser", tons: 1, slots: 1, availability: [{ from: 2609, to: 2950 }, { from: 3037 }] },
       { id: "medium-pulse-laser-is", name: "Medium Pulse Laser", tons: 2, slots: 1, availability: [{ from: 2609, to: 2950 }, { from: 3037 }] },
       { id: "large-pulse-laser-is", name: "Large Pulse Laser", tons: 7, slots: 2, availability: [{ from: 2609, to: 2950 }, { from: 3037 }] },
@@ -70,6 +69,17 @@ export const WEAPONS: EquipmentGroup[] = [
       { id: "heavy-ppc-is", name: "Heavy PPC", tons: 10, slots: 4, availability: [{ from: 3067 }] },
       { id: "er-ppc-is", name: "ER PPC", tons: 7, slots: 3, availability: [{ from: 2751, to: 2860 }, { from: 3037 }] },
       { id: "snub-nose-ppc-is", name: "Snub-Nose PPC", aliases: ["Snub-Nosed PPC"], tons: 6, slots: 2, availability: [{ from: 2784, to: 2790 }, { from: 3067 }], cite: { book: "TechManual", page: 234 } },
+    ],
+  },
+  {
+    defaults: { kind: "weapon", techBase: "inner-sphere", cite: { book: "TechManual", page: 341 }, checked: "page" },
+    items: [
+      // Machine guns and flamers (Inner Sphere)
+      { id: "light-machine-gun-is", name: "Light Machine Gun", tons: 0.5, slots: 1, availability: [{ from: 3068 }] },
+      { id: "machine-gun-is", name: "Machine Gun", aliases: ["MG"], tons: 0.5, slots: 1, availability: [{ from: 1950 }] },
+      { id: "heavy-machine-gun-is", name: "Heavy Machine Gun", tons: 1, slots: 1, availability: [{ from: 3068 }] },
+      { id: "flamer-is", name: "Flamer", tons: 1, slots: 1, availability: [{ from: 2025 }] },
+      { id: "vehicle-flamer-is", name: "Flamer (Vehicle)", aliases: ["Vehicle Flamer"], tons: 0.5, slots: 1, availability: [{ from: 1950 }] },
       // Missile launchers (Inner Sphere)
       { id: "lrm-5-is", name: "LRM 5", tons: 2, slots: 1, availability: [{ from: 2300 }] },
       { id: "lrm-10-is", name: "LRM 10", tons: 5, slots: 2, availability: [{ from: 2300 }] },
@@ -107,7 +117,7 @@ export const WEAPONS: EquipmentGroup[] = [
     ],
   },
   {
-    defaults: { kind: "weapon", techBase: "clan", cite: { book: "TechManual", page: 343 }, checked: "page" },
+    defaults: { kind: "weapon", techBase: "clan", cite: { book: "TechManual", page: 343 }, checked: "page", directFire: true },
     items: [
       // Autocannons (Clan)
       { id: "lb-2-x-ac-clan", name: "LB 2-X AC", aliases: ["LB 2-X"], tons: 5, slots: 3, availability: [{ from: 2826 }] },
@@ -124,12 +134,6 @@ export const WEAPONS: EquipmentGroup[] = [
       { id: "hyper-assault-gauss-20-clan", name: "Hyper-Assault Gauss 20", aliases: ["Hyper Assault Gauss 20", "HAG/20"], tons: 10, slots: 6, availability: [{ from: 3068 }] },
       { id: "hyper-assault-gauss-30-clan", name: "Hyper-Assault Gauss 30", aliases: ["Hyper Assault Gauss 30", "HAG/30"], tons: 13, slots: 8, availability: [{ from: 3068 }], splittable: true },
       { id: "hyper-assault-gauss-40-clan", name: "Hyper-Assault Gauss 40", aliases: ["Hyper Assault Gauss 40", "HAG/40"], tons: 16, slots: 10, availability: [{ from: 3069 }], splittable: true },
-      // Machine guns and flamers (Clan)
-      { id: "light-machine-gun-clan", name: "Light Machine Gun", tons: 0.25, slots: 1, availability: [{ from: 3060 }] },
-      { id: "machine-gun-clan", name: "Machine Gun", aliases: ["MG"], tons: 0.25, slots: 1, availability: [{ from: 2825 }] },
-      { id: "heavy-machine-gun-clan", name: "Heavy Machine Gun", tons: 0.5, slots: 1, availability: [{ from: 3059 }] },
-      { id: "flamer-clan", name: "Flamer", tons: 0.5, slots: 1, availability: [{ from: 2827 }] },
-      { id: "vehicle-flamer-clan", name: "Flamer (Vehicle)", aliases: ["Vehicle Flamer"], tons: 0.5, slots: 1, availability: [{ from: 1950 }] },
       // Lasers (Clan)
       { id: "er-micro-laser-clan", name: "ER Micro Laser", tons: 0.25, slots: 1, availability: [{ from: 3060 }] },
       { id: "er-small-laser-clan", name: "ER Small Laser", tons: 0.5, slots: 1, availability: [{ from: 2825 }] },
@@ -145,6 +149,16 @@ export const WEAPONS: EquipmentGroup[] = [
       // Plasma weapons and PPCs (Clan)
       { id: "plasma-cannon-clan", name: "Plasma Cannon", tons: 3, slots: 1, availability: [{ from: 3069 }] },
       { id: "er-ppc-clan", name: "ER PPC", tons: 6, slots: 2, availability: [{ from: 2826 }] },
+    ],
+  },
+  {
+    defaults: { kind: "weapon", techBase: "clan", cite: { book: "TechManual", page: 343 }, checked: "page" },
+    items: [
+      // Machine guns and flamers (Clan)
+      { id: "light-machine-gun-clan", name: "Light Machine Gun", tons: 0.25, slots: 1, availability: [{ from: 3060 }] },
+      { id: "machine-gun-clan", name: "Machine Gun", aliases: ["MG"], tons: 0.25, slots: 1, availability: [{ from: 2825 }] },
+      { id: "heavy-machine-gun-clan", name: "Heavy Machine Gun", tons: 0.5, slots: 1, availability: [{ from: 3059 }] },
+      { id: "flamer-clan", name: "Flamer", tons: 0.5, slots: 1, availability: [{ from: 2827 }] },
       // Missile launchers (Clan)
       { id: "atm-3-clan", name: "ATM 3", tons: 1.5, slots: 2, availability: [{ from: 3054 }] },
       { id: "atm-6-clan", name: "ATM 6", tons: 3.5, slots: 3, availability: [{ from: 3054 }] },
@@ -168,19 +182,26 @@ export const WEAPONS: EquipmentGroup[] = [
     ],
   },
   {
+    defaults: { kind: "weapon", techBase: "clan", cite: { book: "TechManual", page: 343 }, checked: "page", yearsInferred: true },
+    items: [
+      // Machine guns and flamers (Clan)
+      { id: "vehicle-flamer-clan", name: "Flamer (Vehicle)", aliases: ["Vehicle Flamer"], tons: 0.5, slots: 1, availability: [{ from: 1950 }] },
+    ],
+  },
+  {
     defaults: { kind: "weapon", techBase: "inner-sphere", cite: { book: "TechManual", page: 237 }, checked: "page" },
     items: [
       // Physical weapons (Inner Sphere); weight and slots follow the 'Mech's tonnage (formulas in rules/catalog.ts)
       { id: "hatchet-is", name: "Hatchet", tons: "ceil-tons-15", slots: "ceil-tons-15", availability: [{ from: 3022 }], locations: ["LA", "RA"], cite: { book: "TechManual", page: 220 } },
       { id: "sword-is", name: "Sword", tons: "sword-tons", slots: "ceil-tons-15", availability: [{ from: 3058 }], locations: ["LA", "RA"] },
-      { id: "retractable-blade-is", name: "Retractable Blade", tons: "blade-tons", slots: "blade-slots", availability: [{ from: 2420 }], locations: ["LA", "RA"], checked: "text" },
+      { id: "retractable-blade-is", name: "Retractable Blade", tons: "blade-tons", slots: "blade-slots", availability: [{ from: 2420 }], locations: ["LA", "RA"], cite: { book: "TechManual", page: 236 } },
     ],
   },
   {
-    defaults: { kind: "weapon", techBase: "clan", cite: { book: "TechManual", page: 237 }, checked: "page" },
+    defaults: { kind: "weapon", techBase: "clan", cite: { book: "TechManual", page: 237 }, checked: "page", yearsInferred: true },
     items: [
       // Physical weapons (Clan); weight and slots follow the 'Mech's tonnage (formulas in rules/catalog.ts)
-      { id: "retractable-blade-clan", name: "Retractable Blade", tons: "blade-tons", slots: "blade-slots", availability: [{ from: 2420 }], locations: ["LA", "RA"], checked: "text" },
+      { id: "retractable-blade-clan", name: "Retractable Blade", tons: "blade-tons", slots: "blade-slots", availability: [{ from: 2420 }], locations: ["LA", "RA"], cite: { book: "TechManual", page: 236 } },
     ],
   },
 ];

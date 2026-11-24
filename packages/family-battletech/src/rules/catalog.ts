@@ -22,6 +22,13 @@ export interface EquipmentRow {
   locations?: LocationCode[]; // where the book says the item may be placed; absent means anywhere
   splittable?: boolean; // true only where the book lets the item span adjacent locations
   needs?: string; // what the item must be paired with, in the same location: "launcher", "machine-gun"
+  /** True when `availability` is not a year the book prints for this tech base (a dash in the book's table, or one date
+   * printed for both tech bases). The availability check reports such rows as notes, not errors. */
+  yearsInferred?: true;
+  /** The 'Mech carries exactly this many of the item, each one a separate one-slot mount, placed anywhere. */
+  perMech?: number;
+  /** A non-missile direct-fire or pulse weapon: its weight counts toward a targeting computer (TechManual p. 238). */
+  directFire?: true;
   editions?: Record<string, Partial<Pick<EquipmentRow, "tons" | "slots" | "availability" | "locations">>>;
   cite: { book: string; page: number };
   checked: "page" | "text";
@@ -32,9 +39,12 @@ export interface EquipmentGroup {
 }
 
 const REQUIRED = ["id", "name", "kind", "techBase", "tons", "slots", "availability", "cite", "checked"] as const;
+const KINDS: string[] = ["weapon", "ammunition", "heat-sink", "jump-jet", "other"];
+const TECH_BASES: string[] = ["inner-sphere", "clan"];
 
 /** Rows from groups: each item takes its group's defaults and may override them. Throws, naming the id, on a missing
- * required field or a repeated id. `aliases` is optional and defaults to none. */
+ * required field, a repeated id, an unknown kind or tech base, a `tons` or `slots` string that is not a formula, or an
+ * empty or backwards availability. `aliases` is optional and defaults to none. */
 export function expand(groups: EquipmentGroup[]): EquipmentRow[] {
   const rows: EquipmentRow[] = [];
   const seen = new Set<string>();
@@ -46,7 +56,19 @@ export function expand(groups: EquipmentGroup[]): EquipmentRow[] {
       for (const field of REQUIRED) {
         if (merged[field] === undefined) throw new Error(`equipment ${item.id} has no ${field}`);
       }
-      rows.push(merged as EquipmentRow);
+      const row = merged as EquipmentRow;
+      const bad = (why: string): never => {
+        throw new Error(`equipment ${item.id}: ${why}`);
+      };
+      if (!KINDS.includes(row.kind)) bad(`unknown kind ${row.kind}`);
+      if (!TECH_BASES.includes(row.techBase)) bad(`unknown tech base ${row.techBase}`);
+      for (const field of ["tons", "slots"] as const) {
+        const value = row[field];
+        if (typeof value === "string" && !Object.hasOwn(FORMULAS, value)) bad(`${field} names the unknown formula ${value}`);
+      }
+      if (!Array.isArray(row.availability) || row.availability.length === 0) bad("availability is empty");
+      if (row.availability.some((s) => s.to !== undefined && s.to < s.from)) bad("a span ends before it starts");
+      rows.push(row);
     }
   }
   return rows;
@@ -56,11 +78,25 @@ export function expand(groups: EquipmentGroup[]): EquipmentRow[] {
 // Formulas: the items whose weight or slots the book scales with the 'Mech. A formula takes the row and the record and
 // returns a number. Add one only when a row needs it.
 // ---------------------------------------------------------------------------------------------------------------
-type Formula = (row: EquipmentRow, record: MechRecord) => number;
+type Formula = (row: EquipmentRow, record: MechRecord, catalog: Catalog) => number;
+function directFireTons(record: MechRecord, catalog: Catalog): number {
+  let total = 0;
+  for (const mount of record.mounts) {
+    const row = mount.equipmentId === null ? undefined : catalog.byId(mount.equipmentId);
+    if (row?.directFire) total += catalog.factsOf(mount, record)?.tons ?? 0;
+  }
+  return total;
+}
 const ceilHalf = (x: number) => Math.ceil(x * 2) / 2;
 const FORMULAS: Record<string, Formula> = {
   // Jump Jets table (TechManual p. 51): per jet, by 'Mech tonnage band 10-55, 60-85, 90-100.
   "jump-jet": (_row, record) => (record.tons <= 55 ? 0.5 : record.tons <= 85 ? 1 : 2),
+  // Improved jump jets (p. 51): twice the standard weight per jet (two slots, in the data).
+  "improved-jump-jet": (row, record, catalog) => 2 * (FORMULAS["jump-jet"]?.(row, record, catalog) ?? 0),
+  // Targeting computer (p. 238): the weight of the record's direct-fire weapons over 4 (Inner Sphere) or 5 (Clan),
+  // rounded up to a whole ton; one slot per ton.
+  "targeting-computer-is": (_row, record, catalog) => Math.ceil(directFireTons(record, catalog) / 4),
+  "targeting-computer-clan": (_row, record, catalog) => Math.ceil(directFireTons(record, catalog) / 5),
   // MASC (p. 52): 5 percent of the 'Mech's tonnage (Inner Sphere) or 4 percent (Clan), rounded normally; slots are the same number.
   "masc-is": (_row, record) => Math.round(record.tons / 20),
   "masc-clan": (_row, record) => Math.round((record.tons * 4) / 100),
@@ -98,9 +134,18 @@ export function createCatalog(rows: EquipmentRow[]): Catalog {
   const names = new Map<string, EquipmentRow>();
   const aliases = new Map<string, EquipmentRow>();
   for (const r of rows) {
-    const key = (text: string) => `${r.techBase}|${normalize(text)}`;
-    if (!names.has(key(r.name))) names.set(key(r.name), r);
-    for (const a of r.aliases) if (!aliases.has(key(a))) aliases.set(key(a), r);
+    const key = `${r.techBase}|${normalize(r.name)}`;
+    const claimed = names.get(key);
+    if (claimed) throw new Error(`equipment ${claimed.id} and ${r.id} have the same name within a tech base`);
+    names.set(key, r);
+  }
+  for (const r of rows) {
+    for (const a of r.aliases) {
+      const key = `${r.techBase}|${normalize(a)}`;
+      const claimed = names.get(key) ?? aliases.get(key);
+      if (claimed && claimed.id !== r.id) throw new Error(`equipment ${claimed.id} and ${r.id} have the same name within a tech base`);
+      aliases.set(key, r);
+    }
   }
 
   const available: Catalog["available"] = (row, editionId, year) => {
@@ -111,7 +156,7 @@ export function createCatalog(rows: EquipmentRow[]): Catalog {
   const resolve = (value: number | string, row: EquipmentRow, record: MechRecord): number | undefined => {
     if (typeof value === "number") return value;
     const formula = Object.hasOwn(FORMULAS, value) ? FORMULAS[value] : undefined;
-    return formula ? formula(row, record) : undefined;
+    return formula ? formula(row, record, catalog) : undefined;
   };
 
   const factsOf: FactsOf = (mount, record) => {
@@ -123,7 +168,7 @@ export function createCatalog(rows: EquipmentRow[]): Catalog {
     return tons === undefined || slots === undefined ? undefined : ({ tons, slots } satisfies MountFacts);
   };
 
-  return {
+  const catalog: Catalog = {
     all: () => rows,
     byId: (id) => byId.get(id),
     match: (name, techBase) => {
@@ -137,6 +182,7 @@ export function createCatalog(rows: EquipmentRow[]): Catalog {
     available,
     factsOf,
   };
+  return catalog;
 }
 
 let loading: Promise<Catalog> | undefined;
