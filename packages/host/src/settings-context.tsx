@@ -49,14 +49,19 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const changedThisSession = useRef(false);
   const current = useRef<Settings>(DEFAULT_SETTINGS);
 
-  // Saves to the store; the pending note (written at `at`) goes once that has worked, and stays if it fails.
+  // Saves to the store; the pending note (written at `at`) goes once that has worked in a persistent store,
+  // and stays if it fails or the store is only memory.
   const save = useCallback(
     (next: Settings, at: number) => {
       storePromise
-        .then((store) => saveSettings(store, next))
+        .then(async (store) => {
+          await saveSettings(store, next);
+          return store.persistent;
+        })
         .then(
-          () => {
-            clearPending(at);
+          (persistent) => {
+            // A memory store forgets on the next load, so then the note is the only durable copy.
+            if (persistent) clearPending(at);
             setSaveFailed(false);
           },
           () => {

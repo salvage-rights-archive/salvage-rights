@@ -49,6 +49,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   localStorage.clear();
+  vi.unstubAllGlobals();
 });
 
 describe("pending settings note", () => {
@@ -67,6 +68,27 @@ describe("pending settings note", () => {
     await waitFor(() => {
       expect(localStorage.getItem(NOTE_KEY)).toBeNull();
     });
+  });
+
+  it("stays when the store is only memory, and a fresh start-up applies it", async () => {
+    vi.stubGlobal("indexedDB", undefined);
+    render(
+      <SettingsProvider>
+        <Probe />
+      </SettingsProvider>,
+    );
+    await screen.findByText("theme device");
+    await userEvent.click(screen.getByRole("button", { name: "Choose light" }));
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(readNote()?.settings.theme).toBe("light");
+
+    cleanup();
+    render(
+      <SettingsProvider>
+        <Probe />
+      </SettingsProvider>,
+    );
+    expect(await screen.findByText("theme light")).toBeTruthy();
   });
 
   it("is gone after a save that succeeds and stays, holding the new settings, after one that fails", async () => {
