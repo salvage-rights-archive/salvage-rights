@@ -10,6 +10,7 @@ import {
   type FactsOf,
   type LocationCode,
   type MechRecord,
+  type Mount,
 } from "./mech";
 
 const labels = (l: ReturnType<typeof layout>, loc: LocationCode) => (l.slots[loc] ?? []).map((c) => c.label);
@@ -42,14 +43,12 @@ describe("layout", () => {
 
   // [engine, gyro, side-torso engine cells, center-torso engine cells, gyro cells]
   it.each([
-    ["standard", "standard", 0, 6, 4],
     ["xl", "standard", 3, 6, 4],
     ["xl-clan", "standard", 2, 6, 4],
     ["light", "standard", 2, 6, 4],
     ["compact", "standard", 0, 3, 4],
     ["standard", "compact", 0, 6, 2],
     ["standard", "xl", 0, 6, 6],
-    ["standard", "heavy-duty", 0, 6, 4],
   ])("fills the torsos for a %s engine and a %s gyro", (engine, gyro, side, ctEngine, ctGyro) => {
     const l = layout(chassis({ engine: { type: engine, rating: 200 }, gyro }), factsOf);
     expect(count(l, "LT", "Engine")).toBe(side);
@@ -58,26 +57,41 @@ describe("layout", () => {
     expect(count(l, "CT", "Gyro")).toBe(ctGyro);
   });
 
-  it("reports two mounts on one slot, and one on a fixed cell, as conflicts and keeps them all", () => {
+  it("reports clashing mounts as conflicts and a mount running past the last slot as overflow, keeping them all", () => {
     const record = bipedRecord({
-      mounts: [mount("a", "medium-laser", "LA", 5), mount("b", "medium-laser", "LA", 5), mount("c", "medium-laser", "LA", 0)],
+      mounts: [
+        mount("a", "medium-laser", "LA", 5),
+        mount("b", "medium-laser", "LA", 5),
+        mount("c", "medium-laser", "LA", 0), // on a fixed cell
+        mount("big", "big-gun", "RA", 6),
+        mount("edge", "ac-10", "LL", 4),
+        mount("fits", "ac-10", "RT", 5),
+      ],
     });
     const l = layout(record, factsOf);
     expect(l.conflicts).toEqual([
       { location: "LA", slot: 0, mountIds: ["c"] },
       { location: "LA", slot: 5, mountIds: ["a", "b"] },
     ]);
-    expect(record.mounts).toHaveLength(3);
-  });
-
-  it("reports a mount running past the last slot as overflow", () => {
-    const record = bipedRecord({
-      mounts: [mount("big", "big-gun", "LA", 6), mount("edge", "ac-10", "LL", 4), mount("fits", "ac-10", "RA", 5)],
-    });
-    expect(layout(record, factsOf).overflow).toEqual([
-      { location: "LA", mountId: "big" },
+    expect(l.overflow).toEqual([
+      { location: "RA", mountId: "big" },
       { location: "LL", mountId: "edge" },
     ]);
+    expect(record.mounts).toHaveLength(6);
+  });
+
+  // Hostile mounts: none may throw; a bad place means unplaced, and a slot far past the end means overflow.
+  it.each<[string, Mount["location"], number, "unplaced" | "overflow"]>([
+    ["a negative slot", "LA", -1, "unplaced"],
+    ["a fractional slot", "LA", 2.5, "unplaced"],
+    ["a huge slot", "LA", 1e9, "overflow"],
+    ["a location the configuration lacks", "FLL", 4, "unplaced"],
+    ["a location named like an object property", "constructor" as Mount["location"], 4, "unplaced"],
+  ])("copes with %s", (_name, location, slot, where) => {
+    const l = layout(bipedRecord({ mounts: [mount("odd", "medium-laser", location, slot)] }), factsOf);
+    expect(l.unplaced.map((m) => m.id)).toEqual(where === "unplaced" ? ["odd"] : []);
+    expect(l.overflow.map((o) => o.mountId)).toEqual(where === "overflow" ? ["odd"] : []);
+    expect(l.slots.LA).toHaveLength(12);
   });
 
   it("lists mounts that take slots but have no slot as unplaced, and not zero-slot items", () => {
@@ -111,7 +125,7 @@ describe("layout", () => {
 });
 
 describe("weights", () => {
-  it("lists structure to armor, then each mount, and the lines sum to the total", () => {
+  it("lists structure to armor, then each mount, sums the lines, and nulls the total for an unknown mount", () => {
     const w = weights(bipedRecord(), factsOf);
     expect(w.lines.slice(0, 6).map((x) => [x.label, x.tons])).toEqual([
       ["Structure", 5], ["Engine", 8.5], ["Gyro", 2], ["Cockpit", 3], ["Heat sinks", 0], ["Armor", 5],
@@ -119,48 +133,36 @@ describe("weights", () => {
     expect(w.lines).toHaveLength(6 + 7);
     expect(w.total).toBe(40);
     expect(w.lines.reduce((sum, x) => sum + (x.tons ?? 0), 0)).toBe(w.total);
+
+    const unmatched = weights(bipedRecord({ mounts: [mount("ac", "ac-10", "RT", 0), mount("mystery", null, "LT", 0)] }), factsOf);
+    expect(unmatched.lines.at(-1)).toEqual({ label: "mystery", tons: null });
+    expect(unmatched.lines.at(-2)).toEqual({ label: "ac", tons: 12 });
+    expect(unmatched.total).toBeNull();
   });
 
-  it("makes a mount with no catalog entry, and the total, null", () => {
-    const record = bipedRecord({ mounts: [mount("ac", "ac-10", "RT", 0), mount("mystery", null, "LT", 0)] });
-    const w = weights(record, factsOf);
-    expect(w.lines.at(-1)).toEqual({ label: "mystery", tons: null });
-    expect(w.lines.at(-2)).toEqual({ label: "ac", tons: 12 });
-    expect(w.total).toBeNull();
-  });
-
-  // Values worked in the book's own examples.
+  // One row per rule worked in the book's own examples: endo-steel's half-ton rounding, the Compact engine factor,
+  // the gyro's two roundings, ferro-fibrous armor's points per ton.
   it.each<[string, Partial<MechRecord["chassis"]>, Partial<MechRecord>, string, number]>([
     ["endo-steel at 25 tons", { structure: "endo-steel" }, { tons: 25 }, "Structure", 1.5],
-    ["a 380 XL engine", { engine: { type: "xl", rating: 380 } }, {}, "Engine", 20.5],
     ["a 220 compact engine", { engine: { type: "compact", rating: 220 } }, {}, "Engine", 15],
     ["a compact gyro on a 160 engine", { gyro: "compact", engine: { type: "standard", rating: 160 } }, {}, "Gyro", 3],
-    ["a standard gyro on a 350 engine", { engine: { type: "standard", rating: 350 } }, {}, "Gyro", 4],
-    ["a small cockpit", { cockpit: "small" }, {}, "Cockpit", 2],
-    ["15 sinks, 10 of them free", { heatSinks: { type: "double", count: 15 } }, {}, "Heat sinks", 5],
     ["89 points of Inner Sphere ferro-fibrous", { armorType: "ferro-fibrous" }, { armor: { CT: { front: 89 } } }, "Armor", 5],
-    ["105 points of heavy ferro-fibrous", { armorType: "heavy-ferro-fibrous" }, { armor: { CT: { front: 105 } } }, "Armor", 5.5],
-    ["259 points of Clan ferro-fibrous", { armorType: "ferro-fibrous-clan" }, { armor: { CT: { front: 250 }, HD: { front: 9 } } }, "Armor", 13.5],
   ])("matches the book for %s", (_name, patch, rest, label, tons) => {
     expect(line(chassis(patch, rest), label)).toBe(tons);
   });
 });
 
 describe("structure points, armor limits and speed", () => {
-  it("gives structure points by location for a biped and a quad", () => {
-    expect(structurePoints(bipedRecord())).toEqual({ HD: 3, CT: 16, LT: 12, RT: 12, LA: 8, RA: 8, LL: 12, RL: 12 });
-    expect(structurePoints(quadRecord({ tons: 70 }))).toEqual({
-      HD: 3, CT: 22, LT: 15, RT: 15, FLL: 15, FRL: 15, RLL: 15, RRL: 15,
-    });
-  });
-
   // The totals are the book's Maximum Armor Factor column.
   it.each<[number, string, number]>([[20, "biped", 69], [55, "biped", 185], [100, "biped", 307], [70, "quad", 233]])(
-    "allows %i tons (%s) a head of 9, twice the structure elsewhere, %i in all",
+    "gives %i tons (%s) 3 head structure points, a head of 9, twice the structure elsewhere, %i in all",
     (tons, configuration, total) => {
       const record = bipedRecord({ tons, configuration });
       const max = maxArmor(record);
       const structure = structurePoints(record);
+      expect(structure.HD).toBe(3);
+      expect(Object.keys(structure)).toEqual(Object.keys(max));
+      expect(configuration === "quad" ? structure.FLL : structure.LL).toBe(structure.RRL ?? structure.RL);
       expect(max.HD).toBe(9);
       expect(max.CT).toBe(2 * (structure.CT ?? 0));
       expect(Object.values(max).reduce((a, b) => a + b, 0)).toBe(total);

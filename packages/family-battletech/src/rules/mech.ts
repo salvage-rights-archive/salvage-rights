@@ -10,10 +10,11 @@ import {
   GYROS,
   HEAD_MAX_ARMOR,
   HEAD_STRUCTURE,
-  HEAT_SINKS,
+  HEAT_SINK_RULES,
   INTERNAL_STRUCTURE,
   SHEET,
   STRUCTURE_TYPES,
+  STRUCTURE_WEIGHT,
 } from "../data/chassis";
 
 export type LocationCode = "HD" | "CT" | "LT" | "RT" | "LA" | "RA" | "LL" | "RL" | "FLL" | "FRL" | "RLL" | "RRL";
@@ -108,6 +109,20 @@ function ceilHalf(x: number): number {
 }
 const tidy = (x: number) => Math.round(x * 1000) / 1000;
 
+/** Engine weight: the printed column for the type times its stated factor, rounded up to a half ton. null if unknown. */
+export function engineTons(type: string, rating: number): number | null {
+  const engine = own(ENGINE_TYPES.types, type);
+  const row = own(ENGINE_WEIGHTS.rows, rating);
+  return engine && row ? ceilHalf(row[engine.weightColumn] * engine.weightFactor) : null;
+}
+
+/** Structure weight: a tenth of the tonnage, times the type's factor, rounded up to a half ton. null if unknown. */
+export function structureTons(type: string, tons: number): number | null {
+  const structure = own(STRUCTURE_TYPES.types, type);
+  if (!structure || !own(INTERNAL_STRUCTURE.rows, tons)) return null;
+  return ceilHalf(tons * STRUCTURE_WEIGHT.fractionOfTons * structure.weightFactor);
+}
+
 // ---------------------------------------------------------------------------------------------------------------
 // Layout
 // ---------------------------------------------------------------------------------------------------------------
@@ -176,7 +191,7 @@ export function layout(record: MechRecord, factsOf: FactsOf): Layout {
   for (const mount of record.mounts) {
     const taken = mount.part ? 1 : (factsOf(mount, record)?.slots ?? 1);
     if (taken <= 0) continue;
-    const cells = mount.location ? slots[mount.location] : undefined;
+    const cells = mount.location ? own(slots as Record<string, SlotCell[]>, mount.location) : undefined;
     const first = mount.slot;
     if (!mount.location || !cells || first === null || !Number.isInteger(first) || first < 0) {
       unplaced.push(mount);
@@ -214,13 +229,8 @@ export function weights(record: MechRecord, factsOf: FactsOf): { lines: WeightLi
   const { chassis } = record;
   const lines: WeightLine[] = [];
 
-  const structure = own(STRUCTURE_TYPES.types, chassis.structure);
-  const structureRow = own(INTERNAL_STRUCTURE.rows, record.tons);
-  lines.push({ label: "Structure", tons: structure && structureRow ? structureRow[structure.weightColumn] : null });
-
-  const engine = own(ENGINE_TYPES.types, chassis.engine.type);
-  const engineRow = own(ENGINE_WEIGHTS.rows, chassis.engine.rating);
-  lines.push({ label: "Engine", tons: engine && engineRow ? engineRow[engine.weightColumn] : null });
+  lines.push({ label: "Structure", tons: structureTons(chassis.structure, record.tons) });
+  lines.push({ label: "Engine", tons: engineTons(chassis.engine.type, chassis.engine.rating) });
 
   const gyro = own(GYROS.types, chassis.gyro);
   const rating = chassis.engine.rating;
@@ -231,8 +241,8 @@ export function weights(record: MechRecord, factsOf: FactsOf): { lines: WeightLi
 
   lines.push({ label: "Cockpit", tons: own(COCKPITS.types, chassis.cockpit)?.tons ?? null });
 
-  const extraSinks = Math.max(0, chassis.heatSinks.count - HEAT_SINKS.freeWithEngine);
-  lines.push({ label: "Heat sinks", tons: Number.isFinite(extraSinks) ? extraSinks * HEAT_SINKS.tonsEach : null });
+  const extraSinks = Math.max(0, chassis.heatSinks.count - HEAT_SINK_RULES.freeWithEngine);
+  lines.push({ label: "Heat sinks", tons: Number.isFinite(extraSinks) ? extraSinks * HEAT_SINK_RULES.tonsEach : null });
 
   const armorType = own(ARMOR.types, chassis.armorType);
   const points = Object.values(record.armor).reduce((sum, a) => sum + (a ? a.front + (a.rear ?? 0) : 0), 0);
@@ -259,7 +269,7 @@ export function weights(record: MechRecord, factsOf: FactsOf): { lines: WeightLi
 export function structurePoints(record: MechRecord): Partial<Record<LocationCode, number>> {
   const row = own(INTERNAL_STRUCTURE.rows, record.tons);
   if (!row) return {};
-  const points: Partial<Record<LocationCode, number>> = { HD: HEAD_STRUCTURE, CT: row.ct, LT: row.side, RT: row.side };
+  const points: Partial<Record<LocationCode, number>> = { HD: HEAD_STRUCTURE.points, CT: row.ct, LT: row.side, RT: row.side };
   if (record.configuration === "biped") {
     Object.assign(points, { LA: row.arm, RA: row.arm, LL: row.leg, RL: row.leg });
   } else if (record.configuration === "quad") {
@@ -272,7 +282,7 @@ export function structurePoints(record: MechRecord): Partial<Record<LocationCode
 export function maxArmor(record: MechRecord): Partial<Record<LocationCode, number>> {
   const max: Partial<Record<LocationCode, number>> = {};
   for (const [loc, points] of Object.entries(structurePoints(record)) as [LocationCode, number][]) {
-    max[loc] = loc === "HD" ? HEAD_MAX_ARMOR : points * 2;
+    max[loc] = loc === "HD" ? HEAD_MAX_ARMOR.points : points * 2;
   }
   return max;
 }
