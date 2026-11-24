@@ -128,7 +128,7 @@ describe("host frame", () => {
     const store = await openStore("host");
     await saveSettings(store, { ...DEFAULT_SETTINGS, theme: "dark" });
     renderAt("/");
-    await screen.findByRole("heading", { name: "Salvage Rights" });
+    await screen.findByRole("heading", { name: "Archaeology for mecha tabletop games." });
     await waitFor(() => {
       expect(document.body.classList.contains("dark")).toBe(true);
     });

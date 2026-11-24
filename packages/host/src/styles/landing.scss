@@ -1,0 +1,244 @@
+// Landing page: who we are, the three options, and the family tiles.
+
+.sr-landing {
+  max-width: 70rem;
+  margin: 0 auto;
+  padding: 0 var(--sr-space-3);
+
+  h1,
+  h2,
+  h3,
+  p {
+    overflow-wrap: anywhere;
+  }
+
+  &__who {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sr-space-3);
+    padding: var(--sr-space-5) 0 var(--sr-space-4);
+
+    h1 {
+      margin: 0;
+      max-width: 18ch;
+      font-size: clamp(2.1rem, 5vw, 3.5rem);
+      line-height: 1.08;
+    }
+
+    p {
+      margin: 0;
+      max-width: 62ch;
+    }
+  }
+
+  &__tag {
+    font-family: var(--sr-font-tag);
+    letter-spacing: .12em;
+    color: var(--sr-patina);
+  }
+
+  &__lead {
+    font-size: 1.125rem;
+  }
+
+  &__note {
+    color: var(--sr-ink-muted);
+  }
+
+  &__section {
+    padding: var(--sr-space-4) 0 var(--sr-space-5);
+    border-top: var(--sr-border) solid var(--sr-line);
+
+    > h2 {
+      margin: 0 0 var(--sr-space-3);
+      font-size: 1.6rem;
+    }
+  }
+}
+
+.sr-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(15rem, 100%), 1fr));
+  gap: var(--sr-space-4);
+}
+
+.sr-option {
+  h3 {
+    margin: 0 0 var(--sr-space-1);
+    font-family: var(--sr-font-tag);
+    font-weight: 400;
+    font-size: 1.1rem;
+    color: var(--sr-hazard);
+  }
+
+  p {
+    margin: 0;
+    color: var(--sr-ink-muted);
+  }
+}
+
+.sr-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: var(--sr-space-3);
+
+  @media (max-width: 359px) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.sr-tile {
+  --tile-accent: var(--sr-accent-bg);
+  position: relative;
+  display: flex;
+  min-width: 0;
+  background: var(--sr-surface);
+  color: var(--sr-ink);
+  border: var(--sr-border) solid var(--sr-line-strong);
+  border-top: 4px solid var(--tile-accent);
+  clip-path: polygon(0 0, calc(100% - 22px) 0, 100% 22px, 100% 100%, 0 100%);
+  text-decoration: none;
+
+  &[data-accent="patina"] {
+    --tile-accent: var(--sr-patina);
+  }
+
+  &[data-accent="hazard"] {
+    --tile-accent: var(--sr-hazard);
+  }
+
+  &[data-accent="info"] {
+    --tile-accent: var(--sr-info);
+  }
+
+  &:hover {
+    color: var(--sr-ink);
+  }
+
+  // The clip would cut an outside outline, so the ring is drawn inside the tile.
+  &:focus-visible {
+    outline-offset: -5px;
+  }
+
+  &__panel {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: var(--sr-space-3);
+    min-width: 0;
+    min-height: 15rem;
+    padding: var(--sr-space-3);
+  }
+
+  &__text {
+    flex: 1;
+  }
+
+  &__name {
+    margin: 0 0 var(--sr-space-2);
+    font-size: 1.75rem;
+  }
+
+  &__blurb {
+    margin: 0;
+    color: var(--sr-ink-muted);
+  }
+
+  &__open {
+    font-family: var(--sr-font-tag);
+    color: var(--sr-accent);
+  }
+
+  &__games {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(12rem, 100%), 1fr));
+    gap: var(--sr-space-2);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  &__game {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+    padding: var(--sr-space-2) var(--sr-space-3);
+    background: var(--sr-bg);
+    border: var(--sr-border) solid var(--sr-line-strong);
+    font-family: var(--sr-font-tag);
+    overflow-wrap: anywhere;
+    text-decoration: none;
+  }
+
+  a.sr-tile__game:focus-visible {
+    outline-offset: -5px;
+  }
+
+  // One family fills the row: the text sits on a solid steel panel beside the artwork.
+  &[data-size="single"] {
+    flex-wrap: wrap;
+    background: var(--sr-header-bg);
+    color: var(--sr-header-ink);
+
+    .sr-tile__panel {
+      flex: 1 1 18rem;
+      min-height: 18rem;
+      padding: var(--sr-space-4);
+      background: var(--sr-header-bg);
+    }
+
+    .sr-tile__name {
+      font-size: clamp(1.9rem, 5vw, 3.25rem);
+      line-height: 1.05;
+    }
+
+    .sr-tile__blurb {
+      color: var(--sr-paper-ink-on-steel, #d9d1bd);
+      font-size: 1.1rem;
+    }
+
+    .sr-tile__open,
+    a.sr-tile__game {
+      color: var(--sr-header-link);
+    }
+
+    .sr-tile__game {
+      background: transparent;
+      border-color: var(--sr-header-line);
+    }
+
+    a:focus-visible,
+    &:focus-visible {
+      outline-color: var(--sr-header-focus);
+    }
+  }
+
+  &__art {
+    position: relative;
+    flex: 2 1 18rem;
+    min-width: 0;
+    background: var(--sr-surface-sunk);
+
+    img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      min-height: 12rem;
+      aspect-ratio: 4 / 3;
+      object-fit: cover;
+    }
+  }
+
+  &__credit {
+    position: absolute;
+    right: var(--sr-space-2);
+    bottom: var(--sr-space-2);
+    left: var(--sr-space-2);
+    margin: 0;
+    padding: var(--sr-space-1) var(--sr-space-2);
+    background: var(--sr-header-bg);
+    color: var(--sr-header-ink);
+    font-family: var(--sr-font-tag);
+    font-size: .85rem;
+  }
+}

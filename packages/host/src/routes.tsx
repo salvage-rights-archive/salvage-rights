@@ -2,17 +2,10 @@ import { Route, Routes } from "react-router";
 import type { FamilyManifest } from "@salvage-rights/shared";
 import { About } from "./pages/About";
 import { FamilyRoutePage } from "./pages/FamilyRoutePage";
+import { Landing } from "./pages/Landing";
 import { NotFound } from "./pages/NotFound";
 
-// The landing page (Task 7) and the Settings page (Task 8) replace these two.
-function Landing() {
-  return (
-    <div className="sr-page">
-      <h1>Salvage Rights</h1>
-    </div>
-  );
-}
-
+// The Settings page (Task 8) replaces this.
 function SettingsPage() {
   return (
     <div className="sr-page">
@@ -24,7 +17,7 @@ function SettingsPage() {
 export function AppRoutes({ families }: { families: FamilyManifest[] }) {
   return (
     <Routes>
-      <Route path="/" element={<Landing />} />
+      <Route path="/" element={<Landing families={families} />} />
       <Route path="/about" element={<About families={families} />} />
       <Route path="/settings" element={<SettingsPage />} />
       <Route path="/:family/*" element={<FamilyRoutePage families={families} />} />

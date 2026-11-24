@@ -6,6 +6,7 @@ import { App } from "./App";
 import { restoredPath } from "./restore-path";
 import "./styles/tokens.scss";
 import "./styles/shell.scss";
+import "./styles/landing.scss";
 
 // public/404.html leaves the address the visitor asked for here before sending them to the base path.
 const REDIRECT_KEY = "sr-redirect";
