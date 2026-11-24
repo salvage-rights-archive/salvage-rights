@@ -33,29 +33,41 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [persistent, setPersistent] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [saveFailed, setSaveFailed] = useState(false);
-  const [storePromise] = useState<Promise<Store>>(() => openStore("host"));
+  const [{ storePromise, readPromise }] = useState(() => {
+    const opened: Promise<Store> = openStore("host");
+    // Resolves once the stored settings have been read; null when they could not be.
+    const read: Promise<Settings | null> = opened.then(async (store) => {
+      try {
+        return await loadSettings(store);
+      } catch {
+        return null;
+      }
+    });
+    return { storePromise: opened, readPromise: read };
+  });
   const changedBeforeLoad = useRef(false);
+  const current = useRef<Settings>(DEFAULT_SETTINGS);
 
   useEffect(() => {
     let cancelled = false;
-    void storePromise.then(async (store) => {
+    void Promise.all([storePromise, readPromise]).then(([store, stored]) => {
+      if (cancelled) return;
       setPersistent(store.persistent);
-      try {
-        const loaded = await loadSettings(store);
-        if (!cancelled && !changedBeforeLoad.current) setSettings(loaded);
-      } catch {
-        // Unreadable settings: keep the defaults.
+      if (stored && !changedBeforeLoad.current) {
+        current.current = stored;
+        setSettings(stored);
       }
-      if (!cancelled) setLoaded(true);
+      setLoaded(true);
     });
     return () => {
       cancelled = true;
     };
-  }, [storePromise]);
+  }, [storePromise, readPromise]);
 
   const update = useCallback(
     (next: Settings) => {
       changedBeforeLoad.current = true;
+      current.current = next;
       setSettings(next);
       storePromise
         .then((store) => saveSettings(store, next))
@@ -72,10 +84,13 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   );
 
   // Settings never changed are not in the store yet, and a file without them could not be imported again.
+  // The export waits for the stored settings to be read, so defaults never stand in for stored values.
   const exportSettings = useCallback(async () => {
+    const stored = await readPromise;
     const file = await exportStore(await storePromise);
-    return { ...file, entries: { ...file.entries, settings } };
-  }, [storePromise, settings]);
+    const mine = changedBeforeLoad.current ? current.current : (stored ?? DEFAULT_SETTINGS);
+    return { ...file, entries: { ...file.entries, settings: mine } };
+  }, [storePromise, readPromise]);
 
   const importSettings = useCallback(
     (file: unknown): string[] => {

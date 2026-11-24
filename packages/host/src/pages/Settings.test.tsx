@@ -1,6 +1,7 @@
 import "fake-indexeddb/auto";
 import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useEffect } from "react";
 import { IDBFactory } from "fake-indexeddb";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DEFAULT_SETTINGS, loadSettings, openStore, saveSettings } from "@salvage-rights/shared";
@@ -150,11 +151,17 @@ describe("settings page", () => {
     });
   });
 
-  it("exports the settings even when none were ever changed", async () => {
+  it("exports stored settings that were never touched in this session, even when asked at once", async () => {
+    await saveSettings(await openStore("host"), { ...DEFAULT_SETTINGS, theme: "dark" });
     let exported: unknown;
     function Probe() {
-      const { exportSettings, loaded } = useSettings();
-      if (loaded && exported === undefined) void exportSettings().then((file) => (exported = file));
+      const { exportSettings } = useSettings();
+      useEffect(() => {
+        // Asked on the first render, before the stored settings have been read.
+        void exportSettings().then((file) => {
+          exported = file;
+        });
+      }, [exportSettings]);
       return null;
     }
     render(
@@ -163,7 +170,7 @@ describe("settings page", () => {
       </SettingsProvider>,
     );
     await waitFor(() => {
-      expect(exported).toMatchObject({ namespace: "host", entries: { settings: DEFAULT_SETTINGS } });
+      expect(exported).toMatchObject({ namespace: "host", entries: { settings: { theme: "dark" } } });
     });
   });
 
