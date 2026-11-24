@@ -114,6 +114,12 @@ describe("offered and available", () => {
     expect(catalog.factsOf(ppcMount, bipedRecord({ editionId: "test-ed" }))).toEqual({ tons: 8, slots: 3 });
     expect(catalog.factsOf(ppcMount, bipedRecord({ editionId: "core-2026" }))).toEqual({ tons: 7, slots: 3 });
   });
+
+  it("gives a row as an edition sees it, and nothing for an unknown id", () => {
+    expect(catalog.rowFor("ppc-is", "test-ed")).toMatchObject({ tons: 8, availability: [{ from: 2500 }] });
+    expect(catalog.rowFor("ppc-is", "core-2026")).toMatchObject({ tons: 7, availability: [{ from: 2460 }] });
+    expect(catalog.rowFor("nope", "core-2026")).toBeUndefined();
+  });
 });
 
 describe("targeting computer", () => {

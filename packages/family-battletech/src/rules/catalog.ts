@@ -114,6 +114,8 @@ const FORMULAS: Record<string, Formula> = {
 export interface Catalog {
   all(): EquipmentRow[];
   byId(id: string): EquipmentRow | undefined;
+  /** The row as the edition sees it: its own values with that edition's overrides applied. */
+  rowFor(id: string, editionId: string): EquipmentRow | undefined;
   /** Exact name, then alias, within the tech base; case, spacing, hyphens, slashes and periods are ignored. */
   match(name: string, techBase: TechBase): EquipmentRow | undefined;
   offered(editionId: string, want: { techBase: TechBase | "mixed"; year: number | null }): EquipmentRow[];
@@ -172,6 +174,10 @@ export function createCatalog(rows: EquipmentRow[]): Catalog {
   const catalog: Catalog = {
     all: () => rows,
     byId: (id) => byId.get(id),
+    rowFor: (id, editionId) => {
+      const row = byId.get(id);
+      return row && inEdition(row, editionId);
+    },
     match: (name, techBase) => {
       const key = `${techBase}|${normalize(name)}`;
       return names.get(key) ?? aliases.get(key);

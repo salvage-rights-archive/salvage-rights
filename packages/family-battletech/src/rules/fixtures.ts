@@ -8,6 +8,7 @@ const FACTS: Record<string, { tons: number; slots: number }> = {
   "ac-10-ammo": { tons: 1, slots: 1 },
   "jump-jet": { tons: 0.5, slots: 1 },
   "big-gun": { tons: 20, slots: 14 },
+  "heat-sink-is": { tons: 0, slots: 1 },
 };
 
 export const factsOf: FactsOf = (mount) => (mount.equipmentId === null ? undefined : FACTS[mount.equipmentId]);
@@ -16,7 +17,8 @@ export function mount(id: string, equipmentId: string | null, location: Mount["l
   return { id, equipmentId, name: id, techBase: "inner-sphere", location, slot };
 }
 
-/** A 50-ton biped, Inner Sphere, standard everything: walks 4 with a 200 engine. Weighs 40 tons as listed. */
+/** A 50-ton biped, Inner Sphere, standard everything: walks 4 with a 200 engine. Weighs 40 tons as listed. Legal under every
+ * check: its engine holds 8 of the 10 heat sinks and the other 2 are placed in the legs. */
 export function bipedRecord(overrides: Partial<MechRecord> = {}): MechRecord {
   return {
     schema: 1,
@@ -54,13 +56,15 @@ export function bipedRecord(overrides: Partial<MechRecord> = {}): MechRecord {
       mount("jj-1", "jump-jet", "CT", 10),
       mount("jj-2", "jump-jet", "LL", 4),
       mount("jj-3", "jump-jet", "RL", 4),
+      mount("hs-1", "heat-sink-is", "LL", 5),
+      mount("hs-2", "heat-sink-is", "RL", 5),
     ],
     notes: {},
     ...overrides,
   };
 }
 
-/** A 60-ton quad with a 240 engine (walks 4). */
+/** A 60-ton quad with a 240 engine (walks 4). Legal under every check. */
 export function quadRecord(overrides: Partial<MechRecord> = {}): MechRecord {
   return {
     ...bipedRecord(),
@@ -87,7 +91,8 @@ export function quadRecord(overrides: Partial<MechRecord> = {}): MechRecord {
       RLL: { front: 16 },
       RRL: { front: 16 },
     },
-    mounts: [mount("laser", "medium-laser", "LT", 1), mount("ac", "ac-10", "RT", 0)],
+    // The 240 engine holds 9 of the 10 heat sinks; the tenth is placed.
+    mounts: [mount("laser", "medium-laser", "LT", 1), mount("ac", "ac-10", "RT", 0), mount("hs-1", "heat-sink-is", "RRL", 5)],
     ...overrides,
   };
 }

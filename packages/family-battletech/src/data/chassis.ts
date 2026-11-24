@@ -72,6 +72,7 @@ export const STRUCTURE_WEIGHT: Sourced & { fractionOfTons: number } = {
 
 // Structure types. Slots are the critical slots the type takes, placed anywhere (printed p.47).
 export interface StructureType {
+  name: string; // as shown to the player
   weightFactor: number;
   slots: number;
 }
@@ -79,9 +80,9 @@ export const STRUCTURE_TYPES: Sourced & { types: Record<string, StructureType> }
   cite: { book: "TechManual", page: 47 },
   checked: "page",
   types: {
-    standard: { weightFactor: 1, slots: 0 },
-    "endo-steel": { weightFactor: 0.5, slots: 14 },
-    "endo-steel-clan": { weightFactor: 0.5, slots: 7 },
+    standard: { name: "Standard", weightFactor: 1, slots: 0 },
+    "endo-steel": { name: "Endo Steel", weightFactor: 0.5, slots: 14 },
+    "endo-steel-clan": { name: "Endo Steel (Clan)", weightFactor: 0.5, slots: 7 },
   },
 };
 
@@ -184,6 +185,7 @@ export const ENGINE_WEIGHTS: Sourced & { rows: Record<number, number> } = {
 // half (both p.214, equipment descriptions; read from the text extract). The half-ton rounding is the book's rounding
 // everywhere else, and with it each factor reproduces the printed p.49 column for every rating.
 export interface EngineType {
+  name: string; // as shown to the player; label is what the record sheets print
   label: string;
   weightFactor: number;
   factorCite?: Cite;
@@ -196,11 +198,12 @@ export const ENGINE_TYPES: Sourced & { types: Record<string, EngineType> } = {
   cite: { book: "TechManual", page: 50 },
   checked: "page",
   types: {
-    standard: { label: "Fusion Engine", weightFactor: 1, ct: 6, side: 0 },
-    xl: { label: "XL Fusion Engine", weightFactor: 0.5, factorCite: P214, factorChecked: "text", ct: 6, side: 3 },
-    "xl-clan": { label: "XL Fusion Engine", weightFactor: 0.5, factorCite: P214, factorChecked: "text", ct: 6, side: 2 },
-    light: { label: "Light Fusion Engine", weightFactor: 0.75, factorCite: P214, factorChecked: "text", ct: 6, side: 2 },
+    standard: { name: "Standard Fusion", label: "Fusion Engine", weightFactor: 1, ct: 6, side: 0 },
+    xl: { name: "XL Fusion", label: "XL Fusion Engine", weightFactor: 0.5, factorCite: P214, factorChecked: "text", ct: 6, side: 3 },
+    "xl-clan": { name: "XL Fusion (Clan)", label: "XL Fusion Engine", weightFactor: 0.5, factorCite: P214, factorChecked: "text", ct: 6, side: 2 },
+    light: { name: "Light Fusion", label: "Light Fusion Engine", weightFactor: 0.75, factorCite: P214, factorChecked: "text", ct: 6, side: 2 },
     compact: {
+      name: "Compact Fusion",
       label: "Compact Fusion Engine",
       weightFactor: 1.5,
       factorCite: { book: "TechManual", page: 48 },
@@ -216,6 +219,7 @@ export const ENGINE_TYPES: Sourced & { types: Record<string, EngineType> } = {
 // up to a half ton. All gyro slots are in the center torso. Clan BattleMechs have only the standard gyro.
 // ---------------------------------------------------------------------------------------------------------------
 export interface GyroType {
+  name: string; // as shown to the player; label is what the record sheets print
   label: string; // as the record sheets print it
   multiplier: number;
   slots: number;
@@ -224,10 +228,10 @@ export const GYROS: Sourced & { types: Record<string, GyroType> } = {
   cite: { book: "TechManual", page: 50 },
   checked: "page",
   types: {
-    standard: { label: "Gyro", multiplier: 1.0, slots: 4 },
-    compact: { label: "Compact Gyro", multiplier: 1.5, slots: 2 },
-    "heavy-duty": { label: "Heavy Duty Gyro", multiplier: 2.0, slots: 4 },
-    xl: { label: "XL Gyro", multiplier: 0.5, slots: 6 },
+    standard: { name: "Standard", label: "Gyro", multiplier: 1.0, slots: 4 },
+    compact: { name: "Compact", label: "Compact Gyro", multiplier: 1.5, slots: 2 },
+    "heavy-duty": { name: "Heavy-Duty", label: "Heavy Duty Gyro", multiplier: 2.0, slots: 4 },
+    xl: { name: "XL", label: "XL Gyro", multiplier: 0.5, slots: 6 },
   },
 };
 
@@ -235,6 +239,7 @@ export const GYROS: Sourced & { types: Record<string, GyroType> } = {
 // Cockpit (BattleMech Cockpit Table, printed p.52). Default head slots are the book's own numbering, counted from 1.
 // ---------------------------------------------------------------------------------------------------------------
 export interface CockpitType {
+  name: string;
   tons: number;
   cockpit: number[];
   sensors: number[];
@@ -244,8 +249,8 @@ export const COCKPITS: Sourced & { types: Record<string, CockpitType> } = {
   cite: { book: "TechManual", page: 52 },
   checked: "page",
   types: {
-    standard: { tons: 3, cockpit: [3], sensors: [2, 5], lifeSupport: [1, 6] },
-    small: { tons: 2, cockpit: [3], sensors: [2, 4], lifeSupport: [1] },
+    standard: { name: "Standard", tons: 3, cockpit: [3], sensors: [2, 5], lifeSupport: [1, 6] },
+    small: { name: "Small", tons: 2, cockpit: [3], sensors: [2, 4], lifeSupport: [1] },
   },
 };
 
@@ -256,6 +261,7 @@ export const COCKPITS: Sourced & { types: Record<string, CockpitType> } = {
 // sink per `ratingPerHeldSink` of rating (rounded down) without critical slots.
 // ---------------------------------------------------------------------------------------------------------------
 export interface HeatSinkType {
+  name: string;
   slots: number;
 }
 export const HEAT_SINK_RULES: Sourced & {
@@ -273,9 +279,9 @@ export const HEAT_SINKS: Sourced & { types: Record<string, HeatSinkType> } = {
   cite: { book: "TechManual", page: 54 },
   checked: "page",
   types: {
-    single: { slots: 1 },
-    double: { slots: 3 },
-    "double-clan": { slots: 2 },
+    single: { name: "Single", slots: 1 },
+    double: { name: "Double", slots: 3 },
+    "double-clan": { name: "Double (Clan)", slots: 2 },
   },
 };
 
@@ -286,6 +292,7 @@ export const HEAT_SINKS: Sourced & { types: Record<string, HeatSinkType> } = {
 // ECM Suite; that placement is not modelled here.
 // ---------------------------------------------------------------------------------------------------------------
 export interface ArmorType {
+  name: string;
   multiplier: number;
   slots: number;
 }
@@ -294,12 +301,12 @@ export const ARMOR: Sourced & { basePointsPerTon: number; types: Record<string, 
   checked: "page",
   basePointsPerTon: 16,
   types: {
-    standard: { multiplier: 1.0, slots: 0 },
-    stealth: { multiplier: 1.0, slots: 12 },
-    "light-ferro-fibrous": { multiplier: 1.06, slots: 7 },
-    "ferro-fibrous": { multiplier: 1.12, slots: 14 },
-    "ferro-fibrous-clan": { multiplier: 1.2, slots: 7 },
-    "heavy-ferro-fibrous": { multiplier: 1.24, slots: 21 },
+    standard: { name: "Standard", multiplier: 1.0, slots: 0 },
+    stealth: { name: "Stealth", multiplier: 1.0, slots: 12 },
+    "light-ferro-fibrous": { name: "Light Ferro-Fibrous", multiplier: 1.06, slots: 7 },
+    "ferro-fibrous": { name: "Ferro-Fibrous", multiplier: 1.12, slots: 14 },
+    "ferro-fibrous-clan": { name: "Ferro-Fibrous (Clan)", multiplier: 1.2, slots: 7 },
+    "heavy-ferro-fibrous": { name: "Heavy Ferro-Fibrous", multiplier: 1.24, slots: 21 },
   },
 };
 
@@ -309,6 +316,8 @@ export const ARMOR: Sourced & { basePointsPerTon: number; types: Record<string, 
 // Inner Sphere only. "standard" is plain myomer. The two enhancements may not be combined.
 // ---------------------------------------------------------------------------------------------------------------
 export interface MyomerType {
+  name: string;
+  catalogId?: string; // the equipment row whose mounts stand for this myomer (a perMech item), read by the checks
   percentOfTons: number;
   slots: number | "percent";
 }
@@ -317,10 +326,10 @@ export const MYOMER: Sourced & { types: Record<string, MyomerType> } = {
   cite: { book: "TechManual", page: 52 },
   checked: "page",
   types: {
-    standard: { percentOfTons: 0, slots: 0 },
-    masc: { percentOfTons: 5, slots: "percent" },
-    "masc-clan": { percentOfTons: 4, slots: "percent" },
-    tsm: { percentOfTons: 0, slots: 6 },
+    standard: { name: "Standard", percentOfTons: 0, slots: 0 },
+    masc: { name: "MASC", percentOfTons: 5, slots: "percent" },
+    "masc-clan": { name: "MASC (Clan)", percentOfTons: 4, slots: "percent" },
+    tsm: { name: "Triple-Strength Myomer", catalogId: "tsm-is", percentOfTons: 0, slots: 6 },
   },
 };
 
