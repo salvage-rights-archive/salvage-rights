@@ -89,9 +89,8 @@ export function FamilyTile({
                 {path === null ? (
                   <span className="sr-tile__game sr-tile__game--plain">{game.shortName}</span>
                 ) : (
-                  <Link className="sr-tile__game" to={path}>
+                  <Link className="sr-tile__game" to={path} aria-label={`${game.shortName}, ${family.name}`}>
                     {game.shortName}
-                    <span className="sr-tile__hidden">, {family.name}</span>
                   </Link>
                 )}
               </li>

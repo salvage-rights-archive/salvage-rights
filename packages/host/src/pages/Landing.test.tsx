@@ -52,8 +52,8 @@ describe("landing page", () => {
     expect(within(tile).getByText("Blurb of alpha.")).toBeTruthy();
     const list = within(tile).getByRole("list", { name: "Family alpha" });
     const links = within(list).getAllByRole("link");
-    expect(links.map((link) => link.textContent)).toEqual(["Alpha One, Family alpha", "Alpha Two, Family alpha"]);
-    expect(within(list).getByRole("link", { name: /^Alpha One\s*,\s*Family alpha$/ })).toBe(links[0]);
+    expect(links.map((link) => link.textContent)).toEqual(["Alpha One", "Alpha Two"]);
+    expect(within(list).getByRole("link", { name: "Alpha One, Family alpha" })).toBe(links[0]);
     expect(links[0]?.getAttribute("href")).toBe("/alpha/one/play");
     expect(within(tile).queryByText("Alpha Late")).toBeNull();
     expect(screen.getByRole("heading", { name: "Choose your games" })).toBeTruthy();
