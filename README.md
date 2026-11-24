@@ -4,11 +4,17 @@ Archaeology for mecha tabletop games. We dig up the units, equipment and rules o
 
 ## Running it
 
+You need Node.js 26 (22.22 and 24 also work). The repository pins it for Volta in `package.json` and for nvm and
+fnm in `.nvmrc`, so a Node version manager picks the right one for you.
+
 ```
 npm ci
 npm run dev
 npm run check
 ```
+
+The type check runs on TypeScript 7 (the `typescript-7` package). TypeScript 6 is also installed, because the lint
+tooling does not support version 7 yet; it can go when that changes.
 
 ## Tests
 
