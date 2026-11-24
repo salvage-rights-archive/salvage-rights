@@ -71,7 +71,11 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     [storePromise],
   );
 
-  const exportSettings = useCallback(async () => exportStore(await storePromise), [storePromise]);
+  // Settings never changed are not in the store yet, and a file without them could not be imported again.
+  const exportSettings = useCallback(async () => {
+    const file = await exportStore(await storePromise);
+    return { ...file, entries: { ...file.entries, settings } };
+  }, [storePromise, settings]);
 
   const importSettings = useCallback(
     (file: unknown): string[] => {

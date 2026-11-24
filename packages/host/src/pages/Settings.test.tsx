@@ -5,7 +5,7 @@ import { IDBFactory } from "fake-indexeddb";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DEFAULT_SETTINGS, loadSettings, openStore, saveSettings } from "@salvage-rights/shared";
 import type { FamilyManifest, Settings } from "@salvage-rights/shared";
-import { SettingsProvider } from "../settings-context";
+import { SettingsProvider, useSettings } from "../settings-context";
 import { fixtureFamily, fixtureGame } from "../test-fixtures";
 import { SettingsPage } from "./Settings";
 
@@ -147,6 +147,23 @@ describe("settings page", () => {
     expect((screen.getByRole("checkbox", { name: "Show Family beta" }) as HTMLInputElement).checked).toBe(false);
     await waitFor(async () => {
       expect(await storedSettings()).toMatchObject({ theme: "dark", hiddenFamilies: ["beta"] });
+    });
+  });
+
+  it("exports the settings even when none were ever changed", async () => {
+    let exported: unknown;
+    function Probe() {
+      const { exportSettings, loaded } = useSettings();
+      if (loaded && exported === undefined) void exportSettings().then((file) => (exported = file));
+      return null;
+    }
+    render(
+      <SettingsProvider>
+        <Probe />
+      </SettingsProvider>,
+    );
+    await waitFor(() => {
+      expect(exported).toMatchObject({ namespace: "host", entries: { settings: DEFAULT_SETTINGS } });
     });
   });
 
