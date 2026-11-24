@@ -12,6 +12,9 @@
     "dev": "vite packages/host --mode dev",
     "build:free": "vite build packages/host --mode free && node scripts/check-edition.mjs free --require-dist",
     "build:tkf": "vite build packages/host --mode ten-thousand-fleets && node scripts/check-edition.mjs ten-thousand-fleets --require-dist",
+    "build:dev": "vite build packages/host --mode dev",
+    "test:e2e": "npm run build:dev && npm run build:free && playwright test -c packages/host/playwright.config.ts --project=chromium",
+    "test:e2e:all": "npm run build:dev && npm run build:free && playwright test -c packages/host/playwright.config.ts",
     "typecheck": "tsc -b",
     "lint": "eslint .",
     "test": "vitest run",
@@ -19,7 +22,9 @@
     "check": "npm run typecheck && npm run lint && npm test && npm run check:editions && npm run build:free && npm run build:tkf"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.14.1",
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.65.1",
     "@testing-library/react": "^16.3.3",
     "@testing-library/user-event": "^14.6.13",
     "@types/node": "^22.20.5",
