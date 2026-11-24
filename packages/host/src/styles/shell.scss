@@ -132,6 +132,7 @@ h1:focus {
   }
 
   &__group {
+    min-width: 0;
     margin: 0 0 var(--sr-space-4);
     padding: var(--sr-space-2) var(--sr-space-3) var(--sr-space-3);
     background: var(--sr-surface);
@@ -176,7 +177,13 @@ h1:focus {
     }
   }
 
+  &__file {
+    flex-wrap: wrap;
+  }
+
   &__file input {
+    min-width: 0;
+    max-width: 100%;
     min-height: 44px;
     padding: var(--sr-space-2) 0;
   }
