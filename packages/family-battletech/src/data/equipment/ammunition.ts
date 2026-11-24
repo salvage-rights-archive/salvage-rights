@@ -1,0 +1,127 @@
+// Ammunition for the weapons in weapons.ts. A bin is one ton in one critical slot (printed p. 57); machine guns may also
+// carry a half-ton bin, which still takes one slot. Years are the Heavy Weapon Ammunition table, printed pp. 294-295 (read
+// against the page image); the cite names p. 57, where the weight and slots come from. Where the ammunition table gives a
+// Clan introduction of "—", the Clan row starts at the Inner Sphere year, as for weapons. The Narc and iNarc rows have no
+// line in that table; they take their launcher's dates (pp. 291-292) and are checked "text". Special munitions (armor-
+// piercing, Artemis-capable, Thunder, inferno and the rest) are not tabulated here; the LB-X cluster rows are, because
+// the table lists them as their own bins.
+
+import type { EquipmentGroup } from "../../rules/catalog";
+
+export const AMMUNITION: EquipmentGroup[] = [
+  {
+    defaults: { kind: "ammunition", techBase: "inner-sphere", cite: { book: "TechManual", page: 57 }, checked: "page" },
+    items: [
+      // Autocannon ammunition (Inner Sphere)
+      { id: "ammo-ac-2-is", name: "Autocannon/2 Ammo", aliases: ["AC/2 Ammo"], tons: 1, slots: 1, availability: [{ from: 2300 }] },
+      { id: "ammo-ac-5-is", name: "Autocannon/5 Ammo", aliases: ["AC/5 Ammo"], tons: 1, slots: 1, availability: [{ from: 2250 }] },
+      { id: "ammo-ac-10-is", name: "Autocannon/10 Ammo", aliases: ["AC/10 Ammo"], tons: 1, slots: 1, availability: [{ from: 2460 }] },
+      { id: "ammo-ac-20-is", name: "Autocannon/20 Ammo", aliases: ["AC/20 Ammo"], tons: 1, slots: 1, availability: [{ from: 2500 }] },
+      { id: "ammo-lb-2-x-is", name: "LB 2-X AC Ammo", aliases: ["LB 2-X Ammo"], tons: 1, slots: 1, availability: [{ from: 3058 }] },
+      { id: "ammo-lb-2-x-cluster-is", name: "LB 2-X AC Cluster Ammo", aliases: ["LB 2-X Cluster Ammo"], tons: 1, slots: 1, availability: [{ from: 3058 }] },
+      { id: "ammo-lb-5-x-is", name: "LB 5-X AC Ammo", aliases: ["LB 5-X Ammo"], tons: 1, slots: 1, availability: [{ from: 3058 }] },
+      { id: "ammo-lb-5-x-cluster-is", name: "LB 5-X AC Cluster Ammo", aliases: ["LB 5-X Cluster Ammo"], tons: 1, slots: 1, availability: [{ from: 3058 }] },
+      { id: "ammo-lb-10-x-is", name: "LB 10-X AC Ammo", aliases: ["LB 10-X Ammo"], tons: 1, slots: 1, availability: [{ from: 2595, to: 2840 }, { from: 3035 }] },
+      { id: "ammo-lb-10-x-cluster-is", name: "LB 10-X AC Cluster Ammo", aliases: ["LB 10-X Cluster Ammo"], tons: 1, slots: 1, availability: [{ from: 2595, to: 2840 }, { from: 3035 }] },
+      { id: "ammo-lb-20-x-is", name: "LB 20-X AC Ammo", aliases: ["LB 20-X Ammo"], tons: 1, slots: 1, availability: [{ from: 3058 }] },
+      { id: "ammo-lb-20-x-cluster-is", name: "LB 20-X AC Cluster Ammo", aliases: ["LB 20-X Cluster Ammo"], tons: 1, slots: 1, availability: [{ from: 3058 }] },
+      { id: "ammo-light-ac-2-is", name: "Light AC/2 Ammo", aliases: ["LAC/2 Ammo"], tons: 1, slots: 1, availability: [{ from: 3068 }] },
+      { id: "ammo-light-ac-5-is", name: "Light AC/5 Ammo", aliases: ["LAC/5 Ammo"], tons: 1, slots: 1, availability: [{ from: 3068 }] },
+      { id: "ammo-rotary-ac-2-is", name: "Rotary AC/2 Ammo", aliases: ["RAC/2 Ammo"], tons: 1, slots: 1, availability: [{ from: 3062 }] },
+      { id: "ammo-rotary-ac-5-is", name: "Rotary AC/5 Ammo", aliases: ["RAC/5 Ammo"], tons: 1, slots: 1, availability: [{ from: 3062 }] },
+      { id: "ammo-ultra-ac-2-is", name: "Ultra AC/2 Ammo", aliases: ["UAC/2 Ammo"], tons: 1, slots: 1, availability: [{ from: 3057 }] },
+      { id: "ammo-ultra-ac-5-is", name: "Ultra AC/5 Ammo", aliases: ["UAC/5 Ammo"], tons: 1, slots: 1, availability: [{ from: 2640, to: 2915 }, { from: 3035 }] },
+      { id: "ammo-ultra-ac-10-is", name: "Ultra AC/10 Ammo", aliases: ["UAC/10 Ammo"], tons: 1, slots: 1, availability: [{ from: 3057 }] },
+      { id: "ammo-ultra-ac-20-is", name: "Ultra AC/20 Ammo", aliases: ["UAC/20 Ammo"], tons: 1, slots: 1, availability: [{ from: 3060 }] },
+      // Gauss, machine gun, flamer and plasma ammunition (Inner Sphere)
+      { id: "ammo-light-gauss-rifle-is", name: "Light Gauss Rifle Ammo", tons: 1, slots: 1, availability: [{ from: 3056 }] },
+      { id: "ammo-gauss-rifle-is", name: "Gauss Rifle Ammo", tons: 1, slots: 1, availability: [{ from: 2590, to: 2865 }, { from: 3040 }] },
+      { id: "ammo-heavy-gauss-rifle-is", name: "Heavy Gauss Rifle Ammo", tons: 1, slots: 1, availability: [{ from: 3061 }] },
+      { id: "ammo-light-machine-gun-is", name: "Light Machine Gun Ammo", tons: 1, slots: 1, availability: [{ from: 3068 }] },
+      { id: "ammo-light-machine-gun-half-is", name: "Light Machine Gun Ammo (Half Ton)", tons: 0.5, slots: 1, availability: [{ from: 3068 }] },
+      { id: "ammo-machine-gun-is", name: "Machine Gun Ammo", tons: 1, slots: 1, availability: [{ from: 1950 }] },
+      { id: "ammo-machine-gun-half-is", name: "Machine Gun Ammo (Half Ton)", tons: 0.5, slots: 1, availability: [{ from: 1950 }] },
+      { id: "ammo-heavy-machine-gun-is", name: "Heavy Machine Gun Ammo", tons: 1, slots: 1, availability: [{ from: 3068 }] },
+      { id: "ammo-heavy-machine-gun-half-is", name: "Heavy Machine Gun Ammo (Half Ton)", tons: 0.5, slots: 1, availability: [{ from: 3068 }] },
+      { id: "ammo-vehicle-flamer-is", name: "Flamer (Vehicle) Ammo", aliases: ["Vehicle Flamer Ammo"], tons: 1, slots: 1, availability: [{ from: 1950 }] },
+      { id: "ammo-plasma-rifle-is", name: "Plasma Rifle Ammo", tons: 1, slots: 1, availability: [{ from: 3068 }] },
+      // Missile ammunition (Inner Sphere)
+      { id: "ammo-lrm-5-is", name: "LRM 5 Ammo", tons: 1, slots: 1, availability: [{ from: 2300 }] },
+      { id: "ammo-lrm-10-is", name: "LRM 10 Ammo", tons: 1, slots: 1, availability: [{ from: 2300 }] },
+      { id: "ammo-lrm-15-is", name: "LRM 15 Ammo", tons: 1, slots: 1, availability: [{ from: 2300 }] },
+      { id: "ammo-lrm-20-is", name: "LRM 20 Ammo", tons: 1, slots: 1, availability: [{ from: 2300 }] },
+      { id: "ammo-mml-3-lrm-is", name: "MML 3 LRM Ammo", tons: 1, slots: 1, availability: [{ from: 2300 }] },
+      { id: "ammo-mml-3-srm-is", name: "MML 3 SRM Ammo", tons: 1, slots: 1, availability: [{ from: 2370 }] },
+      { id: "ammo-mml-5-lrm-is", name: "MML 5 LRM Ammo", tons: 1, slots: 1, availability: [{ from: 2300 }] },
+      { id: "ammo-mml-5-srm-is", name: "MML 5 SRM Ammo", tons: 1, slots: 1, availability: [{ from: 2370 }] },
+      { id: "ammo-mml-7-lrm-is", name: "MML 7 LRM Ammo", tons: 1, slots: 1, availability: [{ from: 2300 }] },
+      { id: "ammo-mml-7-srm-is", name: "MML 7 SRM Ammo", tons: 1, slots: 1, availability: [{ from: 2370 }] },
+      { id: "ammo-mml-9-lrm-is", name: "MML 9 LRM Ammo", tons: 1, slots: 1, availability: [{ from: 2300 }] },
+      { id: "ammo-mml-9-srm-is", name: "MML 9 SRM Ammo", tons: 1, slots: 1, availability: [{ from: 2370 }] },
+      { id: "ammo-srm-2-is", name: "SRM 2 Ammo", tons: 1, slots: 1, availability: [{ from: 2370 }] },
+      { id: "ammo-srm-4-is", name: "SRM 4 Ammo", tons: 1, slots: 1, availability: [{ from: 2370 }] },
+      { id: "ammo-srm-6-is", name: "SRM 6 Ammo", tons: 1, slots: 1, availability: [{ from: 2370 }] },
+      { id: "ammo-mrm-10-is", name: "MRM 10 Ammo", tons: 1, slots: 1, availability: [{ from: 3058 }] },
+      { id: "ammo-mrm-20-is", name: "MRM 20 Ammo", tons: 1, slots: 1, availability: [{ from: 3058 }] },
+      { id: "ammo-mrm-30-is", name: "MRM 30 Ammo", tons: 1, slots: 1, availability: [{ from: 3058 }] },
+      { id: "ammo-mrm-40-is", name: "MRM 40 Ammo", tons: 1, slots: 1, availability: [{ from: 3058 }] },
+      { id: "ammo-streak-srm-2-is", name: "Streak SRM 2 Ammo", aliases: ["Streak-2 Ammo"], tons: 1, slots: 1, availability: [{ from: 2647, to: 2845 }, { from: 3035 }] },
+      { id: "ammo-streak-srm-4-is", name: "Streak SRM 4 Ammo", aliases: ["Streak-4 Ammo"], tons: 1, slots: 1, availability: [{ from: 3058 }] },
+      { id: "ammo-streak-srm-6-is", name: "Streak SRM 6 Ammo", aliases: ["Streak-6 Ammo"], tons: 1, slots: 1, availability: [{ from: 3058 }] },
+      // Anti-missile and Narc ammunition (Inner Sphere); the Narc rows take their launcher's dates, the ammunition table has no Narc row
+      { id: "ammo-ams-is", name: "Anti-Missile System Ammo", aliases: ["AMS Ammo"], tons: 1, slots: 1, availability: [{ from: 2617, to: 2796 }, { from: 3040 }] },
+      { id: "ammo-narc-is", name: "Narc Missile Beacon Ammo", aliases: ["Narc Ammo"], tons: 1, slots: 1, availability: [{ from: 2587, to: 2795 }, { from: 3035 }], checked: "text" },
+      { id: "ammo-improved-narc-is", name: "Improved Narc Launcher Ammo", aliases: ["iNarc Ammo"], tons: 1, slots: 1, availability: [{ from: 3062 }], checked: "text" },
+    ],
+  },
+  {
+    defaults: { kind: "ammunition", techBase: "clan", cite: { book: "TechManual", page: 57 }, checked: "page" },
+    items: [
+      // Autocannon ammunition (Clan)
+      { id: "ammo-lb-2-x-clan", name: "LB 2-X AC Ammo", aliases: ["LB 2-X Ammo"], tons: 1, slots: 1, availability: [{ from: 2826 }] },
+      { id: "ammo-lb-2-x-cluster-clan", name: "LB 2-X AC Cluster Ammo", aliases: ["LB 2-X Cluster Ammo"], tons: 1, slots: 1, availability: [{ from: 2826 }] },
+      { id: "ammo-lb-5-x-clan", name: "LB 5-X AC Ammo", aliases: ["LB 5-X Ammo"], tons: 1, slots: 1, availability: [{ from: 2825 }] },
+      { id: "ammo-lb-5-x-cluster-clan", name: "LB 5-X AC Cluster Ammo", aliases: ["LB 5-X Cluster Ammo"], tons: 1, slots: 1, availability: [{ from: 2825 }] },
+      { id: "ammo-lb-10-x-clan", name: "LB 10-X AC Ammo", aliases: ["LB 10-X Ammo"], tons: 1, slots: 1, availability: [{ from: 2595 }] },
+      { id: "ammo-lb-10-x-cluster-clan", name: "LB 10-X AC Cluster Ammo", aliases: ["LB 10-X Cluster Ammo"], tons: 1, slots: 1, availability: [{ from: 2595 }] },
+      { id: "ammo-lb-20-x-clan", name: "LB 20-X AC Ammo", aliases: ["LB 20-X Ammo"], tons: 1, slots: 1, availability: [{ from: 2826 }] },
+      { id: "ammo-lb-20-x-cluster-clan", name: "LB 20-X AC Cluster Ammo", aliases: ["LB 20-X Cluster Ammo"], tons: 1, slots: 1, availability: [{ from: 2826 }] },
+      { id: "ammo-ultra-ac-2-clan", name: "Ultra AC/2 Ammo", aliases: ["UAC/2 Ammo"], tons: 1, slots: 1, availability: [{ from: 2827 }] },
+      { id: "ammo-ultra-ac-5-clan", name: "Ultra AC/5 Ammo", aliases: ["UAC/5 Ammo"], tons: 1, slots: 1, availability: [{ from: 2640 }] },
+      { id: "ammo-ultra-ac-10-clan", name: "Ultra AC/10 Ammo", aliases: ["UAC/10 Ammo"], tons: 1, slots: 1, availability: [{ from: 2825 }] },
+      { id: "ammo-ultra-ac-20-clan", name: "Ultra AC/20 Ammo", aliases: ["UAC/20 Ammo"], tons: 1, slots: 1, availability: [{ from: 2825 }] },
+      // Gauss, machine gun, flamer and plasma ammunition (Clan)
+      { id: "ammo-ap-gauss-rifle-clan", name: "AP Gauss Rifle Ammo", tons: 1, slots: 1, availability: [{ from: 3069 }] },
+      { id: "ammo-gauss-rifle-clan", name: "Gauss Rifle Ammo", tons: 1, slots: 1, availability: [{ from: 2590 }] },
+      { id: "ammo-hyper-assault-gauss-20-clan", name: "Hyper-Assault Gauss 20 Ammo", aliases: ["HAG/20 Ammo"], tons: 1, slots: 1, availability: [{ from: 3068 }] },
+      { id: "ammo-hyper-assault-gauss-30-clan", name: "Hyper-Assault Gauss 30 Ammo", aliases: ["HAG/30 Ammo"], tons: 1, slots: 1, availability: [{ from: 3068 }] },
+      { id: "ammo-hyper-assault-gauss-40-clan", name: "Hyper-Assault Gauss 40 Ammo", aliases: ["HAG/40 Ammo"], tons: 1, slots: 1, availability: [{ from: 3069 }] },
+      { id: "ammo-light-machine-gun-clan", name: "Light Machine Gun Ammo", tons: 1, slots: 1, availability: [{ from: 3060 }] },
+      { id: "ammo-light-machine-gun-half-clan", name: "Light Machine Gun Ammo (Half Ton)", tons: 0.5, slots: 1, availability: [{ from: 3060 }] },
+      { id: "ammo-machine-gun-clan", name: "Machine Gun Ammo", tons: 1, slots: 1, availability: [{ from: 1950 }] },
+      { id: "ammo-machine-gun-half-clan", name: "Machine Gun Ammo (Half Ton)", tons: 0.5, slots: 1, availability: [{ from: 1950 }] },
+      { id: "ammo-heavy-machine-gun-clan", name: "Heavy Machine Gun Ammo", tons: 1, slots: 1, availability: [{ from: 3059 }] },
+      { id: "ammo-heavy-machine-gun-half-clan", name: "Heavy Machine Gun Ammo (Half Ton)", tons: 0.5, slots: 1, availability: [{ from: 3059 }] },
+      { id: "ammo-vehicle-flamer-clan", name: "Flamer (Vehicle) Ammo", aliases: ["Vehicle Flamer Ammo"], tons: 1, slots: 1, availability: [{ from: 1950 }] },
+      { id: "ammo-plasma-cannon-clan", name: "Plasma Cannon Ammo", tons: 1, slots: 1, availability: [{ from: 3069 }] },
+      // Missile ammunition (Clan)
+      { id: "ammo-atm-3-clan", name: "ATM 3 Ammo", tons: 1, slots: 1, availability: [{ from: 3054 }] },
+      { id: "ammo-atm-6-clan", name: "ATM 6 Ammo", tons: 1, slots: 1, availability: [{ from: 3054 }] },
+      { id: "ammo-atm-9-clan", name: "ATM 9 Ammo", tons: 1, slots: 1, availability: [{ from: 3054 }] },
+      { id: "ammo-atm-12-clan", name: "ATM 12 Ammo", tons: 1, slots: 1, availability: [{ from: 3055 }] },
+      { id: "ammo-lrm-5-clan", name: "LRM 5 Ammo", tons: 1, slots: 1, availability: [{ from: 2300 }] },
+      { id: "ammo-lrm-10-clan", name: "LRM 10 Ammo", tons: 1, slots: 1, availability: [{ from: 2300 }] },
+      { id: "ammo-lrm-15-clan", name: "LRM 15 Ammo", tons: 1, slots: 1, availability: [{ from: 2300 }] },
+      { id: "ammo-lrm-20-clan", name: "LRM 20 Ammo", tons: 1, slots: 1, availability: [{ from: 2300 }] },
+      { id: "ammo-srm-2-clan", name: "SRM 2 Ammo", tons: 1, slots: 1, availability: [{ from: 2370 }] },
+      { id: "ammo-srm-4-clan", name: "SRM 4 Ammo", tons: 1, slots: 1, availability: [{ from: 2370 }] },
+      { id: "ammo-srm-6-clan", name: "SRM 6 Ammo", tons: 1, slots: 1, availability: [{ from: 2370 }] },
+      { id: "ammo-streak-srm-2-clan", name: "Streak SRM 2 Ammo", aliases: ["Streak-2 Ammo"], tons: 1, slots: 1, availability: [{ from: 2647 }] },
+      { id: "ammo-streak-srm-4-clan", name: "Streak SRM 4 Ammo", aliases: ["Streak-4 Ammo"], tons: 1, slots: 1, availability: [{ from: 2826 }] },
+      { id: "ammo-streak-srm-6-clan", name: "Streak SRM 6 Ammo", aliases: ["Streak-6 Ammo"], tons: 1, slots: 1, availability: [{ from: 2826 }] },
+      // Anti-missile and Narc ammunition (Clan); the Narc rows take their launcher's dates, the ammunition table has no Narc row
+      { id: "ammo-ams-clan", name: "Anti-Missile System Ammo", aliases: ["AMS Ammo"], tons: 1, slots: 1, availability: [{ from: 2831 }] },
+      { id: "ammo-narc-clan", name: "Narc Missile Beacon Ammo", aliases: ["Narc Ammo"], tons: 1, slots: 1, availability: [{ from: 2828 }], checked: "text" },
+    ],
+  },
+];
