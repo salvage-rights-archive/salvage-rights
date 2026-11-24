@@ -52,6 +52,19 @@ describe("openStore with IndexedDB", () => {
   });
 });
 
+interface FakeRequest {
+  result?: unknown;
+  onsuccess?: () => void;
+  onblocked?: () => void;
+}
+
+/** Makes indexedDB.open return a request the test settles by hand. */
+function fakeRequest(): FakeRequest {
+  const request: FakeRequest = {};
+  vi.spyOn(indexedDB, "open").mockReturnValue(request as unknown as IDBOpenDBRequest);
+  return request;
+}
+
 describe("openStore fallback", () => {
   async function checkMemory() {
     const store = await openStore(ns());
@@ -75,24 +88,22 @@ describe("openStore fallback", () => {
   });
 
   it("uses memory when the open never settles, and closes a late connection", async () => {
-    const request: Partial<IDBOpenDBRequest> = {};
-    vi.spyOn(indexedDB, "open").mockReturnValue(request as IDBOpenDBRequest);
+    const request = fakeRequest();
     const store = await openStore(ns(), { timeoutMs: 20 });
     expect(store.persistent).toBe(false);
     const close = vi.fn();
-    Object.defineProperty(request, "result", { value: { close } });
-    request.onsuccess?.(new Event("success"));
+    request.result = { close };
+    request.onsuccess?.();
     expect(close).toHaveBeenCalledOnce();
   });
 
   it("keeps waiting after a blocked open and ends persistent", async () => {
-    const request: Partial<IDBOpenDBRequest> = {};
-    vi.spyOn(indexedDB, "open").mockReturnValue(request as IDBOpenDBRequest);
+    const request = fakeRequest();
     const pending = openStore(ns(), { timeoutMs: 1000 });
-    request.onblocked?.(new Event("blocked") as IDBVersionChangeEvent);
+    request.onblocked?.();
     const db = { close: vi.fn(), onversionchange: null as unknown };
-    Object.defineProperty(request, "result", { value: db });
-    request.onsuccess?.(new Event("success"));
+    request.result = db;
+    request.onsuccess?.();
     const store = await pending;
     expect(store.persistent).toBe(true);
     expect(typeof db.onversionchange).toBe("function");
