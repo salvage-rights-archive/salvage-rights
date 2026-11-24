@@ -1,0 +1,189 @@
+import { describe, expect, it } from "vitest";
+import { bipedRecord, factsOf, mount, quadRecord } from "./fixtures";
+import {
+  editRecord,
+  layout,
+  maxArmor,
+  structurePoints,
+  walkMP,
+  weights,
+  type FactsOf,
+  type LocationCode,
+  type MechRecord,
+} from "./mech";
+
+const labels = (l: ReturnType<typeof layout>, loc: LocationCode) => (l.slots[loc] ?? []).map((c) => c.label);
+const count = (l: ReturnType<typeof layout>, loc: LocationCode, label: string) =>
+  labels(l, loc).filter((x) => x === label).length;
+const chassis = (patch: Partial<MechRecord["chassis"]>, rest: Partial<MechRecord> = {}) => {
+  const base = bipedRecord();
+  return bipedRecord({ mounts: [], chassis: { ...base.chassis, ...patch }, ...rest });
+};
+const line = (record: MechRecord, label: string) => weights(record, factsOf).lines.find((l) => l.label === label)?.tons;
+
+describe("layout", () => {
+  it("sizes a biped, labels the fixed cells and puts each mount in the cell its slot says", () => {
+    const l = layout(bipedRecord(), factsOf);
+    expect(l.supported).toBe(true);
+    expect(l.locations).toEqual(["HD", "CT", "LT", "RT", "LA", "RA", "LL", "RL"]);
+    // The book counts six slots in the head and legs and twelve elsewhere.
+    expect(Object.fromEntries(l.locations.map((loc) => [loc, l.slots[loc]?.length]))).toEqual({
+      HD: 6, CT: 12, LT: 12, RT: 12, LA: 12, RA: 12, LL: 6, RL: 6,
+    });
+    expect(labels(l, "HD")).toEqual(["Life Support", "Sensors", "Cockpit", "", "Sensors", "Life Support"]);
+    expect(labels(l, "CT").slice(0, 10)).toEqual([...Array(3).fill("Engine"), ...Array(4).fill("Gyro"), ...Array(3).fill("Engine")]);
+    expect(labels(l, "LA").slice(0, 4)).toEqual(["Shoulder", "Upper Arm Actuator", "Lower Arm Actuator", "Hand Actuator"]);
+    expect(l.slots.RT?.slice(0, 8).map((c) => c.mountId)).toEqual(["ac", "ac", "ac", "ac", "ac", "ac", "ac", undefined]);
+    expect(l.slots.LA?.[4]).toMatchObject({ kind: "mount", mountId: "laser-l" });
+    expect(l.slots.LA?.[5]?.kind).toBe("empty");
+    expect([l.unplaced, l.conflicts, l.overflow]).toEqual([[], [], []]);
+    expect(layout(quadRecord(), factsOf).locations).toEqual(["HD", "CT", "LT", "RT", "FLL", "FRL", "RLL", "RRL"]);
+  });
+
+  // [engine, gyro, side-torso engine cells, center-torso engine cells, gyro cells]
+  it.each([
+    ["standard", "standard", 0, 6, 4],
+    ["xl", "standard", 3, 6, 4],
+    ["xl-clan", "standard", 2, 6, 4],
+    ["light", "standard", 2, 6, 4],
+    ["compact", "standard", 0, 3, 4],
+    ["standard", "compact", 0, 6, 2],
+    ["standard", "xl", 0, 6, 6],
+    ["standard", "heavy-duty", 0, 6, 4],
+  ])("fills the torsos for a %s engine and a %s gyro", (engine, gyro, side, ctEngine, ctGyro) => {
+    const l = layout(chassis({ engine: { type: engine, rating: 200 }, gyro }), factsOf);
+    expect(count(l, "LT", "Engine")).toBe(side);
+    expect(count(l, "RT", "Engine")).toBe(side);
+    expect(count(l, "CT", "Engine")).toBe(ctEngine);
+    expect(count(l, "CT", "Gyro")).toBe(ctGyro);
+  });
+
+  it("reports two mounts on one slot, and one on a fixed cell, as conflicts and keeps them all", () => {
+    const record = bipedRecord({
+      mounts: [mount("a", "medium-laser", "LA", 5), mount("b", "medium-laser", "LA", 5), mount("c", "medium-laser", "LA", 0)],
+    });
+    const l = layout(record, factsOf);
+    expect(l.conflicts).toEqual([
+      { location: "LA", slot: 0, mountIds: ["c"] },
+      { location: "LA", slot: 5, mountIds: ["a", "b"] },
+    ]);
+    expect(record.mounts).toHaveLength(3);
+  });
+
+  it("reports a mount running past the last slot as overflow", () => {
+    const record = bipedRecord({
+      mounts: [mount("big", "big-gun", "LA", 6), mount("edge", "ac-10", "LL", 4), mount("fits", "ac-10", "RA", 5)],
+    });
+    expect(layout(record, factsOf).overflow).toEqual([
+      { location: "LA", mountId: "big" },
+      { location: "LL", mountId: "edge" },
+    ]);
+  });
+
+  it("lists mounts that take slots but have no slot as unplaced, and not zero-slot items", () => {
+    const facts: FactsOf = (m, r) => (m.id === "zero" ? { tons: 0, slots: 0 } : factsOf(m, r));
+    const record = bipedRecord({
+      mounts: [mount("loose", "ac-10", null, null), mount("zero", "ac-10", null, null), mount("unknown", null, null, null)],
+    });
+    expect(layout(record, facts).unplaced.map((m) => m.id)).toEqual(["loose", "unknown"]);
+  });
+
+  it("counts the slots a structure type needs and the part mounts present", () => {
+    const part = (id: string, slot: number) => ({ ...mount(id, null, "LT", slot), part: "structure" as const });
+    const record = chassis({ structure: "endo-steel" }, { mounts: [part("e1", 3), part("e2", 4), part("e3", 5)] });
+    const l = layout(record, factsOf);
+    expect(l.partSlots).toContainEqual({ part: "structure", needed: 14, present: 3 });
+    expect(l.partSlots).toContainEqual({ part: "armor", needed: 0, present: 0 });
+    expect(l.slots.LT?.[3]).toMatchObject({ kind: "mount", mountId: "e1" });
+  });
+
+  it("does not throw for an unknown configuration or unknown chassis keys", () => {
+    const l = layout(bipedRecord({ configuration: "tripod" }), factsOf);
+    expect(l).toMatchObject({ supported: false, locations: [], slots: {} });
+    const odd = chassis({ engine: { type: "quantum", rating: 7 }, gyro: "?", cockpit: "?", structure: "?", armorType: "?" }, { tons: 77 });
+    expect(() => [layout(odd, factsOf), weights(odd, factsOf), structurePoints(odd), maxArmor(odd), walkMP(odd)]).not.toThrow();
+    const w = weights(odd, factsOf);
+    expect(w.lines.slice(0, 6).map((x) => x.tons)).toEqual([null, null, null, null, 0, null]);
+    expect(w.total).toBeNull();
+    expect(structurePoints(odd)).toEqual({});
+    expect(maxArmor(odd)).toEqual({});
+  });
+});
+
+describe("weights", () => {
+  it("lists structure to armor, then each mount, and the lines sum to the total", () => {
+    const w = weights(bipedRecord(), factsOf);
+    expect(w.lines.slice(0, 6).map((x) => [x.label, x.tons])).toEqual([
+      ["Structure", 5], ["Engine", 8.5], ["Gyro", 2], ["Cockpit", 3], ["Heat sinks", 0], ["Armor", 5],
+    ]);
+    expect(w.lines).toHaveLength(6 + 7);
+    expect(w.total).toBe(40);
+    expect(w.lines.reduce((sum, x) => sum + (x.tons ?? 0), 0)).toBe(w.total);
+  });
+
+  it("makes a mount with no catalog entry, and the total, null", () => {
+    const record = bipedRecord({ mounts: [mount("ac", "ac-10", "RT", 0), mount("mystery", null, "LT", 0)] });
+    const w = weights(record, factsOf);
+    expect(w.lines.at(-1)).toEqual({ label: "mystery", tons: null });
+    expect(w.lines.at(-2)).toEqual({ label: "ac", tons: 12 });
+    expect(w.total).toBeNull();
+  });
+
+  // Values worked in the book's own examples.
+  it.each<[string, Partial<MechRecord["chassis"]>, Partial<MechRecord>, string, number]>([
+    ["endo-steel at 25 tons", { structure: "endo-steel" }, { tons: 25 }, "Structure", 1.5],
+    ["a 380 XL engine", { engine: { type: "xl", rating: 380 } }, {}, "Engine", 20.5],
+    ["a 220 compact engine", { engine: { type: "compact", rating: 220 } }, {}, "Engine", 15],
+    ["a compact gyro on a 160 engine", { gyro: "compact", engine: { type: "standard", rating: 160 } }, {}, "Gyro", 3],
+    ["a standard gyro on a 350 engine", { engine: { type: "standard", rating: 350 } }, {}, "Gyro", 4],
+    ["a small cockpit", { cockpit: "small" }, {}, "Cockpit", 2],
+    ["15 sinks, 10 of them free", { heatSinks: { type: "double", count: 15 } }, {}, "Heat sinks", 5],
+    ["89 points of Inner Sphere ferro-fibrous", { armorType: "ferro-fibrous" }, { armor: { CT: { front: 89 } } }, "Armor", 5],
+    ["105 points of heavy ferro-fibrous", { armorType: "heavy-ferro-fibrous" }, { armor: { CT: { front: 105 } } }, "Armor", 5.5],
+    ["259 points of Clan ferro-fibrous", { armorType: "ferro-fibrous-clan" }, { armor: { CT: { front: 250 }, HD: { front: 9 } } }, "Armor", 13.5],
+  ])("matches the book for %s", (_name, patch, rest, label, tons) => {
+    expect(line(chassis(patch, rest), label)).toBe(tons);
+  });
+});
+
+describe("structure points, armor limits and speed", () => {
+  it("gives structure points by location for a biped and a quad", () => {
+    expect(structurePoints(bipedRecord())).toEqual({ HD: 3, CT: 16, LT: 12, RT: 12, LA: 8, RA: 8, LL: 12, RL: 12 });
+    expect(structurePoints(quadRecord({ tons: 70 }))).toEqual({
+      HD: 3, CT: 22, LT: 15, RT: 15, FLL: 15, FRL: 15, RLL: 15, RRL: 15,
+    });
+  });
+
+  // The totals are the book's Maximum Armor Factor column.
+  it.each<[number, string, number]>([[20, "biped", 69], [55, "biped", 185], [100, "biped", 307], [70, "quad", 233]])(
+    "allows %i tons (%s) a head of 9, twice the structure elsewhere, %i in all",
+    (tons, configuration, total) => {
+      const record = bipedRecord({ tons, configuration });
+      const max = maxArmor(record);
+      const structure = structurePoints(record);
+      expect(max.HD).toBe(9);
+      expect(max.CT).toBe(2 * (structure.CT ?? 0));
+      expect(Object.values(max).reduce((a, b) => a + b, 0)).toBe(total);
+    },
+  );
+
+  it("works out walking MP as rating over tonnage, null when it is not a whole number", () => {
+    expect(walkMP(bipedRecord())).toBe(4);
+    expect(walkMP(chassis({ engine: { type: "standard", rating: 200 } }, { tons: 60 }))).toBeNull();
+    expect(walkMP(bipedRecord({ tons: 0 }))).toBeNull();
+  });
+
+  it("edits a copy and leaves the original and its nested parts alone", () => {
+    const original = bipedRecord();
+    const snapshot = structuredClone(original);
+    const next = editRecord(original, (draft) => {
+      draft.chassis.engine.rating = 250;
+      draft.mounts.push(mount("new", "medium-laser", "HD", 3));
+      draft.armor.HD = { front: 1 };
+    });
+    expect(next).not.toBe(original);
+    expect(next.chassis.engine.rating).toBe(250);
+    expect(next.mounts).toHaveLength(original.mounts.length + 1);
+    expect(original).toEqual(snapshot);
+  });
+});
