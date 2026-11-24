@@ -3,7 +3,7 @@
 //   host, shared  never reach a family; shared never reaches host
 //   a family      never reaches another family or host
 //   rules/, data/ of a family reach only that family's src/rules and src/data (no react, react-dom, shared)
-//   any package   never reaches another package by a relative path, or leaves its own package at all
+//   any package   never reaches another package under packages/ by a relative path
 //
 // Checked: static imports, `export ... from`, `import("literal")` and `require("literal")`.
 // Files outside packages/ (tests/, scripts/, config) are not restricted.
@@ -49,11 +49,11 @@ function check(filename, specifier) {
 
   if (specifier.startsWith(".")) {
     const target = locate(resolve(dirname(filename), specifier));
-    if (!target || target.pkg !== self.pkg) {
-      const where = target ? `package "${target.pkg}"` : "a location outside packages/";
-      return `"${specifier}" reaches ${where} by a relative path; a package stays inside itself`;
+    // Repo-root files (site.config.json, editions/) are outside packages/ and allowed, except from rules/ and data/.
+    if (target && target.pkg !== self.pkg) {
+      return `"${specifier}" reaches package "${target.pkg}" by a relative path; a package stays inside itself`;
     }
-    if (zone && !inZone(target.rest)) {
+    if (zone && !(target && inZone(target.rest))) {
       return `"${specifier}" leaves rules/ and data/; they import only each other`;
     }
     return null;
