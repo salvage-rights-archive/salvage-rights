@@ -21,7 +21,9 @@
 // Placement limits (`locations`) and splitting follow the item entries on pp. 204-238 and the ranged-weapon rule on p. 57:
 // a ranged weapon of 8 or more slots may be split between two adjacent locations other than the legs.
 // `directFire` marks the weapons whose weight counts toward a targeting computer (p. 238): non-missile pulse and
-// direct-fire heavy weapons, not machine guns, flamers or TAG.
+// direct-fire heavy weapons, not machine guns, flamers or TAG. TechManual's own tables have no Type column; the Type
+// comes from Total Warfare's weapons tables, which print the plasma rifle and plasma cannon as DE (direct-fire energy,
+// with heat effect) and the AP Gauss rifle as DB (direct-fire ballistic), so all three count.
 // A formula name (a string in `tons` or `slots`) is defined in rules/catalog.ts.
 
 import type { EquipmentGroup } from "../../rules/catalog";
