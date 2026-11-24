@@ -4,6 +4,7 @@ import { BrowserRouter } from "react-router";
 import { families } from "virtual:families";
 import { App } from "./App";
 import { restoredPath } from "./restore-path";
+import { startupProblems } from "./startup";
 import "./styles/tokens.scss";
 import "./styles/shell.scss";
 import "./styles/landing.scss";
@@ -22,10 +23,27 @@ try {
 const container = document.getElementById("root");
 if (!container) throw new Error("index.html has no #root");
 
-createRoot(container).render(
-  <StrictMode>
-    <BrowserRouter basename={import.meta.env.BASE_URL}>
-      <App families={families} />
-    </BrowserRouter>
-  </StrictMode>,
-);
+const problems = startupProblems(families);
+if (problems.length > 0) {
+  console.error("This build has a problem:", problems);
+  createRoot(container).render(
+    <main className="sr-content">
+      <div className="sr-page">
+        <h1>This build has a problem</h1>
+        <ul>
+          {problems.map((problem) => (
+            <li key={problem}>{problem}</li>
+          ))}
+        </ul>
+      </div>
+    </main>,
+  );
+} else {
+  createRoot(container).render(
+    <StrictMode>
+      <BrowserRouter basename={import.meta.env.BASE_URL}>
+        <App families={families} />
+      </BrowserRouter>
+    </StrictMode>,
+  );
+}

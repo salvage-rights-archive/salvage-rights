@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { useLocation } from "react-router";
 import type { FamilyManifest } from "@salvage-rights/shared";
+import { AppErrorBoundary } from "./components/AppErrorBoundary";
 import { Footer } from "./components/Footer";
 import { Header } from "./components/Header";
 import { AppRoutes } from "./routes";
@@ -58,8 +59,10 @@ function Frame({ families }: { families: FamilyManifest[] }) {
 /** The app frame. The caller supplies the router, so tests can use a memory router. */
 export function App({ families }: { families: FamilyManifest[] }) {
   return (
-    <SettingsProvider>
-      <Frame families={families} />
-    </SettingsProvider>
+    <AppErrorBoundary>
+      <SettingsProvider>
+        <Frame families={families} />
+      </SettingsProvider>
+    </AppErrorBoundary>
   );
 }
