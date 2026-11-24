@@ -36,7 +36,12 @@ function checkDuplicates(items: unknown[], where: string, label: string, out: st
   }
 }
 
-function checkRoutes(routes: unknown, where: string, out: string[]): void {
+function checkReady(rec: Rec, where: string, out: string[]): void {
+  if (typeof rec["ready"] !== "boolean") out.push(`${where}.ready must be true or false`);
+}
+
+/** `gameIds`, when given, are ids a route's first segment must not equal (it would hide that game's pages). */
+function checkRoutes(routes: unknown, where: string, out: string[], gameIds: string[] = []): void {
   if (!Array.isArray(routes)) {
     out.push(`${where} must be an array`);
     return;
@@ -48,8 +53,13 @@ function checkRoutes(routes: unknown, where: string, out: string[]): void {
       return;
     }
     const path = route["path"];
-    if (typeof path !== "string" || path === "" || path.startsWith("/") || path.includes("..")) {
-      out.push(`${at}.path must be non-empty, relative and free of ".."`);
+    if (typeof path !== "string" || !path.split("/").every((segment) => ID_PATTERN.test(segment))) {
+      out.push(`${at}.path must be segments of lower case letters, digits and hyphens joined by "/"`);
+    } else {
+      const first = path.split("/")[0] ?? "";
+      if (gameIds.includes(first)) {
+        out.push(`${at}.path starts with the game id "${first}", which would hide that game's pages`);
+      }
     }
     checkText(route, "label", at, out);
     if (typeof route["section"] !== "string" || !SECTIONS.includes(route["section"])) {
@@ -136,6 +146,10 @@ export function validateManifest(manifest: unknown): string[] {
       checkText(game, "shortName", at, out);
       checkText(game, "fullName", at, out);
       checkRoutes(game["routes"], `${at}.routes`, out);
+      checkReady(game, at, out);
+      if (game["ready"] === true && Array.isArray(game["routes"]) && game["routes"].length === 0) {
+        out.push(`${at}.routes must have at least one route when the game is ready`);
+      }
     });
     checkDuplicates(games, "games", "game id", out);
   }
@@ -152,12 +166,16 @@ export function validateManifest(manifest: unknown): string[] {
       }
       checkId(unit, at, out);
       checkText(unit, "name", at, out);
+      checkReady(unit, at, out);
     });
     checkDuplicates(unitTypes, "unitTypes", "unit type id", out);
   }
 
   checkEras(manifest["eras"], "eras", out);
-  checkRoutes(manifest["routes"], "routes", out);
+  const gameIds = Array.isArray(games)
+    ? games.flatMap((game) => (isRec(game) && typeof game["id"] === "string" ? [game["id"]] : []))
+    : [];
+  checkRoutes(manifest["routes"], "routes", out, gameIds);
 
   return out;
 }

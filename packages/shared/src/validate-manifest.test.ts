@@ -19,10 +19,10 @@ function fixture(): FamilyManifest {
         routes: [{ path: "play/table", label: "Table", section: "play", load }],
       },
     ],
-    unitTypes: [{ id: "mech", name: "Mech", ready: true }],
+    unitTypes: [{ id: "unit-one", name: "Unit One", ready: true }],
     eras: [{ id: "era-one", name: "Era One", startYear: 2000, endYear: 2100, subEras: [{ id: "sub-one", name: "Sub" }] }],
-    measures: ["hexes"],
-    routes: [{ path: "workshop/mech", label: "Mech", section: "workshop", load }],
+    measures: ["meters"],
+    routes: [{ path: "workshop/unit", label: "Unit", section: "workshop", load }],
     credits: { owner: "Owner", license: "Apache-2.0", notes: [] },
   };
 }
@@ -49,7 +49,7 @@ describe("validateManifest", () => {
   });
 
   it("rejects bad ids at every level", () => {
-    expectMessage(mutate((m) => (m.id = "Bad_Id")), "id");
+    expectMessage(mutate((m) => (m.id = "Bad_Id")), "manifest.id");
     expectMessage(mutate((m) => { m.games[0]!.id = "Bad"; }), "games[0].id");
     expectMessage(mutate((m) => { m.unitTypes[0]!.id = "-x"; }), "unitTypes[0].id");
     expectMessage(mutate((m) => { m.eras[0]!.id = "a--b"; }), "eras[0].id");
@@ -57,10 +57,10 @@ describe("validateManifest", () => {
   });
 
   it("rejects empty text fields", () => {
-    expectMessage(mutate((m) => (m.name = "")), "name");
-    expectMessage(mutate((m) => (m.blurb = " ")), "blurb");
-    expectMessage(mutate((m) => { m.games[0]!.shortName = ""; }), "shortName");
-    expectMessage(mutate((m) => { m.games[0]!.fullName = ""; }), "fullName");
+    expectMessage(mutate((m) => (m.name = "")), "manifest.name");
+    expectMessage(mutate((m) => (m.blurb = " ")), "manifest.blurb");
+    expectMessage(mutate((m) => { m.games[0]!.shortName = ""; }), "games[0].shortName");
+    expectMessage(mutate((m) => { m.games[0]!.fullName = ""; }), "games[0].fullName");
   });
 
   it("rejects bad accent and measures", () => {
@@ -84,6 +84,30 @@ describe("validateManifest", () => {
     expectMessage(mutate((m) => { m.routes[0]!.path = "/abs"; }), "routes[0].path");
     expectMessage(mutate((m) => { m.routes[0]!.path = "a/../b"; }), "routes[0].path");
     expectMessage(mutate((m) => { m.games[0]!.routes[0]!.path = ""; }), "games[0].routes[0].path");
+  });
+
+  it("rejects route paths that are not plain segments joined by slashes", () => {
+    for (const path of ["play?x", "a#b", ".", "a/./b", "a//b", "a/", "Upper"]) {
+      expectMessage(mutate((m) => { m.routes[0]!.path = path; }), "routes[0].path");
+    }
+  });
+
+  it("rejects a family route that starts with a game id", () => {
+    expectMessage(mutate((m) => m.routes.push({ ...m.routes[0]!, path: "game-one/extra" })), "routes[1].path");
+    expectMessage(mutate((m) => m.routes.push({ ...m.routes[0]!, path: "game-one" })), "game-one");
+  });
+
+  it("rejects a ready flag that is not a boolean", () => {
+    const loose = (value: unknown) => (m: FamilyManifest) => {
+      (m.games[0] as unknown as Record<string, unknown>).ready = value;
+    };
+    expectMessage(mutate(loose("yes")), "games[0].ready");
+    expectMessage(mutate((m) => { (m.unitTypes[0] as unknown as Record<string, unknown>).ready = 1; }), "unitTypes[0].ready");
+  });
+
+  it("rejects a ready game with no routes but accepts one that is not ready", () => {
+    expectMessage(mutate((m) => { m.games[0]!.routes = []; }), "games[0].routes");
+    expect(mutate((m) => { m.games[0]!.routes = []; m.games[0]!.ready = false; })).toEqual([]);
   });
 
   it("rejects duplicate route paths in one list", () => {

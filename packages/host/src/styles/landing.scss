@@ -186,13 +186,6 @@
     outline-offset: -5px;
   }
 
-  // A ready game with no page yet: text, not a box.
-  &__game--plain {
-    background: none;
-    border: 0;
-    color: var(--sr-ink-muted);
-  }
-
   // One family fills the row: the text sits on a solid steel panel beside the artwork.
   &[data-size="single"] {
     flex-wrap: wrap;
@@ -228,10 +221,6 @@
 
     a.sr-tile__game:focus-visible {
       outline-color: var(--sr-header-focus);
-    }
-
-    .sr-tile__game--plain {
-      color: color-mix(in srgb, var(--sr-header-ink) 75%, var(--sr-header-bg));
     }
   }
 

@@ -84,15 +84,12 @@ export function FamilyTile({
         <ul className="sr-tile__games" aria-labelledby={nameId}>
           {games.map((game) => {
             const path = firstPath(family, game);
-            return (
+            // A listed game always has a route (the manifest check requires one); no route, no entry.
+            return path === null ? null : (
               <li key={game.id}>
-                {path === null ? (
-                  <span className="sr-tile__game sr-tile__game--plain">{game.shortName}</span>
-                ) : (
-                  <Link className="sr-tile__game" to={path} aria-label={`${game.shortName}, ${family.name}`}>
-                    {game.shortName}
-                  </Link>
-                )}
+                <Link className="sr-tile__game" to={path} aria-label={`${game.shortName}, ${family.name}`}>
+                  {game.shortName}
+                </Link>
               </li>
             );
           })}

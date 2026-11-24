@@ -13,7 +13,7 @@ export interface Era {
 }
 
 export interface FamilyRoute {
-  /** Relative, no leading slash, e.g. "workshop/mech". */
+  /** Relative, no leading slash, e.g. "workshop/unit". */
   path: string;
   label: string;
   section: Section;
@@ -26,6 +26,7 @@ export interface GameManifest {
   shortName: string;
   fullName: string;
   ready: boolean;
+  /** The first route is the page the game's tile entry opens; a ready game needs at least one. */
   routes: FamilyRoute[];
 }
 
