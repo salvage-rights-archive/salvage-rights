@@ -112,8 +112,8 @@ const tidy = (x: number) => Math.round(x * 1000) / 1000;
 /** Engine weight: the printed column for the type times its stated factor, rounded up to a half ton. null if unknown. */
 export function engineTons(type: string, rating: number): number | null {
   const engine = own(ENGINE_TYPES.types, type);
-  const row = own(ENGINE_WEIGHTS.rows, rating);
-  return engine && row ? ceilHalf(row[engine.weightColumn] * engine.weightFactor) : null;
+  const standard = own(ENGINE_WEIGHTS.rows, rating);
+  return engine && standard !== undefined ? ceilHalf(standard * engine.weightFactor) : null;
 }
 
 /** Structure weight: a tenth of the tonnage, times the type's factor, rounded up to a half ton. null if unknown. */
@@ -146,21 +146,21 @@ function fixedLabels(record: MechRecord, config: NonNullable<ReturnType<typeof c
     for (const n of cockpit.lifeSupport) set("HD", n - 1, "Life Support");
   }
 
-  // Center torso: some engine cells, then the gyro, then the rest of the engine. Where the book leaves the placement
-  // of a non-standard gyro to the designer we keep it contiguous, right after the first engine cells.
+  // Center torso: the first engine cells, then the gyro, then the rest of the engine, as the published record sheets
+  // print it (see SHEET in data/chassis.ts).
   const engine = own(ENGINE_TYPES.types, record.chassis.engine.type);
   const gyro = own(GYROS.types, record.chassis.gyro);
   const above = Math.min(SHEET.engineAbove, engine?.ct ?? SHEET.engineAbove);
   const gyroSlots = gyro?.slots ?? own(GYROS.types, "standard")?.slots ?? 4;
   if (engine) {
-    for (let i = 0; i < above; i++) set("CT", i, "Engine");
-    for (let i = 0; i < engine.ct - above; i++) set("CT", above + gyroSlots + i, "Engine");
+    for (let i = 0; i < above; i++) set("CT", i, engine.label);
+    for (let i = 0; i < engine.ct - above; i++) set("CT", above + gyroSlots + i, engine.label);
     for (let i = 0; i < engine.side; i++) {
-      set("LT", i, "Engine");
-      set("RT", i, "Engine");
+      set("LT", i, engine.label);
+      set("RT", i, engine.label);
     }
   }
-  if (gyro) for (let i = 0; i < gyro.slots; i++) set("CT", above + i, "Gyro");
+  if (gyro) for (let i = 0; i < gyro.slots; i++) set("CT", above + i, gyro.label);
   return labels;
 }
 

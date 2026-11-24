@@ -14,8 +14,6 @@ import {
 } from "./mech";
 
 const labels = (l: ReturnType<typeof layout>, loc: LocationCode) => (l.slots[loc] ?? []).map((c) => c.label);
-const count = (l: ReturnType<typeof layout>, loc: LocationCode, label: string) =>
-  labels(l, loc).filter((x) => x === label).length;
 const chassis = (patch: Partial<MechRecord["chassis"]>, rest: Partial<MechRecord> = {}) => {
   const base = bipedRecord();
   return bipedRecord({ mounts: [], chassis: { ...base.chassis, ...patch }, ...rest });
@@ -32,7 +30,7 @@ describe("layout", () => {
       HD: 6, CT: 12, LT: 12, RT: 12, LA: 12, RA: 12, LL: 6, RL: 6,
     });
     expect(labels(l, "HD")).toEqual(["Life Support", "Sensors", "Cockpit", "", "Sensors", "Life Support"]);
-    expect(labels(l, "CT").slice(0, 10)).toEqual([...Array(3).fill("Engine"), ...Array(4).fill("Gyro"), ...Array(3).fill("Engine")]);
+    expect(labels(l, "CT").slice(0, 10)).toEqual([...Array(3).fill("Fusion Engine"), ...Array(4).fill("Gyro"), ...Array(3).fill("Fusion Engine")]);
     expect(labels(l, "LA").slice(0, 4)).toEqual(["Shoulder", "Upper Arm Actuator", "Lower Arm Actuator", "Hand Actuator"]);
     expect(l.slots.RT?.slice(0, 8).map((c) => c.mountId)).toEqual(["ac", "ac", "ac", "ac", "ac", "ac", "ac", undefined]);
     expect(l.slots.LA?.[4]).toMatchObject({ kind: "mount", mountId: "laser-l" });
@@ -41,20 +39,22 @@ describe("layout", () => {
     expect(layout(quadRecord(), factsOf).locations).toEqual(["HD", "CT", "LT", "RT", "FLL", "FRL", "RLL", "RRL"]);
   });
 
-  // [engine, gyro, side-torso engine cells, center-torso engine cells, gyro cells]
-  it.each([
-    ["xl", "standard", 3, 6, 4],
-    ["xl-clan", "standard", 2, 6, 4],
-    ["light", "standard", 2, 6, 4],
-    ["compact", "standard", 0, 3, 4],
-    ["standard", "compact", 0, 6, 2],
-    ["standard", "xl", 0, 6, 6],
-  ])("fills the torsos for a %s engine and a %s gyro", (engine, gyro, side, ctEngine, ctGyro) => {
+  // The positions Catalyst's record sheets print. Center torso: E engine, G gyro, . free (slots 1-12); the side torsos
+  // start with the given number of engine cells.
+  it.each<[string, string, string, string, string, number]>([
+    ["standard", "standard", "Fusion Engine", "Gyro", "EEEGGGGEEE..", 0],
+    ["xl", "standard", "XL Fusion Engine", "Gyro", "EEEGGGGEEE..", 3],
+    ["xl-clan", "standard", "XL Fusion Engine", "Gyro", "EEEGGGGEEE..", 2],
+    ["light", "heavy-duty", "Light Fusion Engine", "Heavy Duty Gyro", "EEEGGGGEEE..", 2],
+    ["compact", "standard", "Compact Fusion Engine", "Gyro", "EEEGGGG.....", 0],
+    ["standard", "compact", "Fusion Engine", "Compact Gyro", "EEEGGEEE....", 0],
+    ["light", "xl", "Light Fusion Engine", "XL Gyro", "EEEGGGGGGEEE", 2],
+  ])("places a %s engine and a %s gyro as the sheets do", (engine, gyro, engineLabel, gyroLabel, ct, side) => {
     const l = layout(chassis({ engine: { type: engine, rating: 200 }, gyro }), factsOf);
-    expect(count(l, "LT", "Engine")).toBe(side);
-    expect(count(l, "RT", "Engine")).toBe(side);
-    expect(count(l, "CT", "Engine")).toBe(ctEngine);
-    expect(count(l, "CT", "Gyro")).toBe(ctGyro);
+    const spell = (c: string) => (c === "E" ? engineLabel : c === "G" ? gyroLabel : "");
+    expect(labels(l, "CT")).toEqual([...ct].map(spell));
+    const sideTorso = [...Array<string>(side).fill(engineLabel), ...Array<string>(12 - side).fill("")];
+    expect([labels(l, "LT"), labels(l, "RT")]).toEqual([sideTorso, sideTorso]);
   });
 
   it("reports clashing mounts as conflicts and a mount running past the last slot as overflow, keeping them all", () => {
@@ -144,7 +144,9 @@ describe("weights", () => {
   // the gyro's two roundings, ferro-fibrous armor's points per ton.
   it.each<[string, Partial<MechRecord["chassis"]>, Partial<MechRecord>, string, number]>([
     ["endo-steel at 25 tons", { structure: "endo-steel" }, { tons: 25 }, "Structure", 1.5],
-    ["a 220 compact engine", { engine: { type: "compact", rating: 220 } }, {}, "Engine", 15],
+    ["a 380 XL engine", { engine: { type: "xl", rating: 380 } }, {}, "Engine", 20.5],
+    ["a 350 light engine", { engine: { type: "light", rating: 350 } }, {}, "Engine", 22.5],
+    ["a 220 compact engine",{ engine: { type: "compact", rating: 220 } }, {}, "Engine", 15],
     ["a compact gyro on a 160 engine", { gyro: "compact", engine: { type: "standard", rating: 160 } }, {}, "Gyro", 3],
     ["89 points of Inner Sphere ferro-fibrous", { armorType: "ferro-fibrous" }, { armor: { CT: { front: 89 } } }, "Armor", 5],
   ])("matches the book for %s", (_name, patch, rest, label, tons) => {

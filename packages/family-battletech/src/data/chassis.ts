@@ -86,120 +86,128 @@ export const STRUCTURE_TYPES: Sourced & { types: Record<string, StructureType> }
 };
 
 // ---------------------------------------------------------------------------------------------------------------
-// Engine weight in tons by rating (Master Engine Table, printed p.49). Only the fusion columns a BattleMech may use,
-// and only the ones the book does not state as a rule: standard, plus the printed XL and Light columns (the book gives
-// no factor for those in words). Compact is not here: the book states it as a rule (see ENGINE_TYPES). Clan XL weighs
-// what Inner Sphere XL does; they differ in slots only. Ratings run 10 to 400 in steps of 5.
+// Standard fusion engine weight in tons by rating (Master Engine Table, printed p.49), ratings 10 to 400 in steps of 5.
+// The other fusion types the book states as factors on this weight (see ENGINE_TYPES); the table's XL, Light and Compact
+// columns agree with those factors for every rating, so they are not repeated here. A BattleMech may use only fusion
+// engines, so the non-fusion columns are left out.
 // ---------------------------------------------------------------------------------------------------------------
-export type EngineWeightColumn = "standard" | "xl" | "light";
-export type EngineWeights = Record<EngineWeightColumn, number>;
-export const ENGINE_WEIGHTS: Sourced & { rows: Record<number, EngineWeights> } = {
+export const ENGINE_WEIGHTS: Sourced & { rows: Record<number, number> } = {
   cite: { book: "TechManual", page: 49 },
   checked: "page",
   rows: {
-    10: { standard: 0.5, xl: 0.5, light: 0.5 },
-    15: { standard: 0.5, xl: 0.5, light: 0.5 },
-    20: { standard: 0.5, xl: 0.5, light: 0.5 },
-    25: { standard: 0.5, xl: 0.5, light: 0.5 },
-    30: { standard: 1.0, xl: 0.5, light: 1.0 },
-    35: { standard: 1.0, xl: 0.5, light: 1.0 },
-    40: { standard: 1.0, xl: 0.5, light: 1.0 },
-    45: { standard: 1.0, xl: 0.5, light: 1.0 },
-    50: { standard: 1.5, xl: 1.0, light: 1.5 },
-    55: { standard: 1.5, xl: 1.0, light: 1.5 },
-    60: { standard: 1.5, xl: 1.0, light: 1.5 },
-    65: { standard: 2.0, xl: 1.0, light: 1.5 },
-    70: { standard: 2.0, xl: 1.0, light: 1.5 },
-    75: { standard: 2.0, xl: 1.0, light: 1.5 },
-    80: { standard: 2.5, xl: 1.5, light: 2.0 },
-    85: { standard: 2.5, xl: 1.5, light: 2.0 },
-    90: { standard: 3.0, xl: 1.5, light: 2.5 },
-    95: { standard: 3.0, xl: 1.5, light: 2.5 },
-    100: { standard: 3.0, xl: 1.5, light: 2.5 },
-    105: { standard: 3.5, xl: 2.0, light: 3.0 },
-    110: { standard: 3.5, xl: 2.0, light: 3.0 },
-    115: { standard: 4.0, xl: 2.0, light: 3.0 },
-    120: { standard: 4.0, xl: 2.0, light: 3.0 },
-    125: { standard: 4.0, xl: 2.0, light: 3.0 },
-    130: { standard: 4.5, xl: 2.5, light: 3.5 },
-    135: { standard: 4.5, xl: 2.5, light: 3.5 },
-    140: { standard: 5.0, xl: 2.5, light: 4.0 },
-    145: { standard: 5.0, xl: 2.5, light: 4.0 },
-    150: { standard: 5.5, xl: 3.0, light: 4.5 },
-    155: { standard: 5.5, xl: 3.0, light: 4.5 },
-    160: { standard: 6.0, xl: 3.0, light: 4.5 },
-    165: { standard: 6.0, xl: 3.0, light: 4.5 },
-    170: { standard: 6.0, xl: 3.0, light: 4.5 },
-    175: { standard: 7.0, xl: 3.5, light: 5.5 },
-    180: { standard: 7.0, xl: 3.5, light: 5.5 },
-    185: { standard: 7.5, xl: 4.0, light: 6.0 },
-    190: { standard: 7.5, xl: 4.0, light: 6.0 },
-    195: { standard: 8.0, xl: 4.0, light: 6.0 },
-    200: { standard: 8.5, xl: 4.5, light: 6.5 },
-    205: { standard: 8.5, xl: 4.5, light: 6.5 },
-    210: { standard: 9.0, xl: 4.5, light: 7.0 },
-    215: { standard: 9.5, xl: 5.0, light: 7.5 },
-    220: { standard: 10.0, xl: 5.0, light: 7.5 },
-    225: { standard: 10.0, xl: 5.0, light: 7.5 },
-    230: { standard: 10.5, xl: 5.5, light: 8.0 },
-    235: { standard: 11.0, xl: 5.5, light: 8.5 },
-    240: { standard: 11.5, xl: 6.0, light: 9.0 },
-    245: { standard: 12.0, xl: 6.0, light: 9.0 },
-    250: { standard: 12.5, xl: 6.5, light: 9.5 },
-    255: { standard: 13.0, xl: 6.5, light: 10.0 },
-    260: { standard: 13.5, xl: 7.0, light: 10.5 },
-    265: { standard: 14.0, xl: 7.0, light: 10.5 },
-    270: { standard: 14.5, xl: 7.5, light: 11.0 },
-    275: { standard: 15.5, xl: 8.0, light: 12.0 },
-    280: { standard: 16.0, xl: 8.0, light: 12.0 },
-    285: { standard: 16.5, xl: 8.5, light: 12.5 },
-    290: { standard: 17.5, xl: 9.0, light: 13.5 },
-    295: { standard: 18.0, xl: 9.0, light: 13.5 },
-    300: { standard: 19.0, xl: 9.5, light: 14.5 },
-    305: { standard: 19.5, xl: 10.0, light: 15.0 },
-    310: { standard: 20.5, xl: 10.5, light: 15.5 },
-    315: { standard: 21.5, xl: 11.0, light: 16.5 },
-    320: { standard: 22.5, xl: 11.5, light: 17.0 },
-    325: { standard: 23.5, xl: 12.0, light: 18.0 },
-    330: { standard: 24.5, xl: 12.5, light: 18.5 },
-    335: { standard: 25.5, xl: 13.0, light: 19.5 },
-    340: { standard: 27.0, xl: 13.5, light: 20.5 },
-    345: { standard: 28.5, xl: 14.5, light: 21.5 },
-    350: { standard: 29.5, xl: 15.0, light: 22.5 },
-    355: { standard: 31.5, xl: 16.0, light: 24.0 },
-    360: { standard: 33.0, xl: 16.5, light: 25.0 },
-    365: { standard: 34.5, xl: 17.5, light: 26.0 },
-    370: { standard: 36.5, xl: 18.5, light: 27.5 },
-    375: { standard: 38.5, xl: 19.5, light: 29.0 },
-    380: { standard: 41.0, xl: 20.5, light: 31.0 },
-    385: { standard: 43.5, xl: 22.0, light: 33.0 },
-    390: { standard: 46.0, xl: 23.0, light: 34.5 },
-    395: { standard: 49.0, xl: 24.5, light: 37.0 },
-    400: { standard: 52.5, xl: 26.5, light: 39.5 },
+    10: 0.5,
+    15: 0.5,
+    20: 0.5,
+    25: 0.5,
+    30: 1.0,
+    35: 1.0,
+    40: 1.0,
+    45: 1.0,
+    50: 1.5,
+    55: 1.5,
+    60: 1.5,
+    65: 2.0,
+    70: 2.0,
+    75: 2.0,
+    80: 2.5,
+    85: 2.5,
+    90: 3.0,
+    95: 3.0,
+    100: 3.0,
+    105: 3.5,
+    110: 3.5,
+    115: 4.0,
+    120: 4.0,
+    125: 4.0,
+    130: 4.5,
+    135: 4.5,
+    140: 5.0,
+    145: 5.0,
+    150: 5.5,
+    155: 5.5,
+    160: 6.0,
+    165: 6.0,
+    170: 6.0,
+    175: 7.0,
+    180: 7.0,
+    185: 7.5,
+    190: 7.5,
+    195: 8.0,
+    200: 8.5,
+    205: 8.5,
+    210: 9.0,
+    215: 9.5,
+    220: 10.0,
+    225: 10.0,
+    230: 10.5,
+    235: 11.0,
+    240: 11.5,
+    245: 12.0,
+    250: 12.5,
+    255: 13.0,
+    260: 13.5,
+    265: 14.0,
+    270: 14.5,
+    275: 15.5,
+    280: 16.0,
+    285: 16.5,
+    290: 17.5,
+    295: 18.0,
+    300: 19.0,
+    305: 19.5,
+    310: 20.5,
+    315: 21.5,
+    320: 22.5,
+    325: 23.5,
+    330: 24.5,
+    335: 25.5,
+    340: 27.0,
+    345: 28.5,
+    350: 29.5,
+    355: 31.5,
+    360: 33.0,
+    365: 34.5,
+    370: 36.5,
+    375: 38.5,
+    380: 41.0,
+    385: 43.5,
+    390: 46.0,
+    395: 49.0,
+    400: 52.5,
   },
 };
 
 // Engine types and the slots each takes (Engine Critical Space Table, printed p.50). ct is the center torso total
-// (the standard sheet has 6); side is the count in each side torso. An engine weighs its column's printed weight times
-// weightFactor, rounded up to a half ton. The factor is 1 except where the book states one in words: a Compact fusion
-// engine weighs 50 percent more than a standard one of the same rating (printed p.48, factorCite). The half-ton
-// rounding is not stated there; it is the book's rounding everywhere else and reproduces every printed compact weight.
+// (the standard sheet has 6); side is the count in each side torso; label is what the record sheets print in each cell.
+// An engine weighs the standard weight for its rating times weightFactor, rounded up to a half ton. The factors are
+// stated in words: Compact weighs 50 percent more (printed p.48 and p.214), Light about 25 percent less and XL roughly
+// half (both p.214, equipment descriptions; read from the text extract). The half-ton rounding is the book's rounding
+// everywhere else, and with it each factor reproduces the printed p.49 column for every rating.
 export interface EngineType {
-  weightColumn: EngineWeightColumn;
+  label: string;
   weightFactor: number;
   factorCite?: Cite;
+  factorChecked?: Checked;
   ct: number;
   side: number;
 }
+const P214: Cite = { book: "TechManual", page: 214 };
 export const ENGINE_TYPES: Sourced & { types: Record<string, EngineType> } = {
   cite: { book: "TechManual", page: 50 },
   checked: "page",
   types: {
-    standard: { weightColumn: "standard", weightFactor: 1, ct: 6, side: 0 },
-    xl: { weightColumn: "xl", weightFactor: 1, ct: 6, side: 3 },
-    "xl-clan": { weightColumn: "xl", weightFactor: 1, ct: 6, side: 2 },
-    light: { weightColumn: "light", weightFactor: 1, ct: 6, side: 2 },
-    compact: { weightColumn: "standard", weightFactor: 1.5, factorCite: { book: "TechManual", page: 48 }, ct: 3, side: 0 },
+    standard: { label: "Fusion Engine", weightFactor: 1, ct: 6, side: 0 },
+    xl: { label: "XL Fusion Engine", weightFactor: 0.5, factorCite: P214, factorChecked: "text", ct: 6, side: 3 },
+    "xl-clan": { label: "XL Fusion Engine", weightFactor: 0.5, factorCite: P214, factorChecked: "text", ct: 6, side: 2 },
+    light: { label: "Light Fusion Engine", weightFactor: 0.75, factorCite: P214, factorChecked: "text", ct: 6, side: 2 },
+    compact: {
+      label: "Compact Fusion Engine",
+      weightFactor: 1.5,
+      factorCite: { book: "TechManual", page: 48 },
+      factorChecked: "text",
+      ct: 3,
+      side: 0,
+    },
   },
 };
 
@@ -208,6 +216,7 @@ export const ENGINE_TYPES: Sourced & { types: Record<string, EngineType> } = {
 // up to a half ton. All gyro slots are in the center torso. Clan BattleMechs have only the standard gyro.
 // ---------------------------------------------------------------------------------------------------------------
 export interface GyroType {
+  label: string; // as the record sheets print it
   multiplier: number;
   slots: number;
 }
@@ -215,10 +224,10 @@ export const GYROS: Sourced & { types: Record<string, GyroType> } = {
   cite: { book: "TechManual", page: 50 },
   checked: "page",
   types: {
-    standard: { multiplier: 1.0, slots: 4 },
-    compact: { multiplier: 1.5, slots: 2 },
-    "heavy-duty": { multiplier: 2.0, slots: 4 },
-    xl: { multiplier: 0.5, slots: 6 },
+    standard: { label: "Gyro", multiplier: 1.0, slots: 4 },
+    compact: { label: "Compact Gyro", multiplier: 1.5, slots: 2 },
+    "heavy-duty": { label: "Heavy Duty Gyro", multiplier: 2.0, slots: 4 },
+    xl: { label: "XL Gyro", multiplier: 0.5, slots: 6 },
   },
 };
 
@@ -319,8 +328,10 @@ export const MYOMER: Sourced & { types: Record<string, MyomerType> } = {
 // Fixed slot layout (Standard 'Mech Critical Space Table, printed p.45; actuator and head labels from the record
 // sheet, printed p.24). Slots are counted from 0 here. `size` is the slots in a location; `fixed` lists the labels
 // that fill a location from slot 0 upward. The head, the center torso and the side torsos also take cells from the
-// cockpit, gyro and engine tables above (see rules/mech.ts). On the sheet the center torso carries `engineAbove`
-// engine cells, then the gyro, then the rest of the engine.
+// cockpit, gyro and engine tables above (see rules/mech.ts). The cell order for engines and gyros follows the
+// published record sheets (Catalyst Game Labs, "Record Sheets: Jihad", 2022): the center torso carries `engineAbove`
+// engine cells, then the gyro, then the rest of the engine, whatever the gyro's size; side-torso engine cells are the
+// first slots of the side torso. Combinations no sheet shows follow the same pattern.
 // ---------------------------------------------------------------------------------------------------------------
 export const SHEET = {
   // Labels and their order rest on the record sheet (p.24); the slot counts on the Critical Space Table (p.45).
