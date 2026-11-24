@@ -159,7 +159,7 @@ describe("settings page", () => {
       useEffect(() => {
         // Asked on the first render, before the stored settings have been read.
         void exportSettings().then((file) => {
-          exported = file;
+          exported ??= file; // only the first answer counts
         });
       }, [exportSettings]);
       return null;
