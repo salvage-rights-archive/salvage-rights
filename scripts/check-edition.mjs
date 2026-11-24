@@ -5,6 +5,7 @@
 //   - host, shared or a family in the edition has a license the edition does not allow;
 //   - package.json dependencies break the boundaries (host or shared naming a family, a family naming another
 //     family or the host, shared naming the host);
+//   - a family marked salvageRights.devOnly is part of any edition other than dev;
 //   - dist/<edition id>/ exists and a file there mentions the name of a family that is not in the edition.
 // Without dist/<edition id>/ the built files are not checked, and a line says so. --require-dist makes a missing
 // or empty dist/<edition id>/ an error. Family ids are not searched for: a short id such as "example" also
@@ -40,8 +41,12 @@ const edition = readJson(editionPath);
 if (edition.id !== editionId) {
   fail([`${editionPath} has id ${JSON.stringify(edition.id)}, but edition "${editionId}" was asked for`]);
 }
-if (!Array.isArray(edition.families) || !Array.isArray(edition.allowLicenses)) {
-  fail([`${editionPath} needs "families" and "allowLicenses" arrays`]);
+if (
+  !Array.isArray(edition.families) ||
+  !Array.isArray(edition.allowLicenses) ||
+  !Array.isArray(edition.allowThirdPartyLicenses)
+) {
+  fail([`${editionPath} needs "families", "allowLicenses" and "allowThirdPartyLicenses" arrays`]);
 }
 
 function readPackage(dir) {
@@ -67,6 +72,14 @@ for (const { dir, license } of checked) {
     problems.push(
       `package "${dir}" has license "${license}", which edition "${editionId}" does not allow (${edition.allowLicenses.join(", ")})`,
     );
+  }
+}
+
+if (editionId !== "dev") {
+  for (const { id, file, pkg } of members) {
+    if (pkg.salvageRights?.devOnly === true) {
+      problems.push(`family "${id}" is marked devOnly in ${file}; it may only be part of the dev edition`);
+    }
   }
 }
 

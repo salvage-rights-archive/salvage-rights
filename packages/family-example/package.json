@@ -10,7 +10,8 @@
   },
   "salvageRights": {
     "familyId": "example",
-    "familyName": "Example Yard"
+    "familyName": "Example Yard",
+    "devOnly": true
   },
   "peerDependencies": {
     "react": "^19.0.0"

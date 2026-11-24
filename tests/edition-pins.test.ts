@@ -10,5 +10,6 @@ it("the Ten Thousand Fleets edition must stay free of GPL code", () => {
     id: "ten-thousand-fleets",
     families: ["ten-thousand-fleets"],
     allowLicenses: ["Apache-2.0"],
+    allowThirdPartyLicenses: ["MIT", "ISC", "BSD-2-Clause", "BSD-3-Clause", "Apache-2.0", "0BSD"],
   });
 });

@@ -34,11 +34,11 @@ describe("family packages", () => {
 
     it(`${key} package.json matches its manifest`, () => {
       const pkg = readJson(`packages/family-${key}/package.json`) as {
-        salvageRights: { familyId: string; familyName: string };
+        salvageRights: { familyId: string; familyName: string; devOnly?: boolean };
         license: string;
       };
       expect(manifest.credits.license.startsWith(pkg.license)).toBe(true);
-      expect(pkg.salvageRights).toEqual({ familyId: manifest.id, familyName: manifest.name });
+      expect(pkg.salvageRights).toMatchObject({ familyId: manifest.id, familyName: manifest.name });
       expect(manifest.id).toBe(key);
     });
   }
