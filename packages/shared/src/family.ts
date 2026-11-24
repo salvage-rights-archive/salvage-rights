@@ -17,6 +17,7 @@ export interface FamilyRoute {
   path: string;
   label: string;
   section: Section;
+  /** The host provides the page's `<main>`; a family page must not render its own. */
   load: () => Promise<{ default: ComponentType }>;
 }
 
