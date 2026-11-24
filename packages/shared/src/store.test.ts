@@ -74,6 +74,30 @@ describe("openStore fallback", () => {
     }
   });
 
+  it("uses memory when the open never settles, and closes a late connection", async () => {
+    const request: Partial<IDBOpenDBRequest> = {};
+    vi.spyOn(indexedDB, "open").mockReturnValue(request as IDBOpenDBRequest);
+    const store = await openStore(ns(), { timeoutMs: 20 });
+    expect(store.persistent).toBe(false);
+    const close = vi.fn();
+    Object.defineProperty(request, "result", { value: { close } });
+    request.onsuccess?.(new Event("success"));
+    expect(close).toHaveBeenCalledOnce();
+  });
+
+  it("keeps waiting after a blocked open and ends persistent", async () => {
+    const request: Partial<IDBOpenDBRequest> = {};
+    vi.spyOn(indexedDB, "open").mockReturnValue(request as IDBOpenDBRequest);
+    const pending = openStore(ns(), { timeoutMs: 1000 });
+    request.onblocked?.(new Event("blocked") as IDBVersionChangeEvent);
+    const db = { close: vi.fn(), onversionchange: null as unknown };
+    Object.defineProperty(request, "result", { value: db });
+    request.onsuccess?.(new Event("success"));
+    const store = await pending;
+    expect(store.persistent).toBe(true);
+    expect(typeof db.onversionchange).toBe("function");
+  });
+
   it("uses memory when indexedDB.open throws", async () => {
     vi.spyOn(indexedDB, "open").mockImplementation(() => {
       throw new Error("blocked");
