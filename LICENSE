@@ -1,0 +1,12 @@
+Salvage Rights is a workspace of packages. Each package carries its own license
+in its own LICENSE file.
+
+Package                                   License
+----------------------------------------  ----------------
+packages/shared                           Apache-2.0
+packages/host                             Apache-2.0
+packages/family-ten-thousand-fleets       Apache-2.0
+packages/family-example                   Apache-2.0
+packages/family-battletech                GPL-3.0-or-later
+
+A build that includes packages/family-battletech is distributed as a whole under the GNU General Public License, version 3 or later.

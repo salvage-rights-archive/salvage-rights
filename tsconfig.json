@@ -1,0 +1,20 @@
+{
+  "files": [],
+  "references": [
+    {
+      "path": "packages/shared"
+    },
+    {
+      "path": "packages/host"
+    },
+    {
+      "path": "packages/family-battletech"
+    },
+    {
+      "path": "packages/family-ten-thousand-fleets"
+    },
+    {
+      "path": "packages/family-example"
+    }
+  ]
+}
