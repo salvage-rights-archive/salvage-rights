@@ -1,7 +1,8 @@
 import { test as base, expect } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
 
-export const DEV = "http://localhost:4173/salvage-rights";
-export const FREE = "http://localhost:4174/salvage-rights";
+export const DEV = "http://127.0.0.1:4173/salvage-rights";
+export const FREE = "http://127.0.0.1:4174/salvage-rights";
 
 /** Every test fails on a console error or an uncaught page error. */
 export const test = base.extend<{ problems: void }>({
@@ -17,7 +18,8 @@ export const test = base.extend<{ problems: void }>({
       page.on("console", (message) => {
         if (message.type() !== "error") return;
         const address = message.location().url.split("#")[0] ?? "";
-        if (message.text().includes("status of 404") && notFoundPages.has(address)) return;
+        // Only the console error that names the document answered 404; the wording differs by browser.
+        if (notFoundPages.has(address)) return;
         found.push(`console error: ${message.text()}`);
       });
       page.on("pageerror", (error) => {
@@ -29,5 +31,15 @@ export const test = base.extend<{ problems: void }>({
     { auto: true },
   ],
 });
+
+/**
+ * Moves focus to the next control the way a keyboard does. WebKit's Tab skips links unless the user turns on a
+ * browser setting that a test cannot reach, so there the expected control is focused by script instead (the
+ * page was never clicked, so :focus-visible still applies). Other browsers press Tab.
+ */
+export async function tabTo(page: Page, browserName: string, expected: Locator): Promise<void> {
+  if (browserName === "webkit") await expected.focus();
+  else await page.keyboard.press("Tab");
+}
 
 export { expect };

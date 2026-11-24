@@ -15,6 +15,11 @@ async function expectNoViolations(page: Page, base: string) {
     await chooseTheme(page, base, theme);
     for (const path of PAGES) {
       await page.goto(`${base}${path}`);
+      // The theme must have come back from storage, or the audit would run against the wrong one. Read the class
+      // with evaluate: with Playwright's locator assertion here, Firefox crashes the page during the axe run.
+      await expect
+        .poll(() => page.evaluate(() => document.body.className), { message: `${theme} theme kept on ${path}` })
+        .toBe(theme.toLowerCase());
       await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
       const results = await new AxeBuilder({ page }).analyze();
       expect(results.violations, `${theme} theme, ${path}`).toEqual([]);

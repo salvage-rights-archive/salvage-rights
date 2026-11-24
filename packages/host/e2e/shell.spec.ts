@@ -1,5 +1,5 @@
 import { readFile } from "node:fs/promises";
-import { DEV, FREE, expect, test } from "./fixtures";
+import { DEV, FREE, expect, tabTo, test } from "./fixtures";
 
 test.describe("dev edition", () => {
   test("the landing page shows the example tile and a game link opens its page", async ({ page }) => {
@@ -17,6 +17,7 @@ test.describe("dev edition", () => {
     await page.getByRole("checkbox", { name: "Show Example Yard" }).uncheck();
     await page.getByRole("link", { name: "Games" }).click();
     await expect(page.getByText("You have hidden every game.")).toBeVisible();
+    // Reload at once: a change just made must not be lost.
     await page.reload();
     await expect(page.getByText("You have hidden every game.")).toBeVisible();
     await expect(page.getByRole("link", { name: "Choose games in Settings" })).toBeVisible();
@@ -64,21 +65,59 @@ test.describe("dev edition", () => {
     await expect(page.getByText("Settings imported.")).toBeVisible();
   });
 
-  test("Tab reaches every link in order and each shows a focus outline", async ({ page }) => {
+  test("Tab reaches every link in order and each shows a focus outline", async ({ page, browserName }) => {
     await page.goto(`${DEV}/`);
     await expect(page.getByTestId("family-tile")).toBeVisible();
     const expected = ["Games", "About", "Settings", "Alpha, Example Yard", "Bravo, Example Yard"];
     for (const name of expected) {
-      await page.keyboard.press("Tab");
+      await tabTo(page, browserName, page.getByRole("link", { name, exact: true }));
       const focused = page.locator(":focus");
       await expect(focused).toHaveAccessibleName(name);
-      const outline = await focused.evaluate((element) => {
-        const style = getComputedStyle(element);
-        return { style: style.outlineStyle, width: parseFloat(style.outlineWidth) };
-      });
-      expect(outline.style, `outline style on ${name}`).not.toBe("none");
-      expect(outline.width, `outline width on ${name}`).toBeGreaterThan(0);
+      // The header and the single tile's panel are dark, so their links use the header ring colour.
+      const ring = await focused.evaluate(
+        (element, token) => {
+          const probe = document.createElement("span");
+          probe.style.color = `var(${token})`;
+          document.body.append(probe);
+          const expected = getComputedStyle(probe).color;
+          probe.remove();
+          const style = getComputedStyle(element);
+          return { expected, color: style.outlineColor, style: style.outlineStyle, width: parseFloat(style.outlineWidth) };
+        },
+        "--sr-header-focus",
+      );
+      expect(ring.style, `outline style on ${name}`).not.toBe("none");
+      expect(ring.width, `outline width on ${name}`).toBeGreaterThan(0);
+      expect(ring.color, `outline colour on ${name}`).toBe(ring.expected);
     }
+  });
+
+  test("a tile that is one link shows the project's focus ring only while focused", async ({ page, browserName }) => {
+    await page.goto(`${DEV}/settings`);
+    await page.getByRole("checkbox", { name: "Bravo" }).uncheck();
+    await page.goto(`${DEV}/`);
+    const tile = page.getByTestId("family-tile");
+    await expect(tile).toBeVisible();
+    await expect(tile).toHaveJSProperty("tagName", "A");
+    const ringOf = () =>
+      tile.evaluate((element) => {
+        const probe = document.createElement("span");
+        probe.style.color = "var(--sr-focus)";
+        document.body.append(probe);
+        const expected = getComputedStyle(probe).color;
+        probe.remove();
+        const after = getComputedStyle(element, "::after");
+        return { expected, content: after.content, color: after.borderTopColor };
+      });
+
+    expect((await ringOf()).content).toBe("none");
+    for (let i = 0; i < 4; i += 1) await tabTo(page, browserName, tile);
+    await expect(tile).toBeFocused();
+    const focused = await ringOf();
+    expect(focused.content).not.toBe("none");
+    expect(focused.color).toBe(focused.expected);
+    await tile.blur();
+    expect((await ringOf()).content).toBe("none");
   });
 });
 

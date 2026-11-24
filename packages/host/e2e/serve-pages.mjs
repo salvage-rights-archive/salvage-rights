@@ -52,9 +52,14 @@ createServer(async (request, response) => {
   const { pathname } = new URL(request.url ?? "/", "http://localhost");
   const file = await fileFor(pathname);
   if (file !== null) {
-    response.writeHead(200, { "content-type": TYPES[extname(file)] ?? "application/octet-stream" });
-    response.end(await readFile(file));
-    return;
+    try {
+      const content = await readFile(file);
+      response.writeHead(200, { "content-type": TYPES[extname(file)] ?? "application/octet-stream" });
+      response.end(content);
+      return;
+    } catch {
+      // The file vanished after the check: answer as for any unknown path.
+    }
   }
   try {
     const page = await readFile(join(root, "404.html"));
@@ -64,6 +69,6 @@ createServer(async (request, response) => {
     response.writeHead(404, { "content-type": TYPES[".txt"] });
     response.end("Not found");
   }
-}).listen(port, () => {
-  console.log(`serving ${root} at http://localhost:${port}${BASE}`);
+}).listen(port, "127.0.0.1", () => {
+  console.log(`serving ${root} at http://127.0.0.1:${port}${BASE}`);
 });

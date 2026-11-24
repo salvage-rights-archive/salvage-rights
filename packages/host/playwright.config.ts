@@ -4,8 +4,8 @@ import { defineConfig, devices } from "@playwright/test";
 const repoRoot = resolve(import.meta.dirname, "../..");
 
 // One static server per edition, each behaving like GitHub Pages. `npm run test:e2e` builds both editions first.
-export const DEV_URL = "http://localhost:4173";
-export const FREE_URL = "http://localhost:4174";
+export const DEV_URL = "http://127.0.0.1:4173";
+export const FREE_URL = "http://127.0.0.1:4174";
 
 export default defineConfig({
   testDir: "e2e",
