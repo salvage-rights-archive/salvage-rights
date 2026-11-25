@@ -53,6 +53,8 @@ export interface AsSource {
   at?: string;
   style?: string;
   values?: AsCard;
+  /** Set when the unit is a published design from a named source (the Master Unit List); it holds only while the card is still `values`. */
+  official?: { book: string };
 }
 
 export interface AsUnit {

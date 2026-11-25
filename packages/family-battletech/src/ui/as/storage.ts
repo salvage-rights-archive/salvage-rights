@@ -78,7 +78,8 @@ function isSource(v: unknown): boolean {
     optional(v.ref, isString) &&
     optional(v.at, isString) &&
     optional(v.style, isString) &&
-    optional(v.values, isCard)
+    optional(v.values, isCard) &&
+    optional(v.official, (o) => isObject(o) && isString(o.book))
   );
 }
 

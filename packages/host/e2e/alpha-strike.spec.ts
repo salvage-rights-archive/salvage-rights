@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
 import { AS_UNIT_ID, DEV, FAKE_KEY, expect, test } from "./fixtures";
 
 const ALPHA = "/battletech/alpha-strike";
@@ -76,4 +76,22 @@ test("import a unit from Mordel, review it with its credit, save it, and find it
   await expect(page.getByText("Saved.")).toBeVisible();
   await page.goto(`${DEV}${ALPHA}/home`);
   await expect(page.getByRole("list").getByText("Test Walker TW-1")).toBeVisible();
+});
+
+test("import a saved Master Unit List page, see it marked OFFICIAL, and see the mark go when the card is changed", async ({ page }, testInfo) => {
+  const html = `<html><head><title>Test Hornet THR-1</title></head><body><h1 class="ba-title">Test Hornet THR-1</h1><span class="ba-crumb">Search / Test Hornet</span>
+<div class="u-kv"><span class="k">Type</span><span class="v">BattleMech</span><span class="k">Intro Year</span><span class="v">3058 (Clan Invasion)</span><span class="k">Tech Base</span><span class="v">Clan</span><span class="k">Role</span><span class="v">Striker</span></div>
+<span data-sheet-uid="9TESTUID99"></span><div class="u-statgrid"><div><div class="k">PV</div><div class="v">28</div></div><div><div class="k">Size</div><div class="v">2</div></div><div><div class="k">Move</div><div class="v">10"/8"j</div></div><div><div class="k">TMM</div><div class="v">2</div></div>
+<div><div class="k">Armor</div><div class="v">4</div></div><div><div class="k">Struct</div><div class="v">3</div></div></div>
+<div class="u-abilrow"><span class="aschip">DMG 2/2/1/0</span><span class="aschip">ECM <span class="an">made-up words</span></span></div></body></html>`;
+  const path = testInfo.outputPath("test-hornet.html");
+  await writeFile(path, html);
+  await page.goto(`${DEV}${ALPHA}/home`);
+  await page.getByLabel("Saved Master Unit List page").setInputFiles(path);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Test Hornet THR-1");
+  await expect(page.getByText("OFFICIAL, Master Unit List")).toBeVisible();
+  await expect(page.getByText("Master Unit List page you saved")).toBeVisible();
+  await page.screenshot({ path: testInfo.outputPath("mul-review.png") });
+  await page.getByLabel("Point Value (PV)").fill("29");
+  await expect(page.getByText("NOT OFFICIAL: changed from the published design")).toBeVisible();
 });
