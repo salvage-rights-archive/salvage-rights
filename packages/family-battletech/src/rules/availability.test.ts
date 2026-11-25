@@ -137,6 +137,7 @@ describe("equipment groups", () => {
       ["inf-laser-rifle-ebony-assault-is", "infantry"],
       ["turret-is", "vehicle"],
       ["kraken-t-is", "capital"],
+      ["heavy-n-ppc-clan", "capital"],
       ["ammo-copperhead-sniper-is", "ammo-artillery"],
       ["ammo-mortar-airburst-clan", "ammo-missile"],
       ["ammo-remote-sensor-dispenser-is", "ammo-other"],

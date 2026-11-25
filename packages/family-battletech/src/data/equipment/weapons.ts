@@ -553,4 +553,55 @@ export const WEAPONS: EquipmentGroup[] = [
       { id: "ar-10-launcher-clan", name: "AR-10 Launcher", techBase: "clan", tons: 250, availability: [{ from: 2550 }], yearsInferred: true, cite: { book: "TechManual", page: 343 } },
     ],
   },
+  // Naval (capital) weapons and mass drivers, from Tactical Operations: Advanced Units and Equipment: the Heavy Weapons and Equipment Construction Data
+  // table (printed p. 221: tech base, years, weapon cost, weight, space) and the Advanced Weapons and Equipment table (p. 220: heat, damage, range
+  // class and rules level), read against the page images. Only a JumpShip, WarShip or space station (the `ship` unit type) and a mobile structure
+  // (`building`) mount them, one slot each (the table's "1-C*" and "1*": one capital bay slot, with special rules). `heat` and `damage` are the
+  // capital-scale figures the table prints in its Aero column ("-C" marks capital damage); `by.ship.rangeClass` is its range class (the "-C" dropped).
+  // Types "CAP, AE" as printed. The IS / Clan lines print one year for both ("2195 / 2195"), so both rows are dated as printed; the mass drivers
+  // are Inner Sphere only (a prototype year, "2715P"). The prices are in data/cost.ts. Not added: the ammunition (a ton per shot count, "5/1" and
+  // the like), and the other items on those pages (naval C3, comm-scanner suites, repair facilities, tug adaptor, mine dispensers and the rest).
+  {
+    defaults: { kind: "weapon", techBase: "inner-sphere", cite: { book: TO, page: 221 }, playCite: { book: TO, page: 220 }, checked: "page", slots: 1, units: ["ship", "building"] },
+    items: [
+      { id: "nac-10-is", name: "NAC/10", tons: 2000, availability: [{ from: 2195 }], rulesLevel: "advanced", type: "CAP, AE", heat: 30, damage: "10-C", by: { ship: { rangeClass: "Long" } } },
+      { id: "nac-20-is", name: "NAC/20", tons: 2500, availability: [{ from: 2197 }], rulesLevel: "advanced", type: "CAP, AE", heat: 60, damage: "20-C", by: { ship: { rangeClass: "Long" } } },
+      { id: "nac-25-is", name: "NAC/25", tons: 3000, availability: [{ from: 2200 }], rulesLevel: "advanced", type: "CAP, AE", heat: 85, damage: "25-C", by: { ship: { rangeClass: "Long" } } },
+      { id: "nac-30-is", name: "NAC/30", tons: 3500, availability: [{ from: 2200 }], rulesLevel: "advanced", type: "CAP, AE", heat: 100, damage: "30-C", by: { ship: { rangeClass: "Long" } } },
+      { id: "nac-35-is", name: "NAC/35", tons: 4000, availability: [{ from: 2201 }], rulesLevel: "advanced", type: "CAP, AE", heat: 120, damage: "35-C", by: { ship: { rangeClass: "Medium" } } },
+      { id: "nac-40-is", name: "NAC/40", tons: 4500, availability: [{ from: 2202 }], rulesLevel: "advanced", type: "CAP, AE", heat: 135, damage: "40-C", by: { ship: { rangeClass: "Medium" } } },
+      { id: "light-n-gauss-is", name: "Light N-Gauss", tons: 4500, availability: [{ from: 2448 }], rulesLevel: "advanced", type: "CAP, AE", heat: 9, damage: "15-C", by: { ship: { rangeClass: "Extreme" } } },
+      { id: "medium-n-gauss-is", name: "Medium N-Gauss", tons: 5500, availability: [{ from: 2448 }], rulesLevel: "advanced", type: "CAP, AE", heat: 15, damage: "25-C", by: { ship: { rangeClass: "Extreme" } } },
+      { id: "heavy-n-gauss-is", name: "Heavy N-Gauss", tons: 7000, availability: [{ from: 2449 }], rulesLevel: "advanced", type: "CAP, AE", heat: 18, damage: "30-C", by: { ship: { rangeClass: "Extreme" } } },
+      { id: "nl-35-is", name: "NL35", tons: 700, availability: [{ from: 2305 }], rulesLevel: "advanced", type: "CAP, AE", heat: 52, damage: "3.5-C", by: { ship: { rangeClass: "Long" } } },
+      { id: "nl-45-is", name: "NL45", tons: 900, availability: [{ from: 2305 }], rulesLevel: "advanced", type: "CAP, AE", heat: 70, damage: "4.5-C", by: { ship: { rangeClass: "Extreme" } } },
+      { id: "nl-55-is", name: "NL55", tons: 1100, availability: [{ from: 2307 }], rulesLevel: "advanced", type: "CAP, AE", heat: 85, damage: "5.5-C", by: { ship: { rangeClass: "Extreme" } } },
+      { id: "light-n-ppc-is", name: "Light N-PPC", tons: 1400, availability: [{ from: 2358 }], rulesLevel: "advanced", type: "CAP, AE", heat: 105, damage: "7-C", by: { ship: { rangeClass: "Long" } } },
+      { id: "medium-n-ppc-is", name: "Medium N-PPC", tons: 1800, availability: [{ from: 2358 }], rulesLevel: "advanced", type: "CAP, AE", heat: 135, damage: "9-C", by: { ship: { rangeClass: "Extreme" } } },
+      { id: "heavy-n-ppc-is", name: "Heavy N-PPC", tons: 3000, availability: [{ from: 2356 }], rulesLevel: "advanced", type: "CAP, AE", heat: 225, damage: "15-C", by: { ship: { rangeClass: "Extreme" } } },
+      { id: "light-mass-driver-is", name: "Light Mass Driver", tons: 30000, availability: [{ from: 2715 }], rulesLevel: "experimental", type: "CAP, AE", heat: 30, damage: "60-C", by: { ship: { rangeClass: "Long" } } },
+      { id: "medium-mass-driver-is", name: "Medium Mass Driver", tons: 50000, availability: [{ from: 2715 }], rulesLevel: "experimental", type: "CAP, AE", heat: 60, damage: "100-C", by: { ship: { rangeClass: "Long" } } },
+      { id: "heavy-mass-driver-is", name: "Heavy Mass Driver", tons: 100000, availability: [{ from: 2715 }], rulesLevel: "experimental", type: "CAP, AE", heat: 90, damage: "140-C", by: { ship: { rangeClass: "Long" } } },
+    ],
+  },
+  {
+    defaults: { kind: "weapon", techBase: "clan", cite: { book: TO, page: 221 }, playCite: { book: TO, page: 220 }, checked: "page", slots: 1, units: ["ship", "building"] },
+    items: [
+      { id: "nac-10-clan", name: "NAC/10", tons: 2000, availability: [{ from: 2195 }], rulesLevel: "advanced", type: "CAP, AE", heat: 30, damage: "10-C", by: { ship: { rangeClass: "Long" } } },
+      { id: "nac-20-clan", name: "NAC/20", tons: 2500, availability: [{ from: 2197 }], rulesLevel: "advanced", type: "CAP, AE", heat: 60, damage: "20-C", by: { ship: { rangeClass: "Long" } } },
+      { id: "nac-25-clan", name: "NAC/25", tons: 3000, availability: [{ from: 2200 }], rulesLevel: "advanced", type: "CAP, AE", heat: 85, damage: "25-C", by: { ship: { rangeClass: "Long" } } },
+      { id: "nac-30-clan", name: "NAC/30", tons: 3500, availability: [{ from: 2200 }], rulesLevel: "advanced", type: "CAP, AE", heat: 100, damage: "30-C", by: { ship: { rangeClass: "Long" } } },
+      { id: "nac-35-clan", name: "NAC/35", tons: 4000, availability: [{ from: 2201 }], rulesLevel: "advanced", type: "CAP, AE", heat: 120, damage: "35-C", by: { ship: { rangeClass: "Medium" } } },
+      { id: "nac-40-clan", name: "NAC/40", tons: 4500, availability: [{ from: 2202 }], rulesLevel: "advanced", type: "CAP, AE", heat: 135, damage: "40-C", by: { ship: { rangeClass: "Medium" } } },
+      { id: "light-n-gauss-clan", name: "Light N-Gauss", tons: 4500, availability: [{ from: 2448 }], rulesLevel: "advanced", type: "CAP, AE", heat: 9, damage: "15-C", by: { ship: { rangeClass: "Extreme" } } },
+      { id: "medium-n-gauss-clan", name: "Medium N-Gauss", tons: 5500, availability: [{ from: 2448 }], rulesLevel: "advanced", type: "CAP, AE", heat: 15, damage: "25-C", by: { ship: { rangeClass: "Extreme" } } },
+      { id: "heavy-n-gauss-clan", name: "Heavy N-Gauss", tons: 7000, availability: [{ from: 2449 }], rulesLevel: "advanced", type: "CAP, AE", heat: 18, damage: "30-C", by: { ship: { rangeClass: "Extreme" } } },
+      { id: "nl-35-clan", name: "NL35", tons: 700, availability: [{ from: 2305 }], rulesLevel: "advanced", type: "CAP, AE", heat: 52, damage: "3.5-C", by: { ship: { rangeClass: "Long" } } },
+      { id: "nl-45-clan", name: "NL45", tons: 900, availability: [{ from: 2305 }], rulesLevel: "advanced", type: "CAP, AE", heat: 70, damage: "4.5-C", by: { ship: { rangeClass: "Extreme" } } },
+      { id: "nl-55-clan", name: "NL55", tons: 1100, availability: [{ from: 2307 }], rulesLevel: "advanced", type: "CAP, AE", heat: 85, damage: "5.5-C", by: { ship: { rangeClass: "Extreme" } } },
+      { id: "light-n-ppc-clan", name: "Light N-PPC", tons: 1400, availability: [{ from: 2358 }], rulesLevel: "advanced", type: "CAP, AE", heat: 105, damage: "7-C", by: { ship: { rangeClass: "Long" } } },
+      { id: "medium-n-ppc-clan", name: "Medium N-PPC", tons: 1800, availability: [{ from: 2358 }], rulesLevel: "advanced", type: "CAP, AE", heat: 135, damage: "9-C", by: { ship: { rangeClass: "Extreme" } } },
+      { id: "heavy-n-ppc-clan", name: "Heavy N-PPC", tons: 3000, availability: [{ from: 2356 }], rulesLevel: "advanced", type: "CAP, AE", heat: 225, damage: "15-C", by: { ship: { rangeClass: "Extreme" } } },
+    ],
+  },
 ];

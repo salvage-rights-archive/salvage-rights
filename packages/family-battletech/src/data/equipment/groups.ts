@@ -17,7 +17,7 @@ const words = (list: string): RegExp => new RegExp(`(^|-)(${list})(-|$)`);
 export const EQUIPMENT_GROUPS: GroupRule[] = [
   { id: "infantry", label: "Conventional infantry weapons", match: words("inf") },
   { id: "vehicle", label: "Vehicle equipment", match: words("turret") },
-  { id: "capital", label: "Capital weapons", match: words("killer-whale|killer-whale-t|white-shark|white-shark-t|barracuda|barracuda-t|ar-10-launcher|kraken-t|screen-launcher") },
+  { id: "capital", label: "Capital weapons", match: words("nac|nl|n-ppc|n-gauss|mass-driver|killer-whale|killer-whale-t|white-shark|white-shark-t|barracuda|barracuda-t|ar-10-launcher|kraken-t|screen-launcher") },
   { id: "battlearmor", label: "Battle armor equipment", match: words("ba") },
   { id: "artillery", label: "Artillery", match: words("arrow-iv|thumper|sniper|long-tom") },
   { id: "industrial", label: "Industrial equipment", match: words("backhoe|chainsaw|combine|dual-saw|pile-driver|mining-drill|rock-cutter|spot-welder|nail-rivet|wrecking-ball|salvage-arm|sprayer|fluid-suction|lift-hoist|bridgelayer|remote-sensor-dispenser|searchlight|ejection-seat|tracks|environmental-sealing|bulldozer|field-kitchen|mash|quarters|seating|lifeboat|escape-pod|extended-fuel-tank|communications-equipment|cargo") },

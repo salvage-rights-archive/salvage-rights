@@ -462,6 +462,12 @@ export const EQUIPMENT_COST: PriceGroup[] = [
     prices: { "ba-ap-gauss-rifle": 10000, "ba-bearhunter-superheavy-ac": 11250, "ba-er-micro-laser": 10000, "ba-micro-pulse-laser": 12500, "ba-heavy-small-laser": 20000, "ba-heavy-medium-laser": 100000, "ba-bomb-rack": 30000, "ba-advanced-srm-1": 15000, "ba-advanced-srm-2": 30000, "ba-advanced-srm-3": 45000, "ba-advanced-srm-4": 60000, "ba-advanced-srm-5": 75000, "ba-advanced-srm-6": 90000 },
   },
   {
+    // TO:AUE p.221 (Heavy Weapons and Equipment Construction Data: the weapon price of the naval weapons and mass drivers; the ammunition price beside it is not kept)
+    cite: { book: TO, page: 221 },
+    checked: "page",
+    prices: { "nac-10": 2000000, "nac-20": 5000000, "nac-25": 7500000, "nac-30": 10500000, "nac-35": 14000000, "nac-40": 18000000, "light-n-gauss": 20300000, "medium-n-gauss": 30350000, "heavy-n-gauss": 50050000, "nl-35": 500000, "nl-45": 850000, "nl-55": 1250000, "light-n-ppc": 2000000, "medium-n-ppc": 3250000, "heavy-n-ppc": 9050000, "light-mass-driver": 150000000, "medium-mass-driver": 280000000, "heavy-mass-driver": 500000000 },
+  },
+  {
     // TechManual p.292 (Heavy Weapons and Equipment cost table: capital missile launchers and the screen launcher)
     cite: { book: TM, page: 292 },
     checked: "page",
