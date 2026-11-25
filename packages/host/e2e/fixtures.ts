@@ -174,6 +174,9 @@ export async function importMech(page: Page, base: string): Promise<void> {
   await page.getByLabel("Mordel key").fill(FAKE_KEY);
   await page.getByRole("button", { name: "Save key" }).click();
   await expect(page.getByText("A key is saved on this device.")).toBeVisible();
+  // The page asks mordel.net for the member's designs as it opens; let that finish before going on, so leaving the
+  // page never cancels a request in flight (WebKit reports that as a page error).
+  await expect(page.getByText("You have no designs on mordel.net yet.")).toBeVisible();
   await page.getByLabel("Unit number or address").fill(String(UNIT_ID));
   await page.getByRole("button", { name: "Import", exact: true }).click();
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(MECH_NAME);

@@ -77,6 +77,8 @@ describe("landing page", () => {
     expect(within(tile).getByRole("img", { name: "A fixture picture" })).toBeTruthy();
     expect(within(tile).getByText(/Fixture Artist/)).toBeTruthy();
     expect(screen.getByRole("heading", { name: "Your game" })).toBeTruthy();
+    // The name starts with the family name, not the picture's text.
+    expect(screen.getByRole("link", { name: /^Family alpha / })).toBe(tile);
   });
 
   it("drops the artwork and its credit when the picture fails to load", async () => {

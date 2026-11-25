@@ -18,7 +18,6 @@ export function FamilyTile({
   size: "grid" | "single";
 }) {
   const nameId = useId();
-  const blurbId = useId();
   const [artworkFailed, setArtworkFailed] = useState(false);
   const artwork = size === "single" && !artworkFailed ? family.artwork : undefined;
 
@@ -27,7 +26,7 @@ export function FamilyTile({
       <h3 id={nameId} className="sr-tile__name">
         {family.name}
       </h3>
-      <p id={blurbId} className="sr-tile__blurb">{family.blurb}</p>
+      <p className="sr-tile__blurb">{family.blurb}</p>
     </div>
   );
   const picture = artwork && (
@@ -57,11 +56,11 @@ export function FamilyTile({
   function body(footer: ReactNode) {
     return (
       <>
-        {picture}
         <div className="sr-tile__panel">
           {text}
           {footer}
         </div>
+        {picture}
       </>
     );
   }

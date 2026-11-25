@@ -225,6 +225,8 @@
   }
 
   &__art {
+    // After the text in the document, so the link's name starts with the family name; first on screen.
+    order: -1;
     position: relative;
     flex: 2 1 18rem;
     min-width: 0;

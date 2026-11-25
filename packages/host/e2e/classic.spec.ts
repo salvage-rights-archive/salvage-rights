@@ -6,7 +6,10 @@ const HOME = `${DEV}${CLASSIC}/home`;
 test("import a 'Mech by number, move an item by keyboard, save, and find it again", async ({ page }) => {
   await importMech(page, DEV);
   await expect(page.getByText("Designed by Test Designer on mordel.net")).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Rules check" })).toBeVisible();
+  // A finding of this unit: its parts weigh less than its tonnage, with the printed page it rests on.
+  const rules = page.getByRole("region", { name: "Rules check" });
+  await expect(rules.getByText("The parts weigh 40 tons of 50 tons; 10 tons is unused.")).toBeVisible();
+  await expect(rules.getByText("TechManual, p. 46")).toBeVisible();
 
   // The key is kept on the device and shown nowhere.
   expect(page.url()).not.toContain(FAKE_KEY);
@@ -74,7 +77,7 @@ test("the home, import and editor pages do not scroll sideways at 320 px wide", 
   for (const address of [HOME, `${DEV}${CLASSIC}/import`, editor]) {
     await page.goto(address);
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
-    // The import page asks mordel.net for the member's designs as it opens; let that finish before leaving the page.
+    // Leaving the import page while its designs request is in flight shows up as a page error in WebKit.
     if (address.endsWith("/import")) await expect(page.getByText("You have no designs on mordel.net yet.")).toBeVisible();
     const widths = await page.evaluate(() => ({
       scroll: document.documentElement.scrollWidth,
