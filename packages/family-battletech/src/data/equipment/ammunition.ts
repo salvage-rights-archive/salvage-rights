@@ -362,4 +362,39 @@ export const AMMUNITION: EquipmentGroup[] = [
       { id: "ammo-thunderbolt-20-is", name: "Thunderbolt 20 Ammo", tons: 1, slots: 1, shotsPerTon: 3, availability: [{ from: 3072 }], rulesLevel: "advanced" },
     ],
   },
+  // Alternative munitions from the Heavy Weapons Ammunition Construction Data table (Tactical Operations: Advanced Units and Equipment, printed
+  // p. 229, read against the page image; the rules level and rules pages are the Alternative Munitions play table, p. 228): the mortar munitions,
+  // the remote sensor dispenser sensors and the Copperhead artillery rounds. Like the other special munitions here they carry no shots per ton:
+  // the table gives them "x1" of the standard munition of the weapon, and the bin is a ton in a slot. Not added: the mine types (the table leaves
+  // their shots and weight to the special rules, "**"), the other artillery, missile and bomb munitions, and "HPC" ammunition, which none of the
+  // rulebook extracts in the archive names.
+  {
+    defaults: { kind: "ammunition", techBase: "inner-sphere", cite: { book: TO, page: 229 }, checked: "page", tons: 1, slots: 1, rulesLevel: "advanced" },
+    items: [
+      { id: "ammo-mortar-airburst-is", name: "Mortar Airburst Ammo", availability: [{ from: 2544 }], playCite: { book: TO, page: 228 } },
+      { id: "ammo-mortar-anti-personnel-is", name: "Mortar Anti-Personnel Ammo", availability: [{ from: 2531 }], playCite: { book: TO, page: 228 } },
+      { id: "ammo-mortar-armor-piercing-shaped-charge-is", name: "Mortar Armor-Piercing (Shaped-Charge) Ammo", availability: [{ from: 2531 }], playCite: { book: TO, page: 228 } },
+      { id: "ammo-mortar-flare-is", name: "Mortar Flare Ammo", availability: [{ from: 2536 }], playCite: { book: TO, page: 228 } },
+      { id: "ammo-mortar-semi-guided-is", name: "Mortar Semi-Guided Ammo", availability: [{ from: 3064 }], playCite: { book: TO, page: 228 } },
+      { id: "ammo-mortar-smoke-is", name: "Mortar Smoke Ammo", availability: [{ from: 2531 }], playCite: { book: TO, page: 228 } },
+      { id: "ammo-remote-sensor-dispenser-is", name: "Remote Sensor Dispenser Ammo", availability: [{ from: 2590 }], playCite: { book: TO, page: 228 } },
+      { id: "ammo-copperhead-long-tom-is", name: "Copperhead (Long Tom) Ammo", availability: [{ from: 3051 }], cite: { book: TO, page: 226 }, checked: "text" },
+      { id: "ammo-copperhead-sniper-is", name: "Copperhead (Sniper) Ammo", availability: [{ from: 3051 }], cite: { book: TO, page: 226 }, checked: "text" },
+      { id: "ammo-copperhead-thumper-is", name: "Copperhead (Thumper) Ammo", availability: [{ from: 3051 }], cite: { book: TO, page: 227 } },
+    ],
+  },
+  {
+    defaults: { kind: "ammunition", techBase: "clan", cite: { book: TO, page: 229 }, checked: "page", tons: 1, slots: 1, rulesLevel: "advanced" },
+    items: [
+      { id: "ammo-mortar-airburst-clan", name: "Mortar Airburst Ammo", availability: [{ from: 2544 }], playCite: { book: TO, page: 228 } },
+      { id: "ammo-mortar-anti-personnel-clan", name: "Mortar Anti-Personnel Ammo", availability: [{ from: 2531 }], playCite: { book: TO, page: 228 } },
+      { id: "ammo-mortar-armor-piercing-shaped-charge-clan", name: "Mortar Armor-Piercing (Shaped-Charge) Ammo", availability: [{ from: 2531 }], playCite: { book: TO, page: 228 } },
+      { id: "ammo-mortar-flare-clan", name: "Mortar Flare Ammo", availability: [{ from: 2536 }], playCite: { book: TO, page: 228 } },
+      { id: "ammo-mortar-smoke-clan", name: "Mortar Smoke Ammo", availability: [{ from: 2531 }], playCite: { book: TO, page: 228 } },
+      { id: "ammo-remote-sensor-dispenser-clan", name: "Remote Sensor Dispenser Ammo", availability: [{ from: 2590 }], playCite: { book: TO, page: 228 } },
+      { id: "ammo-copperhead-long-tom-clan", name: "Copperhead (Long Tom) Ammo", availability: [{ from: 2645 }], cite: { book: TO, page: 226 }, checked: "text" },
+      { id: "ammo-copperhead-sniper-clan", name: "Copperhead (Sniper) Ammo", availability: [{ from: 2645 }], cite: { book: TO, page: 226 }, checked: "text" },
+      { id: "ammo-copperhead-thumper-clan", name: "Copperhead (Thumper) Ammo", availability: [{ from: 2645 }], cite: { book: TO, page: 227 } },
+    ],
+  },
 ];

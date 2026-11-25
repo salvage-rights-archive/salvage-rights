@@ -36,7 +36,7 @@ export const OTHER_GROUP = { id: "other", label: "Other equipment" };
 
 /** Ammunition, by the weapon family it feeds. The stem is the id without `ammo-`. */
 export const AMMO_GROUPS: GroupRule[] = [
-  { id: "ammo-other", label: "Ammunition: machine guns, flamers and other", match: words("plasma|chemical|flamer|machine-gun|nail-rivet|fluid-gun|taser|ams|c3-remote-sensor-launcher|pds|tear-gas") },
+  { id: "ammo-other", label: "Ammunition: machine guns, flamers and other", match: words("plasma|chemical|flamer|machine-gun|nail-rivet|fluid-gun|taser|ams|c3-remote-sensor-launcher|pds|tear-gas|remote-sensor-dispenser") },
   { id: "ammo-artillery", label: "Ammunition: artillery", match: words("arrow-iv|thumper|sniper|long-tom") },
   { id: "ammo-missile", label: "Ammunition: missile", match: words("lrm|srm|mrm|mml|atm|narc|thunder|thunderbolt|inferno|swarm|swarm-i|semi-guided|harpoon|artemis|mortar|streak|rocket") },
   { id: "ammo-ballistic", label: "Ammunition: ballistic", match: words("ac|lb|gauss|rifle|rotary|ultra|magshot|armor-piercing|flechette|precision|fragmentation") },

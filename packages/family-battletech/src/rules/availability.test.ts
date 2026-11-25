@@ -134,6 +134,11 @@ describe("equipment groups", () => {
       ["ammo-gauss-rifle-clan", "ammo-ballistic"],
       ["double-heat-sink-clan", "heat"],
       ["guardian-ecm-suite-is", "electronics"],
+      ["inf-laser-rifle-ebony-assault-is", "infantry"],
+      ["turret-is", "vehicle"],
+      ["ammo-copperhead-sniper-is", "ammo-artillery"],
+      ["ammo-mortar-airburst-clan", "ammo-missile"],
+      ["ammo-remote-sensor-dispenser-is", "ammo-other"],
     ];
     expect(ids.map(([id]) => groupOf({ id, kind: id.startsWith("ammo-") ? "ammunition" : "weapon" }).id)).toEqual(ids.map(([, group]) => group));
   });
