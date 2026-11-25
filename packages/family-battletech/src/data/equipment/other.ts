@@ -55,6 +55,7 @@
 import type { EquipmentGroup } from "../../rules/catalog";
 
 const IO = "Interstellar Operations: Alternate Eras";
+const TO = "Tactical Operations: Advanced Units and Equipment";
 
 export const OTHER: EquipmentGroup[] = [
   {
@@ -295,6 +296,74 @@ export const OTHER: EquipmentGroup[] = [
       // Land-Air BattleMech equipment (Tournament Legal); LAMs only, which the catalog does not check. LAM Fuel Tanks print ES, written as 2200
       { id: "lam-bomb-bay-is", name: "LAM Bomb Bay", tons: 1, slots: 1, availability: [{ from: 2680 }] },
       { id: "lam-fuel-tanks-is", name: "LAM Fuel Tanks", tons: 1, slots: 1, availability: [{ from: 2200 }] },
+    ],
+  },
+  {
+    defaults: { kind: "other", techBase: "inner-sphere", cite: { book: TO, page: 217 }, playCite: { book: TO, page: 216 }, checked: "page" },
+    items: [
+      // Electronics and other equipment, pp. 216-217
+      { id: "bloodhound-active-probe-is", name: "Bloodhound Active Probe", aliases: ["Bloodhound AP"], tons: 2, slots: 3, type: "E", heat: 0, damage: "0", range: [0, 0, 0, 8], availability: [{ from: 3058 }], rulesLevel: "experimental" },
+      { id: "angel-ecm-is", name: "Angel ECM", tons: 2, slots: 2, type: "E", heat: 0, damage: "0", range: [0, 0, 0, 6], availability: [{ from: 3057 }], rulesLevel: "experimental" },
+      { id: "c3-boosted-master-is", name: "C3 Boosted Master", aliases: ["C3BS Master"], tons: 6, slots: 6, type: "E, CE, T", heat: 0, availability: [{ from: 3073 }], rulesLevel: "experimental" },
+      { id: "c3-boosted-slave-is", name: "C3 Boosted Slave", aliases: ["C3BS Slave"], tons: 3, slots: 2, type: "E, CE, T", heat: 0, availability: [{ from: 3073 }], rulesLevel: "experimental" },
+      { id: "c3-emergency-master-is", name: "C3 Emergency Master", tons: 2, slots: 2, type: "E, T", heat: 0, availability: [{ from: 3071 }], rulesLevel: "experimental" },
+      { id: "case-ii-is", name: "CASE II", tons: 1, slots: 1, type: "PE", availability: [{ from: 3064 }], rulesLevel: "experimental" },
+    ],
+  },
+  {
+    defaults: { kind: "other", techBase: "clan", cite: { book: TO, page: 217 }, playCite: { book: TO, page: 216 }, checked: "page" },
+    items: [
+      // Electronics and other equipment, pp. 216-217
+      { id: "watchdog-cews-clan", name: "Watchdog CEWS", tons: 1.5, slots: 2, type: "E", heat: 0, damage: "0", range: [0, 0, 0, 3], availability: [{ from: 3059 }], rulesLevel: "experimental" },
+      { id: "angel-ecm-clan", name: "Angel ECM", tons: 2, slots: 2, type: "E", heat: 0, damage: "0", range: [0, 0, 0, 6], availability: [{ from: 3058 }], rulesLevel: "experimental" },
+      { id: "artemis-v-clan", name: "Artemis V FCS", aliases: ["Artemis V"], tons: 1.5, slots: 2, type: "T", heat: 0, damage: "0", availability: [{ from: 3061 }], rulesLevel: "experimental", needs: "launcher" },
+      { id: "case-ii-clan", name: "CASE II", tons: 0.5, slots: 1, type: "PE", availability: [{ from: 3062 }], rulesLevel: "experimental" },
+    ],
+  },
+  {
+    defaults: { kind: "other", techBase: "inner-sphere", cite: { book: TO, page: 219 }, playCite: { book: TO, page: 218 }, checked: "page" },
+    items: [
+      // Electronics and other equipment, pp. 218-219
+      { id: "chaff-pod-is", name: "Chaff Pod", tons: 1, slots: 1, type: "PB, E, OS, X", heat: 0, availability: [{ from: 3069 }], rulesLevel: "experimental" },
+      { id: "coolant-pod-is", name: "Coolant Pod", tons: 1, slots: 1, type: "PE, OS, X", availability: [{ from: 3049 }], rulesLevel: "experimental" },
+      { id: "electronic-warfare-equipment-is", name: "Electronic Warfare Equipment", aliases: ["EW Equipment"], tons: 7.5, slots: 4, type: "E", range: [0, 0, 0, 3], availability: [{ from: 3025 }], rulesLevel: "experimental" },
+    ],
+  },
+  {
+    defaults: { kind: "other", techBase: "clan", cite: { book: TO, page: 219 }, playCite: { book: TO, page: 218 }, checked: "page" },
+    items: [
+      // Electronics and other equipment, pp. 218-219
+      { id: "coolant-pod-clan", name: "Coolant Pod", tons: 1, slots: 1, type: "PE, OS, X", availability: [{ from: 3056 }], rulesLevel: "experimental" },
+    ],
+  },
+  {
+    defaults: { kind: "other", techBase: "inner-sphere", cite: { book: TO, page: 221 }, playCite: { book: TO, page: 220 }, checked: "page" },
+    items: [
+      // Electronics and other equipment, pp. 220-221
+      { id: "laser-insulator-is", name: "Laser Insulator", tons: 0.5, slots: 1, type: "PE", availability: [{ from: 2575 }], rulesLevel: "experimental", needs: "laser" },
+      { id: "mrm-apollo-fcs-is", name: "MRM Apollo FCS", aliases: ["Apollo FCS","MRM \"Apollo\" FCS"], tons: 1, slots: 1, type: "E", heat: 0, availability: [{ from: 3071 }], rulesLevel: "advanced", needs: "mrm" },
+    ],
+  },
+  {
+    defaults: { kind: "other", techBase: "clan", cite: { book: TO, page: 221 }, playCite: { book: TO, page: 220 }, checked: "page" },
+    items: [
+      // Electronics and other equipment, pp. 220-221
+      { id: "laser-insulator-clan", name: "Laser Insulator", tons: 0.5, slots: 1, type: "PE", availability: [{ from: 2575 }], rulesLevel: "experimental", needs: "laser" },
+    ],
+  },
+  {
+    defaults: { kind: "other", techBase: "inner-sphere", cite: { book: TO, page: 223 }, playCite: { book: TO, page: 222 }, checked: "page" },
+    items: [
+      // Electronics and other equipment, pp. 222-223
+      { id: "ppc-capacitor-is", name: "PPC Capacitor", tons: 1, slots: 1, type: "X", availability: [{ from: 3060 }], rulesLevel: "experimental", needs: "ppc" },
+      { id: "recon-camera-is", name: "Recon Camera", tons: 0.5, slots: 1, type: "E", availability: [{ from: 1950 }], rulesLevel: "advanced" },
+    ],
+  },
+  {
+    defaults: { kind: "other", techBase: "clan", cite: { book: TO, page: 223 }, playCite: { book: TO, page: 222 }, checked: "page" },
+    items: [
+      // Electronics and other equipment, pp. 222-223
+      { id: "recon-camera-clan", name: "Recon Camera", tons: 0.5, slots: 1, type: "E", availability: [{ from: 1950 }], rulesLevel: "advanced" },
     ],
   },
 ];

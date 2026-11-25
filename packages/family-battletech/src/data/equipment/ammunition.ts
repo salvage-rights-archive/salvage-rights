@@ -17,6 +17,7 @@
 import type { EquipmentGroup } from "../../rules/catalog";
 
 const IO = "Interstellar Operations: Alternate Eras";
+const TO = "Tactical Operations: Advanced Units and Equipment";
 
 export const AMMUNITION: EquipmentGroup[] = [
   {
@@ -258,6 +259,107 @@ export const AMMUNITION: EquipmentGroup[] = [
     items: [
       // Ammunition for the RISC Advanced PDS
       { id: "ammo-risc-advanced-pds-is", name: "RISC Advanced PDS Ammo", tons: 1, slots: 1, shotsPerTon: 12, availability: [{ from: 3137 }] },
+    ],
+  },
+  {
+    defaults: { kind: "ammunition", techBase: "inner-sphere", cite: { book: TO, page: 217 }, playCite: { book: TO, page: 216 }, checked: "page" },
+    items: [
+      // Ammunition for the weapons above (the Ammo column; the bin is one ton in one slot, TechManual p. 57), pp. 216-217
+      { id: "ammo-arrow-iv-is", name: "Arrow IV Ammo", tons: 1, slots: 1, shotsPerTon: 5, availability: [{ from: 3044 }], rulesLevel: "advanced" },
+      { id: "ammo-thumper-artillery-is", name: "Thumper Artillery Ammo", tons: 1, slots: 1, shotsPerTon: 20, availability: [{ from: 1950 }], rulesLevel: "advanced" },
+      { id: "ammo-sniper-artillery-is", name: "Sniper Artillery Ammo", tons: 1, slots: 1, shotsPerTon: 10, availability: [{ from: 1950 }], rulesLevel: "advanced" },
+      { id: "ammo-thumper-cannon-is", name: "Thumper Cannon Ammo", tons: 1, slots: 1, shotsPerTon: 20, availability: [{ from: 3012 }], rulesLevel: "experimental" },
+      { id: "ammo-sniper-cannon-is", name: "Sniper Cannon Ammo", tons: 1, slots: 1, shotsPerTon: 10, availability: [{ from: 3012 }], rulesLevel: "experimental" },
+      { id: "ammo-long-tom-cannon-is", name: "Long Tom Cannon Ammo", tons: 1, slots: 1, shotsPerTon: 5, availability: [{ from: 3012 }], rulesLevel: "experimental" },
+      { id: "ammo-hyper-velocity-ac-2-is", name: "Hyper-Velocity AC/2 Ammo", tons: 1, slots: 1, shotsPerTon: 30, availability: [{ from: 3059 }], rulesLevel: "experimental" },
+      { id: "ammo-hyper-velocity-ac-5-is", name: "Hyper-Velocity AC/5 Ammo", tons: 1, slots: 1, shotsPerTon: 15, availability: [{ from: 3059 }], rulesLevel: "experimental" },
+      { id: "ammo-hyper-velocity-ac-10-is", name: "Hyper-Velocity AC/10 Ammo", tons: 1, slots: 1, shotsPerTon: 8, availability: [{ from: 3060 }], rulesLevel: "experimental" },
+      { id: "ammo-c3-remote-sensor-launcher-is", name: "C3 Remote Sensor Launcher Ammo", tons: 1, slots: 1, shotsPerTon: 4, availability: [{ from: 3072 }], rulesLevel: "experimental" },
+    ],
+  },
+  {
+    defaults: { kind: "ammunition", techBase: "clan", cite: { book: TO, page: 217 }, playCite: { book: TO, page: 216 }, checked: "page" },
+    items: [
+      // Ammunition for the weapons above (the Ammo column; the bin is one ton in one slot, TechManual p. 57), pp. 216-217
+      { id: "ammo-arrow-iv-clan", name: "Arrow IV Ammo", tons: 1, slots: 1, shotsPerTon: 5, availability: [{ from: 2850 }], rulesLevel: "advanced" },
+      { id: "ammo-thumper-artillery-clan", name: "Thumper Artillery Ammo", tons: 1, slots: 1, shotsPerTon: 20, availability: [{ from: 1950 }], rulesLevel: "advanced" },
+      { id: "ammo-sniper-artillery-clan", name: "Sniper Artillery Ammo", tons: 1, slots: 1, shotsPerTon: 10, availability: [{ from: 1950 }], rulesLevel: "advanced" },
+      { id: "ammo-thumper-cannon-clan", name: "Thumper Cannon Ammo", tons: 1, slots: 1, shotsPerTon: 20, availability: [{ from: 3032 }], rulesLevel: "experimental" },
+      { id: "ammo-sniper-cannon-clan", name: "Sniper Cannon Ammo", tons: 1, slots: 1, shotsPerTon: 10, availability: [{ from: 3032 }], rulesLevel: "experimental" },
+      { id: "ammo-long-tom-cannon-clan", name: "Long Tom Cannon Ammo", tons: 1, slots: 1, shotsPerTon: 5, availability: [{ from: 3032 }], rulesLevel: "experimental" },
+      { id: "ammo-protomech-ac-2-clan", name: "ProtoMech AC/2 Ammo", tons: 1, slots: 1, shotsPerTon: 40, availability: [{ from: 3073 }], rulesLevel: "advanced" },
+      { id: "ammo-protomech-ac-4-clan", name: "ProtoMech AC/4 Ammo", tons: 1, slots: 1, shotsPerTon: 20, availability: [{ from: 3073 }], rulesLevel: "advanced" },
+      { id: "ammo-protomech-ac-8-clan", name: "ProtoMech AC/8 Ammo", tons: 1, slots: 1, shotsPerTon: 10, availability: [{ from: 3073 }], rulesLevel: "advanced" },
+      { id: "ammo-rotary-ac-2-clan", name: "Rotary AC/2 Ammo", tons: 1, slots: 1, shotsPerTon: 45, availability: [{ from: 3073 }], rulesLevel: "experimental" },
+      { id: "ammo-rotary-ac-5-clan", name: "Rotary AC/5 Ammo", tons: 1, slots: 1, shotsPerTon: 20, availability: [{ from: 3073 }], rulesLevel: "experimental" },
+    ],
+  },
+  {
+    defaults: { kind: "ammunition", techBase: "inner-sphere", cite: { book: TO, page: 219 }, playCite: { book: TO, page: 218 }, checked: "page" },
+    items: [
+      // Ammunition for the weapons above (the Ammo column; the bin is one ton in one slot, TechManual p. 57), pp. 218-219
+      { id: "ammo-heavy-flamer-is", name: "Heavy Flamer Ammo", tons: 1, slots: 1, shotsPerTon: 10, availability: [{ from: 3068 }], rulesLevel: "advanced" },
+      { id: "ammo-fluid-gun-is", name: "Fluid Gun Ammo", tons: 1, slots: 1, shotsPerTon: 20, availability: [{ from: 1950 }], rulesLevel: "advanced" },
+      { id: "ammo-improved-heavy-gauss-is", name: "Improved Heavy Gauss Ammo", tons: 1, slots: 1, shotsPerTon: 4, availability: [{ from: 3065 }], rulesLevel: "experimental" },
+      { id: "ammo-magshot-is", name: "MagShot Ammo", tons: 1, slots: 1, shotsPerTon: 50, availability: [{ from: 3072 }], rulesLevel: "advanced" },
+      { id: "ammo-silver-bullet-gauss-is", name: "Silver Bullet Gauss Ammo", tons: 1, slots: 1, shotsPerTon: 8, availability: [{ from: 3051 }], rulesLevel: "experimental" },
+    ],
+  },
+  {
+    defaults: { kind: "ammunition", techBase: "clan", cite: { book: TO, page: 219 }, playCite: { book: TO, page: 218 }, checked: "page" },
+    items: [
+      // Ammunition for the weapons above (the Ammo column; the bin is one ton in one slot, TechManual p. 57), pp. 218-219
+      { id: "ammo-heavy-flamer-clan", name: "Heavy Flamer Ammo", tons: 1, slots: 1, shotsPerTon: 10, availability: [{ from: 3067 }], rulesLevel: "advanced" },
+      { id: "ammo-fluid-gun-clan", name: "Fluid Gun Ammo", tons: 1, slots: 1, shotsPerTon: 20, availability: [{ from: 1950 }], rulesLevel: "advanced" },
+      { id: "ammo-chemical-laser-small-clan", name: "Chemical Laser, Small Ammo", tons: 1, slots: 1, shotsPerTon: 60, availability: [{ from: 3059 }], rulesLevel: "experimental" },
+      { id: "ammo-chemical-laser-medium-clan", name: "Chemical Laser, Medium Ammo", tons: 1, slots: 1, shotsPerTon: 30, availability: [{ from: 3059 }], rulesLevel: "experimental" },
+      { id: "ammo-chemical-laser-large-clan", name: "Chemical Laser, Large Ammo", tons: 1, slots: 1, shotsPerTon: 10, availability: [{ from: 3059 }], rulesLevel: "experimental" },
+    ],
+  },
+  {
+    defaults: { kind: "ammunition", techBase: "inner-sphere", cite: { book: TO, page: 221 }, playCite: { book: TO, page: 220 }, checked: "page" },
+    items: [
+      // Ammunition for the weapons above (the Ammo column; the bin is one ton in one slot, TechManual p. 57), pp. 220-221
+      { id: "ammo-mech-mortar-1-is", name: "'Mech Mortar/1 Ammo", tons: 1, slots: 1, shotsPerTon: 24, availability: [{ from: 1950 }], rulesLevel: "advanced" },
+      { id: "ammo-mech-mortar-2-is", name: "'Mech Mortar/2 Ammo", tons: 1, slots: 1, shotsPerTon: 12, availability: [{ from: 1950 }], rulesLevel: "advanced" },
+      { id: "ammo-mech-mortar-4-is", name: "'Mech Mortar/4 Ammo", tons: 1, slots: 1, shotsPerTon: 6, availability: [{ from: 1950 }], rulesLevel: "advanced" },
+      { id: "ammo-mech-mortar-8-is", name: "'Mech Mortar/8 Ammo", tons: 1, slots: 1, shotsPerTon: 4, availability: [{ from: 1950 }], rulesLevel: "advanced" },
+      { id: "ammo-enhanced-lrm-5-is", name: "Enhanced LRM 5 Ammo", tons: 1, slots: 1, shotsPerTon: 24, availability: [{ from: 3058 }], rulesLevel: "experimental" },
+      { id: "ammo-enhanced-lrm-10-is", name: "Enhanced LRM 10 Ammo", tons: 1, slots: 1, shotsPerTon: 12, availability: [{ from: 3058 }], rulesLevel: "experimental" },
+      { id: "ammo-enhanced-lrm-15-is", name: "Enhanced LRM 15 Ammo", tons: 1, slots: 1, shotsPerTon: 8, availability: [{ from: 3058 }], rulesLevel: "experimental" },
+      { id: "ammo-enhanced-lrm-20-is", name: "Enhanced LRM 20 Ammo", tons: 1, slots: 1, shotsPerTon: 6, availability: [{ from: 3058 }], rulesLevel: "experimental" },
+      { id: "ammo-extended-lrm-5-is", name: "Extended LRM 5 Ammo", tons: 1, slots: 1, shotsPerTon: 18, availability: [{ from: 3054 }], rulesLevel: "experimental" },
+      { id: "ammo-extended-lrm-10-is", name: "Extended LRM 10 Ammo", tons: 1, slots: 1, shotsPerTon: 9, availability: [{ from: 3054 }], rulesLevel: "experimental" },
+      { id: "ammo-extended-lrm-15-is", name: "Extended LRM 15 Ammo", tons: 1, slots: 1, shotsPerTon: 6, availability: [{ from: 3054 }], rulesLevel: "experimental" },
+      { id: "ammo-extended-lrm-20-is", name: "Extended LRM 20 Ammo", tons: 1, slots: 1, shotsPerTon: 4, availability: [{ from: 3054 }], rulesLevel: "experimental" },
+    ],
+  },
+  {
+    defaults: { kind: "ammunition", techBase: "clan", cite: { book: TO, page: 221 }, playCite: { book: TO, page: 220 }, checked: "page" },
+    items: [
+      // Ammunition for the weapons above (the Ammo column; the bin is one ton in one slot, TechManual p. 57), pp. 220-221
+      { id: "ammo-mech-mortar-1-clan", name: "'Mech Mortar/1 Ammo", tons: 1, slots: 1, shotsPerTon: 24, availability: [{ from: 1950 }], rulesLevel: "advanced" },
+      { id: "ammo-mech-mortar-2-clan", name: "'Mech Mortar/2 Ammo", tons: 1, slots: 1, shotsPerTon: 12, availability: [{ from: 1950 }], rulesLevel: "advanced" },
+      { id: "ammo-mech-mortar-4-clan", name: "'Mech Mortar/4 Ammo", tons: 1, slots: 1, shotsPerTon: 6, availability: [{ from: 1950 }], rulesLevel: "advanced" },
+      { id: "ammo-mech-mortar-8-clan", name: "'Mech Mortar/8 Ammo", tons: 1, slots: 1, shotsPerTon: 4, availability: [{ from: 1950 }], rulesLevel: "advanced" },
+      { id: "ammo-streak-lrm-5-clan", name: "Streak LRM 5 Ammo", tons: 1, slots: 1, shotsPerTon: 24, availability: [{ from: 3057 }], rulesLevel: "experimental" },
+      { id: "ammo-streak-lrm-10-clan", name: "Streak LRM 10 Ammo", tons: 1, slots: 1, shotsPerTon: 12, availability: [{ from: 3057 }], rulesLevel: "experimental" },
+      { id: "ammo-streak-lrm-15-clan", name: "Streak LRM 15 Ammo", tons: 1, slots: 1, shotsPerTon: 8, availability: [{ from: 3057 }], rulesLevel: "experimental" },
+      { id: "ammo-streak-lrm-20-clan", name: "Streak LRM 20 Ammo", tons: 1, slots: 1, shotsPerTon: 6, availability: [{ from: 3057 }], rulesLevel: "experimental" },
+    ],
+  },
+  {
+    defaults: { kind: "ammunition", techBase: "inner-sphere", cite: { book: TO, page: 223 }, playCite: { book: TO, page: 222 }, checked: "page" },
+    items: [
+      // Ammunition for the weapons above (the Ammo column; the bin is one ton in one slot, TechManual p. 57), pp. 222-223
+      { id: "ammo-light-rifle-is", name: "Light Rifle Ammo", tons: 1, slots: 1, shotsPerTon: 18, availability: [{ from: 1950 }], rulesLevel: "experimental" },
+      { id: "ammo-medium-rifle-is", name: "Medium Rifle Ammo", tons: 1, slots: 1, shotsPerTon: 9, availability: [{ from: 1950 }], rulesLevel: "experimental" },
+      { id: "ammo-heavy-rifle-is", name: "Heavy Rifle Ammo", tons: 1, slots: 1, shotsPerTon: 6, availability: [{ from: 1950 }], rulesLevel: "experimental" },
+      { id: "ammo-taser-is", name: "Taser (BattleMech) Ammo", tons: 1, slots: 1, shotsPerTon: 5, availability: [{ from: 3067 }], rulesLevel: "experimental" },
+      { id: "ammo-thunderbolt-5-is", name: "Thunderbolt 5 Ammo", tons: 1, slots: 1, shotsPerTon: 12, availability: [{ from: 3072 }], rulesLevel: "advanced" },
+      { id: "ammo-thunderbolt-10-is", name: "Thunderbolt 10 Ammo", tons: 1, slots: 1, shotsPerTon: 6, availability: [{ from: 3072 }], rulesLevel: "advanced" },
+      { id: "ammo-thunderbolt-15-is", name: "Thunderbolt 15 Ammo", tons: 1, slots: 1, shotsPerTon: 4, availability: [{ from: 3072 }], rulesLevel: "advanced" },
+      { id: "ammo-thunderbolt-20-is", name: "Thunderbolt 20 Ammo", tons: 1, slots: 1, shotsPerTon: 3, availability: [{ from: 3072 }], rulesLevel: "advanced" },
     ],
   },
 ];
