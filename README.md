@@ -72,3 +72,11 @@ Build one with `npm run build:free`, `npm run build:tkf` or `npm run build:dev`.
 A build that includes `packages/family-battletech` is distributed as a whole under the GNU General Public License, version 3 or later.
 
 These tools are built with AI assistance.
+
+## Artwork
+
+Some pictures in the app were generated with an AI image tool, and each one is labelled where it is shown. We would
+rather show work made by a person. If you are an artist, or hold the rights to a piece, and can let us use it
+legally, we will gladly replace any AI-generated art and credit you. To offer a piece, start a thread in
+[Discussions](https://github.com/salvage-rights-archive/salvage-rights/discussions) or open an
+[issue](https://github.com/salvage-rights-archive/salvage-rights/issues).
