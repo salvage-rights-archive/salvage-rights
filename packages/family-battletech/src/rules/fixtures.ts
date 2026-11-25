@@ -1,5 +1,6 @@
 // Small, made-up 'Mechs and an equipment stub for the rules tests. Nothing here is a real design.
 import type { FactsOf, MechRecord, Mount } from "./mech";
+import type { OmniChassis } from "./omni";
 
 /** Tons and slots for the equipment ids the fixtures use. Task 2's catalog replaces this in real use. */
 const FACTS: Record<string, { tons: number; slots: number }> = {
@@ -233,4 +234,95 @@ export function mordelOdd(): Json {
 export function mordelWith(response: Json, patch: Json): Json {
   const unit = response["unit"] as Json;
   return { ...response, unit: { ...unit, ...patch } };
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// The Gladiator of the TechManual OmniMech example (printed pp.44-58): 95 tons, Clan, a 380 XL engine, a 4-ton gyro, a 3-ton cockpit, four jump
+// jets (8 tons), MASC (4 tons, 4 slots in the left torso), 16 double heat sinks (15 held by the engine, one in the right torso), 13.5 tons of
+// Clan ferro-fibrous armor (259 points, 7 slots). The base leaves 26.5 tons. The Prime mounts a Gauss rifle, two ER large lasers, two machine
+// guns, their ammunition and three more double heat sinks, and uses all 95 tons. (The book slot counts for the example do not reconcile
+// with its own critical space table, so only the tons are an oracle; see the specification, section 9.)
+// ---------------------------------------------------------------------------------------------------------------
+export const clanMount = (id: string, equipmentId: string | null, location: Mount["location"], slot: number | null, extra: Partial<Mount> = {}): Mount => ({
+  id,
+  equipmentId,
+  name: id,
+  techBase: "clan",
+  location,
+  slot,
+  ...extra,
+});
+const ferro = (id: string, location: Mount["location"], slot: number): Mount => clanMount(id, null, location, slot, { part: "armor", name: "Ferro-Fibrous (Clan)" });
+
+export function gladiator(): OmniChassis {
+  return {
+    schema: 1,
+    id: "gladiator",
+    editionId: "classic",
+    name: { chassis: "Gladiator" },
+    techBase: "clan",
+    year: 3060,
+    rulesLevel: "standard",
+    tons: 95,
+    body: "biped",
+    base: {
+      chassis: {
+        engine: { type: "xl-clan", rating: 380 },
+        gyro: "standard",
+        cockpit: "standard",
+        structure: "standard",
+        armorType: "ferro-fibrous-clan",
+        myomer: "standard",
+        heatSinks: { type: "double-clan", count: 16 },
+      },
+      armor: {
+        HD: { front: 9 },
+        CT: { front: 37, rear: 9 },
+        LT: { front: 20, rear: 10 },
+        RT: { front: 20, rear: 10 },
+        LA: { front: 32 },
+        RA: { front: 32 },
+        LL: { front: 40 },
+        RL: { front: 40 },
+      },
+      mounts: [
+        clanMount("jj-ll-1", "jump-jet-clan", "LL", 4),
+        clanMount("jj-ll-2", "jump-jet-clan", "LL", 5),
+        clanMount("jj-rl-1", "jump-jet-clan", "RL", 4),
+        clanMount("jj-rl-2", "jump-jet-clan", "RL", 5),
+        clanMount("masc", "masc-clan", "LT", 2),
+        clanMount("hs-base", "double-heat-sink-clan", "RT", 2),
+        ferro("ff-1", "CT", 10),
+        ferro("ff-2", "CT", 11),
+        ferro("ff-3", "HD", 3),
+        ferro("ff-4", "LA", 11),
+        ferro("ff-5", "RA", 11),
+        ferro("ff-6", "RT", 4),
+        ferro("ff-7", "RT", 5),
+      ],
+    },
+    configurations: [
+      {
+        id: "prime",
+        code: "Prime",
+        arms: { LA: { lowerArm: false, hand: false } },
+        mounts: [
+          clanMount("gauss", "gauss-rifle-clan", "LA", 2),
+          clanMount("gauss-ammo-1", "ammo-gauss-rifle-clan", "LT", 6),
+          clanMount("gauss-ammo-2", "ammo-gauss-rifle-clan", "LT", 7),
+          clanMount("erll-1", "er-large-laser-clan", "RA", 4),
+          clanMount("erll-2", "er-large-laser-clan", "RA", 5),
+          clanMount("mg-1", "machine-gun-clan", "RT", 6),
+          clanMount("mg-2", "machine-gun-clan", "RT", 7),
+          clanMount("mg-ammo", "ammo-machine-gun-clan", "RT", 8),
+          clanMount("dhs-1", "double-heat-sink-clan", "LA", 8),
+          clanMount("dhs-2", "double-heat-sink-clan", "RA", 6),
+          clanMount("dhs-3", "double-heat-sink-clan", "RA", 8),
+        ],
+      },
+      { id: "a", code: "A", mounts: [clanMount("erll-a", "er-large-laser-clan", "RA", 4)] },
+    ],
+    primaryId: "prime",
+    notes: {},
+  };
 }
