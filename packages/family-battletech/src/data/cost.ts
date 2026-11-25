@@ -436,6 +436,16 @@ export const EQUIPMENT_COST: PriceGroup[] = [
       "cargo-standard": 0, "cargo-liquid": { perTon: 100 }, "cargo-insulated": { perTon: 250 },
     },
   },
+  {
+    // TechManual pp.292-293: vehicle and unit equipment (Bulldozer, Field Kitchen, MASH, quarters and seating, lifeboats, escape pods)
+    cite: { book: TM, page: 292 },
+    checked: "page",
+    prices: {
+      "bulldozer": 50_000, "field-kitchen": 25_000, "mash-core-unit": 35_000, "mash-added-theater": 10_000,
+      "quarters-steerage": 5_000, "quarters-second-class": 15_000, "quarters-first-class": 30_000, "seating-standard": 100, "seating-pillion": 10,
+      "lifeboat-aerospace": 5_000, "lifeboat-atmospheric": 6_000, "lifeboat-maritime": 5_000, "escape-pod-aerospace": 5_000, "escape-pod-maritime": 5_000,
+    },
+  },
 ];
 
 /** Retractable blade (printed p.293, Industrial Equipment): the mechanism, plus the blade at a price per ton of its weight.

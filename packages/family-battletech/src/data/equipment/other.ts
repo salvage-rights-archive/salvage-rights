@@ -464,7 +464,7 @@ export const OTHER: EquipmentGroup[] = [
   // (the Clan column is a dash), so the Clan rows are marked inferred, as for the rows above. `units` is the table's Space columns
   // that are not NA; `by` is where a column differs from the BattleMech or IndustrialMech's.
   // Cargo and communications equipment take one slot per ton or fraction of a ton on a 'Mech (pp. 212, 239); the extended fuel tank
-  // too, torso locations only (p. 244). Left out of this table: the dumper (weight is a share of the cargo it empties), tracks,
+  // is a tenth of the engine's weight up to the half ton, with a slot for each ton of that, torso locations only (p. 244). Left out of this table: the dumper (weight is a share of the cargo it empties), tracks,
   // environmental sealing and ladders (weight by a rule on the unit), the bulldozer, field kitchen, MASH, quarters and the other
   // vehicle-only equipment (next pass).
   // -------------------------------------------------------------------------------------------------------------
@@ -473,7 +473,7 @@ export const OTHER: EquipmentGroup[] = [
     items: [
       { id: "searchlight-is", name: "Searchlight", aliases: ["Searchlight (Mounted)", "Mounted Searchlight"], tons: 0.5, slots: 1, heat: 0, range: [0, 0, 0, 170], availability: [{ from: 1950 }], units: ["mech", "industrialmech", "vehicle", "aero", "smallcraft", "dropship"], by: { aero: { slots: 0 }, smallcraft: { slots: 0 }, dropship: { slots: 0 } } },
       { id: "ejection-seat-is", name: "Ejection Seat", tons: 0.5, slots: 1, availability: [{ from: 2445 }], locations: ["HD"], units: ["industrialmech", "vehicle"], by: { vehicle: { tons: 0.1, slots: 0, note: "Support vehicle" } } },
-      { id: "extended-fuel-tank-is", name: "Extended Fuel Tank", aliases: ["Fuel Tank", "Extended Fuel Tanks"], tons: "chosen-tons", slots: "ceil-amount", availability: [{ from: 2300 }], locations: ["CT", "LT", "RT"], amount: { unit: "tons", min: 0.5, step: 0.5 }, units: ["industrialmech", "vehicle"], by: { vehicle: { slots: 1 } } },
+      { id: "extended-fuel-tank-is", name: "Extended Fuel Tank", aliases: ["Fuel Tank", "Extended Fuel Tanks"], tons: "fuel-tank-tons", slots: "fuel-tank-slots", availability: [{ from: 2300 }], locations: ["CT", "LT", "RT"], units: ["industrialmech", "vehicle"], by: { vehicle: { slots: 1 } } },
       { id: "communications-equipment-is", name: "Communications Equipment", aliases: ["CommsGear", "Comm. Equipment"], tons: "chosen-tons", slots: "ceil-amount", availability: [{ from: 1950 }], amount: { unit: "tons", min: 1, max: 15, step: 1 }, units: ["mech", "industrialmech", "vehicle", "aero", "smallcraft", "dropship"], by: { vehicle: { slots: 1 }, aero: { slots: 0 }, smallcraft: { slots: 0 }, dropship: { slots: 0 } } },
       { id: "cargo-standard-is", name: "Cargo, Standard", aliases: ["Cargo", "Cargo Bay"], tons: "chosen-tons", slots: "ceil-amount", availability: [{ from: 1950 }], amount: { unit: "tons", min: 0.5, step: 0.5 }, units: ["mech", "industrialmech", "vehicle"], by: { vehicle: { slots: 1 } } },
       { id: "cargo-liquid-is", name: "Cargo, Liquid", aliases: ["Liquid Storage", "Liquid Cargo"], tons: "chosen-tons", slots: "ceil-amount", availability: [{ from: 1950 }], amount: { unit: "tons", min: 0.5, step: 0.5 }, units: ["mech", "industrialmech", "vehicle"], by: { vehicle: { slots: 1 } } },
@@ -485,7 +485,7 @@ export const OTHER: EquipmentGroup[] = [
     items: [
       { id: "searchlight-clan", name: "Searchlight", aliases: ["Searchlight (Mounted)", "Mounted Searchlight"], tons: 0.5, slots: 1, heat: 0, range: [0, 0, 0, 170], availability: [{ from: 1950 }], units: ["mech", "industrialmech", "vehicle", "aero", "smallcraft", "dropship"], by: { aero: { slots: 0 }, smallcraft: { slots: 0 }, dropship: { slots: 0 } } },
       { id: "ejection-seat-clan", name: "Ejection Seat", tons: 0.5, slots: 1, availability: [{ from: 2445 }], locations: ["HD"], units: ["industrialmech", "vehicle"], by: { vehicle: { tons: 0.1, slots: 0, note: "Support vehicle" } } },
-      { id: "extended-fuel-tank-clan", name: "Extended Fuel Tank", aliases: ["Fuel Tank", "Extended Fuel Tanks"], tons: "chosen-tons", slots: "ceil-amount", availability: [{ from: 2300 }], locations: ["CT", "LT", "RT"], amount: { unit: "tons", min: 0.5, step: 0.5 }, units: ["industrialmech", "vehicle"], by: { vehicle: { slots: 1 } } },
+      { id: "extended-fuel-tank-clan", name: "Extended Fuel Tank", aliases: ["Fuel Tank", "Extended Fuel Tanks"], tons: "fuel-tank-tons", slots: "fuel-tank-slots", availability: [{ from: 2300 }], locations: ["CT", "LT", "RT"], units: ["industrialmech", "vehicle"], by: { vehicle: { slots: 1 } } },
       { id: "communications-equipment-clan", name: "Communications Equipment", aliases: ["CommsGear", "Comm. Equipment"], tons: "chosen-tons", slots: "ceil-amount", availability: [{ from: 1950 }], amount: { unit: "tons", min: 1, max: 15, step: 1 }, units: ["mech", "industrialmech", "vehicle", "aero", "smallcraft", "dropship"], by: { vehicle: { slots: 1 }, aero: { slots: 0 }, smallcraft: { slots: 0 }, dropship: { slots: 0 } } },
       { id: "cargo-standard-clan", name: "Cargo, Standard", aliases: ["Cargo", "Cargo Bay"], tons: "chosen-tons", slots: "ceil-amount", availability: [{ from: 1950 }], amount: { unit: "tons", min: 0.5, step: 0.5 }, units: ["mech", "industrialmech", "vehicle"], by: { vehicle: { slots: 1 } } },
       { id: "cargo-liquid-clan", name: "Cargo, Liquid", aliases: ["Liquid Storage", "Liquid Cargo"], tons: "chosen-tons", slots: "ceil-amount", availability: [{ from: 1950 }], amount: { unit: "tons", min: 0.5, step: 0.5 }, units: ["mech", "industrialmech", "vehicle"], by: { vehicle: { slots: 1 } } },
@@ -506,6 +506,64 @@ export const OTHER: EquipmentGroup[] = [
       { id: "risc-heat-sink-override-kit-is", name: "RISC Heat Sink Override Kit", aliases: ["Heat Sink Override Kit"], tons: 0, slots: 0, availability: [{ from: 3134 }], rulesLevel: "experimental" },
       { id: "risc-laser-pulse-module-is", name: "RISC Laser Pulse Module", aliases: ["RISC Laser Module", "Laser Pulse Module"], tons: 1, slots: 1, availability: [{ from: 3137 }], rulesLevel: "experimental", needs: "laser" },
       { id: "remote-drone-command-console-is", name: "Remote Drone Command Console", aliases: ["Remote Drone"], tons: 2, slots: 1, availability: [{ from: 3140 }], rulesLevel: "experimental" },
+    ],
+  },
+  {
+    defaults: { kind: "other", techBase: "inner-sphere", cite: { book: "TechManual", page: 344 }, checked: "page" },
+    items: [
+      { id: "bulldozer-is", name: "Bulldozer", aliases: [], tons: 2, slots: 1, availability: [{ from: 1950 }], units: ["vehicle"] },
+      { id: "field-kitchen-is", name: "Field Kitchen", aliases: [], tons: 3, slots: 1, availability: [{ from: 1950 }], units: ["vehicle"] },
+      { id: "mash-core-unit-is", name: "MASH (Core Unit)", aliases: ["MASH"], tons: 3.5, slots: 1, availability: [{ from: 1950 }], units: ["vehicle", "smallcraft", "dropship"] },
+      { id: "mash-added-theater-is", name: "MASH (Added Theater)", aliases: [], tons: 1, slots: 1, availability: [{ from: 1950 }], units: ["vehicle", "smallcraft", "dropship"] },
+      { id: "quarters-steerage-is", name: "Quarters (Steerage)", aliases: ["Steerage"], tons: 5, slots: 1, availability: [{ from: 1950 }], units: ["vehicle", "smallcraft", "dropship"] },
+      { id: "quarters-second-class-is", name: "Quarters (Crew/2nd Class)", aliases: ["Crew/2nd Class"], tons: 7, slots: 1, availability: [{ from: 1950 }], units: ["vehicle", "smallcraft", "dropship"] },
+      { id: "quarters-first-class-is", name: "Quarters (Officer/1st Class)", aliases: ["Officer/1st Class"], tons: 10, slots: 1, availability: [{ from: 1950 }], units: ["vehicle", "smallcraft", "dropship"] },
+      { id: "seating-combat-crew-is", name: "Seating (Combat Crew)", aliases: [], tons: 0.5, slots: 1, availability: [{ from: 1950 }], units: ["vehicle", "smallcraft", "dropship"] },
+      { id: "seating-standard-is", name: "Seating (Standard)", aliases: [], tons: 0.075, slots: 1, availability: [{ from: 1950 }], units: ["vehicle", "smallcraft", "dropship"] },
+      { id: "seating-pillion-is", name: "Seating (Pillion)", aliases: [], tons: 0.025, slots: 1, availability: [{ from: 1950 }], units: ["vehicle"] },
+      { id: "lifeboat-aerospace-is", name: "Lifeboat (Aerospace)", aliases: [], tons: 7, slots: 1, availability: [{ from: 2200 }], units: ["smallcraft", "dropship"] },
+      { id: "lifeboat-atmospheric-is", name: "Lifeboat (Atmospheric)", aliases: [], tons: 1, slots: 1, availability: [{ from: 1950 }], units: ["vehicle"] },
+      { id: "lifeboat-maritime-is", name: "Lifeboat (Maritime)", aliases: [], tons: 1, slots: 1, availability: [{ from: 1950 }], units: ["vehicle"] },
+      { id: "escape-pod-aerospace-is", name: "Escape Pod (Aerospace)", aliases: [], tons: 7, slots: 1, availability: [{ from: 2200 }], units: ["smallcraft", "dropship"] },
+      { id: "escape-pod-maritime-is", name: "Escape Pod (Maritime)", aliases: [], tons: 7, slots: 1, availability: [{ from: 2200 }], units: ["vehicle"] },
+    ],
+  },
+  {
+    defaults: { kind: "other", techBase: "clan", cite: { book: "TechManual", page: 344 }, checked: "page", yearsInferred: true },
+    items: [
+      { id: "bulldozer-clan", name: "Bulldozer", aliases: [], tons: 2, slots: 1, availability: [{ from: 1950 }], units: ["vehicle"] },
+      { id: "field-kitchen-clan", name: "Field Kitchen", aliases: [], tons: 3, slots: 1, availability: [{ from: 1950 }], units: ["vehicle"] },
+      { id: "mash-core-unit-clan", name: "MASH (Core Unit)", aliases: ["MASH"], tons: 3.5, slots: 1, availability: [{ from: 1950 }], units: ["vehicle", "smallcraft", "dropship"] },
+      { id: "mash-added-theater-clan", name: "MASH (Added Theater)", aliases: [], tons: 1, slots: 1, availability: [{ from: 1950 }], units: ["vehicle", "smallcraft", "dropship"] },
+      { id: "quarters-steerage-clan", name: "Quarters (Steerage)", aliases: ["Steerage"], tons: 5, slots: 1, availability: [{ from: 1950 }], units: ["vehicle", "smallcraft", "dropship"] },
+      { id: "quarters-second-class-clan", name: "Quarters (Crew/2nd Class)", aliases: ["Crew/2nd Class"], tons: 7, slots: 1, availability: [{ from: 1950 }], units: ["vehicle", "smallcraft", "dropship"] },
+      { id: "quarters-first-class-clan", name: "Quarters (Officer/1st Class)", aliases: ["Officer/1st Class"], tons: 10, slots: 1, availability: [{ from: 1950 }], units: ["vehicle", "smallcraft", "dropship"] },
+      { id: "seating-combat-crew-clan", name: "Seating (Combat Crew)", aliases: [], tons: 0.5, slots: 1, availability: [{ from: 1950 }], units: ["vehicle", "smallcraft", "dropship"] },
+      { id: "seating-standard-clan", name: "Seating (Standard)", aliases: [], tons: 0.075, slots: 1, availability: [{ from: 1950 }], units: ["vehicle", "smallcraft", "dropship"] },
+      { id: "seating-pillion-clan", name: "Seating (Pillion)", aliases: [], tons: 0.025, slots: 1, availability: [{ from: 1950 }], units: ["vehicle"] },
+      { id: "lifeboat-aerospace-clan", name: "Lifeboat (Aerospace)", aliases: [], tons: 7, slots: 1, availability: [{ from: 2200 }], units: ["smallcraft", "dropship"] },
+      { id: "lifeboat-atmospheric-clan", name: "Lifeboat (Atmospheric)", aliases: [], tons: 1, slots: 1, availability: [{ from: 1950 }], units: ["vehicle"] },
+      { id: "lifeboat-maritime-clan", name: "Lifeboat (Maritime)", aliases: [], tons: 1, slots: 1, availability: [{ from: 1950 }], units: ["vehicle"] },
+      { id: "escape-pod-aerospace-clan", name: "Escape Pod (Aerospace)", aliases: [], tons: 7, slots: 1, availability: [{ from: 2200 }], units: ["smallcraft", "dropship"] },
+      { id: "escape-pod-maritime-clan", name: "Escape Pod (Maritime)", aliases: [], tons: 7, slots: 1, availability: [{ from: 2200 }], units: ["vehicle"] },
+    ],
+  },
+  {
+    // Weight and slots by a rule (TechManual pp. 213 and 249, tables pp. 344-345; dates pp. 213 and 249): tracks weigh a tenth of the 'Mech, one slot in
+    // each leg; environmental sealing is a tenth of the IndustrialMech, one slot in each body location. The cost tables print no price for either.
+    defaults: { kind: "other", techBase: "inner-sphere", cite: { book: "TechManual", page: 344 }, checked: "page" },
+    items: [
+      { id: "tracks-is", name: "Tracks", aliases: ["Track"], tons: "tenth-tons", slots: 1, availability: [{ from: 2440 }], locations: ["LL", "RL"], locationsQuad: ["FLL", "FRL", "RLL", "RRL"], perMech: 2, perMechQuad: 4, splitWeight: true, units: ["mech", "industrialmech"] },
+      { id: "environmental-sealing-is", name: "Environmental Sealing", aliases: ["Environmental Sealing (IndustrialMech)"], tons: "tenth-tons", slots: 1, availability: [{ from: 1950 }], perMech: 8, splitWeight: true, units: ["industrialmech"] },
+    ],
+  },
+  {
+    // Weight and slots by a rule (TechManual pp. 213 and 249, tables pp. 344-345; dates pp. 213 and 249): tracks weigh a tenth of the 'Mech, one slot in
+    // each leg; environmental sealing is a tenth of the IndustrialMech, one slot in each body location. The cost tables print no price for either.
+    defaults: { kind: "other", techBase: "clan", cite: { book: "TechManual", page: 344 }, checked: "page", yearsInferred: true },
+    items: [
+      { id: "tracks-clan", name: "Tracks", aliases: ["Track"], tons: "tenth-tons", slots: 1, availability: [{ from: 2440 }], locations: ["LL", "RL"], locationsQuad: ["FLL", "FRL", "RLL", "RRL"], perMech: 2, perMechQuad: 4, splitWeight: true, units: ["mech", "industrialmech"] },
+      { id: "environmental-sealing-clan", name: "Environmental Sealing", aliases: ["Environmental Sealing (IndustrialMech)"], tons: "tenth-tons", slots: 1, availability: [{ from: 1950 }], perMech: 8, splitWeight: true, units: ["industrialmech"] },
     ],
   },
 ];

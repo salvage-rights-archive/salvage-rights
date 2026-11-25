@@ -66,6 +66,9 @@ const SCALED: Record<string, Scaled> = {
   "partial-wing-clan": { of: "tons", times: 0.05, round: "ceil-half" },
   // Mechanical jump boosters (p. 104): 5 percent of the tonnage for every Jumping MP chosen, up to the half ton, for all legs.
   "jump-booster": { of: "tons", times: 0.05, round: "ceil-half", perAmount: true },
+  // Tracks and environmental sealing (TechManual pp. 213, 249): a tenth of the unit, up to the half ton. Extended fuel tank (p. 244): a tenth of the engine.
+  "tenth-tons": { of: "tons", divide: 10, round: "ceil-half" },
+  "fuel-tank-tons": { of: "engine", divide: 10, round: "ceil-half" },
   // Booby trap (p. 108): a tenth of the 'Mech, up to the half ton.
   "booby-trap": { of: "tons", divide: 10, round: "ceil-half" },
   // Supercharger (p. 156): a tenth of the engine's weight, up to the half ton.
@@ -85,6 +88,8 @@ export const FORMULAS: Record<string, Formula> = {
   // Targeting computer (p. 238): the weight of the record's direct-fire weapons over 4 (Inner Sphere) or 5 (Clan), rounded up.
   "targeting-computer-is": (_row, record, catalog) => Math.ceil(directFireTons(record, catalog) / 4),
   "targeting-computer-clan": (_row, record, catalog) => Math.ceil(directFireTons(record, catalog) / 5),
+  // A fuel tank takes a slot for each ton of its weight, or part of one (TechManual p. 244).
+  "fuel-tank-slots": (row, record, catalog, mount) => Math.ceil(FORMULAS["fuel-tank-tons"]?.(row, record, catalog, mount) ?? 0),
   // AES slots (TO:AUE p. 90): one per weight class of the 'Mech.
   "aes-slots": (_row, record) => weightClass(record.tons),
 };

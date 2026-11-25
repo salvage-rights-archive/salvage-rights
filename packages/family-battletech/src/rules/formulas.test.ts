@@ -38,7 +38,7 @@ describe("formula rows", () => {
     ["umu-is", 70, {}, 1, 1], // as a jump jet of 60-85 tons
     ["cargo-liquid-is", 50, { amount: 2.5 }, 2.5, 3], // a slot for each ton or part of one
     ["communications-equipment-is", 50, { amount: 3 }, 3, 3],
-    ["extended-fuel-tank-is", 50, { amount: 4 }, 4, 4],
+    ["extended-fuel-tank-is", 50, { engine: 400 }, 5.5, 6], // a tenth of a 400 engine (52.5 tons), up to 5.5, and a slot for each ton or part of one
   ];
   it.each(cases)("%s on a %d-ton 'Mech", (id, tons, options, expectedTons, expectedSlots) => {
     expect(facts(id, tons, options)).toEqual({ tons: expectedTons, slots: expectedSlots });
