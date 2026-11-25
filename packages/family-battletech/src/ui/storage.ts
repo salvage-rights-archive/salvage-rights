@@ -124,6 +124,21 @@ export function fromMechFile(file: unknown): { ok: true; record: MechRecord } | 
   return { ok: true, record: file.record };
 }
 
+/** Hands the 'Mech to the browser as a file. */
+export function downloadMech(record: MechRecord): void {
+  const base = `${record.name.chassis}-${record.name.model}`.replace(/[^A-Za-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+  const url = URL.createObjectURL(new Blob([JSON.stringify(toMechFile(record), null, 2)], { type: "application/json" }));
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `${base || "mech"}.mech.json`;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => {
+    URL.revokeObjectURL(url);
+  }, 1000);
+}
+
 function entryOf(id: string, stored: unknown): SavedEntry {
   if (!isObject(stored)) return { id, unreadable: "This saved 'Mech is not in a form the app understands." };
   const savedAt = isString(stored.savedAt) ? stored.savedAt : undefined;

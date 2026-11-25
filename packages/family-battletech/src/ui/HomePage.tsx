@@ -3,27 +3,13 @@ import type { ChangeEvent } from "react";
 import { Link } from "react-router";
 import { DEFAULT_EDITION, EDITIONS } from "../data/editions";
 import type { MechRecord } from "../rules/mech";
-import { STORAGE_READ_FAILED, STORAGE_WRITE_FAILED, fromMechFile, openFamilyStorage, toMechFile } from "./storage";
+import { STORAGE_READ_FAILED, STORAGE_WRITE_FAILED, downloadMech, fromMechFile, openFamilyStorage } from "./storage";
 import type { FamilyStorage, SavedEntry } from "./storage";
 import "./classic.scss";
 
 const MAX_IMPORT_BYTES = 1024 * 1024;
 
 const nameOf = (record: MechRecord) => `${record.name.chassis} ${record.name.model}`.trim();
-
-function download(record: MechRecord) {
-  const base = `${record.name.chassis}-${record.name.model}`.replace(/[^A-Za-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
-  const url = URL.createObjectURL(new Blob([JSON.stringify(toMechFile(record), null, 2)], { type: "application/json" }));
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = `${base || "mech"}.mech.json`;
-  document.body.append(link);
-  link.click();
-  link.remove();
-  setTimeout(() => {
-    URL.revokeObjectURL(url);
-  }, 1000);
-}
 
 export default function HomePage() {
   const [storage, setStorage] = useState<FamilyStorage>();
@@ -251,7 +237,7 @@ export default function HomePage() {
                       className="bt-button bt-button--secondary"
                       aria-label={`Export ${name}`}
                       onClick={() => {
-                        download(record);
+                        downloadMech(record);
                         say("Export started.");
                       }}
                     >
