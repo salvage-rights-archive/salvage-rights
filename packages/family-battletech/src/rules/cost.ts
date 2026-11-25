@@ -60,7 +60,7 @@ export interface UnitCost {
   notes: string[];
 }
 export interface CostOptions {
-  /** The record does not say whether a 'Mech is an OmniMech; true multiplies the cost by 1.25 (printed p.285). */
+  /** True multiplies the cost by 1.25 (printed p.285). Absent, the record says: a resolved OmniMech configuration (or the base) has it, any other 'Mech does not. */
   omni?: boolean;
 }
 
@@ -290,7 +290,7 @@ export function unitCost(record: MechRecord, catalog: Catalog, options: CostOpti
       : [{ label: "Conversion equipment", cost: conversion, how: `${special.conversion} x ${money(structuralTotal + equipmentTotal)}`, cite: special.cite, checked: special.checked }];
 
   // An IndustrialMech: the tonnage is divided by 400 and there is no Omni factor (printed p.285).
-  const multiplier = tonsKnown ? (industrial ? finalMultiplier(tons, false, INDUSTRIAL_COST.tonsDivisor) : finalMultiplier(tons, options.omni === true)) : 1;
+  const multiplier = tonsKnown ? (industrial ? finalMultiplier(tons, false, INDUSTRIAL_COST.tonsDivisor) : finalMultiplier(tons, options.omni ?? record.omni !== undefined)) : 1;
   if (!tonsKnown) skip("Final multiplier", "the tonnage is not a positive number");
   const total = roundUpCents((structuralTotal + equipmentTotal + conversion) * multiplier);
   return {

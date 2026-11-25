@@ -152,7 +152,10 @@ function useScrolls() {
 
 export default function CalculatorPanel({ record, catalog }: { record: MechRecord; catalog: Catalog }) {
   const [pilot, setPilot] = useState(DEFAULT_PILOT);
-  const [omni, setOmni] = useState(false);
+  const [omniChoice, setOmni] = useState(false);
+  // A configuration of an OmniMech chassis is an Omni by what it is; the box is for trying the 1.25 on any other 'Mech.
+  const omni = record.omni !== undefined || omniChoice;
+  const isBase = record.omni?.isBase === true;
   // Typing in an armor box changes the record on every key; the figures follow at low priority so the box never waits for them.
   const deferred = useDeferredValue(record);
   const bv = useMemo(() => battleValue(deferred, catalog, pilot), [deferred, catalog, pilot]);
@@ -166,7 +169,7 @@ export default function CalculatorPanel({ record, catalog }: { record: MechRecor
   const mordelBv = record.source?.values.battleValue;
 
   // A status line that is read out once the figures have settled for a moment, not on every key.
-  const summary = `Battle Value ${bvText}. Cost ${costText}.`;
+  const summary = isBase ? `Cost of the base ${costText}.` : `Battle Value ${bvText}. Cost ${costText}.`;
   const [announced, setAnnounced] = useState("");
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -207,6 +210,10 @@ export default function CalculatorPanel({ record, catalog }: { record: MechRecor
       </div>
 
       <h3>Battle Value</h3>
+      {isBase ? (
+        <p className="bt-hint">The base has no Battle Value: it is not a legal unit until a configuration fills its pods (TechManual p. 44).</p>
+      ) : (
+      <>
       <p className="bt-calc__figure" data-testid="bv-total">
         {bvText}
       </p>
@@ -239,17 +246,21 @@ export default function CalculatorPanel({ record, catalog }: { record: MechRecor
       <Disclosure label="Battle Value breakdown">
         <BvBreakdown bv={bv} />
       </Disclosure>
+      </>
+      )}
 
-      <h3>Cost</h3>
+      <h3>{isBase ? "Cost of the base" : "Cost"}</h3>
       <p className="bt-calc__figure" data-testid="cost-total">
         {costText}
       </p>
-      {industrialRulesOf(deferred) === undefined && (
+      {record.omni !== undefined ? (
+        <p className="bt-hint">OmniMech: cost x 1.25 on the whole sum, the base and any pods together (TechManual p. 285).</p>
+      ) : industrialRulesOf(deferred) === undefined && (
       <label className="bt-check" htmlFor={ids.omni}>
         <input
           id={ids.omni}
           type="checkbox"
-          checked={omni}
+          checked={omniChoice}
           onChange={(event) => {
             setOmni(event.target.checked);
           }}

@@ -3,7 +3,9 @@ import { AMMUNITION } from "../data/equipment/ammunition";
 import { OTHER } from "../data/equipment/other";
 import { WEAPONS } from "../data/equipment/weapons";
 import { createCatalog, expand } from "./catalog";
+import { battleValue } from "./bv";
 import { runChecks } from "./checks";
+import { finalMultiplier, unitCost } from "./cost";
 import { bipedRecord, clanMount, gladiator } from "./fixtures";
 import { configurationLevel, omniChassisFindings, brokenBy } from "./omni";
 import type { OmniConfiguration } from "./omni";
@@ -224,5 +226,39 @@ describe("the Omni checks (TechManual pp.19-20, 44-58)", () => {
     expect(broken.map((b) => b.code)).toEqual(["Prime", "A"]);
     expect(broken[0]?.added.length).toBeGreaterThan(0);
     expect(brokenBy(chassis, chassis, catalog)).toEqual([]);
+  });
+});
+
+describe("cost and Battle Value of a configuration (TechManual pp.282, 285)", () => {
+  const prime = resolveConfiguration(gladiator(), "prime") as MechRecord;
+  const plain = (record: MechRecord): MechRecord => {
+    const copy = structuredClone(record);
+    delete copy.omni;
+    for (const m of copy.mounts) delete m.pod;
+    return copy;
+  };
+
+  it("multiplies the whole sum, base and pods together, by 1.25 and (1 + tons / 100); the book's worked pair 627,500 and 997,500 gives 1,255,000 and 1,995,000", () => {
+    expect(627_500 * finalMultiplier(30, true, 50)).toBe(1_255_000);
+    expect(997_500 * finalMultiplier(30, true, 50)).toBe(1_995_000);
+    const cost = unitCost(prime, catalog);
+    expect(cost.multiplier).toBe(1.25 * 1.95);
+    expect(cost.total).toBeCloseTo((cost.structural + cost.equipment) * 1.25 * 1.95, 1);
+    expect(unitCost(plain(prime), catalog).total).toBeCloseTo(cost.total / 1.25, 1); // the record alone does not make an Omni
+  });
+
+  it("prices the base on its own, less than any configuration, with the jump jets counted once for the whole unit", () => {
+    const base = unitCost(resolveBase(gladiator()), catalog);
+    const loaded = unitCost(prime, catalog);
+    expect(base.multiplier).toBe(loaded.multiplier);
+    expect(base.total).toBeLessThan(loaded.total);
+    const jets = (c: typeof base) => c.lines.find((l) => l.label.startsWith("Jump jets"))?.cost;
+    expect(jets(base)).toBeGreaterThan(0);
+    expect(jets(base)).toBe(jets(loaded));
+  });
+
+  it("values each configuration as an ordinary 'Mech: the Omni link changes nothing, and the configurations differ", () => {
+    expect(battleValue(prime, catalog)).toEqual(battleValue(plain(prime), catalog));
+    expect(battleValue(prime, catalog).total).not.toBe(battleValue(resolveConfiguration(gladiator(), "a") as MechRecord, catalog).total);
   });
 });
