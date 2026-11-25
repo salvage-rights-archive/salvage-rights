@@ -7,74 +7,54 @@ gives us artwork made by a person that we can legally use. To offer a piece, sta
 GitHub repository, or open an issue there.
 
 The game pictures below were made with DeviantArt DreamUp. Each entry reads: "Made by the Salvage Rights team with an
-AI image tool (DeviantArt DreamUp) on or before 2026-11-25, cropped and resized. Prompt: not recorded." We will add
-the prompts when we have them.
+AI image tool (DeviantArt DreamUp) on or before 2026-11-25, cropped and resized." The prompt is given as DeviantArt
+saved it in the picture's file name, which cuts it off after about 100 characters; "..." marks where it stops. Two
+pairs of pictures came from the same prompt, so they share one. Each icon comes from the same original as its game
+picture and shares its prompt.
 
 ## flatbed-salvage-tile.jpg
 
 - The BattleTech tile on the landing page. Made by the Salvage Rights team with an AI image tool (DeviantArt DreamUp)
-  on or before 2026-11-25, cropped and resized. Prompt: not recorded.
+  on or before 2026-11-25, cropped and resized.
+- Prompt: "1980s retro sci fi oil painting set in the battletech universe of a heavily combat damaged light ba..."
 
-## classic-canyon-salvage.jpg
+## classic-canyon-salvage.jpg and classic-icon.jpg
 
-- The Classic BattleTech home page and tile entry. Made by the Salvage Rights team with an AI image tool (DeviantArt
-  DreamUp) on or before 2026-11-25, cropped and resized. Prompt: not recorded.
+- The Classic BattleTech home page, its tile entry and its icon. Made by the Salvage Rights team with an AI image
+  tool (DeviantArt DreamUp) on or before 2026-11-25, cropped and resized.
+- Prompt: "cinematic sci fi book cover art battle worn mercenary war mech in a desert canyon heavy salvage to..."
 
-## classic-icon.jpg
+## alpha-strike-combined-arms.jpg and alpha-strike-icon.jpg
 
-- Classic's icon. Made by the Salvage Rights team with an AI image tool (DeviantArt DreamUp) on or before 2026-11-25,
-  cropped and resized from the picture above. Prompt: not recorded.
+- The Alpha Strike home page, its tile entry and its icon. Made by the Salvage Rights team with an AI image tool
+  (DeviantArt DreamUp) on or before 2026-11-25, cropped and resized.
+- Prompt: "military sci fi concept art wide battlefield aftermath set in battletech but at large scale sleek..."
 
-## alpha-strike-combined-arms.jpg
+## aces-dust-battle.jpg and aces-icon.jpg
 
-- The Alpha Strike home page and tile entry. Made by the Salvage Rights team with an AI image tool (DeviantArt
-  DreamUp) on or before 2026-11-25, cropped and resized. Prompt: not recorded.
+- The Aces tile entry and its icon. Made by the Salvage Rights team with an AI image tool (DeviantArt DreamUp) on or
+  before 2026-11-25, cropped and resized. The original carried a third-party watermark in its bottom-right corner; the
+  crop removes it.
+- Prompt: "military sci fi concept art wide battlefield aftermath set in battletech but at large scale sleek..."
+  (the same prompt as the Alpha Strike picture; a different result)
 
-## alpha-strike-icon.jpg
+## aerotech-fighter-dropship.jpg and aerotech-icon.jpg
 
-- Alpha Strike's icon. Made by the Salvage Rights team with an AI image tool (DeviantArt DreamUp) on or before
-  2026-11-25, cropped and resized from the picture above. Prompt: not recorded.
+- The AeroTech tile entry and its icon. Made by the Salvage Rights team with an AI image tool (DeviantArt DreamUp) on
+  or before 2026-11-25, cropped and resized.
+- Prompt: "hard sci fi space art upper atmosphere above a planet curve bulky industrial tug spacecraft using..."
 
-## aces-dust-battle.jpg
+## aerotech2-broken-warship.jpg and aerotech2-icon.jpg
 
-- The Aces tile entry. Made by the Salvage Rights team with an AI image tool (DeviantArt DreamUp) on or before
-  2026-11-25, cropped and resized. The original carried a third-party watermark in its bottom-right corner; the crop
-  removes it. Prompt: not recorded.
+- The AeroTech 2 tile entry and its icon. Made by the Salvage Rights team with an AI image tool (DeviantArt DreamUp)
+  on or before 2026-11-25, cropped and resized.
+- Prompt: "hard sci fi space art upper atmosphere above a planet curve heavily damaged warship in orbit with..."
 
-## aces-icon.jpg
+## gothic-skull-mech.jpg and gothic-icon.jpg
 
-- Aces' icon. Made by the Salvage Rights team with an AI image tool (DeviantArt DreamUp) on or before 2026-11-25,
-  cropped and resized from the same original. Prompt: not recorded.
-
-## aerotech-fighter-dropship.jpg
-
-- The AeroTech tile entry. Made by the Salvage Rights team with an AI image tool (DeviantArt DreamUp) on or before
-  2026-11-25, cropped and resized. Prompt: not recorded.
-
-## aerotech-icon.jpg
-
-- AeroTech's icon. Made by the Salvage Rights team with an AI image tool (DeviantArt DreamUp) on or before
-  2026-11-25, cropped and resized from the picture above. Prompt: not recorded.
-
-## aerotech2-broken-warship.jpg
-
-- The AeroTech 2 tile entry. Made by the Salvage Rights team with an AI image tool (DeviantArt DreamUp) on or before
-  2026-11-25, cropped and resized. Prompt: not recorded.
-
-## aerotech2-icon.jpg
-
-- AeroTech 2's icon. Made by the Salvage Rights team with an AI image tool (DeviantArt DreamUp) on or before
-  2026-11-25, cropped and resized from the picture above. Prompt: not recorded.
-
-## gothic-skull-mech.jpg
-
-- The Gothic tile entry. Made by the Salvage Rights team with an AI image tool (DeviantArt DreamUp) on or before
-  2026-11-25, cropped and resized. Prompt: not recorded.
-
-## gothic-icon.jpg
-
-- Gothic's icon. Made by the Salvage Rights team with an AI image tool (DeviantArt DreamUp) on or before 2026-11-25,
-  cropped and resized from the picture above. Prompt: not recorded.
+- The Gothic tile entry and its icon. Made by the Salvage Rights team with an AI image tool (DeviantArt DreamUp) on or
+  before 2026-11-25, cropped and resized.
+- Prompt: "dark grimdark gothic sci fi art set in battletech gothic with a menacing war mech with ornate cathe..."
 
 ## empty-bay.jpg
 

@@ -18,22 +18,22 @@ soon as someone gives us work made by a person that we can legally use (see the 
 ## Game pictures and icons made with DeviantArt DreamUp
 
 These live in the artwork folder of the game family package, with their notice. Each one: "Made by the Salvage Rights
-team with an AI image tool (DeviantArt DreamUp) on or before 2026-11-25, cropped and resized. Prompt: not recorded."
-Each is shown with a label saying it is AI-generated.
+team with an AI image tool (DeviantArt DreamUp) on or before 2026-11-25, cropped and resized." Each is shown with a label saying it is AI-generated. The prompt for each picture, as
+DeviantArt saved it in the file name, is in that notice.
 
-- `flatbed-salvage-tile.jpg`: the game family tile. Prompt: not recorded.
-- `classic-canyon-salvage.jpg`: Classic. Prompt: not recorded.
-- `classic-icon.jpg`: Classic's icon. Prompt: not recorded.
-- `alpha-strike-combined-arms.jpg`: Alpha Strike. Prompt: not recorded.
-- `alpha-strike-icon.jpg`: Alpha Strike's icon. Prompt: not recorded.
-- `aces-dust-battle.jpg`: Aces (a third-party watermark in the original's corner is cropped off). Prompt: not recorded.
-- `aces-icon.jpg`: Aces' icon. Prompt: not recorded.
-- `aerotech-fighter-dropship.jpg`: AeroTech. Prompt: not recorded.
-- `aerotech-icon.jpg`: AeroTech's icon. Prompt: not recorded.
-- `aerotech2-broken-warship.jpg`: AeroTech 2. Prompt: not recorded.
-- `aerotech2-icon.jpg`: AeroTech 2's icon. Prompt: not recorded.
-- `gothic-skull-mech.jpg`: Gothic. Prompt: not recorded.
-- `gothic-icon.jpg`: Gothic's icon. Prompt: not recorded.
+- `flatbed-salvage-tile.jpg`: the game family tile.
+- `classic-canyon-salvage.jpg`: Classic.
+- `classic-icon.jpg`: Classic's icon.
+- `alpha-strike-combined-arms.jpg`: Alpha Strike.
+- `alpha-strike-icon.jpg`: Alpha Strike's icon.
+- `aces-dust-battle.jpg`: Aces (a third-party watermark in the original's corner is cropped off).
+- `aces-icon.jpg`: Aces' icon.
+- `aerotech-fighter-dropship.jpg`: AeroTech.
+- `aerotech-icon.jpg`: AeroTech's icon.
+- `aerotech2-broken-warship.jpg`: AeroTech 2.
+- `aerotech2-icon.jpg`: AeroTech 2's icon.
+- `gothic-skull-mech.jpg`: Gothic.
+- `gothic-icon.jpg`: Gothic's icon.
 
 ## Fonts
 
