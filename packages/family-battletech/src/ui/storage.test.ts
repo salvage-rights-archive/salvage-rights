@@ -25,6 +25,8 @@ describe("family storage", () => {
       await storage.remove("new");
       expect((await storage.list()).map((e) => e.id)).toEqual(["old"]);
       expect(await storage.get("new")).toBeUndefined();
+      await storage.save(bipedRecord({ id: "old" }));
+      expect((await storage.list()).map((e) => e.id)).toEqual(["old"]);
     } finally {
       vi.useRealTimers();
     }
@@ -84,7 +86,22 @@ describe("mech files", () => {
     if (!result.ok) expect(result.message).toMatch(/\S/);
   });
 
-  it("accepts an illegal but well-shaped record", () => {
-    expect(isMechRecord(bipedRecord({ tons: 9999 }))).toBe(true);
+  it("checks shape, not legality, and save refuses what fails the check", async () => {
+    const source = { kind: "mordel", unitType: "bm", id: 1, designer: "d", fetchedAt: "t", original: null, values: {} } as const;
+    const accepted = [bipedRecord({ tons: 9999 }), bipedRecord({ source }), bipedRecord({ imageUrl: "x", notes: { overview: "o" } })];
+    const refused = [
+      bipedRecord({ source: { ...source, kind: "other" } as never }),
+      bipedRecord({ source: { ...source, id: "1" } as never }),
+      bipedRecord({ source: { ...source, designer: 3 } as never }),
+      bipedRecord({ notes: { overview: 5 } as never }),
+      bipedRecord({ imageUrl: 5 as never }),
+    ];
+    for (const record of accepted) expect(isMechRecord(record)).toBe(true);
+    const storage = await openFamilyStorage();
+    for (const record of refused) {
+      expect(isMechRecord(record)).toBe(false);
+      await expect(storage.save(record)).rejects.toThrow("cannot be saved");
+    }
+    expect(await storage.list()).toEqual([]);
   });
 });

@@ -3,7 +3,7 @@
 
 export const MORDEL_BASE = "https://mordel.net/api/v1";
 
-export type MordelFailure = "bad-key" | "not-found" | "slow-down" | "offline" | "server";
+export type MordelFailure = "bad-key" | "not-found" | "slow-down" | "offline" | "server" | "bad-request";
 export type MordelResult<T> = { ok: true; value: T } | { ok: false; failure: MordelFailure; message: string };
 
 export interface MordelListRow {
@@ -18,7 +18,8 @@ export interface MordelListRow {
 export interface MordelClient {
   testKey(): Promise<MordelResult<true>>;
   unit(unitType: string, id: number): Promise<MordelResult<unknown>>;
-  myUnits(): Promise<MordelResult<MordelListRow[]>>;
+  /** All or nothing: a failure on any page returns only the failure. After 20 pages it stops and says `truncated`. */
+  myUnits(): Promise<MordelResult<{ rows: MordelListRow[]; truncated: boolean }>>;
 }
 
 const MESSAGES: Record<MordelFailure, string> = {
@@ -27,6 +28,7 @@ const MESSAGES: Record<MordelFailure, string> = {
   "slow-down": "mordel.net asked us to slow down. Try again in a minute.",
   offline: "We could not reach mordel.net. You may be offline.",
   server: "mordel.net had a problem. Try again later.",
+  "bad-request": "We sent mordel.net a request it did not understand. This is a fault in the app.",
 };
 
 const MAX_PAGES = 20;
@@ -42,7 +44,7 @@ const fail = (failure: MordelFailure): { ok: false; failure: MordelFailure; mess
 const isObject = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
 
 function retrySeconds(header: string | null): number {
-  const n = header === null ? NaN : Number(header);
+  const n = header === null || header.trim() === "" ? NaN : Number(header);
   return Number.isFinite(n) && n >= 0 ? Math.min(n, MAX_RETRY_SECONDS) : DEFAULT_RETRY_SECONDS;
 }
 
@@ -70,12 +72,15 @@ export function createMordelClient(options: {
         response = await send(path);
       }
     } catch {
+      // A refused redirect (redirect: "error") lands here too, and is reported as offline.
       return fail("offline");
     }
     if (response.status === 429) return fail("slow-down");
     if (response.status === 401) return fail("bad-key");
     if (response.status === 404) return fail("not-found");
-    if (response.status >= 500 || !response.ok) return fail("server");
+    // Any other 4xx means our own request was wrong (the list answers 400 to a parameter it does not know).
+    if (response.status >= 400) return fail(response.status >= 500 ? "server" : "bad-request");
+    if (!response.ok) return fail("server");
     let body: unknown;
     try {
       body = await response.json();
@@ -100,7 +105,7 @@ export function createMordelClient(options: {
 
   return {
     testKey: async () => {
-      const result = await get("/units?owner=me&type=bm&limit=1");
+      const result = await get("/key");
       return result.ok ? { ok: true, value: true } : result;
     },
     unit: (unitType, id) => get(`/units/${encodeURIComponent(unitType)}/${encodeURIComponent(String(id))}`),
@@ -109,20 +114,18 @@ export function createMordelClient(options: {
       let cursor: string | null = null;
       for (let page = 0; page < MAX_PAGES; page++) {
         const query: string = "/units?owner=me&type=bm&limit=1000" + (cursor ? `&cursor=${encodeURIComponent(cursor)}` : "");
-        const result = await get(query);
+        const result: MordelResult<unknown> = await get(query);
         if (!result.ok) return result;
         const body = result.value;
-        // The list envelope is not documented in our notes: accept a bare array or the usual wrapper names.
-        const wrapped = isObject(body) ? [body.units, body.data, body.results, body.items].find(Array.isArray) : undefined;
-        const list: unknown[] = Array.isArray(body) ? body : (wrapped ?? []);
-        for (const raw of list) {
+        if (!isObject(body) || !Array.isArray(body.units)) return fail("server");
+        for (const raw of body.units) {
           const row = rowOf(raw);
           if (row) rows.push(row);
         }
-        cursor = isObject(body) && typeof body.next_cursor === "string" && body.next_cursor ? body.next_cursor : null;
-        if (cursor === null) break;
+        cursor = typeof body.next_cursor === "string" && body.next_cursor ? body.next_cursor : null;
+        if (cursor === null) return { ok: true, value: { rows, truncated: false } };
       }
-      return { ok: true, value: rows };
+      return { ok: true, value: { rows, truncated: true } };
     },
   };
 }

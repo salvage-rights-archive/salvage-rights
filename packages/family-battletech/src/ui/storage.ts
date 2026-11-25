@@ -77,7 +77,7 @@ function isChassis(v: unknown): boolean {
 /** Checks the shape of a 'Mech record, not whether it is legal: an illegal 'Mech is still a record. */
 export function isMechRecord(value: unknown): value is MechRecord {
   if (!isObject(value)) return false;
-  const { name, armor, mounts, notes } = value;
+  const { name, armor, mounts, notes, source } = value;
   return (
     value.schema === 1 &&
     isString(value.id) &&
@@ -94,7 +94,16 @@ export function isMechRecord(value: unknown): value is MechRecord {
     Object.values(armor).every((a) => isObject(a) && isNumber(a.front) && (a.rear === undefined || isNumber(a.rear))) &&
     Array.isArray(mounts) &&
     mounts.every(isMount) &&
-    isObject(notes)
+    isObject(notes) &&
+    Object.values(notes).every((n) => n === undefined || isString(n)) &&
+    (value.imageUrl === undefined || isString(value.imageUrl)) &&
+    (source === undefined ||
+      (isObject(source) &&
+        source.kind === "mordel" &&
+        isString(source.unitType) &&
+        isNumber(source.id) &&
+        isString(source.designer) &&
+        isString(source.fetchedAt)))
   );
 }
 
@@ -144,7 +153,10 @@ function wrap(store: Store): FamilyStorage {
       const stored = await store.get<unknown>(MECH_PREFIX + id);
       return stored === undefined ? undefined : entryOf(id, stored);
     },
-    save: (record) => store.set(MECH_PREFIX + record.id, { record, savedAt: new Date().toISOString() }),
+    save: (record) => {
+      if (!isMechRecord(record)) return Promise.reject(new Error("This 'Mech is incomplete and cannot be saved."));
+      return store.set(MECH_PREFIX + record.id, { record, savedAt: new Date().toISOString() });
+    },
     remove: (id) => store.delete(MECH_PREFIX + id),
   };
 }
