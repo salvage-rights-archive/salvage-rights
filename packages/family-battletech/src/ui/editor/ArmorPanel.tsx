@@ -57,6 +57,7 @@ export default function ArmorPanel({
   armorTons,
   changed,
   selected,
+  errorLocations,
   onSelect,
   onEdit,
 }: {
@@ -65,6 +66,8 @@ export default function ArmorPanel({
   armorTons: number | null;
   changed: Set<string>;
   selected: LocationCode | undefined;
+  /** Locations whose armor the rules check reports as an error; the armor doll outlines them in red. */
+  errorLocations: Set<string>;
   onSelect: (location: LocationCode) => void;
   onEdit: OnEdit;
 }) {
@@ -109,6 +112,8 @@ export default function ArmorPanel({
           frame={{ centerX: -box.left, top: -box.top, scale }}
           suffix={use}
           selected={selected?.toLowerCase()}
+          // The limit covers front and rear together, so both plates of a torso are marked.
+          inError={use === "armor" ? [...errorLocations].flatMap((code) => [code.toLowerCase(), `${code.toLowerCase()}r`]) : []}
           onSelect={chooseOnDoll}
         />
       </svg>

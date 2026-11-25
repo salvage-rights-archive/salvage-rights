@@ -543,6 +543,10 @@ function Editor({ initial, catalog, storage }: { initial: MechRecord; catalog: C
 
   const layout = useMemo(() => safeLayout(record, catalog), [record, catalog]);
   const findings = useMemo(() => runChecks(record, catalog), [record, catalog]);
+  const armorErrors = useMemo(
+    () => new Set(findings.flatMap((f) => (f.check === "armor" && f.level === "error" && f.where?.location ? [f.where.location] : []))),
+    [findings],
+  );
   const changed = useMemo(() => changedSinceImport(record), [record]);
   const weights = useMemo(() => buildWeights(record, catalog.factsOf), [record, catalog]);
 
@@ -604,6 +608,10 @@ function Editor({ initial, catalog, storage }: { initial: MechRecord; catalog: C
     >
       <header className="bt-editor__header">
         <div className="bt-editor__title">
+          {/* Leaving with unsaved changes asks first (the blocker below). */}
+          <Link className="bt-back" to={HOME}>
+            <span aria-hidden="true">&larr; </span>Your 'Mechs
+          </Link>
           <h1 tabIndex={-1}>{title || "Unnamed 'Mech"}</h1>
         </div>
         <div className="bt-actions">
@@ -796,6 +804,7 @@ function Editor({ initial, catalog, storage }: { initial: MechRecord; catalog: C
           armorTons={weights.lines.find((l) => l.label === "Armor")?.tons ?? null}
           changed={changed}
           selected={selected}
+          errorLocations={armorErrors}
           onSelect={setSelected}
           onEdit={edit}
         />

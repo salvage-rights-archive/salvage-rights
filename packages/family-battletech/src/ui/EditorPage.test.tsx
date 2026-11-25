@@ -137,6 +137,8 @@ describe("The 'Mech editor", () => {
     const user = userEvent.setup();
     const router = await open("imported-1");
     const tons = await field("Tons");
+    // The way back to the list is a link in the header; leaving by it is guarded like any other navigation.
+    expect(screen.getByRole("link", { name: "Your 'Mechs" }).getAttribute("href")).toBe("/battletech/classic/home");
     await user.type(tons, "5");
     void router.navigate("/battletech/classic/home");
     const dialog = await screen.findByRole("alertdialog", { name: "You have unsaved changes." });
@@ -325,6 +327,12 @@ describe("The armor panel", () => {
     await user.clear(arm);
     await user.type(arm, "20");
     expect(within(rules()).getByText(/Left Arm armor is 20; the most it can carry is 16/)).toBeTruthy();
+    // The doll draws only the circles the location can carry (16), so it outlines the location in red and says so in
+    // its name; a location within its limit stays as it was.
+    const outline = document.querySelector("[data-error=la] polygon");
+    expect(outline?.getAttribute("stroke")).toBe("rgb(179,38,30)");
+    expect(document.querySelector(".bt-doll--armor [data-loc=la]")?.getAttribute("aria-label")).toBe("Left Arm, 16 armor, in error");
+    expect(document.querySelector("[data-error=ra]")).toBeNull();
   });
 
   it("moves focus to a location's armor field when it is chosen on the doll", async () => {

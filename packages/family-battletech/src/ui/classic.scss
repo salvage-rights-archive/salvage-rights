@@ -73,6 +73,13 @@ a.bt-button {
   text-decoration: none;
 }
 
+.bt-back {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  font-size: .95rem;
+}
+
 .bt-new {
   container-type: inline-size;
   margin-bottom: var(--sr-space-4);

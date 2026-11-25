@@ -29,6 +29,8 @@ export interface IMechDollProps {
     selected?: string;
     /** Makes each location a button; called with the doll location's code. */
     onSelect?(loc: string): void;
+    /** Doll locations whose amount breaks a rule: their outline, selected or not, is drawn in red. */
+    inError?: string[];
     /** The labels' color; black unless the sheet marks the current phase. */
     ink?: string;
 }
@@ -40,6 +42,9 @@ const LABEL_FONT: Record<"armor" | "structure", number> = { armor: 20, structure
 /** A location's plates on the sheet. */
 export const placedPlates = (location: IDollLocation, frame: IDollFrame): Shape[] =>
     PARTS[location.part].plates.map((plate) => placeShape(plate, location.at).map((point) => toSheet(point, frame)));
+
+/** The outline of a location whose amount breaks a rule. On the white sheet it has a contrast of about 6.5 to 1. */
+export const ERROR_INK = "rgb(179,38,30)";
 
 /** How far outside a plate the focus outline is drawn, in sheet units. */
 const FOCUS_GAP = 7;
@@ -166,6 +171,8 @@ export default function MechDoll(props: IMechDollProps): JSX.Element {
             />
         ));
     };
+    const wrong = (loc: string): boolean => props.inError?.includes(loc) ?? false;
+    const inkOf = (loc: string): string => (wrong(loc) ? ERROR_INK : INK);
     const onSelect = props.onSelect;
     // The transfer diagram has no points to name, so it stays one labelled image even when onSelect is given.
     const interactive = onSelect !== undefined && use !== "transfer";
@@ -218,7 +225,7 @@ export default function MechDoll(props: IMechDollProps): JSX.Element {
                     role: "button",
                     tabIndex: 0,
                     "aria-pressed": chosen,
-                    "aria-label": `${dollLocationName(location.loc)}, ${pointsOf(location.loc)} ${use}`,
+                    "aria-label": `${dollLocationName(location.loc)}, ${pointsOf(location.loc)} ${use}${wrong(location.loc) ? ", in error" : ""}`,
                     onClick: choose,
                     onFocus: () => setFocused(location.loc),
                     onBlur: () => setFocused((now) => (now === location.loc ? undefined : now)),
@@ -241,17 +248,21 @@ export default function MechDoll(props: IMechDollProps): JSX.Element {
             })}
             {interactive ? (
                 <g aria-hidden="true" pointerEvents="none" data-outlines="">
-                    {locations.filter((location) => location.loc === props.selected).map((location) => (
-                        <g key={`selected-${location.loc}`} data-selected={location.loc}>
+                    {locations.filter((location) => location.loc === props.selected || wrong(location.loc)).map((location) => (
+                        <g
+                            key={`selected-${location.loc}`}
+                            {...(location.loc === props.selected ? { "data-selected": location.loc } : {})}
+                            {...(wrong(location.loc) ? { "data-error": location.loc } : {})}
+                        >
                             {placedPlates(location, frame).map((plate, i) => (
-                                <polygon key={i} points={shapePoints(plate)} fill="none" stroke={INK} strokeWidth={pen.contour * 2} strokeLinejoin="round" />
+                                <polygon key={i} points={shapePoints(plate)} fill="none" stroke={inkOf(location.loc)} strokeWidth={pen.contour * 2} strokeLinejoin="round" />
                             ))}
                         </g>
                     ))}
                     {locations.filter((location) => location.loc === focused).map((location) => (
                         <g key={`focus-${location.loc}`} data-focus={location.loc}>
                             {placedPlates(location, frame).map((plate, i) => (
-                                <polygon key={i} points={shapePoints(grown(plate, FOCUS_GAP))} fill="none" stroke={INK} strokeWidth={3} strokeDasharray="10 6" strokeLinejoin="round" />
+                                <polygon key={i} points={shapePoints(grown(plate, FOCUS_GAP))} fill="none" stroke={inkOf(location.loc)} strokeWidth={3} strokeDasharray="10 6" strokeLinejoin="round" />
                             ))}
                         </g>
                     ))}
