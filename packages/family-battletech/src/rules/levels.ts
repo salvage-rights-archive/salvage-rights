@@ -1,7 +1,7 @@
 // Rules levels: the order they come in, which level an item belongs to, and the lowest level that accepts everything a
 // 'Mech uses. Pure functions over the tables in data/chassis.ts and the catalog; nothing here throws on what it does not
 // know (an unknown part or an unmatched mount simply asks nothing of the level).
-import { INTRODUCTORY_PARTS, ARMOR, COCKPITS, ENGINE_TYPES, GYROS, HEAT_SINKS, RULES_LEVELS, STRUCTURE_TYPES } from "../data/chassis";
+import { INTRODUCTORY_PARTS, ARMOR, COCKPITS, ENGINE_TYPES, GYROS, HEAT_SINKS, MIXED_TECHNOLOGY, RULES_LEVELS, STRUCTURE_TYPES } from "../data/chassis";
 import type { PartFacts, RulesLevel, RulesLevelRow, Span } from "../data/chassis";
 import type { Catalog, EquipmentRow } from "./catalog";
 import { configurationOf, mechTypeOf } from "./mech";
@@ -21,11 +21,20 @@ export function levelAtLeast(a: RulesLevel, b: RulesLevel): boolean {
   return rank(a) >= rank(b);
 }
 
-/** The tech bases a unit at `level` may choose: at Introductory only Inner Sphere (3025 technology); the current choice is kept so a selector never blanks. */
-export function techBaseChoices(level: RulesLevel | undefined, current: string): [string, string][] {
+/** Where a record's time falls against the mixed technology option's dates (data/chassis.ts MIXED_TECHNOLOGY): in production, in its
+ * prototype years (the Clan prototype year counts, as a mixed record draws on both bases), or before either. No year or era is no limit. */
+export const mixedPhase = (when: Pick<MechRecord, "era" | "year">): Phase | null => rowPhase(MIXED_TECHNOLOGY, "mixed", windowOf(when));
+
+/** The tech bases a unit at `level` and in `when` may choose, the ones that do not fit hidden: at Introductory only Inner Sphere (3025
+ * technology); Mixed (an Advanced option, Experimental in its prototype years) only from its prototype year and at the level its phase
+ * needs. The current choice is kept so a selector never blanks. */
+export function techBaseChoices(level: RulesLevel | undefined, current: string, when: Pick<MechRecord, "era" | "year">): [string, string][] {
   const all: [string, string][] = [["inner-sphere", "Inner Sphere"], ["clan", "Clan"], ["mixed", "Mixed"]];
-  if (levelAtLeast(level ?? DEFAULT_LEVEL, DEFAULT_LEVEL)) return all;
-  return all.filter(([value]) => value === "inner-sphere" || value === current);
+  const at = level ?? DEFAULT_LEVEL;
+  const phase = mixedPhase(when);
+  const mixedFits = phase !== null && levelAtLeast(at, levelIn(MIXED_TECHNOLOGY.rulesLevel, phase));
+  const clanFits = levelAtLeast(at, DEFAULT_LEVEL);
+  return all.filter(([value]) => value === current || value === "inner-sphere" || (value === "clan" ? clanFits : mixedFits));
 }
 
 /** The level's row (label, description, cite). */
@@ -102,8 +111,12 @@ export function levelItems(record: MechRecord, catalog: Catalog): LevelItem[] {
     const prototype = record.techBase === "clan" ? (config.clanPrototypeYear ?? config.prototypeYear) : config.prototypeYear;
     items.push({ what: "configuration", name: config.name, ...inPhase(level, phase, prototype, record.techBase === "clan" ? (config.clanAvailability ?? config.availability) : config.availability), cite: config.levelCite, where: { field: "configuration" } });
   }
-  if (record.techBase !== "inner-sphere") {
-    items.push({ what: "tech base", name: record.techBase === "clan" ? "Clan technology" : "Mixed technology", level: DEFAULT_LEVEL, where: { field: "techBase" } });
+  if (record.techBase === "clan") items.push({ what: "tech base", name: "Clan technology", level: DEFAULT_LEVEL, where: { field: "techBase" } });
+  if (record.techBase === "mixed") {
+    // Mixed technology is an Advanced option (TO:AUE p.189), Experimental in its prototype years; the book's dates carry a "~", so they print with one.
+    const phase = mixedPhase(record);
+    const dates = `Prototype ~${MIXED_TECHNOLOGY.clanPrototypeYear}, production ~${MIXED_TECHNOLOGY.availability[0]?.from ?? ""}`;
+    items.push({ what: "tech base", name: "Mixed technology", level: levelIn(MIXED_TECHNOLOGY.rulesLevel, phase), ...(phase === "prototype" ? { prototype: dates } : {}), cite: MIXED_TECHNOLOGY.cite, where: { field: "techBase" } });
   }
   /** A part's level item: its level, raised to the prototype's while the record's time is in the part's prototype phase. */
   const partItem = (what: LevelItem["what"], part: PartFacts & { name: string }, level: RulesLevel, cite: LevelItem["cite"], field: string): LevelItem => {

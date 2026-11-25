@@ -15,7 +15,7 @@ import type { Catalog } from "../rules/catalog";
 import type { OmniChassis } from "../rules/omni";
 import LevelSelect from "./editor/LevelSelect";
 import TypeSelect from "./editor/TypeSelect";
-import type { MechRecord, NewMechOptions, TechBase } from "../rules/mech";
+import type { MechRecord, NewMechOptions } from "../rules/mech";
 import { STORAGE_READ_FAILED, STORAGE_WRITE_FAILED, downloadMech, downloadOmni, fromMechFile, fromOmniFile, openFamilyStorage } from "./storage";
 import type { FamilyStorage, SavedEntry } from "./storage";
 import emptyBay from "../artwork/empty-bay.jpg";
@@ -25,6 +25,8 @@ const MAX_IMPORT_BYTES = 1024 * 1024;
 // The choices a new 'Mech starts from, read from the book's own tables.
 const TONNAGES = Object.keys(INTERNAL_STRUCTURE.rows).map(Number);
 const MAX_RATING = Math.max(...Object.keys(ENGINE_WEIGHTS.rows).map(Number));
+/** The build form has no year or era yet, so a tech base is offered by the level alone. */
+const NO_TIME = { year: null } as const;
 
 const nameOf = (record: MechRecord) => `${record.name.chassis} ${record.name.model}`.trim();
 const plural = (n: number, word: string) => `${String(n)} ${word}${n === 1 ? "" : "s"}`;
@@ -502,15 +504,15 @@ export default function HomePage() {
               id="bt-new-level"
               record={draft}
               onChange={(rulesLevel) => {
-                // At Introductory only Inner Sphere is offered (3025 technology): a Clan choice gives way to it.
-                const inner = techBaseChoices(rulesLevel, "inner-sphere").length === 1;
-                setDraft({ ...draft, rulesLevel, techBase: inner ? "inner-sphere" : draft.techBase });
+                // A tech base the new level does not offer gives way to Inner Sphere (Clan below Standard, Mixed below Advanced).
+                const fits = techBaseChoices(rulesLevel, "inner-sphere", NO_TIME).some(([value]) => value === draft.techBase);
+                setDraft({ ...draft, rulesLevel, techBase: fits ? draft.techBase : "inner-sphere" });
               }}
             />
             <div className="bt-field">
               <label htmlFor="bt-new-tech">Tech base</label>
-              <select id="bt-new-tech" value={draft.techBase} onChange={(e) => setDraft({ ...draft, techBase: e.target.value as TechBase })}>
-                {techBaseChoices(draft.rulesLevel, draft.techBase).filter(([value]) => value !== "mixed").map(([value, label]) => (
+              <select id="bt-new-tech" value={draft.techBase} onChange={(e) => setDraft({ ...draft, techBase: e.target.value as NewMechOptions["techBase"] })}>
+                {techBaseChoices(draft.rulesLevel, draft.techBase, NO_TIME).map(([value, label]) => (
                   <option key={value} value={value}>
                     {label}
                   </option>

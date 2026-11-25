@@ -190,7 +190,7 @@ export function typeAvailable(id: MechType, record: Subject, everything = false)
   const row = MECH_TYPES.find((r) => r.id === id);
   if (!row) return false;
   if (!levelAtLeast(recordLevel(record), row.rulesLevel)) return false;
-  if (row.industrial && !row.industrial.techBases.some((base) => base === record.techBase)) return false; // not mixed (TechManual p.64)
+  if (row.industrial && !row.industrial.techBases.some((base) => base === record.techBase)) return false;
   if (everything) return true;
   const phase = typePhase(id, record);
   return phase === "production" || (phase === "prototype" && levelAtLeast(recordLevel(record), levelIn(row.rulesLevel, phase)));
