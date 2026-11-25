@@ -78,6 +78,25 @@ describe("The 'Mech editor", () => {
     expect(screen.getByText(/^[\d.]+ of 50 tons, not counting \d+ items? of unknown weight$/)).toBeTruthy();
   });
 
+  it("puts Name, Model, Type and Configuration first in the identity card, and switching to IndustrialMech re-filters the lists and judges the parts by its rules", async () => {
+    await saved(mordelBiped());
+    const user = userEvent.setup();
+    await open("imported-1");
+    const card = (await screen.findByRole("heading", { level: 2, name: "Identity" })).closest("section");
+    if (!card) throw new Error("no identity card");
+    expect([...card.querySelectorAll("label")].map((l) => l.textContent).slice(0, 6)).toEqual(["Name", "Model", "Type", "Configuration", "Rules level", "Tech base"]);
+    const type = within(card).getByLabelText<HTMLSelectElement>("Type");
+    const config = within(card).getByLabelText<HTMLSelectElement>("Configuration");
+    const texts = (select: HTMLSelectElement) => [...select.options].map((o) => o.text);
+    expect([type.value, texts(type)]).toEqual(["mech", ["BattleMech"]]); // the import is Introductory, which has no IndustrialMechs
+    await user.selectOptions(within(card).getByLabelText("Rules level"), "standard");
+    expect(texts(type)).toEqual(["BattleMech", "IndustrialMech"]);
+    await user.selectOptions(type, "industrialmech");
+    expect(texts(config)).toEqual(["Biped", "Quad"]);
+    expect(within(rules()).getByText(/Standard structure is not allowed on an IndustrialMech/)).toBeTruthy();
+    expect(within(rules()).getByText(/Standard cockpit is not allowed on an IndustrialMech/)).toBeTruthy();
+  });
+
   it("says so, with a way home, when the 'Mech is not saved here", async () => {
     await open("nobody");
     expect(await screen.findByText("That 'Mech is not saved on this device.")).toBeTruthy();

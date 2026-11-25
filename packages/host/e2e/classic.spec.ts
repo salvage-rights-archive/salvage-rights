@@ -121,6 +121,29 @@ test("build a Land-Air 'Mech through the form and see its rules level, conversio
   await expect(page.getByText("25 of 50 tons")).toBeVisible();
 });
 
+test("build an IndustrialMech through the form, set its configuration to a quad and reach its record sheet", async ({ page }) => {
+  await page.goto(HOME);
+  const form = page.getByRole("form", { name: "Build a new one" });
+  await form.getByLabel("Name").fill("Hauler");
+  await form.getByLabel("Type", { exact: true }).selectOption({ label: "IndustrialMech" });
+  await expect(form.getByLabel("Configuration").locator("option")).toHaveText(["Biped", "Quad"]);
+  await form.getByLabel("Configuration").selectOption({ label: "Quad" });
+  await form.getByLabel("Tonnage").selectOption("10");
+  await form.getByRole("button", { name: "Start building" }).click();
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Hauler");
+  await expect(page.getByLabel("Type", { exact: true })).toHaveValue("industrialmech");
+  await expect(page.getByLabel("Configuration")).toHaveValue("quad");
+  // Built on its own frame and cockpit, so no part is reported; the weight is its own: 2 structure, 1 engine, 1 gyro and 3 cockpit.
+  const rules = page.getByRole("region", { name: "Rules check" });
+  await expect(rules.getByText(/is not allowed on an IndustrialMech/)).toHaveCount(0);
+  await expect(rules.getByText("The parts weigh 7 tons of 10 tons; 3 tons is unused.")).toBeVisible();
+  await page.getByRole("link", { name: "Record sheet" }).click();
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Hauler record sheet");
+  const sheet = page.getByRole("img", { name: "Hauler record sheet" });
+  await expect(sheet.locator("text", { hasText: /^IndustrialMech record sheet$/ })).toBeVisible();
+  await expect(sheet.locator("[data-diagram]")).toHaveCount(3);
+});
+
 test("the home, import and editor pages do not scroll sideways at 320 px wide", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 700 });
   await importMech(page, DEV);
@@ -166,6 +189,8 @@ test("change the rules level in the editor and see the picker and the rules chec
   await form.getByLabel("Rules level").selectOption("advanced");
   await form.getByLabel("Configuration").selectOption({ label: "Tripod" });
   await form.getByRole("button", { name: "Start building" }).click();
+  // The home page stays on screen until the editor has loaded: wait for the editor, or the level choice would go to the form.
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Strider");
   const level = page.getByLabel("Rules level");
   await level.selectOption("introductory");
   await expect(level).toHaveValue("introductory");

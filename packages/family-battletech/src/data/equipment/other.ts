@@ -103,6 +103,9 @@ export const OTHER: EquipmentGroup[] = [
       { id: "masc-is", name: "MASC", aliases: ["Myomer Accelerator Signal Circuitry"], tons: "masc-is", slots: "masc-is", availability: [{ from: 2740, to: 2795 }, { from: 3035 }] },
       // Triple-Strength Myomer: six one-slot items, 0 tons, placed anywhere
       { id: "tsm-is", name: "Triple-Strength Myomer", aliases: ["TSM"], tons: 0, slots: 1, availability: [{ from: 3050 }], perMech: 6, checked: "text" },
+      // Industrial Triple-Strength Myomer (IndustrialMech construction, printed p.70, table and text read against the page image):
+      // twelve one-slot items, 0 tons, placed anywhere and not contiguous; Inner Sphere IndustrialMechs only. Production 3045 (IO:AE printed p.42).
+      { id: "industrial-tsm-is", name: "Industrial Triple-Strength Myomer", aliases: ["Industrial TSM"], tons: 0, slots: 1, availability: [{ from: 3045 }], perMech: 12, units: ["industrialmech"], cite: { book: "TechManual", page: 70 } },
     ],
   },
   {
@@ -554,7 +557,7 @@ export const OTHER: EquipmentGroup[] = [
     defaults: { kind: "other", techBase: "inner-sphere", cite: { book: "TechManual", page: 344 }, checked: "page" },
     items: [
       { id: "tracks-is", name: "Tracks", aliases: ["Track"], tons: "tenth-tons", slots: 1, availability: [{ from: 2440 }], locations: ["LL", "RL"], locationsQuad: ["FLL", "FRL", "RLL", "RRL"], perMech: 2, perMechQuad: 4, splitWeight: true, units: ["mech", "industrialmech"] },
-      { id: "environmental-sealing-is", name: "Environmental Sealing", aliases: ["Environmental Sealing (IndustrialMech)"], tons: "tenth-tons", slots: 1, availability: [{ from: 1950 }], perMech: 8, splitWeight: true, units: ["industrialmech"] },
+      { id: "environmental-sealing-is", name: "Environmental Sealing", aliases: ["Environmental Sealing (IndustrialMech)"], tons: "ceil-tenth-tons", slots: 1, availability: [{ from: 1950 }], perMech: 8, splitWeight: true, units: ["industrialmech"] },
     ],
   },
   {
@@ -563,7 +566,7 @@ export const OTHER: EquipmentGroup[] = [
     defaults: { kind: "other", techBase: "clan", cite: { book: "TechManual", page: 344 }, checked: "page", yearsInferred: true },
     items: [
       { id: "tracks-clan", name: "Tracks", aliases: ["Track"], tons: "tenth-tons", slots: 1, availability: [{ from: 2440 }], locations: ["LL", "RL"], locationsQuad: ["FLL", "FRL", "RLL", "RRL"], perMech: 2, perMechQuad: 4, splitWeight: true, units: ["mech", "industrialmech"] },
-      { id: "environmental-sealing-clan", name: "Environmental Sealing", aliases: ["Environmental Sealing (IndustrialMech)"], tons: "tenth-tons", slots: 1, availability: [{ from: 1950 }], perMech: 8, splitWeight: true, units: ["industrialmech"] },
+      { id: "environmental-sealing-clan", name: "Environmental Sealing", aliases: ["Environmental Sealing (IndustrialMech)"], tons: "ceil-tenth-tons", slots: 1, availability: [{ from: 1950 }], perMech: 8, splitWeight: true, units: ["industrialmech"] },
     ],
   },
   {

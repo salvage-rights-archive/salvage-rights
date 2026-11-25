@@ -173,8 +173,8 @@ describe("unitCost", () => {
   it("prices every catalog item that is not ammunition or a counted heat sink, so nothing in the table is left unpriced", () => {
     const rows = catalog.all().filter((r) => r.kind !== "ammunition" && r.kind !== "heat-sink" && r.id !== "tsm-is" && r.id !== "prototype-triple-strength-myomer-is");
     const record = mongoose({ mounts: rows.map((r) => mount(r.id, r.id, "CT", null)) });
-    // The items the book prints no price for: the mechanical jump booster's cost column is a dash (TO:AUE p.217); tracks, environmental sealing and combat-crew seating are in no cost table (TM pp.292-293).
-    expect(unitCost(record, catalog).unpriced.map((u) => u.id).sort()).toEqual(["environmental-sealing-clan", "environmental-sealing-is", "mechanical-jump-booster-is", "seating-combat-crew-clan", "seating-combat-crew-is", "tracks-clan", "tracks-is"]);
+    // The items the book prints no price for: the mechanical jump booster cost column is a dash (TO:AUE p.217); combat-crew seating is in no cost table (TM pp.292-293). Tracks and environmental sealing are priced by rule (TM p.278).
+    expect(unitCost(record, catalog).unpriced.map((u) => u.id).sort()).toEqual(["mechanical-jump-booster-is", "seating-combat-crew-clan", "seating-combat-crew-is"]);
   });
 
   it("prices items the later books print: an XXL engine, spikes at 50 x tonnage, a retractable blade, an Enhanced LRM (TO:AUE pp.217-221, TM p.293)", () => {

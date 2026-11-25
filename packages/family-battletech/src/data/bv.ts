@@ -74,6 +74,21 @@ export const BV_METHOD: Sourced & {
   halved: 0.5,
 };
 
+/**
+ * Where an IndustrialMech's Battle Value differs from a BattleMech's (v4.1 "Calculating 'Mech BV", read against the page image): a
+ * unit with an internal combustion engine has Movement Heat Value 0; Industrial TSM multiplies the tonnage added to the Weapon Battle
+ * Rating by 1.15 (and is no extra movement for the Speed Factor); and the Offensive Battle Rating is multiplied by 0.9 unless the
+ * cockpit has Advanced Fire Control. Its armor and structure modifiers (Commercial 0.5, Industrial structure 0.5) are the tables below.
+ */
+export const INDUSTRIAL_BV: Sourced & { offensiveFactor: number; tsmTonnage: number; noMovementHeatEngines: string[]; fireControlCockpit: string } = {
+  cite: { book: TM_BV, page: 302 },
+  checked: "page",
+  offensiveFactor: 0.9,
+  tsmTonnage: 1.15,
+  noMovementHeatEngines: ["ice"],
+  fireControlCockpit: "industrial-afc",
+};
+
 /** Multipliers on the heat a weapon adds to Total Weapon Heat (v4.1, "Determine Total Weapon Heat"). */
 export const HEAT_MULTIPLIER = { ultra: 2, rotary: 6, streak: 0.5, oneShot: 0.25 } as const;
 
@@ -522,7 +537,7 @@ export const EQUIPMENT_BV: BvGroup[] = [
       ["rock-cutter-clan", 6], ["spot-welder-clan", 5], ["wrecking-ball-clan", 8],
       // The table prints no BV for these: they change the BV of other things (notes A to C, E, F) or the unit's ratings.
       ["case-is", 0, undefined, { none: true }], ["case-clan", 0, undefined, { none: true }], ["masc-is", 0, undefined, { none: true }], ["masc-clan", 0, undefined, { none: true }],
-      ["tsm-is", 0, undefined, { none: true }], ["c3-computer-master-is", 0, undefined, { none: true }], ["c3-computer-slave-is", 0, undefined, { none: true }],
+      ["tsm-is", 0, undefined, { none: true }], ["industrial-tsm-is", 0, undefined, { none: true }], ["c3-computer-master-is", 0, undefined, { none: true }], ["c3-computer-slave-is", 0, undefined, { none: true }],
       ["improved-c3-computer-is", 0, undefined, { none: true }], ["tag-is", 0, undefined, { none: true }], ["tag-clan", 0, undefined, { none: true }],
       ["light-tag-clan", 0, undefined, { none: true }], ["artemis-iv-is", 0, undefined, { none: true }], ["artemis-iv-clan", 0, undefined, { none: true }],
       ["targeting-computer-is", 0, undefined, { none: true }], ["targeting-computer-clan", 0, undefined, { none: true }],

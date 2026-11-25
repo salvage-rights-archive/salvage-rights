@@ -163,7 +163,8 @@ export interface Catalog {
   rowFor(id: string, editionId: string): EquipmentRow | undefined;
   /** Exact name, then alias, within the tech base; case, spacing, hyphens, slashes and periods are ignored. */
   match(name: string, techBase: TechBase): EquipmentRow | undefined;
-  offered(editionId: string, want: { techBase: TechBase | "mixed"; year: number | null }): EquipmentRow[];
+  /** The rows an edition offers a unit of the type (a BattleMech when no `unit` is given) in a tech base and year. */
+  offered(editionId: string, want: { techBase: TechBase | "mixed"; year: number | null; unit?: UnitId }): EquipmentRow[];
   available(row: EquipmentRow, editionId: string, year: number | null): boolean;
   /** True when the item can be had at some time from `from` to `to`, inclusive: one of its spans overlaps the window. A year is the window [year, year]. */
   availableBetween(row: EquipmentRow, editionId: string, from: number, to: number): boolean;
@@ -215,7 +216,9 @@ export function createCatalog(rows: EquipmentRow[]): Catalog {
     const count = mountsRequired(row, record.configuration);
     const tons = whole !== undefined && row.splitWeight && count !== undefined && count > 1 ? whole / count : whole;
     const slots = resolve(row.slots, row, record, mount);
-    return tons === undefined || slots === undefined ? undefined : ({ tons, slots } satisfies MountFacts);
+    if (tons === undefined || slots === undefined) return undefined;
+    // An energy weapon is what an IndustrialMech's power amplifiers are a share of (the picker's Energy weapons group).
+    return row.kind === "weapon" && groupOf(row).id === "energy" ? ({ tons, slots, energy: true } satisfies MountFacts) : ({ tons, slots } satisfies MountFacts);
   };
 
   const catalog: Catalog = {
@@ -233,9 +236,9 @@ export function createCatalog(rows: EquipmentRow[]): Catalog {
       }
       return undefined;
     },
-    offered: (editionId, { techBase, year }) =>
+    offered: (editionId, { techBase, year, unit = "mech" }) =>
       rows
-        .filter((r) => mountableOn(r, "mech") && (techBase === "mixed" || r.techBase === techBase) && available(r, editionId, year))
+        .filter((r) => mountableOn(r, unit) && (techBase === "mixed" || r.techBase === techBase) && available(r, editionId, year))
         .map((r) => inEdition(r, editionId)),
     available,
     availableBetween,

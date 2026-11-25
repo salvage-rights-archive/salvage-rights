@@ -118,8 +118,8 @@ describe("offered and available", () => {
     expect(catalog.available(ppc, "test-ed", 2500)).toBe(true);
     expect(catalog.available(ppc, "total-warfare", 2470)).toBe(true);
     const ppcMount = mount("p", "ppc-is", "RA", 0);
-    expect(catalog.factsOf(ppcMount, bipedRecord({ editionId: "test-ed" }))).toEqual({ tons: 8, slots: 3 });
-    expect(catalog.factsOf(ppcMount, bipedRecord({ editionId: "total-warfare" }))).toEqual({ tons: 7, slots: 3 });
+    expect(catalog.factsOf(ppcMount, bipedRecord({ editionId: "test-ed" }))).toEqual({ tons: 8, slots: 3, energy: true });
+    expect(catalog.factsOf(ppcMount, bipedRecord({ editionId: "total-warfare" }))).toEqual({ tons: 7, slots: 3, energy: true });
   });
 
   it("gives a row as an edition sees it, and nothing for an unknown id", () => {

@@ -4,6 +4,7 @@
 // for chassis parts are mapped to our table keys by the small tables below; a word that is not in a table is stored as
 // Mordel wrote it, with a note, and the checks report it as unknown. Nothing is guessed.
 import { ARMOR, MYOMER, STRUCTURE_TYPES } from "../data/chassis";
+import type { MechType } from "../data/chassis";
 import type { Catalog, EquipmentRow } from "./catalog";
 import { lowestLevelFor } from "./levels";
 import { ARM_FULL, armorSpread, configurationOf, layout, locationName, slotsTaken } from "./mech";
@@ -58,6 +59,11 @@ const ENGINE_WORDS: Record<string, Words> = {
   compactfusion: { is: "compact" },
   xxl: { is: "xxl", clan: "xxl-clan" },
   xxlfusion: { is: "xxl", clan: "xxl-clan" },
+  ice: { is: "ice" },
+  internalcombustion: { is: "ice" },
+  internalcombustionengine: { is: "ice" },
+  fuelcell: { is: "fuel-cell" },
+  fission: { is: "fission" },
 };
 const GYRO_WORDS: Record<string, Words> = {
   standard: { is: "standard" },
@@ -66,7 +72,18 @@ const GYRO_WORDS: Record<string, Words> = {
   xl: { is: "xl" },
   extralight: { is: "xl" },
 };
-const COCKPIT_WORDS: Record<string, Words> = { standard: { is: "standard" }, small: { is: "small" }, torsomounted: { is: "torso-mounted" } };
+/** The unit types this importer reads, by Mordel's short code: bm is a BattleMech, im an IndustrialMech. */
+export const UNIT_TYPE_OF: Record<string, MechType> = { bm: "mech", im: "industrialmech" };
+// The IndustrialMech words below (internal combustion, fuel cell, fission, industrial cockpit and Industrial TSM) are our best reading of
+// what Mordel sends for an IndustrialMech: a word not in the tables gives the importer's note and the part is left as it came.
+const COCKPIT_WORDS: Record<string, Words> = {
+  standard: { is: "standard" },
+  small: { is: "small" },
+  torsomounted: { is: "torso-mounted" },
+  industrial: { is: "industrial" },
+  industrialafc: { is: "industrial-afc" },
+  industrialadvancedfirecontrol: { is: "industrial-afc" },
+};
 const STRUCTURE_WORDS: Record<string, Words> = {
   standard: { is: "standard" },
   endosteel: { is: "endo-steel", clan: "endo-steel-clan" },
@@ -98,6 +115,9 @@ const MYOMER_WORDS: Record<string, Words> = {
   tsm: { is: "tsm" },
   triplestrength: { is: "tsm" },
   triplestrengthmyomer: { is: "tsm" },
+  industrialtsm: { is: "industrial-tsm" },
+  industrialtriplestrength: { is: "industrial-tsm" },
+  industrialtriplestrengthmyomer: { is: "industrial-tsm" },
 };
 const HEAT_SINK_WORDS: Record<string, Words> = {
   single: { is: "single" },
@@ -138,15 +158,16 @@ const own = <T>(table: Record<string, T>, key: string): T | undefined => (Object
 // ---------------------------------------------------------------------------------------------------------------
 // The importer
 // ---------------------------------------------------------------------------------------------------------------
-export function fromMordel(response: unknown, catalog: Catalog, editionId: string, now: string, newId: () => string): MordelImport {
+/** `requested` is the unit type asked for (bm or im), used when the response does not say its own. */
+export function fromMordel(response: unknown, catalog: Catalog, editionId: string, now: string, newId: () => string, requested = "bm"): MordelImport {
   try {
-    return convert(response, catalog, editionId, now, newId);
+    return convert(response, catalog, editionId, now, newId, requested);
   } catch {
     return { ok: false, message: "This response could not be read as a Mordel unit." };
   }
 }
 
-function convert(response: unknown, catalog: Catalog, editionId: string, now: string, newId: () => string): MordelImport {
+function convert(response: unknown, catalog: Catalog, editionId: string, now: string, newId: () => string, requested: string): MordelImport {
   const isObject = (x: unknown): x is Json => typeof x === "object" && x !== null && !Array.isArray(x);
   const top = isObject(response) ? response : undefined;
   if (!top) return { ok: false, message: "Mordel sent nothing this tool can read: the response is not an object." };
@@ -157,8 +178,11 @@ function convert(response: unknown, catalog: Catalog, editionId: string, now: st
   const unitValue = top["unit"];
   if (!isObject(unitValue)) return { ok: false, message: "The response has no unit in it." };
   const unit = unitValue;
-  if (typeof unit["unit_type_short"] === "string" && unit["unit_type_short"].toLowerCase() !== "bm") {
-    return { ok: false, message: `This is a ${unit["unit_type_short"]} unit; only BattleMechs (bm) can be imported.` };
+  // Mordel's unit type decides ours: bm is a BattleMech and im an IndustrialMech (the types it calls cv and pm are not built yet).
+  const mordelType = typeof unit["unit_type_short"] === "string" ? unit["unit_type_short"].toLowerCase() : requested.toLowerCase();
+  const unitType = Object.hasOwn(UNIT_TYPE_OF, mordelType) ? UNIT_TYPE_OF[mordelType] : undefined;
+  if (unitType === undefined) {
+    return { ok: false, message: `This is a ${String(unit["unit_type_short"])} unit; only BattleMechs (bm) and IndustrialMechs (im) can be imported.` };
   }
 
   const notes: string[] = [];
@@ -379,6 +403,7 @@ function convert(response: unknown, catalog: Catalog, editionId: string, now: st
     name: { chassis: chassisName, model },
     techBase,
     year,
+    unitType,
     tons: tons ?? 0,
     configuration,
     chassis,
@@ -387,7 +412,7 @@ function convert(response: unknown, catalog: Catalog, editionId: string, now: st
     notes: notesOut,
     source: {
       kind: "mordel",
-      unitType: "bm",
+      unitType: mordelType,
       id: num(unit["id"], "unit id") ?? 0,
       designer: str(unit["designer"], "designer") ?? "",
       fetchedAt: now,

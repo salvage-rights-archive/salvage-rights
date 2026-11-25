@@ -1,5 +1,6 @@
 // The editions the tool knows. An edition names the books it follows: which one the play rules come from and which one the
 // construction rules and equipment tables come from. Plain data; nothing here runs.
+import { MECH_TYPES } from "./chassis";
 
 export interface Edition {
   id: string;
@@ -8,9 +9,10 @@ export interface Edition {
   unitTypes: { id: string; name: string; ready: boolean }[];
 }
 
+// The 'Mech types (BattleMech, IndustrialMech, OmniMech) come from MECH_TYPES in data/chassis.ts, which also holds their rules; the
+// other unit families wait here until their rules are built.
 const UNIT_TYPES: Edition["unitTypes"] = [
-  { id: "mech", name: "BattleMech", ready: true },
-  { id: "industrialmech", name: "IndustrialMech", ready: false },
+  ...MECH_TYPES.map(({ id, label, ready }) => ({ id, name: label, ready })),
   { id: "vehicle", name: "Vehicle", ready: false },
   { id: "protomech", name: "ProtoMech", ready: false },
   { id: "infantry", name: "Infantry", ready: false },

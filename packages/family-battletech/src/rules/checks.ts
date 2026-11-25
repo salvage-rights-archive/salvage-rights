@@ -21,14 +21,14 @@ import {
   STRUCTURE_TYPES,
 } from "../data/chassis";
 import type { Cite, PartFacts, Span } from "../data/chassis";
-import { configurationInTime, eraOfRecord, eraOfYear, partSpans, spansFit, windowOf } from "./availability";
-import { locationsFor, mountsRequired } from "./catalog";
+import { configurationInTime, eraOfRecord, eraOfYear, partSpans, spansFit, typeInTime, windowOf } from "./availability";
+import { locationsFor, mountableOn, mountsRequired } from "./catalog";
 import { levelAtLeast, levelItems, levelRow } from "./levels";
 import type { Catalog, EquipmentRow } from "./catalog";
-import { armorSpread, configurationOf, engineTons, layout as buildLayout, maxArmor, walkMP, weights } from "./mech";
+import { armorSpread, configurationOf, engineTons, freeHeatSinks, industrialRulesOf, layout as buildLayout, maxArmor, mechTypeOf, walkMP, weights } from "./mech";
 import { locationName, type Layout, type LocationCode, type MechRecord, type Mount } from "./mech";
 import { mountedShields, missingActuators, shieldStats } from "./shields";
-import { movementPenalty, rowOf, TSM_ROWS } from "./walk";
+import { movementPenalty, rowOf, stemOf, TSM_ROWS } from "./walk";
 
 export interface Finding {
   check: string;
@@ -56,7 +56,6 @@ const tm = (page: number) => ({ book: "TechManual", page });
 // from walking speed (p.48), jump jets (p.51), armor weight (p.55), tech base of equipment (p.57), Artemis IV (p.207),
 // machine gun arrays (p.228), the first page of the cost and availability tables (p.290; they run to p.293).
 const PAGE = { weight: 46, engineRating: 48, jump: 51, armorTons: 55, techBase: 57, artemis: 207, machineGunArray: 228, availability: 290 };
-const TONNAGE = { min: 20, max: 100, step: 5 }; // p.46
 
 const TECH_BASE_NAMES: Record<string, string> = { "inner-sphere": "Inner Sphere", clan: "Clan", mixed: "Mixed" };
 
@@ -103,11 +102,13 @@ const gunSize = (id: string | null) => /^(light|heavy)-/.exec(id ?? "")?.[1] ?? 
 function weightCheck({ record, layout, catalog }: CheckInput): Finding[] {
   const out: Finding[] = [];
   const where = { field: "tons" };
-  if (isPositive(record.tons) && !(record.tons >= TONNAGE.min && record.tons <= TONNAGE.max && record.tons % TONNAGE.step === 0)) {
+  const type = mechTypeOf(record);
+  const limits = type.tonnage;
+  if (isPositive(record.tons) && !(record.tons >= limits.min && record.tons <= limits.max && record.tons % limits.step === 0)) {
     out.push(
-      finding("weight", "error", `A BattleMech weighs ${TONNAGE.min} to ${TONNAGE.max} tons in steps of ${TONNAGE.step}; ${num(record.tons)} is not allowed.`, {
+      finding("weight", "error", `${/^[AEIOU]/i.test(type.label) ? "An" : "A"} ${type.label} weighs ${limits.min} to ${limits.max} tons in steps of ${limits.step}; ${num(record.tons)} is not allowed.`, {
         where,
-        cite: tm(PAGE.weight),
+        cite: limits.cite,
       }),
     );
   }
@@ -281,8 +282,9 @@ function heatSinkCheck({ record, catalog }: CheckInput): Finding[] {
   if (!isCount(count)) {
     return [finding("heat-sinks", "error", `The heat sink count is ${num(count)}; it must be a whole number, zero or more.`, { where, cite })];
   }
-  if (count < HEAT_SINK_RULES.freeWithEngine) {
-    out.push(finding("heat-sinks", "error", `The chassis has ${count} heat sinks; a 'Mech has at least the ${HEAT_SINK_RULES.freeWithEngine} heat sinks its engine provides.`, { where, cite }));
+  const free = freeHeatSinks(record);
+  if (count < free) {
+    out.push(finding("heat-sinks", "error", `The chassis has ${count} heat sinks; a 'Mech has at least the ${free} heat sinks its engine provides.`, { where, cite: industrialRulesOf(record)?.cites.heatSinks ?? cite }));
   }
   const sinks = record.mounts.filter((m) => rowOf(catalog, record, m)?.kind === "heat-sink");
   const rating = record.chassis.engine.rating;
@@ -481,8 +483,14 @@ function eraCheck({ record }: CheckInput): Finding[] {
   if (record.era !== undefined && record.year !== null && holds?.id !== record.era) {
     out.push(finding("availability", "warning", `The era is ${record.era}, but the year ${record.year} is ${holds ? `in the ${holds.name} era` : "in no era we list"}. Choose the era again or change the year.`, { where: { field: "era" } }));
   }
+  const type = mechTypeOf(record);
   const row = configurationOf(record.configuration);
-  if (row && !configurationInTime(record.configuration, record)) {
+  const bodyInTime = !row || configurationInTime(record.configuration, record);
+  if (bodyInTime && !typeInTime(type, record)) {
+    const when = record.year !== null ? String(record.year) : `the ${eraOfRecord(record)?.name ?? "chosen"} era`;
+    out.push(finding("availability", "error", `A ${type.label} is not available to ${record.techBase === "clan" ? "a Clan" : record.techBase === "mixed" ? "a mixed technology" : "an Inner Sphere"} 'Mech in ${when}; ${spansText(record.techBase === "clan" ? (type.clanAvailability ?? type.availability) : type.availability, {})}.`, { where: { field: "unitType" }, cite: type.availabilityCite }));
+  }
+  if (row && !bodyInTime) {
     const when = record.year !== null ? String(record.year) : `the ${eraOfRecord(record)?.name ?? "chosen"} era`;
     out.push(finding("availability", "error", `A ${row.name} is not available to ${record.techBase === "clan" ? "a Clan" : record.techBase === "mixed" ? "a mixed technology" : "an Inner Sphere"} 'Mech in ${when}.`, { where: { field: "configuration" }, cite: { book: "Interstellar Operations: Alternate Eras", page: 44 } }));
   }
@@ -640,8 +648,8 @@ function partsCheck({ record, catalog }: CheckInput): Finding[] {
       const when = record.year !== null ? String(record.year) : `the ${eraOfRecord(record)?.name ?? "chosen"} era`;
       out.push(finding("parts", "error", `${part.name} ${what} is not available in ${when}; ${spansText(spans, part)}.`, { where, cite: part.availabilityCite ?? cite }));
     }
-    if (part.industrial) {
-      out.push(finding("parts", "warning", `${part.name} ${what} is printed for IndustrialMechs. A 'Mech that uses it is an IndustrialMech, built under rules this tool does not check.`, { where, cite }));
+    if (part.industrial && industrialRulesOf(record) === undefined) {
+      out.push(finding("parts", "error", `${part.name} ${what} is printed for IndustrialMechs; a ${mechTypeOf(record).label} may not use it.`, { where, cite }));
     }
     if (part.primitive) {
       out.push(finding("parts", "warning", `${part.name} ${what} is printed for Primitive BattleMechs, which have their own construction rules this tool does not check.`, { where, cite }));
@@ -706,6 +714,76 @@ function unsupportedCheck({ record, layout }: CheckInput): Finding[] {
   ];
 }
 
+/**
+ * The rules of the record's 'Mech type. Equipment printed for another kind of unit is refused for any type. An OmniMech's rules are
+ * not built, so it is checked as a BattleMech and says so. An IndustrialMech (TechManual, IndustrialMech Construction, printed
+ * pp.64-75) has its own: Inner Sphere or Clan, a biped or a quad, only industrial structure, the engines, cockpits, gyro, heat
+ * sinks, myomer and armor its tables name, jump jets only with a fusion or fission engine and only standard ones, and no Artemis IV,
+ * Beagle Active Probe, C3 or targeting computer without Advanced Fire Control. One finding for each rule it breaks (one for each item
+ * where the rule is about an item); the tonnage limit is in the weight check.
+ */
+function unitTypeCheck({ record, catalog }: CheckInput): Finding[] {
+  const type = mechTypeOf(record);
+  const out: Finding[] = [];
+  const add = (message: string, cite: { book: string; page: number }, where?: Finding["where"]) => out.push(finding("unit-type", "error", message, { where, cite }));
+  if (!type.ready) {
+    out.push(finding("unit-type", "note", `${type.label} rules are not built yet, so this is checked as a BattleMech.`, { where: { field: "unitType" }, cite: type.cite }));
+  }
+  for (const mount of record.mounts) {
+    const row = rowOf(catalog, record, mount);
+    if (row && !mountableOn(row, type.unit)) {
+      add(`${mount.name} is not equipment a ${type.label} may mount.`, row.cite, { mountId: mount.id, location: mount.location ?? undefined });
+    }
+  }
+  const rules = type.industrial;
+  if (!rules) return out;
+  const { chassis } = record;
+  const names = (table: { types: Record<string, { name: string }> }, keys: string[], renamed: Record<string, string> = {}) =>
+    keys.map((key) => (own(renamed, key) ? (renamed[key] ?? key) : partName(table, key))).join(", ");
+  const unit = type.label;
+  if (!rules.techBases.some((base) => base === record.techBase)) {
+    add(`A ${unit} is Inner Sphere or Clan; a ${techBaseName(record.techBase).toLowerCase()} technology 'Mech is not allowed.`, rules.cites.techBase, { field: "techBase" });
+  }
+  if (!rules.configurations.includes(record.configuration)) {
+    add(`A ${unit} is a ${rules.configurations.join(" or a ")}; the ${record.configuration} configuration is not allowed.`, rules.cites.configuration, { field: "configuration" });
+  }
+  const parts: [string, { types: Record<string, { name: string }> }, string, string[], string, Cite, Record<string, string>?][] = [
+    ["structure", STRUCTURE_TYPES, chassis.structure, rules.parts.structure, "chassis.structure", rules.cites.structure],
+    ["engine", ENGINE_TYPES, chassis.engine.type, rules.parts.engine, "chassis.engine", rules.cites.engine],
+    ["cockpit", COCKPITS, chassis.cockpit, rules.parts.cockpit, "chassis.cockpit", rules.cites.cockpit],
+    ["gyro", GYROS, chassis.gyro, rules.parts.gyro, "chassis.gyro", rules.cites.gyro],
+    ["heat sink", HEAT_SINKS, chassis.heatSinks.type, rules.parts.heatSink, "chassis.heatSinks", rules.cites.heatSinks],
+    ["myomer", MYOMER, chassis.myomer, rules.parts.myomer, "chassis.myomer", rules.cites.myomer],
+    ["armor", ARMOR, chassis.armorType, rules.parts.armor, "chassis.armorType", rules.cites.armor, rules.armorNames],
+  ];
+  for (const [what, table, key, allowed, field, cite, renamed] of parts) {
+    if (own(table.types, key) && !allowed.includes(key)) {
+      const name = renamed !== undefined && own(renamed, key) ? (renamed[key] ?? key) : partName(table, key);
+      add(`${name} ${what} is not allowed on an ${unit}; it has ${names(table, allowed, renamed)}.`, cite, { field });
+    }
+  }
+  const jets = record.mounts.filter((m) => rowOf(catalog, record, m)?.kind === "jump-jet");
+  if (jets.length > 0 && own(ENGINE_TYPES.types, chassis.engine.type) && !rules.jumpEngines.includes(chassis.engine.type)) {
+    add(`An ${unit} may mount jump jets only with a fusion or fission engine; this one has ${partName(ENGINE_TYPES, chassis.engine.type)} and ${jets.length} jump ${jets.length === 1 ? "jet" : "jets"}.`, rules.cites.jump, { field: "chassis.engine" });
+  }
+  for (const m of jets) {
+    const row = rowOf(catalog, record, m);
+    if (row && stemOf(row.id) !== "jump-jet") add(`${m.name} is not a standard jump jet; an ${unit} may use only standard jump jets.`, rules.cites.jump, { mountId: m.id });
+  }
+  if (chassis.cockpit !== "industrial-afc") {
+    for (const m of record.mounts) {
+      if (m.equipmentId !== null && rules.needsFireControl.includes(m.equipmentId)) {
+        add(`${m.name} needs Advanced Fire Control; this ${unit}'s ${own(COCKPITS.types, chassis.cockpit) ? `${partName(COCKPITS, chassis.cockpit)} cockpit has` : "cockpit has"} none.`, rules.cites.fireControl, { mountId: m.id, location: m.location ?? undefined });
+      }
+    }
+  }
+  const amplifiers = weights(record, catalog.factsOf).lines.find((l) => l.label === "Power amplifiers");
+  if (amplifiers?.tons) {
+    out.push(finding("unit-type", "note", `The ${partName(ENGINE_TYPES, chassis.engine.type)} engine needs power amplifiers for the energy weapons: ${tons(amplifiers.tons)}, in the weight and taking no slots.`, { where: { field: "chassis.engine" }, cite: rules.cites.powerAmplifier }));
+  }
+  return out;
+}
+
 export const CHECKS: Check[] = [
   { id: "weight", editions: "all", run: weightCheck },
   { id: "slots", editions: "all", run: slotsCheck },
@@ -717,6 +795,7 @@ export const CHECKS: Check[] = [
   { id: "availability", editions: "all", run: availabilityCheck },
   { id: "level", editions: "all", run: levelCheck },
   { id: "configuration", editions: "all", run: configurationCheck },
+  { id: "unit-type", editions: "all", run: unitTypeCheck },
   { id: "unmatched", editions: "all", run: unmatchedCheck },
   { id: "parts", editions: "all", run: partsCheck },
   { id: "era", editions: "all", run: eraCheck },

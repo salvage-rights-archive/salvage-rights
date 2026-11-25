@@ -18,6 +18,7 @@ import type { PartKind } from "../rules/availability";
 import { withLevel } from "../rules/levels";
 import { ERAS } from "../data/editions";
 import LevelSelect from "./editor/LevelSelect";
+import TypeSelect from "./editor/TypeSelect";
 import ArmorPanel from "./editor/ArmorPanel";
 import { dialogKeyDown } from "./editor/dialog";
 import CalculatorPanel from "./editor/CalculatorPanel";
@@ -326,7 +327,7 @@ const safeLayout = (record: MechRecord, catalog: Catalog): Layout => {
 
 /** The ids a finding may name a field by: the identity and chassis fields, and the armor fields drawn. */
 function fieldTargets(armorLocations: string[]): Set<string> {
-  const paths = ["name", "rulesLevel", "tons", "year", "era", "techBase", "configuration", ...CHASSIS_FIELDS.filter((f) => f.kind === "select").map((f) => f.path), ...armorLocations.map((l) => `armor.${l}`)];
+  const paths = ["name", "unitType", "rulesLevel", "tons", "year", "era", "techBase", "configuration", ...CHASSIS_FIELDS.filter((f) => f.kind === "select").map((f) => f.path), ...armorLocations.map((l) => `armor.${l}`)];
   return new Set(paths);
 }
 
@@ -750,8 +751,17 @@ function Editor({ initial, catalog, storage }: { initial: MechRecord; catalog: C
           <section className="bt-panel" aria-labelledby="bt-identity">
             <h2 id="bt-identity">Identity</h2>
             <div className="bt-grid">
-              <TextField id="field-name" label="Chassis name" value={record.name.chassis} changed={mark("name")} onChange={(v) => { edit((d) => void (d.name.chassis = v), "name"); }} />
+              <TextField id="field-name" label="Name" value={record.name.chassis} changed={mark("name")} onChange={(v) => { edit((d) => void (d.name.chassis = v), "name"); }} />
               <TextField id="field-name-model" label="Model" value={record.name.model} onChange={(v) => { edit((d) => void (d.name.model = v), "name-model"); }} />
+              <TypeSelect record={record} onChange={(type) => { edit((d) => void (d.unitType = type)); }} />
+              <SelectField
+                id="field-configuration"
+                label="Configuration"
+                value={record.configuration}
+                options={configurationChoices(record, record.configuration)}
+                changed={mark("configuration")}
+                onChange={(v) => { edit((d) => void (d.configuration = v)); }}
+              />
               <LevelSelect record={record} onChange={(level) => { edit((d) => void (d.rulesLevel = level)); }} />
               <SelectField
                 id="field-techBase"
@@ -773,14 +783,6 @@ function Editor({ initial, catalog, storage }: { initial: MechRecord; catalog: C
               />
               </div>
               <NumberField id="field-tons" label="Tons" value={record.tons} changed={mark("tons")} onValid={(v) => { edit((d) => void (d.tons = v ?? d.tons), "tons"); }} />
-              <SelectField
-                id="field-configuration"
-                label="Configuration"
-                value={record.configuration}
-                options={configurationChoices(record, record.configuration)}
-                changed={mark("configuration")}
-                onChange={(v) => { edit((d) => void (d.configuration = v)); }}
-              />
             </div>
           </section>
 

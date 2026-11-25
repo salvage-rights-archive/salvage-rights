@@ -13,10 +13,12 @@ import {
   FINAL_COST,
   GYRO_COST,
   HEAT_SINK_COST,
+  INDUSTRIAL_COST,
   JUMP_JET_COST,
   LIFE_SUPPORT_COST,
   MASC_COST,
   MUSCULATURE_COST,
+  NON_FUSION_ENGINES,
   RETRACTABLE_BLADE_COST,
   ROUNDING,
   SENSORS_COST,
@@ -24,7 +26,7 @@ import {
 } from "../data/cost";
 import type { Price } from "../data/cost";
 import type { Catalog, EquipmentRow } from "./catalog";
-import { configurationOf } from "./mech";
+import { configurationOf, industrialRulesOf } from "./mech";
 import type { LocationCode, MechRecord, Mount } from "./mech";
 import { equipmentItems, mascOf, own, stemOf, tsmOf, TSM_ROWS, weightLine } from "./walk";
 
@@ -106,7 +108,7 @@ export const retractableBladeCost = (tons: number) => RETRACTABLE_BLADE_COST.mec
 /** The Land-Air 'Mech conversion equipment (IO:AE p.181): a share of the structural, weapon and equipment cost, added before the final multiplier. */
 export const conversionCost = (share: number, structuralAndEquipment: number) => share * structuralAndEquipment;
 /** The final multiplier (p.285): the Omni factor times (1 + tons / 100). */
-export const finalMultiplier = (tons: number, omni: boolean) => (omni ? FINAL_COST.omniFactor : 1) * (1 + tons / FINAL_COST.tonsDivisor);
+export const finalMultiplier = (tons: number, omni: boolean, tonsDivisor = FINAL_COST.tonsDivisor) => (omni ? FINAL_COST.omniFactor : 1) * (1 + tons / tonsDivisor);
 
 // ---------------------------------------------------------------------------------------------------------------
 // The cost of a 'Mech
@@ -122,6 +124,7 @@ export function unitCost(record: MechRecord, catalog: Catalog, options: CostOpti
   const skip = (name: string, why: string, id: string | null = null) => unpriced.push({ id, name, why });
   const assume = (label: string) => notes.push(`${label}: the book prints one price for both tech bases and none for this Clan part, so the Inner Sphere price is used.`);
   const tonsKnown = Number.isFinite(tons) && tons > 0;
+  const industrial = industrialRulesOf(record) !== undefined;
   const config = configurationOf(record.configuration);
   const special = own(CONFIGURATION_COST, record.configuration);
   const { items, unknown } = equipmentItems(record, catalog);
@@ -187,8 +190,10 @@ export function unitCost(record: MechRecord, catalog: Catalog, options: CostOpti
   const sinks = own(HEAT_SINK_COST.rows, chassis.heatSinks.type);
   if (sinks && Number.isFinite(chassis.heatSinks.count)) {
     if (sinks.assumed) assume(`Heat sinks "${chassis.heatSinks.type}"`);
-    const paid = Math.max(0, chassis.heatSinks.count - sinks.free);
-    add(structural, `Heat sinks (${chassis.heatSinks.type}, ${paid} paid for)`, heatSinkCost(sinks.each, sinks.free, chassis.heatSinks.count), `${money(sinks.each)} x ${paid}`, HEAT_SINK_COST);
+    // With a non-fusion engine there are no free sinks: every one is paid for (printed p.278).
+    const free = NON_FUSION_ENGINES.includes(chassis.engine.type) ? 0 : sinks.free;
+    const paid = Math.max(0, chassis.heatSinks.count - free);
+    add(structural, `Heat sinks (${chassis.heatSinks.type}, ${paid} paid for)`, heatSinkCost(sinks.each, free, chassis.heatSinks.count), `${money(sinks.each)} x ${paid}`, HEAT_SINK_COST);
   } else skip(`Heat sinks "${chassis.heatSinks.type}"`, "the cost table has no such heat sink");
 
   // Armor
@@ -215,7 +220,18 @@ export function unitCost(record: MechRecord, catalog: Catalog, options: CostOpti
     }
     const itemTons = row.splitWeight && mountTons !== undefined ? items.filter((i) => i.row.id === row.id).reduce((sum, i) => sum + (i.tons ?? 0), 0) : mountTons;
     if (row.kind === "heat-sink") continue; // paid for by count, above
-    if (TSM_ROWS.includes(row.id) || row.id === "super-cooled-myomer-is") continue; // the myomer slots are the musculature priced above
+    if (TSM_ROWS.includes(row.id) || row.id === "super-cooled-myomer-is" || row.id === "industrial-tsm-is") continue; // the myomer slots are the musculature priced above
+    // An IndustrialMech's environmental sealing and tracks have prices by rule (printed p.278): 225 x tonnage, and 500 x engine rating x tonnage over 75.
+    if (stemOf(row.id) === "environmental-sealing") {
+      if (!tonsKnown) skip(mount.name, "the tonnage is not a positive number", row.id);
+      else add(structural, "Environmental sealing", INDUSTRIAL_COST.sealingPerTon * tons, `${money(INDUSTRIAL_COST.sealingPerTon)} x ${tons}`, INDUSTRIAL_COST);
+      continue;
+    }
+    if (stemOf(row.id) === "tracks") {
+      if (!tonsKnown || !Number.isFinite(chassis.engine.rating)) skip(mount.name, "the tonnage or engine rating is not a number", row.id);
+      else add(equipment, "Tracks", engineCost(INDUSTRIAL_COST.tracksPerRating, chassis.engine.rating, tons), `${money(INDUSTRIAL_COST.tracksPerRating)} x ${chassis.engine.rating} x ${tons} / ${ENGINE_COST.divisor}`, INDUSTRIAL_COST);
+      continue;
+    }
     if (row.kind === "ammunition") continue; // ammunition is not bought for a unit's cost (p.282)
     if (stemOf(row.id) === "umu") {
       jets.set("umu", [...(jets.get("umu") ?? []), mount]);
@@ -256,6 +272,8 @@ export function unitCost(record: MechRecord, catalog: Catalog, options: CostOpti
       else add(equipment, mount.name, perTonCost(found.price.perTon, itemTons), `${money(found.price.perTon)} x ${Math.ceil(itemTons)} tons`, found);
     }
   }
+  const amplifiers = weightLine(record, catalog, "Power amplifiers");
+  if (amplifiers !== null && amplifiers > 0) add(equipment, "Power amplifiers", INDUSTRIAL_COST.amplifierPerTon * amplifiers, `${money(INDUSTRIAL_COST.amplifierPerTon)} x ${amplifiers}`, INDUSTRIAL_COST);
   for (const [kind, group] of jets) {
     const row = own(JUMP_JET_COST.rows, kind);
     if (row && tonsKnown) add(equipment, `Jump jets (${kind}, ${group.length})`, jumpJetCost(row.perJetSquared, group.length, tons), `${row.perJetSquared} x ${group.length}^2 x ${tons}`, JUMP_JET_COST);
@@ -271,7 +289,8 @@ export function unitCost(record: MechRecord, catalog: Catalog, options: CostOpti
       ? []
       : [{ label: "Conversion equipment", cost: conversion, how: `${special.conversion} x ${money(structuralTotal + equipmentTotal)}`, cite: special.cite, checked: special.checked }];
 
-  const multiplier = tonsKnown ? finalMultiplier(tons, options.omni === true) : 1;
+  // An IndustrialMech: the tonnage is divided by 400 and there is no Omni factor (printed p.285).
+  const multiplier = tonsKnown ? (industrial ? finalMultiplier(tons, false, INDUSTRIAL_COST.tonsDivisor) : finalMultiplier(tons, options.omni === true)) : 1;
   if (!tonsKnown) skip("Final multiplier", "the tonnage is not a positive number");
   const total = roundUpCents((structuralTotal + equipmentTotal + conversion) * multiplier);
   return {

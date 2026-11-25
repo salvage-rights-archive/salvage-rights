@@ -14,11 +14,12 @@ import {
   HEAT_SINKS,
   INTERNAL_STRUCTURE,
   LAM,
+  MECH_TYPES,
   SHEET,
   STRUCTURE_TYPES,
   STRUCTURE_WEIGHT,
 } from "../data/chassis";
-import type { ArmorType, ConfigurationRow, RulesLevel } from "../data/chassis";
+import type { ArmorType, ConfigurationRow, IndustrialRules, MechType, MechTypeRow, RulesLevel } from "../data/chassis";
 
 export type LocationCode = "HD" | "CT" | "LT" | "RT" | "LA" | "RA" | "LL" | "RL" | "CL" | "FLL" | "FRL" | "RLL" | "RRL";
 export const LOCATION_NAMES: Record<LocationCode, string> = {
@@ -74,6 +75,9 @@ export interface MechRecord {
   /** The rules level the unit is built under (rules/levels.ts). Absent on records saved before levels existed: they read as the
    * lowest level that accepts everything they use. */
   rulesLevel?: RulesLevel;
+  /** What kind of 'Mech this is (MECH_TYPES in data/chassis.ts). Absent on records saved before types were offered, and read as a
+   * BattleMech; a value that is not one of the types is read the same way. */
+  unitType?: MechType;
   tons: number;
   configuration: string; // "biped" | "quad" | "tripod" | the source's own word
   chassis: {
@@ -111,6 +115,8 @@ export interface MechRecord {
 export interface MountFacts {
   tons: number;
   slots: number;
+  /** True for an energy weapon (laser, PPC, flamer...): an IndustrialMech with an internal combustion or fuel cell engine carries power amplifiers for its weight. */
+  energy?: true;
 }
 export type FactsOf = (mount: Mount, record: MechRecord) => MountFacts | undefined;
 
@@ -141,6 +147,19 @@ export interface WeightLine {
 // ---------------------------------------------------------------------------------------------------------------
 function own<T>(table: Record<string | number, T>, key: string | number): T | undefined {
   return Object.hasOwn(table, key) ? table[key] : undefined;
+}
+
+/** The type's row in MECH_TYPES; an absent or unknown type is the BattleMech's row. */
+export function mechTypeOf(record: Pick<MechRecord, "unitType">): MechTypeRow {
+  return MECH_TYPES.find((row) => row.id === record.unitType) ?? (MECH_TYPES[0] as MechTypeRow);
+}
+/** The IndustrialMech construction rules when the record is an IndustrialMech, else undefined. */
+export const industrialRulesOf = (record: Pick<MechRecord, "unitType">): IndustrialRules | undefined => mechTypeOf(record).industrial;
+
+/** Heat sinks that cost no tonnage: ten with a fusion engine, and for an IndustrialMech what its engine type gives (TechManual p.71). */
+export function freeHeatSinks(record: Pick<MechRecord, "unitType" | "chassis">): number {
+  const free = industrialRulesOf(record)?.freeHeatSinks;
+  return free === undefined ? HEAT_SINK_RULES.freeWithEngine : (own(free, record.chassis.engine.type) ?? HEAT_SINK_RULES.freeWithEngine);
 }
 
 /** The configuration's row in the chassis tables, or undefined for a body type we have no layout for. */
@@ -358,7 +377,7 @@ export function weights(record: MechRecord, factsOf: FactsOf): { lines: WeightLi
 
   lines.push({ label: "Cockpit", tons: own(COCKPITS.types, chassis.cockpit)?.tons ?? null });
 
-  const extraSinks = Math.max(0, chassis.heatSinks.count - HEAT_SINK_RULES.freeWithEngine);
+  const extraSinks = Math.max(0, chassis.heatSinks.count - freeHeatSinks(record));
   lines.push({ label: "Heat sinks", tons: Number.isFinite(extraSinks) ? extraSinks * (own(HEAT_SINKS.types, chassis.heatSinks.type)?.tonsEach ?? HEAT_SINK_RULES.tonsEach) : null });
 
   const armorType = own(ARMOR.types, chassis.armorType);
@@ -368,11 +387,18 @@ export function weights(record: MechRecord, factsOf: FactsOf): { lines: WeightLi
     tons: armorType && Number.isFinite(points) ? ceilHalf(points / (ARMOR.basePointsPerTon * armorType.multiplier)) : null,
   });
 
+  let energyTons = 0;
   for (const mount of record.mounts) {
     if (mount.part) continue; // its weight is in the structure or armor line
     const facts = factsOf(mount, record);
     if (!facts) lines.push({ label: mount.name, tons: null });
     else if (facts.tons > 0) lines.push({ label: mount.name, tons: facts.tons });
+    if (facts?.energy) energyTons += facts.tons;
+  }
+  // An IndustrialMech with an internal combustion or fuel cell engine carries power amplifiers for its energy weapons (TechManual p.74).
+  const amplifier = industrialRulesOf(record)?.powerAmplifier;
+  if (amplifier?.engines.includes(chassis.engine.type) && energyTons > 0) {
+    lines.push({ label: "Power amplifiers", tons: ceilHalf(energyTons * amplifier.share) });
   }
 
   const total = lines.some((l) => l.tons === null) ? null : tidy(lines.reduce((sum, l) => sum + (l.tons ?? 0), 0));
@@ -422,6 +448,8 @@ export interface NewMechOptions {
   year: number | null;
   /** The rules level to build under; standard when absent. */
   rulesLevel?: RulesLevel;
+  /** What kind of 'Mech; a BattleMech when absent. */
+  unitType?: MechType;
 }
 
 /**
@@ -429,6 +457,7 @@ export interface NewMechOptions {
  * sinks every 'Mech starts with, every location at zero armor and no equipment. The rules check says what it lacks.
  */
 export function newRecord(options: NewMechOptions, editionId: string, id: string): MechRecord {
+  const industrial = industrialRulesOf({ unitType: options.unitType }) !== undefined;
   const record: MechRecord = {
     schema: 1,
     id,
@@ -437,13 +466,15 @@ export function newRecord(options: NewMechOptions, editionId: string, id: string
     techBase: options.techBase,
     year: options.year,
     rulesLevel: options.rulesLevel ?? "standard",
+    unitType: mechTypeOf({ unitType: options.unitType }).id,
     tons: options.tons,
     configuration: options.configuration,
     chassis: {
       engine: { type: "standard", rating: options.tons * options.walk },
       gyro: "standard",
-      cockpit: configurationOf(options.configuration)?.cockpit ?? "standard",
-      structure: "standard",
+      // An IndustrialMech's own frame and cockpit (TechManual pp.67 and 69); armor "standard" is its Heavy Industrial.
+      cockpit: industrial ? "industrial" : (configurationOf(options.configuration)?.cockpit ?? "standard"),
+      structure: industrial ? "industrial" : "standard",
       armorType: "standard",
       myomer: "standard",
       heatSinks: { type: "single", count: HEAT_SINK_RULES.freeWithEngine },

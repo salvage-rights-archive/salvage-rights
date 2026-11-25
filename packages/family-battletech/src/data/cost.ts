@@ -46,6 +46,25 @@ export const FINAL_COST: Sourced & { tonsDivisor: number; omniFactor: number } =
   omniFactor: 1.25,
 };
 
+/**
+ * Where an IndustrialMech's cost differs from a BattleMech's (read against the page images). The Final Unit Cost Formulas Table
+ * (printed p.285) divides the tonnage by 400, not 100, and has no Omni factor. The BattleMech and IndustrialMech Structural Costs
+ * table (printed p.278) lists environmental sealing under internal structure at 225 x unit tonnage ("IndustrialMechs only"), power
+ * amplifiers at 20,000 x their tonnage and tracks at 500 x engine rating x unit tonnage over 75, and prices a single heat sink
+ * 2,000 for each one of the unit's total when its engine is not a fusion engine (a fusion engine's first ten are free).
+ */
+export const INDUSTRIAL_COST: Sourced & { tonsDivisor: number; sealingPerTon: number; amplifierPerTon: number; tracksPerRating: number; finalCite: Cite } = {
+  cite: { book: TM, page: 278 },
+  checked: "page",
+  tonsDivisor: 400,
+  sealingPerTon: 225,
+  amplifierPerTon: 20_000,
+  tracksPerRating: 500,
+  finalCite: { book: TM, page: 285 },
+};
+/** Engines that are not fusion engines: a heat sink with one is paid for in full (printed p.278). */
+export const NON_FUSION_ENGINES = ["ice", "fuel-cell", "fission"];
+
 // ---------------------------------------------------------------------------------------------------------------
 // BattleMech structural costs (printed pp.277-278). Costs "x Unit Tonnage" are `perTon`.
 // ---------------------------------------------------------------------------------------------------------------
