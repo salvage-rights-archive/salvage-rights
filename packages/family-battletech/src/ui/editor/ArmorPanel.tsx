@@ -73,6 +73,17 @@ export default function ArmorPanel({
   const type = Object.hasOwn(ARMOR.types, record.chassis.armorType) ? (ARMOR.types[record.chassis.armorType]?.name ?? record.chassis.armorType) : record.chassis.armorType;
   const unit = dollUnitFromRecord(record);
 
+  // The fields in the order they are seen on the body-shaped grid, row by row, so Tab follows the picture.
+  const cellOf = (location: string, side: "front" | "rear"): Cell | undefined =>
+    (BODY_CELLS[record.configuration] ?? {})[side === "rear" ? `${location}-rear` : location];
+  const fieldOrder = locations
+    .flatMap((location): [LocationCode, "front" | "rear"][] =>
+      WITH_REAR.includes(location) || record.armor[location]?.rear !== undefined ? [[location, "front"], [location, "rear"]] : [[location, "front"]],
+    )
+    .map((item, index) => ({ item, index, at: cellOf(...item) }))
+    .sort((a, b) => (a.at?.[0] ?? 99) - (b.at?.[0] ?? 99) || (a.at?.[1] ?? 99) - (b.at?.[1] ?? 99) || a.index - b.index)
+    .map(({ item }) => item);
+
   const chooseOnDoll = (doll: string) => {
     const location = recordLocation(doll) as LocationCode;
     onSelect(location);
@@ -107,7 +118,7 @@ export default function ArmorPanel({
     const limit = max[location];
     const name = locationName(location);
     const rear = side === "rear";
-    const at = (BODY_CELLS[record.configuration] ?? {})[rear ? `${location}-rear` : location];
+    const at = cellOf(location, side);
     const id = rear ? `${fieldId(`armor.${location}`)}-rear` : fieldId(`armor.${location}`);
     const hasRear = WITH_REAR.includes(location) || entry?.rear !== undefined;
     return (
@@ -120,7 +131,7 @@ export default function ArmorPanel({
         <NumberField
           id={id}
           label={rear ? `${location} rear` : location}
-          name={rear ? `${name} rear armor` : hasRear ? `${name} front armor` : `${name} armor`}
+          name={rear ? `${location} rear, ${name} rear armor` : `${location}, ${hasRear ? `${name} front armor` : `${name} armor`}`}
           value={(rear ? entry?.rear : entry?.front) ?? 0}
           changed={!rear && changed.has(`armor.${location}`)}
           onValid={(value) => {
@@ -149,8 +160,7 @@ export default function ArmorPanel({
         )}
         <div className="bt-armor__side">
           <div className="bt-armor__body" role="group" aria-label="Armor points by location">
-            {locations.map((location) => cell(location, "front"))}
-            {locations.filter((location) => WITH_REAR.includes(location) || record.armor[location]?.rear !== undefined).map((location) => cell(location, "rear"))}
+            {fieldOrder.map(([location, side]) => cell(location, side))}
           </div>
           {unit && <div className="bt-armor__structure">{doll("structure", STRUCTURE_SCALE)}</div>}
         </div>

@@ -11,12 +11,19 @@ import type { OnEdit } from "../EditorPage";
 import Picker from "./Picker";
 
 /** The record sheet's arrangement from the width of five columns up: one string per row of the grid, a location's lower-case
- * code naming its place and a dot an empty one. The head sits over the center torso; the legs under the arms. */
+ * code naming its place and a dot an empty one. The head sits over the center torso and each leg under its side torso (a
+ * quad's front legs take the arms' columns). Each band is six slots tall: the arms and torsos span two bands, the head one,
+ * the center torso two, the legs one. */
 const SHEET_ROWS: Record<string, string[]> = {
-  // The arms and side torsos are as tall as the head and half the center torso together, so the legs fit beside the
-  // rest of the center torso.
-  biped: ["la lt hd rt ra", "la lt ct rt ra", "ll . ct . rl"],
-  quad: ["fll lt hd rt frl", "fll lt ct rt frl", "rll . ct . rrl"],
+  biped: ["la lt hd rt ra", "la lt ct rt ra", ". ll ct rl ."],
+  quad: ["fll lt hd rt frl", "fll lt ct rt frl", ". rll ct rrl ."],
+};
+
+/** The locations in the order the columns are met, left to right and top to bottom in each column, so that Tab follows what
+ * is seen on the widest layout and the narrower ones flow the same way. */
+const SHEET_ORDER: Record<string, LocationCode[]> = {
+  biped: ["LA", "LT", "LL", "HD", "CT", "RT", "RL", "RA"],
+  quad: ["FLL", "LT", "RLL", "HD", "CT", "RT", "RRL", "FRL"],
 };
 
 type Block =
@@ -80,7 +87,7 @@ export default function SlotsPanel({
     if (moving === undefined) return;
     const cancel = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
-      pendingFocus.current = `move-${moving}`;
+      pendingFocus.current = `actions-${moving}`;
       setMoving(undefined);
     };
     window.addEventListener("keydown", cancel);
@@ -112,7 +119,7 @@ export default function SlotsPanel({
   };
 
   const place = (mount: Mount, location: LocationCode | null, slot: number | null) => {
-    pendingFocus.current = `move-${mount.id}`;
+    pendingFocus.current = `actions-${mount.id}`;
     setMoving(undefined);
     onEdit((draft) => {
       const target = draft.mounts.find((m) => m.id === mount.id);
@@ -175,6 +182,7 @@ export default function SlotsPanel({
               aria-label={`${unplacedItem ? "Place" : "Move"} ${mount.name}`}
               onClick={() => {
                 pendingFocus.current = "bt-move-status";
+                setOpen(undefined);
                 setMoving(mount.id);
               }}
             >
@@ -211,6 +219,8 @@ export default function SlotsPanel({
   const unplacedIds = new Set(layout.unplaced.map((m) => m.id));
   const other = record.mounts.filter((m) => !drawn.has(m.id) && !unplacedIds.has(m.id));
   const sheet = Object.hasOwn(SHEET_ROWS, record.configuration) ? SHEET_ROWS[record.configuration] : undefined;
+  const known = Object.hasOwn(SHEET_ORDER, record.configuration) ? (SHEET_ORDER[record.configuration] ?? []) : [];
+  const columns = [...known.filter((l) => layout.locations.includes(l)), ...layout.locations.filter((l) => !known.includes(l))];
   const sheetStyle = sheet ? ({ "--bt-areas": sheet.map((row) => `"${row}"`).join(" ") } as CSSProperties) : undefined;
 
   return (
@@ -251,7 +261,7 @@ export default function SlotsPanel({
 
       {layout.supported ? (
         <div className="bt-slots" style={sheetStyle}>
-          {layout.locations.map((location) => {
+          {columns.map((location) => {
             const cells = layout.slots[location] ?? [];
             const name = locationName(location);
             return (

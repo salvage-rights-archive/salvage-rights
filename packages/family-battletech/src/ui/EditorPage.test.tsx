@@ -148,6 +148,7 @@ describe("The 'Mech editor", () => {
     expect(document.activeElement).toBe(stay);
     await user.keyboard("{Escape}");
     expect(screen.queryByRole("alertdialog")).toBeNull();
+    expect(document.activeElement).toBe(tons);
     expect(router.state.location.pathname).toBe("/battletech/classic/editor");
     void router.navigate("/battletech/classic/home");
     await user.click(await screen.findByRole("button", { name: "Leave without saving" }));
@@ -156,7 +157,12 @@ describe("The 'Mech editor", () => {
     });
   });
 
-  it("shows Mordel's picture of the 'Mech and removes it if it will not load", async () => {
+  it("shows Mordel's picture of the 'Mech, removes it if it will not load, and ignores any other host", async () => {
+    await saved(mordelWith(mordelBiped(), { image_url: "https://example.com/pictures/test.png" }));
+    await open("imported-1");
+    await screen.findByRole("heading", { level: 1, name: "Test Walker TW-1" });
+    expect(screen.queryByRole("img")).toBeNull();
+    cleanup();
     await saved(mordelWith(mordelBiped(), { image_url: "https://mordel.net/pictures/test.png" }));
     await open("imported-1");
     const picture = await screen.findByRole("img", { name: "Test Walker TW-1, picture from mordel.net" });
@@ -181,7 +187,7 @@ describe("The 'Mech editor", () => {
     await openActions(user, "Left Arm");
     await user.click(moveButton("Left Arm"));
     await user.click(screen.getByRole("button", { name: "Place Medium Laser in Left Torso slot 5" }));
-    expect(within(slotList("Left Torso").querySelector("li:has(button[aria-label='Move Medium Laser'])") as HTMLElement).getByText("Changed since import")).toBeTruthy();
+    expect(within(slotList("Left Torso").querySelector("li:has(button[aria-label='Actions for Medium Laser'])") as HTMLElement).getByText("Changed since import")).toBeTruthy();
     const untouched = within(slotList("Right Arm")).getByText("Medium Laser").closest("li") as HTMLElement;
     expect(within(untouched).queryByText("Changed since import")).toBeNull();
   });
@@ -201,6 +207,10 @@ describe("The critical slots", () => {
     expect(laser && within(laser).getAllByRole("button").map((b) => b.textContent)).toEqual(["Actions", "Move", "Replace", "Remove"]);
     expect(laser && within(laser).getByRole("button", { name: "Actions for Medium Laser" }).getAttribute("aria-expanded")).toBe("true");
     expect(arm.getAllByText("Empty").length).toBeGreaterThan(0);
+    // Tab order is the order of the widest layout, column by column: legs follow their side torsos.
+    expect([...document.querySelectorAll(".bt-slotcol__head")].map((h) => h.textContent)).toEqual([
+      "Left Arm", "Left Torso", "Left Leg", "Head", "Center Torso", "Right Torso", "Right Leg", "Right Arm",
+    ]);
   });
 
   it("moves a mount by keyboard to a free slot in another location, and Escape leaves it where it was", async () => {
@@ -214,8 +224,18 @@ describe("The critical slots", () => {
     const status = screen.getByText("Choose a slot for Medium Laser. Press Escape to cancel.");
     expect(document.activeElement).toBe(status);
     await user.keyboard("{Escape}");
-    expect(document.activeElement).toBe(moveButton("Left Arm"));
+    const actions = within(slotList("Left Arm")).getByRole("button", { name: "Actions for Medium Laser" });
+    expect(document.activeElement).toBe(actions);
+    expect(actions.getAttribute("aria-expanded")).toBe("false");
+    // Escape closes an open Actions row and returns focus to its button.
     await user.keyboard("{Enter}");
+    expect(actions.getAttribute("aria-expanded")).toBe("true");
+    moveButton("Left Arm").focus();
+    await user.keyboard("{Escape}");
+    expect(actions.getAttribute("aria-expanded")).toBe("false");
+    expect(document.activeElement).toBe(actions);
+    await user.keyboard("{Enter}");
+    await user.click(moveButton("Left Arm"));
     await user.click(within(rules()).getByRole("button", { name: /weighs 20 to 100 tons|parts weigh/ }));
     expect(screen.queryByText(/Choose a slot for/)).toBeNull();
     expect(document.activeElement?.id).toBe("field-tons");
@@ -223,7 +243,7 @@ describe("The critical slots", () => {
     await user.click(moveButton("Left Arm"));
     await user.click(screen.getByRole("button", { name: "Place Medium Laser in Left Torso slot 5" }));
     expect(within(slotList("Left Arm")).queryByText("Medium Laser")).toBeNull();
-    expect(document.activeElement).toBe(moveButton("Left Torso"));
+    expect(document.activeElement).toBe(within(slotList("Left Torso")).getByRole("button", { name: "Actions for Medium Laser" }));
     expect(within(slotList("Left Torso")).getByText("Medium Laser").closest("li")?.textContent).toMatch(/^5/);
   });
 
@@ -247,10 +267,12 @@ describe("The critical slots", () => {
     await user.click(moveButton("Left Arm"));
     await user.click(screen.getByRole("button", { name: "Leave unplaced" }));
     const tray = screen.getByRole("heading", { name: "Unplaced" }).parentElement as HTMLElement;
+    await user.click(within(tray).getByRole("button", { name: "Actions for Medium Laser" }));
     await user.click(within(tray).getByRole("button", { name: "Place Medium Laser" }));
     await user.click(screen.getByRole("button", { name: "Place Medium Laser in Left Arm slot 7" }));
     expect(within(slotList("Left Arm")).getByText("Medium Laser").closest("li")?.textContent).toMatch(/^7/);
     expect(screen.queryByRole("heading", { name: "Unplaced" })).toBeNull();
+    await openActions(user, "Left Arm");
     await user.click(moveButton("Left Arm"));
     expect(screen.getByText(/Choose a slot for Medium Laser/)).toBeTruthy();
     await user.click(screen.getByRole("button", { name: "Undo" }));
@@ -294,7 +316,7 @@ describe("The armor panel", () => {
     await saved(mordelBiped());
     const user = userEvent.setup();
     await open("imported-1");
-    const arm = await field("Left Arm armor");
+    const arm = await field("LA, Left Arm armor");
     expect(screen.getAllByText("/ 16").length).toBeGreaterThan(0);
     await user.clear(arm);
     await user.type(arm, "20");
@@ -306,14 +328,14 @@ describe("The armor panel", () => {
     const user = userEvent.setup();
     await open("imported-1");
     await user.click(await screen.findByRole("button", { name: "Left Arm, 8 armor" }));
-    expect(document.activeElement).toBe(screen.getByLabelText("Left Arm armor"));
+    expect(document.activeElement).toBe(screen.getByLabelText("LA, Left Arm armor"));
     expect(screen.getByRole("button", { name: "Left Arm", pressed: true })).toBeTruthy();
   });
 
   it("shows the armor fields of a quad and says no doll is drawn for it", async () => {
     await saved(mordelQuad());
     await open("imported-1");
-    expect(await field("Front Left Leg armor")).toBeTruthy();
+    expect(await field("FLL, Front Left Leg armor")).toBeTruthy();
     expect(screen.getByText("No doll is drawn for this body type yet.")).toBeTruthy();
   });
 });

@@ -2,7 +2,7 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import type { Catalog, EquipmentKind, EquipmentRow } from "../../rules/catalog";
 import type { MechRecord, Mount } from "../../rules/mech";
-import { dialogKeyDown } from "../EditorPage";
+import { dialogKeyDown } from "./dialog";
 
 const CAP = 100;
 const KINDS: [EquipmentKind | "all", string][] = [

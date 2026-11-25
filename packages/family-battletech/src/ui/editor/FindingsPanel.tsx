@@ -1,4 +1,5 @@
 // The rules check beside the 'Mech: what is illegal or does not add up, with the printed page each rule rests on.
+import { useEffect, useRef, useState } from "react";
 import type { Finding } from "../../rules/checks";
 
 const GROUPS: { level: Finding["level"]; title: string }[] = [
@@ -19,11 +20,30 @@ export default function FindingsPanel({
   targetOf: (where: Finding["where"]) => string | undefined;
   onChoose: (id: string) => void;
 }) {
+  const box = useRef<HTMLElement>(null);
+  const inner = useRef<HTMLDivElement>(null);
+  // The panel scrolls on its own when it is taller than the screen allows; then it is a tab stop, so a keyboard user can scroll it.
+  const [scrolls, setScrolls] = useState(false);
+  useEffect(() => {
+    const outer = box.current;
+    const content = inner.current;
+    if (!outer || !content || typeof ResizeObserver === "undefined") return;
+    const measure = () => {
+      setScrolls(outer.scrollHeight > outer.clientHeight + 1);
+    };
+    const observer = new ResizeObserver(measure);
+    observer.observe(outer);
+    observer.observe(content);
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
   const count = (level: Finding["level"]) => findings.filter((f) => f.level === level).length;
   const summary =
     findings.length === 0 ? "No problems found." : `${count("error")} errors, ${count("warning")} warnings, ${count("note")} notes`;
   return (
-    <section className="bt-panel bt-findings" aria-labelledby="bt-rules-heading">
+    <section ref={box} className="bt-panel bt-findings" aria-labelledby="bt-rules-heading" tabIndex={scrolls ? 0 : undefined}>
+      <div ref={inner}>
       <h2 id="bt-rules-heading">Rules check</h2>
       <p className="bt-findings__summary" aria-live="polite">
         {summary}
@@ -60,6 +80,7 @@ export default function FindingsPanel({
           </div>
         );
       })}
+      </div>
     </section>
   );
 }

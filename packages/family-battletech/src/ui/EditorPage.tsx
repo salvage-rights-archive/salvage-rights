@@ -2,7 +2,7 @@
 // (for Undo and Redo), derives everything else from the current record, and hands each panel what it shows and an
 // `onEdit(change)` callback. Every edit goes through `editRecord`.
 import { useEffect, useId, useMemo, useRef, useState } from "react";
-import type { KeyboardEvent, ReactNode } from "react";
+import type { ReactNode } from "react";
 import { Link, useBlocker, useLocation, useSearchParams } from "react-router";
 import { ARMOR, COCKPITS, ENGINE_TYPES, GYROS, HEAT_SINKS, MYOMER, STRUCTURE_TYPES } from "../data/chassis";
 import { loadCatalog } from "../rules/catalog";
@@ -13,6 +13,7 @@ import { changedSinceImport } from "../rules/mordel";
 import { editRecord, layout as buildLayout, weights as buildWeights } from "../rules/mech";
 import type { Layout, LocationCode, MechRecord } from "../rules/mech";
 import ArmorPanel from "./editor/ArmorPanel";
+import { dialogKeyDown } from "./editor/dialog";
 import FindingsPanel from "./editor/FindingsPanel";
 import SlotsPanel from "./editor/SlotsPanel";
 import { STORAGE_READ_FAILED, STORAGE_WRITE_FAILED, downloadMech, openFamilyStorage } from "./storage";
@@ -25,30 +26,6 @@ export type OnEdit = (change: Change, field?: string) => void;
 
 const HISTORY_LIMIT = 100;
 const HOME = "/battletech/classic/home";
-
-const FOCUSABLE = "button:not([disabled]), input:not([disabled]), select:not([disabled]), [href]";
-
-/** The keys a modal dialog answers to, for the picker and the unsaved-changes confirm: Escape asks to close, and Tab
- * stays inside the dialog. */
-export function dialogKeyDown(event: KeyboardEvent<HTMLElement>, container: HTMLElement | null, onEscape: () => void): void {
-  if (event.key === "Escape") {
-    event.stopPropagation();
-    onEscape();
-    return;
-  }
-  if (event.key !== "Tab" || !container) return;
-  const items = [...container.querySelectorAll<HTMLElement>(FOCUSABLE)];
-  const first = items[0];
-  const last = items[items.length - 1];
-  if (!first || !last) return;
-  if (event.shiftKey && document.activeElement === first) {
-    event.preventDefault();
-    last.focus();
-  } else if (!event.shiftKey && document.activeElement === last) {
-    event.preventDefault();
-    first.focus();
-  }
-}
 
 // ---------------------------------------------------------------------------------------------------------------
 // Small shared pieces: the ids that findings and change markers point at, and the labelled fields.
@@ -201,12 +178,15 @@ function SelectField({
   changed?: boolean;
 }) {
   const known = options.some(([key]) => key === value);
+  // Wide enough for the longest choice, so the current value is never cut off.
+  const longest = Math.max(...options.map(([, text]) => text.length), known ? 0 : `${value} (as imported)`.length);
   return (
     <Field id={id} label={label} changed={changed}>
       {(describedBy) => (
         <select
           id={id}
           value={value}
+          style={{ minWidth: `${longest + 4}ch` }}
           aria-describedby={describedBy}
           onChange={(event) => {
             onChange(event.target.value);
@@ -375,6 +355,8 @@ interface History {
   past: MechRecord[];
   present: MechRecord;
   future: MechRecord[];
+  /** The field being typed into: edits to it in a row make one step. */
+  group?: string;
 }
 
 const sameRecord = (a: MechRecord, b: MechRecord) => a === b || JSON.stringify(a) === JSON.stringify(b);
@@ -388,9 +370,35 @@ export function weightSummary(weights: { lines: { tons: number | null }[]; total
   return `${known} of ${tons} tons, not counting ${unknown} ${unknown === 1 ? "item" : "items"} of unknown weight`;
 }
 
+/** Only a picture on mordel.net is shown; any other address in a file is ignored rather than requested. */
+export function mordelPicture(url: string | undefined): url is string {
+  if (url === undefined) return false;
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === "https:" && (parsed.hostname === "mordel.net" || parsed.hostname === "www.mordel.net");
+  } catch {
+    return false;
+  }
+}
+
 /** Mordel's picture of the 'Mech; `onFail` is called when it cannot be loaded, so the page can take its place away. */
 function Picture({ url, alt, onFail }: { url: string; alt: string; onFail: () => void }) {
-  return <img className="bt-picture" src={url} alt={alt} width={160} loading="lazy" referrerPolicy="no-referrer" onError={onFail} />;
+  const [loaded, setLoaded] = useState(false);
+  return (
+    <img
+      className="bt-picture"
+      src={url}
+      alt={alt}
+      width={160}
+      loading="lazy"
+      referrerPolicy="no-referrer"
+      data-loaded={loaded}
+      onLoad={() => {
+        setLoaded(true);
+      }}
+      onError={onFail}
+    />
+  );
 }
 
 /** The unsaved-changes question, a modal dialog like the picker: focus goes to Stay and comes back there. */
@@ -405,7 +413,10 @@ function LeaveConfirm({ proceed, reset }: { proceed: () => void; reset: () => vo
   }, []);
   const keep = () => {
     reset();
-    if (before.current instanceof HTMLElement) before.current.focus();
+    // Back to what had focus; if that is gone, to the page's heading.
+    const opener = before.current;
+    if (opener instanceof HTMLElement && opener.isConnected) opener.focus();
+    else document.querySelector<HTMLElement>("h1")?.focus();
   };
   return (
     <div className="bt-picker-backdrop">
@@ -440,28 +451,25 @@ function Editor({ initial, catalog, storage }: { initial: MechRecord; catalog: C
   const [status, setStatus] = useState("");
   const [problem, setProblem] = useState("");
   const [selected, setSelected] = useState<LocationCode>();
-  /** The field whose edits are being typed in a row; they make one history step. */
-  const lastField = useRef<string | undefined>(undefined);
   /** Changing the key starts the slots panel afresh, which ends move mode and closes whatever is open. */
   const [panelKey, setPanelKey] = useState(0);
   const refocus = useRef<string | undefined>(undefined);
   const [pictureFailed, setPictureFailed] = useState(false);
+  const [weightOpen, setWeightOpen] = useState(false);
   const record = history.present;
   const dirty = !sameRecord(record, savedRecord);
 
   const edit: OnEdit = (change, field) => {
-    const joins = field !== undefined && lastField.current === field;
-    lastField.current = field;
     setJustSaved(false);
     setStatus("");
     setHistory((h) => {
       const next = editRecord(h.present, change);
-      if (sameRecord(next, h.present)) return h;
-      return { past: joins ? h.past : [...h.past, h.present].slice(-HISTORY_LIMIT), present: next, future: [] };
+      if (sameRecord(next, h.present)) return h; // nothing changed: no step, and no run of edits begins
+      const joins = field !== undefined && h.group === field;
+      return { past: joins ? h.past : [...h.past, h.present].slice(-HISTORY_LIMIT), present: next, future: [], group: field };
     });
   };
   const undo = () => {
-    lastField.current = undefined;
     setJustSaved(false);
     setPanelKey((k) => k + 1);
     setHistory((h) => {
@@ -470,7 +478,6 @@ function Editor({ initial, catalog, storage }: { initial: MechRecord; catalog: C
     });
   };
   const redo = () => {
-    lastField.current = undefined;
     setJustSaved(false);
     setPanelKey((k) => k + 1);
     setHistory((h) => {
@@ -540,7 +547,7 @@ function Editor({ initial, catalog, storage }: { initial: MechRecord; catalog: C
   const mark = (path: string) => changed.has(path);
   const notes = importNotes(useLocation().state);
   const notesId = useId();
-  const showPicture = !pictureFailed && record.imageUrl !== undefined && record.imageUrl.startsWith("https://");
+  const showPicture = !pictureFailed && mordelPicture(record.imageUrl);
   const chassisGroups = CHASSIS_FIELDS.reduce<ChassisField[][]>((groups, field) => {
     if (field.kind === "number") groups[groups.length - 1]?.push(field);
     else groups.push([field]);
@@ -551,70 +558,87 @@ function Editor({ initial, catalog, storage }: { initial: MechRecord; catalog: C
     <div
       className="sr-page bt-editor"
       onBlur={() => {
-        lastField.current = undefined;
+        // Leaving a field ends the run of edits that make one Undo step.
+        setHistory((h) => (h.group === undefined ? h : { ...h, group: undefined }));
       }}
     >
-      <div className="bt-editor__record">
-        <header className="bt-editor__header">
-          <div className="bt-editor__title">
-            <h1>{title || "Unnamed 'Mech"}</h1>
-            {source && <p className="bt-credit">Designed by {source.designer || "an unnamed designer"} on mordel.net</p>}
-          </div>
-          <div className="bt-actions">
-            <button type="button" className="bt-button" disabled={!dirty} onClick={() => void save()}>
-              Save
-            </button>
-            <button type="button" className="bt-button bt-button--secondary" disabled={history.past.length === 0} onClick={undo}>
-              Undo
-            </button>
-            <button type="button" className="bt-button bt-button--secondary" disabled={history.future.length === 0} onClick={redo}>
-              Redo
-            </button>
-            <button
-              type="button"
-              className="bt-button bt-button--secondary"
-              onClick={() => {
-                downloadMech(record);
-                setStatus("Export started.");
-              }}
-            >
-              Export
-            </button>
-            <details className="bt-weight">
-              <summary>{weightSummary(weights, record.tons)}</summary>
-              <ul>
-                {weights.lines.map((line, index) => (
-                  <li key={index}>{`${line.label}: ${line.tons === null ? "unknown" : `${line.tons} tons`}`}</li>
-                ))}
-              </ul>
-            </details>
-          </div>
-          <div role="status">{justSaved && !dirty ? "Saved." : status}</div>
-          <div role="alert" className="bt-problem">
-            {problem}
-          </div>
-        </header>
-
-        <div className="bt-editor__info">
-          {figures.length > 0 && <p className="bt-hint bt-figures">{`Mordel's figures: ${figures.join(", ")}`}</p>}
-          {changed.has("source.unreadable") && (
-            <p className="bt-hint">The original from mordel.net could not be read, so changes since import are not marked.</p>
-          )}
-          {dirty && <p className="bt-hint">You have changes that are not saved.</p>}
-          {notes.length > 0 && (
-            <details className="bt-notes" aria-labelledby={notesId}>
-              <summary id={notesId}>Import notes</summary>
-              <ul>
-                {notes.map((note, index) => (
-                  <li key={index}>{note}</li>
-                ))}
-              </ul>
-            </details>
-          )}
+      <header className="bt-editor__header">
+        <div className="bt-editor__title">
+          <h1 tabIndex={-1}>{title || "Unnamed 'Mech"}</h1>
         </div>
+        <div className="bt-actions">
+          <button type="button" className="bt-button" disabled={!dirty} onClick={() => void save()}>
+            Save
+          </button>
+          <button type="button" className="bt-button bt-button--secondary" disabled={history.past.length === 0} onClick={undo}>
+            Undo
+          </button>
+          <button type="button" className="bt-button bt-button--secondary" disabled={history.future.length === 0} onClick={redo}>
+            Redo
+          </button>
+          <button
+            type="button"
+            className="bt-button bt-button--secondary"
+            onClick={() => {
+              downloadMech(record);
+              setStatus("Export started.");
+            }}
+          >
+            Export
+          </button>
+          <button
+            type="button"
+            className="bt-weight__toggle"
+            aria-expanded={weightOpen}
+            aria-controls="bt-weight-lines"
+            onClick={() => {
+              setWeightOpen(!weightOpen);
+            }}
+          >
+            {weightSummary(weights, record.tons)}
+          </button>
+        </div>
+      </header>
 
-        <div className="bt-editor__body">
-          <div className="bt-editor__fields" data-picture={showPicture}>
+      <div className="bt-editor__status">
+        <div role="status">{justSaved && !dirty ? "Saved." : status}</div>
+        <div role="alert" className="bt-problem">
+          {problem}
+        </div>
+      </div>
+
+      <div className="bt-editor__info">
+        {source && <p className="bt-credit">Designed by {source.designer || "an unnamed designer"} on mordel.net</p>}
+        {weightOpen && (
+          <ul id="bt-weight-lines" className="bt-weight">
+            {weights.lines.map((line, index) => (
+              <li key={index}>{`${line.label}: ${line.tons === null ? "unknown" : `${line.tons} tons`}`}</li>
+            ))}
+          </ul>
+        )}
+        {figures.length > 0 && <p className="bt-hint bt-figures">{`Mordel's figures: ${figures.join(", ")}`}</p>}
+        {changed.has("source.unreadable") && (
+          <p className="bt-hint">The original from mordel.net could not be read, so changes since import are not marked.</p>
+        )}
+        {dirty && <p className="bt-hint">You have changes that are not saved.</p>}
+        {notes.length > 0 && (
+          <details className="bt-notes" aria-labelledby={notesId}>
+            <summary id={notesId}>Import notes</summary>
+            <ul>
+              {notes.map((note, index) => (
+                <li key={index}>{note}</li>
+              ))}
+            </ul>
+          </details>
+        )}
+      </div>
+
+      <div className="bt-editor__side">
+        <FindingsPanel findings={findings} targetOf={targetOf} onChoose={focusTarget} />
+      </div>
+
+      <div className="bt-editor__body">
+        <div className="bt-editor__fields" data-picture={showPicture}>
           {record.imageUrl && showPicture && (
             <Picture
               key={record.imageUrl}
@@ -681,25 +705,20 @@ function Editor({ initial, catalog, storage }: { initial: MechRecord; catalog: C
               ))}
             </div>
           </section>
-          </div>
-
-          <ArmorPanel
-            record={record}
-            layout={layout}
-            armorTons={weights.lines.find((l) => l.label === "Armor")?.tons ?? null}
-            changed={changed}
-            selected={selected}
-            onSelect={setSelected}
-            onEdit={edit}
-          />
-
-          <SlotsPanel key={panelKey} record={record} layout={layout} catalog={catalog} changed={changed} selected={selected} onSelect={setSelected} onEdit={edit} />
         </div>
-      </div>
 
-      <aside className="bt-editor__side" tabIndex={0} aria-label="Rules check">
-        <FindingsPanel findings={findings} targetOf={targetOf} onChoose={focusTarget} />
-      </aside>
+        <ArmorPanel
+          record={record}
+          layout={layout}
+          armorTons={weights.lines.find((l) => l.label === "Armor")?.tons ?? null}
+          changed={changed}
+          selected={selected}
+          onSelect={setSelected}
+          onEdit={edit}
+        />
+
+        <SlotsPanel key={panelKey} record={record} layout={layout} catalog={catalog} changed={changed} selected={selected} onSelect={setSelected} onEdit={edit} />
+      </div>
 
       {blocker.state === "blocked" && <LeaveConfirm proceed={blocker.proceed} reset={blocker.reset} />}
     </div>

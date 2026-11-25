@@ -133,105 +133,136 @@ a.bt-button {
 // The editor
 // ---------------------------------------------------------------------------------------------------------------
 
-// Narrow: one column in the order header, picture and notes, rules check, then the record. The record's wrapper
-// dissolves so its parts can be ordered among the grid's.
+// The document order is the page's order: header, status, notes, rules check, then the record. Narrow, they stack. From
+// 900 px the rules check floats to the right and sticks while the record scrolls beside it (a float rather than a grid
+// column, so that the sticky header and the sticky rules check both have the whole page to stick within).
 .bt-editor {
-  // The editor wants the width: a sheet of five slot columns beside the rules check.
+  // Most of the screen a sticky header may take; every focusable thing in the record scrolls clear of it.
+  --bt-header-h: 11rem;
+  --bt-side: 24%;
   max-width: 96rem;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: var(--sr-space-3);
-
-  &__record {
-    display: contents;
-  }
-
-  &__header {
-    order: 0;
-  }
-
-  &__info {
-    order: 1;
-  }
-
-  &__side {
-    order: 2;
-  }
-
-  &__body {
-    order: 3;
-  }
+  display: flow-root;
 
   &__header,
+  &__status,
   &__info,
-  &__body,
-  &__side {
+  &__body {
     min-width: 0;
   }
 
-  &__title h1 {
-    margin: 0;
-    font-size: 1.5rem;
-  }
-
   &__header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--sr-space-1) var(--sr-space-3);
+    margin-bottom: var(--sr-space-2);
     padding: var(--sr-space-2) var(--sr-space-3);
     background: var(--sr-surface);
     border: var(--sr-border) solid var(--sr-line);
     border-radius: var(--sr-radius);
   }
 
-  @media (min-width: 900px) {
-    grid-template-columns: minmax(0, 3fr) minmax(0, 1fr);
-    align-items: start;
+  // A long name is cut with an ellipsis on one line; the heading's text is still all of it.
+  &__title {
+    flex: 1 1 14rem;
+    min-width: 0;
 
-    &__record {
-      display: block;
-      min-width: 0;
+    h1 {
+      margin: 0;
+      font-size: 1.5rem;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
     }
 
-    // Name, actions and weight stay in view while the record scrolls.
+    .bt-credit {
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+  }
+
+  &__info {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0 var(--sr-space-3);
+    margin-bottom: var(--sr-space-2);
+
+    p {
+      margin: 0 0 var(--sr-space-1);
+    }
+  }
+
+  &__status {
+    margin: 0;
+
+    > div:empty {
+      display: none;
+    }
+  }
+
+  &__side {
+    margin-bottom: var(--sr-space-3);
+  }
+
+  @media (min-width: 900px) {
     &__header {
       position: sticky;
       top: 0;
       z-index: 10;
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      justify-content: space-between;
-      gap: var(--sr-space-1) var(--sr-space-3);
-      margin-bottom: var(--sr-space-3);
+    }
+
+    &__header,
+    &__status,
+    &__info {
+      margin-right: calc(var(--bt-side) + var(--sr-space-3));
     }
 
     &__side {
+      float: right;
+      width: var(--bt-side);
+      margin: 0 0 var(--sr-space-3) var(--sr-space-3);
       position: sticky;
       top: var(--sr-space-3);
+    }
+
+    // The record sits beside the floated rules check, whatever its length.
+    &__body {
+      display: flow-root;
+
+      :is(input, select, button, summary, a, [tabindex]) {
+        scroll-margin-top: calc(var(--bt-header-h) + var(--sr-space-2));
+      }
+    }
+
+    .bt-findings {
       max-height: calc(100vh - 2 * var(--sr-space-3));
       overflow-y: auto;
+      margin-bottom: 0;
     }
   }
 }
 
-.bt-editor__info {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0 var(--sr-space-3);
-  margin-bottom: var(--sr-space-2);
-
-  p {
-    margin: 0 0 var(--sr-space-1);
-  }
-}
-
-// Mordel's picture sits beside identity and chassis when there is room, above them when there is not.
+// Mordel's picture sits beside identity and chassis when there is room, above them when there is not. Until it has loaded
+// completely it takes no room and shows nothing, so a slow load never shows as a tall box with a sliver of picture.
 .bt-picture {
   display: block;
+  width: 160px;
   max-width: 100%;
   height: auto;
   margin: 0 0 var(--sr-space-2);
   border: var(--sr-border) solid var(--sr-line);
   border-radius: var(--sr-radius);
+  align-self: start;
+
+  &[data-loaded="false"] {
+    height: 0;
+    margin: 0;
+    border: 0;
+    opacity: 0;
+  }
 }
 
 .bt-actions {
@@ -248,7 +279,7 @@ a.bt-button {
 }
 
 .bt-panel {
-  margin: 0 0 var(--sr-space-3);
+  margin: 0 0 var(--sr-space-2);
   padding: var(--sr-space-3);
   background: var(--sr-surface);
   border: var(--sr-border) solid var(--sr-line);
@@ -275,27 +306,26 @@ a.bt-button {
   }
 }
 
+// The weight summary is a button in the header; its lines open in normal flow beneath the header.
+.bt-weight__toggle {
+  min-height: 44px;
+  padding: 0 var(--sr-space-1);
+  background: none;
+  border: 0;
+  color: var(--sr-accent);
+  font: inherit;
+  text-decoration: underline;
+  text-align: left;
+  cursor: pointer;
+}
+
 .bt-weight {
-  position: relative;
-
-  summary {
-    min-height: 44px;
-    display: flex;
-    align-items: center;
-    cursor: pointer;
-  }
-
-  ul {
-    position: absolute;
-    right: 0;
-    z-index: 20;
-    min-width: 14rem;
-    margin: 0;
-    padding: var(--sr-space-2) var(--sr-space-3) var(--sr-space-2) var(--sr-space-4);
-    background: var(--sr-surface-alt);
-    border: var(--sr-border) solid var(--sr-line-strong);
-    border-radius: var(--sr-radius);
-  }
+  flex: 1 1 100%;
+  margin: 0 0 var(--sr-space-2);
+  padding: var(--sr-space-2) var(--sr-space-3) var(--sr-space-2) var(--sr-space-4);
+  background: var(--sr-surface-alt);
+  border: var(--sr-border) solid var(--sr-line-strong);
+  border-radius: var(--sr-radius);
 }
 
 .bt-changed {
@@ -345,18 +375,23 @@ a.bt-button {
   container-type: inline-size;
 }
 
-// Fields in a grid by the width of their panel: three across when it is wide, two when it is middling, one below.
+// Fields in a grid: one below 560 px; two from 560 px, in a panel wide enough for two; three from 900 px, in a panel wide
+// enough for three (the width of the panel, not only the screen, decides, since panels sit side by side).
 .bt-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: var(--sr-space-1) var(--sr-space-3);
 
-  @container (min-width: 14rem) {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  @media (min-width: 560px) {
+    @container (min-width: 14rem) {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
   }
 
-  @container (min-width: 26rem) {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+  @media (min-width: 900px) {
+    @container (min-width: 36rem) {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
   }
 
   .bt-field {
@@ -369,11 +404,17 @@ a.bt-button {
   }
 }
 
-// Engine type and rating, or heat sink type and count, share one cell.
+// Engine type and rating, or heat sink type and count, share a row of the grid: they span two of its columns.
 .bt-pair {
   display: grid;
   grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
   gap: var(--sr-space-2);
+
+  @media (min-width: 560px) {
+    @container (min-width: 14rem) {
+      grid-column: span 2;
+    }
+  }
 }
 
 .bt-field input[aria-invalid="true"] {
@@ -391,8 +432,9 @@ a.bt-button {
 .bt-picker input:focus-visible,
 .bt-picker select:focus-visible,
 .bt-picker__result:focus-visible,
-.bt-editor__side:focus-visible,
-.bt-weight summary:focus-visible,
+.bt-findings:focus-visible,
+.bt-weight__toggle:focus-visible,
+.bt-editor h1:focus-visible,
 .bt-notes summary:focus-visible,
 #bt-move-status:focus-visible {
   outline: 3px solid var(--sr-focus);
