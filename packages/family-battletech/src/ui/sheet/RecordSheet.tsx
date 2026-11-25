@@ -28,6 +28,9 @@ const RECTS = {
   critical: { x: 30, y: 1150, w: 1060, h: 995 },
 };
 
+const TRADEMARK_LINE =
+  "BattleTech, 'Mech, BattleMech, and MechWarrior are registered trademarks and/or trademarks of The Topps Company, Inc. Unofficial, non-commercial fan project, not affiliated with or endorsed by Topps or Catalyst Game Labs.";
+
 export default function RecordSheet({ record, catalog }: { record: MechRecord; catalog: Catalog }) {
   const facts = sheetFacts(record, catalog);
   const name = facts.title;
@@ -65,8 +68,8 @@ export default function RecordSheet({ record, catalog }: { record: MechRecord; c
         <text x={SHEET_WIDTH / 2} y={2171} fontSize={20} textAnchor="middle" fill={INK} {...squeeze(`Not an official record sheet. Made with Salvage Rights, an unofficial fan project.${credit}`, 20, 1640)}>
           {`Not an official record sheet. Made with Salvage Rights, an unofficial fan project.${credit}`}
         </text>
-        <text x={SHEET_WIDTH / 2} y={2194} fontSize={20} textAnchor="middle" fill={INK} {...squeeze("BattleTech, BattleMech and 'Mech are registered trademarks of The Topps Company, Inc. All rights reserved.", 20, 1640)}>
-          BattleTech, BattleMech and 'Mech are registered trademarks of The Topps Company, Inc. All rights reserved.
+        <text x={SHEET_WIDTH / 2} y={2194} fontSize={20} textAnchor="middle" fill={INK} {...squeeze(TRADEMARK_LINE, 20, 1640)}>
+          {TRADEMARK_LINE}
         </text>
       </svg>
       <SheetText facts={facts} record={record} />

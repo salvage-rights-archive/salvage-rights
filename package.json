@@ -14,7 +14,7 @@
     "build:tkf": "vite build packages/host --mode ten-thousand-fleets && node scripts/check-edition.mjs ten-thousand-fleets --require-dist",
     "build:dev": "vite build packages/host --mode dev",
     "test:e2e": "npm run build:dev && npm run build:free && playwright test -c packages/host/playwright.config.ts --project=chromium",
-    "test:e2e:all": "npm run build:dev && npm run build:free && playwright test -c packages/host/playwright.config.ts",
+    "test:e2e:all": "npm run build:dev && npm run build:free && playwright test -c packages/host/playwright.config.ts --project=chromium && playwright test -c packages/host/playwright.config.ts --project=firefox && playwright test -c packages/host/playwright.config.ts --project=webkit",
     "typecheck": "node node_modules/typescript-7/bin/tsc -b",
     "lint": "eslint .",
     "test": "node scripts/vitest.mjs run",

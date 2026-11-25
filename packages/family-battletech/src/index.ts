@@ -52,12 +52,13 @@ const manifest: FamilyManifest = {
   routes: [],
   credits: {
     owner:
-      "BattleTech, BattleMech, 'Mech, MechWarrior and AeroTech are registered trademarks of The Topps Company, Inc. " +
-      "BattleTech game material is copyright The Topps Company, Inc. All rights reserved. " +
+      // The non-affiliation notice fan projects for this game commonly carry, word for word, then two lines of our own.
+      "BattleTech, 'Mech, BattleMech, and MechWarrior are registered trademarks and/or trademarks of The Topps Company, Inc. " +
+      "in the United States and/or other countries. " +
       "Catalyst Game Labs and the Catalyst Game Labs logo are trademarks of InMediaRes Productions, LLC. " +
-      "The BattleTech name for electronic games is a trademark of Microsoft Corporation. " +
-      "Salvage Rights is an unofficial, fan-made project. It is not affiliated with, endorsed by or licensed by " +
-      "The Topps Company, Catalyst Game Labs or Microsoft.",
+      "This is an unofficial, non-commercial fan project and is not affiliated with or endorsed by Topps or Catalyst Game Labs. " +
+      "The BattleTech name for electronic games is a trademark of Microsoft Corporation, which has not endorsed this project either. " +
+      "BattleTech game material is copyright The Topps Company, Inc. All rights reserved.",
     license: "GPL-3.0-or-later",
     notes: [
       "The import from mordel.net uses the API built by MordelBlacknight.",
