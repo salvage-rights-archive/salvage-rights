@@ -14,6 +14,7 @@ import { editRecord, layout as buildLayout, weights as buildWeights } from "../r
 import type { Layout, LocationCode, MechRecord } from "../rules/mech";
 import ArmorPanel from "./editor/ArmorPanel";
 import FindingsPanel from "./editor/FindingsPanel";
+import SlotsPanel from "./editor/SlotsPanel";
 import { STORAGE_READ_FAILED, STORAGE_WRITE_FAILED, downloadMech, openFamilyStorage } from "./storage";
 import type { FamilyStorage } from "./storage";
 import "./classic.scss";
@@ -550,6 +551,8 @@ function Editor({ initial, catalog, storage }: { initial: MechRecord; catalog: C
           onSelect={setSelected}
           onEdit={edit}
         />
+
+        <SlotsPanel record={record} layout={layout} catalog={catalog} changed={changed} selected={selected} onSelect={setSelected} onEdit={edit} />
       </div>
     </div>
   );

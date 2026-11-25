@@ -105,6 +105,64 @@ describe("The 'Mech editor", () => {
   });
 });
 
+const slotList = (location: string) => screen.getByRole("list", { name: `${location} slots` });
+const moveButton = (location: string) => within(slotList(location)).getByRole<HTMLButtonElement>("button", { name: "Move Medium Laser" });
+
+describe("The critical slots", () => {
+  it("labels fixed cells without controls and gives each mount Move and Remove", async () => {
+    await saved(mordelBiped());
+    await open("imported-1");
+    await screen.findByRole("heading", { name: "Critical slots" });
+    const arm = within(slotList("Left Arm"));
+    const shoulder = arm.getByText("Shoulder").closest("li");
+    expect(shoulder && within(shoulder).queryAllByRole("button")).toHaveLength(0);
+    const laser = arm.getByText("Medium Laser").closest("li");
+    expect(laser && within(laser).getAllByRole("button").map((b) => b.textContent)).toEqual(["Move", "Remove"]);
+    expect(arm.getAllByText("Empty").length).toBeGreaterThan(0);
+  });
+
+  it("moves a mount by keyboard to a free slot in another location, and Escape leaves it where it was", async () => {
+    await saved(mordelBiped());
+    const user = userEvent.setup();
+    await open("imported-1");
+    await screen.findByRole("heading", { name: "Critical slots" });
+    moveButton("Left Arm").focus();
+    await user.keyboard("{Enter}");
+    expect(screen.getByText("Choose a slot for Medium Laser. Press Escape to cancel.")).toBeTruthy();
+    await user.keyboard("{Escape}");
+    expect(document.activeElement).toBe(moveButton("Left Arm"));
+    await user.keyboard("{Enter}");
+    await user.click(screen.getByRole("button", { name: "Place Medium Laser in Left Torso slot 5" }));
+    expect(within(slotList("Left Arm")).queryByText("Medium Laser")).toBeNull();
+    expect(document.activeElement).toBe(moveButton("Left Torso"));
+    expect(within(slotList("Left Torso")).getByText("Medium Laser").closest("li")?.textContent).toMatch(/^5/);
+  });
+
+  it("allows a move onto an occupied slot and reports the clash naming both items", async () => {
+    await saved(mordelBiped());
+    const user = userEvent.setup();
+    await open("imported-1");
+    await user.click(await within(await screen.findByRole("list", { name: "Left Arm slots" })).findByRole("button", { name: "Move Medium Laser" }));
+    await user.click(screen.getByRole("button", { name: "Place Medium Laser in Right Torso slot 1" }));
+    const clash = within(rules()).getAllByText(/shares slot 1 of the Right Torso with/);
+    expect(clash.map((c) => c.textContent).join(" ")).toMatch(/AC\/10.*Medium Laser/);
+    expect(screen.getByRole("heading", { name: "Sharing a slot, or taking none" })).toBeTruthy();
+  });
+
+  it("keeps an unplaced mount in the tray and places it from there", async () => {
+    await saved(mordelBiped());
+    const user = userEvent.setup();
+    await open("imported-1");
+    await user.click(await within(await screen.findByRole("list", { name: "Left Arm slots" })).findByRole("button", { name: "Move Medium Laser" }));
+    await user.click(screen.getByRole("button", { name: "Leave unplaced" }));
+    const tray = screen.getByRole("heading", { name: "Unplaced" }).parentElement as HTMLElement;
+    await user.click(within(tray).getByRole("button", { name: "Place Medium Laser" }));
+    await user.click(screen.getByRole("button", { name: "Place Medium Laser in Left Arm slot 7" }));
+    expect(within(slotList("Left Arm")).getByText("Medium Laser").closest("li")?.textContent).toMatch(/^7/);
+    expect(within(tray).queryByText("Medium Laser")).toBeNull();
+  });
+});
+
 describe("The armor panel", () => {
   it("accepts armor above the maximum, shows the maximum beside the field and reports it", async () => {
     await saved(mordelBiped());
@@ -123,6 +181,7 @@ describe("The armor panel", () => {
     await open("imported-1");
     await user.click(await screen.findByRole("button", { name: "Left Arm, 8 armor" }));
     expect(document.activeElement).toBe(screen.getByLabelText("Left Arm armor"));
+    expect(screen.getByRole("button", { name: "Left Arm", pressed: true })).toBeTruthy();
   });
 
   it("shows the armor fields of a quad and says no doll is drawn for it", async () => {
