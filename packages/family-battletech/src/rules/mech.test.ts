@@ -222,7 +222,7 @@ describe("structure points, armor limits and speed", () => {
 
   it("starts a new design bare: engine sized for the walk, ten heat sinks, zero armor in each location of its configuration", () => {
     const options = { chassis: "Digger", model: "", tons: 55, walk: 5, techBase: "clan", year: null } as const;
-    const biped = newRecord({ ...options, configuration: "biped" }, "core-2026", "new-1");
+    const biped = newRecord({ ...options, configuration: "biped" }, "total-warfare", "new-1");
     expect(biped.chassis.engine).toEqual({ type: "standard", rating: 275 });
     expect(walkMP(biped)).toBe(5);
     expect(biped.chassis.heatSinks).toEqual({ type: "single", count: 10 });
@@ -230,19 +230,19 @@ describe("structure points, armor limits and speed", () => {
       HD: { front: 0 }, CT: { front: 0, rear: 0 }, LT: { front: 0, rear: 0 }, RT: { front: 0, rear: 0 },
       LA: { front: 0 }, RA: { front: 0 }, LL: { front: 0 }, RL: { front: 0 },
     });
-    expect([biped.source, biped.techBase, biped.editionId]).toEqual([undefined, "clan", "core-2026"]);
+    expect([biped.source, biped.techBase, biped.editionId]).toEqual([undefined, "clan", "total-warfare"]);
     // A 275 engine holds eleven sinks, so none wait; a 200 holds eight, so two wait unplaced.
     expect(biped.mounts).toEqual([]);
-    const slow = newRecord({ ...options, tons: 50, walk: 4, techBase: "inner-sphere", configuration: "biped" }, "core-2026", "new-3");
+    const slow = newRecord({ ...options, tons: 50, walk: 4, techBase: "inner-sphere", configuration: "biped" }, "total-warfare", "new-3");
     expect(slow.mounts.map((m) => [m.equipmentId, m.location, m.slot])).toEqual([
       ["heat-sink-is", null, null],
       ["heat-sink-is", null, null],
     ]);
-    expect(Object.keys(newRecord({ ...options, configuration: "quad" }, "core-2026", "new-2").armor)).toEqual(
+    expect(Object.keys(newRecord({ ...options, configuration: "quad" }, "total-warfare", "new-2").armor)).toEqual(
       ["HD", "CT", "LT", "RT", "FLL", "FRL", "RLL", "RRL"],
     );
     // A tripod starts with its own cockpit and a center leg.
-    const tripod = newRecord({ ...options, configuration: "tripod" }, "core-2026", "new-4");
+    const tripod = newRecord({ ...options, configuration: "tripod" }, "total-warfare", "new-4");
     expect(Object.keys(tripod.armor)).toEqual(["HD", "CT", "LT", "RT", "LA", "RA", "LL", "RL", "CL"]);
     expect(tripod.chassis.cockpit).toBe("tripod");
   });

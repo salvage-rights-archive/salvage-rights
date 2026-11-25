@@ -77,7 +77,7 @@ describe("expand", () => {
     expect(rows[0]).toMatchObject({ perMech: 6, yearsInferred: true, directFire: true, locations: ["LA"], locationsQuad: ["LT"] });
     const seen = createCatalog(rows);
     expect(seen.offered("other", { techBase: "clan", year: null })[0]?.locationsQuad).toEqual([]);
-    expect(seen.offered("core-2026", { techBase: "clan", year: null })[0]?.locationsQuad).toEqual(["LT"]);
+    expect(seen.offered("total-warfare", { techBase: "clan", year: null })[0]?.locationsQuad).toEqual(["LT"]);
   });
 });
 
@@ -97,18 +97,18 @@ describe("offered and available", () => {
   const ids = (list: { id: string }[]) => list.map((r) => r.id).sort();
 
   it("keeps rows of the wanted tech base whose spans contain the year; mixed keeps both; a null year keeps every row", () => {
-    expect(ids(catalog.offered("core-2026", { techBase: "inner-sphere", year: 3025 }))).toEqual(["ac-2-is", "jump-jet-is", "ppc-is"]); // the Gauss rifle is in its gap
-    expect(ids(catalog.offered("core-2026", { techBase: "clan", year: 3025 }))).toEqual(["er-medium-laser-clan"]);
-    expect(ids(catalog.offered("core-2026", { techBase: "mixed", year: 3060 }))).toEqual(
+    expect(ids(catalog.offered("total-warfare", { techBase: "inner-sphere", year: 3025 }))).toEqual(["ac-2-is", "jump-jet-is", "ppc-is"]); // the Gauss rifle is in its gap
+    expect(ids(catalog.offered("total-warfare", { techBase: "clan", year: 3025 }))).toEqual(["er-medium-laser-clan"]);
+    expect(ids(catalog.offered("total-warfare", { techBase: "mixed", year: 3060 }))).toEqual(
       ["ac-2-is", "er-medium-laser-clan", "er-medium-laser-is", "gauss-rifle-is", "jump-jet-is", "ppc-is"],
     );
-    expect(catalog.offered("core-2026", { techBase: "inner-sphere", year: null })).toHaveLength(5);
-    expect(catalog.available(row("ac-2-is"), "core-2026", null)).toBe(true);
+    expect(catalog.offered("total-warfare", { techBase: "inner-sphere", year: null })).toHaveLength(5);
+    expect(catalog.available(row("ac-2-is"), "total-warfare", null)).toBe(true);
   });
 
   it("offers a row that went extinct and was reintroduced before, not during, and after the gap", () => {
     const gauss = row("gauss-rifle-is");
-    const answers = [2589, 2590, 2865, 2866, 3039, 3040, 3100].map((year) => catalog.available(gauss, "core-2026", year));
+    const answers = [2589, 2590, 2865, 2866, 3039, 3040, 3100].map((year) => catalog.available(gauss, "total-warfare", year));
     expect(answers).toEqual([false, true, true, false, false, true, true]);
   });
 
@@ -116,16 +116,16 @@ describe("offered and available", () => {
     const ppc = row("ppc-is");
     expect(catalog.available(ppc, "test-ed", 2470)).toBe(false);
     expect(catalog.available(ppc, "test-ed", 2500)).toBe(true);
-    expect(catalog.available(ppc, "core-2026", 2470)).toBe(true);
+    expect(catalog.available(ppc, "total-warfare", 2470)).toBe(true);
     const ppcMount = mount("p", "ppc-is", "RA", 0);
     expect(catalog.factsOf(ppcMount, bipedRecord({ editionId: "test-ed" }))).toEqual({ tons: 8, slots: 3 });
-    expect(catalog.factsOf(ppcMount, bipedRecord({ editionId: "core-2026" }))).toEqual({ tons: 7, slots: 3 });
+    expect(catalog.factsOf(ppcMount, bipedRecord({ editionId: "total-warfare" }))).toEqual({ tons: 7, slots: 3 });
   });
 
   it("gives a row as an edition sees it, and nothing for an unknown id", () => {
     expect(catalog.rowFor("ppc-is", "test-ed")).toMatchObject({ tons: 8, availability: [{ from: 2500 }] });
-    expect(catalog.rowFor("ppc-is", "core-2026")).toMatchObject({ tons: 7, availability: [{ from: 2460 }] });
-    expect(catalog.rowFor("nope", "core-2026")).toBeUndefined();
+    expect(catalog.rowFor("ppc-is", "total-warfare")).toMatchObject({ tons: 7, availability: [{ from: 2460 }] });
+    expect(catalog.rowFor("nope", "total-warfare")).toBeUndefined();
   });
 });
 
@@ -263,9 +263,9 @@ describe("play statistics", () => {
 });
 
 describe("EDITIONS", () => {
-  it("starts with core-2026, a play book and a construction book", () => {
-    expect(EDITIONS[0]?.id).toBe("core-2026");
-    expect(DEFAULT_EDITION).toBe("core-2026");
+  it("starts with total-warfare, a play book and a construction book", () => {
+    expect(EDITIONS[0]?.id).toBe("total-warfare");
+    expect(DEFAULT_EDITION).toBe("total-warfare");
     expect(EDITIONS[0]?.books.map((b) => b.role).sort()).toEqual(["construction", "play"]);
     expect(EDITIONS[0]?.unitTypes.find((u) => u.id === "mech")?.ready).toBe(true);
   });

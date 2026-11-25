@@ -1,6 +1,6 @@
 // The words and figures the record sheet prints for a 'Mech, worked out once so the drawing and the screen reader's copy
 // of the sheet say the same thing.
-import { EDITIONS } from "../../data/editions";
+import { editionLine } from "../../data/editions";
 import { SHEET_HEAT_SINKS, TECH_BASE_NAMES } from "../../data/sheet";
 import { inventoryLines, ammoLines } from "../../rules/catalog";
 import type { Catalog, InventoryLine } from "../../rules/catalog";
@@ -79,7 +79,7 @@ export function sheetFacts(record: MechRecord, catalog: Catalog): SheetFacts {
     jump: String(jumpJets),
     tons: String(record.tons),
     techBase: Object.hasOwn(TECH_BASE_NAMES, record.techBase) ? (TECH_BASE_NAMES[record.techBase] ?? record.techBase) : record.techBase,
-    edition: EDITIONS.find((e) => e.id === record.editionId)?.name ?? record.editionId,
+    edition: editionLine(record.editionId),
     year: record.year === null ? undefined : String(record.year),
     inventory: inventoryLines(record, catalog),
     ammo,

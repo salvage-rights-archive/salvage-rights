@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import { Link, useNavigate } from "react-router";
+import { EDITIONS } from "../data/editions";
 import { loadCatalog } from "../rules/catalog";
 import { fromMordel, parseMordelRef } from "../rules/mordel";
 import { createMordelClient } from "./mordel-client";
@@ -20,6 +21,7 @@ export default function ImportPage({ makeClient = defaultMakeClient }: ImportPag
   const navigate = useNavigate();
   const [storage, setStorage] = useState<FamilyStorage>();
   const [storedKey, setStoredKey] = useState<string>();
+  const [builtUnder, setBuiltUnder] = useState<string>();
   const [typedKey, setTypedKey] = useState("");
   const [showKey, setShowKey] = useState(false);
   const [reference, setReference] = useState("");
@@ -50,6 +52,8 @@ export default function ImportPage({ makeClient = defaultMakeClient }: ImportPag
         const s = await openFamilyStorage();
         setStorage(s);
         setStoredKey(await s.getKey());
+        const edition = await s.getEdition();
+        setBuiltUnder(EDITIONS.find((e) => e.id === edition)?.name ?? edition);
       } catch {
         setProblem(STORAGE_READ_FAILED);
       }
@@ -174,6 +178,7 @@ export default function ImportPage({ makeClient = defaultMakeClient }: ImportPag
           mordel.net
         </a>
       </p>
+      {builtUnder && <p>Built under: {builtUnder}</p>}
 
       <section className="bt-section" aria-labelledby="bt-key">
         <h2 id="bt-key">Your key</h2>

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { ChangeEvent } from "react";
 import { Link, useNavigate } from "react-router";
 import { ENGINE_WEIGHTS, INTERNAL_STRUCTURE, SHEET } from "../data/chassis";
-import { DEFAULT_EDITION, EDITIONS, bookName } from "../data/editions";
+import { DEFAULT_EDITION, EDITIONS, PLAY_ONLY_BOOK, bookName } from "../data/editions";
 import { configurationLabel, newRecord } from "../rules/mech";
 import type { MechRecord, NewMechOptions, TechBase } from "../rules/mech";
 import { STORAGE_READ_FAILED, STORAGE_WRITE_FAILED, downloadMech, fromMechFile, openFamilyStorage } from "./storage";
@@ -85,7 +85,7 @@ export default function HomePage() {
   const bookLine = (["play", "construction"] as const)
     .flatMap((role) => {
       const book = current?.books.find((b) => b.role === role);
-      return book ? [`${role === "play" ? "Play" : "Construction"}: ${bookName(book.title)}, ${book.printing}.`] : [];
+      return book ? [`${role === "play" ? "Play" : "Construction"}: ${bookName(book.title)}, ${book.printing}${book.errata ? `, errata ${book.errata}` : ""}.`] : [];
     })
     .join(" ");
 
@@ -182,7 +182,7 @@ export default function HomePage() {
       </div>
 
       <section className="bt-section" aria-labelledby="bt-edition">
-        <h2 id="bt-edition">Rules edition</h2>
+        <h2 id="bt-edition">Built under</h2>
         <div className="bt-field">
           <label htmlFor="bt-edition-select">Edition</label>
           <select
@@ -200,6 +200,10 @@ export default function HomePage() {
           </select>
         </div>
         {bookLine && <p className="bt-hint">{bookLine}</p>}
+        <p className="bt-hint">
+          The {PLAY_ONLY_BOOK.title} ({PLAY_ONLY_BOOK.printing}) is a play book only. Its construction rules are not
+          published yet, so 'Mechs are built under the books above.
+        </p>
       </section>
 
       <section className="bt-section" aria-labelledby="bt-saved">
@@ -242,6 +246,9 @@ export default function HomePage() {
                 <li key={entry.id} className="bt-row">
                   <span className="bt-row__text">
                     <strong>{name}</strong> {record.tons} tons
+                    <span className="bt-row__credit">
+                      Built under {EDITIONS.find((e) => e.id === record.editionId)?.name ?? record.editionId}
+                    </span>
                     {record.source && (
                       <span className="bt-row__credit">
                         Designed by {record.source.designer || "an unnamed designer"} on mordel.net

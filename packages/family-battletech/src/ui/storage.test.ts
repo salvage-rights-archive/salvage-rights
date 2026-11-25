@@ -56,9 +56,22 @@ describe("family storage", () => {
     await expect(storage.setKey("   ")).rejects.toThrow();
     await storage.clearKey();
     expect(await storage.getKey()).toBeUndefined();
-    expect(await storage.getEdition()).toBe("core-2026");
+    expect(await storage.getEdition()).toBe("total-warfare");
     await storage.setEdition("not-an-edition");
-    expect(await storage.getEdition()).toBe("core-2026");
+    expect(await storage.getEdition()).toBe("total-warfare");
+  });
+});
+
+describe("an edition id from an earlier version", () => {
+  it("reads as Total Warfare / TechManual in the setting, a saved 'Mech and a file, and never throws", async () => {
+    const storage = await openFamilyStorage();
+    await (await openStore("battletech")).set("edition", "core-2026");
+    expect(await storage.getEdition()).toBe("total-warfare");
+    const old = bipedRecord({ editionId: "core-2026" });
+    await storage.save(old);
+    expect((await storage.get(old.id))?.record?.editionId).toBe("total-warfare");
+    const file = fromMechFile(JSON.parse(JSON.stringify(toMechFile(old))));
+    expect(file.ok && file.record.editionId).toBe("total-warfare");
   });
 });
 

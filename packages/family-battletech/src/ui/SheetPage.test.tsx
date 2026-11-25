@@ -23,7 +23,7 @@ function open(id: string) {
 
 describe("The record sheet page", () => {
   it("shows the saved 'Mech's sheet with the way back, the way to the editor and Print, and says when the 'Mech has rules errors", async () => {
-    const result = fromMordel(mordelBiped(), await loadCatalog(), "core-2026", "2026-01-01T00:00:00Z", () => "imported-1");
+    const result = fromMordel(mordelBiped(), await loadCatalog(), "total-warfare", "2026-01-01T00:00:00Z", () => "imported-1");
     if (!result.ok) throw new Error(result.message);
     result.record.armor.HD = { front: 40 };
     await (await openFamilyStorage()).save(result.record);

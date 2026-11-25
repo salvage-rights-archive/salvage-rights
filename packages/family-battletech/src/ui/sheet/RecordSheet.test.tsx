@@ -10,7 +10,7 @@ import { inventoryStep } from "./MechData";
 afterEach(cleanup);
 
 async function recordOf(response: unknown): Promise<MechRecord> {
-  const result = fromMordel(response, await loadCatalog(), "core-2026", "2026-01-01T00:00:00Z", () => "sheet-1");
+  const result = fromMordel(response, await loadCatalog(), "total-warfare", "2026-01-01T00:00:00Z", () => "sheet-1");
   if (!result.ok) throw new Error(result.message);
   return result.record;
 }
@@ -33,7 +33,7 @@ describe("The record sheet", () => {
     expect(lines).toContain("Walking: 4");
     expect(lines).toContain("Running: 6");
     expect(lines).toContain("Jumping: 3");
-    expect(lines).toContain("Rules edition: Core Rulebook (2026)");
+    expect(lines).toContain("Rules edition: TechManual, corrected sixth printing");
     // Two Medium Lasers in two arms are two lines of one; the AC/10 is in the right torso.
     const ac = [...svg.querySelectorAll("[data-line]")].map((g) => [...g.querySelectorAll("text")].map((t) => t.textContent));
     expect(ac).toContainEqual(["1", "Autocannon/10", "RT", "3", "10", "—", "5", "10", "15"]);

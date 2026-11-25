@@ -25,7 +25,7 @@ afterEach(cleanup);
 
 /** An imported 'Mech in the made-up Mordel shape, saved on the device. `own: true` drops the source, as a hand-made one. */
 async function saved(response: unknown, own = false): Promise<MechRecord> {
-  const result = fromMordel(response, await loadCatalog(), "core-2026", "2026-01-01T00:00:00Z", () => (own ? "own-1" : "imported-1"));
+  const result = fromMordel(response, await loadCatalog(), "total-warfare", "2026-01-01T00:00:00Z", () => (own ? "own-1" : "imported-1"));
   if (!result.ok) throw new Error(result.message);
   const record = { ...result.record };
   if (own) delete record.source;
@@ -325,7 +325,7 @@ describe("The equipment picker", () => {
     await saved(mordelBiped());
     const user = userEvent.setup();
     const catalog = await loadCatalog();
-    const offered = catalog.offered("core-2026", { techBase: "inner-sphere", year: 3025 }).length;
+    const offered = catalog.offered("total-warfare", { techBase: "inner-sphere", year: 3025 }).length;
     const everything = catalog.all().length;
     expect(offered).toBeGreaterThan(0);
     expect(everything).toBeGreaterThan(offered);

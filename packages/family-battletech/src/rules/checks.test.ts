@@ -61,7 +61,7 @@ describe("the shared fixtures", () => {
   });
 
   it("starts a new tripod with no error findings, and the page that makes it an advanced-rules design", () => {
-    const record = newRecord({ chassis: "Digger", model: "", tons: 55, walk: 5, techBase: "inner-sphere", configuration: "tripod", year: null }, "core-2026", "t-1");
+    const record = newRecord({ chassis: "Digger", model: "", tons: 55, walk: 5, techBase: "inner-sphere", configuration: "tripod", year: null }, "total-warfare", "t-1");
     const findings = runChecks(record, catalog);
     expect(errors(findings)).toEqual([]);
     expectFinding(findings.filter((f) => f.check === "configuration"), { level: "note", text: "advanced rules", where: { field: "configuration" }, page: 158 });
@@ -270,7 +270,7 @@ describe("Land-Air 'Mech", () => {
   });
 
   it("starts from newRecord with the three jump jets it needs, waiting unplaced, and breaks no Land-Air rule", () => {
-    const fresh = newRecord({ chassis: "Hawk", model: "", tons: 50, walk: 4, techBase: "inner-sphere", configuration: "lam", year: null }, "core-2026", "new-lam");
+    const fresh = newRecord({ chassis: "Hawk", model: "", tons: 50, walk: 4, techBase: "inner-sphere", configuration: "lam", year: null }, "total-warfare", "new-lam");
     expect(fresh.mounts.filter((m) => m.equipmentId === "jump-jet-is").map((m) => [m.location, m.slot])).toEqual([[null, null], [null, null], [null, null]]);
     expect(runChecks(fresh, catalog).filter((f) => f.check === "lam" || f.where?.field === "configuration")).toMatchObject([{ check: "configuration", level: "note" }]);
   });

@@ -7,7 +7,7 @@ import { changedSinceImport, fromMordel, parseMordelRef } from "./mordel";
 const catalog = await loadCatalog();
 let counter = 0;
 const NOW = "2026-11-24T10:00:00.000Z";
-const run = (response: unknown) => fromMordel(response, catalog, "core-2026", NOW, () => `rec-${++counter}`);
+const run = (response: unknown) => fromMordel(response, catalog, "total-warfare", NOW, () => `rec-${++counter}`);
 function imported(response: unknown): { record: MechRecord; notes: string[] } {
   const result = run(response);
   if (!result.ok) throw new Error(result.message);
@@ -46,7 +46,7 @@ describe("fromMordel", () => {
     const { record, notes } = imported(mordelBiped());
     expect(record).toMatchObject({
       schema: 1,
-      editionId: "core-2026",
+      editionId: "total-warfare",
       name: { chassis: "Test Walker", model: "TW-1" },
       techBase: "inner-sphere",
       year: 3025,

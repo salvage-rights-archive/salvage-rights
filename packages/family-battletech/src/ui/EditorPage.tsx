@@ -1,6 +1,7 @@
 // The 'Mech editor: one saved record, edited in place, with the rules check beside it. The page holds the record's history
 // (for Undo and Redo), derives everything else from the current record, and hands each panel what it shows and an
 // `onEdit(change)` callback. Every edit goes through `editRecord`.
+import { EDITIONS } from "../data/editions";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import type { ChangeEvent, CSSProperties, ReactNode } from "react";
 import { Link, useBlocker, useLocation, useSearchParams } from "react-router";
@@ -614,6 +615,7 @@ function Editor({ initial, catalog, storage }: { initial: MechRecord; catalog: C
             <span aria-hidden="true">&larr; </span>Your 'Mechs
           </Link>
           <h1 tabIndex={-1}>{title || "Unnamed 'Mech"}</h1>
+          <p className="bt-hint">Built under: {EDITIONS.find((e) => e.id === record.editionId)?.name ?? record.editionId}</p>
         </div>
         <div className="bt-actions">
           <button type="button" className="bt-button" disabled={!dirty} onClick={() => void save()}>

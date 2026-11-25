@@ -2,7 +2,7 @@
 // of key. Nothing here logs, and a stored 'Mech that cannot be read is reported, never thrown or dropped.
 import { openStore } from "@salvage-rights/shared";
 import type { Store } from "@salvage-rights/shared";
-import { DEFAULT_EDITION, EDITIONS } from "../data/editions";
+import { DEFAULT_EDITION, EDITIONS, currentEditionId } from "../data/editions";
 import type { MechRecord } from "../rules/mech";
 
 export interface SavedEntry {
@@ -145,6 +145,12 @@ export function isMechRecord(value: unknown): value is MechRecord {
   );
 }
 
+/** A record saved under an edition id an earlier version used is read as the edition that id means now. */
+function migrated(record: MechRecord): MechRecord {
+  const editionId = currentEditionId(record.editionId);
+  return editionId === record.editionId ? record : { ...record, editionId };
+}
+
 export function toMechFile(record: MechRecord): MechFile {
   return { app: "salvage-rights", kind: "mech", version: 1, record: structuredClone(record) };
 }
@@ -155,7 +161,7 @@ export function fromMechFile(file: unknown): { ok: true; record: MechRecord } | 
   if (file.kind !== "mech") return { ok: false, message: "This file does not hold a 'Mech." };
   if (file.version !== 1) return { ok: false, message: "This file is from a version this app cannot read." };
   if (!isMechRecord(file.record)) return { ok: false, message: "The 'Mech in this file is incomplete or damaged." };
-  return { ok: true, record: file.record };
+  return { ok: true, record: migrated(file.record) };
 }
 
 /** Hands the 'Mech to the browser as a file. */
@@ -179,7 +185,7 @@ function entryOf(id: string, stored: unknown): SavedEntry {
   if (!isMechRecord(stored.record)) {
     return { id, savedAt, unreadable: "This saved 'Mech is incomplete or from a different version." };
   }
-  return { id, record: stored.record, savedAt };
+  return { id, record: migrated(stored.record), savedAt };
 }
 
 function wrap(store: Store): FamilyStorage {
@@ -193,8 +199,9 @@ function wrap(store: Store): FamilyStorage {
     },
     clearKey: () => store.delete(KEY),
     getEdition: async () => {
-      const id = await store.get<unknown>(EDITION);
-      return isString(id) && EDITIONS.some((e) => e.id === id) ? id : DEFAULT_EDITION;
+      const stored = await store.get<unknown>(EDITION);
+      const id = isString(stored) ? currentEditionId(stored) : undefined;
+      return id !== undefined && EDITIONS.some((e) => e.id === id) ? id : DEFAULT_EDITION;
     },
     setEdition: (id) => store.set(EDITION, id),
     list: async () => {
