@@ -1,5 +1,6 @@
 // The rules check beside the 'Mech: what is illegal or does not add up, with the printed page each rule rests on.
 import { useEffect, useRef, useState } from "react";
+import { bookName } from "../../data/editions";
 import type { Finding } from "../../rules/checks";
 
 const GROUPS: { level: Finding["level"]; title: string }[] = [
@@ -8,7 +9,7 @@ const GROUPS: { level: Finding["level"]; title: string }[] = [
   { level: "note", title: "Notes" },
 ];
 
-export const citation = (cite: NonNullable<Finding["cite"]>) => `${cite.book}, p. ${cite.page}`;
+export const citation = (cite: NonNullable<Finding["cite"]>) => `${bookName(cite.book)}, p. ${cite.page}`;
 
 export default function FindingsPanel({
   findings,

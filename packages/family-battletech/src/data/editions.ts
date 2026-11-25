@@ -27,3 +27,16 @@ export const EDITIONS: Edition[] = [
 ];
 
 export const DEFAULT_EDITION = "core-2026";
+
+// Who published each book we cite. These games have had several publishers, so a citation names the one whose
+// printing we read. A new book gets a row here.
+const PUBLISHERS: Record<string, string> = {
+  "BattleTech Core Rulebook": "Catalyst Game Labs",
+  TechManual: "Catalyst Game Labs",
+};
+
+/** A book's title with its publisher, as citations show it: `TechManual (Catalyst Game Labs)`. */
+export function bookName(title: string): string {
+  const publisher = PUBLISHERS[title];
+  return publisher === undefined ? title : `${title} (${publisher})`;
+}

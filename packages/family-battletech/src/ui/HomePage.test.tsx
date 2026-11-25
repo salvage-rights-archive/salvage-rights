@@ -58,7 +58,7 @@ describe("Classic BattleTech home", () => {
     expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
     const select = await screen.findByLabelText<HTMLSelectElement>("Edition");
     expect(select.value).toBe("core-2026");
-    expect(screen.getByText(/^Play: BattleTech Core Rulebook, 2026, first printing\. Construction: TechManual,/)).toBeTruthy();
+    expect(screen.getByText(/^Play: BattleTech Core Rulebook \(Catalyst Game Labs\), 2026, first printing\. Construction: TechManual \(Catalyst Game Labs\),/)).toBeTruthy();
     expect(await screen.findByText("No 'Mechs saved yet.")).toBeTruthy();
     expect(screen.getByRole("link", { name: "Import from Mordel" }).getAttribute("href")).toBe("/battletech/classic/import");
     expect(await rawEdition()).toBeUndefined();

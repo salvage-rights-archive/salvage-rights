@@ -9,7 +9,7 @@ test("import a 'Mech by number, move an item by keyboard, save, and find it agai
   // A finding of this unit: its parts weigh less than its tonnage, with the printed page it rests on.
   const rules = page.getByRole("region", { name: "Rules check" });
   await expect(rules.getByText("The parts weigh 40 tons of 50 tons; 10 tons is unused.")).toBeVisible();
-  await expect(rules.getByText("TechManual, p. 46")).toBeVisible();
+  await expect(rules.getByText("TechManual (Catalyst Game Labs), p. 46")).toBeVisible();
 
   // The key is kept on the device and shown nowhere.
   expect(page.url()).not.toContain(FAKE_KEY);

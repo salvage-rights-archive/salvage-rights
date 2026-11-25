@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ChangeEvent } from "react";
 import { Link } from "react-router";
-import { DEFAULT_EDITION, EDITIONS } from "../data/editions";
+import { DEFAULT_EDITION, EDITIONS, bookName } from "../data/editions";
 import type { MechRecord } from "../rules/mech";
 import { STORAGE_READ_FAILED, STORAGE_WRITE_FAILED, downloadMech, fromMechFile, openFamilyStorage } from "./storage";
 import type { FamilyStorage, SavedEntry } from "./storage";
@@ -71,7 +71,7 @@ export default function HomePage() {
   const bookLine = (["play", "construction"] as const)
     .flatMap((role) => {
       const book = current?.books.find((b) => b.role === role);
-      return book ? [`${role === "play" ? "Play" : "Construction"}: ${book.title}, ${book.printing}.`] : [];
+      return book ? [`${role === "play" ? "Play" : "Construction"}: ${bookName(book.title)}, ${book.printing}.`] : [];
     })
     .join(" ");
 
