@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { loadCatalog } from "./catalog";
 import { mordelBiped, mordelOdd, mordelQuad, mordelWith } from "./fixtures";
 import { editRecord, layout, type LocationCode, type MechRecord } from "./mech";
-import { changedSinceImport, fromMordel, parseMordelRef } from "./mordel";
+import { changedSinceImport, fromMordel, importOmniSet, importOmniSingle, omniFacts, parseMordelRef } from "./mordel";
 
 const catalog = await loadCatalog();
 let counter = 0;
@@ -279,3 +279,43 @@ describe("changedSinceImport", () => {
     }
   });
 });
+
+describe("an OmniMech set (the owner's notes: omni, omni_base_id, omni_variants; the pod marker is unverified, so a variant's pods are its equipment minus the base's)", () => {
+  const fixed = [entry(5, "Jump Jet", "CT"), entry(6, "Jump Jet", "LL"), entry(7, "Jump Jet", "RL"), entry(8, "Heat Sink", "LL"), entry(9, "Heat Sink", "RL")];
+  const unit = (id: number, model: string, extra: Record<string, unknown>, equipment: unknown[]) =>
+    mordelWith(mordelBiped(), { id, name_parts: { name: model === "[BASE]" ? "Test Walker [BASE]" : "Test Walker", alternate_name: null, model: model === "[BASE]" ? "" : model }, equipment, ...extra });
+  const base = unit(900010, "[BASE]", { omni: true, omni_base_id: 900010, omni_variants: [900011, 900012] }, fixed);
+  const prime = unit(900011, "Prime", { omni: true, omni_base_id: 900010 }, [entry(1, "AC/10", "RT", { slots: 7 }), entry(2, "AC/10 Ammo", "LT"), ...fixed]);
+  const alt = unit(900012, "A", { omni: true, omni_base_id: 900010 }, [entry(3, "Medium Laser", "LA"), entry(4, "Medium Laser", "RA"), ...fixed.slice(0, 4)]);
+
+  it("reads the Omni facts, makes one chassis of the base and its variants, and reports what a variant lacks", async () => {
+    expect(omniFacts(base)).toMatchObject({ omni: true, isBase: true, id: 900010, baseId: 900010, variantIds: [900011, 900012] });
+    expect(omniFacts(prime)).toMatchObject({ omni: true, isBase: false, baseId: 900010 });
+    expect(omniFacts(mordelBiped()).omni).toBe(false);
+    let n = 0;
+    const newId = () => `id-${++n}`;
+    const record = (response: unknown) => imported(response).record;
+    const { chassis, notes } = importOmniSet(record(base), [record(prime), record(alt)], newId);
+    expect(chassis.name.chassis).toBe("Test Walker");
+    expect(chassis.base.mounts.map((m) => m.name).sort()).toEqual(["Heat Sink", "Heat Sink", "Jump Jet", "Jump Jet", "Jump Jet"]);
+    expect(chassis.configurations.map((c) => [c.code, c.mounts.map((m) => m.name).sort()])).toEqual([
+      ["Prime", ["AC/10", "AC/10 Ammo"]],
+      ["A", ["Medium Laser", "Medium Laser"]],
+    ]);
+    expect(chassis.primaryId).toBe(chassis.configurations[0]?.id);
+    expect(chassis.configurations[0]?.source?.baseline).toBeUndefined();
+    expect(notes.some((t) => t.startsWith("A does not list Heat Sink"))).toBe(true);
+    expect(isOmniShaped(chassis)).toBe(true);
+  });
+
+  it("falls back, labelled, to a one-configuration chassis when the base is not to be had", async () => {
+    const { chassis, notes } = importOmniSingle(imported(prime).record, catalog, () => `solo-${++counter}`, "This variant names no base.");
+    expect(chassis.configurations).toHaveLength(1);
+    expect(chassis.configurations[0]?.code).toBe("Prime");
+    expect(chassis.base.mounts.filter((m) => m.part === undefined).map((m) => m.name).sort()).toEqual(["Heat Sink", "Heat Sink", "Jump Jet", "Jump Jet", "Jump Jet"]);
+    expect(chassis.configurations[0]?.mounts.map((m) => m.name).sort()).toEqual(["AC/10", "AC/10 Ammo"]);
+    expect(notes[0]).toContain("a guess");
+  });
+});
+
+const isOmniShaped = (c: { base: { mounts: unknown[] }; configurations: unknown[]; primaryId: string }) => c.base.mounts.length > 0 && c.configurations.length > 0 && c.primaryId !== "";
