@@ -2,23 +2,35 @@ import { readFile } from "node:fs/promises";
 import { DEV, FREE, expect, tabTo, test } from "./fixtures";
 
 test.describe("dev edition", () => {
-  test("the landing page shows one tile and its first game link opens that game's page", async ({ page }) => {
+  test("the landing page shows two tiles and the first link of the one with several games opens that game's page", async ({ page }) => {
     await page.goto(`${DEV}/`);
     await expect(page.getByRole("heading", { level: 1 })).toHaveText("Archaeology for mecha tabletop games.");
-    await expect(page.getByRole("heading", { name: "Your games" })).toBeVisible();
-    const tile = page.getByTestId("family-tile");
-    await expect(tile).toHaveCount(1);
-    await tile.getByRole("link").first().click();
+    await expect(page.getByRole("heading", { name: "Choose your games" })).toBeVisible();
+    const tiles = page.getByTestId("family-tile");
+    await expect(tiles).toHaveCount(2);
+    for (const tile of await tiles.all()) await expect(tile).toHaveAttribute("data-size", "grid");
+    // A tile with several games is a box holding one link per game; a tile with one game is itself the link.
+    const several = page.locator("div[data-testid='family-tile']");
+    await expect(several).toHaveCount(1);
+    expect(await several.getByRole("link").count()).toBeGreaterThan(1);
+    await several.getByRole("link").first().click();
     await expect(page).toHaveURL(/\/salvage-rights\/[a-z0-9-]+\/[a-z0-9-]+\/[a-z0-9-/]+$/);
     const heading = page.getByRole("heading", { level: 1 });
     await expect(heading).toBeVisible();
     await expect(page).toHaveTitle(`${(await heading.textContent()) ?? ""} · Salvage Rights`);
   });
 
-  test("hiding the family shows the all-hidden line and the choice survives a reload", async ({ page }) => {
+  test("hiding the families one at a time reaches the single layout, then the all-hidden line, and survives a reload", async ({ page }) => {
     await page.goto(`${DEV}/settings`);
-    // The first "Show ..." checkbox is the family's own.
-    await page.getByRole("checkbox", { name: /^Show / }).first().uncheck();
+    // The "Show ..." checkboxes are the families' own, one each.
+    const families = page.getByRole("checkbox", { name: /^Show / });
+    await expect(families).toHaveCount(2);
+    await families.first().uncheck();
+    await page.getByRole("link", { name: "Games" }).click();
+    await expect(page.getByTestId("family-tile")).toHaveCount(1);
+    await expect(page.getByTestId("family-tile")).toHaveAttribute("data-size", "single");
+    await page.getByRole("link", { name: "Settings" }).click();
+    await families.last().uncheck();
     await page.getByRole("link", { name: "Games" }).click();
     await expect(page.getByText("You have hidden every game.")).toBeVisible();
     // Reload at once: a change just made must not be lost.
@@ -71,46 +83,55 @@ test.describe("dev edition", () => {
 
   test("Tab reaches every link in order and each shows a focus outline", async ({ page, browserName }) => {
     await page.goto(`${DEV}/`);
-    await expect(page.getByTestId("family-tile")).toBeVisible();
-    const gameLinks = page.getByTestId("family-tile").getByRole("link");
+    await expect(page.getByTestId("family-tile")).toHaveCount(2);
+    // Every link in the page's own content, in document order: a tile that is one link, then the links inside the other.
+    const contentLinks = page.getByRole("main").getByRole("link");
     const expected = ["Games", "About", "Settings"].map((name) => ({
       name,
       link: page.getByRole("link", { name, exact: true }),
+      token: "--sr-header-focus",
     }));
-    const gameCount = await gameLinks.count();
-    expect(gameCount).toBeGreaterThan(0);
-    for (let i = 0; i < gameCount; i += 1) expected.push({ name: `game link ${String(i + 1)}`, link: gameLinks.nth(i) });
-    for (const { name, link } of expected) {
+    const contentCount = await contentLinks.count();
+    expect(contentCount).toBeGreaterThan(2);
+    for (let i = 0; i < contentCount; i += 1) {
+      expected.push({ name: `content link ${String(i + 1)}`, link: contentLinks.nth(i), token: "--sr-focus" });
+    }
+    for (const { name, link, token } of expected) {
       await tabTo(page, browserName, link);
       await expect(link).toBeFocused();
-      const focused = page.locator(":focus");
-      // The header and the single tile's panel are dark, so their links use the header ring colour.
-      const ring = await focused.evaluate(
-        (element, token) => {
+      const ring = await page.locator(":focus").evaluate(
+        (element, ringToken) => {
           const probe = document.createElement("span");
-          probe.style.color = `var(${token})`;
+          probe.style.color = `var(${ringToken})`;
           document.body.append(probe);
-          const expected = getComputedStyle(probe).color;
+          const expectedColor = getComputedStyle(probe).color;
           probe.remove();
           const style = getComputedStyle(element);
-          return { expected, color: style.outlineColor, style: style.outlineStyle, width: parseFloat(style.outlineWidth) };
+          // A link that is a whole tile draws its ring as an overlay inside the clipped edge instead of an outline.
+          const after = getComputedStyle(element, "::after");
+          const overlay = element.getAttribute("data-testid") === "family-tile";
+          return {
+            expectedColor,
+            overlay,
+            color: overlay ? after.borderTopColor : style.outlineColor,
+            visible: overlay
+              ? after.content !== "none" && parseFloat(after.borderTopWidth) > 0
+              : style.outlineStyle !== "none" && parseFloat(style.outlineWidth) > 0,
+          };
         },
-        "--sr-header-focus",
+        token,
       );
-      expect(ring.style, `outline style on ${name}`).not.toBe("none");
-      expect(ring.width, `outline width on ${name}`).toBeGreaterThan(0);
-      expect(ring.color, `outline colour on ${name}`).toBe(ring.expected);
+      expect(ring.visible, `focus ring on ${name}`).toBe(true);
+      expect(ring.color, `focus ring colour on ${name}`).toBe(ring.expectedColor);
     }
   });
 
   test("a tile that is one link shows the project's focus ring only while focused", async ({ page, browserName }) => {
-    await page.goto(`${DEV}/settings`);
-    // The family checkbox comes first, then one per game: hiding the last game leaves a tile with one link.
-    await page.getByRole("checkbox").last().uncheck();
     await page.goto(`${DEV}/`);
-    const tile = page.getByTestId("family-tile");
+    // The tile whose family has one ready game is itself the one link.
+    const tile = page.locator("a[data-testid='family-tile']");
+    await expect(tile).toHaveCount(1);
     await expect(tile).toBeVisible();
-    await expect(tile).toHaveJSProperty("tagName", "A");
     const ringOf = () =>
       tile.evaluate((element) => {
         const probe = document.createElement("span");
@@ -135,9 +156,15 @@ test.describe("dev edition", () => {
 });
 
 test.describe("free edition", () => {
-  test("the landing page says nothing is ready and shows no tile", async ({ page }) => {
+  test("the landing page shows one tile, large, and its link opens the game's first page", async ({ page }) => {
     await page.goto(`${FREE}/`);
-    await expect(page.getByText("The first game is on its way. There is nothing to open yet.")).toBeVisible();
-    await expect(page.getByTestId("family-tile")).toHaveCount(0);
+    const tile = page.getByTestId("family-tile");
+    await expect(tile).toHaveCount(1);
+    await expect(tile).toHaveAttribute("data-size", "single");
+    await expect(page.getByText("The first game is on its way. There is nothing to open yet.")).toHaveCount(0);
+    await page.getByRole("main").getByRole("link").first().click();
+    const heading = page.getByRole("heading", { level: 1 });
+    await expect(heading).toBeVisible();
+    await expect(heading).not.toHaveText("Nothing here");
   });
 });
