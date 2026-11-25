@@ -105,4 +105,30 @@ describe("The 'Mech editor", () => {
   });
 });
 
-void mordelQuad;
+describe("The armor panel", () => {
+  it("accepts armor above the maximum, shows the maximum beside the field and reports it", async () => {
+    await saved(mordelBiped());
+    const user = userEvent.setup();
+    await open("imported-1");
+    const arm = await field("Left Arm armor");
+    expect(screen.getAllByText("of 16").length).toBeGreaterThan(0);
+    await user.clear(arm);
+    await user.type(arm, "20");
+    expect(within(rules()).getByText(/Left Arm armor is 20; the most it can carry is 16/)).toBeTruthy();
+  });
+
+  it("moves focus to a location's armor field when it is chosen on the doll", async () => {
+    await saved(mordelBiped());
+    const user = userEvent.setup();
+    await open("imported-1");
+    await user.click(await screen.findByRole("button", { name: "Left Arm, 8 armor" }));
+    expect(document.activeElement).toBe(screen.getByLabelText("Left Arm armor"));
+  });
+
+  it("shows the armor fields of a quad and says no doll is drawn for it", async () => {
+    await saved(mordelQuad());
+    await open("imported-1");
+    expect(await field("Front Left Leg armor")).toBeTruthy();
+    expect(screen.getByText("No doll is drawn for this body type yet.")).toBeTruthy();
+  });
+});

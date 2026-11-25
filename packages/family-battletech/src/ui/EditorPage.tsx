@@ -11,7 +11,8 @@ import { runChecks } from "../rules/checks";
 import type { Finding } from "../rules/checks";
 import { changedSinceImport } from "../rules/mordel";
 import { editRecord, layout as buildLayout, weights as buildWeights } from "../rules/mech";
-import type { Layout, MechRecord } from "../rules/mech";
+import type { Layout, LocationCode, MechRecord } from "../rules/mech";
+import ArmorPanel from "./editor/ArmorPanel";
 import FindingsPanel from "./editor/FindingsPanel";
 import { STORAGE_READ_FAILED, STORAGE_WRITE_FAILED, downloadMech, openFamilyStorage } from "./storage";
 import type { FamilyStorage } from "./storage";
@@ -350,6 +351,7 @@ function Editor({ initial, catalog, storage }: { initial: MechRecord; catalog: C
   const [justSaved, setJustSaved] = useState(false);
   const [status, setStatus] = useState("");
   const [problem, setProblem] = useState("");
+  const [selected, setSelected] = useState<LocationCode>();
   const record = history.present;
   const dirty = !sameRecord(record, savedRecord);
 
@@ -538,6 +540,16 @@ function Editor({ initial, catalog, storage }: { initial: MechRecord; catalog: C
             ),
           )}
         </section>
+
+        <ArmorPanel
+          record={record}
+          layout={layout}
+          armorTons={weights.lines.find((l) => l.label === "Armor")?.tons ?? null}
+          changed={changed}
+          selected={selected}
+          onSelect={setSelected}
+          onEdit={edit}
+        />
       </div>
     </div>
   );
