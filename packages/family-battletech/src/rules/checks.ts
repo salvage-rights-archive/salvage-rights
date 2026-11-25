@@ -20,7 +20,8 @@ import {
   SHIELDS,
   STRUCTURE_TYPES,
 } from "../data/chassis";
-import type { Cite, PartFacts } from "../data/chassis";
+import type { Cite, PartFacts, Span } from "../data/chassis";
+import { configurationInTime, eraOfRecord, eraOfYear, partSpans, spansFit, windowOf } from "./availability";
 import { locationsFor, mountsRequired } from "./catalog";
 import { levelAtLeast, levelItems, levelRow } from "./levels";
 import type { Catalog, EquipmentRow } from "./catalog";
@@ -452,6 +453,12 @@ function availabilityCheck({ record, catalog }: CheckInput): Finding[] {
         }),
       );
     }
+    const window = windowOf(record);
+    if (record.year === null && window !== null && !catalog.availableBetween(row, record.editionId, window.from, window.to)) {
+      const era = eraOfRecord(record);
+      const reason = `${mount.name} is not available in the ${era?.name ?? "chosen"} era (${window.from} to ${Number.isFinite(window.to) ? window.to : "on"}).`;
+      out.push(finding("availability", row.yearsInferred ? "note" : "error", `${reason} Set a year to check it against one.`, { where, cite: tm(PAGE.availability) }));
+    }
     if (record.year !== null && !catalog.available(row, record.editionId, record.year)) {
       // The dates come from the cost and availability tables, pp.290-293; a row that cites a page there keeps its page.
       const fromRow = row.cite.page >= PAGE.availability && row.cite.page <= PAGE.availability + 3;
@@ -463,6 +470,21 @@ function availabilityCheck({ record, catalog }: CheckInput): Finding[] {
         out.push(finding("availability", "error", `${reason}${where2}`, { where, cite: fromRow ? row.cite : tm(PAGE.availability) }));
       }
     }
+  }
+  return out;
+}
+
+/** The era and the year disagree, or the body type is not one this tech base and time had. */
+function eraCheck({ record }: CheckInput): Finding[] {
+  const out: Finding[] = [];
+  const holds = eraOfYear(record.year);
+  if (record.era !== undefined && record.year !== null && holds?.id !== record.era) {
+    out.push(finding("availability", "warning", `The era is ${record.era}, but the year ${record.year} is ${holds ? `in the ${holds.name} era` : "in no era we list"}. Choose the era again or change the year.`, { where: { field: "era" } }));
+  }
+  const row = configurationOf(record.configuration);
+  if (row && !configurationInTime(record.configuration, record)) {
+    const when = record.year !== null ? String(record.year) : `the ${eraOfRecord(record)?.name ?? "chosen"} era`;
+    out.push(finding("availability", "error", `A ${row.name} is not available to ${record.techBase === "clan" ? "a Clan" : record.techBase === "mixed" ? "a mixed technology" : "an Inner Sphere"} 'Mech in ${when}.`, { where: { field: "configuration" }, cite: { book: "Interstellar Operations: Alternate Eras", page: 44 } }));
   }
   return out;
 }
@@ -578,11 +600,11 @@ function lamCheck({ record, catalog }: CheckInput): Finding[] {
   return out;
 }
 
-/** The year the part first appears for the record's tech base (a mixed record takes the earlier), or undefined when the book prints none. */
-function firstYear(part: PartFacts, techBase: MechRecord["techBase"]): number | undefined {
-  const years = techBase === "inner-sphere" ? [part.introduced?.is] : techBase === "clan" ? [part.introduced?.clan] : [part.introduced?.is, part.introduced?.clan];
-  const printed = years.filter((y): y is number => y !== undefined);
-  return printed.length === 0 ? undefined : Math.min(...printed);
+/** What a part's dates say, in words: "it appears in 2579" or "it is available 2487 to 2850 and from 3035". */
+function spansText(spans: Span[], part: PartFacts): string {
+  const [only] = spans;
+  if (spans.length === 1 && only !== undefined && only.to === undefined) return part.introduced?.prototype && part.availability === undefined ? `prototypes appear in ${only.from}` : `it appears in ${only.from}`;
+  return `it is available ${spans.map((s) => (s.to === undefined ? `from ${s.from}` : `${s.from} to ${s.to}`)).join(" and ")}`;
 }
 
 /**
@@ -598,7 +620,11 @@ function partsCheck({ record, catalog }: CheckInput): Finding[] {
     ["armor", ARMOR, chassis.armorType, "chassis.armorType"],
     ["engine", ENGINE_TYPES, chassis.engine.type, "chassis.engine"],
     ["cockpit", COCKPITS, chassis.cockpit, "chassis.cockpit"],
+    ["gyro", GYROS, chassis.gyro, "chassis.gyro"],
+    ["heat sink", HEAT_SINKS, chassis.heatSinks.type, "chassis.heatSinks"],
+    ["myomer", MYOMER, chassis.myomer, "chassis.myomer"],
   ];
+  const window = windowOf(record);
   for (const [what, table, key, field] of parts) {
     const part = own(table.types, key) ? table.types[key] : undefined;
     if (!part) continue;
@@ -609,10 +635,10 @@ function partsCheck({ record, catalog }: CheckInput): Finding[] {
     if (clanOnly || isOnly) {
       out.push(finding("parts", "error", `${part.name} ${what} is ${clanOnly ? "Clan" : "Inner Sphere"} technology; this is ${record.techBase === "clan" ? "a Clan" : "an Inner Sphere"} 'Mech.`, { where, cite }));
     }
-    const from = firstYear(part, record.techBase);
-    if (from !== undefined && record.year !== null && record.year < from) {
-      const early = part.introduced?.prototype ? `prototypes appear in ${from}` : `it appears in ${from}`;
-      out.push(finding("parts", "error", `${part.name} ${what} is not available in ${record.year}; ${early}.`, { where, cite }));
+    const spans = partSpans(part, record.techBase);
+    if (spans !== undefined && !spansFit(spans, window)) {
+      const when = record.year !== null ? String(record.year) : `the ${eraOfRecord(record)?.name ?? "chosen"} era`;
+      out.push(finding("parts", "error", `${part.name} ${what} is not available in ${when}; ${spansText(spans, part)}.`, { where, cite: part.availabilityCite ?? cite }));
     }
     if (part.industrial) {
       out.push(finding("parts", "warning", `${part.name} ${what} is printed for IndustrialMechs. A 'Mech that uses it is an IndustrialMech, built under rules this tool does not check.`, { where, cite }));
@@ -693,6 +719,7 @@ export const CHECKS: Check[] = [
   { id: "configuration", editions: "all", run: configurationCheck },
   { id: "unmatched", editions: "all", run: unmatchedCheck },
   { id: "parts", editions: "all", run: partsCheck },
+  { id: "era", editions: "all", run: eraCheck },
   { id: "shields", editions: "all", run: shieldCheck },
   { id: "lam", editions: "all", run: lamCheck },
   { id: "unsupported", editions: "all", run: unsupportedCheck },

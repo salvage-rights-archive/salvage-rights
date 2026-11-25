@@ -55,19 +55,11 @@ export interface LevelItem {
 const own = (table: object, key: string) => Object.hasOwn(table, key);
 /** A part's level: the level its row states when above Standard (hardened armor is Advanced, say), else Introductory for the
  * 3025 parts, else Standard. */
-const partLevel = (table: keyof typeof INTRODUCTORY_PARTS, key: string, row?: { rulesLevel?: RulesLevel }): RulesLevel => {
+export const partLevel = (table: keyof typeof INTRODUCTORY_PARTS, key: string, row?: { rulesLevel?: RulesLevel }): RulesLevel => {
   const stated = row ? levelOf(row) : DEFAULT_LEVEL;
   if (stated !== DEFAULT_LEVEL) return stated;
   return INTRODUCTORY_PARTS[table].includes(key) ? "introductory" : DEFAULT_LEVEL;
 };
-
-/** A chassis part table's rows as select options at the record's level: a type above that level says what it needs, `Hardened (needs Advanced)`. */
-export function partOptions(table: { types: Record<string, { name: string; rulesLevel?: RulesLevel }> }, level: RulesLevel): [string, string][] {
-  return Object.entries(table.types).map(([key, row]) => {
-    const needs = levelOf(row);
-    return [key, needs !== DEFAULT_LEVEL && !levelAtLeast(level, needs) ? `${row.name} (needs ${levelRow(needs).label})` : row.name];
-  });
-}
 
 /** Everything the record uses that has a level, one entry per part and one per distinct equipment row. */
 export function levelItems(record: MechRecord, catalog: Catalog): LevelItem[] {
@@ -127,12 +119,4 @@ export function levelOfRecord(record: MechRecord, catalog: Catalog): RulesLevel 
 /** The record with its level set, for a record read from storage, a file or an import that has none. Nothing else changes. */
 export function withLevel(record: MechRecord, catalog: Catalog): MechRecord {
   return record.rulesLevel !== undefined && LEVEL_ORDER.includes(record.rulesLevel) ? record : { ...record, rulesLevel: lowestLevelFor(record, catalog) };
-}
-
-/** A configuration's name for a list at the record's level: above that level it says what it needs, `Tripod (needs Advanced)`. */
-export function configurationOption(key: string, level: RulesLevel): string {
-  const row = configurationOf(key);
-  if (!row) return key;
-  const needs = row.rulesLevel === DEFAULT_LEVEL ? undefined : row.rulesLevel;
-  return needs !== undefined && !levelAtLeast(level, needs) ? `${row.name} (needs ${levelRow(needs).label})` : row.name;
 }

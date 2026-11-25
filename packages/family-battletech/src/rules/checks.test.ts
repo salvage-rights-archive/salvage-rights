@@ -57,7 +57,7 @@ describe("the shared fixtures", () => {
     ["tripod", tripodRecord()],
   ])("the %s is legal: no error findings, and the checks run in order", (_name, record) => {
     expect(errors(runChecks(record, catalog))).toEqual([]);
-    expect(CHECKS.map((c) => c.id)).toEqual(["weight", "slots", "armor", "engine", "heat-sinks", "jump", "placement", "availability", "level", "configuration", "unmatched", "parts", "shields", "lam", "unsupported"]);
+    expect(CHECKS.map((c) => c.id)).toEqual(["weight", "slots", "armor", "engine", "heat-sinks", "jump", "placement", "availability", "level", "configuration", "unmatched", "parts", "era", "shields", "lam", "unsupported"]);
   });
 
   it("starts a new tripod with a level error at Standard, citing the page that makes it Advanced, and none at Advanced", () => {

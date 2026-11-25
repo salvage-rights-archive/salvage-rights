@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { ARMOR, RULES_LEVELS } from "../data/chassis";
+import { RULES_LEVELS } from "../data/chassis";
 import type { RulesLevel } from "../data/chassis";
 import { OTHER } from "../data/equipment/other";
 import { createCatalog, expand, loadCatalog } from "./catalog";
 import type { EquipmentGroup, EquipmentRow } from "./catalog";
 import { runChecks } from "./checks";
 import { bipedRecord, mount, tripodRecord } from "./fixtures";
-import { configurationOption, equipmentLevel, levelAtLeast, levelOf, lowestLevelFor, partOptions, withLevel } from "./levels";
+import { equipmentLevel, levelAtLeast, levelOf, lowestLevelFor, withLevel } from "./levels";
 import { editRecord } from "./mech";
 import type { MechRecord } from "./mech";
 
@@ -76,21 +76,15 @@ describe("rules levels", () => {
     const chosen = bipedRecord({ rulesLevel: "unlimited" });
     expect(withLevel(chosen, catalog)).toBe(chosen);
   });
-
-  it("marks the body types above a level with the level they need", () => {
-    expect([configurationOption("biped", "introductory"), configurationOption("tripod", "standard"), configurationOption("tripod", "advanced")]).toEqual(["Biped", "Tripod (needs Advanced)", "Tripod"]);
-  });
 });
 
 describe("chassis part levels", () => {
-  it("takes a part row's own level: hardened armor lifts the unit to Experimental, is named in the level finding, and is marked in the selector", () => {
+  it("takes a part row's own level: hardened armor lifts the unit to Experimental in the level finding", () => {
     const record = editRecord(bipedRecord({ rulesLevel: "standard" }), (d) => void (d.chassis.armorType = "hardened"));
     expect(lowestLevelFor(record, catalog)).toBe("experimental");
     const found = runChecks(record, catalog).filter((f) => f.check === "level");
     expect(found.map((f) => f.message)).toEqual([expect.stringContaining("Hardened (armor) is Experimental level; this unit is built at Standard level")]);
     expect(found[0]?.where).toMatchObject({ field: "chassis.armorType" });
-    expect(partOptions(ARMOR, "standard")).toContainEqual(["hardened", "Hardened (needs Experimental)"]);
-    expect(partOptions(ARMOR, "experimental")).toContainEqual(["hardened", "Hardened"]);
   });
 });
 

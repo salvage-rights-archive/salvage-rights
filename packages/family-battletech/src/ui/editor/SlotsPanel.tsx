@@ -322,6 +322,7 @@ export default function SlotsPanel({
           record={record}
           catalog={catalog}
           title={picking.replace === undefined ? "Add equipment" : `Replace ${record.mounts.find((m) => m.id === picking.replace)?.name ?? "equipment"}`}
+          current={picking.replace === undefined ? undefined : (record.mounts.find((m) => m.id === picking.replace)?.equipmentId ?? undefined)}
           onChoose={finishPicking}
           onClose={() => {
             finishPicking();

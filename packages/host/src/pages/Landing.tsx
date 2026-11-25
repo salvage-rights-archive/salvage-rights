@@ -29,9 +29,9 @@ export function Landing({ families }: { families: FamilyManifest[] }) {
     <div className="sr-landing">
       <section className="sr-landing__who">
         <p className="sr-landing__tag">WHO WE ARE</p>
-        <h1>Archaeology for mecha tabletop games.</h1>
+        <h1>Battlefield recovery and salvage for mecha tabletop games.</h1>
         <p className="sr-landing__lead">
-          We dig up the units, equipment and rules of mecha games, edition by edition, so they are not lost. Then we
+          We recover and salvage the units, equipment and rules of mecha games, edition by edition, so they are not lost. Then we
           give you the tools to build with them and play them, on whatever you have in your hand.
         </p>
         <p className="sr-landing__note">

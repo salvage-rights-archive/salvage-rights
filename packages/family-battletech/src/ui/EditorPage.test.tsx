@@ -4,9 +4,8 @@ import userEvent from "@testing-library/user-event";
 import { IDBFactory } from "fake-indexeddb";
 import { RouterProvider, createMemoryRouter } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { equipmentAvailable } from "../rules/availability";
 import { loadCatalog } from "../rules/catalog";
-import type { EquipmentRow } from "../rules/catalog";
-import { equipmentLevel, levelAtLeast } from "../rules/levels";
 import type { RulesLevel } from "../data/chassis";
 import { bipedRecord, mount, mordelBiped, mordelOdd, mordelQuad, mordelWith } from "../rules/fixtures";
 import { fromMordel } from "../rules/mordel";
@@ -34,6 +33,12 @@ async function saved(response: unknown, own = false): Promise<MechRecord> {
   if (own) delete record.source;
   await (await openFamilyStorage()).save(record);
   return record;
+}
+/** The same 'Mech built under Standard rules in 3070, so the newer parts (an XL gyro, endo steel) are on offer. */
+async function savedNewer(): Promise<void> {
+  const record = await saved(mordelBiped());
+  const source = record.source && { ...record.source, baseline: record.source.baseline && { ...record.source.baseline, year: 3070 } };
+  await (await openFamilyStorage()).save({ ...record, rulesLevel: "standard", year: 3070, source });
 }
 const stored = async (id: string) => (await (await openFamilyStorage()).get(id))?.record;
 
@@ -94,7 +99,7 @@ describe("The 'Mech editor", () => {
   });
 
   it("undoes and redoes edits, with both buttons disabled at the ends of the history", async () => {
-    await saved(mordelBiped());
+    await savedNewer();
     const user = userEvent.setup();
     await open("imported-1");
     const undo = await screen.findByRole<HTMLButtonElement>("button", { name: "Undo" });
@@ -115,7 +120,7 @@ describe("The 'Mech editor", () => {
   });
 
   it("adds a structure type's slots unplaced in one edit that Undo takes back whole, and lists the import notes", async () => {
-    await saved(mordelBiped());
+    await savedNewer();
     const user = userEvent.setup();
     await open("imported-1", { notes: ["Mordel does not say where the heat sinks go."] });
     expect(await screen.findByText("Mordel does not say where the heat sinks go.")).toBeTruthy();
@@ -211,7 +216,7 @@ describe("The 'Mech editor", () => {
   });
 
   it("marks what was changed since the import and nothing that was not", async () => {
-    await saved(mordelBiped());
+    await savedNewer();
     const user = userEvent.setup();
     await open("imported-1");
     await screen.findByRole("heading", { name: "Critical slots" });
@@ -342,34 +347,46 @@ describe("The critical slots", () => {
 });
 
 describe("The equipment picker", () => {
-  it("lists what the edition and the rules level offer, has no cap, can lift the filters and replaces equipment in place", async () => {
-    await saved(mordelBiped());
+  it("offers what the unit may use in groups, shows a group's items when it is opened, lifts the filters on request and replaces equipment in place", async () => {
+    const record = await saved(mordelBiped());
     const user = userEvent.setup();
     const catalog = await loadCatalog();
-    const atLevel = (rows: EquipmentRow[], level: RulesLevel) => rows.filter((row) => levelAtLeast(level, equipmentLevel(row))).length;
-    const offered = atLevel(catalog.offered("total-warfare", { techBase: "inner-sphere", year: 3025 }), "introductory");
-    const everythingIntro = atLevel(catalog.all(), "introductory");
-    const everything = atLevel(catalog.all(), "standard");
-    expect(offered).toBeGreaterThan(0);
-    expect(everything).toBeGreaterThan(everythingIntro);
+    const count = (level: RulesLevel, everything: boolean) => catalog.all().filter((row) => equipmentAvailable(row, { ...record, rulesLevel: level }, catalog, everything)).length;
+    const offered = count("introductory", false);
+    expect([offered, count("introductory", true), count("standard", true)].sort((x, y) => x - y)).toEqual([offered, count("introductory", true), count("standard", true)]);
+    expect(offered).toBeLessThanOrEqual(count("introductory", true));
     await open("imported-1");
     await openActions(user, "Left Arm");
     await user.click(within(slotList("Left Arm")).getByRole("button", { name: "Replace Medium Laser" }));
     const dialog = screen.getByRole("dialog", { name: "Replace Medium Laser" });
     expect(document.activeElement).toBe(within(dialog).getByLabelText("Search by name"));
-    expect(within(dialog).getAllByRole("button", { name: /Inner Sphere/ })).toHaveLength(offered);
+    expect(within(dialog).getByRole("status").textContent).toMatch(new RegExp(`^${String(offered)} items in \\d+ groups`));
+    // The first groups are open, the rest closed; a closed group lists nothing until it is opened.
+    const energy = within(dialog).getByRole("button", { name: /^Energy weapons \(\d+\)$/ });
+    expect(energy.getAttribute("aria-expanded")).toBe("true");
+    const ammunition = within(dialog).getByRole("button", { name: /^Ammunition: ballistic/ });
+    expect(ammunition.getAttribute("aria-expanded")).toBe("false");
+    expect(within(dialog).queryByRole("list", { name: /^Ammunition: ballistic/ })).toBeNull();
+    await user.click(ammunition);
+    expect(within(within(dialog).getByRole("list", { name: /^Ammunition: ballistic/ })).getAllByRole("button").length).toBeGreaterThan(0);
+    // A search runs across every group; an item that is not yet on sale is not offered.
     await user.type(within(dialog).getByLabelText("Search by name"), "light machine gun");
     expect(within(dialog).getByText("No equipment matches.")).toBeTruthy();
     await user.clear(within(dialog).getByLabelText("Search by name"));
     await user.click(within(dialog).getByRole("checkbox", { name: "Show everything" }));
-    expect(within(dialog).getAllByRole("list", { name: "Equipment" })[0]?.children).toHaveLength(everythingIntro);
+    expect(within(dialog).getByRole("status").textContent).toMatch(new RegExp(`^${String(count("introductory", true))} items`));
     // Raising the unit's level brings in the rest of Standard.
     await user.click(within(dialog).getByRole("button", { name: "Cancel" }));
     await user.selectOptions(screen.getByLabelText("Rules level"), "standard");
     await user.click(within(slotList("Left Arm")).getByRole("button", { name: "Replace Medium Laser" }));
     const again = screen.getByRole("dialog", { name: "Replace Medium Laser" });
     await user.click(within(again).getByRole("checkbox", { name: "Show everything" }));
-    expect(within(again).getAllByRole("list", { name: "Equipment" })[0]?.children).toHaveLength(everything);
+    expect(within(again).getByRole("status").textContent).toMatch(new RegExp(`^${String(count("standard", true))} items`));
+    // A group with nothing to show is not listed, and a searched group opens by itself.
+    await user.type(within(again).getByLabelText("Search by name"), "ecm");
+    expect(within(again).getByRole("button", { name: /^Electronics and targeting \(\d+\)$/ }).getAttribute("aria-expanded")).toBe("true");
+    expect(within(again).queryByRole("button", { name: /^Energy weapons/ })).toBeNull();
+    await user.clear(within(again).getByLabelText("Search by name"));
     await user.type(within(again).getByLabelText("Search by name"), "light machine gun");
     await user.click(within(again).getByRole("button", { name: /^Light Machine Gun Inner Sphere, 0.5 tons, 1 slot/ }));
     expect(screen.queryByRole("dialog")).toBeNull();

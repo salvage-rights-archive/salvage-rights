@@ -68,6 +68,9 @@ export interface MechRecord {
   name: { chassis: string; model: string };
   techBase: TechBase | "mixed";
   year: number | null;
+  /** The era the unit belongs to (an id from `ERAS` in data/editions.ts). It and `year` are kept consistent by `setYear` and `setEra`
+   * (rules/availability.ts); with a year, the era is the one that holds it. Absent on records saved before eras were offered. */
+  era?: string;
   /** The rules level the unit is built under (rules/levels.ts). Absent on records saved before levels existed: they read as the
    * lowest level that accepts everything they use. */
   rulesLevel?: RulesLevel;

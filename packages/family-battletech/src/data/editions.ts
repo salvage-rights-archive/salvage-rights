@@ -67,3 +67,27 @@ export function bookName(title: string): string {
   const publisher = PUBLISHERS[title];
   return publisher === undefined ? title : `${title} (${publisher})`;
 }
+
+/** The Master Unit List's eras, names and years only; the list starts the Age of War in 2005. A year belongs to the era whose span holds
+ * it; the last era is open-ended. Not included yet: the Clan-only eras of Interstellar Operations: Alternate Eras (Founding Years
+ * 2800-2840, Golden Years 2841-3049, Post-Reaving 3086-3150), which overlap these and need a place as sub-eras. */
+export interface EraRow {
+  id: string;
+  name: string;
+  startYear: number;
+  endYear?: number;
+}
+export const ERAS: EraRow[] = [
+  { id: "age-of-war", name: "Age of War", startYear: 2005, endYear: 2570 },
+  { id: "star-league", name: "Star League", startYear: 2571, endYear: 2780 },
+  { id: "early-succession-war", name: "Early Succession War", startYear: 2781, endYear: 2900 },
+  { id: "late-succession-war-lostech", name: "Late Succession War - LosTech", startYear: 2901, endYear: 3019 },
+  { id: "late-succession-war-renaissance", name: "Late Succession War - Renaissance", startYear: 3020, endYear: 3049 },
+  { id: "clan-invasion", name: "Clan Invasion", startYear: 3050, endYear: 3061 },
+  { id: "civil-war", name: "Civil War", startYear: 3062, endYear: 3067 },
+  { id: "jihad", name: "Jihad", startYear: 3068, endYear: 3085 },
+  { id: "early-republic", name: "Early Republic", startYear: 3086, endYear: 3100 },
+  { id: "late-republic", name: "Late Republic", startYear: 3101, endYear: 3130 },
+  { id: "dark-ages", name: "Dark Ages", startYear: 3131, endYear: 3150 },
+  { id: "ilclan", name: "ilClan", startYear: 3151 },
+];
