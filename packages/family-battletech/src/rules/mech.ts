@@ -54,6 +54,8 @@ export interface Mount {
   /** Slots the item takes when the catalog has no row for it: what the source said. Layout reads it only then. */
   slots?: number;
   linkedTo?: string;
+  /** The item fires to the rear (torso, leg and head mounts only matter); read by the Battle Value rules. The importer does not set it. */
+  rear?: true;
 }
 
 export interface MechRecord {
