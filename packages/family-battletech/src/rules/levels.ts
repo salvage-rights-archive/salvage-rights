@@ -53,7 +53,21 @@ export interface LevelItem {
 }
 
 const own = (table: object, key: string) => Object.hasOwn(table, key);
-const partLevel = (table: keyof typeof INTRODUCTORY_PARTS, key: string): RulesLevel => (INTRODUCTORY_PARTS[table].includes(key) ? "introductory" : DEFAULT_LEVEL);
+/** A part's level: the level its row states when above Standard (hardened armor is Advanced, say), else Introductory for the
+ * 3025 parts, else Standard. */
+const partLevel = (table: keyof typeof INTRODUCTORY_PARTS, key: string, row?: { rulesLevel?: RulesLevel }): RulesLevel => {
+  const stated = row ? levelOf(row) : DEFAULT_LEVEL;
+  if (stated !== DEFAULT_LEVEL) return stated;
+  return INTRODUCTORY_PARTS[table].includes(key) ? "introductory" : DEFAULT_LEVEL;
+};
+
+/** A chassis part table's rows as select options at the record's level: a type above that level says what it needs, `Hardened (needs Advanced)`. */
+export function partOptions(table: { types: Record<string, { name: string; rulesLevel?: RulesLevel }> }, level: RulesLevel): [string, string][] {
+  return Object.entries(table.types).map(([key, row]) => {
+    const needs = levelOf(row);
+    return [key, needs !== DEFAULT_LEVEL && !levelAtLeast(level, needs) ? `${row.name} (needs ${levelRow(needs).label})` : row.name];
+  });
+}
 
 /** Everything the record uses that has a level, one entry per part and one per distinct equipment row. */
 export function levelItems(record: MechRecord, catalog: Catalog): LevelItem[] {
@@ -67,8 +81,8 @@ export function levelItems(record: MechRecord, catalog: Catalog): LevelItem[] {
   if (record.techBase !== "inner-sphere") {
     items.push({ what: "tech base", name: record.techBase === "clan" ? "Clan technology" : "Mixed technology", level: DEFAULT_LEVEL, where: { field: "techBase" } });
   }
-  const part = (what: LevelItem["what"], table: { cite: { book: string; page: number }; types: Record<string, { name: string }> }, key: string, field: string, kind: keyof typeof INTRODUCTORY_PARTS) => {
-    if (own(table.types, key)) items.push({ what, name: table.types[key]?.name ?? key, level: partLevel(kind, key), cite: table.cite, where: { field } });
+  const part = (what: LevelItem["what"], table: { cite: { book: string; page: number }; types: Record<string, { name: string; rulesLevel?: RulesLevel }> }, key: string, field: string, kind: keyof typeof INTRODUCTORY_PARTS) => {
+    if (own(table.types, key)) items.push({ what, name: table.types[key]?.name ?? key, level: partLevel(kind, key, table.types[key]), cite: table.cite, where: { field } });
   };
   part("engine", ENGINE_TYPES, chassis.engine.type, "chassis.engine", "engine");
   part("gyro", GYROS, chassis.gyro, "chassis.gyro", "gyro");
@@ -82,7 +96,7 @@ export function levelItems(record: MechRecord, catalog: Catalog): LevelItem[] {
     items.push({
       what: "cockpit",
       name: cockpit.name,
-      level: owner && owner.rulesLevel !== DEFAULT_LEVEL ? owner.rulesLevel : partLevel("cockpit", chassis.cockpit),
+      level: owner && owner.rulesLevel !== DEFAULT_LEVEL ? owner.rulesLevel : partLevel("cockpit", chassis.cockpit, cockpit),
       cite: cockpit.cite ?? COCKPITS.cite,
       where: { field: "chassis.cockpit" },
     });

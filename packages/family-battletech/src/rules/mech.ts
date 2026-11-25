@@ -239,6 +239,16 @@ function fixedLabels(record: MechRecord, config: NonNullable<ReturnType<typeof c
     }
   }
 
+  // Cockpit parts that live outside the head (a torso-mounted cockpit): the first free slots, after the engine and gyro.
+  if (cockpit?.elsewhere) {
+    for (const [loc, parts] of Object.entries(cockpit.elsewhere) as [LocationCode, string[]][]) {
+      for (const part of parts) {
+        const free = labels[loc]?.indexOf("") ?? -1;
+        if (free >= 0) set(loc, free, part);
+      }
+    }
+  }
+
   // An arm without its lower arm actuator has no hand either; the freed cells are ordinary empty slots.
   for (const arm of ["LA", "RA"] as const) {
     const has = record.arms?.[arm];

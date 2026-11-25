@@ -56,6 +56,8 @@ const ENGINE_WORDS: Record<string, Words> = {
   lightfusion: { is: "light" },
   compact: { is: "compact" },
   compactfusion: { is: "compact" },
+  xxl: { is: "xxl", clan: "xxl-clan" },
+  xxlfusion: { is: "xxl", clan: "xxl-clan" },
 };
 const GYRO_WORDS: Record<string, Words> = {
   standard: { is: "standard" },
@@ -64,10 +66,14 @@ const GYRO_WORDS: Record<string, Words> = {
   xl: { is: "xl" },
   extralight: { is: "xl" },
 };
-const COCKPIT_WORDS: Record<string, Words> = { standard: { is: "standard" }, small: { is: "small" } };
+const COCKPIT_WORDS: Record<string, Words> = { standard: { is: "standard" }, small: { is: "small" }, torsomounted: { is: "torso-mounted" } };
 const STRUCTURE_WORDS: Record<string, Words> = {
   standard: { is: "standard" },
   endosteel: { is: "endo-steel", clan: "endo-steel-clan" },
+  composite: { is: "composite" },
+  endocomposite: { is: "endo-composite", clan: "endo-composite-clan" },
+  reinforced: { is: "reinforced" },
+  industrial: { is: "industrial" },
 };
 const ARMOR_WORDS: Record<string, Words> = {
   standard: { is: "standard" },
@@ -75,6 +81,16 @@ const ARMOR_WORDS: Record<string, Words> = {
   lightferrofibrous: { is: "light-ferro-fibrous" },
   ferrofibrous: { is: "ferro-fibrous", clan: "ferro-fibrous-clan" },
   heavyferrofibrous: { is: "heavy-ferro-fibrous" },
+  hardened: { is: "hardened" },
+  ferrolamellor: { is: "ferro-lamellor" },
+  laserreflective: { is: "laser-reflective", clan: "laser-reflective-clan" },
+  reactive: { is: "reactive", clan: "reactive-clan" },
+  antipenetrativeablation: { is: "anti-penetrative-ablation" },
+  ballisticreinforced: { is: "ballistic-reinforced" },
+  heatdissipating: { is: "heat-dissipating" },
+  impactresistant: { is: "impact-resistant" },
+  commercial: { is: "commercial" },
+  industrial: { is: "industrial" },
 };
 const MYOMER_WORDS: Record<string, Words> = {
   standard: { is: "standard" },

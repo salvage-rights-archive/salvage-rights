@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { loadCatalog } from "../../rules/catalog";
 import { mordelBiped, mordelQuad, mordelWith, tripodRecord } from "../../rules/fixtures";
 import { fromMordel } from "../../rules/mordel";
+import { editRecord } from "../../rules/mech";
 import type { MechRecord } from "../../rules/mech";
 import RecordSheet from "./RecordSheet";
 import { inventoryStep } from "./MechData";
@@ -25,6 +26,15 @@ async function drawn(record: MechRecord) {
 }
 
 describe("The record sheet", () => {
+  it("takes hardened armor's and a large shield's movement off the printed movement and says why", async () => {
+    const slowed = editRecord(await recordOf(mordelBiped()), (d) => {
+      d.chassis.armorType = "hardened";
+      d.mounts.push({ id: "sh", equipmentId: "shield-large-is", name: "Shield, Large", techBase: "inner-sphere", location: "LA", slot: null });
+    });
+    const { lines } = await drawn(slowed);
+    expect(lines).toEqual(expect.arrayContaining(["Walking: 3", "Running: 4", "Jumping: 0", "Hardened: Run -1; Shield: MP -1; No jump"]));
+  });
+
   it("prints the movement, an inventory line, the ammunition, an empty slot, the heat sinks and the credit", async () => {
     const { svg, lines } = await drawn(await recordOf(mordelBiped()));
     expect(svg.getAttribute("role")).toBe("img");

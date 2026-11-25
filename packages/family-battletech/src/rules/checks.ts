@@ -17,14 +17,17 @@ import {
   LAM,
   MYOMER,
   SHEET,
+  SHIELDS,
   STRUCTURE_TYPES,
 } from "../data/chassis";
+import type { Cite, PartFacts } from "../data/chassis";
 import { locationsFor } from "./catalog";
 import { levelAtLeast, levelItems, levelRow } from "./levels";
 import type { Catalog, EquipmentRow } from "./catalog";
 import { armorSpread, configurationOf, engineTons, layout as buildLayout, maxArmor, walkMP, weights } from "./mech";
 import { locationName, type Layout, type LocationCode, type MechRecord, type Mount } from "./mech";
-import { rowOf } from "./walk";
+import { mountedShields, missingActuators, shieldStats } from "./shields";
+import { movementPenalty, rowOf } from "./walk";
 
 export interface Finding {
   check: string;
@@ -563,6 +566,96 @@ function lamCheck({ record, catalog }: CheckInput): Finding[] {
   return out;
 }
 
+/** The year the part first appears for the record's tech base (a mixed record takes the earlier), or undefined when the book prints none. */
+function firstYear(part: PartFacts, techBase: MechRecord["techBase"]): number | undefined {
+  const years = techBase === "inner-sphere" ? [part.introduced?.is] : techBase === "clan" ? [part.introduced?.clan] : [part.introduced?.is, part.introduced?.clan];
+  const printed = years.filter((y): y is number => y !== undefined);
+  return printed.length === 0 ? undefined : Math.min(...printed);
+}
+
+/**
+ * The newer structure, armor, engine and cockpit types (rows that carry PartFacts in data/chassis.ts): whose technology each is,
+ * when it first appears, a warning for a part printed for IndustrialMechs or Primitive 'Mechs, and what it does in play as a note.
+ * Play effects are shown, never simulated.
+ */
+function partsCheck({ record, catalog }: CheckInput): Finding[] {
+  const out: Finding[] = [];
+  const { chassis } = record;
+  const parts: [string, { cite: Cite; types: Record<string, PartFacts & { name: string }> }, string, string][] = [
+    ["structure", STRUCTURE_TYPES, chassis.structure, "chassis.structure"],
+    ["armor", ARMOR, chassis.armorType, "chassis.armorType"],
+    ["engine", ENGINE_TYPES, chassis.engine.type, "chassis.engine"],
+    ["cockpit", COCKPITS, chassis.cockpit, "chassis.cockpit"],
+  ];
+  for (const [what, table, key, field] of parts) {
+    const part = own(table.types, key) ? table.types[key] : undefined;
+    if (!part) continue;
+    const where = { field };
+    const cite = part.cite ?? table.cite;
+    const clanOnly = part.techBase === "clan" && record.techBase === "inner-sphere";
+    const isOnly = part.techBase === "inner-sphere" && record.techBase === "clan";
+    if (clanOnly || isOnly) {
+      out.push(finding("parts", "error", `${part.name} ${what} is ${clanOnly ? "Clan" : "Inner Sphere"} technology; this is ${record.techBase === "clan" ? "a Clan" : "an Inner Sphere"} 'Mech.`, { where, cite }));
+    }
+    const from = firstYear(part, record.techBase);
+    if (from !== undefined && record.year !== null && record.year < from) {
+      const early = part.introduced?.prototype ? `prototypes appear in ${from}` : `it appears in ${from}`;
+      out.push(finding("parts", "error", `${part.name} ${what} is not available in ${record.year}; ${early}.`, { where, cite }));
+    }
+    if (part.industrial) {
+      out.push(finding("parts", "warning", `${part.name} ${what} is printed for IndustrialMechs. A 'Mech that uses it is an IndustrialMech, built under rules this tool does not check.`, { where, cite }));
+    }
+    if (part.primitive) {
+      out.push(finding("parts", "warning", `${part.name} ${what} is printed for Primitive BattleMechs, which have their own construction rules this tool does not check.`, { where, cite }));
+    }
+    if (part.rules) out.push(finding("parts", "note", `${part.name} ${what}${part.rulesLevel && part.rulesLevel !== "standard" ? ` (${part.rulesLevel} rules)` : ""}: ${part.rules}`, { where, cite: part.rulesCite ?? cite }));
+  }
+  const slow = movementPenalty(record, catalog);
+  if (slow.because.length > 0) {
+    const armor = own(ARMOR.types, chassis.armorType) ? ARMOR.types[chassis.armorType] : undefined;
+    out.push(finding("parts", "note", `Movement: ${slow.because.join("; ")}. The record sheet and the Battle Value count it.`, { cite: armor?.movement ? (armor.rulesCite ?? ARMOR.cite) : SHIELDS.cite }));
+  }
+  return out;
+}
+
+/** Shields (TO:AUE printed pp.100 and 103): only in an arm, one to an arm, none on a body without arms; what each gives its arm and what a large one costs. */
+function shieldCheck({ record, catalog }: CheckInput): Finding[] {
+  const shields = mountedShields(record, catalog);
+  if (shields.length === 0) return [];
+  const out: Finding[] = [];
+  const size = configurationOf(record.configuration)?.size as Partial<Record<LocationCode, number>> | undefined;
+  const armless = size !== undefined && size.LA === undefined && size.RA === undefined;
+  const cite = SHIELDS.rulesCite;
+  for (const shield of shields) {
+    const where = { mountId: shield.mount.id, location: shield.mount.location ?? undefined };
+    if (armless) {
+      out.push(finding("shields", "error", `A ${record.configuration} has no arms, so it cannot mount ${shield.mount.name}; a shield goes in an arm.`, { where, cite }));
+      continue;
+    }
+    if (shield.arm === null) {
+      if (shield.mount.location !== null) {
+        out.push(finding("shields", "error", `${shield.mount.name} is in the ${locationName(shield.mount.location)}; a shield may only be mounted in an arm.`, { where, cite }));
+      }
+      continue;
+    }
+    const { da, dc } = shieldStats(record, shield);
+    const lost = missingActuators(record, shield.arm);
+    const reduced = lost > 0 ? ` (less ${lost} each for ${lost === 1 ? "its" : "the"} missing arm or hand actuator${lost === 1 ? "" : "s"})` : "";
+    out.push(finding("shields", "note", `${shield.mount.name} in the ${locationName(shield.arm)}: Damage Absorption ${da}, Damage Capacity ${dc}${reduced}. A Shield Bash takes ${shield.row.bash} to hit.`, { where, cite: SHIELDS.cite }));
+  }
+  for (const arm of ["LA", "RA"] as const) {
+    const here = shields.filter((s) => s.arm === arm);
+    if (here.length > SHIELDS.perArm) {
+      out.push(finding("shields", "error", `The ${locationName(arm)} mounts ${here.length} shields; only ${SHIELDS.perArm} may be mounted per arm.`, { where: { location: arm }, cite }));
+    }
+  }
+  const jets = record.mounts.filter((m) => rowOf(catalog, record, m)?.kind === "jump-jet").length;
+  if (jets > 0 && shields.some((s) => s.row.noJump)) {
+    out.push(finding("shields", "note", "A 'Mech carrying a large shield may not jump; its jump jets are for the Battle Value only.", { cite: SHIELDS.cite }));
+  }
+  return out;
+}
+
 function unsupportedCheck({ record, layout }: CheckInput): Finding[] {
   if (layout.supported) return [];
   return [
@@ -587,6 +680,8 @@ export const CHECKS: Check[] = [
   { id: "level", editions: "all", run: levelCheck },
   { id: "configuration", editions: "all", run: configurationCheck },
   { id: "unmatched", editions: "all", run: unmatchedCheck },
+  { id: "parts", editions: "all", run: partsCheck },
+  { id: "shields", editions: "all", run: shieldCheck },
   { id: "lam", editions: "all", run: lamCheck },
   { id: "unsupported", editions: "all", run: unsupportedCheck },
 ];

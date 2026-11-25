@@ -13,7 +13,7 @@ import type { Finding } from "../rules/checks";
 import { changedSinceImport } from "../rules/mordel";
 import { ARM_FULL, bodyOf, editRecord, layout as buildLayout, locationName, weights as buildWeights } from "../rules/mech";
 import type { Layout, LocationCode, MechRecord } from "../rules/mech";
-import { DEFAULT_LEVEL, configurationOption, withLevel } from "../rules/levels";
+import { DEFAULT_LEVEL, configurationOption, partOptions, withLevel } from "../rules/levels";
 import type { RulesLevel } from "../data/chassis";
 import LevelSelect from "./editor/LevelSelect";
 import ArmorPanel from "./editor/ArmorPanel";
@@ -284,21 +284,19 @@ const NOTE_FIELDS = [
 // The fields, as tables
 // ---------------------------------------------------------------------------------------------------------------
 
-const names = (types: Record<string, { name: string }>): [string, string][] => Object.entries(types).map(([key, row]) => [key, row.name]);
-
 type ChassisField =
-  | { kind: "select"; path: string; label: string; options: [string, string][]; read: (r: MechRecord) => string; write: (d: MechRecord, v: string) => void }
+  | { kind: "select"; path: string; label: string; options: (level: RulesLevel) => [string, string][]; read: (r: MechRecord) => string; write: (d: MechRecord, v: string) => void }
   | { kind: "number"; path: string; label: string; read: (r: MechRecord) => number; write: (d: MechRecord, v: number) => void };
 
 const CHASSIS_FIELDS: ChassisField[] = [
-  { kind: "select", path: "chassis.engine", label: "Engine type", options: names(ENGINE_TYPES.types), read: (r) => r.chassis.engine.type, write: (d, v) => void (d.chassis.engine.type = v) },
+  { kind: "select", path: "chassis.engine", label: "Engine type", options: (level) => partOptions(ENGINE_TYPES, level), read: (r) => r.chassis.engine.type, write: (d, v) => void (d.chassis.engine.type = v) },
   { kind: "number", path: "chassis.engine-rating", label: "Engine rating", read: (r) => r.chassis.engine.rating, write: (d, v) => void (d.chassis.engine.rating = v) },
-  { kind: "select", path: "chassis.gyro", label: "Gyro", options: names(GYROS.types), read: (r) => r.chassis.gyro, write: (d, v) => void (d.chassis.gyro = v) },
-  { kind: "select", path: "chassis.cockpit", label: "Cockpit", options: names(COCKPITS.types), read: (r) => r.chassis.cockpit, write: (d, v) => void (d.chassis.cockpit = v) },
-  { kind: "select", path: "chassis.structure", label: "Structure type", options: names(STRUCTURE_TYPES.types), read: (r) => r.chassis.structure, write: (d, v) => { setPartType(d, "structure", v); } },
-  { kind: "select", path: "chassis.armorType", label: "Armor type", options: names(ARMOR.types), read: (r) => r.chassis.armorType, write: (d, v) => { setPartType(d, "armor", v); } },
-  { kind: "select", path: "chassis.myomer", label: "Myomer", options: names(MYOMER.types), read: (r) => r.chassis.myomer, write: (d, v) => void (d.chassis.myomer = v) },
-  { kind: "select", path: "chassis.heatSinks", label: "Heat sink type", options: names(HEAT_SINKS.types), read: (r) => r.chassis.heatSinks.type, write: (d, v) => void (d.chassis.heatSinks.type = v) },
+  { kind: "select", path: "chassis.gyro", label: "Gyro", options: (level) => partOptions(GYROS, level), read: (r) => r.chassis.gyro, write: (d, v) => void (d.chassis.gyro = v) },
+  { kind: "select", path: "chassis.cockpit", label: "Cockpit", options: (level) => partOptions(COCKPITS, level), read: (r) => r.chassis.cockpit, write: (d, v) => void (d.chassis.cockpit = v) },
+  { kind: "select", path: "chassis.structure", label: "Structure type", options: (level) => partOptions(STRUCTURE_TYPES, level), read: (r) => r.chassis.structure, write: (d, v) => { setPartType(d, "structure", v); } },
+  { kind: "select", path: "chassis.armorType", label: "Armor type", options: (level) => partOptions(ARMOR, level), read: (r) => r.chassis.armorType, write: (d, v) => { setPartType(d, "armor", v); } },
+  { kind: "select", path: "chassis.myomer", label: "Myomer", options: (level) => partOptions(MYOMER, level), read: (r) => r.chassis.myomer, write: (d, v) => void (d.chassis.myomer = v) },
+  { kind: "select", path: "chassis.heatSinks", label: "Heat sink type", options: (level) => partOptions(HEAT_SINKS, level), read: (r) => r.chassis.heatSinks.type, write: (d, v) => void (d.chassis.heatSinks.type = v) },
   { kind: "number", path: "chassis.heatSinks-count", label: "Heat sinks", read: (r) => r.chassis.heatSinks.count, write: (d, v) => void (d.chassis.heatSinks.count = v) },
 ];
 
@@ -773,7 +771,7 @@ function Editor({ initial, catalog, storage }: { initial: MechRecord; catalog: C
                         id={fieldId(field.path)}
                         label={field.label}
                         value={field.read(record)}
-                        options={field.options}
+                        options={field.options(record.rulesLevel ?? DEFAULT_LEVEL)}
                         changed={mark(field.path)}
                         onChange={(v) => { edit((d) => { field.write(d, v); }); }}
                       />

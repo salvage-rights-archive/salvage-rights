@@ -112,6 +112,63 @@ export const GYRO_BV_MODIFIER: Sourced & { values: Record<string, number> } = {
   values: { standard: 0.5, compact: 0.5, xl: 0.5, "heavy-duty": 1.0 },
 };
 
+/**
+ * The newer armor, internal structure and engine types' modifiers: Tactical Operations: Advanced Units and Equipment, Armor Type
+ * Modifier Table (printed p.192), 'Mech Internal Structure Modifier Table [Addendum] (p.194) and 'Mech Engine Type Modifier Table
+ * [Addendum] (p.193), and Interstellar Operations: Alternate Eras, Dark Age Armor Modifiers Table (p.185); all read against the page
+ * image. Keys are the chassis table's keys. A row with `likeThe` has no figure of its own in any table: the book says the part
+ * works as the named one (or, for the primitive armor, the primitive unit's BV is worked "normally" with a Barrier Armor Rating
+ * of 10), so it takes that part's figure; that is our reading, not a printed value.
+ */
+export interface ModifierRow {
+  value: number;
+  cite: BvCite;
+  checked: Checked;
+  likeThe?: string;
+}
+const TO_ARMOR_MODIFIERS: BvCite = { book: TO, page: 192 };
+const IO_ARMOR_MODIFIERS: BvCite = { book: IO, page: 185 };
+const TO_STRUCTURE_MODIFIERS: BvCite = { book: TO, page: 194 };
+const TO_ENGINE_MODIFIERS: BvCite = { book: TO, page: 193 };
+const row = (value: number, cite: BvCite, likeThe?: string): ModifierRow => ({ value, cite, checked: likeThe === undefined ? "page" : "text", ...(likeThe === undefined ? {} : { likeThe }) });
+export const ADVANCED_BV_MODIFIERS: { armor: Record<string, ModifierRow>; structure: Record<string, ModifierRow>; engine: Record<string, ModifierRow> } = {
+  armor: {
+    hardened: row(2.0, TO_ARMOR_MODIFIERS),
+    "ferro-lamellor": row(1.2, TO_ARMOR_MODIFIERS),
+    "laser-reflective": row(1.5, TO_ARMOR_MODIFIERS),
+    "laser-reflective-clan": row(1.5, TO_ARMOR_MODIFIERS),
+    reactive: row(1.5, TO_ARMOR_MODIFIERS),
+    "reactive-clan": row(1.5, TO_ARMOR_MODIFIERS),
+    "anti-penetrative-ablation": row(1.2, IO_ARMOR_MODIFIERS),
+    "heat-dissipating": row(1.05, IO_ARMOR_MODIFIERS),
+    "impact-resistant": row(1.0, IO_ARMOR_MODIFIERS),
+    "ballistic-reinforced": row(1.2, IO_ARMOR_MODIFIERS),
+    "prototype-ferro-fibrous": row(1.0, TO_ARMOR_MODIFIERS, "ferro-fibrous (all)"),
+    primitive: row(1.0, { book: IO, page: 187 }, "standard armor (Barrier Armor Rating 10)"),
+  },
+  structure: {
+    composite: row(0.5, TO_STRUCTURE_MODIFIERS),
+    "endo-composite": row(1.0, TO_STRUCTURE_MODIFIERS),
+    "endo-composite-clan": row(1.0, TO_STRUCTURE_MODIFIERS),
+    reinforced: row(2.0, TO_STRUCTURE_MODIFIERS),
+    "prototype-endo-steel": row(1.0, TO_STRUCTURE_MODIFIERS, "endo steel"),
+  },
+  engine: {
+    xxl: row(0.25, TO_ENGINE_MODIFIERS),
+    "xxl-clan": row(0.5, TO_ENGINE_MODIFIERS),
+    "prototype-xl": row(0.5, { book: TM, page: 315 }, "Inner Sphere XL"),
+  },
+};
+
+/** A torso-mounted cockpit doubles the center torso armor (front and rear together) before the armor modifier, and the finished BV takes 0.95 (TO:AUE printed p.193). */
+export const TORSO_COCKPIT_BV: Sourced & { cockpit: string; armorFactor: number; finalFactor: number } = {
+  cite: { book: TO, page: 193 },
+  checked: "page",
+  cockpit: "torso-mounted",
+  armorFactor: 2,
+  finalFactor: 0.95,
+};
+
 /** Target Movement Modifier by hexes moved (Attack Modifiers Table, Total Warfare p. 117): [most hexes in the band, modifier]. Jumping adds 1. */
 export const TARGET_MODIFIER: Sourced & { bands: [number, number][]; jumpBonus: number } = {
   cite: { book: TW, page: 117 },

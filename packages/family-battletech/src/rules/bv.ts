@@ -3,6 +3,7 @@
 // Nothing here throws: an item the book prints no BV for is left out of the total and listed in `unvalued`, and `complete`
 // says so. The method is read as the book prints it; the places where the printed text is ambiguous are noted at the line.
 import {
+  ADVANCED_BV_MODIFIERS,
   ARMOR_BV_MODIFIER,
   ARTEMIS_IDS,
   BV_METHOD,
@@ -25,6 +26,7 @@ import {
   STRUCTURE_BV_MODIFIER,
   TARGET_MODIFIER,
   TARGETING_COMPUTER_IDS,
+  TORSO_COCKPIT_BV,
   UNFIXED,
   UNLISTED_IS_ZERO,
   WEAPON_BV,
@@ -33,7 +35,7 @@ import type { BvGroup, BvOptions } from "../data/bv";
 import { walkMP } from "./mech";
 import type { LocationCode, MechRecord, Mount } from "./mech";
 import type { Catalog, EquipmentRow } from "./catalog";
-import { armorPoints, equipmentItems, heatSinkCapacity, jumpMP as jumpJets, mascOf, own, roundHalfUp, stemOf, structureTotal, tidy, tsmOf } from "./walk";
+import { armorPoints, equipmentItems, heatSinkCapacity, jumpMP as jumpJets, mascOf, movementPenalty, own, roundHalfUp, stemOf, structureTotal, tidy, tsmOf } from "./walk";
 import type { Item } from "./walk";
 
 export interface PilotSkills {
@@ -90,7 +92,7 @@ export interface BvResult {
     speedFactor: number;
     rating: number;
   };
-  modifiers: { smallCockpit: boolean; tsm: boolean };
+  modifiers: { smallCockpit: boolean; torsoCockpit: boolean; tsm: boolean };
   unvalued: Unvalued[];
   /** Items counted as 0 because the books say equipment in none of their BV tables counts as 0 (TO:AUE p. 192). */
   zeroByRule: Unvalued[];
@@ -180,16 +182,19 @@ export function battleValue(record: MechRecord, catalog: Catalog, pilot: PilotSk
   // TSM adds 2 Walking MP from 9 heat (Total Warfare p. 143), where the heat scale has already taken 1 (p. 159): the most it
   // can legally generate is 1 more than its Walking MP.
   const walkMax = tsm ? walk + BV_METHOD.tsmWalkBonus : walk;
-  const runMP = masc ? walk * 2 : Math.ceil(walkMax * 1.5); // MASC: double the Walking MP, Total Warfare p. 137; running: p. 53
+  // Hardened armor and medium and large shields take Running MP away, and the Defensive and Speed Factors count it (TO:AUE p. 192); a
+  // large shield's "no jumping" is not counted, the jump rating is used as normal (p. 193).
+  const penalty = movementPenalty(record, catalog);
+  const runMP = Math.max(0, (masc ? walk * 2 : Math.ceil(walkMax * 1.5)) - penalty.run); // MASC: double the Walking MP, Total Warfare p. 137; running: p. 53
   const jumpMP = jumpJets(items);
   const improvedJets = has(IMPROVED_JUMP_JET_IDS);
   const cruise = jumpMP * LAM_BV.cruisePerJumpMP;
   const flank = Math.ceil(cruise * LAM_BV.flankFactor);
 
   // ---- Defensive Battle Rating ----------------------------------------------------------------------------------
-  const armorMod = own(ARMOR_BV_MODIFIER.values, chassis.armorType);
-  const structureMod = own(STRUCTURE_BV_MODIFIER.values, chassis.structure);
-  const engineMod = own(ENGINE_BV_MODIFIER.values, chassis.engine.type);
+  const armorMod = own(ARMOR_BV_MODIFIER.values, chassis.armorType) ?? own(ADVANCED_BV_MODIFIERS.armor, chassis.armorType)?.value;
+  const structureMod = own(STRUCTURE_BV_MODIFIER.values, chassis.structure) ?? own(ADVANCED_BV_MODIFIERS.structure, chassis.structure)?.value;
+  const engineMod = own(ENGINE_BV_MODIFIER.values, chassis.engine.type) ?? own(ADVANCED_BV_MODIFIERS.engine, chassis.engine.type)?.value;
   const gyroMod = own(GYRO_BV_MODIFIER.values, chassis.gyro);
   for (const [what, value, key] of [
     ["armor type", armorMod, chassis.armorType],
@@ -200,7 +205,11 @@ export function battleValue(record: MechRecord, catalog: Catalog, pilot: PilotSk
     if (value === undefined) note(undefined, `${what} "${key}"`, "no printed Battle Value modifier; counted as 1.0");
   }
   const structure = structureTotal(record);
-  const armor = armorPoints(record) * BV_METHOD.armorFactor * (armorMod ?? 1);
+  // A torso-mounted cockpit doubles the center torso armor, front and rear together, before the armor modifier (TO:AUE p. 193).
+  const torsoCockpit = chassis.cockpit === TORSO_COCKPIT_BV.cockpit;
+  const centerTorso = record.armor.CT ? record.armor.CT.front + (record.armor.CT.rear ?? 0) : 0;
+  const armorTotal = armorPoints(record) + (torsoCockpit ? centerTorso * (TORSO_COCKPIT_BV.armorFactor - 1) : 0);
+  const armor = armorTotal * BV_METHOD.armorFactor * (armorMod ?? 1);
   const structureBv = structure * BV_METHOD.structureFactor * (structureMod ?? 1) * (engineMod ?? 1);
   const gyro = record.tons * (gyroMod ?? 1);
 
@@ -222,8 +231,10 @@ export function battleValue(record: MechRecord, catalog: Catalog, pilot: PilotSk
   for (const { systems, ammo } of defensiveAmmo.values()) defensiveEquipment += Math.min(systems, ammo);
 
   // Explosive ammunition and Gauss weapons: points per critical slot, by where the slot is.
-  const clanMech = record.techBase === "clan" || chassis.engine.type === "xl-clan";
-  const xlInnerSphere = chassis.engine.type === "xl";
+  // A Clan 'Mech with an XXL engine loses points for explosive slots as an Inner Sphere XL does, and so does an Inner Sphere XXL (TO:AUE p. 193).
+  const xxl = chassis.engine.type === "xxl" || chassis.engine.type === "xxl-clan";
+  const clanMech = !xxl && (record.techBase === "clan" || chassis.engine.type === "xl-clan");
+  const xlInnerSphere = chassis.engine.type === "xl" || xxl;
   const caseAt = (loc: LocationCode | null): number | undefined => {
     const found = items.filter((i) => i.mount.location === loc && own(CASE_ROWS, i.row.id) !== undefined);
     return found.length === 0 ? undefined : Math.max(...found.map((i) => CASE_ROWS[i.row.id] ?? 0));
@@ -437,7 +448,7 @@ export function battleValue(record: MechRecord, catalog: Catalog, pilot: PilotSk
 
   // ---- Final ----------------------------------------------------------------------------------------------------
   const smallCockpit = chassis.cockpit === "small";
-  const sum = (defensiveRating + offensiveRating) * (smallCockpit ? BV_METHOD.smallCockpit : 1);
+  const sum = (defensiveRating + offensiveRating) * (smallCockpit ? BV_METHOD.smallCockpit : 1) * (torsoCockpit ? TORSO_COCKPIT_BV.finalFactor : 1);
   const baseBv = roundHalfUp(sum);
   const multiplier = skillMultiplier(pilot);
   return {
@@ -472,7 +483,7 @@ export function battleValue(record: MechRecord, catalog: Catalog, pilot: PilotSk
       speedFactor: speed,
       rating: tidy(offensiveRating),
     },
-    modifiers: { smallCockpit, tsm },
+    modifiers: { smallCockpit, torsoCockpit, tsm },
     unvalued,
     zeroByRule,
   };
