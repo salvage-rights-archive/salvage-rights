@@ -58,6 +58,8 @@ const PUBLISHERS: Record<string, string> = {
   TechManual: "Catalyst Game Labs",
   "Interstellar Operations: Alternate Eras": "Catalyst Game Labs",
   "Tactical Operations: Advanced Units and Equipment": "Catalyst Game Labs",
+  "Quick-Strike: Introductory 'Mech Cards": "Catalyst Game Labs",
+  "BattleTech Quick-Start Rules": "Catalyst Game Labs",
 };
 
 /** A book's title with its publisher, as citations show it: `TechManual (Catalyst Game Labs)`. */

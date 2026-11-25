@@ -34,7 +34,7 @@ export function levelOf(row: { rulesLevel?: RulesLevel }): RulesLevel {
  * when it is Inner Sphere equipment on sale in 3025: one of its availability spans covers that year. That covers every
  * TechManual weapon, heat sink, jump jet and the like the book dates to or before 3025 and still sold then; it misses items
  * the book dates only for a later reintroduction (they are Standard, correctly) and cannot see an item a 3025 force
- * fielded that the book gives no date for (its `availability` is the book's, so none is guessed).
+ * fielded that the book gives no date for (its `availability` is the book's, so none is guessed). The 3025 cut-off is Total Warfare p.275; applying it to the TechManual dates is our inference (see INTRODUCTORY_PARTS in data/chassis.ts).
  */
 export function equipmentLevel(row: EquipmentRow): RulesLevel {
   const stated = levelOf(row);

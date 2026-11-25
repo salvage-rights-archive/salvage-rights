@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { RULES_LEVELS } from "../data/chassis";
 import type { RulesLevel } from "../data/chassis";
 import { OTHER } from "../data/equipment/other";
-import { createCatalog, expand } from "./catalog";
+import { createCatalog, expand, loadCatalog } from "./catalog";
 import type { EquipmentGroup, EquipmentRow } from "./catalog";
 import { runChecks } from "./checks";
 import { bipedRecord, mount, tripodRecord } from "./fixtures";
@@ -109,5 +109,15 @@ describe("the level check", () => {
     expect(unlimited.filter((f) => f.level === "error")).toEqual([]);
     expect(unlimited.filter((f) => f.check === "level")).toEqual([]);
     expect(unlimited.filter((f) => f.check === "armor" && f.level !== "note").map((f) => f.level)).toEqual(["warning"]);
+  });
+});
+
+describe("the Introductory level against the Quick-Start record sheets", () => {
+  it("holds every weapon and the jump jets the Griffin and Wolverine sheets print", async () => {
+    const real = await loadCatalog();
+    const printed = ["Medium Laser", "SRM 6", "Autocannon/5", "LRM 10", "PPC", "Jump Jet", "LRM 10 Ammo", "SRM 6 Ammo"];
+    const found = printed.map((name) => real.match(name, "inner-sphere"));
+    expect(printed.filter((_, i) => !found[i])).toEqual([]);
+    expect(found.map((r) => r && equipmentLevel(r))).toEqual(printed.map(() => "introductory"));
   });
 });

@@ -426,10 +426,12 @@ export interface RulesLevelRow {
   label: string;
   description: string;
   cite?: { book: string; page: number };
+  /** Further pages that bear on the level, shown after the cite. */
+  see?: { book: string; page: number }[];
   checked?: Checked;
 }
 export const RULES_LEVELS: RulesLevelRow[] = [
-  { id: "introductory", label: "Introductory", description: "3025 technology only: Inner Sphere, the Succession Wars era's standard equipment.", cite: { book: "Total Warfare", page: 275 }, checked: "page" },
+  { id: "introductory", label: "Introductory", description: "3025 technology only: Inner Sphere 'Mechs like those of the Introductory Box Set, with the Succession Wars era's standard equipment.", cite: { book: "Total Warfare", page: 275 }, see: [{ book: "Quick-Strike: Introductory 'Mech Cards", page: 2 }], checked: "page" },
   { id: "standard", label: "Standard", description: "The tournament-legal rules of Total Warfare and TechManual.", cite: { book: "Total Warfare", page: 10 }, checked: "page" },
   { id: "advanced", label: "Advanced", description: "Mainstream technology beyond the tournament rules, such as Tactical Operations equipment.", cite: { book: "Tactical Operations: Advanced Units and Equipment", page: 87 }, checked: "page" },
   { id: "experimental", label: "Experimental", description: "Technology that has not reached mass production: prototypes, lost technology and rarities.", cite: { book: "Tactical Operations: Advanced Units and Equipment", page: 87 }, checked: "page" },
@@ -437,9 +439,20 @@ export const RULES_LEVELS: RulesLevelRow[] = [
   { id: "fan-made", label: "Fan-made", description: "Made by fans, not published by the rules publisher. Meant to be balanced." },
   { id: "unlimited", label: "Unlimited", description: "Anything goes: joke equipment, superpowered gear. The check still tells you what breaks the rules." },
 ];
-/** The chassis parts that are 3025 technology, by table: the plain ones the Succession Wars 'Mechs were built from. Every
+/**
+ * What the books print about the Introductory level, and what we infer. PRINTED: Total Warfare p.275 calls "3025
+ * (introductory) technology" the technology of the classic 'Mechs, vehicles and infantry; the Quick-Strike: Introductory
+ * 'Mech Cards p.2 (PDF page; the booklet prints no page numbers) say the Introductory Box Set's 24 'Mechs are the
+ * Technical Readout: 3039 designs; the Quick-Start Rules (2021) print two such designs, the Griffin GRF-1N and Wolverine
+ * WVR-6R (Inner Sphere; LRM 10, PPC, medium laser, SRM 6, AC/5, jump jets; printed p.14) and say the Tech Base has "no
+ * significance at this rules level" (p.9). The Quick-Start and Beginner Box rules print no construction rules and no
+ * list of allowed parts, and the Salvage Box's record sheets (Clan 'Mechs, ER weapons) are marked as advanced technology
+ * beyond the Introductory game (p.1), so they do not widen the level. INFERRED, since no book lists them: the parts below
+ * and the 3025 cut-off for equipment (equipmentLevel in rules/levels.ts), read from the TechManual dates.
+ * The chassis parts that are 3025 technology, by table: the plain ones the Succession Wars 'Mechs were built from. Every
  * other part of TechManual is Standard (that book is the standard construction rules, Tactical Operations p.87); a part
- * not named here is therefore Standard, not Introductory. Our reading, not a printed list. */
+ * not named here is therefore Standard, not Introductory.
+ */
 export const INTRODUCTORY_PARTS: Record<"configuration" | "engine" | "gyro" | "cockpit" | "structure" | "armor" | "heatSink", string[]> = {
   configuration: ["biped", "quad"],
   engine: ["standard"],

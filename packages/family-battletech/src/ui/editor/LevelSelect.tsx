@@ -38,7 +38,7 @@ export default function LevelSelect({
       </select>
       <span id={noteId} className="bt-hint bt-level__note">
         {level.description}
-        {level.cite && ` ${bookName(level.cite.book)}, p. ${String(level.cite.page)}.`}
+        {level.cite && ` ${[level.cite, ...(level.see ?? [])].map((c) => `${bookName(c.book)}, p. ${String(c.page)}`).join("; ")}.`}
       </span>
     </div>
   );
