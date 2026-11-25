@@ -321,7 +321,7 @@ function heatSinkCheck({ record, catalog }: CheckInput): Finding[] {
       // Compact and laser sinks (the rows with a page of their own) keep their own rule against mixing; the rest fall to the one-type rule.
       const barred = [a.type, b.type].map((t) => (own(HEAT_SINKS.types, t) ? HEAT_SINKS.types[t] : undefined)).find((t) => t?.cite !== undefined);
       const doubles = [a.type, b.type].every((t) => HEAT_SINK_RULES.mixable.includes(t)) && a.type !== b.type;
-      const why = a.type === b.type ? "list the same type twice; give its sinks one count" : doubles ? "mix only on a mixed technology 'Mech" : "mix only on a FrankenMech or at Fan-made rules or higher";
+      const why = a.type === b.type ? "are listed twice; give the sinks of one type a single count" : doubles ? "may be mixed only on a mixed technology 'Mech" : "may be mixed only on a FrankenMech or at Fan-made rules or higher";
       out.push(finding("heat-sinks", "error", `${partName(HEAT_SINKS, a.type)} and ${partName(HEAT_SINKS, b.type)} heat sinks ${why}; the standard rules allow one type.`, { where, cite: barred?.cite ?? cite }));
     });
   });

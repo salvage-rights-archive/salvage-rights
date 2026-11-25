@@ -37,7 +37,7 @@ describe("an Inner Sphere and a Clan double heat sink together", () => {
   // The rule in one place (heatSinkMixAllowed), and what the rules check says of it.
   it.each<[string, [string, number], [string, number][], Partial<MechRecord>, RegExp | null, number?]>([
     ["a mixed record at Advanced", ["double", 10], [["double-clan", 4]], {}, null],
-    ["an Inner Sphere record", ["double", 10], [["double-clan", 4]], { techBase: "inner-sphere" }, /only on a mixed technology/, 53],
+    ["an Inner Sphere record", ["double", 10], [["double-clan", 4]], { techBase: "inner-sphere" }, /mixed only on a mixed technology/, 53],
     ["single with double at Advanced", ["single", 10], [["double-clan", 4]], {}, /FrankenMech or at Fan-made/, 53],
     ["single with double at Fan-made", ["single", 10], [["double-clan", 4]], { rulesLevel: "fan-made" }, null],
     ["compact with laser at Advanced", ["compact", 10], [["laser", 4]], {}, /FrankenMech or at Fan-made/, 217],
