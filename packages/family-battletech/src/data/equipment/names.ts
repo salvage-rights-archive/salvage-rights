@@ -22,6 +22,10 @@ export const SHEET_ALIASES: Record<string, string[]> = {
   "tsemp-cannon-is": ["TSEMP Repeating Cannon"],
   "risc-repeating-tsemp-cannon-is": ["TSEMP Repeating"],
   "improved-heavy-gauss-is": ["Imp. Heavy Gauss Rifle", "Imp. Heavy Gauss", "iHeavy Gauss"],
+  "thumper-cannon-is": ["Thumper"],
+  "thumper-cannon-clan": ["Thumper"],
+  "sniper-cannon-is": ["Sniper"],
+  "sniper-cannon-clan": ["Sniper"],
   "heavy-rifle-is": ["Rifle (Cannon, Heavy)"],
   "light-rifle-is": ["Rifle (Cannon, Light)"],
   "medium-rifle-is": ["Rifle (Cannon, Medium)"],
@@ -59,7 +63,9 @@ export function sheetNameVariants(name: string): string[] {
   const tidy = tidySheetName(name);
   if (tidy !== name) out.push(tidy);
   const prototype = /^(.*?)\s*\(P\)$/.exec(tidy);
-  if (prototype?.[1]) out.push(`Prototype ${prototype[1]}`);
+  if (prototype?.[1]) out.push(`Prototype ${prototype[1]}`, `Prototype ${prototype[1].replace(/^Ultra AC\/(\d+)$/i, "Ultra Autocannon/$1")}`);
+  const counted = /^(.*?)\s*\(\d+\)$/.exec(tidy);
+  if (counted?.[1]) out.push(counted[1]);
   const er = /^ER (Small|Medium|Large) Pulse(?: Laser)?$/i.exec(tidy);
   if (er?.[1]) out.push(`ER Pulse Laser, ${er[1]}`);
   const heavy = /^Imp\. Heavy (Small|Medium|Large)(?: Laser)?$/i.exec(tidy);
@@ -69,8 +75,20 @@ export function sheetNameVariants(name: string): string[] {
   const ammo = /^Ammo \((.+?)\)\s*(?:\d+.*)?$/i.exec(tidy);
   if (ammo?.[1]) {
     const what = ammo[1];
-    if (/artemis(?: v)?-capable/i.test(what)) out.push("Artemis-Capable Missile Ammo");
-    else if (/narc-capable/i.test(what)) out.push("Narc-Capable Missile Ammo");
+    const printed: Record<string, string> = {
+      hmg: "Heavy Machine Gun",
+      lmg: "Light Machine Gun",
+      mg: "Machine Gun",
+      flamer: "Flamer (Vehicle)",
+      "silver bullet": "Silver Bullet Gauss",
+      "improved gauss": "Improved Gauss Rifle",
+      thumper: "Thumper Cannon",
+      sniper: "Sniper Cannon",
+      "arrow iv homing": "Arrow IV",
+    };
+    if (/artemis/i.test(what)) out.push("Artemis-Capable Missile Ammo");
+    else if (/narc/i.test(what)) out.push("Narc-Capable Missile Ammo");
+    else if (Object.hasOwn(printed, what.toLowerCase())) out.push(`${printed[what.toLowerCase()]} Ammo`);
     else if (/^ATM \d+ ER$/i.test(what)) out.push("ER ATM Ammo");
     else if (/^ATM \d+ HE$/i.test(what)) out.push("HE ATM Ammo");
     else if (/^Proto AC\/\d$/i.test(what)) out.push(`ProtoMech ${what.slice(6)} Ammo`);
