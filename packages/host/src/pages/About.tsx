@@ -34,9 +34,8 @@ export function About({ families, editionId }: { families: FamilyManifest[]; edi
         {families.map((family) => (
           <section key={family.id} aria-labelledby={`credits-${family.id}`} className="sr-credits">
             <h3 id={`credits-${family.id}`}>{family.name}</h3>
-            <p>
-              Owner: {family.credits.owner}. License: {family.credits.license}.
-            </p>
+            <p>{family.credits.owner}</p>
+            <p>License of this section's code: {family.credits.license}.</p>
             {family.credits.notes.length > 0 && (
               <ul>
                 {family.credits.notes.map((note) => (

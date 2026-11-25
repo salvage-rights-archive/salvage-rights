@@ -37,7 +37,7 @@ const manifest: FamilyManifest = {
   measures: ["inches"],
   routes: [],
   credits: {
-    owner: "Salvage Rights Team",
+    owner: "Example Yard is made by the Salvage Rights Team.",
     license: "Apache-2.0",
     notes: ["Artwork and text made for this project."],
   },
