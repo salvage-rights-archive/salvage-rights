@@ -8,7 +8,7 @@ import { loadCatalog } from "../rules/catalog";
 import type { EquipmentRow } from "../rules/catalog";
 import { equipmentLevel, levelAtLeast } from "../rules/levels";
 import type { RulesLevel } from "../data/chassis";
-import { mordelBiped, mordelOdd, mordelQuad, mordelWith } from "../rules/fixtures";
+import { bipedRecord, mount, mordelBiped, mordelOdd, mordelQuad, mordelWith } from "../rules/fixtures";
 import { fromMordel } from "../rules/mordel";
 import type { MechRecord } from "../rules/mech";
 import EditorPage from "./EditorPage";
@@ -300,6 +300,24 @@ describe("The critical slots", () => {
     const clash = within(rules()).getAllByText(/shares slot 1 of the Right Torso with/);
     expect(clash.map((c) => c.textContent).join(" ")).toMatch(/AC\/10.*Medium Laser/);
     expect(screen.getByRole("heading", { name: "Sharing a slot, or taking none" })).toBeTruthy();
+  });
+
+  it("shows a five-slot shield over every slot the record gives it, and the check names the same slots", async () => {
+    const shield = (slot: number) => ({ ...mount("shield", "shield-medium-is", "LA", slot), name: "Shield, Medium" });
+    const storage = await openFamilyStorage();
+    // From slot 1 it lands on the four actuators: the panel names the clash in each of them and the check numbers them the same.
+    await storage.save(bipedRecord({ id: "clash", editionId: "total-warfare", rulesLevel: "experimental", mounts: [shield(0)] }));
+    await open("clash");
+    const arm = await screen.findByRole("list", { name: "Left Arm slots" });
+    expect(within(arm).getByText("Shoulder + Shield, Medium")).toBeTruthy();
+    expect(within(arm).getByText("Shield, Medium").closest("li")?.textContent).toMatch(/^1-5/);
+    expect(within(rules()).getAllByText(/Shield, Medium shares slot \d of the Left Arm with/)).toHaveLength(4);
+    cleanup();
+    // After the actuators, in slots 5 to 9, it is one block with no slot errors.
+    await storage.save(bipedRecord({ id: "fits", editionId: "total-warfare", rulesLevel: "experimental", mounts: [shield(4)] }));
+    await open("fits");
+    expect((await within(await screen.findByRole("list", { name: "Left Arm slots" })).findByText("Shield, Medium")).closest("li")?.textContent).toMatch(/^5-9/);
+    expect(within(rules()).queryByText(/shares slot/)).toBeNull();
   });
 
   it("keeps an unplaced mount in the tray and places it from there", async () => {

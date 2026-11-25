@@ -112,6 +112,8 @@ export interface SlotCell {
   kind: "fixed" | "mount" | "empty";
   label: string;
   mountId?: string;
+  /** Names of other mounts that also cover this slot (a clash). They are not drawn in it, but the slot panel names them. */
+  alsoLabels?: string[];
 }
 export interface Layout {
   supported: boolean; // false when the configuration has no fixed layout
@@ -315,6 +317,7 @@ export function layout(record: MechRecord, factsOf: FactsOf): Layout {
         if (cell.mountId && !clash.mountIds.includes(cell.mountId)) clash.mountIds.push(cell.mountId);
         clash.mountIds.push(mount.id);
         clashes.set(key, clash);
+        cells[index] = { ...cell, alsoLabels: [...(cell.alsoLabels ?? []), mount.name] };
         continue;
       }
       cells[index] = { kind: "mount", label: mount.name, mountId: mount.id };

@@ -4,7 +4,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import type { Catalog, EquipmentRow } from "../../rules/catalog";
-import { bodyOf, locationName } from "../../rules/mech";
+import { bodyOf, locationName, slotsTaken } from "../../rules/mech";
 import type { Layout, LocationCode, MechRecord, Mount, SlotCell } from "../../rules/mech";
 import { Changed, mountDomId } from "../EditorPage";
 import type { OnEdit } from "../EditorPage";
@@ -46,7 +46,7 @@ function blocksOf(cells: SlotCell[], seen: Set<string>): Block[] {
       blocks.push({ kind: "mount", label: cell.label, start: index, length: 1, mountId: cell.mountId, first: !seen.has(cell.mountId) });
       seen.add(cell.mountId);
     } else {
-      blocks.push({ kind: cell.kind === "fixed" ? "fixed" : "empty", label: cell.label, start: index, length: 1 });
+      blocks.push({ kind: cell.kind === "fixed" ? "fixed" : "empty", label: [cell.label, ...(cell.alsoLabels ?? [])].join(" + "), start: index, length: 1 });
     }
   });
   return blocks;
@@ -293,7 +293,7 @@ export default function SlotsPanel({
                     : blocksOf(cells, seen).map((block) => {
                         const span = { gridRow: `span ${block.length}` };
                         const mount = block.kind === "mount" ? record.mounts.find((m) => m.id === block.mountId) : undefined;
-                        if (mount && block.kind === "mount" && block.first) return mountRow(mount, range(block.start, block.length), block.start, span);
+                        if (mount && block.kind === "mount" && block.first) return mountRow(mount, range(mount.slot ?? block.start, slotsTaken(mount, record, catalog.factsOf)), block.start, span);
                         return (
                           <li key={block.start} className={`bt-slot bt-slot--${block.kind}`} style={span}>
                             <span className="bt-slot__n">{range(block.start, block.length)}</span>
