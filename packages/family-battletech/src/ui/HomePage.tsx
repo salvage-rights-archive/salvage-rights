@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ChangeEvent } from "react";
 import { Link, useNavigate } from "react-router";
-import { ENGINE_WEIGHTS, INTERNAL_STRUCTURE, SHEET } from "../data/chassis";
+import { ENGINE_WEIGHTS, INTERNAL_STRUCTURE } from "../data/chassis";
 import { DEFAULT_EDITION, EDITIONS, PLAY_ONLY_BOOK, bookName } from "../data/editions";
-import { DEFAULT_LEVEL, configurationOption, withLevel } from "../rules/levels";
+import { configurationChoices } from "../rules/availability";
+import { withLevel } from "../rules/levels";
 import { loadCatalog } from "../rules/catalog";
 import { newRecord } from "../rules/mech";
 import LevelSelect from "./editor/LevelSelect";
@@ -395,9 +396,9 @@ export default function HomePage() {
                 value={draft.configuration}
                 onChange={(e) => setDraft({ ...draft, configuration: e.target.value as NewMechOptions["configuration"] })}
               >
-                {Object.keys(SHEET.configurations).map((key) => (
+                {configurationChoices({ techBase: draft.techBase, year: null, rulesLevel: draft.rulesLevel }, draft.configuration).map(([key, label]) => (
                   <option key={key} value={key}>
-                    {configurationOption(key, draft.rulesLevel ?? DEFAULT_LEVEL)}
+                    {label}
                   </option>
                 ))}
               </select>

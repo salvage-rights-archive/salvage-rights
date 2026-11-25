@@ -78,7 +78,10 @@ describe("Classic BattleTech home", () => {
     expect([...walk.options].map((o) => o.value)).toEqual(["1", "2", "3", "4", "5"]);
     await user.selectOptions(walk, "5");
     const configuration = within(form).getByLabelText<HTMLSelectElement>("Configuration");
-    expect([...configuration.options].map((o) => o.text)).toEqual(["Biped", "Quad", "Tripod (needs Advanced)", "Land-Air 'Mech (needs Experimental)", "Bimodal Land-Air 'Mech (needs Experimental)"]);
+    expect([...configuration.options].map((o) => o.text)).toEqual(["Biped", "Quad"]);
+    await user.selectOptions(within(form).getByLabelText("Rules level"), "experimental");
+    expect([...configuration.options].map((o) => o.text)).toEqual(["Biped", "Quad", "Tripod", "Land-Air 'Mech", "Bimodal Land-Air 'Mech"]);
+    await user.selectOptions(within(form).getByLabelText("Rules level"), "standard");
     await user.selectOptions(configuration, "quad");
     await waitFor(() => expect(within(form).getByRole<HTMLButtonElement>("button", { name: "Start building" }).disabled).toBe(false));
     await user.click(within(form).getByRole("button", { name: "Start building" }));
@@ -99,7 +102,8 @@ describe("Classic BattleTech home", () => {
     renderHome();
     const form = await screen.findByRole("form", { name: "Build a new one" });
     const config = within(form).getByLabelText<HTMLSelectElement>("Configuration");
-    expect([...config.options].map((o) => o.text)).toEqual(["Biped", "Quad", "Tripod (needs Advanced)", "Land-Air 'Mech (needs Experimental)", "Bimodal Land-Air 'Mech (needs Experimental)"]);
+    await user.selectOptions(within(form).getByLabelText("Rules level"), "experimental");
+    expect([...config.options].map((o) => o.text)).toEqual(["Biped", "Quad", "Tripod", "Land-Air 'Mech", "Bimodal Land-Air 'Mech"]);
     await user.type(within(form).getByLabelText("Name"), "Hawk");
     await user.selectOptions(config, "lam");
     await waitFor(() => expect(within(form).getByRole<HTMLButtonElement>("button", { name: "Start building" }).disabled).toBe(false));

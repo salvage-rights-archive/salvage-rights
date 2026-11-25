@@ -2,15 +2,12 @@
 // itself is plain data in data/equipment/*, written in groups whose `defaults` carry what the items share; `expand`
 // turns the groups into rows and `createCatalog` indexes them. Nothing here is specific to a book except the formula
 // table, which holds the few items the book scales with the 'Mech.
-import type { RulesLevel } from "../data/chassis";
+import type { RulesLevel, Span } from "../data/chassis";
+import { AMMO_GROUPS, AMMO_OTHER_GROUP, EQUIPMENT_GROUPS, GROUP_ORDER, OTHER_GROUP } from "../data/equipment/groups";
 import type { FactsOf, LocationCode, MechRecord, MountFacts, TechBase } from "./mech";
 
 export type EquipmentKind = "weapon" | "ammunition" | "heat-sink" | "jump-jet" | "other";
-/** Years, inclusive, as the book prints them; no `to` means the item is still available. */
-export interface Span {
-  from: number;
-  to?: number;
-}
+export type { Span };
 export interface EquipmentRow {
   id: string;
   name: string;
@@ -159,6 +156,8 @@ export interface Catalog {
   match(name: string, techBase: TechBase): EquipmentRow | undefined;
   offered(editionId: string, want: { techBase: TechBase | "mixed"; year: number | null }): EquipmentRow[];
   available(row: EquipmentRow, editionId: string, year: number | null): boolean;
+  /** True when the item can be had at some time from `from` to `to`, inclusive: one of its spans overlaps the window. A year is the window [year, year]. */
+  availableBetween(row: EquipmentRow, editionId: string, from: number, to: number): boolean;
   /** Weight and slots of a mounted item, with formulas and the record's edition applied. */
   factsOf: FactsOf;
 }
@@ -190,10 +189,9 @@ export function createCatalog(rows: EquipmentRow[]): Catalog {
     }
   }
 
-  const available: Catalog["available"] = (row, editionId, year) => {
-    if (year === null) return true;
-    return inEdition(row, editionId).availability.some((s) => year >= s.from && (s.to === undefined || year <= s.to));
-  };
+  const availableBetween: Catalog["availableBetween"] = (row, editionId, from, to) =>
+    inEdition(row, editionId).availability.some((s) => s.from <= to && (s.to === undefined || s.to >= from));
+  const available: Catalog["available"] = (row, editionId, year) => year === null || availableBetween(row, editionId, year, year);
 
   const resolve = (value: number | string, row: EquipmentRow, record: MechRecord): number | undefined => {
     if (typeof value === "number") return value;
@@ -226,6 +224,7 @@ export function createCatalog(rows: EquipmentRow[]): Catalog {
         .filter((r) => (techBase === "mixed" || r.techBase === techBase) && available(r, editionId, year))
         .map((r) => inEdition(r, editionId)),
     available,
+    availableBetween,
     factsOf,
   };
   return catalog;
@@ -326,3 +325,22 @@ export function ammoLines(record: MechRecord, catalog: Catalog): { name: string;
   }
   return [...totals.values()];
 }
+
+// ---------------------------------------------------------------------------------------------------------------
+// Groups for the equipment picker: derived from each row's id by the patterns in data/equipment/groups.ts
+// ---------------------------------------------------------------------------------------------------------------
+export interface GroupKey {
+  id: string;
+  label: string;
+}
+/** The group a row belongs to: ammunition by the weapon family it feeds, everything else by the first pattern its id stem matches. */
+export function groupOf(row: Pick<EquipmentRow, "id" | "kind">): GroupKey {
+  const bare = row.id.replace(/-(is|clan)$/, "");
+  if (row.kind === "ammunition") return AMMO_GROUPS.find((g) => g.match.test(bare.replace(/^ammo-/, ""))) ?? AMMO_OTHER_GROUP;
+  return EQUIPMENT_GROUPS.find((g) => g.match.test(bare)) ?? OTHER_GROUP;
+}
+/** Where a group sits in the list; a group not named in the order goes last. */
+export const groupRank = (id: string): number => {
+  const at = GROUP_ORDER.indexOf(id);
+  return at === -1 ? GROUP_ORDER.length : at;
+};

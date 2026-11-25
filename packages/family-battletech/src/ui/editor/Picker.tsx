@@ -1,55 +1,68 @@
-// The equipment picker: an in-page dialog over the catalog, for replacing a mount's equipment or adding a new item.
+// The equipment picker: an in-page dialog over the catalog, for replacing a mount's equipment or adding a new item. What it offers
+// is what rules/availability.ts says the record may use (rules level, tech base, era or year); the items are sorted into groups
+// (data/equipment/groups.ts), each a disclosure button over its list, so no one list runs on.
 import { useEffect, useId, useMemo, useRef, useState } from "react";
-import type { Catalog, EquipmentKind, EquipmentRow } from "../../rules/catalog";
-import { DEFAULT_LEVEL, equipmentLevel, levelAtLeast, levelRow } from "../../rules/levels";
+import { equipmentAvailable } from "../../rules/availability";
+import { groupOf, groupRank } from "../../rules/catalog";
+import type { Catalog, EquipmentRow, GroupKey } from "../../rules/catalog";
+import { DEFAULT_LEVEL, equipmentLevel, levelRow } from "../../rules/levels";
 import type { MechRecord, Mount } from "../../rules/mech";
 import { dialogKeyDown } from "./dialog";
 
-const KINDS: [EquipmentKind | "all", string][] = [
-  ["all", "All"],
-  ["weapon", "Weapons"],
-  ["ammunition", "Ammunition"],
-  ["heat-sink", "Heat sinks"],
-  ["jump-jet", "Jump jets"],
-  ["other", "Other"],
-];
 const TECH_BASE_NAMES = { "inner-sphere": "Inner Sphere", clan: "Clan" };
-const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
+const plural = (n: number, word: string) => `${String(n)} ${word}${n === 1 ? "" : "s"}`;
+const OPEN_AT_FIRST = 2; // how many groups start open when nothing has been searched
+
+interface Group extends GroupKey {
+  rows: EquipmentRow[];
+}
 
 export default function Picker({
   record,
   catalog,
   title,
+  current,
   onChoose,
   onClose,
 }: {
   record: MechRecord;
   catalog: Catalog;
   title: string;
+  /** The equipment id of the item being replaced: it stays on offer even where the rules would hide it, so the choice is never empty of it. */
+  current?: string;
   onChoose: (row: EquipmentRow) => void;
   onClose: () => void;
 }) {
   const [query, setQuery] = useState("");
-  const [kind, setKind] = useState<EquipmentKind | "all">("all");
   const [everything, setEverything] = useState(false);
+  const [toggled, setToggled] = useState<Record<string, boolean>>({});
   const dialog = useRef<HTMLDivElement>(null);
   const search = useRef<HTMLInputElement>(null);
   const titleId = useId();
+  const panelId = useId();
 
   useEffect(() => {
     search.current?.focus();
   }, []);
 
-  const matches = useMemo(() => {
-    const rows = everything
-      ? catalog.all().map((row) => catalog.rowFor(row.id, record.editionId) ?? row)
-      : catalog.offered(record.editionId, { techBase: record.techBase, year: record.year });
+  const groups = useMemo<Group[]>(() => {
     const needle = query.trim().toLowerCase();
-    const level = record.rulesLevel ?? DEFAULT_LEVEL;
-    return rows.filter(
-      (row) => levelAtLeast(level, equipmentLevel(row)) && (kind === "all" || row.kind === kind) && (needle === "" || [row.name, ...row.aliases].some((name) => name.toLowerCase().includes(needle))),
-    );
-  }, [catalog, record.editionId, record.techBase, record.year, record.rulesLevel, everything, kind, query]);
+    const named = (row: EquipmentRow) => needle === "" || [row.name, ...row.aliases].some((name) => name.toLowerCase().includes(needle));
+    const byGroup = new Map<string, Group>();
+    for (const base of catalog.all()) {
+      const row = catalog.rowFor(base.id, record.editionId) ?? base;
+      if (!named(row) || !(equipmentAvailable(row, record, catalog, everything) || row.id === current)) continue;
+      const key = groupOf(row);
+      const group = byGroup.get(key.id) ?? { ...key, rows: [] };
+      group.rows.push(row);
+      byGroup.set(key.id, group);
+    }
+    for (const group of byGroup.values()) group.rows.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }) || a.techBase.localeCompare(b.techBase));
+    return [...byGroup.values()].sort((a, b) => groupRank(a.id) - groupRank(b.id));
+  }, [catalog, record, everything, query, current]);
+
+  const total = groups.reduce((sum, group) => sum + group.rows.length, 0);
+  const isOpen = (group: Group, index: number) => toggled[group.id] ?? (query.trim() !== "" || index < OPEN_AT_FIRST);
 
   const factsLine = (row: EquipmentRow) => {
     const trial: Mount = { id: "trial", equipmentId: row.id, name: row.name, techBase: row.techBase, location: null, slot: null };
@@ -60,6 +73,7 @@ export default function Picker({
     const level = equipmentLevel(row);
     if (level !== "introductory" && level !== DEFAULT_LEVEL) parts.push(`${levelRow(level).label} level`);
     if (row.yearsInferred) parts.push("year not printed in the book");
+    if (!equipmentAvailable(row, record, catalog)) parts.push("not available to this unit");
     return parts.join(", ");
   };
 
@@ -78,24 +92,9 @@ export default function Picker({
             value={query}
             onChange={(event) => {
               setQuery(event.target.value);
+              setToggled({});
             }}
           />
-        </div>
-        <div className="bt-field">
-          <label htmlFor="bt-picker-kind">Kind</label>
-          <select
-            id="bt-picker-kind"
-            value={kind}
-            onChange={(event) => {
-              setKind(event.target.value as EquipmentKind | "all");
-            }}
-          >
-            {KINDS.map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
         </div>
         <div className="bt-field">
           <label>
@@ -109,30 +108,56 @@ export default function Picker({
             Show everything
           </label>
           <span className="bt-hint">
-            {everything ? "Showing every item, whatever its tech base or year. Items above the unit's rules level stay hidden." : "Showing what this edition offers for this tech base and year."}
+            {everything ? "Showing every item, whatever its tech base or era. Items above the unit's rules level stay hidden." : "Showing what this unit's rules level, tech base and era or year allow."}
           </span>
         </div>
-        {matches.length === 0 ? (
+        {total === 0 ? (
           <p>No equipment matches.</p>
         ) : (
           <>
-            <p role="status">{`${plural(matches.length, "item")} at ${levelRow(record.rulesLevel ?? DEFAULT_LEVEL).label} level or below`}</p>
-            <ul className="bt-list bt-picker__list" aria-label="Equipment">
-              {matches.map((row) => (
-                <li key={row.id}>
-                  <button
-                    type="button"
-                    className="bt-picker__result"
-                    onClick={() => {
-                      onChoose(row);
-                    }}
-                  >
-                    <strong>{row.name}</strong>
-                    <span className="bt-picker__detail">{factsLine(row)}</span>
-                  </button>
-                </li>
-              ))}
-            </ul>
+            <p role="status">{`${plural(total, "item")} in ${plural(groups.length, "group")}, at ${levelRow(record.rulesLevel ?? DEFAULT_LEVEL).label} level or below`}</p>
+            {groups.map((group, index) => {
+              const open = isOpen(group, index);
+              const headingId = `${panelId}-${group.id}-h`;
+              const listId = `${panelId}-${group.id}`;
+              return (
+                <section key={group.id} className="bt-picker__group" aria-labelledby={headingId}>
+                  <h3 id={headingId} className="bt-picker__heading">
+                    <button
+                      type="button"
+                      className="bt-picker__toggle"
+                      aria-expanded={open}
+                      aria-controls={listId}
+                      onClick={() => {
+                        setToggled((now) => ({ ...now, [group.id]: !open }));
+                      }}
+                    >
+                      <span aria-hidden="true" className="bt-picker__chevron">{open ? "▾" : "▸"}</span>
+                      {group.label}
+                      <span className="bt-picker__count">{` (${String(group.rows.length)})`}</span>
+                    </button>
+                  </h3>
+                  {open && (
+                    <ul id={listId} className="bt-list bt-picker__list" aria-label={group.label}>
+                      {group.rows.map((row) => (
+                        <li key={row.id}>
+                          <button
+                            type="button"
+                            className="bt-picker__result"
+                            onClick={() => {
+                              onChoose(row);
+                            }}
+                          >
+                            <strong>{row.name}</strong>
+                            <span className="bt-picker__detail">{factsLine(row)}</span>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </section>
+              );
+            })}
           </>
         )}
         <p>
