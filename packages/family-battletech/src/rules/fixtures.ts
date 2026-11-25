@@ -230,6 +230,16 @@ export function mordelOdd(): Json {
   });
 }
 
+/** Brings an imported `mordelBiped` to a 'Mech that passes the rules check with nothing left over: a year, armor to the limit and four more
+ * tons of ammunition, so that every ton is used. */
+export function makeClean(d: MechRecord): void {
+  d.year = 3025;
+  d.armor = { HD: { front: 9 }, CT: { front: 22, rear: 10 }, LT: { front: 16, rear: 8 }, RT: { front: 16, rear: 8 }, LA: { front: 16 }, RA: { front: 16 }, LL: { front: 24 }, RL: { front: 24 } };
+  const ammo = d.mounts.find((m) => m.name === "AC/10 Ammo");
+  if (!ammo) return;
+  for (const [n, [location, slot]] of ([["RA", 5], ["RA", 6], ["RA", 7], ["LA", 5]] as const).entries()) d.mounts.push({ ...ammo, id: `ammo-${String(n)}`, location, slot });
+}
+
 /** The response with some of the unit's fields replaced. */
 export function mordelWith(response: Json, patch: Json): Json {
   const unit = response["unit"] as Json;

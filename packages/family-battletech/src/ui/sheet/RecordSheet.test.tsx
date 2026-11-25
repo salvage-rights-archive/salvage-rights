@@ -2,7 +2,8 @@ import { cleanup, render } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { battleValue } from "../../rules/bv";
 import { loadCatalog } from "../../rules/catalog";
-import { mordelBiped, mordelQuad, mordelWith, tripodRecord } from "../../rules/fixtures";
+import { makeClean, mordelBiped, mordelQuad, mordelWith, tripodRecord } from "../../rules/fixtures";
+import { markOfficial } from "../../rules/official";
 import { fromMordel } from "../../rules/mordel";
 import { editRecord } from "../../rules/mech";
 import type { MechRecord } from "../../rules/mech";
@@ -67,6 +68,18 @@ describe("The record sheet", () => {
     const catalog = await loadCatalog();
     expect(lines).toContain(`BV: ${battleValue(record, catalog).total.toLocaleString("en-US")} (calculated, pilot 4/5)`);
     expect(lines.some((line) => line.includes("mordel.net"))).toBe(false);
+  });
+
+  it("prints the verified line only for a record that passes, and the OFFICIAL or NOT OFFICIAL mark", async () => {
+    const clean = editRecord(await recordOf(mordelBiped()), makeClean);
+    const verified = (lines: string[]) => lines.filter((line) => line.startsWith("Verified Standard Rules Compliant"));
+    const passing = await drawn(clean);
+    expect(verified(passing.lines)).toEqual([expect.stringMatching(/^Verified Standard Rules Compliant: Salvage Rights rules check, Total Warfare \/ TechManual, \d{4}-\d{2}-\d{2}\.$/)]);
+    expect(passing.lines).toContain("NOT OFFICIAL");
+    const failing = await drawn(editRecord(clean, (d) => void (d.chassis.armorType = "hardened")));
+    expect(verified(failing.lines)).toEqual([]);
+    const official = await drawn(editRecord(clean, (d) => void markOfficial(d, "TechManual", 7)));
+    expect(official.lines).toContain("OFFICIAL: TechManual, p. 7");
   });
 
   it("draws the three diagrams for a quad", async () => {

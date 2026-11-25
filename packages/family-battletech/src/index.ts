@@ -49,6 +49,7 @@ const manifest: FamilyManifest = {
       "The import from mordel.net uses the API built by MordelBlacknight.",
       "Each imported design is credited to the mordel.net member who created it.",
       "The Classic BattleTech section (the import, the editor and the rules checks) was made by the Salvage Rights team.",
+      "\"Verified Standard Rules Compliant\" means only that our own rules check, against the rulebooks we cite, found nothing wrong with a Standard-level 'Mech; tournament organisers have the final word. \"OFFICIAL\" is what the player states about a design, and it turns off when the design is changed.",
       "The picture on the BattleTech tile was generated with an AI image tool (Nano Banana 2). We would rather show work made by a person. If you are an artist, or hold the rights to a piece, and can let us use it legally, we will gladly replace any AI-generated art here and credit you. To offer a piece, start a thread in Discussions on our GitHub repository (https://github.com/salvage-rights-archive/salvage-rights/discussions), or open an issue there.",
     ],
   },

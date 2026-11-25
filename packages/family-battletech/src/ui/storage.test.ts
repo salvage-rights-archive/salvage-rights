@@ -129,6 +129,17 @@ describe("mech files", () => {
     expect(await storage.list()).toEqual([]);
   });
 
+  it("reads a record saved before the OFFICIAL mark, and keeps the mark on a record, a configuration and the base", () => {
+    expect(isMechRecord(bipedRecord())).toBe(true);
+    const mark = { status: "official", book: "TechManual", page: 12, design: "{}" } as const;
+    expect(fromMechFile(JSON.parse(JSON.stringify(toMechFile(bipedRecord({ official: mark })))))).toMatchObject({ ok: true, record: { official: mark } });
+    const chassis = gladiator();
+    const marked = { ...chassis, official: mark, configurations: chassis.configurations.map((c) => ({ ...c, official: mark })) };
+    const back = fromOmniFile(JSON.parse(JSON.stringify(toOmniFile(marked))));
+    expect(back.ok && [back.chassis.official, back.chassis.configurations[0]?.official]).toEqual([mark, mark]);
+    expect(isMechRecord(bipedRecord({ official: { status: "yes" } as never }))).toBe(false);
+  });
+
   it("keeps a whole chassis under omni:<id> beside the plain 'Mechs, round-trips its file, and reports one it cannot read", async () => {
     const storage = await openFamilyStorage();
     const raw = await openStore("battletech");

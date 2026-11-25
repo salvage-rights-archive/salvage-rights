@@ -3,6 +3,7 @@
 // below. One SVG of 1700 by 2200 units (Letter proportions); the type never goes under 20 units, 6.6 pt at Letter width.
 // Pure: it reads nothing but its props, so it can be tested and reused. The sheet is paper: white, with black ink.
 import type { Catalog } from "../../rules/catalog";
+import { officialLabel, officialState, standardCompliance, verifiedLine } from "../../rules/official";
 import { mechTypeOf } from "../../rules/mech";
 import type { MechRecord } from "../../rules/mech";
 import { ArmorDiagram, StructureDiagram } from "./Diagrams";
@@ -24,18 +25,23 @@ const RECTS = {
   picture: { x: 700, y: 600, w: 390, h: 510 },
   armor: { x: 1110, y: 40, w: 560, h: 900 },
   structure: { x: 1110, y: 990, w: 465, h: 520 },
-  scale: { x: 1592, y: 968, w: 78, h: 1177 },
-  heat: { x: 1110, y: 1550, w: 465, h: 595 },
-  critical: { x: 30, y: 1150, w: 1060, h: 995 },
+  scale: { x: 1592, y: 968, w: 78, h: 1163 },
+  heat: { x: 1110, y: 1550, w: 465, h: 581 },
+  critical: { x: 30, y: 1150, w: 1060, h: 981 },
 };
 
 const TRADEMARK_LINE =
   "BattleTech, 'Mech, BattleMech, and MechWarrior are registered trademarks and/or trademarks of The Topps Company, Inc. Unofficial, non-commercial fan project, not affiliated with or endorsed by Topps or Catalyst Game Labs.";
 
-export default function RecordSheet({ record, catalog }: { record: MechRecord; catalog: Catalog }) {
+/** `checkedOn` is the date the verified line names (year-month-day); it defaults to today on this device. */
+export default function RecordSheet({ record, catalog, checkedOn }: { record: MechRecord; catalog: Catalog; checkedOn?: string }) {
   const facts = sheetFacts(record, catalog);
   const name = facts.title;
   const nameSize = Math.min(84, Math.floor(1020 / (Math.max(name.length, 1) * 0.62)));
+  const official = officialLabel(officialState(record));
+  const mark = official.badge === "OFFICIAL" ? `OFFICIAL: ${official.detail}` : official.badge;
+  const compliance = standardCompliance(record, catalog);
+  const verified = compliance.verified ? verifiedLine(compliance.edition, checkedOn ?? new Date().toLocaleDateString("en-CA")) : undefined;
   const credit = facts.designer === undefined ? "" : ` Designed by ${facts.designer} on mordel.net.`;
   return (
     <>
@@ -57,6 +63,10 @@ export default function RecordSheet({ record, catalog }: { record: MechRecord; c
           SALVAGE RIGHTS
         </text>
 
+        <text x={1090} y={142} fontSize={26} fontWeight={700} textAnchor="end" fill={INK} data-official={official.badge === "OFFICIAL"} {...squeeze(mark, 26, 380, true)}>
+          {mark}
+        </text>
+
         <MechData rect={RECTS.mech} facts={facts} />
         <WarriorData rect={RECTS.warrior} />
         <UnitPicture rect={RECTS.picture} record={record} label={`${name}, unit picture`} />
@@ -66,14 +76,19 @@ export default function RecordSheet({ record, catalog }: { record: MechRecord; c
         <HeatScale rect={RECTS.scale} />
         <HeatData rect={RECTS.heat} facts={facts} />
 
-        <text x={SHEET_WIDTH / 2} y={2171} fontSize={20} textAnchor="middle" fill={INK} {...squeeze(`Not an official record sheet. Made with Salvage Rights, an unofficial fan project.${credit}`, 20, 1640)}>
+        {verified !== undefined && (
+          <text x={SHEET_WIDTH / 2} y={2152} fontSize={20} fontWeight={700} textAnchor="middle" fill={INK} data-verified="" {...squeeze(verified, 20, 1640, true)}>
+            {verified}
+          </text>
+        )}
+        <text x={SHEET_WIDTH / 2} y={2173} fontSize={20} textAnchor="middle" fill={INK} {...squeeze(`Not an official record sheet. Made with Salvage Rights, an unofficial fan project.${credit}`, 20, 1640)}>
           {`Not an official record sheet. Made with Salvage Rights, an unofficial fan project.${credit}`}
         </text>
         <text x={SHEET_WIDTH / 2} y={2194} fontSize={20} textAnchor="middle" fill={INK} {...squeeze(TRADEMARK_LINE, 20, 1640)}>
           {TRADEMARK_LINE}
         </text>
       </svg>
-      <SheetText facts={facts} record={record} />
+      <SheetText facts={facts} record={record} marks={[["Official", official.detail ? `${official.badge}, ${official.detail}` : official.badge], ...(verified === undefined ? [] : [["Verified", verified] as [string, string]])]} />
     </>
   );
 }

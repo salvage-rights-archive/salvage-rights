@@ -41,6 +41,8 @@ export interface OmniConfiguration {
   imageUrl?: string;
   picture?: MechRecord["picture"];
   source?: MechSource;
+  /** The OFFICIAL mark of this configuration alone (rules/official.ts); the base has its own on the chassis. */
+  official?: MechRecord["official"];
 }
 
 export interface OmniChassis {
@@ -65,6 +67,8 @@ export interface OmniChassis {
   imageUrl?: string;
   picture?: MechRecord["picture"];
   source?: MechSource;
+  /** The OFFICIAL mark of the base chassis (rules/official.ts); each configuration has its own. */
+  official?: MechRecord["official"];
 }
 
 /** The id the editor and `resolveConfiguration` use for the unloaded base. */
@@ -112,6 +116,8 @@ function build(chassis: OmniChassis, configuration: OmniConfiguration | undefine
   if (picture) record.picture = structuredClone(picture);
   const source = configuration?.source ?? chassis.source;
   if (source) record.source = structuredClone(source);
+  const official = configuration ? configuration.official : chassis.official;
+  if (official) record.official = structuredClone(official);
   return record;
 }
 
@@ -195,6 +201,8 @@ export function applyConfigurationEdit(chassis: OmniChassis, configurationId: st
     if (edited.picture) configuration.picture = structuredClone(edited.picture);
     else delete configuration.picture;
   }
+  if (edited.official) configuration.official = structuredClone(edited.official);
+  else delete configuration.official;
   return next;
 }
 
@@ -241,6 +249,8 @@ export function applyBaseEdit(chassis: OmniChassis, edited: MechRecord): OmniCha
   else next.imageUrl = edited.imageUrl;
   if (edited.picture) next.picture = structuredClone(edited.picture);
   else delete next.picture;
+  if (edited.official) next.official = structuredClone(edited.official);
+  else delete next.official;
   return next;
 }
 

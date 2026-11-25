@@ -9,7 +9,8 @@ import type { Catalog, EquipmentRow } from "./catalog";
 import { levelAtLeast, lowestLevelFor } from "./levels";
 import { ARM_FULL, armorSpread, armsOf, configurationOf, layout, locationName, partMountBase, slotsTaken } from "./mech";
 import type { LocationCode, MechRecord, Mount, TechBase } from "./mech";
-import { defaultFixedMounts, splitRecord } from "./omni";
+import { canon, designKey } from "./official";
+import { defaultFixedMounts, resolveBase, resolveConfiguration, splitRecord } from "./omni";
 import type { OmniChassis, OmniConfiguration } from "./omni";
 
 /** `fixedIds` is set only when every equipment entry carries a boolean `fixed`: the ids of the mounts Mordel marks as the base's own. */
@@ -463,6 +464,14 @@ function convert(response: unknown, catalog: Catalog, editionId: string, now: st
 
   placeMounts(record, catalog, note);
   record.rulesLevel = lowestLevelFor(record, catalog);
+  // Mordel's own `canon` flag is the one thing that makes an import OFFICIAL: a unit it marks canon is the publisher's design, and the
+  // title of its first listed source is the book. Every other import is a member's design and reads as NOT OFFICIAL.
+  if (unit["canon"] === true) {
+    const sources = Array.isArray(unit["sources"]) ? unit["sources"] : [];
+    const first: unknown = sources.find((s) => isObject(s) && typeof s["title"] === "string" && s["title"].trim() !== "");
+    const book = isObject(first) && typeof first["title"] === "string" ? first["title"].trim() : "a published book (Mordel marks it canon)";
+    record.official = { status: "official", book, design: designKey(record) };
+  }
   if (record.source) {
     const { name, notes, tons, year, techBase, configuration, chassis, armor, arms, mounts } = structuredClone(record);
     record.source.baseline = { name, notes, tons, year, techBase, configuration, chassis, armor, arms, mounts };
@@ -576,20 +585,6 @@ function placeMounts(record: MechRecord, catalog: Catalog, note: (text: string) 
 // What has changed since the import
 // ---------------------------------------------------------------------------------------------------------------
 
-/** Canonical text of a value: object keys in order, so two equal values written in different key orders agree. */
-function canon(value: unknown): string {
-  if (Array.isArray(value)) return `[${value.map(canon).join(",")}]`;
-  if (typeof value === "object" && value !== null) {
-    const o = value as Json;
-    return `{${Object.keys(o)
-      .filter((k) => o[k] !== undefined)
-      .sort()
-      .map((k) => `${JSON.stringify(k)}:${canon(o[k])}`)
-      .join(",")}}`;
-  }
-  return JSON.stringify(value) ?? "undefined";
-}
-
 /** The field paths (as the checks name them), mount ids, and `mounts.removed` that differ from what the importer produced,
  * which the record keeps as `source.baseline`. Empty when the record has no source or no baseline. */
 export function changedSinceImport(record: MechRecord): Set<string> {
@@ -679,6 +674,10 @@ const plainSource = (record: MechRecord): MechRecord["source"] => {
   delete source.baseline; // "changed since import" compares a plain 'Mech with its import; a configuration is part of a chassis
   return source;
 };
+/** The unit's OFFICIAL mark, when the base or configuration made from it is still the design Mordel listed (the subtraction of the base's
+ * equipment can differ from the listing, and then the mark does not carry over). */
+const keptMark = (from: MechRecord, resolved: MechRecord | undefined): MechRecord["official"] =>
+  from.official && resolved && from.official.design === designKey(resolved) ? { ...from.official } : undefined;
 const mountKey = (m: Mount) => `${m.name}|${m.techBase}|${m.location ?? ""}`;
 
 /**
@@ -765,6 +764,13 @@ export function importOmniSet(base: MechRecord, variants: MechRecord[], newId: (
   if (base.imageUrl) chassis.imageUrl = base.imageUrl;
   const source = plainSource(base);
   if (source) chassis.source = source;
+  const baseMark = keptMark(base, resolveBase(chassis));
+  if (baseMark) chassis.official = baseMark;
+  for (const [at, variant] of variants.entries()) {
+    const config = configurations[at];
+    const mark = config && keptMark(variant, resolveConfiguration(chassis, config.id));
+    if (config && mark) config.official = mark;
+  }
   return { chassis, notes };
 }
 
@@ -792,6 +798,8 @@ export function importOmniSingle(record: MechRecord, catalog: Catalog, newId: ()
     const source = plainSource(copy);
     if (source) config.source = source;
     config.rulesLevel = copy.rulesLevel !== undefined && levelAtLeast(copy.rulesLevel, "standard") ? copy.rulesLevel : "standard";
+    const mark = keptMark(copy, resolveConfiguration(chassis, config.id));
+    if (mark) config.official = mark;
   }
   delete chassis.source;
   if (fixedIds) return { chassis, notes: [`${why} We rebuilt the base from this variant because the base is not visible to us: the items Mordel marks as fixed are the base's, and the rest are this configuration's pods.`] };
