@@ -3,7 +3,7 @@ import type { ChangeEvent } from "react";
 import { Link } from "react-router";
 import { DEFAULT_EDITION, EDITIONS } from "../data/editions";
 import type { MechRecord } from "../rules/mech";
-import { fromMechFile, openFamilyStorage, toMechFile } from "./storage";
+import { STORAGE_READ_FAILED, STORAGE_WRITE_FAILED, fromMechFile, openFamilyStorage, toMechFile } from "./storage";
 import type { FamilyStorage, SavedEntry } from "./storage";
 import "./classic.scss";
 
@@ -30,59 +30,99 @@ export default function HomePage() {
   const [entries, setEntries] = useState<SavedEntry[]>([]);
   const [edition, setEdition] = useState(DEFAULT_EDITION);
   const [confirming, setConfirming] = useState<{ id: string; name: string }>();
+  const [status, setStatus] = useState("");
   const [problem, setProblem] = useState("");
-  const [imported, setImported] = useState(false);
   const keepRef = useRef<HTMLButtonElement>(null);
+  const openerRef = useRef<HTMLElement | null>(null);
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  const emptyRef = useRef<HTMLParagraphElement>(null);
+  const focusList = useRef(false);
 
-  const reload = useCallback(async (s: FamilyStorage) => {
-    setEntries(await s.list());
+  /** Runs a storage action; when it rejects, shows the fixed message and returns false. */
+  const attempt = useCallback(async (message: string, action: () => Promise<void>): Promise<boolean> => {
+    try {
+      await action();
+      return true;
+    } catch {
+      setStatus("");
+      setProblem(message);
+      return false;
+    }
   }, []);
+
+  const say = (text: string) => {
+    setProblem("");
+    setStatus(text);
+  };
 
   useEffect(() => {
     void (async () => {
-      const s = await openFamilyStorage();
-      setStorage(s);
-      setEdition(await s.getEdition());
-      await reload(s);
+      try {
+        const s = await openFamilyStorage();
+        setStorage(s);
+        setEdition(await s.getEdition());
+        setEntries(await s.list());
+      } catch {
+        setProblem(STORAGE_READ_FAILED);
+      }
     })();
-  }, [reload]);
+  }, []);
 
   useEffect(() => {
     if (confirming) keepRef.current?.focus();
   }, [confirming]);
 
-  const current = EDITIONS.find((e) => e.id === edition) ?? EDITIONS[0];
-  const book = (role: "play" | "construction") => current?.books.find((b) => b.role === role);
-  const bookLine = `Play: ${book("play")?.title ?? ""}, ${book("play")?.printing ?? ""}. Construction: ${book("construction")?.title ?? ""}, ${book("construction")?.printing ?? ""}.`;
+  useEffect(() => {
+    if (!focusList.current) return;
+    focusList.current = false;
+    (entries.length === 0 ? emptyRef.current : headingRef.current)?.focus();
+  }, [entries]);
+
+  const reload = (s: FamilyStorage) => attempt(STORAGE_READ_FAILED, async () => void setEntries(await s.list()));
+
+  const current = EDITIONS.find((e) => e.id === edition);
+  const bookLine = (["play", "construction"] as const)
+    .flatMap((role) => {
+      const book = current?.books.find((b) => b.role === role);
+      return book ? [`${role === "play" ? "Play" : "Construction"}: ${book.title}, ${book.printing}.`] : [];
+    })
+    .join(" ");
 
   const chooseEdition = async (id: string) => {
     setEdition(id);
-    await storage?.setEdition(id);
+    if (storage) await attempt(STORAGE_WRITE_FAILED, () => storage.setEdition(id));
   };
 
   const duplicate = async (record: MechRecord) => {
     if (!storage) return;
-    await storage.save({
-      ...structuredClone(record),
-      id: crypto.randomUUID(),
-      name: { ...record.name, model: `${record.name.model} (copy)` },
-    });
-    await reload(storage);
+    const saved = await attempt(STORAGE_WRITE_FAILED, () =>
+      storage.save({
+        ...structuredClone(record),
+        id: crypto.randomUUID(),
+        name: { ...record.name, model: `${record.name.model} (copy)` },
+      }),
+    );
+    if (saved && (await reload(storage))) say("Copy saved.");
   };
 
   const remove = async (id: string) => {
     if (!storage) return;
-    await storage.remove(id);
     setConfirming(undefined);
-    await reload(storage);
+    if (!(await attempt(STORAGE_WRITE_FAILED, () => storage.remove(id)))) return;
+    focusList.current = true;
+    if (await reload(storage)) say("Deleted.");
+  };
+
+  const cancel = () => {
+    setConfirming(undefined);
+    openerRef.current?.focus();
   };
 
   const upload = async (event: ChangeEvent<HTMLInputElement>) => {
     const input = event.target;
     const chosen = input.files?.[0];
     if (!chosen || !storage) return;
-    setProblem("");
-    setImported(false);
+    say("");
     let message = "";
     if (chosen.size > MAX_IMPORT_BYTES) {
       message = "That file is too large to be a 'Mech file.";
@@ -98,15 +138,21 @@ export default function HomePage() {
         if (!result.ok) {
           message = result.message;
         } else {
-          const taken = (await storage.list()).some((e) => e.id === result.record.id);
-          await storage.save(taken ? { ...result.record, id: crypto.randomUUID() } : result.record);
-          await reload(storage);
-          setImported(true);
+          const done = await attempt(STORAGE_WRITE_FAILED, async () => {
+            const taken = (await storage.list()).some((e) => e.id === result.record.id);
+            await storage.save(taken ? { ...result.record, id: crypto.randomUUID() } : result.record);
+          });
+          if (done && (await reload(storage))) say("'Mech imported.");
         }
       }
     }
-    setProblem(message);
+    if (message) setProblem(message);
     input.value = "";
+  };
+
+  const askDelete = (target: { id: string; name: string }, opener: HTMLElement) => {
+    openerRef.current = opener;
+    setConfirming(target);
   };
 
   return (
@@ -115,6 +161,10 @@ export default function HomePage() {
       {storage && !storage.persistent && (
         <p className="bt-warning">This browser is not letting us save. Your 'Mechs last until you close this tab.</p>
       )}
+      <div role="status">{status}</div>
+      <div role="alert" className="bt-problem">
+        {problem}
+      </div>
 
       <section className="bt-section" aria-labelledby="bt-edition">
         <h2 id="bt-edition">Rules edition</h2>
@@ -134,13 +184,17 @@ export default function HomePage() {
             ))}
           </select>
         </div>
-        <p className="bt-hint">{bookLine}</p>
+        {bookLine && <p className="bt-hint">{bookLine}</p>}
       </section>
 
       <section className="bt-section" aria-labelledby="bt-saved">
-        <h2 id="bt-saved">Your 'Mechs</h2>
+        <h2 id="bt-saved" ref={headingRef} tabIndex={-1}>
+          Your 'Mechs
+        </h2>
         {storage && entries.length === 0 ? (
-          <p>No 'Mechs saved yet.</p>
+          <p ref={emptyRef} tabIndex={-1}>
+            No 'Mechs saved yet.
+          </p>
         ) : (
           <ul className="bt-list">
             {entries.map((entry) => {
@@ -148,13 +202,13 @@ export default function HomePage() {
               if (!record) {
                 return (
                   <li key={entry.id} className="bt-row">
-                    <span>This saved 'Mech cannot be read. {entry.unreadable}</span>
+                    <span className="bt-row__text">This saved 'Mech cannot be read. {entry.unreadable}</span>
                     <span className="bt-row__actions">
                       <button
                         type="button"
                         className="bt-button bt-button--secondary"
-                        onClick={() => {
-                          setConfirming({ id: entry.id, name: "this 'Mech" });
+                        onClick={(event) => {
+                          askDelete({ id: entry.id, name: "this 'Mech" }, event.currentTarget);
                         }}
                       >
                         Delete
@@ -166,8 +220,13 @@ export default function HomePage() {
               const name = nameOf(record);
               return (
                 <li key={entry.id} className="bt-row">
-                  <span>
+                  <span className="bt-row__text">
                     <strong>{name}</strong> {record.tons} tons
+                    {record.source && (
+                      <span className="bt-row__credit">
+                        Designed by {record.source.designer || "an unnamed designer"} on mordel.net
+                      </span>
+                    )}
                   </span>
                   <span className="bt-row__actions">
                     <Link
@@ -193,6 +252,7 @@ export default function HomePage() {
                       aria-label={`Export ${name}`}
                       onClick={() => {
                         download(record);
+                        say("Export started.");
                       }}
                     >
                       Export
@@ -201,8 +261,8 @@ export default function HomePage() {
                       type="button"
                       className="bt-button bt-button--secondary"
                       aria-label={`Delete ${name}`}
-                      onClick={() => {
-                        setConfirming({ id: entry.id, name });
+                      onClick={(event) => {
+                        askDelete({ id: entry.id, name }, event.currentTarget);
                       }}
                     >
                       Delete
@@ -214,7 +274,14 @@ export default function HomePage() {
           </ul>
         )}
         {confirming && (
-          <div className="bt-confirm" role="group" aria-label="Confirm delete">
+          <div
+            className="bt-confirm"
+            role="group"
+            aria-label="Confirm delete"
+            onKeyDown={(event) => {
+              if (event.key === "Escape") cancel();
+            }}
+          >
             <p>{`Delete ${confirming.name}? This cannot be undone.`}</p>
             <span className="bt-row__actions">
               <button
@@ -226,14 +293,7 @@ export default function HomePage() {
               >
                 Delete
               </button>
-              <button
-                type="button"
-                ref={keepRef}
-                className="bt-button bt-button--secondary"
-                onClick={() => {
-                  setConfirming(undefined);
-                }}
-              >
+              <button type="button" ref={keepRef} className="bt-button bt-button--secondary" onClick={cancel}>
                 Keep
               </button>
             </span>
@@ -259,14 +319,6 @@ export default function HomePage() {
             }}
           />
         </div>
-        <div role="status" aria-label="Import result">
-          {imported && "'Mech imported."}
-        </div>
-        {problem && (
-          <p role="alert" className="bt-problem">
-            {problem}
-          </p>
-        )}
       </section>
     </div>
   );

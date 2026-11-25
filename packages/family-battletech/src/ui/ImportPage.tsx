@@ -5,7 +5,7 @@ import { loadCatalog } from "../rules/catalog";
 import { fromMordel, parseMordelRef } from "../rules/mordel";
 import { createMordelClient } from "./mordel-client";
 import type { MordelClient, MordelListRow } from "./mordel-client";
-import { openFamilyStorage } from "./storage";
+import { STORAGE_READ_FAILED, STORAGE_WRITE_FAILED, openFamilyStorage } from "./storage";
 import type { FamilyStorage } from "./storage";
 import "./classic.scss";
 
@@ -26,13 +26,30 @@ export default function ImportPage({ makeClient = defaultMakeClient }: ImportPag
   const [status, setStatus] = useState("");
   const [problem, setProblem] = useState("");
   const [busy, setBusy] = useState(false);
+  const [testing, setTesting] = useState(false);
   const [designs, setDesigns] = useState<{ rows: MordelListRow[]; truncated: boolean }>();
+
+  /** Runs a storage action; when it rejects, shows the fixed message and returns false. */
+  const attempt = useCallback(async (message: string, action: () => Promise<void>): Promise<boolean> => {
+    try {
+      await action();
+      return true;
+    } catch {
+      setStatus("");
+      setProblem(message);
+      return false;
+    }
+  }, []);
 
   useEffect(() => {
     void (async () => {
-      const s = await openFamilyStorage();
-      setStorage(s);
-      setStoredKey(await s.getKey());
+      try {
+        const s = await openFamilyStorage();
+        setStorage(s);
+        setStoredKey(await s.getKey());
+      } catch {
+        setProblem(STORAGE_READ_FAILED);
+      }
     })();
   }, []);
 
@@ -59,30 +76,38 @@ export default function ImportPage({ makeClient = defaultMakeClient }: ImportPag
       setProblem("Type your key first.");
       return;
     }
-    const result = await makeClient(key).testKey();
-    if (result.ok) setStatus("That key works.");
-    else setProblem(result.message);
+    setTesting(true);
+    try {
+      const result = await makeClient(key).testKey();
+      if (result.ok) setStatus("That key works.");
+      else setProblem(result.message);
+    } finally {
+      setTesting(false);
+    }
   };
 
   const saveKey = async () => {
     setStatus("");
     setProblem("");
-    try {
-      await storage?.setKey(typedKey);
-      setStoredKey(typedKey.trim());
-      setTypedKey("");
-      setShowKey(false);
-    } catch {
+    const key = typedKey.trim();
+    if (!key || !storage) {
       setProblem("Type your key first.");
+      return;
     }
+    const saved = await attempt(STORAGE_WRITE_FAILED, () => storage.setKey(key));
+    if (!saved) return;
+    setStoredKey(key);
+    setTypedKey("");
+    setShowKey(false);
   };
 
   const removeKey = async () => {
-    await storage?.clearKey();
-    setStoredKey(undefined);
-    setDesigns(undefined);
+    if (!storage) return;
     setStatus("");
     setProblem("");
+    if (!(await attempt(STORAGE_WRITE_FAILED, () => storage.clearKey()))) return;
+    setStoredKey(undefined);
+    setDesigns(undefined);
   };
 
   const importUnit = useCallback(
@@ -111,7 +136,8 @@ export default function ImportPage({ makeClient = defaultMakeClient }: ImportPag
           setProblem(result.message);
           return;
         }
-        await storage.save(result.record);
+        const record = result.record;
+        if (!(await attempt(STORAGE_WRITE_FAILED, () => storage.save(record)))) return;
         void navigate(`/battletech/classic/editor?id=${encodeURIComponent(result.record.id)}`, {
           state: result.notes.length > 0 ? { notes: result.notes } : undefined,
         });
@@ -122,7 +148,7 @@ export default function ImportPage({ makeClient = defaultMakeClient }: ImportPag
         setBusy(false);
       }
     },
-    [storage, storedKey, makeClient, navigate],
+    [storage, storedKey, makeClient, navigate, attempt],
   );
 
   const submit = (event: FormEvent) => {
@@ -155,6 +181,7 @@ export default function ImportPage({ makeClient = defaultMakeClient }: ImportPag
               <button
                 type="button"
                 className="bt-button bt-button--secondary"
+                disabled={testing}
                 onClick={() => {
                   void testKey();
                 }}
@@ -201,6 +228,7 @@ export default function ImportPage({ makeClient = defaultMakeClient }: ImportPag
               <button
                 type="button"
                 className="bt-button bt-button--secondary"
+                disabled={testing}
                 onClick={() => {
                   void testKey();
                 }}
@@ -210,6 +238,7 @@ export default function ImportPage({ makeClient = defaultMakeClient }: ImportPag
               <button
                 type="button"
                 className="bt-button"
+                disabled={!storage}
                 onClick={() => {
                   void saveKey();
                 }}
@@ -223,11 +252,9 @@ export default function ImportPage({ makeClient = defaultMakeClient }: ImportPag
       </section>
 
       <div role="status">{status}</div>
-      {problem && (
-        <p role="alert" className="bt-problem">
-          {problem}
-        </p>
-      )}
+      <div role="alert" className="bt-problem">
+        {problem}
+      </div>
 
       {storedKey && (
         <>
@@ -260,7 +287,7 @@ export default function ImportPage({ makeClient = defaultMakeClient }: ImportPag
               <ul className="bt-list">
                 {designs.rows.map((row) => (
                   <li key={`${row.unitType}-${row.id}`} className="bt-row">
-                    <span>
+                    <span className="bt-row__text">
                       <strong>{row.name}</strong> {row.tons} tons, designed by {row.designer || "an unnamed designer"}
                     </span>
                     <button

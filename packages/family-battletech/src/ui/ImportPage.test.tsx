@@ -1,16 +1,30 @@
 import "fake-indexeddb/auto";
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { IDBFactory } from "fake-indexeddb";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { mordelBiped } from "../rules/fixtures";
+import { mordelBiped, mordelOdd } from "../rules/fixtures";
 import ImportPage from "./ImportPage";
 import type { MordelClient, MordelFailure, MordelResult } from "./mordel-client";
 import { openFamilyStorage } from "./storage";
 
+const control = vi.hoisted(() => ({ failSetKey: false }));
+
+vi.mock("./storage", async (importOriginal) => {
+  const original = await importOriginal<typeof import("./storage")>();
+  return {
+    ...original,
+    openFamilyStorage: async () => {
+      const real = await original.openFamilyStorage();
+      return { ...real, setKey: (key: string) => (control.failSetKey ? Promise.reject(new Error("disk full")) : real.setKey(key)) };
+    },
+  };
+});
+
 beforeEach(() => {
   globalThis.indexedDB = new IDBFactory();
+  control.failSetKey = false;
 });
 afterEach(cleanup);
 
@@ -27,7 +41,12 @@ function fakeClient(over: Partial<MordelClient> = {}): MordelClient {
 
 function Where() {
   const location = useLocation();
-  return <p data-testid="where">{location.pathname + location.search}</p>;
+  return (
+    <>
+      <p data-testid="where">{location.pathname + location.search}</p>
+      <p data-testid="state">{JSON.stringify(location.state)}</p>
+    </>
+  );
 }
 
 function renderImport(client: MordelClient) {
@@ -53,29 +72,55 @@ describe("Import from Mordel", () => {
     expect(screen.getByRole("button", { name: "Save key" })).toBeTruthy();
     expect(screen.getByText("Uses the mordel.net API built by MordelBlacknight.")).toBeTruthy();
     expect(screen.getByRole("link", { name: "mordel.net" }).getAttribute("href")).toBe("https://www.mordel.net/");
-    const toggle = screen.getByRole("button", { name: "Show key" });
-    await userEvent.setup().click(toggle);
+    await userEvent.setup().click(screen.getByRole("button", { name: "Show key" }));
     expect(field.type).toBe("text");
     expect(screen.getByRole("button", { name: "Hide key" }).getAttribute("aria-pressed")).toBe("true");
   });
 
-  it("reports a rejected key, keeps what was typed and never repeats the key", async () => {
+  it("tests a key: says it works, or shows the client message as is, keeping the typed key out of every message", async () => {
     const user = userEvent.setup();
-    renderImport(fakeClient({ testKey: () => Promise.resolve(failure("bad-key", "mordel.net did not accept that key.")) }));
+    let result: MordelResult<true> = { ok: true, value: true };
+    renderImport(fakeClient({ testKey: () => Promise.resolve(result) }));
     const field = await screen.findByLabelText<HTMLInputElement>("Mordel key");
     await user.type(field, "sekrit-key-123");
-    await user.click(screen.getByRole("button", { name: "Test key" }));
-    const alert = await screen.findByRole("alert");
-    expect(alert.textContent).toBe("mordel.net did not accept that key.");
-    expect(field.value).toBe("sekrit-key-123");
-    expect(document.body.textContent).not.toContain("sekrit-key-123");
+    const cases: [MordelResult<true>, string, string][] = [
+      [{ ok: true, value: true }, "status", "That key works."],
+      [failure("bad-key", "mordel.net did not accept that key."), "alert", "mordel.net did not accept that key."],
+      [failure("slow-down", "mordel.net asked us to slow down. Try again in a minute."), "alert", "mordel.net asked us to slow down. Try again in a minute."],
+      [failure("offline", "We could not reach mordel.net. You may be offline."), "alert", "We could not reach mordel.net. You may be offline."],
+    ];
+    for (const [next, role, text] of cases) {
+      result = next;
+      await user.click(screen.getByRole("button", { name: "Test key" }));
+      await waitFor(() => {
+        expect(screen.getByRole(role).textContent).toBe(text);
+      });
+      expect(field.value).toBe("sekrit-key-123");
+      expect(document.body.textContent).not.toContain("sekrit-key-123");
+    }
   });
 
-  it("saves a key, then shows it as saved without displaying it", async () => {
+  it("saves a key, shows it as saved without displaying it, removes it; refuses an empty key and reports a failed save", async () => {
     const user = userEvent.setup();
     renderImport(fakeClient());
-    await user.type(await screen.findByLabelText("Mordel key"), "abc123");
-    await user.click(screen.getByRole("button", { name: "Save key" }));
+    const field = await screen.findByLabelText<HTMLInputElement>("Mordel key");
+    const save = screen.getByRole("button", { name: "Save key" });
+    await waitFor(() => {
+      expect((save as HTMLButtonElement).disabled).toBe(false);
+    });
+    await user.click(save);
+    expect(screen.getByRole("alert").textContent).toBe("Type your key first.");
+
+    control.failSetKey = true;
+    await user.type(field, "abc123");
+    await user.click(save);
+    await waitFor(() => {
+      expect(screen.getByRole("alert").textContent).toBe("We could not save that on this device.");
+    });
+    expect(field.value).toBe("abc123");
+
+    control.failSetKey = false;
+    await user.click(save);
     expect(await screen.findByText("A key is saved on this device.")).toBeTruthy();
     expect(await (await openFamilyStorage()).getKey()).toBe("abc123");
     expect(screen.queryByLabelText("Mordel key")).toBeNull();
@@ -85,15 +130,17 @@ describe("Import from Mordel", () => {
     expect(await (await openFamilyStorage()).getKey()).toBeUndefined();
   });
 
-  it("imports unit 474 with a stored key, saves it and opens the editor; a cv reference is refused", async () => {
+  it("imports unit 474, saves it and opens the editor with the import notes; a cv reference is refused", async () => {
     const user = userEvent.setup();
     await (await openFamilyStorage()).setKey("abc123");
-    const unit = vi.fn(() => Promise.resolve<MordelResult<unknown>>({ ok: true, value: mordelBiped() }));
+    const unit = vi.fn(() => Promise.resolve<MordelResult<unknown>>({ ok: true, value: mordelOdd() }));
     renderImport(fakeClient({ unit }));
     const box = await screen.findByLabelText("Unit number or address");
     await user.type(box, "cv 12");
     await user.click(screen.getByRole("button", { name: "Import" }));
-    expect((await screen.findByRole("alert")).textContent).toBe("Only BattleMechs can be imported so far.");
+    await waitFor(() => {
+      expect(screen.getByRole("alert").textContent).toBe("Only BattleMechs can be imported so far.");
+    });
     expect(unit).not.toHaveBeenCalled();
 
     await user.clear(box);
@@ -104,6 +151,8 @@ describe("Import from Mordel", () => {
     const saved = await (await openFamilyStorage()).list();
     expect(saved).toHaveLength(1);
     expect(where.textContent).toBe(`/battletech/classic/editor?id=${saved[0]?.id ?? ""}`);
+    const state = JSON.parse(screen.getByTestId("state").textContent) as { notes: string[] };
+    expect(state.notes).toContain("Frobnicator 9000 is not in our equipment table.");
   });
 
   it("lists My designs with designer, and says so when there are none", async () => {
@@ -118,15 +167,5 @@ describe("Import from Mordel", () => {
     cleanup();
     renderImport(fakeClient());
     expect(await screen.findByText("You have no designs on mordel.net yet.")).toBeTruthy();
-  });
-
-  it("shows a slow-down or offline failure in an alert", async () => {
-    const user = userEvent.setup();
-    await (await openFamilyStorage()).setKey("abc123");
-    const message = "We could not reach mordel.net. You may be offline.";
-    renderImport(fakeClient({ unit: () => Promise.resolve(failure("offline", message)) }));
-    await user.type(await screen.findByLabelText("Unit number or address"), "474");
-    await user.click(screen.getByRole("button", { name: "Import" }));
-    expect((await screen.findByRole("alert")).textContent).toBe(message);
   });
 });

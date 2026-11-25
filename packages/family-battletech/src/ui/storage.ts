@@ -32,6 +32,10 @@ export interface MechFile {
   record: MechRecord;
 }
 
+/** What the pages say when the device store fails, so the wording is one thing. */
+export const STORAGE_WRITE_FAILED = "We could not save that on this device.";
+export const STORAGE_READ_FAILED = "We could not read what is saved on this device.";
+
 const KEY = "mordel-key";
 const EDITION = "edition";
 const MECH_PREFIX = "mech:";

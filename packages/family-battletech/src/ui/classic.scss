@@ -93,6 +93,16 @@ a.bt-button {
     margin-top: var(--sr-space-2);
   }
 
+  &__text {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  &__credit {
+    display: block;
+    color: var(--sr-ink-muted);
+  }
+
   &__actions {
     display: flex;
     flex-wrap: wrap;
