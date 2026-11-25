@@ -5,6 +5,7 @@ import { loadCatalog } from "../rules/catalog";
 import type { Catalog } from "../rules/catalog";
 import { runChecks } from "../rules/checks";
 import type { MechRecord } from "../rules/mech";
+import RecordBoundary from "./RecordBoundary";
 import RecordSheet from "./sheet/RecordSheet";
 import { sheetTitle } from "./sheet/facts";
 import { STORAGE_READ_FAILED, openFamilyStorage } from "./storage";
@@ -19,7 +20,18 @@ type Loaded =
   | { state: "failed" }
   | { state: "ready"; catalog: Catalog; record: MechRecord };
 
+/** The sheet for the 'Mech named in the address; whatever goes wrong while drawing it is caught and offered a way out. */
 export default function SheetPage() {
+  const [params] = useSearchParams();
+  const id = params.get("id") ?? "";
+  return (
+    <RecordBoundary key={id} id={id}>
+      <SheetLoader />
+    </RecordBoundary>
+  );
+}
+
+function SheetLoader() {
   const [params] = useSearchParams();
   const id = params.get("id") ?? "";
   const [loaded, setLoaded] = useState<Loaded>({ state: "loading" });

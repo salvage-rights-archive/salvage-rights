@@ -8,6 +8,7 @@ import { editRecord } from "../../rules/mech";
 import type { MechRecord } from "../../rules/mech";
 import RecordSheet from "./RecordSheet";
 import { inventoryStep } from "./MechData";
+import { MAX_SINKS_DRAWN } from "./HeatData";
 
 afterEach(cleanup);
 
@@ -109,6 +110,20 @@ describe("The record sheet", () => {
     expect(await withPicture("https://mordel.net/a.png")).toEqual(["image", "https://mordel.net/a.png"]);
     expect(await withPicture("https://example.com/a.png")).toEqual(["empty", undefined]);
     expect(await withPicture(undefined)).toEqual(["empty", undefined]);
+  });
+
+  it("draws a bounded number of heat sink circles however many heat sinks the record says, and still prints the count", async () => {
+    const circles = async (count: number) => {
+      const record = editRecord(await recordOf(mordelBiped()), (d) => void (d.chassis.heatSinks.count = count));
+      const { svg, lines } = await drawn(record);
+      cleanup();
+      return { drawn: svg.querySelectorAll("circle").length, lines };
+    };
+    const huge = await circles(4_000_000_000);
+    // The sheet has other circles (armor and structure pips); the heat sinks are what a count adds to a sheet with none.
+    expect(huge.drawn - (await circles(0)).drawn).toBe(MAX_SINKS_DRAWN);
+    expect(huge.drawn).toBe((await circles(1_000_000)).drawn);
+    expect(huge.lines).toContain("Single Heat Sinks: 4000000000 (4000000000)");
   });
 
   it("steps the inventory type down to hold 14 lines at its default size and up to 19 at its smallest", () => {

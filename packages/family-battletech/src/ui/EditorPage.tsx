@@ -22,6 +22,7 @@ import CalculatorPanel from "./editor/CalculatorPanel";
 import FindingsPanel from "./editor/FindingsPanel";
 import SlotsPanel from "./editor/SlotsPanel";
 import { mordelPicture, readPicture } from "./picture";
+import RecordBoundary from "./RecordBoundary";
 import { STORAGE_READ_FAILED, STORAGE_WRITE_FAILED, downloadMech, openFamilyStorage } from "./storage";
 import type { FamilyStorage } from "./storage";
 import "./classic.scss";
@@ -347,7 +348,18 @@ type Loaded =
   | { state: "failed" }
   | { state: "ready"; storage: FamilyStorage; catalog: Catalog; record: MechRecord };
 
+/** The editor for the 'Mech named in the address; whatever goes wrong while showing it is caught and offered a way out. */
 export default function EditorPage() {
+  const [params] = useSearchParams();
+  const id = params.get("id") ?? "";
+  return (
+    <RecordBoundary key={id} id={id}>
+      <EditorLoader />
+    </RecordBoundary>
+  );
+}
+
+function EditorLoader() {
   const [params] = useSearchParams();
   const id = params.get("id") ?? "";
   const [loaded, setLoaded] = useState<Loaded>({ state: "loading" });

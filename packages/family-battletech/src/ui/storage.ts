@@ -22,6 +22,8 @@ export interface FamilyStorage {
   list(): Promise<SavedEntry[]>;
   get(id: string): Promise<SavedEntry | undefined>;
   save(record: MechRecord): Promise<void>;
+  /** What is stored under the id, exactly as it is, readable or not: for a copy of a record the pages cannot show. */
+  raw(id: string): Promise<unknown>;
   remove(id: string): Promise<void>;
 }
 
@@ -167,10 +169,15 @@ export function fromMechFile(file: unknown): { ok: true; record: MechRecord } | 
 /** Hands the 'Mech to the browser as a file. */
 export function downloadMech(record: MechRecord): void {
   const base = `${record.name.chassis}-${record.name.model}`.replace(/[^A-Za-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
-  const url = URL.createObjectURL(new Blob([JSON.stringify(toMechFile(record), null, 2)], { type: "application/json" }));
+  downloadJson(`${base || "mech"}.mech.json`, toMechFile(record));
+}
+
+/** Hands any value to the browser as a JSON file. */
+export function downloadJson(filename: string, value: unknown): void {
+  const url = URL.createObjectURL(new Blob([JSON.stringify(value, null, 2)], { type: "application/json" }));
   const link = document.createElement("a");
   link.href = url;
-  link.download = `${base || "mech"}.mech.json`;
+  link.download = filename;
   document.body.append(link);
   link.click();
   link.remove();
@@ -217,6 +224,7 @@ function wrap(store: Store): FamilyStorage {
       if (!isMechRecord(record)) return Promise.reject(new Error("This 'Mech is incomplete and cannot be saved."));
       return store.set(MECH_PREFIX + record.id, { record, savedAt: new Date().toISOString() });
     },
+    raw: (id) => store.get<unknown>(MECH_PREFIX + id),
     remove: (id) => store.delete(MECH_PREFIX + id),
   };
 }
