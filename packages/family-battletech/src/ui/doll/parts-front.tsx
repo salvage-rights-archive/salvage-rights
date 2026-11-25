@@ -25,14 +25,13 @@ interface IQuadLegSet {
     kx: number;
     ky: number;
 }
-/** A quad's legs, the rear ones smaller and further in because they are the far pair; a tripod's center leg, which stands
- * between the two side legs and below the pelvis, and a monoped's, which is broad and short. The center legs start low
- * so that the center torso's label has room above their hips. */
-const QUAD_LEGS: Record<"front" | "rear" | "center" | "mono", IQuadLegSet> = {
-    front: { hip: [-282, 456], kx: 1, ky: 1 },
-    rear: { hip: [-136, 470], kx: 0.8, ky: 0.92 },
-    center: { hip: [0, 738], kx: 1.25, ky: 0.47 },
-    mono: { hip: [0, 612], kx: 1.5, ky: 0.74 },
+/** A quad's legs, the rear ones smaller because they are the far pair and set in under the body with a small gap between
+ * them, the front ones beside them under the shoulders; and a monoped's leg, which is broad and hangs directly under the
+ * body. */
+const QUAD_LEGS: Record<"front" | "rear" | "mono", IQuadLegSet> = {
+    front: { hip: [-236, 456], kx: 1, ky: 1 },
+    rear: { hip: [-76, 470], kx: 0.8, ky: 0.92 },
+    mono: { hip: [0, 490], kx: 1.5, ky: 0.95 },
 };
 
 /** Where each part was drawn: a layout places every part it uses at its own pivot, as the biped does. */
@@ -46,13 +45,14 @@ export const FRONT_PIVOTS = {
     "leg": [-118, 520],
     "quad-leg-front": QUAD_LEGS.front.hip,
     "quad-leg-rear": QUAD_LEGS.rear.hip,
-    "center-leg": QUAD_LEGS.center.hip,
     "mono-leg": QUAD_LEGS.mono.hip,
     "torso-center-legless": [0, 206],
+    "torso-center-trunk": [0, 206],
+    "torso-side-wide": [-84, 204],
 } satisfies Record<FrontPartId, BubblePoint>;
 
 export type FrontPartId = "head" | "torso-center" | "torso-side" | "torso-center-rear" | "torso-side-rear" | "arm" | "leg"
-    | "quad-leg-front" | "quad-leg-rear" | "center-leg" | "mono-leg" | "torso-center-legless";
+    | "quad-leg-front" | "quad-leg-rear" | "mono-leg" | "torso-center-legless" | "torso-center-trunk" | "torso-side-wide";
 
 
 // ---- Head: a hexagonal helm with a crest, a V-notched visor, a chin guard and a whip antenna at the left temple.
@@ -98,6 +98,26 @@ export const torsoCenter = aroundPivot(FRONT_PIVOTS["torso-center"], {
     ),
 });
 
+// ---- Center torso without a pelvis, for the bodies whose legs hang straight from it: the chest, a bare lower shell where the
+// label is printed, and the waist ring, ending where the legs begin. Its points are packed into the chest plate.
+
+const TRUNK_PLATE: Shape = [[-78, 228], [78, 228], [86, 242], [80, 300], [68, 350], [-68, 350], [-80, 300], [-86, 242]];
+
+export const torsoCenterTrunk = aroundPivot(FRONT_PIVOTS["torso-center-trunk"], {
+    plates: [TRUNK_PLATE],
+    label: [0, 300],
+    draw: (pen, ids) => (
+        <>
+            {outline("M -62,206 L 62,206 L 96,222 C 100,276 92,340 78,390 L 60,440 L 58,488 L -58,488 L -60,440 L -78,390 C -92,340 -100,276 -96,222 Z", pen)}
+            {seam("M -58,208 C -44,226 44,226 58,208", pen)}
+            {seam("M -72,358 L 72,358", pen)}
+            {joint("M -58,456 L 58,456 L 58,488 L -58,488 Z", ["M -58,467 L 58,467", "M -58,478 L 58,478"], pen, ids)}
+            {plateFace(TRUNK_PLATE, pen)}
+            {rivets(TRUNK_PLATE, pen)}
+        </>
+    ),
+});
+
 // ---- Side torso (left): an angular shell, its top rising to the shoulder under the pauldron, its foot cut away
 // above the hip.
 
@@ -112,6 +132,25 @@ export const torsoSide = aroundPivot(FRONT_PIVOTS["torso-side"], {
             {seam("M -220,326 C -220,368 -214,402 -202,428", pen)}
             {plateFace(SIDE_PLATE, pen)}
             {rivets(SIDE_PLATE, pen)}
+        </>
+    ),
+});
+
+// ---- Side torso for a quad: the same shell with a shelf out over the front leg's hip, so that the leg hangs from the torso.
+
+const SHELF_PLATE: Shape = [[-208, 438], [-286, 452], [-292, 470], [-208, 474]];
+
+export const torsoSideWide = aroundPivot(FRONT_PIVOTS["torso-side-wide"], {
+    plates: [SIDE_PLATE, SHELF_PLATE],
+    label: [-150, 330],
+    draw: (pen) => (
+        <>
+            {outline("M -84,198 L -152,178 C -180,172 -206,178 -222,192 L -230,268 C -232,330 -226,392 -218,424 L -290,440 C -302,446 -304,466 -296,482 L -96,482 L -70,446 Z", pen)}
+            {seam("M -220,326 C -220,368 -216,400 -210,424", pen)}
+            {plateFace(SIDE_PLATE, pen)}
+            {plateFace(SHELF_PLATE, pen)}
+            {rivets(SIDE_PLATE, pen)}
+            {rivets(SHELF_PLATE, pen)}
         </>
     ),
 });
@@ -299,14 +338,8 @@ const spring = (x: number, top: number, bottom: number, half: number, coils: num
     return <path d={`M ${points.join(" L ")}`} fill="none" stroke={INK} strokeWidth={round(pen.panel * 1.8)} strokeLinejoin="round" strokeLinecap="round" />;
 };
 
-// ---- A tripod's center leg: the stocky leg, between the two side legs and hung low, from two rams under the pelvis so that
-// the center torso's label has room between. A monoped's leg is the same drawing broader, with a heavy ram each side
-// and a coil spring at each heel.
-
-const centerLeg = quadLeg(QUAD_LEGS.center, {
-    bothSides: true,
-    behind: (pen) => <>{piston([-50, 702], [-50, 738], pen)}{piston([50, 702], [50, 738], pen)}</>,
-});
+// ---- A monoped's leg: the stocky leg drawn broader, hanging straight under the body, with a heavy ram each side and a coil
+// spring at each heel. (A tripod's center leg is the side leg's own drawing, set between the two.)
 
 const monoLeg = quadLeg(QUAD_LEGS.mono, {
     bothSides: true,
@@ -344,7 +377,8 @@ export const FRONT_PARTS: Record<FrontPartId, IPart> = {
     "leg": leg,
     "quad-leg-front": quadLeg(QUAD_LEGS.front),
     "quad-leg-rear": quadLeg(QUAD_LEGS.rear),
-    "center-leg": centerLeg,
     "mono-leg": monoLeg,
     "torso-center-legless": torsoCenterLegless,
+    "torso-center-trunk": torsoCenterTrunk,
+    "torso-side-wide": torsoSideWide,
 };

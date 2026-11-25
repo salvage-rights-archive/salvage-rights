@@ -2,7 +2,7 @@
 import React from "react";
 import type { BubblePoint, Shape } from "./shape-bubbles";
 import { aroundPivot, joint, outline, pivotMark, plateFace, rivets, round, seam, seams, withBehind, type IDecor, type IPart } from "./parts-kit";
-import { HEAD_PLATE, PAULDRON_PLATE, head, torsoCenter, torsoSide } from "./parts-front";
+import { HEAD_PLATE, PAULDRON_PLATE, head, torsoCenter, torsoCenterTrunk, torsoSide } from "./parts-front";
 import { INK, PAPER } from "./pen";
 
 /*
@@ -11,12 +11,13 @@ import { INK, PAPER } from "./pen";
  * the left; a layout mirrors it. Our own drawing, nothing traced.
  */
 
-export type VariantPartId = "head-canopy" | "head-super" | "torso-center-super" | "torso-side-super" | "arm-cap";
+export type VariantPartId = "head-canopy" | "head-super" | "torso-center-super" | "torso-center-trunk-super" | "torso-side-super" | "arm-cap";
 
 export const VARIANT_PIVOTS = {
     "head-canopy": [0, 214],
     "head-super": [0, 214],
     "torso-center-super": [0, 206],
+    "torso-center-trunk-super": [0, 206],
     "torso-side-super": [-84, 204],
     "arm-cap": [-266, 230],
 } satisfies Record<VariantPartId, BubblePoint>;
@@ -31,6 +32,7 @@ const puffed = (part: IPart, k: number): IPart => withBehind(part, (pen, ids) =>
 
 const headSuper = puffed(head, 1.1);
 const torsoCenterSuper = puffed(torsoCenter, 1.05);
+const torsoCenterTrunkSuper = puffed(torsoCenterTrunk, 1.05);
 const torsoSideSuper = puffed(torsoSide, 1.05);
 
 // ---- Land-Air canopy head: the helm under a glazed dome with frames.
@@ -74,6 +76,7 @@ export const VARIANT_PARTS: Record<VariantPartId, IPart> = {
     "head-canopy": headCanopy,
     "head-super": headSuper,
     "torso-center-super": torsoCenterSuper,
+    "torso-center-trunk-super": torsoCenterTrunkSuper,
     "torso-side-super": torsoSideSuper,
     "arm-cap": armCap,
 };

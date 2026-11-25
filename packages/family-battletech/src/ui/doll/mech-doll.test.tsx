@@ -276,7 +276,7 @@ describe("the paper doll", () => {
 
   it.each<[string, DollLayoutId, Partial<IDollVariant>, Record<string, string>, string[]]>([
     ["superheavy biped", "biped", { superheavy: true }, { hd: "head-super", ct: "torso-center-super", lt: "torso-side-super" }, []],
-    ["superheavy tripod", "tripod", { superheavy: true }, { hd: "head-super", ct: "torso-center-super", rt: "torso-side-super" }, []],
+    ["superheavy tripod", "tripod", { superheavy: true }, { hd: "head-super", ct: "torso-center-trunk-super", rt: "torso-side-super" }, []],
     ["Land-Air 'Mech", "biped", { lam: "lam" }, { hd: "head-canopy" }, ["wing-folded-left", "wing-folded-right", "fighter-inset"]],
     ["bimodal Land-Air 'Mech", "biped", { lam: "bimodal" }, { hd: "head-canopy" }, ["wing-folded-left", "wing-folded-right", "fighter-inset"]],
     ["VTOL Land-Air 'Mech", "biped", { lam: "vtol" }, { hd: "head-canopy" }, ["rotor"]],

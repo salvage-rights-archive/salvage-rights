@@ -27,7 +27,7 @@ export const scaleLocation = (location: IDollLocation, k: number): IDollLocation
  * can be read. */
 const SUPERHEAVY_SCALE = 1.45;
 
-const SUPERHEAVY_PARTS: Partial<Record<PartId, PartId>> = { head: "head-super", "torso-center": "torso-center-super", "torso-side": "torso-side-super" };
+const SUPERHEAVY_PARTS: Partial<Record<PartId, PartId>> = { head: "head-super", "torso-center": "torso-center-super", "torso-center-trunk": "torso-center-trunk-super", "torso-side": "torso-side-super" };
 
 const withParts = (layout: IDollLayout, swap: (location: IDollLocation) => IDollLocation): IDollLayout =>
     ({ ...layout, front: layout.front.map(swap), rear: layout.rear.map(swap) });

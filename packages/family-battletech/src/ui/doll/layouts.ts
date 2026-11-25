@@ -169,13 +169,18 @@ const BIPED: IDollLayout = {
     rear: REAR_TORSOS,
 };
 
-// A four-legged 'Mech seen from the front and above, as its record sheet shows it: the front legs outside, the rear legs
-// (the far pair) in the gap between them and the center torso, drawn first. Each leg's label sits under its foot.
+// A four-legged 'Mech seen from the front: the rear legs (the far pair, smaller, drawn first) stand under the body with a small
+// gap between them, the front legs beside them, and each side torso has a shelf out over its front leg's hip so the leg hangs
+// from the torso. The center torso has no pelvis: the legs begin under it. Each leg's label sits under its foot.
 // Damage transfer: a destroyed leg's damage moves to the torso on its side, a side torso's to the center torso, and the
 // head's and center torso's nowhere (Total Warfare, Transferring Damage, p.123; a destroyed side torso blows off the
 // front leg on its side, Torso Destruction, p.121).
-const FRONT_LEFT_LEG: IDollLocation = { loc: "fll", part: "quad-leg-front", at: home("quad-leg-front"), label: ["FRONT", "LEFT", "LEG"], labelAt: [-282, 912], labelAnchor: "middle", shortHangsFrom: [-282, 892], transfersTo: "lt" };
-const REAR_LEFT_LEG: IDollLocation = { loc: "rll", part: "quad-leg-rear", at: home("quad-leg-rear"), label: ["REAR", "LEFT", "LEG"], labelAt: [-136, 898], labelAnchor: "middle", shortHangsFrom: [-136, 872], transfersTo: "lt" };
+/** The center torso of the bodies with no pelvis: its label is printed on the bare lower shell, between the chest plate and
+ * the waist ring (the short label hangs from the top of that shell). */
+const TRUNK: IDollLocation = { ...CENTER_TORSO, part: "torso-center-trunk", at: home("torso-center-trunk"), labelAt: [0, 390], shortHangsFrom: [0, 368] };
+
+const FRONT_LEFT_LEG: IDollLocation = { loc: "fll", part: "quad-leg-front", at: home("quad-leg-front"), label: ["FRONT", "LEFT", "LEG"], labelAt: [-236, 912], labelAnchor: "middle", shortHangsFrom: [-236, 892], transfersTo: "lt" };
+const REAR_LEFT_LEG: IDollLocation = { loc: "rll", part: "quad-leg-rear", at: home("quad-leg-rear"), label: ["REAR", "LEFT", "LEG"], labelAt: [-76, 898], labelAnchor: "middle", shortHangsFrom: [-76, 872], transfersTo: "lt" };
 
 const QUAD: IDollLayout = {
     id: "quad",
@@ -185,9 +190,9 @@ const QUAD: IDollLayout = {
         mirrored(REAR_LEFT_LEG, "rrl", ["REAR", "RIGHT", "LEG"], "rt"),
         FRONT_LEFT_LEG,
         mirrored(FRONT_LEFT_LEG, "frl", ["FRONT", "RIGHT", "LEG"], "rt"),
-        LEFT_TORSO,
-        mirrored(LEFT_TORSO, "rt", ["RIGHT", "TORSO"], "ct"),
-        CENTER_TORSO,
+        { ...LEFT_TORSO, part: "torso-side-wide", at: home("torso-side-wide") },
+        mirrored({ ...LEFT_TORSO, part: "torso-side-wide", at: home("torso-side-wide") }, "rt", ["RIGHT", "TORSO"], "ct"),
+        TRUNK,
         HEAD,
     ],
     rear: REAR_TORSOS,
@@ -204,31 +209,31 @@ const moved = (location: IDollLocation, dy: number): IDollLocation => ({
 /** The rear torsos moved to clear what hangs below or above the front view. */
 const rearTorsosMoved = (dy: number): IDollLocation[] => REAR_TORSOS.map((location) => moved(location, dy));
 
-// A tripod: the biped with a third, center leg between the two side legs. The legs stand as the biped's do; the center leg
-// hangs low, so that the center torso's label fits above it, and its label sits under its foot, which pushes the rear torsos
-// down. A destroyed center leg's damage goes to the center torso, a side leg's to the torso on its side (Interstellar
+// A tripod: the biped without its pelvis and with a third leg, the same drawing as the side legs, hung from the center torso
+// between them, the side legs set a little wider apart to make room. The center leg's label sits under its foot, which
+// pushes the rear torsos down. A destroyed center leg's damage goes to the center torso, a side leg's to the torso on its side (Interstellar
 // Operations: Alternate Eras, Tripod 'Mech Game Rules, p. 159).
-const CENTER_LEG: IDollLocation = { loc: "cl", part: "center-leg", at: home("center-leg"), label: ["CENTER", "LEG"], labelAt: [0, 968], labelAnchor: "middle", shortHangsFrom: [0, 950], transfersTo: "ct" };
+const CENTER_LEG: IDollLocation = { loc: "cl", part: "leg", at: { x: 12, y: 520 }, label: ["CENTER", "LEG"], labelAt: [0, 968], labelAnchor: "middle", shortHangsFrom: [0, 950], transfersTo: "ct" };
+const SIDE_LEG: IDollLocation = { ...LEFT_LEG, at: { ...home("leg"), x: home("leg").x - 12 } };
 
 const TRIPOD: IDollLayout = {
     id: "tripod",
     view: "front",
     front: [
         CENTER_LEG,
-        LEFT_LEG,
-        mirrored(LEFT_LEG, "rl", ["RIGHT", "LEG"], "rt"),
+        SIDE_LEG,
+        mirrored(SIDE_LEG, "rl", ["RIGHT", "LEG"], "rt"),
         LEFT_TORSO,
         mirrored(LEFT_TORSO, "rt", ["RIGHT", "TORSO"], "ct"),
         LEFT_ARM,
         mirrored(LEFT_ARM, "ra", ["RIGHT", "ARM"], "rt"),
-        // The short label hangs under the center torso's hatched skirt plate, which ends at y 604.
-        { ...CENTER_TORSO, labelAt: [0, 640], shortHangsFrom: [0, 614] },
+        TRUNK,
         HEAD,
     ],
     rear: rearTorsosMoved(70),
 };
 
-// A monoped: one broad piston leg in the middle, its label beside the foot. The rules for these are not in the app yet, so
+// A monoped: one broad piston leg hung straight from the pelvis-less center torso, its label beside the foot. The rules for these are not in the app yet, so
 // the arrows are provisional: each arm's damage goes to the torso on its side, a side torso's to the center torso, and the
 // center leg's to the center torso.
 const MONO_LEG: IDollLocation = { loc: "cl", part: "mono-leg", at: home("mono-leg"), label: ["CENTER", "LEG"], labelAt: [150, 912], labelAnchor: "start", shortHangsFrom: [150, 892], transfersTo: "ct" };
@@ -242,7 +247,7 @@ const MONOPED: IDollLayout = {
         mirrored(LEFT_TORSO, "rt", ["RIGHT", "TORSO"], "ct"),
         LEFT_ARM,
         mirrored(LEFT_ARM, "ra", ["RIGHT", "ARM"], "rt"),
-        { ...CENTER_TORSO, labelAt: [112, 540], labelAnchor: "start" },
+        TRUNK,
         HEAD,
     ],
     rear: REAR_TORSOS,
