@@ -17,7 +17,7 @@ import {
   STRUCTURE_WEIGHT,
 } from "../data/chassis";
 
-export type LocationCode = "HD" | "CT" | "LT" | "RT" | "LA" | "RA" | "LL" | "RL" | "FLL" | "FRL" | "RLL" | "RRL";
+export type LocationCode = "HD" | "CT" | "LT" | "RT" | "LA" | "RA" | "LL" | "RL" | "CL" | "FLL" | "FRL" | "RLL" | "RRL";
 export const LOCATION_NAMES: Record<LocationCode, string> = {
   HD: "Head",
   CT: "Center Torso",
@@ -27,6 +27,7 @@ export const LOCATION_NAMES: Record<LocationCode, string> = {
   RA: "Right Arm",
   LL: "Left Leg",
   RL: "Right Leg",
+  CL: "Center Leg",
   FLL: "Front Left Leg",
   FRL: "Front Right Leg",
   RLL: "Rear Left Leg",
@@ -72,6 +73,8 @@ export interface MechRecord {
     heatSinks: { type: string; count: number };
   };
   armor: Partial<Record<LocationCode, { front: number; rear?: number }>>;
+  /** Which arm actuators a biped's arm has. Absent (or an arm absent from it) means the lower arm and the hand are both there. */
+  arms?: Partial<Record<"LA" | "RA", { lowerArm: boolean; hand: boolean }>>;
   mounts: Mount[];
   notes: { overview?: string; capabilities?: string; deployment?: string; variants?: string; notables?: string };
   imageUrl?: string;
@@ -83,6 +86,8 @@ export interface MechRecord {
     fetchedAt: string;
     original: unknown;
     values: { battleValue?: number; cost?: number; rulesLevel?: string; era?: string };
+    /** What the importer produced, kept so that "changed since import" compares with it and not with a newer importer. */
+    baseline?: Pick<MechRecord, "name" | "notes" | "tons" | "year" | "techBase" | "configuration" | "chassis" | "armor" | "arms" | "mounts">;
   };
 }
 
@@ -149,6 +154,9 @@ export function structureTons(type: string, tons: number): number | null {
 // Layout
 // ---------------------------------------------------------------------------------------------------------------
 
+export const ARM_FULL = { lowerArm: true, hand: true };
+const ARM_LABELS = { lowerArm: "Lower Arm Actuator", hand: "Hand Actuator" } as const;
+
 /** One label per slot ("" for none) for every location, from the fixed parts of the chassis. */
 function fixedLabels(record: MechRecord, config: NonNullable<ReturnType<typeof configurationOf>>) {
   const labels: Partial<Record<LocationCode, string[]>> = {};
@@ -183,7 +191,22 @@ function fixedLabels(record: MechRecord, config: NonNullable<ReturnType<typeof c
     }
   }
   if (gyro) for (let i = 0; i < gyro.slots; i++) set("CT", above + i, gyro.label);
+
+  // An arm without its lower arm actuator has no hand either; the freed cells are ordinary empty slots.
+  for (const arm of ["LA", "RA"] as const) {
+    const has = record.arms?.[arm];
+    if (!has) continue;
+    const lacking = [has.lowerArm ? "" : ARM_LABELS.lowerArm, has.lowerArm && has.hand ? "" : ARM_LABELS.hand];
+    labels[arm]?.forEach((label, i) => {
+      if (lacking.includes(label)) set(arm, i, "");
+    });
+  }
   return labels;
+}
+
+/** How many slots a mount takes: one for a structure or armor slot, else the catalog's count, else what the source said, else one. */
+export function slotsTaken(mount: Mount, record: MechRecord, factsOf: FactsOf): number {
+  return mount.part ? 1 : (factsOf(mount, record)?.slots ?? mount.slots ?? 1);
 }
 
 export function layout(record: MechRecord, factsOf: FactsOf): Layout {
@@ -211,7 +234,7 @@ export function layout(record: MechRecord, factsOf: FactsOf): Layout {
   const overflow: Layout["overflow"] = [];
   const clashes = new Map<string, { location: LocationCode; slot: number; mountIds: string[] }>();
   for (const mount of record.mounts) {
-    const taken = mount.part ? 1 : (factsOf(mount, record)?.slots ?? mount.slots ?? 1);
+    const taken = slotsTaken(mount, record, factsOf);
     if (taken <= 0) continue;
     const cells = mount.location ? own(slots as Record<string, SlotCell[]>, mount.location) : undefined;
     const first = mount.slot;

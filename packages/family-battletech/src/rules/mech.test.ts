@@ -111,6 +111,17 @@ describe("layout", () => {
     expect(l.slots.LT?.[3]).toMatchObject({ kind: "mount", mountId: "e1" });
   });
 
+  it("frees the hand slot, or the lower arm and hand slots, of an arm that lacks them, and nothing else", () => {
+    const arm = (arms: MechRecord["arms"]) => labels(layout(bipedRecord({ mounts: [], arms }), factsOf), "LA").slice(0, 5);
+    expect(arm(undefined)).toEqual(["Shoulder", "Upper Arm Actuator", "Lower Arm Actuator", "Hand Actuator", ""]);
+    expect(arm({ LA: { lowerArm: true, hand: false } })).toEqual(["Shoulder", "Upper Arm Actuator", "Lower Arm Actuator", "", ""]);
+    // No lower arm takes the hand with it, whatever `hand` says; the other arm is untouched.
+    const bare = layout(bipedRecord({ mounts: [], arms: { LA: { lowerArm: false, hand: true } } }), factsOf);
+    expect(labels(bare, "LA").slice(0, 4)).toEqual(["Shoulder", "Upper Arm Actuator", "", ""]);
+    expect(labels(bare, "RA")[3]).toBe("Hand Actuator");
+    expect(weights(bipedRecord({ arms: { LA: { lowerArm: false, hand: false } } }), factsOf).total).toBe(40);
+  });
+
   it("does not throw for an unknown configuration or unknown chassis keys", () => {
     const l = layout(bipedRecord({ configuration: "tripod" }), factsOf);
     expect(l).toMatchObject({ supported: false, locations: [], slots: {} });

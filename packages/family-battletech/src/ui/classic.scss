@@ -20,7 +20,8 @@
   }
 
   input,
-  select {
+  select,
+  textarea {
     flex: 1 1 14rem;
     min-width: 0;
     min-height: 44px;
@@ -304,6 +305,30 @@ a.bt-button {
   }
 }
 
+.bt-field textarea {
+  min-height: 6rem;
+  padding: var(--sr-space-2);
+}
+
+// The arm actuator choices: one group per arm, each choice a 44 px target.
+.bt-arm {
+  margin: var(--sr-space-2) 0 0;
+  border: var(--sr-border) solid var(--sr-field-line);
+  border-radius: var(--sr-radius);
+}
+
+.bt-check {
+  display: flex;
+  align-items: center;
+  gap: var(--sr-space-2);
+  min-height: 44px;
+
+  input {
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+}
+
 // The weight summary is a button in the header; its lines open in normal flow beneath the header.
 .bt-weight__toggle {
   min-height: 44px;
@@ -428,6 +453,8 @@ a.bt-button {
 
 .bt-field input:focus-visible,
 .bt-field select:focus-visible,
+.bt-field textarea:focus-visible,
+.bt-check input:focus-visible,
 .bt-button:focus-visible,
 .bt-finding__text:focus-visible,
 .bt-doll [role="button"]:focus-visible,

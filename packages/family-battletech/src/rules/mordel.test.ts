@@ -113,13 +113,34 @@ describe("fromMordel", () => {
     expect(cells).toEqual([lrm?.id, lrm?.id, artemis?.id, frob?.id, frob?.id, ammo?.id]);
     expect(artemis?.linkedTo).toBe(lrm?.id);
     expect(lrm?.linkedTo).toBeUndefined();
-    // An item that takes no slot has no location and no slot.
-    expect(mountOf(record, "Mystery Box")).toMatchObject({ location: null, slot: null });
+    // An item that takes no slot has no location, no slot, and is not left unplaced.
+    expect(mountOf(record, "Mystery Box")).toMatchObject({ location: null, slot: null, slots: 0 });
+    expect(layout(record, catalog.factsOf).unplaced.map((m) => m.name)).not.toContain("Mystery Box");
 
     const odd = imported(mordelOdd());
     expect(odd.record).toMatchObject({ configuration: "tripod", year: null, chassis: { myomer: "" } });
     expect(odd.notes.join("\n")).toMatch(/tripod[^]*myomer|myomer[^]*tripod/);
+    // The center leg is kept: its armor, and its laser in the location, though a tripod has no slots laid out.
+    expect(odd.record.armor.CL).toEqual({ front: 6 });
+    expect(odd.record.mounts.find((m) => m.location === "CL")).toMatchObject({ name: "Medium Laser", slot: null });
     expect(imported(mordelWith(mordelBiped(), { engine: { type: "Plasma Drive", rating: 200 } })).record.chassis.engine.type).toBe("Plasma Drive");
+  });
+
+  it("takes the hand actuator, then the lower arm actuator, out of an arm whose equipment cannot fit otherwise, and says so", () => {
+    const unit = withEquipment([
+      entry(1, "Ultra AC/20", "LA", { slots: 10 }),
+      entry(2, "AC/10", "RA", { slots: 7 }),
+      entry(3, "Medium Laser", "RA"),
+      entry(4, "Medium Laser", "RA"),
+    ]);
+    const { record, notes } = imported(unit);
+    expect(record.arms).toEqual({ LA: { lowerArm: false, hand: false }, RA: { lowerArm: true, hand: false } });
+    expect(layout(record, catalog.factsOf).unplaced).toEqual([]);
+    expect(notes).toEqual([
+      expect.stringMatching(/Left Arm.*needs 10 slots.*lower arm and hand actuators were left out/),
+      expect.stringMatching(/Right Arm.*needs 9 slots.*hand actuator was left out/),
+    ]);
+    expect(imported(mordelBiped()).record.arms).toBeUndefined();
   });
 
   it("places structure and armor slots in the first free cells, arms first, and says so once for each", () => {
@@ -238,20 +259,22 @@ describe("changedSinceImport", () => {
   const ac = mountOf(base, "AC/10");
   it.each<[string, (draft: MechRecord) => void, (string | undefined)[]]>([
     ["nothing", () => undefined, []],
+    ["a changed readout text and arm", (d) => void ((d.notes.overview = "Mine."), (d.arms = { LA: { lowerArm: true, hand: false } })), ["notes.overview", "arms.LA"]],
     ["an armor edit and a tonnage", (d) => void ((d.armor.LA = { front: 20 }), (d.tons = 55)), ["armor.LA", "tons"]],
     ["a moved mount", (d) => void (d.mounts.find((m) => m.id === ac?.id)!.slot = 3), [ac?.id]],
     ["a replaced mount", (d) => void (d.mounts.find((m) => m.id === ac?.id)!.equipmentId = "ac-20-is"), [ac?.id]],
     ["an added mount", (d) => void d.mounts.push({ id: "mine", equipmentId: null, name: "Mine", techBase: "inner-sphere", location: null, slot: null }), ["mine"]],
     ["a removed mount", (d) => void d.mounts.pop(), ["mounts.removed"]],
   ])("names %s", (_name, edit, want) => {
-    expect(changedSinceImport(editRecord(base, edit), catalog)).toEqual(new Set(want));
+    expect(changedSinceImport(editRecord(base, edit))).toEqual(new Set(want));
   });
 
-  it("is empty without a source and says the source is unreadable when it cannot be imported again", () => {
-    expect(changedSinceImport({ ...base, source: undefined }, catalog)).toEqual(new Set());
+  it("compares with the stored baseline alone: no baseline, no source, or a response the importer cannot read, shows nothing", () => {
+    expect(base.source?.baseline?.mounts).toEqual(base.mounts);
+    expect(changedSinceImport({ ...base, source: undefined })).toEqual(new Set());
+    expect(changedSinceImport({ ...base, tons: 99, source: base.source && { ...base.source, baseline: undefined } })).toEqual(new Set());
     for (const original of [null, 5, { status: "Error" }]) {
-      const broken = { ...base, source: base.source && { ...base.source, original } };
-      expect(changedSinceImport(broken, catalog)).toEqual(new Set(["source.unreadable"]));
+      expect(changedSinceImport({ ...base, source: base.source && { ...base.source, original } })).toEqual(new Set());
     }
   });
 });

@@ -180,19 +180,21 @@ export function mordelQuad(): Json {
 }
 
 /** Everything awkward at once: an unknown configuration, a null field, an item not in our table, an item that takes no
- * slot, and an Artemis IV associated with its launcher. */
+ * slot, an Artemis IV associated with its launcher, and a tripod's center leg with armor and a laser. */
 export function mordelOdd(): Json {
   return mordelUnit({
     name_parts: { name: "Test Oddity", alternate_name: null, model: "TO-X" },
     configuration: "Tripod",
     year: null,
     myomer: null,
+    locations: armorFor([["H", 9, null], ["CT", 14, 4], ["LT", 10, 3], ["RT", 10, 3], ["LA", 8, null], ["RA", 8, null], ["LL", 6, null], ["RL", 5, null], ["CL", 6, null]]),
     equipment: [
       item(10, "LRM 10", "LT", 2),
       item(11, "Artemis IV", "LT", 1, { associated_id: 10 }),
       item(12, "Frobnicator 9000", "LT", 2),
       item(13, "LRM 10 (Ammo 12)", "LT", 1),
       item(null, "Mystery Box", null, null),
+      item(14, "Medium Laser", "CL", 1),
     ],
   });
 }

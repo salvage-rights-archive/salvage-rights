@@ -184,6 +184,10 @@ describe("The 'Mech editor", () => {
     };
     expect(markerOf("Gyro")).toBe("Changed since import");
     expect(markerOf("Cockpit")).toBeUndefined();
+    // The readout texts are in a section closed by default, and an edit to one is marked.
+    expect((screen.getByText("Readout").closest("details") as HTMLDetailsElement).open).toBe(false);
+    await user.type(screen.getByLabelText("Overview"), "!");
+    expect(markerOf("Overview")).toBe("Changed since import");
     await openActions(user, "Left Arm");
     await user.click(moveButton("Left Arm"));
     await user.click(screen.getByRole("button", { name: "Place Medium Laser in Left Torso slot 5" }));

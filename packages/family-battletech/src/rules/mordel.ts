@@ -5,7 +5,7 @@
 // Mordel wrote it, with a note, and the checks report it as unknown. Nothing is guessed.
 import { ARMOR, MYOMER, STRUCTURE_TYPES } from "../data/chassis";
 import type { Catalog, EquipmentRow } from "./catalog";
-import { layout } from "./mech";
+import { ARM_FULL, layout, locationName, slotsTaken } from "./mech";
 import type { LocationCode, MechRecord, Mount, TechBase } from "./mech";
 
 export type MordelImport = { ok: true; record: MechRecord; notes: string[] } | { ok: false; message: string };
@@ -100,6 +100,7 @@ const LOCATIONS: Record<string, LocationCode> = {
   RA: "RA",
   LL: "LL",
   RL: "RL",
+  CL: "CL",
   LFL: "FLL",
   RFL: "FRL",
   LRL: "RLL",
@@ -305,7 +306,10 @@ function convert(response: unknown, catalog: Catalog, editionId: string, now: st
     if (!row) note(why ?? `${name} is not in our equipment table.`);
     const theirSlots = num(entry["slots"], `${name} slots`);
     const mount: Mount = { id: `mount-${index + 1}`, equipmentId: row?.id ?? null, name, techBase: tech, location: loc ?? null, slot: null };
+    // An item that is not in the table keeps the slots Mordel gave it; one with no id and no location takes none.
+    const slotless = entry["id"] == null && entry["location"] == null;
     if (!row && theirSlots !== undefined && theirSlots >= 0) mount.slots = theirSlots;
+    else if (!row && slotless) mount.slots = 0;
     mounts.push(mount);
     const theirId = num(entry["id"], `${name} id`);
     if (theirId !== undefined) idToMount.set(theirId, mount.id);
@@ -388,7 +392,34 @@ function convert(response: unknown, catalog: Catalog, editionId: string, now: st
   }
 
   placeMounts(record, catalog, note);
+  if (record.source) {
+    const { name, notes, tons, year, techBase, configuration, chassis, armor, arms, mounts } = structuredClone(record);
+    record.source.baseline = { name, notes, tons, year, techBase, configuration, chassis, armor, arms, mounts };
+  }
   return { ok: true, record, notes: [...new Set(notes)] };
+}
+
+/** The arm actuators to try, in the order they are given up: all present, then no hand, then no lower arm (and so no hand). */
+const ARM_STEPS = [undefined, { lowerArm: true, hand: false }, { lowerArm: false, hand: false }] as const;
+
+/** Mordel does not say which arm actuators a design has. Where the equipment listed in an arm cannot fit with them all, the
+ * hand actuator is taken out, and then the lower arm actuator, as far as the equipment needs. */
+function inferArms(record: MechRecord, catalog: Catalog, note: (text: string) => void) {
+  if (record.configuration !== "biped") return;
+  for (const arm of ["LA", "RA"] as const) {
+    const needed = record.mounts.filter((m) => !m.part && m.location === arm).reduce((sum, m) => sum + Math.max(0, slotsTaken(m, record, catalog.factsOf)), 0);
+    const freeWith = (step: (typeof ARM_STEPS)[number]) => {
+      const cells = layout({ ...record, mounts: [], arms: step && { [arm]: step } }, catalog.factsOf).slots[arm] ?? [];
+      return cells.filter((cell) => cell.kind === "empty").length;
+    };
+    const stepAt = ARM_STEPS.findIndex((step) => freeWith(step) >= needed);
+    const step = ARM_STEPS[stepAt < 0 ? ARM_STEPS.length - 1 : stepAt];
+    if (!step) continue;
+    record.arms = { ...record.arms, [arm]: { ...step } };
+    note(
+      `Mordel does not say which actuators the ${locationName(arm)} has. The equipment listed there needs ${needed} slots, so the ${step.lowerArm ? "hand" : "lower arm and hand"} actuator${step.lowerArm ? " was" : "s were"} left out.`,
+    );
+  }
 }
 
 /** Places mounts in the free cells: first the equipment Mordel gave a location, each in the first free run of its size in
@@ -396,6 +427,7 @@ function convert(response: unknown, catalog: Catalog, editionId: string, now: st
  * Mordel did not place. The fixed cells come from layout(), so engine and gyro variants are the tables' business. Whatever
  * does not fit stays unplaced. */
 function placeMounts(record: MechRecord, catalog: Catalog, note: (text: string) => void) {
+  inferArms(record, catalog, note);
   const empty = layout({ ...record, mounts: [] }, catalog.factsOf);
   if (!empty.supported) {
     note(`The configuration "${record.configuration}" has no fixed slot layout here, so no item is placed in a slot.`);
@@ -411,7 +443,7 @@ function placeMounts(record: MechRecord, catalog: Catalog, note: (text: string) 
       note(`${mount.name} is in the ${mount.location}, which this ${record.configuration} does not have; it is left unplaced.`);
       continue;
     }
-    const taken = catalog.factsOf(mount, record)?.slots ?? mount.slots ?? 1;
+    const taken = slotsTaken(mount, record, catalog.factsOf);
     if (taken <= 0) continue;
     for (let first = 0; first + taken <= cells.length; first++) {
       if (cells.slice(first, first + taken).every(Boolean)) {
@@ -473,38 +505,34 @@ function canon(value: unknown): string {
   return JSON.stringify(value) ?? "undefined";
 }
 
-/** The field paths (as the checks name them), mount ids, and `mounts.removed` that differ from a fresh import of the
- * record's own saved Mordel response. Empty when the record has no source; the single key `source.unreadable` when the
- * saved response can no longer be imported. */
-export function changedSinceImport(record: MechRecord, catalog: Catalog): Set<string> {
+/** The field paths (as the checks name them), mount ids, and `mounts.removed` that differ from what the importer produced,
+ * which the record keeps as `source.baseline`. Empty when the record has no source or no baseline. */
+export function changedSinceImport(record: MechRecord): Set<string> {
   const changed = new Set<string>();
-  if (!record.source) return changed;
-  try {
-    const fresh = fromMordel(record.source.original, catalog, record.editionId, record.source.fetchedAt, () => record.id);
-    if (!fresh.ok) return new Set(["source.unreadable"]);
-    const was = fresh.record;
-    const differ = (path: string, a: unknown, b: unknown) => {
-      if (canon(a) !== canon(b)) changed.add(path);
-    };
-    differ("name", record.name, was.name);
-    differ("notes", record.notes, was.notes);
-    for (const field of ["tons", "year", "techBase", "configuration"] as const) differ(field, record[field], was[field]);
-    for (const field of ["engine", "gyro", "cockpit", "structure", "armorType", "myomer", "heatSinks"] as const) {
-      differ(`chassis.${field}`, record.chassis[field], was.chassis[field]);
-    }
-    for (const loc of new Set([...Object.keys(record.armor), ...Object.keys(was.armor)])) {
-      differ(`armor.${loc}`, record.armor[loc as LocationCode], was.armor[loc as LocationCode]);
-    }
-    const now = new Map(record.mounts.map((m) => [m.id, m]));
-    for (const m of was.mounts) {
-      const here = now.get(m.id);
-      if (!here) changed.add("mounts.removed");
-      else differ(m.id, here, m);
-    }
-    const before = new Set(was.mounts.map((m) => m.id));
-    for (const m of record.mounts) if (!before.has(m.id)) changed.add(m.id);
-  } catch {
-    return new Set(["source.unreadable"]);
+  const was = record.source?.baseline;
+  if (!was) return changed;
+  const differ = (path: string, a: unknown, b: unknown) => {
+    if (canon(a) !== canon(b)) changed.add(path);
+  };
+  differ("name", record.name, was.name);
+  for (const key of new Set([...Object.keys(record.notes), ...Object.keys(was.notes)])) {
+    differ(`notes.${key}`, record.notes[key as keyof MechRecord["notes"]], was.notes[key as keyof MechRecord["notes"]]);
   }
+  for (const field of ["tons", "year", "techBase", "configuration"] as const) differ(field, record[field], was[field]);
+  for (const field of ["engine", "gyro", "cockpit", "structure", "armorType", "myomer", "heatSinks"] as const) {
+    differ(`chassis.${field}`, record.chassis[field], was.chassis[field]);
+  }
+  for (const loc of new Set([...Object.keys(record.armor), ...Object.keys(was.armor)])) {
+    differ(`armor.${loc}`, record.armor[loc as LocationCode], was.armor[loc as LocationCode]);
+  }
+  for (const arm of ["LA", "RA"] as const) differ(`arms.${arm}`, record.arms?.[arm] ?? ARM_FULL, was.arms?.[arm] ?? ARM_FULL);
+  const now = new Map(record.mounts.map((m) => [m.id, m]));
+  for (const m of was.mounts) {
+    const here = now.get(m.id);
+    if (!here) changed.add("mounts.removed");
+    else differ(m.id, here, m);
+  }
+  const before = new Set(was.mounts.map((m) => m.id));
+  for (const m of record.mounts) if (!before.has(m.id)) changed.add(m.id);
   return changed;
 }

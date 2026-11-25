@@ -10,7 +10,7 @@ import type { Catalog } from "../rules/catalog";
 import { runChecks } from "../rules/checks";
 import type { Finding } from "../rules/checks";
 import { changedSinceImport } from "../rules/mordel";
-import { editRecord, layout as buildLayout, weights as buildWeights } from "../rules/mech";
+import { ARM_FULL, editRecord, layout as buildLayout, locationName, weights as buildWeights } from "../rules/mech";
 import type { Layout, LocationCode, MechRecord } from "../rules/mech";
 import ArmorPanel from "./editor/ArmorPanel";
 import { dialogKeyDown } from "./editor/dialog";
@@ -162,6 +162,23 @@ function TextField({ id, label, value, onChange, changed }: { id: string; label:
 }
 
 /** A select over a table's own keys; a value the table lacks stays a choice, labelled `(as imported)`. */
+function AreaField({ id, label, value, onChange, changed }: { id: string; label: string; value: string; onChange: (v: string) => void; changed?: boolean }) {
+  return (
+    <Field id={id} label={label} changed={changed}>
+      {(describedBy) => (
+        <textarea
+          id={id}
+          value={value}
+          aria-describedby={describedBy}
+          onChange={(event) => {
+            onChange(event.target.value);
+          }}
+        />
+      )}
+    </Field>
+  );
+}
+
 function SelectField({
   id,
   label,
@@ -234,6 +251,29 @@ export function setPartType(draft: MechRecord, part: "structure" | "armor", type
     have++;
   }
 }
+
+/** Turns one arm actuator on or off. Without the lower arm there is no hand; an arm with both is not stored at all. */
+export function setArmPart(draft: MechRecord, arm: "LA" | "RA", part: "lowerArm" | "hand", on: boolean): void {
+  const next = { ...ARM_FULL, ...draft.arms?.[arm], [part]: on };
+  if (!next.lowerArm) next.hand = false;
+  const arms = { ...draft.arms };
+  if (next.lowerArm && next.hand) delete arms[arm];
+  else arms[arm] = next;
+  if (Object.keys(arms).length === 0) delete draft.arms;
+  else draft.arms = arms;
+}
+
+const ARM_CHOICES = [
+  { part: "lowerArm", label: "Lower arm actuator" },
+  { part: "hand", label: "Hand actuator" },
+] as const;
+const NOTE_FIELDS = [
+  { key: "overview", label: "Overview" },
+  { key: "capabilities", label: "Capabilities" },
+  { key: "deployment", label: "Deployment" },
+  { key: "variants", label: "Variants" },
+  { key: "notables", label: "Notables" },
+] as const;
 
 // ---------------------------------------------------------------------------------------------------------------
 // The fields, as tables
@@ -503,7 +543,7 @@ function Editor({ initial, catalog, storage }: { initial: MechRecord; catalog: C
 
   const layout = useMemo(() => safeLayout(record, catalog), [record, catalog]);
   const findings = useMemo(() => runChecks(record, catalog), [record, catalog]);
-  const changed = useMemo(() => changedSinceImport(record, catalog), [record, catalog]);
+  const changed = useMemo(() => changedSinceImport(record), [record]);
   const weights = useMemo(() => buildWeights(record, catalog.factsOf), [record, catalog]);
 
   const armorLocations = layout.supported ? layout.locations : Object.keys(record.armor);
@@ -617,9 +657,6 @@ function Editor({ initial, catalog, storage }: { initial: MechRecord; catalog: C
           </ul>
         )}
         {figures.length > 0 && <p className="bt-hint bt-figures">{`Mordel's figures: ${figures.join(", ")}`}</p>}
-        {changed.has("source.unreadable") && (
-          <p className="bt-hint">The original from mordel.net could not be read, so changes since import are not marked.</p>
-        )}
         {dirty && <p className="bt-hint">You have changes that are not saved.</p>}
         {notes.length > 0 && (
           <details className="bt-notes" aria-labelledby={notesId}>
@@ -704,6 +741,52 @@ function Editor({ initial, catalog, storage }: { initial: MechRecord; catalog: C
                 </div>
               ))}
             </div>
+            {record.configuration === "biped" &&
+              (["LA", "RA"] as const).map((arm) => {
+                const has = { ...ARM_FULL, ...record.arms?.[arm] };
+                const arms = locationName(arm);
+                return (
+                  <fieldset key={arm} className="bt-arm">
+                    <legend>{`${arms} actuators`}</legend>
+                    {ARM_CHOICES.map(({ part, label }) => (
+                      <label key={part} className="bt-check">
+                        <input
+                          type="checkbox"
+                          aria-label={`${arms} ${label.toLowerCase()}`}
+                          checked={part === "hand" ? has.lowerArm && has.hand : has.lowerArm}
+                          disabled={part === "hand" && !has.lowerArm}
+                          onChange={(event) => {
+                            edit((d) => { setArmPart(d, arm, part, event.target.checked); });
+                          }}
+                        />
+                        {label}
+                      </label>
+                    ))}
+                    {mark(`arms.${arm}`) && <Changed id={`arms-${arm}-changed`} />}
+                  </fieldset>
+                );
+              })}
+          </section>
+
+          <section className="bt-panel">
+            <details className="bt-notes">
+              <summary>Readout</summary>
+              {NOTE_FIELDS.map(({ key, label }) => (
+                <AreaField
+                  key={key}
+                  id={`field-notes-${key}`}
+                  label={label}
+                  value={record.notes[key] ?? ""}
+                  changed={mark(`notes.${key}`)}
+                  onChange={(v) => {
+                    edit((d) => {
+                      if (v === "") delete d.notes[key];
+                      else d.notes[key] = v;
+                    }, `notes-${key}`);
+                  }}
+                />
+              ))}
+            </details>
           </section>
         </div>
 
