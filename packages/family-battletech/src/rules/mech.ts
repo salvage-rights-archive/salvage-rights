@@ -18,6 +18,26 @@ import {
 } from "../data/chassis";
 
 export type LocationCode = "HD" | "CT" | "LT" | "RT" | "LA" | "RA" | "LL" | "RL" | "FLL" | "FRL" | "RLL" | "RRL";
+export const LOCATION_NAMES: Record<LocationCode, string> = {
+  HD: "Head",
+  CT: "Center Torso",
+  LT: "Left Torso",
+  RT: "Right Torso",
+  LA: "Left Arm",
+  RA: "Right Arm",
+  LL: "Left Leg",
+  RL: "Right Leg",
+  FLL: "Front Left Leg",
+  FRL: "Front Right Leg",
+  RLL: "Rear Left Leg",
+  RRL: "Rear Right Leg",
+};
+
+/** A location's display name; a code we do not know prints as itself in quotes, never as "undefined". */
+export function locationName(code: string): string {
+  return Object.hasOwn(LOCATION_NAMES, code) ? LOCATION_NAMES[code as LocationCode] : `"${code}"`;
+}
+
 export type TechBase = "inner-sphere" | "clan";
 
 export interface Mount {

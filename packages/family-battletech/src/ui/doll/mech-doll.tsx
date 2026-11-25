@@ -2,18 +2,20 @@
 import React, { type JSX } from "react";
 import Bubble from "./bubble";
 import { frameTransform, placePoint, placeShape, svgTransform, toSheet, type IDollFrame } from "./geometry";
-import { ARMOR_PITCH, DOLL_LAYOUTS, LOCATION_NAMES, STRUCTURE_PITCH, type DollUse, type IDollLocation, type IDollUnit } from "./layouts";
+import { ARMOR_PITCH, DOLL_LAYOUTS, dollLocationName, STRUCTURE_PITCH, type DollUse, type IDollLocation, type IDollUnit } from "./layouts";
 import { PARTS } from "./parts";
 import { DEFAULT_PEN, DEFAULT_TRANSFER_PEN, DollDefs, INK, PEN_PRESETS, penIds, type IPenStyle, type PenPreset } from "./pen";
-import { cornerAt, drawnBubble, edgeDistance, gridIn, insideShape, packBubbles, type BubblePoint, type Shape } from "./shape-bubbles";
+import { cornerAt, drawnBubble, edgeDistance, gridIn, insideShape, packBubbles, shapePoints, type BubblePoint, type Shape } from "./shape-bubbles";
 
 /*
  * The 'Mech paper doll: one renderer for every body type and all three uses on the record sheet. "armor" draws the
  * front and the rear torsos with a bubble per point of armor; "structure" draws the front with a bubble per point of
  * internal structure; "transfer" draws the figure small, with an arrow from each location to where its damage goes.
  * Bubbles are packed into each location's plates, every plate filling from its own middle at the same pace; bubble N
- * shows point N. Each location's plates and bubbles are one group; with `onSelect` the group is a button named by the
- * location and its points, and without it the whole drawing is one image.
+ * shows point N. Paint order: every location's plates (each its own group), the selected and focused outlines, then every
+ * location's bubbles, the arrows and the labels, so no plate covers a bubble or an outline. With `onSelect` each plate
+ * group is a button named by the location and its points; without it the whole drawing is one image. The transfer
+ * diagram is always one labelled image, even when `onSelect` is given.
  */
 
 export interface IMechDollProps {
@@ -38,6 +40,18 @@ const LABEL_FONT: Record<"armor" | "structure", number> = { armor: 20, structure
 /** A location's plates on the sheet. */
 export const placedPlates = (location: IDollLocation, frame: IDollFrame): Shape[] =>
     PARTS[location.part].plates.map((plate) => placeShape(plate, location.at).map((point) => toSheet(point, frame)));
+
+/** How far outside a plate the focus outline is drawn, in sheet units. */
+const FOCUS_GAP = 7;
+
+/** A convex plate with every corner pushed `gap` away from its middle. */
+const grown = (shape: Shape, gap: number): Shape => {
+    const [cx, cy] = centroid(shape);
+    return shape.map(([x, y]): BubblePoint => {
+        const length = Math.hypot(x - cx, y - cy) || 1;
+        return [x + (x - cx) / length * gap, y + (y - cy) / length * gap];
+    });
+};
 
 const centroid = (shape: Shape): BubblePoint => {
     let area = 0, cx = 0, cy = 0;
@@ -120,6 +134,7 @@ const transferArrow = (from: BubblePoint, to: BubblePoint, key: string, arrowId:
 
 export default function MechDoll(props: IMechDollProps): JSX.Element {
     const { unit, use, frame, suffix } = props;
+    const [focused, setFocused] = React.useState<string | undefined>(undefined);
     const layout = DOLL_LAYOUTS[unit.layoutId];
     if (!layout) {
         return <g data-testid="mech-doll" data-layout={unit.layoutId} data-use={use} />;
@@ -152,6 +167,7 @@ export default function MechDoll(props: IMechDollProps): JSX.Element {
         ));
     };
     const onSelect = props.onSelect;
+    // The transfer diagram has no points to name, so it stays one labelled image even when onSelect is given.
     const interactive = onSelect !== undefined && use !== "transfer";
     const pointsOf = (loc: string): number => (use === "armor" ? unit.armor(loc) : unit.structure(loc));
 
@@ -196,33 +212,56 @@ export default function MechDoll(props: IMechDollProps): JSX.Element {
                 ) : null}
             </g>
             {locations.map((location) => {
-                const name = LOCATION_NAMES[location.loc] ?? location.loc;
                 const chosen = props.selected === location.loc;
-                const locationPen = chosen ? { ...pen, contour: pen.contour * 2, plateBorder: pen.plateBorder * 1.5 } : pen;
                 const choose = () => onSelect?.(location.loc);
                 const buttonProps = interactive ? {
                     role: "button",
                     tabIndex: 0,
                     "aria-pressed": chosen,
-                    "aria-label": `${name}, ${pointsOf(location.loc)} ${use}`,
+                    "aria-label": `${dollLocationName(location.loc)}, ${pointsOf(location.loc)} ${use}`,
                     onClick: choose,
+                    onFocus: () => setFocused(location.loc),
+                    onBlur: () => setFocused((now) => (now === location.loc ? undefined : now)),
                     onKeyDown: (event: React.KeyboardEvent) => {
                         if (event.key === "Enter" || event.key === " ") {
                             event.preventDefault();
                             choose();
                         }
                     },
-                    style: { cursor: "pointer" },
+                    // The focus ring is drawn in the overlay below, not by the browser.
+                    style: { cursor: "pointer", outline: "none" },
                 } : {};
                 return (
-                    <g key={location.loc} data-loc={location.loc} data-selected={chosen ? "true" : undefined} {...buttonProps}>
+                    <g key={location.loc} data-loc={location.loc} {...buttonProps}>
                         <g transform={frameTransform(frame)}>
-                            <g transform={svgTransform(location.at)}>{PARTS[location.part].draw(locationPen, ids)}</g>
+                            <g transform={svgTransform(location.at)}>{PARTS[location.part].draw(pen, ids)}</g>
                         </g>
-                        {use === "transfer" ? null : bubblesOf(location)}
                     </g>
                 );
             })}
+            {interactive ? (
+                <g aria-hidden="true" pointerEvents="none" data-outlines="">
+                    {locations.filter((location) => location.loc === props.selected).map((location) => (
+                        <g key={`selected-${location.loc}`} data-selected={location.loc}>
+                            {placedPlates(location, frame).map((plate, i) => (
+                                <polygon key={i} points={shapePoints(plate)} fill="none" stroke={INK} strokeWidth={pen.contour * 2} strokeLinejoin="round" />
+                            ))}
+                        </g>
+                    ))}
+                    {locations.filter((location) => location.loc === focused).map((location) => (
+                        <g key={`focus-${location.loc}`} data-focus={location.loc}>
+                            {placedPlates(location, frame).map((plate, i) => (
+                                <polygon key={i} points={shapePoints(grown(plate, FOCUS_GAP))} fill="none" stroke={INK} strokeWidth={3} strokeDasharray="10 6" strokeLinejoin="round" />
+                            ))}
+                        </g>
+                    ))}
+                </g>
+            ) : null}
+            {use === "transfer" ? null : (
+                <g aria-hidden="true" pointerEvents="none">
+                    {locations.map((location) => <g key={location.loc} data-bubbles={location.loc}>{bubblesOf(location)}</g>)}
+                </g>
+            )}
             {arrows.length > 0 ? <g aria-hidden="true" transform={frameTransform(frame)}>{arrows}</g> : null}
             {labels}
         </g>

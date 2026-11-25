@@ -20,7 +20,7 @@ import {
 } from "../data/chassis";
 import type { Catalog, EquipmentRow } from "./catalog";
 import { engineTons, layout as buildLayout, maxArmor, walkMP, weights } from "./mech";
-import type { Layout, LocationCode, MechRecord, Mount } from "./mech";
+import { locationName, type Layout, type LocationCode, type MechRecord, type Mount } from "./mech";
 
 export interface Finding {
   check: string;
@@ -50,26 +50,10 @@ const tm = (page: number) => ({ book: "TechManual", page });
 const PAGE = { weight: 46, engineRating: 48, jump: 51, armorTons: 55, techBase: 57, artemis: 207, machineGunArray: 228, availability: 290 };
 const TONNAGE = { min: 20, max: 100, step: 5 }; // p.46
 
-const LOCATION_NAMES: Record<LocationCode, string> = {
-  HD: "Head",
-  CT: "Center Torso",
-  LT: "Left Torso",
-  RT: "Right Torso",
-  LA: "Left Arm",
-  RA: "Right Arm",
-  LL: "Left Leg",
-  RL: "Right Leg",
-  FLL: "Front Left Leg",
-  FRL: "Front Right Leg",
-  RLL: "Rear Left Leg",
-  RRL: "Rear Right Leg",
-};
 const TECH_BASE_NAMES: Record<string, string> = { "inner-sphere": "Inner Sphere", clan: "Clan", mixed: "Mixed" };
 
 const own = (table: object, key: string | number) => Object.hasOwn(table, key);
 const quoted = (key: unknown) => `"${String(key)}"`;
-/** A location's display name; a code we do not know prints as itself in quotes, never as "undefined". */
-const locationName = (code: string) => (own(LOCATION_NAMES, code) ? LOCATION_NAMES[code as LocationCode] : quoted(code));
 const techBaseName = (key: string) => (own(TECH_BASE_NAMES, key) ? (TECH_BASE_NAMES[key] ?? quoted(key)) : quoted(key));
 /** A chassis part's display name from its table; an unknown key prints as itself in quotes. */
 const partName = (table: { types: Record<string, { name: string }> }, key: string) => (own(table.types, key) ? (table.types[key]?.name ?? quoted(key)) : quoted(key));

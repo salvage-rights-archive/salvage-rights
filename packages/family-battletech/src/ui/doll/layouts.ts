@@ -1,5 +1,5 @@
 // Salvage Rights paper doll engine. GPL-3.0-or-later.
-import { maxArmor, structurePoints, type LocationCode, type MechRecord } from "../../rules/mech";
+import { locationName, maxArmor, structurePoints, type LocationCode, type MechRecord } from "../../rules/mech";
 import type { IPlacement } from "./geometry";
 import { BIPED_PIVOTS, type PartId } from "./parts";
 import type { BubblePoint } from "./shape-bubbles";
@@ -105,18 +105,18 @@ export const DOLL_LAYOUTS: Partial<Record<DollLayoutId, IDollLayout>> = {
     biped: BIPED,
 };
 
-/** Each doll location's display name, for the accessible labels. */
-export const LOCATION_NAMES: Record<string, string> = {
-    hd: "Head", ct: "Center Torso", lt: "Left Torso", rt: "Right Torso", la: "Left Arm", ra: "Right Arm", ll: "Left Leg",
-    rl: "Right Leg", ctr: "Center Torso (Rear)", ltr: "Left Torso (Rear)", rtr: "Right Torso (Rear)",
-};
-
 /** The record location a doll location reads, and whether it reads the rear armor. */
 const RECORD_OF: Record<string, { code: LocationCode; rear: boolean }> = {
     hd: { code: "HD", rear: false }, ct: { code: "CT", rear: false }, lt: { code: "LT", rear: false },
     rt: { code: "RT", rear: false }, la: { code: "LA", rear: false }, ra: { code: "RA", rear: false },
     ll: { code: "LL", rear: false }, rl: { code: "RL", rear: false },
     ctr: { code: "CT", rear: true }, ltr: { code: "LT", rear: true }, rtr: { code: "RT", rear: true },
+};
+
+/** A doll location's display name, from the record's own names; the rear torsos add "(Rear)". */
+export const dollLocationName = (loc: string): string => {
+    const at = Object.hasOwn(RECORD_OF, loc) ? RECORD_OF[loc] : undefined;
+    return at ? `${locationName(at.code)}${at.rear ? " (Rear)" : ""}` : loc;
 };
 
 /** The layout each configuration draws with; none is drawn for the rest yet. */
@@ -134,6 +134,7 @@ export const dollUnitFromRecord = (record: MechRecord): IDollUnit | undefined =>
         armor: (loc) => {
             const at = recordLocation(loc);
             if (!at) return 0;
+            // The doll draws at most what a location can carry; the rules check reports any excess.
             const limit = max[at.code] ?? 0, entry = record.armor[at.code];
             const front = Math.max(0, Math.min(entry?.front ?? 0, limit));
             // A torso's maximum covers front and rear together: the rear gets what the front leaves.

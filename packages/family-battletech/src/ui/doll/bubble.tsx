@@ -20,7 +20,7 @@ export default function Bubble(props: IBubbleProps): JSX.Element {
     const { x, y, radius, strokeWidth } = props;
     return (
         <circle
-            cx={x} cy={y} r={radius - 3}
+            cx={x} cy={y} r={Math.max(0, radius - 3)}
             stroke={props.ink ?? INK} strokeWidth={strokeWidth}
             fill={props.filled ? DAMAGE : props.paper ?? PAPER}
         />
