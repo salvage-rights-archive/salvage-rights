@@ -6,33 +6,27 @@
 //
 // The rule: the item's rules level is at or below the record's; its tech base is the record's (a mixed record takes either, an
 // item printed for both fits both); and it exists in the record's time. That time is the year when the record has one, else
-// the whole era (an item introduced by the era's last year and not extinct before its first year), else no limit.
+// the whole era (an item introduced by the era's last year and not extinct before its first year), else no limit. An item with a
+// prototype year and a production year has three times (rules/time.ts): from production it is available as its book prints it;
+// from its prototype year to the year before production it is a prototype, available only at Experimental level and above (or
+// the level its `prototypeLevel` names, where the books print it lower); before its prototype year it does not exist.
 import { ARMOR, COCKPITS, ENGINE_TYPES, GYROS, HEAT_SINKS, MECH_TYPES, MYOMER, SHEET, STRUCTURE_TYPES } from "../data/chassis";
-import type { ConfigurationRow, MechType, MechTypeRow, PartFacts, RulesLevel, Span } from "../data/chassis";
+import type { ConfigurationRow, MechType, MechTypeRow, PartFacts, RulesLevel } from "../data/chassis";
 import { ERAS } from "../data/editions";
-import type { EraRow } from "../data/editions";
 import { mountableOn } from "./catalog";
 import type { Catalog, EquipmentRow } from "./catalog";
-import { DEFAULT_LEVEL, equipmentLevel, levelAtLeast, partLevel } from "./levels";
+import { DEFAULT_LEVEL, equipmentLevel, levelAtLeast, levelIn, partLevel } from "./levels";
 import { industrialRulesOf, mechTypeOf } from "./mech";
 import type { MechRecord } from "./mech";
+import { datesText, eraOfYear, partPrototype, partSpans, phaseIn, rowPhase, windowOf } from "./time";
+import type { Phase } from "./time";
+
+export { eraOfRecord, eraOfYear, partSpans, spansFit, windowOf } from "./time";
+export type { Phase, Window } from "./time";
 
 // ---------------------------------------------------------------------------------------------------------------
 // Eras and years: kept consistent
 // ---------------------------------------------------------------------------------------------------------------
-
-/** The era a year belongs to; none for a missing year or one before the first era. */
-export function eraOfYear(year: number | null): EraRow | undefined {
-  if (year === null || !Number.isFinite(year)) return undefined;
-  return ERAS.find((era) => year >= era.startYear && (era.endYear === undefined || year <= era.endYear));
-}
-
-/** The record's era: the one it names when that era exists and holds its year, else the era its year falls in, else none. */
-export function eraOfRecord(record: Pick<MechRecord, "era" | "year">): EraRow | undefined {
-  const named = record.era === undefined ? undefined : ERAS.find((era) => era.id === record.era);
-  if (named && (record.year === null || eraOfYear(record.year)?.id === named.id)) return named;
-  return eraOfYear(record.year);
-}
 
 /** Set the year on a draft; the era follows it. A cleared year leaves the era as it was. */
 export function setYear(draft: Pick<MechRecord, "era" | "year">, year: number | null): void {
@@ -55,17 +49,6 @@ export function setEra(draft: Pick<MechRecord, "era" | "year">, id: string): voi
   if (draft.year !== null && eraOfYear(draft.year)?.id !== era.id) draft.year = null;
 }
 
-/** The stretch of years the record's technology may come from: its year, else its era's span, else none. */
-export interface Window {
-  from: number;
-  to: number;
-}
-export function windowOf(record: Pick<MechRecord, "era" | "year">): Window | null {
-  if (record.year !== null && Number.isFinite(record.year)) return { from: record.year, to: record.year };
-  const era = eraOfRecord(record);
-  return era ? { from: era.startYear, to: era.endYear ?? Number.POSITIVE_INFINITY } : null;
-}
-
 // ---------------------------------------------------------------------------------------------------------------
 // The rule
 // ---------------------------------------------------------------------------------------------------------------
@@ -79,19 +62,21 @@ function baseFits(base: "inner-sphere" | "clan" | "both" | undefined, techBase: 
   return base === undefined || base === "both" || techBase === "mixed" || base === techBase;
 }
 
-/** True when any span overlaps the window; no spans, or no window, means no limit. */
-export function spansFit(spans: Span[] | undefined, window: Window | null): boolean {
-  return spans === undefined || window === null || spans.some((s) => s.from <= window.to && (s.to === undefined || s.to >= window.from));
+/** An equipment row's phase for a record: production, prototype or neither (read through the record's edition). */
+export function equipmentPhase(row: EquipmentRow, record: Subject & Pick<MechRecord, "editionId">, catalog: Catalog): Phase | null {
+  const adjusted = catalog.rowFor(row.id, record.editionId) ?? row;
+  return phaseIn(adjusted.availability, row.prototypeYear, windowOf(record));
 }
 
 /** An equipment row: at or below the level, the record's tech base, and in the record's time (read through the record's edition). */
 export function equipmentAvailable(row: EquipmentRow, record: Subject & Pick<MechRecord, "editionId">, catalog: Catalog, everything = false): boolean {
   if (!mountableOn(row, mechTypeOf(record).unit)) return false; // a row whose `units` leaves out the unit's type is never offered to it, not even with Show everything
-  if (!levelAtLeast(recordLevel(record), equipmentLevel(row))) return false;
+  const level = equipmentLevel(row);
+  if (!levelAtLeast(recordLevel(record), level)) return false;
   if (everything) return true;
   if (!baseFits(row.techBase, record.techBase)) return false;
-  const window = windowOf(record);
-  return window === null || catalog.availableBetween(row, record.editionId, window.from, window.to);
+  const phase = equipmentPhase(row, record, catalog);
+  return phase === "production" || (phase === "prototype" && levelAtLeast(recordLevel(record), levelIn(level, phase, row.prototypeLevel)));
 }
 
 export type PartKind = "engine" | "gyro" | "cockpit" | "structure" | "armor" | "heatSink" | "myomer";
@@ -106,40 +91,41 @@ const PART_TABLES: Record<PartKind, { types: Record<string, PartRow> }> = {
   myomer: MYOMER,
 };
 
-/** The spans a part is available over for a record: its own `availability` (it belongs to the one tech base the row is for), else
- * its first printed year for the tech base in play (a mixed record takes the earlier), else none printed. */
-export function partSpans(part: PartFacts, techBase: MechRecord["techBase"]): Span[] | undefined {
-  if (part.availability) return part.availability;
-  const years = techBase === "inner-sphere" ? [part.introduced?.is] : techBase === "clan" ? [part.introduced?.clan] : [part.introduced?.is, part.introduced?.clan];
-  const printed = years.filter((y): y is number => y !== undefined);
-  return printed.length === 0 ? undefined : [{ from: Math.min(...printed) }];
+const partRow = (kind: PartKind, key: string): PartRow | undefined => (Object.hasOwn(PART_TABLES[kind].types, key) ? PART_TABLES[kind].types[key] : undefined);
+
+/** A chassis part's phase for a record: production, prototype or neither. A part with no dates printed is always in production. */
+export function partPhase(part: PartFacts, record: Pick<Subject, "techBase" | "year" | "era">): Phase | null {
+  return phaseIn(partSpans(part, record.techBase), partPrototype(part, record.techBase), windowOf(record));
 }
 
 /** A chassis part by table and key. A key the table does not have is available (we know nothing against it). */
 export function partAvailable(kind: PartKind, key: string, record: Subject, everything = false): boolean {
-  const types = PART_TABLES[kind].types;
-  const part = Object.hasOwn(types, key) ? types[key] : undefined;
+  const part = partRow(kind, key);
   if (!part) return true;
   // The type decides first: an IndustrialMech takes the parts its rules name, and any other 'Mech none printed for IndustrialMechs.
   const industrial = industrialRulesOf(record);
   if (industrial ? !industrial.parts[kind].includes(key) : part.industrial) return false;
-  if (!levelAtLeast(recordLevel(record), partLevel(kind, key, part))) return false;
+  const level = partLevel(kind, key, part);
+  if (!levelAtLeast(recordLevel(record), level)) return false;
   if (part.only !== undefined && part.only !== record.configuration) return false;
   if (everything) return true;
-  return baseFits(part.techBase, record.techBase) && spansFit(partSpans(part, record.techBase), windowOf(record));
+  if (!baseFits(part.techBase, record.techBase)) return false;
+  const phase = partPhase(part, record);
+  return phase === "production" || (phase === "prototype" && levelAtLeast(recordLevel(record), levelIn(level, phase, part.prototypeLevel)));
 }
 
 const configurationRow = (key: string): ConfigurationRow | undefined => (Object.hasOwn(SHEET.configurations, key) ? (SHEET.configurations as Record<string, ConfigurationRow>)[key] : undefined);
 
-/** A body configuration's tech base and years against the record (not its level, which the level check reports). A key we do not know fits. */
-export function configurationInTime(key: string, record: Pick<Subject, "techBase" | "year" | "era">): boolean {
+/** A body configuration's phase for a record: production, prototype or neither. A key we do not know is in production. */
+export function configurationPhase(key: string, record: Pick<Subject, "techBase" | "year" | "era">): Phase | null {
   const row = configurationRow(key);
-  if (!row) return true;
-  if (!baseFits(row.techBase, record.techBase)) return false;
-  const window = windowOf(record);
-  const forIs = spansFit(row.availability, window);
-  const forClan = spansFit(row.clanAvailability ?? row.availability, window);
-  return record.techBase === "inner-sphere" ? forIs : record.techBase === "clan" ? forClan : forIs || forClan;
+  if (!row) return "production";
+  return baseFits(row.techBase, record.techBase) ? rowPhase(row, record.techBase, windowOf(record)) : null;
+}
+
+/** A body configuration's tech base and years against the record (not its level, which the level check reports); its prototype years count. */
+export function configurationInTime(key: string, record: Pick<Subject, "techBase" | "year" | "era">): boolean {
+  return configurationPhase(key, record) !== null;
 }
 
 /** A body configuration (biped, quad, tripod, LAM...). `everything` lifts the tech base and years, never the level. */
@@ -148,8 +134,11 @@ export function configurationAvailable(key: string, record: Subject, everything 
   if (!row) return true;
   const industrial = industrialRulesOf(record);
   if (industrial && !industrial.configurations.includes(key)) return false;
-  if (!levelAtLeast(recordLevel(record), partLevel("configuration", key, row))) return false;
-  return everything || configurationInTime(key, record);
+  const level = partLevel("configuration", key, row);
+  if (!levelAtLeast(recordLevel(record), level)) return false;
+  if (everything) return true;
+  const phase = configurationPhase(key, record);
+  return phase === "production" || (phase === "prototype" && levelAtLeast(recordLevel(record), levelIn(level, phase)));
 }
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -158,14 +147,21 @@ export function configurationAvailable(key: string, record: Subject, everything 
 
 const NOT_HERE = " (not available here)";
 
+/** A selector label: the name, and for an item that is a prototype in the record's time its two dates, which also tag it as a prototype:
+ * "XL Fusion (prototype 2556, production 2579)". An item in production is its name alone; the picker and the rules check give every item's dates. */
+export function datedLabel(name: string, prototype: number | undefined, production: number | undefined, phase: Phase | null): string {
+  return phase === "prototype" ? `${name} (${datesText(prototype, production).toLowerCase()})` : name;
+}
+
 /** A chassis part table's rows as select options: those available to the record, and the record's current value even if it is not (marked). */
 export function partChoices(kind: PartKind, record: Subject, current: string): [string, string][] {
   const out: [string, string][] = [];
   const renamed = kind === "armor" ? industrialRulesOf(record)?.armorNames : undefined;
   for (const [key, row] of Object.entries(PART_TABLES[kind].types)) {
     const name = (renamed && Object.hasOwn(renamed, key) ? renamed[key] : undefined) ?? row.name;
-    if (partAvailable(kind, key, record)) out.push([key, name]);
-    else if (key === current) out.push([key, name + NOT_HERE]);
+    const label = datedLabel(name, partPrototype(row, record.techBase), partSpans(row, record.techBase)?.[0]?.from, partPhase(row, record));
+    if (partAvailable(kind, key, record)) out.push([key, label]);
+    else if (key === current) out.push([key, label + NOT_HERE]);
   }
   return out;
 }
@@ -174,21 +170,27 @@ export function partChoices(kind: PartKind, record: Subject, current: string): [
 // The 'Mech type (BattleMech, IndustrialMech, OmniMech)
 // ---------------------------------------------------------------------------------------------------------------
 
-/** A type's years against the record: the production years of its row, the Clan ones where the row has them; a mixed record takes either. */
-export function typeInTime(row: MechTypeRow, record: Pick<Subject, "techBase" | "year" | "era">): boolean {
-  const window = windowOf(record);
-  const forIs = spansFit(row.availability, window);
-  const forClan = spansFit(row.clanAvailability ?? row.availability, window);
-  return record.techBase === "inner-sphere" ? forIs : record.techBase === "clan" ? forClan : forIs || forClan;
+/** A 'Mech type's phase for a record: through the production years of its row, the Clan ones where the row has them; a mixed record takes either. */
+export function typePhase(id: MechType, record: Pick<Subject, "techBase" | "year" | "era">): Phase | null {
+  const row = MECH_TYPES.find((r) => r.id === id);
+  return row ? rowPhase(row, record.techBase, windowOf(record)) : null;
 }
 
-/** A 'Mech type for a record: at or below its rules level, and (unless `everything`) in its tech base and time. A key we do not know fits nothing. */
+/** A type's years against the record: its production years (the Clan ones where the row has them) and its prototype years count; a mixed record takes either. */
+export function typeInTime(row: MechTypeRow, record: Pick<Subject, "techBase" | "year" | "era">): boolean {
+  return rowPhase(row, record.techBase, windowOf(record)) !== null;
+}
+
+/** A 'Mech type for a record: at or below its rules level (raised to the prototype's in its prototype years), and (unless `everything`) in
+ * its tech base and time. A key we do not know fits nothing. */
 export function typeAvailable(id: MechType, record: Subject, everything = false): boolean {
   const row = MECH_TYPES.find((r) => r.id === id);
   if (!row) return false;
   if (!levelAtLeast(recordLevel(record), row.rulesLevel)) return false;
   if (row.industrial && !row.industrial.techBases.some((base) => base === record.techBase)) return false; // not mixed (TechManual p.64)
-  return everything || typeInTime(row, record);
+  if (everything) return true;
+  const phase = typePhase(id, record);
+  return phase === "production" || (phase === "prototype" && levelAtLeast(recordLevel(record), levelIn(row.rulesLevel, phase)));
 }
 
 export interface TypeChoice {
@@ -203,8 +205,10 @@ export function typeChoices(record: Subject): TypeChoice[] {
   const current = mechTypeOf(record).id;
   const out: TypeChoice[] = [];
   for (const row of MECH_TYPES) {
-    if (typeAvailable(row.id, record)) out.push(row.ready ? { id: row.id, label: row.label } : { id: row.id, label: `${row.label} (not built yet)`, disabled: row.notReady ?? "Its rules are not built yet." });
-    else if (row.id === current) out.push({ id: row.id, label: row.label + NOT_HERE });
+    const clan = record.techBase === "clan";
+    const label = datedLabel(row.label, clan ? (row.clanPrototypeYear ?? row.prototypeYear) : row.prototypeYear, (clan ? (row.clanAvailability ?? row.availability) : row.availability)[0]?.from, typePhase(row.id, record));
+    if (typeAvailable(row.id, record)) out.push(row.ready ? { id: row.id, label } : { id: row.id, label: `${label} (not built yet)`, disabled: row.notReady ?? "Its rules are not built yet." });
+    else if (row.id === current) out.push({ id: row.id, label: label + NOT_HERE });
   }
   return out;
 }
@@ -212,9 +216,11 @@ export function typeChoices(record: Subject): TypeChoice[] {
 /** The body configurations as select options, the same way. */
 export function configurationChoices(record: Subject, current: string): [string, string][] {
   const out: [string, string][] = [];
-  for (const [key, row] of Object.entries(SHEET.configurations)) {
-    if (configurationAvailable(key, record)) out.push([key, row.name]);
-    else if (key === current) out.push([key, row.name + NOT_HERE]);
+  for (const [key, row] of Object.entries<ConfigurationRow>(SHEET.configurations)) {
+    const clan = record.techBase === "clan";
+    const label = datedLabel(row.name, clan ? (row.clanPrototypeYear ?? row.prototypeYear) : row.prototypeYear, (clan ? (row.clanAvailability ?? row.availability) : row.availability)[0]?.from, configurationPhase(key, record));
+    if (configurationAvailable(key, record)) out.push([key, label]);
+    else if (key === current) out.push([key, label + NOT_HERE]);
   }
   return out;
 }
