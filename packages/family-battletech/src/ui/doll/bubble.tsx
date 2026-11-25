@@ -3,7 +3,7 @@ import React, { type JSX } from "react";
 import { INK, PAPER } from "./pen";
 
 /** A damaged point's red, part of the drawing style like the pens' ink and paper. */
-const DAMAGE = "rgb(200,0,0)";
+export const DAMAGE = "rgb(200,0,0)";
 
 export interface IBubbleProps {
     x: number;
