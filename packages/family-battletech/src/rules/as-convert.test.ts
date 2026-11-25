@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { ARMOR_RULES, ENGINE_MAPPING, MECH_SIZE_CLASSES, STRUCTURE_RULES, STRUCTURE_TABLE, TMM_ROWS, TYPE_OF_MECH } from "../data/as-convert";
+import { ARMOR_RULES, AS_WEAPON_TABLE, ENGINE_MAPPING, MECH_SIZE_CLASSES, STRUCTURE_RULES, STRUCTURE_TABLE, TMM_ROWS, TYPE_OF_MECH, WEAPON_ROW_OF } from "../data/as-convert";
 import { AMMUNITION } from "../data/equipment/ammunition";
 import { OTHER } from "../data/equipment/other";
 import { WEAPONS } from "../data/equipment/weapons";
 import { ARMOR, ENGINE_TYPES, STRUCTURE_TYPES } from "../data/chassis";
-import { convertArmor, convertBody, convertMovement, convertSize, convertStructure, convertType, tmmOf } from "./as-convert";
+import { convertArmor, convertBody, convertMovement, convertSize, convertStructure, convertType, convertWeapons, tmmOf } from "./as-convert";
 import { createCatalog, expand } from "./catalog";
 import { bipedRecord, mount } from "./fixtures";
 import type { MechRecord, Mount } from "./mech";
@@ -166,5 +166,80 @@ describe("the conversion tables", () => {
     expect(unmapped).toEqual([]);
     expect(Object.keys(ENGINE_TYPES.types).filter((id) => !ENGINE_MAPPING.some((m) => m.engineType === id))).toEqual([]);
     expect(Object.keys(STRUCTURE_TYPES.types).length).toBeGreaterThan(0);
+  });
+});
+
+describe("weapon damage by range (ASC pp. 99-110, errata v1.6)", () => {
+  const clan = (mounts: Mount[]): MechRecord => mech(75, 4, mounts, {}, { techBase: "clan" });
+  const damage = (record: MechRecord) => convertWeapons(record, catalog);
+  const sums = (record: MechRecord) => {
+    const step = damage(record);
+    return step.value && [step.value.subtotal.short, step.value.subtotal.medium, step.value.subtotal.long, step.value.roundedUp.short, step.value.roundedUp.medium, step.value.roundedUp.long];
+  };
+
+  it("the book's Mad Cat Mk II: 6.49 at Short, 7 at Medium and 4.2 at Long, from the Clan table (p. 100)", () => {
+    // Two Gauss rifles, four ER medium lasers and two LRM 10s, with enough ammunition that the ammunition rule does not apply.
+    const record = clan([...many(2, "gauss-rifle-clan"), ...many(4, "er-medium-laser-clan"), ...many(2, "lrm-10-clan"), ...many(3, "ammo-gauss-rifle-clan"), ...many(2, "ammo-lrm-10-clan")]);
+    expect(sums(record)).toEqual([6.49, 7, 4.2, 6.5, 7, 4.2]);
+    const step = damage(record);
+    expect(step.value?.lines).toHaveLength(8);
+    expect(step.working.some((w) => w.cite.page === 109 || w.cite.page === 108)).toBe(true);
+    expect(step.findings).toEqual([]);
+  });
+
+  it("fewer than 10 shots a weapon multiplies by 0.75, and an Ultra needs 20 (p. 101, errata v1.6 wording)", () => {
+    // One ton of Gauss ammunition is 8 shots. One ton of Ultra AC/5 ammunition is 20 shots: enough for one weapon, but 10 each for two.
+    expect(sums(clan([item("gauss-rifle-clan"), item("ammo-gauss-rifle-clan")]))?.slice(0, 3)).toEqual([0.93375, 1.125, 1.125]);
+    expect(sums(clan([item("ultra-ac-5-clan"), item("ammo-ultra-ac-5-clan")]))?.slice(0, 3)).toEqual([0.75, 0.75, 0.75]);
+    expect(sums(clan([...many(2, "ultra-ac-5-clan"), item("ammo-ultra-ac-5-clan")]))?.slice(0, 3)).toEqual([1.125, 1.125, 1.125]);
+  });
+
+  it("a targeting computer multiplies the weapons marked Y by 1.10 and an actuator enhancement system the weapons in its arm by 1.05", () => {
+    const ppc = item("er-ppc-is", "RA");
+    const base = [item("flamer-is", "LA"), item("medium-laser-is", "CT")];
+    expect(sums(mech(60, 4, [...base, ppc]))?.slice(0, 3)).toEqual([1.7, 1.5, 1]);
+    // The medium laser and the ER PPC (TC Y) are multiplied; the flamer (TC N) is not.
+    expect(sums(mech(60, 4, [...base, ppc, item("targeting-computer-is", "RT")]))?.slice(0, 3)).toEqual([1.85, 1.65, 1.1]);
+    // The AES is in the right arm: the ER PPC is multiplied by 1.05, the others are not.
+    expect(sums(mech(60, 4, [...base, ppc, item("aes-arm-is", "RA")]))?.slice(0, 3)).toEqual([1.75, 1.55, 1.05]);
+  });
+
+  it("Artemis IV takes the second value of its launcher, and a Multi-Missile Launcher counts the average of both ammunition counts", () => {
+    const lrm = item("lrm-15-is", "LT");
+    const withArtemis = [lrm, { ...item("artemis-iv-is", "LT"), linkedTo: lrm.id }, ...many(2, "ammo-lrm-15-is")];
+    expect(sums(mech(60, 4, withArtemis))?.slice(0, 3)).toEqual([0.6, 1.2, 1.2]);
+    // MML 5: 24 LRM shots and 20 SRM shots in one ton each, 22 on average, so 22 for the one launcher: no reduction.
+    expect(sums(mech(60, 4, [item("mml-5-is"), item("ammo-mml-5-lrm-is"), item("ammo-mml-5-srm-is")]))?.slice(0, 3)).toEqual([0.6, 0.45, 0.3]);
+  });
+
+  it("a weapon the book or our catalog cannot place is a finding and no value; artillery and melee items are left to their abilities", () => {
+    const stuck = damage(mech(60, 4, [item("medium-laser-is"), item("centurion-weapon-system-is")]));
+    expect(stuck.value).toBeNull();
+    expect(stuck.findings.map((f) => f.code)).toEqual(["no-table-row"]);
+    const placed = damage(mech(60, 4, [item("medium-laser-is"), item("arrow-iv-is"), item("hatchet-is")]));
+    expect(placed.findings).toEqual([]);
+    expect(placed.value?.subtotal.short).toBe(0.5);
+    expect(placed.working.filter((w) => w.rule.includes("not added"))).toHaveLength(2);
+    expect(damage(mech(60, 4, [{ ...item("medium-laser-is"), equipmentId: null, name: "Mystery Cannon" }])).findings[0]?.code).toBe("unknown-mount");
+  });
+
+  it("rear-firing weapons are used only when they deliver more at every range", () => {
+    const rear = (id: string) => ({ ...item(id, "CT"), rear: true as const });
+    expect(sums(mech(50, 4, [item("medium-laser-is", "LA"), rear("small-laser-is")]))?.slice(0, 3)).toEqual([0.5, 0.5, 0]);
+    expect(sums(mech(50, 4, [item("small-laser-is", "LA"), rear("ppc-is")]))?.slice(0, 3)).toEqual([0.75, 1, 1]);
+    const mixed = damage(mech(50, 4, [item("large-laser-is", "LA"), rear("ppc-is")]));
+    expect(mixed.findings.map((f) => f.code)).toEqual(["rear-arc"]);
+  });
+
+  it("the table has the errata's values and every weapon id we map has a row", () => {
+    const find = (tech: string, name: string) => AS_WEAPON_TABLE.find((r) => r.tech === tech && r.name === name);
+    expect(find("is", "Large Re-Engineered Laser")).toMatchObject({ heat: 9, short: 0.945, medium: 0.945, long: null });
+    expect(find("clan", "SRM 4")).toMatchObject({ short: [0.6, 0.6, 0.63] });
+    expect(find("clan", "Improved ATM 6")?.long).toBe(0.6);
+    expect(find("clan", "Heavy Flamer")?.cite.errata).toBe("v1.6");
+    for (const entry of WEAPON_ROW_OF) {
+      expect(find(entry.tech, entry.name), entry.id).toBeDefined();
+      expect(catalog.byId(entry.id), entry.id).toBeDefined();
+    }
   });
 });
