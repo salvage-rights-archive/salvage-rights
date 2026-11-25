@@ -73,6 +73,18 @@ a.bt-button {
   text-decoration: none;
 }
 
+.bt-empty {
+  max-width: 36rem;
+
+  img {
+    display: block;
+    width: 100%;
+    height: auto;
+    border: var(--sr-border) solid var(--sr-line);
+    border-radius: var(--sr-radius);
+  }
+}
+
 .bt-list {
   list-style: none;
   margin: 0;

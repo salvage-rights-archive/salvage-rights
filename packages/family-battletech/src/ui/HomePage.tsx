@@ -5,6 +5,7 @@ import { DEFAULT_EDITION, EDITIONS } from "../data/editions";
 import type { MechRecord } from "../rules/mech";
 import { STORAGE_READ_FAILED, STORAGE_WRITE_FAILED, downloadMech, fromMechFile, openFamilyStorage } from "./storage";
 import type { FamilyStorage, SavedEntry } from "./storage";
+import emptyBay from "../artwork/empty-bay.jpg";
 import "./classic.scss";
 
 const MAX_IMPORT_BYTES = 1024 * 1024;
@@ -178,9 +179,14 @@ export default function HomePage() {
           Your 'Mechs
         </h2>
         {storage && entries.length === 0 ? (
-          <p ref={emptyRef} tabIndex={-1}>
-            No 'Mechs saved yet.
-          </p>
+          <div className="bt-empty">
+            {/* Decorative: the line below says what the empty bay means. Terms: ../artwork/NOTICE.md. */}
+            <img src={emptyBay} alt="" width={1200} height={670} />
+            <p ref={emptyRef} tabIndex={-1}>
+              No 'Mechs saved yet.
+            </p>
+            <p className="bt-hint">Picture: AI-generated image (Nano Banana 2).</p>
+          </div>
         ) : (
           <ul className="bt-list">
             {entries.map((entry) => {
