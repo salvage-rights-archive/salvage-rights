@@ -107,6 +107,11 @@ export default function MechData({ rect, facts }: { rect: Rect; facts: SheetFact
       <text x={x + 24} y={y + 122} fontSize={24} fontWeight={700} fill={INK}>
         Movement Points:
       </text>
+      {facts.movementNote !== undefined && (
+        <text x={x + 262} y={y + 122} fontSize={MIN_SIZE} fontStyle="italic" fill={INK} {...squeeze(facts.movementNote, MIN_SIZE, 366)}>
+          {facts.movementNote}
+        </text>
+      )}
       {pair("Walking:", facts.walk, x + 40, y + 156, 25, 200)}
       {pair("Running:", facts.run, x + 40, y + 188, 25, 200)}
       {pair("Jumping:", facts.jump, x + 40, y + 220, 25, 200)}

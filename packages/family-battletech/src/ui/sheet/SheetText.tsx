@@ -11,6 +11,7 @@ export default function SheetText({ facts, record }: { facts: SheetFacts; record
     ["Walking", facts.walk],
     ["Running", facts.run],
     ["Jumping", facts.jump],
+    ...(facts.movementNote === undefined ? [] : [["Movement taken off", facts.movementNote] as [string, string]]),
     ["Tonnage", facts.tons],
     ["Tech base", facts.techBase],
     ["Rules edition", facts.edition],

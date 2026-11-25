@@ -19,6 +19,26 @@ interface Sourced {
   checked: Checked;
 }
 
+/**
+ * What a part row says about itself beyond its construction numbers; every field is absent on a row the book treats as plain
+ * standard technology. `techBase` is who may build it ("both" when the book prints one row for both); `introduced` is the first
+ * year the book prints for each tech base, with `prototype` where the date is the prototype's only (the book's "P"); `rules`
+ * is what the part does in play, in our words, shown as a note and never simulated; `industrial` marks a part that is printed
+ * for IndustrialMechs and not BattleMechs; `primitive` marks one printed for the Age of War's Primitive 'Mechs.
+ * A row whose figures come from another page than its table's keeps that page in `cite` (with `checked`).
+ */
+export interface PartFacts {
+  techBase?: "inner-sphere" | "clan" | "both";
+  rulesLevel?: "standard" | "advanced" | "experimental";
+  introduced?: { is?: number; clan?: number; prototype?: true };
+  rules?: string;
+  rulesCite?: Cite;
+  industrial?: true;
+  primitive?: true;
+  cite?: Cite;
+  checked?: Checked;
+}
+
 // ---------------------------------------------------------------------------------------------------------------
 // Internal structure points by tonnage (printed p.47). Quads use the legs column for all four legs. The weight of the
 // structure is a rule the book states in words, not a table of ours: see STRUCTURE_WEIGHT below. The tonnages in this
@@ -72,12 +92,18 @@ export const STRUCTURE_WEIGHT: Sourced & { fractionOfTons: number } = {
   fractionOfTons: 0.1,
 };
 
-// Structure types. Slots are the critical slots the type takes, placed anywhere (printed p.47).
-export interface StructureType {
+// Structure types. Slots are the critical slots the type takes, placed anywhere (printed p.47). The weight factors of the
+// newer types are stated in words (Tactical Operations: Advanced Units and Equipment printed p.154, read against the page
+// image) and agree with the weight column of its cost table (p.223): composite half, endo-composite three-quarters,
+// reinforced twice; an IndustrialMech's frame is twice the standard (TechManual printed p.67, "20 percent of the weight").
+export interface StructureType extends PartFacts {
   name: string; // as shown to the player
   weightFactor: number;
   slots: number;
 }
+const TO = "Tactical Operations: Advanced Units and Equipment" as const;
+const IO = "Interstellar Operations: Alternate Eras" as const;
+const TO_STRUCTURE: Cite = { book: TO, page: 154 };
 export const STRUCTURE_TYPES: Sourced & { types: Record<string, StructureType> } = {
   cite: { book: "TechManual", page: 47 },
   checked: "page",
@@ -85,6 +111,77 @@ export const STRUCTURE_TYPES: Sourced & { types: Record<string, StructureType> }
     standard: { name: "Standard", weightFactor: 1, slots: 0 },
     "endo-steel": { name: "Endo Steel", weightFactor: 0.5, slots: 14 },
     "endo-steel-clan": { name: "Endo Steel (Clan)", weightFactor: 0.5, slots: 7 },
+    composite: {
+      name: "Composite",
+      weightFactor: 0.5,
+      slots: 0,
+      techBase: "inner-sphere",
+      rulesLevel: "experimental",
+      introduced: { is: 3061, prototype: true },
+      cite: TO_STRUCTURE,
+      checked: "page",
+      rules: "All damage to this structure is doubled; excess damage that goes on to armored locations follows the armor's rules.",
+      rulesCite: TO_STRUCTURE,
+    },
+    "endo-composite": {
+      name: "Endo-Composite",
+      weightFactor: 0.75,
+      slots: 7,
+      techBase: "inner-sphere",
+      rulesLevel: "experimental",
+      introduced: { is: 3067, prototype: true },
+      cite: TO_STRUCTURE,
+      checked: "page",
+      rules: "Plays as endo steel: a critical hit on one of its slots is rolled again.",
+      rulesCite: TO_STRUCTURE,
+    },
+    "endo-composite-clan": {
+      name: "Endo-Composite (Clan)",
+      weightFactor: 0.75,
+      slots: 4,
+      techBase: "clan",
+      rulesLevel: "experimental",
+      introduced: { clan: 3073, prototype: true },
+      cite: TO_STRUCTURE,
+      checked: "page",
+      rules: "Plays as endo steel: a critical hit on one of its slots is rolled again.",
+      rulesCite: TO_STRUCTURE,
+    },
+    reinforced: {
+      name: "Reinforced",
+      weightFactor: 2,
+      slots: 0,
+      techBase: "both",
+      rulesLevel: "experimental",
+      introduced: { is: 3057, clan: 3065, prototype: true },
+      cite: TO_STRUCTURE,
+      checked: "page",
+      rules: "Each structure point takes two points of damage before it is lost; critical hit rolls against the 'Mech take -1. It does not let more armor be mounted.",
+      rulesCite: { book: TO, page: 155 },
+    },
+    // Age of War: the first endo steel took 2 more slots than the production kind (Interstellar Operations: Alternate Eras printed p.66).
+    "prototype-endo-steel": {
+      name: "Endo Steel (Prototype)",
+      weightFactor: 0.5,
+      slots: 16,
+      techBase: "inner-sphere",
+      introduced: { is: 2471 },
+      cite: { book: IO, page: 66 },
+      checked: "page",
+      rules: "Plays as Inner Sphere endo steel; a critical hit on one of its slots is rolled again.",
+    },
+    // An IndustrialMech's frame weighs 20 percent of its tonnage and takes no slots (TechManual printed p.67; introduced 2350, p.224).
+    industrial: {
+      name: "Industrial",
+      weightFactor: 2,
+      slots: 0,
+      techBase: "both",
+      industrial: true,
+      introduced: { is: 2350 },
+      cite: { book: "TechManual", page: 67 },
+      checked: "page",
+      rules: "A 'Mech built on an industrial frame is an IndustrialMech, which has its own construction rules.",
+    },
   },
 };
 
@@ -186,7 +283,7 @@ export const ENGINE_WEIGHTS: Sourced & { rows: Record<number, number> } = {
 // stated in words: Compact weighs 50 percent more (printed p.48 and p.214), Light about 25 percent less and XL roughly
 // half (both p.214, equipment descriptions; read from the text extract). The half-ton rounding is the book's rounding
 // everywhere else, and with it each factor reproduces the printed p.49 column for every rating.
-export interface EngineType {
+export interface EngineType extends PartFacts {
   name: string; // as shown to the player; label is what the record sheets print
   label: string;
   weightFactor: number;
@@ -212,6 +309,54 @@ export const ENGINE_TYPES: Sourced & { types: Record<string, EngineType> } = {
       factorChecked: "text",
       ct: 3,
       side: 0,
+    },
+    // XXL fusion (Tactical Operations: Advanced Units and Equipment, Advanced Engine Master Table printed p.120, read against the
+    // page image): one third of the standard weight (the table's "x0.333") and twice an XL's slots in each side torso (6 for
+    // Inner Sphere, 4 for Clan). The rules box is p.121; the cost table (p.219) prints the dates, IS 3055P and Clan 3030P.
+    // (The Inner Sphere row also prints 2954X, in the Clan column; the box dates the first Clan prototype 2954, so we keep
+    // the Clan row's own figure.)
+    xxl: {
+      name: "XXL Fusion",
+      label: "XXL Fusion Engine",
+      weightFactor: 1 / 3,
+      ct: 6,
+      side: 6,
+      techBase: "inner-sphere",
+      rulesLevel: "experimental",
+      introduced: { is: 3055, prototype: true },
+      cite: { book: TO, page: 120 },
+      checked: "page",
+      rules: "Runs hotter: 2 heat standing, 4 walking, 6 running, and jumping heat is doubled (at least 6).",
+      rulesCite: { book: TO, page: 121 },
+    },
+    "xxl-clan": {
+      name: "XXL Fusion (Clan)",
+      label: "XXL Fusion Engine",
+      weightFactor: 1 / 3,
+      ct: 6,
+      side: 4,
+      techBase: "clan",
+      rulesLevel: "experimental",
+      introduced: { clan: 3030, prototype: true },
+      cite: { book: TO, page: 120 },
+      checked: "page",
+      rules: "Runs hotter: 2 heat standing, 4 walking, 6 running, and jumping heat is doubled (at least 6).",
+      rulesCite: { book: TO, page: 121 },
+    },
+    // Age of War extralight engine: mounted as an Inner Sphere XL (Interstellar Operations: Alternate Eras printed p.66).
+    "prototype-xl": {
+      name: "XL Fusion (Prototype)",
+      label: "XL Fusion Engine",
+      weightFactor: 0.5,
+      factorCite: P214,
+      factorChecked: "text",
+      ct: 6,
+      side: 3,
+      techBase: "inner-sphere",
+      introduced: { is: 2556 },
+      cite: { book: IO, page: 66 },
+      checked: "page",
+      rules: "Plays as an Inner Sphere XL engine but adds 1 heat a turn, and each critical hit on it makes 5 plus half a die roll heat.",
     },
   },
 };
@@ -245,15 +390,16 @@ const IO_TRIPOD_CONSTRUCTION: Cite = { book: "Interstellar Operations: Alternate
 // ---------------------------------------------------------------------------------------------------------------
 // Cockpit (BattleMech Cockpit Table, printed p.52). Default head slots are the book's own numbering, counted from 1.
 // ---------------------------------------------------------------------------------------------------------------
-export interface CockpitType {
+export interface CockpitType extends PartFacts {
   name: string;
   tons: number;
   /** The one configuration that may mount this cockpit; absent means any configuration that does not require another. */
   only?: string;
-  cite?: Cite; // where the cockpit is printed, when it is not the table's page
   cockpit: number[];
   sensors: number[];
   lifeSupport: number[];
+  /** Parts the cockpit puts outside the head, one label per slot, in the first free slots of each location (the book gives no places). */
+  elsewhere?: Partial<Record<LocationCode, string[]>>;
 }
 export const COCKPITS: Sourced & { types: Record<string, CockpitType> } = {
   cite: { book: "TechManual", page: 52 },
@@ -264,6 +410,39 @@ export const COCKPITS: Sourced & { types: Record<string, CockpitType> } = {
     // The tripod's special cockpit weighs 4 tons up to 100 tons and takes the same slots as the standard one (Interstellar
     // Operations: Alternate Eras, Tripod 'Mech Construction Rules, printed p.159). Its 5-ton superheavy version is out of scope.
     tripod: { name: "Tripod", tons: 4, only: "tripod", cite: IO_TRIPOD_CONSTRUCTION, cockpit: [3], sensors: [2, 5], lifeSupport: [1, 6] },
+    // Torso-mounted cockpit (Tactical Operations: Advanced Units and Equipment, construction rules printed p.112, rules box p.113,
+    // cost table p.219; all read against the page image): 4 tons, 2 slots in the center torso (the cockpit and its added sensors),
+    // a Life Support slot moved to each side torso, and the head keeps the two default sensor slots.
+    "torso-mounted": {
+      name: "Torso-Mounted",
+      tons: 4,
+      techBase: "both",
+      rulesLevel: "experimental",
+      introduced: { is: 3053, clan: 3055, prototype: true },
+      cite: { book: TO, page: 112 },
+      checked: "page",
+      cockpit: [],
+      sensors: [2, 5],
+      lifeSupport: [],
+      elsewhere: { CT: ["Cockpit", "Sensors"], LT: ["Life Support"], RT: ["Life Support"] },
+      rules:
+        "No pilot damage from hits to the center torso; the 'Mech is not destroyed when its head is. Piloting Skill rolls take +1, ejection is impossible, and it survives 2 sensor hits (+2, then +4 to hit).",
+      rulesCite: { book: TO, page: 113 },
+    },
+    // Primitive BattleMechs mount only the primitive cockpit, 5 tons (Interstellar Operations: Alternate Eras printed p.117).
+    primitive: {
+      name: "Primitive",
+      tons: 5,
+      techBase: "inner-sphere",
+      primitive: true,
+      introduced: { is: 2439 },
+      cite: { book: IO, page: 117 },
+      checked: "page",
+      cockpit: [3],
+      sensors: [2, 5],
+      lifeSupport: [1, 6],
+      rules: "Slots as a standard cockpit. Printed for Primitive BattleMechs, which have their own construction rules.",
+    },
   },
 };
 
@@ -308,10 +487,14 @@ export const HEAT_SINKS: Sourced & { types: Record<string, HeatSinkType> } = {
 // ECM Suite; that part is not modelled here.
 // ---------------------------------------------------------------------------------------------------------------
 type Spread = Partial<Record<LocationCode, number>>;
-export interface ArmorType {
+const TO_ARMOR: Cite = { book: TO, page: 92 };
+const IO_ARMOR: Cite = { book: IO, page: 82 };
+export interface ArmorType extends PartFacts {
   name: string;
   multiplier: number;
   slots: number;
+  /** Changes to the 'Mech's movement points while it wears this armor (hardened armor: 1 less Running MP). */
+  movement?: { run: number };
   slotsIn?: { biped: Spread; quad: Spread; tripod: Spread }; // slots per location, where the type has to go in particular places
 }
 export const ARMOR: Sourced & { basePointsPerTon: number; types: Record<string, ArmorType> } = {
@@ -335,6 +518,181 @@ export const ARMOR: Sourced & { basePointsPerTon: number; types: Record<string, 
     "ferro-fibrous": { name: "Ferro-Fibrous", multiplier: 1.12, slots: 14 },
     "ferro-fibrous-clan": { name: "Ferro-Fibrous (Clan)", multiplier: 1.2, slots: 7 },
     "heavy-ferro-fibrous": { name: "Heavy Ferro-Fibrous", multiplier: 1.24, slots: 21 },
+    // The newer types. A row's multiplier is its printed points per ton over the base 16. Tactical Operations: Advanced Units and
+    // Equipment, Advanced Armor Table (printed p.92) for the first six, Interstellar Operations: Alternate Eras, Advanced Armor
+    // Table (printed p.82) for the next four; each was read against the page image. The dates are the books' (cost table p.217, p.84).
+    // The standard armor of the BattleMech table is the IndustrialMech table's "Heavy Industrial" (TechManual p.72), so it has no row of its own.
+    hardened: {
+      name: "Hardened",
+      multiplier: 0.5,
+      slots: 0,
+      movement: { run: -1 },
+      techBase: "both",
+      rulesLevel: "experimental",
+      introduced: { is: 3047, clan: 3061, prototype: true },
+      cite: TO_ARMOR,
+      checked: "page",
+      rules:
+        "Each armor point takes two points of damage before it is lost, but counts as one point for the 20-damage Piloting roll; critical hit rolls against the location take -2; armor-piercing bonuses do nothing. The 'Mech takes +1 on Piloting Skill rolls and loses 1 Running MP (applied here). Not for OmniMechs.",
+      rulesCite: { book: TO, page: 93 },
+    },
+    "ferro-lamellor": {
+      name: "Ferro-Lamellor",
+      multiplier: 14 / 16,
+      slots: 12,
+      techBase: "clan",
+      rulesLevel: "experimental",
+      introduced: { clan: 3070, prototype: true },
+      cite: TO_ARMOR,
+      checked: "page",
+      rules: "Each hit is reduced by 1 for every 5 points (or part) it delivers, to a minimum of 0; armor-piercing bonuses do nothing.",
+      rulesCite: TO_ARMOR,
+    },
+    "laser-reflective": {
+      name: "Laser-Reflective",
+      multiplier: 1,
+      slots: 10,
+      techBase: "inner-sphere",
+      rulesLevel: "experimental",
+      introduced: { is: 3058, prototype: true },
+      cite: TO_ARMOR,
+      checked: "page",
+      rules:
+        "Each point takes up to two points from flamers, lasers, PPCs and plasma rifles, and those heat effects are halved; damage from falls, physical attacks, building walls and artillery is doubled.",
+      rulesCite: { book: TO, page: 93 },
+    },
+    "laser-reflective-clan": {
+      name: "Laser-Reflective (Clan)",
+      multiplier: 1,
+      slots: 5,
+      techBase: "clan",
+      rulesLevel: "experimental",
+      introduced: { clan: 3061, prototype: true },
+      cite: TO_ARMOR,
+      checked: "page",
+      rules:
+        "Each point takes up to two points from flamers, lasers, PPCs and plasma rifles, and those heat effects are halved; damage from falls, physical attacks, building walls and artillery is doubled.",
+      rulesCite: { book: TO, page: 93 },
+    },
+    reactive: {
+      name: "Reactive",
+      multiplier: 1,
+      slots: 14,
+      techBase: "inner-sphere",
+      rulesLevel: "experimental",
+      introduced: { is: 3063, prototype: true },
+      cite: TO_ARMOR,
+      checked: "page",
+      rules: "Halves damage (rounded down, at least 1) from missiles, mortars and artillery; a critical hit on one of its slots can destroy all the armor in the location.",
+      rulesCite: { book: TO, page: 94 },
+    },
+    "reactive-clan": {
+      name: "Reactive (Clan)",
+      multiplier: 1,
+      slots: 7,
+      techBase: "clan",
+      rulesLevel: "experimental",
+      introduced: { clan: 3065, prototype: true },
+      cite: TO_ARMOR,
+      checked: "page",
+      rules: "Halves damage (rounded down, at least 1) from missiles, mortars and artillery; a critical hit on one of its slots can destroy all the armor in the location.",
+      rulesCite: { book: TO, page: 94 },
+    },
+    "anti-penetrative-ablation": {
+      name: "Anti-Penetrative Ablation",
+      multiplier: 12 / 16,
+      slots: 6,
+      techBase: "inner-sphere",
+      rulesLevel: "advanced",
+      introduced: { is: 3114 },
+      cite: IO_ARMOR,
+      checked: "page",
+      rules: "While the location keeps 1 point of armor, critical hit checks from armor-piercing weapons take -2.",
+      rulesCite: { book: IO, page: 80 },
+    },
+    "ballistic-reinforced": {
+      name: "Ballistic-Reinforced",
+      multiplier: 12 / 16,
+      slots: 10,
+      techBase: "inner-sphere",
+      rulesLevel: "advanced",
+      introduced: { is: 3131 },
+      cite: IO_ARMOR,
+      checked: "page",
+      rules: "Each point takes up to two points from direct-fire ballistic and missile attacks.",
+      rulesCite: { book: IO, page: 81 },
+    },
+    "heat-dissipating": {
+      name: "Heat-Dissipating",
+      multiplier: 10 / 16,
+      slots: 6,
+      techBase: "both",
+      rulesLevel: "advanced",
+      introduced: { is: 3123, clan: 3125 },
+      cite: IO_ARMOR,
+      checked: "page",
+      rules: "While the location keeps 1 point of armor, heat from flamers, plasma weapons, infernos and fire is halved.",
+      rulesCite: { book: IO, page: 81 },
+    },
+    "impact-resistant": {
+      name: "Impact-Resistant",
+      multiplier: 14 / 16,
+      slots: 10,
+      techBase: "inner-sphere",
+      rulesLevel: "advanced",
+      introduced: { is: 3103 },
+      cite: IO_ARMOR,
+      checked: "page",
+      rules: "While the location keeps 1 point of armor, collision, fall and physical attack damage is reduced by 1 for every 3 points (or part); armor-piercing critical rolls take +1.",
+      rulesCite: { book: IO, page: 82 },
+    },
+    // Age of War: the first ferro-fibrous took 2 more slots than the production kind (Interstellar Operations: Alternate Eras printed p.66).
+    "prototype-ferro-fibrous": {
+      name: "Ferro-Fibrous (Prototype)",
+      multiplier: 1.12,
+      slots: 16,
+      techBase: "inner-sphere",
+      introduced: { is: 2557 },
+      cite: { book: IO, page: 66 },
+      checked: "page",
+      rules: "Plays as Inner Sphere ferro-fibrous armor.",
+    },
+    // Primitive BattleMechs mount only primitive armor, 0.67 of standard (Interstellar Operations: Alternate Eras printed p.118).
+    primitive: {
+      name: "Primitive",
+      multiplier: 0.67,
+      slots: 0,
+      techBase: "inner-sphere",
+      primitive: true,
+      introduced: { is: 2439 },
+      cite: { book: IO, page: 118 },
+      checked: "page",
+      rules: "Barrier Armor Rating 10. Printed for Primitive BattleMechs, which have their own construction rules.",
+    },
+    // IndustrialMech armor (TechManual printed pp.72 and 205): Commercial has Barrier Armor Rating 5, so any hit of 6 points or more
+    // may cause a critical hit; Industrial has 10.
+    industrial: {
+      name: "Industrial",
+      multiplier: 0.67,
+      slots: 0,
+      techBase: "both",
+      industrial: true,
+      introduced: { is: 2439 },
+      cite: { book: "TechManual", page: 72 },
+      checked: "page",
+      rules: "Barrier Armor Rating 10. Printed for IndustrialMechs.",
+    },
+    commercial: {
+      name: "Commercial",
+      multiplier: 1.5,
+      slots: 0,
+      techBase: "both",
+      industrial: true,
+      introduced: { is: 2300 },
+      cite: { book: "TechManual", page: 72 },
+      checked: "page",
+      rules: "Barrier Armor Rating 5: a hit of 6 or more points at a time may cause a critical hit. Printed for IndustrialMechs.",
+    },
   },
 };
 
@@ -400,6 +758,39 @@ export const LAM: Sourced & {
     { ids: ["heavy-gauss-rifle-is"], why: "it needs a Piloting skill roll to use" },
   ],
 };
+// ---------------------------------------------------------------------------------------------------------------
+// Shields (Tactical Operations: Advanced Units and Equipment: 'Mech Shield Table printed p.103, read against the page image;
+// construction rules printed p.100). Keyed by catalog row id. DA (Damage Absorption) and DC (Damage Capacity) are the shield's
+// own points; DC is what the record sheet's shield boxes hold. Mobility is the Walking, Running and Jumping MP the shield takes
+// away (the table's "-1MP"; a large shield adds "No jump"). Only one shield may be mounted per arm, in an arm and no other
+// location, and it has no actuator requirements, but each missing arm or hand actuator in its arm takes 1 from DA and from DC.
+// ---------------------------------------------------------------------------------------------------------------
+export interface ShieldRow {
+  size: "small" | "medium" | "large";
+  da: number;
+  dc: number;
+  bash: number; // the to-hit modifier of a Shield Bash
+  mp: number; // Walking, Running and Jumping MP taken away
+  noJump?: true;
+}
+export const SHIELDS: Sourced & {
+  rulesCite: Cite;
+  perArm: number;
+  lostPerMissingActuator: number;
+  rows: Record<string, ShieldRow>;
+} = {
+  cite: { book: TO, page: 103 },
+  checked: "page",
+  rulesCite: { book: TO, page: 100 },
+  perArm: 1,
+  lostPerMissingActuator: 1,
+  rows: {
+    "shield-small-is": { size: "small", da: 3, dc: 11, bash: -2, mp: 0 },
+    "shield-medium-is": { size: "medium", da: 5, dc: 18, bash: -3, mp: 1 },
+    "shield-large-is": { size: "large", da: 7, dc: 25, bash: -4, mp: 1, noJump: true },
+  },
+};
+
 // ---------------------------------------------------------------------------------------------------------------
 // Fixed slot layout (Standard 'Mech Critical Space Table, printed p.45; actuator and head labels from the record
 // sheet, printed p.24). Slots are counted from 0 here. `size` is the slots in a location; `fixed` lists the labels

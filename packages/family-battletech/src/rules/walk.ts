@@ -1,10 +1,12 @@
 // Reading a record against the catalog: the lookups, the walk over its equipment and the figures of the record that the
 // rating rules (Battle Value in bv.ts, C-Bill cost in cost.ts) both need. Pure functions over plain data; nothing here
 // throws. A mount the catalog does not know is handed back in `unknown` for the caller to report, never guessed.
+import { ARMOR } from "../data/chassis";
 import { SHEET_HEAT_SINKS } from "../data/sheet";
 import type { Catalog, EquipmentRow } from "./catalog";
 import { slotsTaken, structurePoints, weights } from "./mech";
 import type { MechRecord, Mount } from "./mech";
+import { shieldMovement } from "./shields";
 
 /** A lookup that only sees a table's own keys, so a key like "constructor" is unknown rather than a surprise. */
 export function own<T>(table: Record<string, T>, key: string): T | undefined {
@@ -40,6 +42,46 @@ export function equipmentItems(record: MechRecord, catalog: Catalog): { items: I
     else items.push({ mount, row, slots: slotsTaken(mount, record, catalog.factsOf), tons: catalog.factsOf(mount, record)?.tons });
   }
   return { items, unknown };
+}
+
+/** The movement points the record's armor and shields take away (never negative), and the words that say why. A large shield also
+ * forbids jumping in play; the Battle Value rules still use the jump rating as normal (TO:AUE p.193), so `noJump` is separate. */
+export interface MovementPenalty {
+  /** Walking MP taken away (a shield's); Running MP is then worked out from the reduced Walking MP, never reduced for the same cause. */
+  walk: number;
+  /** Running MP taken away on top of that, for what the book prints as a Running reduction alone (hardened armor, TO:AUE p.93). */
+  run: number;
+  jump: number;
+  noJump: boolean;
+  because: string[];
+  /** The same in a few words, for the record sheet. */
+  short: string[];
+}
+export function movementPenalty(record: MechRecord, catalog: Catalog): MovementPenalty {
+  const shield = shieldMovement(record, catalog);
+  const armor = own(ARMOR.types, record.chassis.armorType);
+  const armorRun = Math.max(0, -(armor?.movement?.run ?? 0));
+  const because: string[] = [];
+  const short: string[] = [];
+  if (armorRun > 0 && armor) {
+    because.push(`${armor.name} armor: -${String(armorRun)} Running MP`);
+    short.push(`${armor.name}: Run -${String(armorRun)}`);
+  }
+  if (shield.mp > 0) {
+    because.push(`${shield.names.join(", ")}: -${String(shield.mp)} Walking MP (Running MP follows from it) and Jumping MP`);
+    short.push(`Shield: MP -${String(shield.mp)}`);
+  }
+  if (shield.noJump) {
+    because.push("Large shield: no jumping");
+    short.push("No jump");
+  }
+  return { walk: shield.mp, run: armorRun, jump: shield.mp, noJump: shield.noJump, because, short };
+}
+
+/** Walking MP after the penalty, and Running MP derived from that (Walking x 1.5 rounded up) less any Running-only reduction. */
+export function penalisedMovement(walk: number, penalty: MovementPenalty): { walk: number; run: number } {
+  const reduced = Math.max(0, walk - penalty.walk);
+  return { walk: reduced, run: Math.max(0, Math.ceil(reduced * 1.5) - penalty.run) };
 }
 
 /** Jumping MP: one for each jump jet mounted. */
