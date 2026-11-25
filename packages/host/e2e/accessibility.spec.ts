@@ -30,6 +30,8 @@ async function expectNoViolations(page: Page, base: string, paths: string[]) {
 }
 
 test("dev edition has no axe violations in either theme", async ({ page }) => {
+  // Twenty axe scans, three seconds each on the editor in Firefox: the default 30 seconds is too short for the one test.
+  test.setTimeout(150_000);
   // One imported 'Mech, kept for the rest of the test (the browser context's storage lasts as long as the test).
   await importMech(page, DEV);
   const editor = new URL(page.url());

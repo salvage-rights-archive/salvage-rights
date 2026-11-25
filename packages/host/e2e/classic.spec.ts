@@ -74,6 +74,8 @@ test("the home, import and editor pages do not scroll sideways at 320 px wide", 
   for (const address of [HOME, `${DEV}${CLASSIC}/import`, editor]) {
     await page.goto(address);
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    // The import page asks mordel.net for the member's designs as it opens; let that finish before leaving the page.
+    if (address.endsWith("/import")) await expect(page.getByText("You have no designs on mordel.net yet.")).toBeVisible();
     const widths = await page.evaluate(() => ({
       scroll: document.documentElement.scrollWidth,
       client: document.documentElement.clientWidth,
