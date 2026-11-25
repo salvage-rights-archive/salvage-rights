@@ -58,6 +58,22 @@ describe("fixed-count items", () => {
   });
 });
 
+describe("a turret holding other mounts", () => {
+  // TechManual p.98: the turret weighs a tenth of what is mounted in it, up to the half ton; p.279 prices it at 5,000 per ton of its own weight.
+  const held = (linked: string | undefined, id = "ac-10-is") => ({ ...mount("w", id, "LA", null), ...(linked === undefined ? {} : { linkedTo: linked }) });
+  const record = (...mounts: Mount[]) => ({ ...bipedRecord(), mounts: [mount("t", "turret-is", "CT", null), ...mounts] });
+  it("weighs a tenth of the mounts linked to it, up to the half ton, and ignores unlinked ones", () => {
+    const turret = (r: ReturnType<typeof record>) => catalog.factsOf(r.mounts[0] as Mount, r);
+    expect(turret(record())).toEqual({ tons: 0, slots: 0 });
+    expect(turret(record(held("t", "medium-laser-is")))).toEqual({ tons: 0.5, slots: 0 }); // 1 ton: 0.1, up to 0.5
+    expect(turret(record(held("t"), held("t", "ac-5-is"), held(undefined, "ppc-is")))).toEqual({ tons: 2, slots: 0 }); // AC/10 12 tons + AC/5 8 tons = 20, a tenth is 2
+  });
+  it("is priced at 5,000 per ton of its own weight", () => {
+    const r = record(held("t", "ac-5-is"), held("t", "ac-5-is"), held("t", "ac-5-is"), held("t", "ac-5-is")); // 32 tons: a 3.5-ton turret
+    expect(unitCost(r, catalog).equipment).toBe(4 * 125_000 + 5_000 * 3.5);
+  });
+});
+
 describe("sheet names", () => {
   const names: [string, string, string][] = [
     ["Imp. Heavy Medium Laser [Clan]", "clan", "improved-heavy-laser-medium-clan"],

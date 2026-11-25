@@ -259,12 +259,12 @@ export const OTHER: EquipmentGroup[] = [
     defaults: { kind: "other", techBase: "inner-sphere", cite: { book: IO, page: 211 }, playCite: { book: IO, page: 210 }, checked: "page", rulesLevel: "experimental" },
     items: [
       // Age of War prototype electronics and equipment (Inner Sphere), the book prints a P on each year
-      { id: "prototype-artemis-iv-is", name: "Prototype Artemis IV FCS", tons: 1, slots: 1, availability: [{ from: 2592 }], needs: "launcher" },
-      { id: "prototype-beagle-active-probe-is", name: "Prototype Beagle Active Probe", tons: 2, slots: 3, type: "E", heat: 0, range: [0, 0, 0, 4], availability: [{ from: 2560 }] },
-      { id: "prototype-case-is", name: "Prototype CASE", tons: 0.5, slots: 1, heat: 0, availability: [{ from: 2452 }] },
-      { id: "prototype-guardian-ecm-suite-is", name: "Prototype Guardian ECM Suite", tons: 2, slots: 3, type: "E", heat: 0, range: [0, 0, 0, 6], availability: [{ from: 2595 }] },
-      { id: "prototype-remote-sensors-is", name: "Prototype Remote Sensors", tons: 0.5, slots: 1, type: "E", heat: 0, range: [0, 0, 0, 0], availability: [{ from: 2586 }] },
-      { id: "prototype-tag-is", name: "Prototype TAG", tons: 1.5, slots: 1, type: "E", heat: 0, range: [0, 5, 9, 15], availability: [{ from: 2593 }] },
+      { id: "prototype-artemis-iv-is", name: "Prototype Artemis IV FCS", tons: 1, slots: 1, availability: [{ from: 2592 }], needs: "launcher", units: ["mech", "industrialmech", "vehicle", "aero", "smallcraft", "dropship", "ship", "building"], by: { vehicle: { slots: 0, note: "Support vehicle: +1 slots" }, aero: { slots: 0 }, smallcraft: { slots: 0 }, dropship: { slots: 0 }, ship: { slots: 0 }, building: { slots: 0 } } },
+      { id: "prototype-beagle-active-probe-is", name: "Prototype Beagle Active Probe", tons: 2, slots: 3, type: "E", heat: 0, range: [0, 0, 0, 4], availability: [{ from: 2560 }], units: ["mech", "industrialmech", "vehicle", "aero", "smallcraft", "dropship", "ship", "building"], by: { vehicle: { slots: 1, note: "Support vehicle: 3 slots" }, aero: { slots: 1 }, smallcraft: { slots: 1 }, dropship: { slots: 1 }, ship: { slots: 1 }, building: { slots: 1 } } },
+      { id: "prototype-case-is", name: "Prototype CASE", tons: 0.5, slots: 1, heat: 0, availability: [{ from: 2452 }], units: ["mech", "industrialmech", "vehicle", "aero"], by: { aero: { slots: 0 } } },
+      { id: "prototype-guardian-ecm-suite-is", name: "Prototype Guardian ECM Suite", tons: 2, slots: 3, type: "E", heat: 0, range: [0, 0, 0, 6], availability: [{ from: 2595 }], units: ["mech", "industrialmech", "vehicle", "aero", "smallcraft", "dropship", "building"], by: { vehicle: { slots: 1, note: "Support vehicle: 3 slots" }, aero: { slots: 1 }, smallcraft: { slots: 1 }, dropship: { slots: 1 }, building: { slots: 1 } } },
+      { id: "prototype-remote-sensors-is", name: "Prototype Remote Sensors", tons: 0.5, slots: 1, type: "E", heat: 0, range: [0, 0, 0, 0], availability: [{ from: 2586 }], units: ["mech", "industrialmech", "vehicle", "aero", "smallcraft", "dropship", "ship", "building"] },
+      { id: "prototype-tag-is", name: "Prototype TAG", tons: 1.5, slots: 1, type: "E", heat: 0, range: [0, 5, 9, 15], availability: [{ from: 2593 }], units: ["mech", "industrialmech", "vehicle", "aero", "smallcraft", "dropship", "ship", "building"] },
     ],
   },
   {
@@ -278,7 +278,7 @@ export const OTHER: EquipmentGroup[] = [
     defaults: { kind: "other", techBase: "clan", cite: { book: IO, page: 213 }, playCite: { book: IO, page: 212 }, checked: "page", rulesLevel: "experimental" },
     items: [
       // Wars of Reaving equipment
-      { id: "nova-cews-clan", name: "Nova CEWS", tons: 1.5, slots: 1, type: "E", heat: 2, damage: "0", range: [0, 0, 0, 3], availability: [{ from: 3065 }] },
+      { id: "nova-cews-clan", name: "Nova CEWS", tons: 1.5, slots: 1, type: "E", heat: 2, damage: "0", range: [0, 0, 0, 3], availability: [{ from: 3065 }], units: ["mech", "industrialmech", "vehicle", "aero", "smallcraft"] },
     ],
   },
   {
@@ -286,8 +286,8 @@ export const OTHER: EquipmentGroup[] = [
     items: [
       // RISC and Dark Age electronics and equipment
       { id: "risc-emergency-coolant-system-is", name: "RISC Emergency Coolant System", tons: 2, slots: 1, type: "PE, X", availability: [{ from: 3136 }] },
-      { id: "risc-viral-jammer-decoy-is", name: "RISC Viral Jammer (Decoy)", tons: 2.5, slots: 1, type: "E", heat: 12, range: [0, 0, 0, 17], availability: [{ from: 3135 }] },
-      { id: "risc-viral-jammer-homing-is", name: "RISC Viral Jammer (Homing)", tons: 2.5, slots: 1, type: "E", heat: 12, range: [0, 0, 0, 17], availability: [{ from: 3135 }] },
+      { id: "risc-viral-jammer-decoy-is", name: "RISC Viral Jammer (Decoy)", tons: 2.5, slots: 1, type: "E", heat: 12, range: [0, 0, 0, 17], availability: [{ from: 3135 }], units: ["mech", "industrialmech", "vehicle", "protomech", "building"] },
+      { id: "risc-viral-jammer-homing-is", name: "RISC Viral Jammer (Homing)", tons: 2.5, slots: 1, type: "E", heat: 12, range: [0, 0, 0, 17], availability: [{ from: 3135 }], units: ["mech", "industrialmech", "vehicle", "protomech", "building"] },
     ],
   },
   {
@@ -504,8 +504,8 @@ export const OTHER: EquipmentGroup[] = [
       { id: "radical-heat-sink-is", name: "Radical Heat Sink System", aliases: ["Radical Heat Sink"], tons: 4, slots: 3, availability: [{ from: 3122 }], rulesLevel: "advanced", locations: ["CT", "LT", "RT"], units: ["mech", "industrialmech", "aero"] },
       { id: "super-cooled-myomer-is", name: "Super-Cooled Myomer", aliases: ["RISC Super-Cooled Myomer"], tons: 0, slots: 1, availability: [{ from: 3132 }], rulesLevel: "experimental", perMech: 6, splitWeight: true, locations: ["LA", "RA", "LL", "RL", "LT", "RT"], locationsQuad: ["FLL", "FRL", "RLL", "RRL", "LT", "RT"] },
       { id: "risc-heat-sink-override-kit-is", name: "RISC Heat Sink Override Kit", aliases: ["Heat Sink Override Kit"], tons: 0, slots: 0, availability: [{ from: 3134 }], rulesLevel: "experimental" },
-      { id: "risc-laser-pulse-module-is", name: "RISC Laser Pulse Module", aliases: ["RISC Laser Module", "Laser Pulse Module"], tons: 1, slots: 1, availability: [{ from: 3137 }], rulesLevel: "experimental", needs: "laser" },
-      { id: "remote-drone-command-console-is", name: "Remote Drone Command Console", aliases: ["Remote Drone"], tons: 2, slots: 1, availability: [{ from: 3140 }], rulesLevel: "experimental" },
+      { id: "risc-laser-pulse-module-is", name: "RISC Laser Pulse Module", aliases: ["RISC Laser Module", "Laser Pulse Module"], tons: 1, slots: 1, availability: [{ from: 3137 }], rulesLevel: "experimental", needs: "laser", units: ["mech", "industrialmech", "vehicle", "protomech", "aero", "smallcraft", "dropship", "ship", "building"], by: { vehicle: { slots: 0, note: "Support vehicle: +1* slots" }, protomech: { slots: 0 }, aero: { slots: 0 }, smallcraft: { slots: 0 }, dropship: { slots: 0 }, ship: { slots: 0 }, building: { slots: 0 } } },
+      { id: "remote-drone-command-console-is", name: "Remote Drone Command Console", aliases: ["Remote Drone"], tons: 2, slots: 1, availability: [{ from: 3140 }], rulesLevel: "experimental", units: ["mech", "industrialmech", "aero"] },
     ],
   },
   {
@@ -1052,6 +1052,18 @@ export const OTHER: EquipmentGroup[] = [
       { id: "inf-support-pulse-laser-clan", name: "Support Pulse Laser", tons: 0.15, availability: [{ from: 2610 }], yearsInferred: true, infantry: { rating: "E", size: "Medium", mode: "Support", damageType: "E", flags: "B", baseRange: 3, damage: 0.81, ammoKg: 3, shots: "21/4", crew: "2", clip: "cells" } },
       { id: "inf-support-pulse-laser-heavy-clan", name: "Support Pulse Laser (Heavy)", tons: 0.3, availability: [{ from: 2615 }], yearsInferred: true, infantry: { rating: "E", size: "Medium", mode: "Support", damageType: "E", flags: "B", baseRange: 4, damage: 0.98, ammoKg: 3, shots: "18/3", crew: "4", clip: "cells" } },
       { id: "inf-support-pulse-laser-semi-portable-clan", name: "Support Pulse Laser (Semi-Portable)", tons: 0.04, availability: [{ from: 3059 }], infantry: { rating: "F", size: "Medium", mode: "Support", damageType: "E", baseRange: 2, damage: 0.55, ammoKg: 3, shots: "25/2", crew: "2", clip: "cells" } },
+    ],
+  },
+  {
+    // Combat vehicle turret (TechManual, Combat Vehicle construction printed p.98; cost "5,000 x Turret Tonnage", structural cost table printed
+    // p.279). A turret weighs a tenth of what is mounted in it, up to the half ton (formula "turret-tons"): what is mounted in it is every mount
+    // whose `linkedTo` is the turret mount's id, so a turret is one mount that holds others. It takes no item slot (it is a location, not an
+    // item). The book prints no introduction year, only ratings, so the span is a floor marked inferred. The vehicle records do not exist yet; the
+    // mechanism is exercised on the formula.
+    defaults: { kind: "other", cite: { book: "TechManual", page: 98 }, checked: "page", tons: "turret-tons", slots: 0, availability: [{ from: 1950 }], yearsInferred: true, units: ["vehicle"] },
+    items: [
+      { id: "turret-is", name: "Turret", techBase: "inner-sphere" },
+      { id: "turret-clan", name: "Turret", techBase: "clan" },
     ],
   },
 ];

@@ -90,6 +90,19 @@ export const FORMULAS: Record<string, Formula> = {
   "targeting-computer-clan": (_row, record, catalog) => Math.ceil(directFireTons(record, catalog) / 5),
   // A fuel tank takes a slot for each ton of its weight, or part of one (TechManual p. 244).
   "fuel-tank-slots": (row, record, catalog, mount) => Math.ceil(FORMULAS["fuel-tank-tons"]?.(row, record, catalog, mount) ?? 0),
+  // Turret (TechManual p. 98, Combat Vehicle construction): a tenth of the weight of everything mounted in it, up to the half ton. What is
+  // mounted in a turret is every mount whose `linkedTo` is the turret mount's id; a turret inside a turret is not counted.
+  "turret-tons": (_row, record, catalog, mount) => {
+    if (!mount) return 0;
+    let held = 0;
+    for (const other of record.mounts) {
+      if (other.linkedTo !== mount.id || other.id === mount.id) continue;
+      const row = other.equipmentId === null ? undefined : catalog.byId(other.equipmentId);
+      if (row?.tons === "turret-tons") continue;
+      held += catalog.factsOf(other, record)?.tons ?? 0;
+    }
+    return ceilHalf(held / 10) || 0; // an empty turret is 0, not -0
+  },
   // AES slots (TO:AUE p. 90): one per weight class of the 'Mech.
   "aes-slots": (_row, record) => weightClass(record.tons),
 };

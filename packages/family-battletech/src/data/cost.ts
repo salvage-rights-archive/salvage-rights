@@ -67,6 +67,7 @@ export const COCKPIT_COST: Sourced & { rows: Record<string, { cost: number; cite
     primitive: { cost: 100_000, cite: { book: IO, page: 215 } },
     "superheavy-tripod": { cost: 500_000, cite: { book: IO, page: 217 } },
     superheavy: { cost: 300_000, cite: { book: IO, page: 215 } },
+    "superheavy-industrial": { cost: 200_000, cite: { book: IO, page: 215 } },
     quadvee: { cost: 375_000, cite: { book: IO, page: 215 } },
   },
 };
@@ -134,7 +135,7 @@ export const ENGINE_COST: Sourced & { divisor: number; rows: Record<string, { pe
 export const GYRO_COST: Sourced & { rows: Record<string, { perGyroTon: number }> } = {
   cite: { book: TM, page: 278 },
   checked: "page",
-  rows: { standard: { perGyroTon: 300_000 }, compact: { perGyroTon: 400_000 }, "heavy-duty": { perGyroTon: 500_000 }, xl: { perGyroTon: 750_000 } },
+  rows: { standard: { perGyroTon: 300_000 }, compact: { perGyroTon: 400_000 }, "heavy-duty": { perGyroTon: 500_000 }, xl: { perGyroTon: 750_000 }, superheavy: { perGyroTon: 500_000 } },
 };
 /** Jump jets: perJetSquared x (number of jets)^2 x unit tonnage (printed p.278, errata v8.0 only fixes the exponent's typesetting). */
 export const JUMP_JET_COST: Sourced & { rows: Record<string, { perJetSquared: number }> } = {
@@ -212,7 +213,8 @@ export const CONFIGURATION_COST: Record<string, { structureFactor?: number; conv
 // (printed p.282). A catalog row with no key here is reported as unpriced, never guessed.
 // ---------------------------------------------------------------------------------------------------------------
 /** C-bills each; or per whole ton of the item's weight; or per ton of the 'Mech (the book's "xTT" formulas: spikes are 50 x tonnage). */
-export type Price = number | { perTon: number } | { perUnitTon: number } | { perRating: number };
+export type Price = number | { perTon: number } | { perUnitTon: number } | { perRating: number } | { perWeight: number };
+// `perWeight` is C-bills for each ton of the item's own weight, not rounded to whole tons (a turret: 5,000 x the turret's tonnage).
 interface PriceGroup extends Sourced {
   prices: Record<string, Price>;
 }
@@ -458,6 +460,12 @@ export const EQUIPMENT_COST: PriceGroup[] = [
     cite: { book: TM, page: 297 },
     checked: "page",
     prices: { "ba-ap-gauss-rifle": 10000, "ba-bearhunter-superheavy-ac": 11250, "ba-er-micro-laser": 10000, "ba-micro-pulse-laser": 12500, "ba-heavy-small-laser": 20000, "ba-heavy-medium-laser": 100000, "ba-bomb-rack": 30000, "ba-advanced-srm-1": 15000, "ba-advanced-srm-2": 30000, "ba-advanced-srm-3": 45000, "ba-advanced-srm-4": 60000, "ba-advanced-srm-5": 75000, "ba-advanced-srm-6": 90000 },
+  },
+  {
+    // TechManual p.279 (Combat Vehicle structural costs: a turret is 5,000 x its own tonnage; p.280 prints the same for a support vehicle)
+    cite: { book: TM, page: 279 },
+    checked: "page",
+    prices: { turret: { perWeight: 5_000 } },
   },
   {
     // TechManual pp.298-301 (Conventional Infantry Weapons: the weapon's price; the clip's price is in the row's `infantry.clip`)

@@ -108,6 +108,15 @@ describe("the rules check", () => {
   });
 });
 
+describe("superheavy parts", () => {
+  it("are data only: no BattleMech, tripod or Show everything choice offers a superheavy cockpit or gyro", () => {
+    const parts: [PartKind, string][] = [["cockpit", "superheavy"], ["cockpit", "superheavy-industrial"], ["cockpit", "superheavy-tripod"], ["gyro", "superheavy"]];
+    for (const configuration of ["biped", "quad", "tripod"]) {
+      for (const [kind, key] of parts) expect(partAvailable(kind, key, record({ configuration, rulesLevel: "unlimited", year: 3140 }), true), `${key} on a ${configuration}`).toBe(false);
+    }
+  });
+});
+
 describe("equipment groups", () => {
   it("never offers a BattleMech an item whose `units` leaves out the BattleMech, with or without Show everything", () => {
     const row = { ...catalog.byId("medium-laser-is")!, units: ["vehicle" as const] };

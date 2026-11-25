@@ -282,6 +282,19 @@ describe("conventional infantry weapons", () => {
   });
 });
 
+describe("Interstellar Operations: Alternate Eras unit-type columns", () => {
+  // The Space columns of the Additional Alternate Era table (printed pp. 211, 213, 215): NA leaves the unit type out; a number that differs
+  // from the 'Mech's is the slots on that unit type.
+  it.each([
+    ["primitive-prototype-ac-5-is", ["mech", "industrialmech", "vehicle", "aero", "smallcraft", "dropship", "ship", "building"], { vehicle: { slots: 1, note: "Support vehicle: 4 slots" }, aero: { slots: 1 } }],
+    ["prototype-case-is", ["mech", "industrialmech", "vehicle", "aero"], { aero: { slots: 0 } }],
+  ])("%s may be mounted only on the unit types whose column is not NA", async (id, units, by) => {
+    const row = (await loadCatalog()).byId(id);
+    expect(row?.units).toEqual(units);
+    expect(row?.by).toMatchObject(by);
+  });
+});
+
 describe("EDITIONS", () => {
   it("starts with total-warfare, a play book and a construction book", () => {
     expect(EDITIONS[0]?.id).toBe("total-warfare");
