@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_EDITION, EDITIONS } from "../data/editions";
-import { ammoLines, createCatalog, expand, inventoryLines, loadCatalog, type EquipmentGroup } from "./catalog";
+import { ammoLines, createCatalog, expand, inventoryLines, loadCatalog, podMountable, type EquipmentGroup } from "./catalog";
 import { bipedRecord, mount } from "./fixtures";
 
 const TM = { book: "TechManual", page: 341 };
@@ -307,6 +307,22 @@ describe("Interstellar Operations: Alternate Eras unit-type columns", () => {
     const row = (await loadCatalog()).byId(id);
     expect(row?.units).toEqual(units);
     expect(row?.by).toMatchObject(by);
+  });
+});
+
+describe("rows an OmniMech cannot pod-mount (TechManual p.53, TO:AUE pp.87-112 and 148-160, IO:AE pp.83-88)", () => {
+  it("are flagged pod: false with the page that says so, and the items the books let a pod carry are not", async () => {
+    const catalog = await loadCatalog();
+    const flagged = catalog.all().filter((row) => row.pod === false);
+    expect(flagged.every((row) => row.podCite !== undefined)).toBe(true);
+    expect(flagged.map((row) => [row.id, row.podCite?.page])).toEqual(
+      expect.arrayContaining([["masc-is", 53], ["masc-clan", 53], ["tsm-is", 53], ["aes-arm-is", 90], ["blue-shield-is", 108], ["partial-wing-clan", 104], ["chameleon-lps-is", 112], ["null-signature-system-is", 148], ["void-signature-system-is", 160], ["harjel-iii-clan", 83], ["risc-emergency-coolant-system-is", 86], ["super-cooled-myomer-is", 88]]),
+    );
+    for (const id of ["supercharger-is", "case-ii-is", "radical-heat-sink-is", "jump-jet-is", "double-heat-sink-clan", "case-is"]) {
+      const row = catalog.byId(id);
+      expect([id, row !== undefined && podMountable(row)]).toEqual([id, true]);
+    }
+    expect(() => expand([{ defaults: { kind: "other", techBase: "clan", tons: 1, slots: 1, availability: [{ from: 3000 }], cite: { book: "b", page: 1 }, checked: "page" }, items: [{ id: "x-clan", name: "X", pod: false }] }])).toThrow("no page says so");
   });
 });
 

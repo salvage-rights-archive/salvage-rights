@@ -4,7 +4,7 @@ import { EDITIONS } from "../data/editions";
 import { AMMUNITION } from "../data/equipment/ammunition";
 import { OTHER } from "../data/equipment/other";
 import { WEAPONS } from "../data/equipment/weapons";
-import { configurationChoices, equipmentAvailable, partChoices, typeChoices } from "./availability";
+import { configurationChoices, equipmentAvailable, partChoices, typeAvailable, typeChoices } from "./availability";
 import { battleValue } from "./bv";
 import { createCatalog, expand } from "./catalog";
 import { runChecks } from "./checks";
@@ -159,6 +159,17 @@ describe("an IndustrialMech", () => {
       choices({ year: 2900, techBase: "clan" }),
       choices({ year: 2400, unitType: "mech" }),
     ]).toEqual([["mech", "industrialmech"], ["mech"], ["mech", "omnimech (disabled)"], ["mech", "industrialmech", "omnimech (disabled)"], ["mech"]]); // mixed: no IndustrialMech, but the Clans' OmniMech
+  });
+
+  it("offers an OmniMech from its production year, and from the Clan prototype year only at Experimental level, labelled prototype (IO:AE p.45)", () => {
+    expect([
+      typeAvailable("omnimech", { techBase: "clan", year: 2855, rulesLevel: "standard" }),
+      typeAvailable("omnimech", { techBase: "clan", year: 2855, rulesLevel: "experimental" }),
+      typeAvailable("omnimech", { techBase: "clan", year: 2856, rulesLevel: "standard" }),
+      typeAvailable("omnimech", { techBase: "clan", year: 2853, rulesLevel: "experimental" }),
+      typeAvailable("omnimech", { techBase: "inner-sphere", year: 3051, rulesLevel: "experimental" }),
+      typeAvailable("omnimech", { techBase: "inner-sphere", year: 3052, rulesLevel: "standard" }),
+    ]).toEqual([false, true, true, false, false, true]);
   });
 
   it("has the Battle Value of the book's DemolitionMech, and a tenth less offense without Advanced Fire Control", () => {

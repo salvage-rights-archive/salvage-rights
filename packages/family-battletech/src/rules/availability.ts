@@ -188,7 +188,18 @@ export function typeAvailable(id: MechType, record: Subject, everything = false)
   if (!row) return false;
   if (!levelAtLeast(recordLevel(record), row.rulesLevel)) return false;
   if (row.industrial && !row.industrial.techBases.some((base) => base === record.techBase)) return false; // not mixed (TechManual p.64)
-  return everything || typeInTime(row, record);
+  return everything || typeInTime(row, record) || (levelAtLeast(recordLevel(record), "experimental") && typeIsPrototype(row, record));
+}
+
+/** True when the type is not yet in production for the record but a prototype exists (the type row's `prototypeYear`, the Clan one for a Clan
+ * record): the window reaches the prototype year and starts before the production year. A type with no prototype year is never a prototype. */
+export function typeIsPrototype(row: MechTypeRow, record: Pick<Subject, "techBase" | "year" | "era">): boolean {
+  const window = windowOf(record);
+  if (window === null || typeInTime(row, record)) return false;
+  const early = (proto: number | undefined, spans: Span[] | undefined) => proto !== undefined && window.to >= proto && spans !== undefined && spans.some((s) => window.from < s.from);
+  const forIs = early(row.prototypeYear, row.availability);
+  const forClan = early(row.clanPrototypeYear, row.clanAvailability ?? row.availability);
+  return record.techBase === "inner-sphere" ? forIs : record.techBase === "clan" ? forClan : forIs || forClan;
 }
 
 export interface TypeChoice {
@@ -203,7 +214,10 @@ export function typeChoices(record: Subject): TypeChoice[] {
   const current = mechTypeOf(record).id;
   const out: TypeChoice[] = [];
   for (const row of MECH_TYPES) {
-    if (typeAvailable(row.id, record)) out.push(row.ready ? { id: row.id, label: row.label } : { id: row.id, label: `${row.label} (not built yet)`, disabled: row.notReady ?? "Its rules are not built yet." });
+    if (typeAvailable(row.id, record)) {
+      const label = typeIsPrototype(row, record) ? `${row.label} (prototype)` : row.label;
+      out.push(row.ready ? { id: row.id, label } : { id: row.id, label: `${row.label} (not built yet)`, disabled: row.notReady ?? "Its rules are not built yet." });
+    }
     else if (row.id === current) out.push({ id: row.id, label: row.label + NOT_HERE });
   }
   return out;

@@ -1041,7 +1041,23 @@ export interface MechTypeRow {
   availability: Span[];
   clanAvailability?: Span[];
   tonnage: { min: number; max: number; step: number; cite: Cite };
+  /** The year a first prototype exists, where the book prints one beside the production year (`availability`): the Inner Sphere's and the
+   * Clans'. Before production and after the prototype year the type is offered only at Experimental level, labelled prototype. */
+  prototypeYear?: number;
+  clanPrototypeYear?: number;
   industrial?: IndustrialRules;
+  omni?: OmniRules;
+}
+/** What the books say about an OmniMech (TechManual pp.19-20, 44-58, read against the page image except where `checked` says text). */
+export interface OmniRules {
+  /** The body types an OmniMech may have; a Land-Air 'Mech and a primitive 'Mech may not (IO:AE pp.105, 108, 117), and an IndustrialMech never. */
+  bodies: string[];
+  bodyCite: Cite;
+  /** What the base holds, whatever the configuration: the chassis parts and the armor (pp.19-20 name them; the pages after give each part's rule). */
+  fixed: { part: string; rule: string; cite: Cite }[];
+  /** What a configuration alone may carry or change. */
+  pod: { part: string; rule: string; cite: Cite }[];
+  checked: Checked;
 }
 const TM_P = (page: number): Cite => ({ book: "TechManual", page });
 export const MECH_TYPES: MechTypeRow[] = [
@@ -1129,8 +1145,33 @@ export const MECH_TYPES: MechTypeRow[] = [
     cite: TM_P(19),
     availabilityCite: { book: IO_AE, page: 45 },
     checked: "page",
+    // Omni Technology, Construction Options (IO:AE p.45, page): prototype ~2854 (Clan Coyote, Clan Star Adder), production 2856 (Clan Coyote),
+    // common 2864, "IS Intro: 3052" (Draconis Combine); the Inner Sphere prints no earlier prototype. TechManual p.292 prints 3052 / 2854 as the
+    // introduction dates. Production is the gate; the Clan prototype year opens it at Experimental level.
     availability: [{ from: 3052 }],
     clanAvailability: [{ from: 2856 }],
+    clanPrototypeYear: 2854,
     tonnage: { min: 20, max: 100, step: 5, cite: TM_P(46) },
+    omni: {
+      bodies: ["biped", "quad", "tripod"],
+      bodyCite: TM_P(44),
+      checked: "page",
+      fixed: [
+        { part: "Structure", rule: "Type and slots per location are set in the base; the slots may shift within their location.", cite: TM_P(47) },
+        { part: "Engine", rule: "Type, rating and size; side-torso engine slots may shift within the torso.", cite: TM_P(48) },
+        { part: "Gyro and cockpit", rule: "May not be altered.", cite: TM_P(50) },
+        { part: "Actuators", rule: "Shoulder, upper arm, hip, upper and lower leg and foot are fixed; the lower arm and hand are pod items.", cite: TM_P(45) },
+        { part: "Armor", rule: "Type, tons, points in every location (front and rear) and its slots; only Modular Armor may be a pod.", cite: TM_P(55) },
+        { part: "Myomer", rule: "MASC and Triple-Strength Myomer are base only.", cite: TM_P(53) },
+        { part: "Heat sinks", rule: "The base keeps its sinks and their type; engine-held sinks are free of slots.", cite: TM_P(53) },
+        { part: "Jump jets", rule: "A jet in the base is permanent; it may shift within its location.", cite: TM_P(51) },
+      ],
+      pod: [
+        { part: "Weapons, ammunition, equipment", rule: "Pod items by default; any may be made fixed in the base.", cite: TM_P(57) },
+        { part: "Heat sinks", rule: "Extra sinks of the base's type, every one of them taking slots.", cite: TM_P(54) },
+        { part: "Jump jets", rule: "More jets, up to the maximum for the jet type, if the base has fewer.", cite: TM_P(51) },
+        { part: "Lower arm and hand", rule: "May be removed to free slots; both must go for a Gauss rifle, autocannon or PPC in the arm.", cite: TM_P(45) },
+      ],
+    },
   },
 ];
