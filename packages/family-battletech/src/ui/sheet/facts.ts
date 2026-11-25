@@ -6,7 +6,8 @@ import { inventoryLines, ammoLines } from "../../rules/catalog";
 import type { Catalog, InventoryLine } from "../../rules/catalog";
 import { battleValue as battleValueOf } from "../../rules/bv";
 import { levelOfRecord, levelRow } from "../../rules/levels";
-import { layout as buildLayout, locationName, structurePoints, walkMP } from "../../rules/mech";
+import { layout as buildLayout, locationName, structurePoints, walkMP, weights } from "../../rules/mech";
+import { configurationLevel } from "../../rules/omni";
 import { movementPenalty, penalisedMovement } from "../../rules/walk";
 import type { Layout, LocationCode, MechRecord } from "../../rules/mech";
 
@@ -83,7 +84,10 @@ export function sheetFacts(record: MechRecord, catalog: Catalog): SheetFacts {
   const structure = structurePoints(record);
   const codes = layout.supported ? layout.locations : (Object.keys(record.armor) as LocationCode[]);
   const imported = record.source?.values.battleValue;
-  const computed = imported === undefined ? battleValueOf(record, catalog) : undefined;
+  const isBase = record.omni?.isBase === true;
+  const computed = imported === undefined && !isBase ? battleValueOf(record, catalog) : undefined;
+  // An OmniMech configuration prints the level of its contents, never below Standard; the base prints its pod space where a Battle Value would go.
+  const total = isBase ? weights(record, catalog.factsOf).total : null;
   return {
     title: sheetTitle(record),
     walk: moved === null ? DASH : String(moved.walk),
@@ -93,12 +97,12 @@ export function sheetFacts(record: MechRecord, catalog: Catalog): SheetFacts {
     tons: String(record.tons),
     techBase: Object.hasOwn(TECH_BASE_NAMES, record.techBase) ? (TECH_BASE_NAMES[record.techBase] ?? record.techBase) : record.techBase,
     edition: editionLine(record.editionId),
-    level: levelRow(levelOfRecord(record, catalog)).label,
+    level: levelRow(record.omni ? configurationLevel(record, catalog) : levelOfRecord(record, catalog)).label,
     year: record.year === null ? undefined : String(record.year),
     inventory: inventoryLines(record, catalog),
     ammo,
-    battleValue: imported !== undefined ? imported.toLocaleString("en-US") : `${computed?.complete === false ? "at least " : ""}${(computed?.total ?? 0).toLocaleString("en-US")}`,
-    battleValueFrom: imported !== undefined ? "mordel.net" : "calculated, pilot 4/5",
+    battleValue: isBase ? DASH : imported !== undefined ? imported.toLocaleString("en-US") : `${computed?.complete === false ? "at least " : ""}${(computed?.total ?? 0).toLocaleString("en-US")}`,
+    battleValueFrom: isBase ? (total === null ? "the base has none" : `the base has none; pod space ${String(Math.round((record.tons - total) * 1000) / 1000)} tons`) : imported !== undefined ? "mordel.net" : "calculated, pilot 4/5",
     heatSinks: {
       line: `${kind?.label ?? sinks.type} Heat Sinks: ${String(sinks.count)} (${dissipation})`,
       summary: `${kind?.label ?? sinks.type}, ${String(sinks.count)} (${dissipation})`,

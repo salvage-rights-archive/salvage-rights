@@ -2,8 +2,9 @@ import "fake-indexeddb/auto";
 import { IDBFactory } from "fake-indexeddb";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { openStore } from "@salvage-rights/shared";
-import { bipedRecord } from "../rules/fixtures";
-import { fromMechFile, isMechRecord, openFamilyStorage, toMechFile } from "./storage";
+import { bipedRecord, gladiator } from "../rules/fixtures";
+import { resolveConfiguration } from "../rules/omni";
+import { fromMechFile, fromOmniFile, isMechRecord, openFamilyStorage, toMechFile, toOmniFile } from "./storage";
 
 beforeEach(() => {
   globalThis.indexedDB = new IDBFactory();
@@ -126,5 +127,28 @@ describe("mech files", () => {
       await expect(storage.save(record)).rejects.toThrow("cannot be saved");
     }
     expect(await storage.list()).toEqual([]);
+  });
+
+  it("keeps a whole chassis under omni:<id> beside the plain 'Mechs, round-trips its file, and reports one it cannot read", async () => {
+    const storage = await openFamilyStorage();
+    const raw = await openStore("battletech");
+    await storage.save(bipedRecord({ id: "plain" }));
+    await storage.saveOmni(gladiator());
+    await raw.set("omni:broken", { chassis: { ...gladiator(), configurations: [] }, savedAt: "2026-01-01T00:00:00Z" });
+    const list = await storage.list();
+    expect(list.map((e) => `${e.kind}:${e.id}`).sort()).toEqual(["mech:plain", "omni:broken", "omni:gladiator"]);
+    expect(list.find((e) => e.id === "broken")?.unreadable).toMatch(/OmniMech/);
+    expect((await storage.get("gladiator"))?.chassis).toEqual(gladiator());
+    expect(fromOmniFile(JSON.parse(JSON.stringify(toOmniFile(gladiator()))))).toEqual({ ok: true, chassis: gladiator() });
+    expect(fromOmniFile({ ...toOmniFile(gladiator()), kind: "mech" }).ok).toBe(false);
+    expect(fromOmniFile({ ...toOmniFile(gladiator()), chassis: { ...gladiator(), tons: "95" } }).ok).toBe(false);
+    // A plain record kept with an omni link (a detached configuration) is still a plain record; a malformed link is refused.
+    const detached = resolveConfiguration(gladiator(), "prime");
+    expect(isMechRecord(detached)).toBe(true);
+    expect(isMechRecord({ ...detached, omni: { chassisId: 1 } })).toBe(false);
+    await storage.convertToOmni({ ...gladiator(), id: "plain" });
+    expect((await storage.get("plain"))?.kind).toBe("omni");
+    await storage.remove("plain");
+    expect(await storage.get("plain")).toBeUndefined();
   });
 });

@@ -100,9 +100,9 @@ export const OTHER: EquipmentGroup[] = [
     defaults: { kind: "other", techBase: "inner-sphere", cite: { book: "TechManual", page: 52 }, checked: "page" },
     items: [
       // MASC (Inner Sphere); weight and slots are a share of the 'Mech's tonnage
-      { id: "masc-is", name: "MASC", aliases: ["Myomer Accelerator Signal Circuitry"], tons: "masc-is", slots: "masc-is", availability: [{ from: 2740, to: 2795 }, { from: 3035 }], prototypeYear: 2730 },
+      { id: "masc-is", pod: false, podCite: { book: "TechManual", page: 53 }, name: "MASC", aliases: ["Myomer Accelerator Signal Circuitry"], tons: "masc-is", slots: "masc-is", availability: [{ from: 2740, to: 2795 }, { from: 3035 }], prototypeYear: 2730 },
       // Triple-Strength Myomer: six one-slot items, 0 tons, placed anywhere
-      { id: "tsm-is", name: "Triple-Strength Myomer", aliases: ["TSM"], tons: 0, slots: 1, availability: [{ from: 3050 }], prototypeYear: 3028, perMech: 6, checked: "text" },
+      { id: "tsm-is", pod: false, podCite: { book: "TechManual", page: 53 }, name: "Triple-Strength Myomer", aliases: ["TSM"], tons: 0, slots: 1, availability: [{ from: 3050 }], prototypeYear: 3028, perMech: 6, checked: "text" },
       // Industrial Triple-Strength Myomer (IndustrialMech construction, printed p.70, table and text read against the page image):
       // twelve one-slot items, 0 tons, placed anywhere and not contiguous; Inner Sphere IndustrialMechs only. Production 3045 (IO:AE printed p.42).
       { id: "industrial-tsm-is", name: "Industrial Triple-Strength Myomer", aliases: ["Industrial TSM"], tons: 0, slots: 1, availability: [{ from: 3045 }], prototypeYear: 3035, perMech: 12, units: ["industrialmech"], cite: { book: "TechManual", page: 70 } },
@@ -212,7 +212,7 @@ export const OTHER: EquipmentGroup[] = [
     defaults: { kind: "other", techBase: "clan", cite: { book: "TechManual", page: 52 }, checked: "page", yearsInferred: true },
     items: [
       // MASC (Clan); weight and slots are a share of the 'Mech's tonnage
-      { id: "masc-clan", name: "MASC", aliases: ["Myomer Accelerator Signal Circuitry"], tons: "masc-clan", slots: "masc-clan", availability: [{ from: 2827 }], prototypeYear: 2820, yearsInferred: false },
+      { id: "masc-clan", pod: false, podCite: { book: "TechManual", page: 53 }, name: "MASC", aliases: ["Myomer Accelerator Signal Circuitry"], tons: "masc-clan", slots: "masc-clan", availability: [{ from: 2827 }], prototypeYear: 2820, yearsInferred: false },
     ],
   },
   {
@@ -274,7 +274,7 @@ export const OTHER: EquipmentGroup[] = [
     defaults: { kind: "other", techBase: "inner-sphere", cite: { book: IO, page: 213 }, playCite: { book: IO, page: 212 }, checked: "page", rulesLevel: "experimental" },
     items: [
       // Late Succession Wars prototype: six one-slot items, 0 tons, placed anywhere (as the standard Triple-Strength Myomer)
-      { id: "prototype-triple-strength-myomer-is", name: "Prototype Triple-Strength Myomer", tons: 0, slots: 1, availability: [{ from: 3028 }], perMech: 6 },
+      { id: "prototype-triple-strength-myomer-is", pod: false, podCite: { book: "TechManual", page: 53 }, name: "Prototype Triple-Strength Myomer", tons: 0, slots: 1, availability: [{ from: 3028 }], perMech: 6 },
     ],
   },
   {
@@ -288,7 +288,7 @@ export const OTHER: EquipmentGroup[] = [
     defaults: { kind: "other", techBase: "inner-sphere", cite: { book: IO, page: 215 }, playCite: { book: IO, page: 214 }, checked: "page", rulesLevel: "experimental" },
     items: [
       // RISC and Dark Age electronics and equipment
-      { id: "risc-emergency-coolant-system-is", name: "RISC Emergency Coolant System", tons: 2, slots: 1, type: "PE, X", availability: [{ from: 3136 }] },
+      { id: "risc-emergency-coolant-system-is", pod: false, podCite: { book: IO, page: 86 }, name: "RISC Emergency Coolant System", tons: 2, slots: 1, type: "PE, X", availability: [{ from: 3136 }] },
       { id: "risc-viral-jammer-decoy-is", name: "RISC Viral Jammer (Decoy)", tons: 2.5, slots: 1, type: "E", heat: 12, range: [0, 0, 0, 17], availability: [{ from: 3135 }], units: ["mech", "industrialmech", "vehicle", "protomech", "building"] },
       { id: "risc-viral-jammer-homing-is", name: "RISC Viral Jammer (Homing)", tons: 2.5, slots: 1, type: "E", heat: 12, range: [0, 0, 0, 17], availability: [{ from: 3135 }], units: ["mech", "industrialmech", "vehicle", "protomech", "building"] },
     ],
@@ -388,10 +388,10 @@ export const OTHER: EquipmentGroup[] = [
     defaults: { kind: "other", techBase: "inner-sphere", cite: { book: TO, page: 217 }, checked: "page", rulesLevel: "experimental" },
     items: [
       // Actuator Enhancement System (rules p. 90): weight and slots by the 'Mech, an arm or all legs
-      { id: "aes-arm-is", name: "Actuator Enhancement System (Arm)", aliases: ["AES", "Actuator Enhancement System", "AES (Arm)"], tons: "aes-tons", slots: "aes-slots", availability: [{ from: 3108 }], prototypeYear: 3070, locations: ["LA", "RA"], locationsQuad: [], cite: { book: TO, page: 217 } },
-      { id: "aes-leg-is", name: "Actuator Enhancement System (Leg)", aliases: ["AES (Leg)"], tons: "aes-tons", slots: "aes-slots", availability: [{ from: 3108 }], prototypeYear: 3070, locations: ["LL", "RL"], locationsQuad: ["FLL", "FRL", "RLL", "RRL"], perMech: 2, perMechQuad: 4 },
+      { id: "aes-arm-is", pod: false, podCite: { book: TO, page: 90 }, name: "Actuator Enhancement System (Arm)", aliases: ["AES", "Actuator Enhancement System", "AES (Arm)"], tons: "aes-tons", slots: "aes-slots", availability: [{ from: 3108 }], prototypeYear: 3070, locations: ["LA", "RA"], locationsQuad: [], cite: { book: TO, page: 217 } },
+      { id: "aes-leg-is", pod: false, podCite: { book: TO, page: 90 }, name: "Actuator Enhancement System (Leg)", aliases: ["AES (Leg)"], tons: "aes-tons", slots: "aes-slots", availability: [{ from: 3108 }], prototypeYear: 3070, locations: ["LL", "RL"], locationsQuad: ["FLL", "FRL", "RLL", "RRL"], perMech: 2, perMechQuad: 4 },
       // Blue Shield (p. 108): 3 tons in all, one slot in every location but the head
-      { id: "blue-shield-is", name: "Blue Shield Particle Field Damper", aliases: ["Blue Shield", "Blue Shield PFD"], tons: 3, slots: 1, availability: [{ from: 3053 }], perMech: 7, splitWeight: true, locations: ["CT", "LT", "RT", "LA", "RA", "LL", "RL"], locationsQuad: ["CT", "LT", "RT", "FLL", "FRL", "RLL", "RRL"], units: ["mech", "industrialmech", "vehicle", "aero"] },
+      { id: "blue-shield-is", pod: false, podCite: { book: TO, page: 108 }, name: "Blue Shield Particle Field Damper", aliases: ["Blue Shield", "Blue Shield PFD"], tons: 3, slots: 1, availability: [{ from: 3053 }], perMech: 7, splitWeight: true, locations: ["CT", "LT", "RT", "LA", "RA", "LL", "RL"], locationsQuad: ["CT", "LT", "RT", "FLL", "FRL", "RLL", "RRL"], units: ["mech", "industrialmech", "vehicle", "aero"] },
       // Booby Trap (p. 109): a tenth of the unit, in the engine's location
       { id: "booby-trap-is", name: "Booby Trap", tons: "booby-trap", slots: 1, availability: [{ from: 1950 }], locations: ["CT"], units: ["mech", "industrialmech", "vehicle", "aero", "smallcraft", "dropship", "ship", "building"] },
       // Claws, lance, mace (pp. 99-102): a ton and a slot for every 15, 20 or 10 tons of the 'Mech
@@ -401,7 +401,7 @@ export const OTHER: EquipmentGroup[] = [
       // Mechanical jump boosters (p. 104): 5 percent of the 'Mech for each Jumping MP chosen, two slots in each leg
       { id: "mechanical-jump-booster-is", name: "Mechanical Jump Booster", aliases: ["Mechanical Jump Boosters", "Jump Booster"], tons: "jump-booster", slots: 2, availability: [{ from: 3083 }], prototypeYear: 3060, locations: ["LL", "RL"], locationsQuad: ["FLL", "FRL", "RLL", "RRL"], perMech: 2, perMechQuad: 4, splitWeight: true, amount: { unit: "Jumping MP", min: 1, step: 1 } },
       // Partial wing (p. 104): 7 percent of the 'Mech, four slots in each side torso
-      { id: "partial-wing-is", name: "Partial Wing", aliases: ["Partial Wing (IS)", "Partial Wing ('Mech)"], tons: "partial-wing-is", slots: 4, availability: [{ from: 3074 }], locations: ["LT", "RT"], perMech: 2, splitWeight: true },
+      { id: "partial-wing-is", pod: false, podCite: { book: TO, page: 104 }, name: "Partial Wing", aliases: ["Partial Wing (IS)", "Partial Wing ('Mech)"], tons: "partial-wing-is", slots: 4, availability: [{ from: 3074 }], locations: ["LT", "RT"], perMech: 2, splitWeight: true },
       // UMU (p. 107): placed and weighed as jump jets
       { id: "umu-is", name: "UMU", aliases: ["UMUs", "Underwater Maneuvering Unit"], tons: "jump-jet", slots: 1, availability: [{ from: 3066 }], locations: ["CT", "LT", "RT", "LL", "RL", "FLL", "FRL", "RLL", "RRL"], checked: "page" },
     ],
@@ -409,11 +409,11 @@ export const OTHER: EquipmentGroup[] = [
   {
     defaults: { kind: "other", techBase: "clan", cite: { book: TO, page: 217 }, checked: "page", rulesLevel: "experimental" },
     items: [
-      { id: "aes-arm-clan", name: "Actuator Enhancement System (Arm)", aliases: ["AES", "Actuator Enhancement System", "AES (Arm)"], tons: "aes-tons", slots: "aes-slots", availability: [{ from: 3108 }], prototypeYear: 3070, locations: ["LA", "RA"], locationsQuad: [] },
-      { id: "aes-leg-clan", name: "Actuator Enhancement System (Leg)", aliases: ["AES (Leg)"], tons: "aes-tons", slots: "aes-slots", availability: [{ from: 3108 }], prototypeYear: 3070, locations: ["LL", "RL"], locationsQuad: ["FLL", "FRL", "RLL", "RRL"], perMech: 2, perMechQuad: 4 },
+      { id: "aes-arm-clan", pod: false, podCite: { book: TO, page: 90 }, name: "Actuator Enhancement System (Arm)", aliases: ["AES", "Actuator Enhancement System", "AES (Arm)"], tons: "aes-tons", slots: "aes-slots", availability: [{ from: 3108 }], prototypeYear: 3070, locations: ["LA", "RA"], locationsQuad: [] },
+      { id: "aes-leg-clan", pod: false, podCite: { book: TO, page: 90 }, name: "Actuator Enhancement System (Leg)", aliases: ["AES (Leg)"], tons: "aes-tons", slots: "aes-slots", availability: [{ from: 3108 }], prototypeYear: 3070, locations: ["LL", "RL"], locationsQuad: ["FLL", "FRL", "RLL", "RRL"], perMech: 2, perMechQuad: 4 },
       // Talons (p. 102): a ton for every 15 tons of the 'Mech in all, two slots in each leg
       { id: "talons-clan", name: "Talons", aliases: ["Talons [Clan]"], tons: "ceil-tons-15", slots: 2, availability: [{ from: 3087 }], prototypeYear: 3072, locations: ["LL", "RL"], locationsQuad: ["FLL", "FRL", "RLL", "RRL"], perMech: 2, perMechQuad: 4, splitWeight: true },
-      { id: "partial-wing-clan", name: "Partial Wing", aliases: ["Partial Wing (C)", "Partial Wing [Clan]", "Partial Wing (Clan)"], tons: "partial-wing-clan", slots: 3, availability: [{ from: 3085 }], prototypeYear: 3067, locations: ["LT", "RT"], perMech: 2, splitWeight: true },
+      { id: "partial-wing-clan", pod: false, podCite: { book: TO, page: 104 }, name: "Partial Wing", aliases: ["Partial Wing (C)", "Partial Wing [Clan]", "Partial Wing (Clan)"], tons: "partial-wing-clan", slots: 3, availability: [{ from: 3085 }], prototypeYear: 3067, locations: ["LT", "RT"], perMech: 2, splitWeight: true },
       { id: "umu-clan", name: "UMU", aliases: ["UMUs", "Underwater Maneuvering Unit"], tons: "jump-jet", slots: 1, availability: [{ from: 3072 }], prototypeYear: 3061, locations: ["CT", "LT", "RT", "LL", "RL", "FLL", "FRL", "RLL", "RRL"] },
     ],
   },
@@ -421,11 +421,11 @@ export const OTHER: EquipmentGroup[] = [
     defaults: { kind: "other", techBase: "inner-sphere", cite: { book: TO, page: 219 }, checked: "page", rulesLevel: "experimental" },
     items: [
       // Chameleon Light Polarization Shield (p. 112): six slots, one in each limb and each side torso, no weight
-      { id: "chameleon-lps-is", name: "Chameleon Light Polarization Shield", aliases: ["Chameleon LPS", "Chameleon Light Polarization", "Chameleon Light Polarization Shield (LPS)"], tons: 0, slots: 1, availability: [{ from: 2630 }], perMech: 6, splitWeight: true, locations: ["LA", "RA", "LL", "RL", "LT", "RT"], locationsQuad: ["FLL", "FRL", "RLL", "RRL", "LT", "RT"] },
+      { id: "chameleon-lps-is", pod: false, podCite: { book: TO, page: 112 }, name: "Chameleon Light Polarization Shield", aliases: ["Chameleon LPS", "Chameleon Light Polarization", "Chameleon Light Polarization Shield (LPS)"], tons: 0, slots: 1, availability: [{ from: 2630 }], perMech: 6, splitWeight: true, locations: ["LA", "RA", "LL", "RL", "LT", "RT"], locationsQuad: ["FLL", "FRL", "RLL", "RRL", "LT", "RT"] },
       // Null-Signature System (p. 148): seven slots, one in each location but the head
-      { id: "null-signature-system-is", name: "Null-Signature System", aliases: ["Null Signature System"], tons: 0, slots: 1, availability: [{ from: 2630 }], prototypeYear: 2615, perMech: 7, splitWeight: true, locations: ["CT", "LT", "RT", "LA", "RA", "LL", "RL"], locationsQuad: ["CT", "LT", "RT", "FLL", "FRL", "RLL", "RRL"], cite: { book: TO, page: 221 } },
+      { id: "null-signature-system-is", pod: false, podCite: { book: TO, page: 148 }, name: "Null-Signature System", aliases: ["Null Signature System"], tons: 0, slots: 1, availability: [{ from: 2630 }], prototypeYear: 2615, perMech: 7, splitWeight: true, locations: ["CT", "LT", "RT", "LA", "RA", "LL", "RL"], locationsQuad: ["CT", "LT", "RT", "FLL", "FRL", "RLL", "RRL"], cite: { book: TO, page: 221 } },
       // Void-Signature System (p. 161)
-      { id: "void-signature-system-is", name: "Void-Signature System", aliases: ["Void Signature System", "Void Signature"], tons: 0, slots: 1, availability: [{ from: 3085 }], prototypeYear: 3070, perMech: 7, splitWeight: true, locations: ["CT", "LT", "RT", "LA", "RA", "LL", "RL"], locationsQuad: ["CT", "LT", "RT", "FLL", "FRL", "RLL", "RRL"], cite: { book: TO, page: 223 } },
+      { id: "void-signature-system-is", pod: false, podCite: { book: TO, page: 160 }, name: "Void-Signature System", aliases: ["Void Signature System", "Void Signature"], tons: 0, slots: 1, availability: [{ from: 3085 }], prototypeYear: 3070, perMech: 7, splitWeight: true, locations: ["CT", "LT", "RT", "LA", "RA", "LL", "RL"], locationsQuad: ["CT", "LT", "RT", "FLL", "FRL", "RLL", "RRL"], cite: { book: TO, page: 223 } },
     ],
   },
   {
@@ -517,7 +517,7 @@ export const OTHER: EquipmentGroup[] = [
     defaults: { kind: "other", techBase: "inner-sphere", cite: { book: IO, page: 215 }, checked: "page" },
     items: [
       { id: "radical-heat-sink-is", name: "Radical Heat Sink System", aliases: ["Radical Heat Sink"], tons: 4, slots: 3, availability: [{ from: 3122 }], prototypeYear: 3115, rulesLevel: "advanced", locations: ["CT", "LT", "RT"], units: ["mech", "industrialmech", "aero"] },
-      { id: "super-cooled-myomer-is", name: "Super-Cooled Myomer", aliases: ["RISC Super-Cooled Myomer"], tons: 0, slots: 1, availability: [{ from: 3132 }], rulesLevel: "experimental", perMech: 6, splitWeight: true, locations: ["LA", "RA", "LL", "RL", "LT", "RT"], locationsQuad: ["FLL", "FRL", "RLL", "RRL", "LT", "RT"] },
+      { id: "super-cooled-myomer-is", pod: false, podCite: { book: IO, page: 88 }, name: "Super-Cooled Myomer", aliases: ["RISC Super-Cooled Myomer"], tons: 0, slots: 1, availability: [{ from: 3132 }], rulesLevel: "experimental", perMech: 6, splitWeight: true, locations: ["LA", "RA", "LL", "RL", "LT", "RT"], locationsQuad: ["FLL", "FRL", "RLL", "RRL", "LT", "RT"] },
       { id: "risc-heat-sink-override-kit-is", name: "RISC Heat Sink Override Kit", aliases: ["Heat Sink Override Kit"], tons: 0, slots: 0, availability: [{ from: 3134 }], rulesLevel: "experimental" },
       { id: "risc-laser-pulse-module-is", name: "RISC Laser Pulse Module", aliases: ["RISC Laser Module", "Laser Pulse Module"], tons: 1, slots: 1, availability: [{ from: 3137 }], rulesLevel: "experimental", needs: "laser", units: ["mech", "industrialmech", "vehicle", "protomech", "aero", "smallcraft", "dropship", "ship", "building"], by: { vehicle: { slots: 0, note: "Support vehicle: +1* slots" }, protomech: { slots: 0 }, aero: { slots: 0 }, smallcraft: { slots: 0 }, dropship: { slots: 0 }, ship: { slots: 0 }, building: { slots: 0 } } },
       { id: "remote-drone-command-console-is", name: "Remote Drone Command Console", aliases: ["Remote Drone"], tons: 2, slots: 1, availability: [{ from: 3140 }], prototypeYear: 3125, rulesLevel: "experimental", units: ["mech", "industrialmech", "aero"] },
@@ -587,8 +587,8 @@ export const OTHER: EquipmentGroup[] = [
     // The table's weights (2 and 3 tons) carry an asterisk; each mount is read as that weight and the slots the table prints.
     defaults: { kind: "other", techBase: "clan", cite: { book: IO, page: 215 }, checked: "page", rulesLevel: "advanced", locations: ["CT", "LT", "RT", "LA", "RA", "LL", "RL"], locationsQuad: ["CT", "LT", "RT", "FLL", "FRL", "RLL", "RRL"] },
     items: [
-      { id: "harjel-ii-clan", name: "HarJel II Self-Repair System", aliases: ["HarJel II"], tons: 2, slots: 1, availability: [{ from: 3136 }], prototypeYear: 3120 },
-      { id: "harjel-iii-clan", name: "HarJel III Self-Repair System", aliases: ["HarJel III", "HarJel Repair Systems (HarJel III)"], tons: 3, slots: 2, availability: [{ from: 3139 }], prototypeYear: 3137 },
+      { id: "harjel-ii-clan", pod: false, podCite: { book: IO, page: 83 }, name: "HarJel II Self-Repair System", aliases: ["HarJel II"], tons: 2, slots: 1, availability: [{ from: 3136 }], prototypeYear: 3120 },
+      { id: "harjel-iii-clan", pod: false, podCite: { book: IO, page: 83 }, name: "HarJel III Self-Repair System", aliases: ["HarJel III", "HarJel Repair Systems (HarJel III)"], tons: 3, slots: 2, availability: [{ from: 3139 }], prototypeYear: 3137 },
     ],
   },
   {
@@ -1077,8 +1077,8 @@ export const OTHER: EquipmentGroup[] = [
     // mechanism is exercised on the formula.
     defaults: { kind: "other", cite: { book: "TechManual", page: 98 }, checked: "page", tons: "turret-tons", slots: 0, availability: [{ from: 1950 }], yearsInferred: true, units: ["vehicle"] },
     items: [
-      { id: "turret-is", name: "Turret", techBase: "inner-sphere" },
-      { id: "turret-clan", name: "Turret", techBase: "clan" },
+      { id: "turret-is", pod: false, podCite: { book: TO, page: 87 }, name: "Turret", techBase: "inner-sphere" },
+      { id: "turret-clan", pod: false, podCite: { book: TO, page: 87 }, name: "Turret", techBase: "clan" },
     ],
   },
 ];

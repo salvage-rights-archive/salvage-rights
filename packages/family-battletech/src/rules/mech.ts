@@ -60,6 +60,22 @@ export interface Mount {
   amount?: number;
   /** The item fires to the rear (torso, leg and head mounts only matter); read by the Battle Value rules. The importer does not set it. */
   rear?: true;
+  /** Set only on a resolved OmniMech configuration (rules/omni.ts): the mount is a pod item, not fixed equipment of the base. */
+  pod?: true;
+}
+
+/** What a resolved OmniMech configuration remembers of its chassis, so cost, Battle Value, the checks and the sheet read it as any 'Mech. */
+export interface OmniLink {
+  chassisId: string;
+  configurationId: string;
+  /** The configuration's code ("Prime", "A", "MS1-OA"). */
+  code: string;
+  /** True for the unloaded base: it is not a legal unit, so it has no Battle Value. */
+  isBase?: true;
+  /** The heat sinks the base carries; the engine's critical-free ones are the lesser of this and its rating divided by 25 (TechManual p.54). */
+  baseHeatSinks: number;
+  /** Which mounts are fixed equipment of the base; every other mount is a pod item. */
+  baseMountIds: string[];
 }
 
 export interface MechRecord {
@@ -78,6 +94,8 @@ export interface MechRecord {
   /** What kind of 'Mech this is (MECH_TYPES in data/chassis.ts). Absent on records saved before types were offered, and read as a
    * BattleMech; a value that is not one of the types is read the same way. */
   unitType?: MechType;
+  /** Present only on a configuration resolved from an OmniMech chassis (rules/omni.ts); absent on every other record. */
+  omni?: OmniLink;
   tons: number;
   configuration: string; // "biped" | "quad" | "tripod" | the source's own word
   chassis: {

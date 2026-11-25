@@ -11,11 +11,25 @@ import type { Catalog } from "../rules/catalog";
 import { runChecks } from "../rules/checks";
 import type { Finding } from "../rules/checks";
 import { changedSinceImport } from "../rules/mordel";
-import { ARM_FULL, bodyOf, editRecord, layout as buildLayout, locationName, weights as buildWeights } from "../rules/mech";
+import { ARM_FULL, bodyOf, configurationOf, editRecord, layout as buildLayout, locationName, mechTypeOf, weights as buildWeights } from "../rules/mech";
 import type { Layout, LocationCode, MechRecord } from "../rules/mech";
 import { configurationChoices, eraOfRecord, partChoices, setEra, setYear } from "../rules/availability";
 import type { PartKind } from "../rules/availability";
 import { techBaseChoices, withLevel } from "../rules/levels";
+import {
+  BASE,
+  applyBaseEdit,
+  applyConfigurationEdit,
+  defaultFixedMounts,
+  omniChassisFindings,
+  primaryOf,
+  resolveBase,
+  resolveConfiguration,
+  splitRecord,
+} from "../rules/omni";
+import type { OmniChassis } from "../rules/omni";
+import { BaseBreaks, CompareView, ConfigurationBar, OMNI_PANEL_ID, PodSpacePanel, omniTabId } from "./editor/OmniBar";
+import type { OnChassis } from "./editor/OmniBar";
 import { ERAS } from "../data/editions";
 import LevelSelect from "./editor/LevelSelect";
 import TypeSelect from "./editor/TypeSelect";
@@ -26,7 +40,7 @@ import FindingsPanel from "./editor/FindingsPanel";
 import SlotsPanel from "./editor/SlotsPanel";
 import { mordelPicture, readPicture } from "./picture";
 import RecordBoundary from "./RecordBoundary";
-import { STORAGE_READ_FAILED, STORAGE_WRITE_FAILED, downloadMech, openFamilyStorage } from "./storage";
+import { STORAGE_READ_FAILED, STORAGE_WRITE_FAILED, downloadMech, downloadOmni, openFamilyStorage } from "./storage";
 import type { FamilyStorage } from "./storage";
 import "./classic.scss";
 
@@ -97,6 +111,7 @@ export function NumberField({
   onFocus,
   name,
   className,
+  disabled,
 }: {
   id: string;
   label: string;
@@ -110,6 +125,8 @@ export function NumberField({
   /** Shown beside the field, such as `of 18`. */
   after?: ReactNode;
   onFocus?: () => void;
+  /** Read-only: a part fixed in an OmniMech base, seen from a configuration. */
+  disabled?: boolean;
 }) {
   const [draft, setDraft] = useState<string>();
   const parse = (text: string): number | null | undefined => {
@@ -135,6 +152,7 @@ export function NumberField({
             value={shown}
             aria-invalid={invalid || undefined}
             aria-describedby={describedBy}
+            disabled={disabled}
             onFocus={onFocus}
             onChange={(event) => {
               const text = event.target.value;
@@ -153,7 +171,7 @@ export function NumberField({
   );
 }
 
-function TextField({ id, label, value, onChange, changed }: { id: string; label: string; value: string; onChange: (v: string) => void; changed?: boolean }) {
+export function TextField({ id, label, value, onChange, changed, disabled }: { id: string; label: string; value: string; onChange: (v: string) => void; changed?: boolean; disabled?: boolean }) {
   return (
     <Field id={id} label={label} changed={changed}>
       {(describedBy) => (
@@ -161,6 +179,7 @@ function TextField({ id, label, value, onChange, changed }: { id: string; label:
           id={id}
           type="text"
           value={value}
+          disabled={disabled}
           aria-describedby={describedBy}
           onChange={(event) => {
             onChange(event.target.value);
@@ -196,6 +215,7 @@ function SelectField({
   options,
   onChange,
   changed,
+  disabled,
 }: {
   id: string;
   label: string;
@@ -203,6 +223,7 @@ function SelectField({
   options: [value: string, label: string][];
   onChange: (value: string) => void;
   changed?: boolean;
+  disabled?: boolean;
 }) {
   const known = options.some(([key]) => key === value);
   // Wide enough for the longest choice, so the current value is never cut off.
@@ -213,6 +234,7 @@ function SelectField({
         <select
           id={id}
           value={value}
+          disabled={disabled}
           style={{ "--bt-select-min": `${longest + 4}ch` } as CSSProperties}
           aria-describedby={describedBy}
           onChange={(event) => {
@@ -343,7 +365,11 @@ type Loaded =
   | { state: "missing" }
   | { state: "unreadable"; message: string }
   | { state: "failed" }
-  | { state: "ready"; storage: FamilyStorage; catalog: Catalog; record: MechRecord };
+  | { state: "ready"; storage: FamilyStorage; catalog: Catalog; doc: Doc };
+
+/** What the editor holds: a plain 'Mech, or an OmniMech chassis whose selected configuration is shown as a record. */
+type Doc = MechRecord | OmniChassis;
+const isChassis = (doc: Doc): doc is OmniChassis => "base" in doc;
 
 /** The editor for the 'Mech named in the address; whatever goes wrong while showing it is caught and offered a way out. */
 export default function EditorPage() {
@@ -369,8 +395,9 @@ function EditorLoader() {
         const entry = await storage.get(id);
         if (!live) return;
         if (!entry) setLoaded({ state: "missing" });
+        else if (entry.chassis) setLoaded({ state: "ready", storage, catalog, doc: entry.chassis });
         else if (!entry.record) setLoaded({ state: "unreadable", message: entry.unreadable ?? "" });
-        else setLoaded({ state: "ready", storage, catalog, record: withLevel(entry.record, catalog) });
+        else setLoaded({ state: "ready", storage, catalog, doc: withLevel(entry.record, catalog) });
       } catch {
         if (live) setLoaded({ state: "failed" });
       }
@@ -380,7 +407,7 @@ function EditorLoader() {
     };
   }, [id]);
 
-  if (loaded.state === "ready") return <Editor key={loaded.record.id} initial={loaded.record} catalog={loaded.catalog} storage={loaded.storage} />;
+  if (loaded.state === "ready") return <Editor key={loaded.doc.id} initial={loaded.doc} startAt={params.get("c") ?? undefined} catalog={loaded.catalog} storage={loaded.storage} />;
   // No heading while loading: the frame names the page after the first heading it finds, which should be the 'Mech's.
   if (loaded.state === "loading") return <div className="sr-page" role="status">Loading.</div>;
   return (
@@ -403,14 +430,14 @@ function EditorLoader() {
 }
 
 interface History {
-  past: MechRecord[];
-  present: MechRecord;
-  future: MechRecord[];
+  past: Doc[];
+  present: Doc;
+  future: Doc[];
   /** The field being typed into: edits to it in a row make one step. */
   group?: string;
 }
 
-const sameRecord = (a: MechRecord, b: MechRecord) => a === b || JSON.stringify(a) === JSON.stringify(b);
+const sameRecord = (a: Doc, b: Doc) => a === b || JSON.stringify(a) === JSON.stringify(b);
 
 /** What the weight summary says: the total, or what is known of it and how many items could not be weighed. */
 export function weightSummary(weights: { lines: { tons: number | null }[]; total: number | null }, tons: number): string {
@@ -484,30 +511,58 @@ function LeaveConfirm({ proceed, reset }: { proceed: () => void; reset: () => vo
   );
 }
 
-function Editor({ initial, catalog, storage }: { initial: MechRecord; catalog: Catalog; storage: FamilyStorage }) {
+function Editor({ initial, startAt, catalog, storage }: { initial: Doc; startAt?: string; catalog: Catalog; storage: FamilyStorage }) {
   const [history, setHistory] = useState<History>({ past: [], present: initial, future: [] });
-  const [savedRecord, setSavedRecord] = useState(initial);
+  const [savedDoc, setSavedDoc] = useState<Doc>(initial);
+  /** An OmniMech chassis shows one of its configurations, or the base, as a record; this is which. */
+  const [selected, setSelected] = useState<string>(() =>
+    isChassis(initial) ? (startAt === BASE || initial.configurations.some((c) => c.id === startAt) ? (startAt ?? BASE) : (primaryOf(initial)?.id ?? BASE)) : "",
+  );
+  const [comparing, setComparing] = useState(false);
   const [justSaved, setJustSaved] = useState(false);
   const [status, setStatus] = useState("");
   const [problem, setProblem] = useState("");
-  const [selected, setSelected] = useState<LocationCode>();
+  const [location, setLocation] = useState<LocationCode>();
   /** Changing the key starts the slots panel afresh, which ends move mode and closes whatever is open. */
   const [panelKey, setPanelKey] = useState(0);
   const refocus = useRef<string | undefined>(undefined);
   const [pictureFailed, setPictureFailed] = useState(false);
   const [weightOpen, setWeightOpen] = useState(false);
-  const record = history.present;
-  const dirty = !sameRecord(record, savedRecord);
+  const doc = history.present;
+  const chassis = isChassis(doc) ? doc : undefined;
+  // The record the page shows: the plain 'Mech, or the selected configuration (or the base) resolved from the chassis.
+  const record = useMemo((): MechRecord => {
+    if (!chassis) return doc as MechRecord;
+    const primary = primaryOf(chassis);
+    return resolveConfiguration(chassis, selected) ?? (primary && resolveConfiguration(chassis, primary.id)) ?? resolveBase(chassis);
+  }, [doc, chassis, selected]);
+  const activeId = chassis ? (record.omni?.configurationId ?? BASE) : "";
+  const inBase = record.omni?.isBase === true;
+  /** Seen from a configuration, the base's parts are shown but not edited. */
+  const fixedHere = chassis !== undefined && !inBase;
+  const dirty = !sameRecord(doc, savedDoc);
 
+  /** Applies a change to what is shown: to the plain record, or written back into the base or the selected configuration. */
+  const applyTo = (d: Doc, change: Change): Doc => {
+    if (!isChassis(d)) return editRecord(d, change);
+    const edited = editRecord(resolveConfiguration(d, activeId) ?? resolveBase(d), change);
+    return activeId === BASE ? applyBaseEdit(d, edited) : applyConfigurationEdit(d, activeId, edited);
+  };
+  const push = (h: History, next: Doc, field?: string): History => {
+    if (sameRecord(next, h.present)) return h; // nothing changed: no step, and no run of edits begins
+    const joins = field !== undefined && h.group === field;
+    return { past: joins ? h.past : [...h.past, h.present].slice(-HISTORY_LIMIT), present: next, future: [], group: field };
+  };
   const edit: OnEdit = (change, field) => {
     setJustSaved(false);
     setStatus("");
-    setHistory((h) => {
-      const next = editRecord(h.present, change);
-      if (sameRecord(next, h.present)) return h; // nothing changed: no step, and no run of edits begins
-      const joins = field !== undefined && h.group === field;
-      return { past: joins ? h.past : [...h.past, h.present].slice(-HISTORY_LIMIT), present: next, future: [], group: field };
-    });
+    setHistory((h) => push(h, applyTo(h.present, change), field));
+  };
+  /** Changes to the chassis itself: adding, renaming, reordering and deleting configurations. */
+  const editChassis: OnChassis = (change, field) => {
+    setJustSaved(false);
+    setStatus("");
+    setHistory((h) => (isChassis(h.present) ? push(h, change(h.present), field) : h));
   };
   const undo = () => {
     setJustSaved(false);
@@ -527,9 +582,10 @@ function Editor({ initial, catalog, storage }: { initial: MechRecord; catalog: C
   };
 
   const save = async () => {
-    const toSave = record;
+    const toSave = doc;
     try {
-      await storage.save(toSave);
+      if (isChassis(toSave)) await storage.saveOmni(toSave);
+      else await storage.save(toSave);
     } catch {
       setJustSaved(false);
       setProblem(STORAGE_WRITE_FAILED);
@@ -537,12 +593,40 @@ function Editor({ initial, catalog, storage }: { initial: MechRecord; catalog: C
     }
     setProblem("");
     setStatus("");
-    setSavedRecord(toSave);
+    setSavedDoc(toSave);
     setJustSaved(true);
   };
 
+  /** "Make Omni": the plain 'Mech becomes a chassis. What stays in every configuration (structure and armor slots, heat sinks, jump jets, MASC and
+   * the like) goes to the base; the weapons, ammunition and other equipment are the Prime's pods. Saved at once, under the same id. */
+  const makeOmni = async () => {
+    if (isChassis(doc)) return;
+    const rules = mechTypeOf({ unitType: "omnimech" }).omni;
+    const body = configurationOf(doc.configuration);
+    if (mechTypeOf(doc).industrial) {
+      setProblem("An IndustrialMech cannot be built as an OmniMech (TechManual p. 64).");
+      return;
+    }
+    if (rules && !rules.bodies.includes(doc.configuration)) {
+      setProblem(`${body ? `A ${body.name}` : `A ${doc.configuration} 'Mech`} cannot be built as an OmniMech.`);
+      return;
+    }
+    const next = splitRecord({ ...doc, unitType: "omnimech" }, defaultFixedMounts(doc, catalog));
+    try {
+      await storage.convertToOmni(next);
+    } catch {
+      setProblem(STORAGE_WRITE_FAILED);
+      return;
+    }
+    setProblem("");
+    setHistory({ past: [], present: next, future: [] });
+    setSavedDoc(next);
+    setSelected(next.primaryId);
+    setStatus("Made an OmniMech: the parts that stay in every configuration are the base, and the weapons and other equipment are the Prime's pods.");
+  };
+
   const layout = useMemo(() => safeLayout(record, catalog), [record, catalog]);
-  const findings = useMemo(() => runChecks(record, catalog), [record, catalog]);
+  const findings = useMemo(() => [...runChecks(record, catalog), ...(chassis ? omniChassisFindings(chassis, catalog) : [])], [record, chassis, catalog]);
   const armorErrors = useMemo(
     () => new Set(findings.flatMap((f) => (f.check === "armor" && f.level === "error" && f.where?.location ? [f.where.location] : []))),
     [findings],
@@ -643,14 +727,27 @@ function Editor({ initial, catalog, storage }: { initial: MechRecord; catalog: C
             type="button"
             className="bt-button bt-button--secondary"
             onClick={() => {
-              downloadMech(record);
+              if (chassis) downloadOmni(chassis);
+              else downloadMech(record);
               setStatus("Export started.");
             }}
           >
-            Export
+            {chassis ? "Export chassis" : "Export"}
           </button>
+          {chassis && !inBase && (
+            <button
+              type="button"
+              className="bt-button bt-button--secondary"
+              onClick={() => {
+                downloadMech(record);
+                setStatus("Export started.");
+              }}
+            >
+              Export this configuration
+            </button>
+          )}
           {/* A navigation: leaving with unsaved changes asks first, and the sheet shows what is saved. */}
-          <Link className="bt-button bt-button--secondary" to={`/battletech/classic/sheet?id=${encodeURIComponent(record.id)}`}>
+          <Link className="bt-button bt-button--secondary" to={`/battletech/classic/sheet?id=${encodeURIComponent(chassis ? chassis.id : record.id)}${chassis ? `&c=${encodeURIComponent(activeId)}` : ""}`}>
             Record sheet
           </Link>
           <button
@@ -697,12 +794,21 @@ function Editor({ initial, catalog, storage }: { initial: MechRecord; catalog: C
         )}
       </div>
 
+      {chassis && (
+        <div className="bt-editor__omni">
+          <ConfigurationBar chassis={chassis} selected={activeId} onSelect={setSelected} onChassis={editChassis} comparing={comparing} onCompare={setComparing} />
+          {isChassis(savedDoc) && <BaseBreaks saved={savedDoc} chassis={chassis} catalog={catalog} />}
+          {comparing && <CompareView chassis={chassis} catalog={catalog} />}
+          <PodSpacePanel chassis={chassis} record={record} catalog={catalog} onEditBase={() => { setSelected(BASE); }} />
+        </div>
+      )}
+
       <div className="bt-editor__side">
         <FindingsPanel findings={findings} targetOf={targetOf} onChoose={focusTarget} />
         <CalculatorPanel record={record} catalog={catalog} />
       </div>
 
-      <div className="bt-editor__body">
+      <div className="bt-editor__body" {...(chassis ? { role: "tabpanel", id: OMNI_PANEL_ID, "aria-labelledby": omniTabId(activeId) } : {})}>
         <div className="bt-editor__fields" data-picture={showPicture}>
           <div className="bt-picturebox" role="group" aria-label="Picture">
             {record.picture ? (
@@ -746,15 +852,33 @@ function Editor({ initial, catalog, storage }: { initial: MechRecord; catalog: C
           <section className="bt-panel" aria-labelledby="bt-identity">
             <h2 id="bt-identity">Identity</h2>
             <div className="bt-grid">
-              <TextField id="field-name" label="Name" value={record.name.chassis} changed={mark("name")} onChange={(v) => { edit((d) => void (d.name.chassis = v), "name"); }} />
-              <TextField id="field-name-model" label="Model" value={record.name.model} onChange={(v) => { edit((d) => void (d.name.model = v), "name-model"); }} />
-              <TypeSelect record={record} onChange={(type) => { edit((d) => void (d.unitType = type)); }} />
+              <TextField id="field-name" label="Name" value={record.name.chassis} changed={mark("name")} disabled={fixedHere} onChange={(v) => { edit((d) => void (d.name.chassis = v), "name"); }} />
+              <TextField id="field-name-model" label={chassis ? "Configuration name" : "Model"} value={record.name.model} disabled={chassis !== undefined} onChange={(v) => { edit((d) => void (d.name.model = v), "name-model"); }} />
+              {chassis ? (
+                <div className="bt-field">
+                  <span id="field-unitType-label" className="bt-label">
+                    Type
+                  </span>
+                  <span id="field-unitType" tabIndex={-1} aria-labelledby="field-unitType-label">
+                    OmniMech
+                  </span>
+                </div>
+              ) : (
+                <TypeSelect
+                  record={record}
+                  onChange={(type) => {
+                    if (type === "omnimech") void makeOmni();
+                    else edit((d) => void (d.unitType = type));
+                  }}
+                />
+              )}
               <SelectField
                 id="field-configuration"
                 label="Configuration"
                 value={record.configuration}
                 options={configurationChoices(record, record.configuration)}
                 changed={mark("configuration")}
+                disabled={fixedHere}
                 onChange={(v) => { edit((d) => void (d.configuration = v)); }}
               />
               <LevelSelect record={record} onChange={(level) => { edit((d) => void (d.rulesLevel = level)); }} />
@@ -764,6 +888,7 @@ function Editor({ initial, catalog, storage }: { initial: MechRecord; catalog: C
                 value={record.techBase}
                 options={techBaseChoices(record.rulesLevel, record.techBase)}
                 changed={mark("techBase")}
+                disabled={fixedHere}
                 onChange={(v) => { edit((d) => void (d.techBase = v as MechRecord["techBase"])); }}
               />
               <NumberField id="field-year" label="Year" value={record.year} allowEmpty changed={mark("year")} onValid={(v) => { edit((d) => { setYear(d, v); }, "year"); }} />
@@ -774,15 +899,24 @@ function Editor({ initial, catalog, storage }: { initial: MechRecord; catalog: C
                 value={eraOfRecord(record)?.id ?? ""}
                 options={ERA_CHOICES}
                 changed={mark("era")}
+                disabled={fixedHere}
                 onChange={(v) => { edit((d) => { setEra(d, v); }, "era"); }}
               />
               </div>
-              <NumberField id="field-tons" label="Tons" value={record.tons} changed={mark("tons")} onValid={(v) => { edit((d) => void (d.tons = v ?? d.tons), "tons"); }} />
+              <NumberField id="field-tons" label="Tons" value={record.tons} changed={mark("tons")} disabled={fixedHere} onValid={(v) => { edit((d) => void (d.tons = v ?? d.tons), "tons"); }} />
             </div>
           </section>
 
           <section className="bt-panel" aria-labelledby="bt-chassis">
             <h2 id="bt-chassis">Chassis</h2>
+            {fixedHere && (
+              <p className="bt-hint">
+                The identity, the chassis parts and the armor are fixed in the base.{" "}
+                <button type="button" className="bt-link" onClick={() => { setSelected(BASE); }}>
+                  Edit base
+                </button>
+              </p>
+            )}
             <div className="bt-grid">
               {chassisGroups.map((group) => (
                 <div key={group[0]?.path} className={group.length > 1 ? "bt-pair" : undefined}>
@@ -795,6 +929,7 @@ function Editor({ initial, catalog, storage }: { initial: MechRecord; catalog: C
                         value={field.read(record)}
                         options={partChoices(field.part, record, field.read(record))}
                         changed={mark(field.path)}
+                        disabled={fixedHere}
                         onChange={(v) => { edit((d) => { field.write(d, v); }); }}
                       />
                     ) : (
@@ -803,6 +938,7 @@ function Editor({ initial, catalog, storage }: { initial: MechRecord; catalog: C
                         id={fieldId(field.path)}
                         label={field.label}
                         value={field.read(record)}
+                        disabled={fixedHere || (chassis !== undefined && field.path === "chassis.heatSinks-count" && !inBase)}
                         onValid={(v) => { edit((d) => { field.write(d, v ?? 0); }, field.path); }}
                       />
                     ),
@@ -810,7 +946,7 @@ function Editor({ initial, catalog, storage }: { initial: MechRecord; catalog: C
                 </div>
               ))}
             </div>
-            {(bodyOf(record.configuration) === "biped" || bodyOf(record.configuration) === "tripod") &&
+            {!inBase && (bodyOf(record.configuration) === "biped" || bodyOf(record.configuration) === "tripod") &&
               (["LA", "RA"] as const).map((arm) => {
                 const has = { ...ARM_FULL, ...record.arms?.[arm] };
                 const arms = locationName(arm);
@@ -865,13 +1001,24 @@ function Editor({ initial, catalog, storage }: { initial: MechRecord; catalog: C
           layout={layout}
           armorTons={weights.lines.find((l) => l.label === "Armor")?.tons ?? null}
           changed={changed}
-          selected={selected}
+          selected={location}
           errorLocations={armorErrors}
-          onSelect={setSelected}
+          onSelect={setLocation}
           onEdit={edit}
+          readOnly={fixedHere}
         />
 
-        <SlotsPanel key={panelKey} record={record} layout={layout} catalog={catalog} changed={changed} selected={selected} onSelect={setSelected} onEdit={edit} />
+        <SlotsPanel
+          key={panelKey}
+          record={record}
+          layout={layout}
+          catalog={catalog}
+          changed={changed}
+          selected={location}
+          onSelect={setLocation}
+          onEdit={edit}
+          lockedIds={fixedHere ? new Set(record.omni?.baseMountIds) : undefined}
+        />
       </div>
 
       {blocker.state === "blocked" && <LeaveConfirm proceed={blocker.proceed} reset={blocker.reset} />}

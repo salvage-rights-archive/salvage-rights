@@ -5,7 +5,7 @@ import { IDBFactory } from "fake-indexeddb";
 import { MemoryRouter } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { openStore } from "@salvage-rights/shared";
-import { bipedRecord } from "../rules/fixtures";
+import { bipedRecord, gladiator } from "../rules/fixtures";
 import HomePage from "./HomePage";
 import { openFamilyStorage, toMechFile } from "./storage";
 
@@ -124,9 +124,7 @@ describe("Classic BattleTech home", () => {
     const config = within(form).getByLabelText<HTMLSelectElement>("Configuration");
     const texts = (select: HTMLSelectElement) => [...select.options].map((o) => o.text);
     expect([type.value, config.value]).toEqual(["mech", "biped"]); // a new unit starts as a BattleMech biped
-    expect(texts(type)).toEqual(["BattleMech", "IndustrialMech", "OmniMech (not built yet)"]);
-    expect(type.options[2]?.disabled).toBe(true);
-    expect(within(form).getByText(/OmniMech is not offered yet: its rules are not built/)).toBeTruthy();
+    expect(texts(type)).toEqual(["BattleMech", "IndustrialMech", "OmniMech"]);
     await user.selectOptions(within(form).getByLabelText("Rules level"), "introductory");
     expect(texts(type)).toEqual(["BattleMech"]);
     await user.selectOptions(within(form).getByLabelText("Rules level"), "experimental");
@@ -178,6 +176,29 @@ describe("Classic BattleTech home", () => {
     });
     expect(screen.getByRole("status").textContent).toBe("Deleted.");
     expect(document.activeElement).toBe(screen.getByRole("heading", { name: "Your 'Mechs" }));
+  });
+
+  it("lists a saved OmniMech once, opens its configurations with their figures, and builds one from the form", async () => {
+    const user = userEvent.setup();
+    await (await openFamilyStorage()).saveOmni(gladiator());
+    renderHome();
+    expect(await screen.findByText(/OmniMech, 95 tons, 2 configurations/)).toBeTruthy();
+    expect(screen.queryByText("Gladiator A")).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Configurations of Gladiator" }));
+    const list = await screen.findByRole("list", { name: "Configurations of Gladiator" });
+    await waitFor(() => {
+      expect(within(list).getAllByText(/Battle Value [\d,]+, [\d,.]+ C-bills/)).toHaveLength(2);
+    });
+    expect(within(list).getByRole("link", { name: "Open Gladiator A" }).getAttribute("href")).toBe("/battletech/classic/editor?id=gladiator&c=a");
+    const form = screen.getByRole("form", { name: "Build a new one" });
+    await user.selectOptions(within(form).getByLabelText("Type"), "omnimech");
+    expect([...within(form).getByLabelText<HTMLSelectElement>("Configuration").options].map((o) => o.text)).toEqual(["Biped", "Quad"]); // no Land-Air 'Mech or tripod at Standard level
+    await user.type(within(form).getByLabelText("Name"), "Falcon");
+    await user.click(within(form).getByRole("button", { name: "Start building" }));
+    await waitFor(async () => {
+      const made = (await (await openFamilyStorage()).list()).find((e) => e.chassis?.name.chassis === "Falcon");
+      expect(made?.chassis?.configurations.map((c) => c.code)).toEqual(["Prime"]);
+    });
   });
 
   it("cancels a delete on Escape and returns focus to its button; focus goes to the empty line after the last delete", async () => {

@@ -6,9 +6,11 @@
 import { ARMOR, MYOMER, STRUCTURE_TYPES } from "../data/chassis";
 import type { MechType } from "../data/chassis";
 import type { Catalog, EquipmentRow } from "./catalog";
-import { lowestLevelFor } from "./levels";
+import { levelAtLeast, lowestLevelFor } from "./levels";
 import { ARM_FULL, armorSpread, configurationOf, layout, locationName, slotsTaken } from "./mech";
 import type { LocationCode, MechRecord, Mount, TechBase } from "./mech";
+import { defaultFixedMounts, splitRecord } from "./omni";
+import type { OmniChassis, OmniConfiguration } from "./omni";
 
 export type MordelImport = { ok: true; record: MechRecord; notes: string[] } | { ok: false; message: string };
 
@@ -605,4 +607,166 @@ export function changedSinceImport(record: MechRecord): Set<string> {
   const before = new Set(was.mounts.map((m) => m.id));
   for (const m of record.mounts) if (!before.has(m.id)) changed.add(m.id);
   return changed;
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// OmniMech sets: a [BASE] unit and its variants become one chassis
+// ---------------------------------------------------------------------------------------------------------------
+// What the owner's notes on the API record (2026-11-06 mapping, sections 2.1 and 4): a unit carries `omni` (boolean), `omni_base_id` and,
+// on a base, `omni_variants` (only the variants the key can see). Each variant is its own unit with its full equipment list; the base is a
+// unit named like "Fire Falcon [BASE]" (bm 2303) that lists itself as its own base; `omni_base_id` is null for a variant whose base is
+// another member's private unit. The notes name NO per-item "pod" or "fixed" marker, so this importer works on the notes' footing: a
+// variant's pods are its equipment minus the base's. NOT VERIFIED against the live API: a check on bm 2303 and one variant must confirm
+// (1) that no equipment entry carries a pod marker (if one does, it should replace the subtraction), (2) that `omni_variants` is a list of
+// unit ids (a list of objects with an `id` is also read), and (3) that a variant lists every fixed item of the base, so the subtraction finds it.
+
+export interface MordelOmniFacts {
+  omni: boolean;
+  /** The unit's own id. */
+  id: number | null;
+  /** The base's id; null when the response has none (a variant whose base is private) or says nothing. */
+  baseId: number | null;
+  /** True for a [BASE] unit: named so, or listing itself as its own base. */
+  isBase: boolean;
+  /** The variants a base lists, as far as the response says. */
+  variantIds: number[];
+}
+
+/** The Omni facts of one Mordel unit response; every field is optional and a response that is not a unit says nothing. */
+export function omniFacts(response: unknown): MordelOmniFacts {
+  const none: MordelOmniFacts = { omni: false, id: null, baseId: null, isBase: false, variantIds: [] };
+  const top = typeof response === "object" && response !== null && !Array.isArray(response) ? (response as Json) : undefined;
+  const unit = top?.["unit"];
+  if (typeof unit !== "object" || unit === null || Array.isArray(unit)) return none;
+  const u = unit as Json;
+  const id = typeof u["id"] === "number" ? u["id"] : null;
+  const baseId = typeof u["omni_base_id"] === "number" ? u["omni_base_id"] : null;
+  const parts = typeof u["name_parts"] === "object" && u["name_parts"] !== null ? (u["name_parts"] as Json) : {};
+  const named = [parts["name"], parts["model"], u["name"]].some((t) => typeof t === "string" && /\[BASE\]/i.test(t));
+  const listed = Array.isArray(u["omni_variants"]) ? u["omni_variants"] : [];
+  const variantIds = listed.flatMap((v): number[] => {
+    const n = typeof v === "number" ? v : typeof v === "object" && v !== null && typeof (v as Json)["id"] === "number" ? ((v as Json)["id"] as number) : undefined;
+    return n === undefined || n === id ? [] : [n];
+  });
+  const omni = u["omni"] === true || named || baseId !== null || variantIds.length > 0;
+  return { omni, id, baseId, isBase: named || (baseId !== null && baseId === id), variantIds: [...new Set(variantIds)] };
+}
+
+export interface OmniImport {
+  chassis: OmniChassis;
+  notes: string[];
+}
+
+const withoutBaseMark = (text: string) => text.replace(/\s*\[BASE\]\s*/gi, " ").trim();
+const plainSource = (record: MechRecord): MechRecord["source"] => {
+  if (!record.source) return undefined;
+  const source = structuredClone(record.source);
+  delete source.baseline; // "changed since import" compares a plain 'Mech with its import; a configuration is part of a chassis
+  return source;
+};
+const mountKey = (m: Mount) => `${m.name}|${m.techBase}|${m.location ?? ""}`;
+
+/**
+ * One chassis from a base and its variants, each already converted by `fromMordel`. The base's equipment is the fixed list. A variant's
+ * pods are its equipment minus the base's, matched one for one on name, tech base and location (the slot is not compared: the importer
+ * places each unit's items itself, so two units' slots need not agree). A variant that lacks an item the base has, or whose chassis parts
+ * differ from the base's, is reported in the notes and still imported. The first variant named Prime (else the first) is the Primary.
+ */
+export function importOmniSet(base: MechRecord, variants: MechRecord[], newId: () => string): OmniImport {
+  const notes: string[] = [];
+  const baseMounts = base.mounts;
+  const taken = new Set(baseMounts.map((m) => m.id));
+  const configurations: OmniConfiguration[] = [];
+  for (const variant of variants) {
+    const remaining = new Map<string, Mount[]>();
+    for (const m of baseMounts.filter((x) => x.part === undefined)) remaining.set(mountKey(m), [...(remaining.get(mountKey(m)) ?? []), m]);
+    const asBase = new Map<string, string>();
+    const pods: Mount[] = [];
+    for (const m of variant.mounts) {
+      if (m.part !== undefined) continue;
+      const match = remaining.get(mountKey(m))?.shift();
+      if (match) asBase.set(m.id, match.id);
+      else pods.push(structuredClone(m));
+    }
+    const code = variant.name.model.trim() || nextFreeCode(configurations.map((c) => c.code));
+    for (const left of remaining.values()) for (const m of left) notes.push(`${code} does not list ${m.name} (${m.location ?? "unplaced"}), which the base has; it is kept as fixed equipment.`);
+    for (const part of ["engine", "gyro", "cockpit", "structure", "armorType"] as const) {
+      if (JSON.stringify(variant.chassis[part]) !== JSON.stringify(base.chassis[part])) notes.push(`${code} has a different ${part === "armorType" ? "armor type" : part} from the base; a configuration cannot change it, so the base's is used.`);
+    }
+    const used = new Set(taken);
+    const renamed = new Map<string, string>();
+    for (const m of pods) {
+      if (!used.has(m.id)) {
+        used.add(m.id);
+        continue;
+      }
+      let n = 1;
+      while (used.has(`pod-${n}-${m.id}`)) n += 1;
+      renamed.set(m.id, `pod-${n}-${m.id}`);
+      used.add(`pod-${n}-${m.id}`);
+    }
+    for (const m of pods) {
+      m.id = renamed.get(m.id) ?? m.id;
+      if (m.linkedTo !== undefined) m.linkedTo = asBase.get(m.linkedTo) ?? renamed.get(m.linkedTo) ?? m.linkedTo;
+    }
+    const level = variant.rulesLevel !== undefined && levelAtLeast(variant.rulesLevel, "standard") ? variant.rulesLevel : "standard";
+    const configuration: OmniConfiguration = { id: newId(), code, mounts: pods, year: variant.year, rulesLevel: level, notes: structuredClone(variant.notes) };
+    if (variant.arms) configuration.arms = structuredClone(variant.arms);
+    if (variant.imageUrl) configuration.imageUrl = variant.imageUrl;
+    const source = plainSource(variant);
+    if (source) configuration.source = source;
+    configurations.push(configuration);
+  }
+  if (configurations.length === 0) notes.push("The base lists no variants this key can see, so the chassis has an empty Prime configuration.");
+  const prime = configurations.find((c) => /prime/i.test(c.code)) ?? configurations[0];
+  if (!prime) configurations.push({ id: newId(), code: "Prime", mounts: [] });
+  const primary = prime ?? (configurations[0] as OmniConfiguration);
+  const chassis: OmniChassis = {
+    schema: 1,
+    id: newId(),
+    editionId: base.editionId,
+    name: { chassis: withoutBaseMark(base.name.chassis) || base.name.chassis },
+    techBase: base.techBase,
+    year: base.year,
+    rulesLevel: "standard",
+    tons: base.tons,
+    body: base.configuration,
+    base: { chassis: structuredClone(base.chassis), armor: structuredClone(base.armor), mounts: structuredClone(baseMounts) },
+    configurations,
+    primaryId: primary.id,
+    notes: structuredClone(base.notes),
+  };
+  if (base.era !== undefined) chassis.era = base.era;
+  if (base.imageUrl) chassis.imageUrl = base.imageUrl;
+  const source = plainSource(base);
+  if (source) chassis.source = source;
+  return { chassis, notes };
+}
+
+function nextFreeCode(used: string[]): string {
+  for (let i = 0; i < 26; i += 1) if (!used.includes(String.fromCharCode(65 + i))) return String.fromCharCode(65 + i);
+  return `V${String(used.length + 1)}`;
+}
+
+/**
+ * FALLBACK, for an Omni variant whose base cannot be had (private, or not fetched): the one unit becomes a one-configuration chassis. Which
+ * items are fixed is OUR GUESS (the structure and armor slots, heat sinks, jump jets and anything the books bar from pods; the rest are pods),
+ * since the notes record no pod marker; the notes say so, and the player can correct it in the editor.
+ */
+export function importOmniSingle(record: MechRecord, catalog: Catalog, newId: () => string, why: string): OmniImport {
+  const copy = structuredClone(record);
+  copy.id = newId();
+  const chassis = splitRecord({ ...copy, unitType: "omnimech" }, defaultFixedMounts(copy, catalog), newId);
+  chassis.name = { chassis: withoutBaseMark(copy.name.chassis) || copy.name.chassis };
+  chassis.rulesLevel = "standard";
+  const config = chassis.configurations[0];
+  if (config) {
+    config.code = copy.name.model.trim() || "Prime";
+    delete config.name;
+    const source = plainSource(copy);
+    if (source) config.source = source;
+    config.rulesLevel = copy.rulesLevel !== undefined && levelAtLeast(copy.rulesLevel, "standard") ? copy.rulesLevel : "standard";
+  }
+  delete chassis.source;
+  return { chassis, notes: [`${why} Imported as a one-configuration OmniMech: which items are fixed in the base is a guess (the structure and armor slots, heat sinks, jump jets and items the books bar from pods); change it in the editor.`] };
 }

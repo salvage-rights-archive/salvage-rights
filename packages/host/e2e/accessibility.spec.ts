@@ -69,6 +69,26 @@ test("the editor's picker and Actions row have no axe violations in either theme
   }
 });
 
+test("an OmniMech editor, base and comparison have no axe violations in either theme", async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.goto(`${DEV}${CLASSIC}/home`);
+  const form = page.getByRole("form", { name: "Build a new one" });
+  await form.getByLabel("Name").fill("Falcon");
+  await form.getByLabel("Type", { exact: true }).selectOption({ label: "OmniMech" });
+  await form.getByRole("button", { name: "Start building" }).click();
+  await expect(page.getByRole("tab", { name: /Prime/ })).toBeVisible();
+  const editor = new URL(page.url());
+  const path = `${editor.pathname.replace(/^\/salvage-rights/, "")}${editor.search}`;
+  for (const theme of ["Light", "Dark"] as const) {
+    await chooseTheme(page, DEV, theme);
+    await page.goto(`${DEV}${path}`);
+    await page.getByRole("button", { name: "Compare configurations" }).click();
+    await scan(page, theme, "the OmniMech editor, Prime and comparison");
+    await page.getByRole("tab", { name: "Base" }).click();
+    await scan(page, theme, "the OmniMech base");
+  }
+});
+
 test("free edition has no axe violations in either theme", async ({ page }) => {
   await expectNoViolations(page, FREE, ["/", "/about", "/settings"]);
 });

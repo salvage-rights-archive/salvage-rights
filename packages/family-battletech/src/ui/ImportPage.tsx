@@ -4,7 +4,9 @@ import { Link, useNavigate } from "react-router";
 import { EDITIONS } from "../data/editions";
 import { loadCatalog } from "../rules/catalog";
 import { DEFAULT_LEVEL, levelRow } from "../rules/levels";
-import { UNIT_TYPE_OF, fromMordel, parseMordelRef } from "../rules/mordel";
+import { UNIT_TYPE_OF, fromMordel, importOmniSet, importOmniSingle, omniFacts, parseMordelRef } from "../rules/mordel";
+import type { OmniImport } from "../rules/mordel";
+import type { MechRecord } from "../rules/mech";
 import { createMordelClient } from "./mordel-client";
 import type { MordelClient, MordelListRow } from "./mordel-client";
 import { STORAGE_READ_FAILED, STORAGE_WRITE_FAILED, openFamilyStorage } from "./storage";
@@ -16,6 +18,8 @@ export interface ImportPageProps {
   makeClient?: (key: string, onWait?: () => void) => MordelClient;
 }
 
+/** Most variants one import fetches: the API allows 120 requests a minute. */
+const MAX_VARIANTS = 12;
 const defaultMakeClient = (key: string, onWait?: () => void) => createMordelClient({ key, onWait });
 
 export default function ImportPage({ makeClient = defaultMakeClient }: ImportPageProps) {
@@ -137,9 +141,62 @@ export default function ImportPage({ makeClient = defaultMakeClient }: ImportPag
           setProblem(fetched.message);
           return;
         }
-        const result = fromMordel(fetched.value, catalog, await storage.getEdition(), new Date().toISOString(), () => crypto.randomUUID(), unitType);
+        const edition = await storage.getEdition();
+        const now = new Date().toISOString();
+        const newId = () => crypto.randomUUID();
+        const result = fromMordel(fetched.value, catalog, edition, now, newId, unitType);
         if (!result.ok) {
           setProblem(result.message);
+          return;
+        }
+        const facts = omniFacts(fetched.value);
+        if (facts.omni) {
+          // An OmniMech: a [BASE] unit and its variants become one chassis. Any unit that cannot be had is left out with a note; with no
+          // base at all the one unit comes in as a one-configuration chassis (the labelled fallback).
+          const client = makeClient(storedKey, waiting);
+          const convert = (value: unknown) => {
+            const r = fromMordel(value, catalog, edition, now, newId, unitType);
+            return r.ok ? r : undefined;
+          };
+          let made: OmniImport;
+          const baseId = facts.isBase ? (facts.id ?? id) : facts.baseId;
+          let baseValue: unknown = facts.isBase ? fetched.value : undefined;
+          if (baseValue === undefined && baseId !== null) {
+            setStatus("Loading the base chassis…");
+            const got = await client.unit(unitType, baseId);
+            if (got.ok) baseValue = got.value;
+          }
+          const base = baseValue === undefined ? undefined : convert(baseValue);
+          if (!base) {
+            made = importOmniSingle(result.record, catalog, newId, baseId === null ? "This variant names no base (its base may be another member's private unit)." : "The base chassis could not be loaded.");
+          } else {
+            const listed = omniFacts(baseValue).variantIds;
+            const wanted = [...new Set([...(facts.isBase ? [] : [id]), ...listed])].slice(0, MAX_VARIANTS);
+            const variants: MechRecord[] = [];
+            const missed: string[] = [];
+            let at = 0;
+            for (const variantId of wanted) {
+              at += 1;
+              let value: unknown;
+              if (variantId === id && !facts.isBase) value = fetched.value;
+              else {
+                setStatus(`Loading configuration ${String(at)} of ${String(wanted.length)}…`);
+                const got = await client.unit(unitType, variantId);
+                if (got.ok) value = got.value;
+              }
+              const converted = value === undefined ? undefined : convert(value);
+              if (converted) variants.push(converted.record);
+              else missed.push(String(variantId));
+            }
+            made = importOmniSet(base.record, variants, newId);
+            if (missed.length > 0) made.notes.push(`These variants could not be loaded and were left out: ${missed.join(", ")}.`);
+            if (listed.length + (facts.isBase ? 0 : 1) > MAX_VARIANTS) made.notes.push(`Only the first ${String(MAX_VARIANTS)} variants were imported.`);
+            made.notes.push(...base.notes);
+          }
+          setStatus("");
+          const chassis = made.chassis;
+          if (!(await attempt(STORAGE_WRITE_FAILED, () => storage.saveOmni(chassis)))) return;
+          void navigate(`/battletech/classic/editor?id=${encodeURIComponent(chassis.id)}`, { state: { notes: made.notes } });
           return;
         }
         const record = result.record;

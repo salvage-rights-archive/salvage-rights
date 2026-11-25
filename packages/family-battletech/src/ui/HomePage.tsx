@@ -8,10 +8,15 @@ import { configurationAvailable, configurationChoices, typeAvailable } from "../
 import { techBaseChoices, withLevel } from "../rules/levels";
 import { loadCatalog } from "../rules/catalog";
 import { mechTypeOf, newRecord } from "../rules/mech";
+import { configurationTitle, newOmniChassis, resolveAll } from "../rules/omni";
+import { battleValue } from "../rules/bv";
+import { unitCost } from "../rules/cost";
+import type { Catalog } from "../rules/catalog";
+import type { OmniChassis } from "../rules/omni";
 import LevelSelect from "./editor/LevelSelect";
 import TypeSelect from "./editor/TypeSelect";
 import type { MechRecord, NewMechOptions, TechBase } from "../rules/mech";
-import { STORAGE_READ_FAILED, STORAGE_WRITE_FAILED, downloadMech, fromMechFile, openFamilyStorage } from "./storage";
+import { STORAGE_READ_FAILED, STORAGE_WRITE_FAILED, downloadMech, downloadOmni, fromMechFile, fromOmniFile, openFamilyStorage } from "./storage";
 import type { FamilyStorage, SavedEntry } from "./storage";
 import emptyBay from "../artwork/empty-bay.jpg";
 import "./classic.scss";
@@ -22,12 +27,47 @@ const TONNAGES = Object.keys(INTERNAL_STRUCTURE.rows).map(Number);
 const MAX_RATING = Math.max(...Object.keys(ENGINE_WEIGHTS.rows).map(Number));
 
 const nameOf = (record: MechRecord) => `${record.name.chassis} ${record.name.model}`.trim();
+const plural = (n: number, word: string) => `${String(n)} ${word}${n === 1 ? "" : "s"}`;
+
+/** The configurations of one saved chassis, each with its Battle Value and cost, Primary first. */
+function Configurations({ chassis, catalog }: { chassis: OmniChassis; catalog: Catalog | undefined }) {
+  return (
+    <ul className="bt-list bt-row__configs" aria-label={`Configurations of ${chassis.name.chassis}`}>
+      {resolveAll(chassis).map((record) => {
+        const id = record.omni?.configurationId ?? "";
+        const config = chassis.configurations.find((c) => c.id === id);
+        const title = config ? configurationTitle(config) : id;
+        const figures = catalog ? `Battle Value ${battleValue(record, catalog).total.toLocaleString("en-US")}, ${unitCost(record, catalog).total.toLocaleString("en-US")} C-bills` : "Working out the figures.";
+        return (
+          <li key={id} className="bt-row">
+            <span className="bt-row__text">
+              <strong>{`${chassis.name.chassis} ${title}`}</strong>
+              {id === chassis.primaryId && " (Primary)"}
+              <span className="bt-row__credit">{figures}</span>
+            </span>
+            <span className="bt-row__actions">
+              <Link className="bt-button" aria-label={`Open ${chassis.name.chassis} ${title}`} to={`/battletech/classic/editor?id=${encodeURIComponent(chassis.id)}&c=${encodeURIComponent(id)}`}>
+                Open
+              </Link>
+              <Link className="bt-button bt-button--secondary" aria-label={`Record sheet for ${chassis.name.chassis} ${title}`} to={`/battletech/classic/sheet?id=${encodeURIComponent(chassis.id)}&c=${encodeURIComponent(id)}`}>
+                Record sheet
+              </Link>
+            </span>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
 
 export default function HomePage() {
   const [storage, setStorage] = useState<FamilyStorage>();
   const [entries, setEntries] = useState<SavedEntry[]>([]);
   const [edition, setEdition] = useState(DEFAULT_EDITION);
   const [confirming, setConfirming] = useState<{ id: string; name: string }>();
+  /** The chassis rows opened to show their configurations; the catalog they are valued with loads when the first one opens. */
+  const [open, setOpen] = useState<Set<string>>(new Set());
+  const [catalog, setCatalog] = useState<Catalog>();
   const [status, setStatus] = useState("");
   const [problem, setProblem] = useState("");
   const keepRef = useRef<HTMLButtonElement>(null);
@@ -114,6 +154,12 @@ export default function HomePage() {
     if (saved && (await reload(storage))) say("Copy saved.");
   };
 
+  const duplicateOmni = async (chassis: OmniChassis) => {
+    if (!storage) return;
+    const saved = await attempt(STORAGE_WRITE_FAILED, () => storage.saveOmni({ ...structuredClone(chassis), id: crypto.randomUUID(), name: { ...chassis.name, chassis: `${chassis.name.chassis} (copy)` } }));
+    if (saved && (await reload(storage))) say("Copy saved.");
+  };
+
   const remove = async (id: string) => {
     if (!storage) return;
     setConfirming(undefined);
@@ -139,13 +185,11 @@ export default function HomePage() {
 
   const build = async () => {
     if (!storage || !draft.chassis.trim()) return;
-    const record = newRecord(
-      { ...draft, unitType, configuration, tons, chassis: draft.chassis.trim(), model: draft.model.trim(), walk: Math.min(draft.walk, walks.at(-1) ?? 1), year: null },
-      edition,
-      crypto.randomUUID(),
-    );
-    if (!(await attempt(STORAGE_WRITE_FAILED, () => storage.save(record)))) return;
-    void navigate(`/battletech/classic/editor?id=${encodeURIComponent(record.id)}`);
+    const options = { ...draft, configuration, tons, chassis: draft.chassis.trim(), model: draft.model.trim(), walk: Math.min(draft.walk, walks.at(-1) ?? 1), year: null };
+    // An OmniMech is a chassis (its fixed base and a Prime to start) and is saved as one.
+    const made = unitType === "omnimech" ? newOmniChassis(options, edition, crypto.randomUUID()) : newRecord({ ...options, unitType }, edition, crypto.randomUUID());
+    if (!(await attempt(STORAGE_WRITE_FAILED, () => ("base" in made ? storage.saveOmni(made) : storage.save(made))))) return;
+    void navigate(`/battletech/classic/editor?id=${encodeURIComponent(made.id)}`);
   };
 
   const cancel = () => {
@@ -169,9 +213,16 @@ export default function HomePage() {
         message = "That file is not a 'Mech file.";
       }
       if (!message) {
-        const result = fromMechFile(parsed);
+        const omni = typeof parsed === "object" && parsed !== null && "kind" in parsed && parsed.kind === "omni";
+        const result = omni ? fromOmniFile(parsed) : fromMechFile(parsed);
         if (!result.ok) {
           message = result.message;
+        } else if ("chassis" in result) {
+          const done = await attempt(STORAGE_WRITE_FAILED, async () => {
+            const taken = (await storage.list()).some((e) => e.id === result.chassis.id);
+            await storage.saveOmni(taken ? { ...result.chassis, id: crypto.randomUUID() } : result.chassis);
+          });
+          if (done && (await reload(storage))) say("OmniMech imported.");
         } else {
           const done = await attempt(STORAGE_WRITE_FAILED, async () => {
             const taken = (await storage.list()).some((e) => e.id === result.record.id);
@@ -244,6 +295,62 @@ export default function HomePage() {
           <ul className="bt-list">
             {entries.map((entry) => {
               const record = entry.record;
+              const chassis = entry.chassis;
+              if (chassis) {
+                const name = chassis.name.chassis.trim() || "Unnamed OmniMech";
+                return (
+                  <li key={`omni-${entry.id}`} className="bt-row">
+                    <span className="bt-row__text">
+                      <strong>{name}</strong> OmniMech, {chassis.tons} tons, {plural(chassis.configurations.length, "configuration")}
+                      <span className="bt-row__credit">Built under {EDITIONS.find((e) => e.id === chassis.editionId)?.name ?? chassis.editionId}</span>
+                    </span>
+                    <span className="bt-row__actions">
+                      <button
+                        type="button"
+                        className="bt-button bt-button--secondary"
+                        aria-expanded={open.has(entry.id)}
+                        aria-controls={`omni-configs-${entry.id}`}
+                        aria-label={`Configurations of ${name}`}
+                        onClick={() => {
+                          const next = new Set(open);
+                          if (next.has(entry.id)) next.delete(entry.id);
+                          else next.add(entry.id);
+                          setOpen(next);
+                          if (!catalog) void loadCatalog().then(setCatalog);
+                        }}
+                      >
+                        Configurations
+                      </button>
+                      <Link className="bt-button" aria-label={`Open ${name}`} to={`/battletech/classic/editor?id=${encodeURIComponent(chassis.id)}`}>
+                        Open
+                      </Link>
+                      <Link className="bt-button bt-button--secondary" aria-label={`Record sheet for ${name}`} to={`/battletech/classic/sheet?id=${encodeURIComponent(chassis.id)}`}>
+                        Record sheet
+                      </Link>
+                      <button type="button" className="bt-button bt-button--secondary" aria-label={`Duplicate ${name}`} onClick={() => { void duplicateOmni(chassis); }}>
+                        Duplicate
+                      </button>
+                      <button
+                        type="button"
+                        className="bt-button bt-button--secondary"
+                        aria-label={`Export ${name}`}
+                        onClick={() => {
+                          downloadOmni(chassis);
+                          say("Export started.");
+                        }}
+                      >
+                        Export
+                      </button>
+                      <button type="button" className="bt-button bt-button--secondary" aria-label={`Delete ${name}`} onClick={(event) => { askDelete({ id: entry.id, name }, event.currentTarget); }}>
+                        Delete
+                      </button>
+                    </span>
+                    <div id={`omni-configs-${entry.id}`} className="bt-row__configs" hidden={!open.has(entry.id)}>
+                      {open.has(entry.id) && <Configurations chassis={chassis} catalog={catalog} />}
+                    </div>
+                  </li>
+                );
+              }
               if (!record) {
                 return (
                   <li key={entry.id} className="bt-row">
@@ -433,7 +540,7 @@ export default function HomePage() {
           </div>
           <p className="bt-hint">
             {unitType === "industrialmech" ? "You start with an industrial frame and cockpit, a standard fusion engine" : "You start with standard parts"}, ten
-            heat sinks, no armor and no equipment. The editor's rules check shows what is left to do.
+            heat sinks, no armor and no equipment. {unitType === "omnimech" && "An OmniMech starts as a base chassis with an empty Prime configuration. "}The editor's rules check shows what is left to do.
           </p>
           <button type="submit" className="bt-button" disabled={!storage}>
             Start building

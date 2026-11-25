@@ -4,7 +4,7 @@ import { IDBFactory } from "fake-indexeddb";
 import { RouterProvider, createMemoryRouter } from "react-router";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { loadCatalog } from "../rules/catalog";
-import { mordelBiped } from "../rules/fixtures";
+import { gladiator, mordelBiped } from "../rules/fixtures";
 import { fromMordel } from "../rules/mordel";
 import SheetPage from "./SheetPage";
 import { openFamilyStorage } from "./storage";
@@ -14,9 +14,9 @@ beforeEach(() => {
 });
 afterEach(cleanup);
 
-function open(id: string) {
+function open(id: string, query = "") {
   const router = createMemoryRouter([{ path: "/battletech/classic/sheet", element: <SheetPage /> }], {
-    initialEntries: [`/battletech/classic/sheet?id=${id}`],
+    initialEntries: [`/battletech/classic/sheet?id=${id}${query}`],
   });
   render(<RouterProvider router={router} />);
 }
@@ -36,6 +36,18 @@ describe("The record sheet page", () => {
     expect(screen.getByText("Prints on one page, Letter or A4. In the print dialog, turn off headers and footers.")).toBeTruthy();
     expect(screen.getByRole("status").textContent).toMatch(/^This 'Mech has \d+ rules errors?\. The sheet shows it as saved\.$/);
     expect(screen.getByRole("img", { name: "Test Walker TW-1 record sheet" })).toBeTruthy();
+  });
+
+  it("prints each configuration of a saved OmniMech as its own sheet titled chassis and configuration, and the base with no Battle Value", async () => {
+    await (await openFamilyStorage()).saveOmni(gladiator());
+    open("gladiator", "&c=a");
+    expect((await screen.findByRole("heading", { level: 1 })).textContent).toBe("Gladiator A record sheet");
+    expect(screen.getByRole("link", { name: "Edit" }).getAttribute("href")).toBe("/battletech/classic/editor?id=gladiator&c=a");
+    expect(screen.getByRole("navigation", { name: "Configurations" }).textContent).toBe("PrimeABase");
+    cleanup();
+    open("gladiator", "&c=base");
+    expect((await screen.findByRole("heading", { level: 1 })).textContent).toBe("Gladiator Base record sheet");
+    expect(screen.getAllByText(/the base has none; pod space 26.5 tons/).length).toBeGreaterThan(0);
   });
 
   it("says so, with the way back, for a 'Mech that is not saved", async () => {

@@ -111,6 +111,14 @@ a.bt-button {
   padding: 0;
 }
 
+// The configurations of a saved OmniMech, opened under its row.
+.bt-row__configs {
+  flex: 1 1 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
 .bt-row {
   display: flex;
   flex-wrap: wrap;
@@ -411,6 +419,101 @@ a.bt-button {
   border: var(--sr-border) solid var(--sr-line-strong);
   border-radius: var(--sr-radius-tag);
   font-size: 0.875rem;
+}
+
+// A button that reads as a link, inside a sentence.
+.bt-link {
+  min-height: 44px;
+  padding: 0 var(--sr-space-1);
+  background: none;
+  border: 0;
+  color: var(--sr-accent);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 3px solid var(--sr-focus);
+    outline-offset: 2px;
+  }
+}
+
+// An OmniMech chassis: the tabs over its base and configurations, the pod space meter, the side-by-side comparison.
+.bt-omni {
+  &__tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sr-space-1);
+    margin-bottom: var(--sr-space-2);
+  }
+
+  &__tab {
+    min-height: 44px;
+    padding: 0 var(--sr-space-3);
+    background: var(--sr-secondary-bg);
+    color: var(--sr-on-secondary);
+    border: var(--sr-border) solid var(--sr-line-strong);
+    border-radius: var(--sr-radius);
+    font: inherit;
+    cursor: pointer;
+
+    &[aria-selected="true"] {
+      background: var(--sr-accent-bg);
+      color: var(--sr-on-accent);
+      font-weight: 700;
+    }
+
+    &:focus-visible {
+      outline: 3px solid var(--sr-focus);
+      outline-offset: 2px;
+    }
+  }
+
+  &__actions {
+    margin-bottom: var(--sr-space-2);
+  }
+
+  &__manage {
+    margin-top: var(--sr-space-3);
+  }
+
+  &__meter {
+    display: block;
+    width: 100%;
+    max-width: 24rem;
+    height: 1.25rem;
+  }
+}
+
+.bt-breaks ul {
+  margin: var(--sr-space-1) 0;
+  padding-left: var(--sr-space-4);
+}
+
+.bt-compare__scroll {
+  overflow-x: auto;
+
+  &:focus-visible {
+    outline: 3px solid var(--sr-focus);
+    outline-offset: 2px;
+  }
+
+  table {
+    border-collapse: collapse;
+    min-width: 100%;
+  }
+
+  th,
+  td {
+    padding: var(--sr-space-2);
+    border: var(--sr-border) solid var(--sr-line-strong);
+    text-align: left;
+    vertical-align: top;
+  }
+
+  th[scope="row"] {
+    font-weight: 600;
+  }
 }
 
 // Identity and chassis side by side when there is room for both.

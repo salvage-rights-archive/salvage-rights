@@ -51,7 +51,7 @@ export default function RecordSheet({ record, catalog }: { record: MechRecord; c
           {name}
         </text>
         <text x={42} y={170} fontSize={34} fontWeight={700} fill={INK}>
-          {`${mechTypeOf(record).label} record sheet`}
+          {`${mechTypeOf(record).label}${record.omni?.isBase ? " base chassis" : ""} record sheet`}
         </text>
         <text className="bt-sheet__head" x={1090} y={170} fontSize={24} textAnchor="end" letterSpacing={3} fill={INK}>
           SALVAGE RIGHTS

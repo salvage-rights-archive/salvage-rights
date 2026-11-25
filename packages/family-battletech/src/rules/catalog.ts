@@ -91,6 +91,10 @@ export interface EquipmentRow {
   /** A non-missile direct-fire or pulse weapon: its weight counts toward a targeting computer (TechManual p. 238). */
   directFire?: true;
   editions?: Record<string, Partial<Pick<EquipmentRow, "tons" | "slots" | "availability" | "locations" | "locationsQuad">>>;
+  /** False for an item an OmniMech cannot carry in a pod: it may only be fixed equipment of the base (or, for MASC and the like, part of the
+   * base chassis). Absent means it may be pod-mounted. `podCite` is the page that says so. */
+  pod?: false;
+  podCite?: { book: string; page: number };
   /** The rules level of the book's table the item comes from; absent means standard (or Introductory, see rules/levels.ts). */
   rulesLevel?: RulesLevel;
   /** Fan-made rows only: who made the item and under what licence, for the credit the screens must show. */
@@ -104,6 +108,8 @@ export function mountsRequired(row: EquipmentRow, configuration: string): number
 }
 /** True when a row may be mounted on the unit type; a row with no `units` is for a BattleMech or IndustrialMech. */
 export const mountableOn = (row: EquipmentRow, unit: UnitId): boolean => (row.units ?? DEFAULT_UNITS).includes(unit);
+/** True unless the books say the item cannot be pod-mounted on an OmniMech (see `pod` on EquipmentRow). */
+export const podMountable = (row: Pick<EquipmentRow, "pod">): boolean => row.pod !== false;
 
 /** Where the book lets a row go on a configuration; undefined means anywhere. A quad has its own rule where it differs. A tripod
  * mounts equipment as a 'Mech of equal weight does (IO:AE printed p.159), so its center leg is allowed wherever the side legs both are. */
@@ -146,6 +152,7 @@ export function expand(groups: EquipmentGroup[]): EquipmentRow[] {
         const value = row[field];
         if (typeof value === "string" && !Object.hasOwn(FORMULAS, value)) bad(`${field} names the unknown formula ${value}`);
       }
+      if (row.pod === false && row.podCite === undefined) bad("pod is false but no page says so");
       if (!Array.isArray(row.availability) || row.availability.length === 0) bad("availability is empty");
       if (row.availability.some((s) => s.to !== undefined && s.to < s.from)) bad("a span ends before it starts");
       if (row.prototypeYear !== undefined && !(row.prototypeYear < Math.min(...row.availability.map((s) => s.from)))) bad("the prototype year is not before the production year");

@@ -4,10 +4,14 @@ import { openStore } from "@salvage-rights/shared";
 import type { Store } from "@salvage-rights/shared";
 import { DEFAULT_EDITION, EDITIONS, currentEditionId } from "../data/editions";
 import type { MechRecord } from "../rules/mech";
+import type { OmniChassis } from "../rules/omni";
 
 export interface SavedEntry {
   id: string;
+  /** "omni" when what is saved is an OmniMech chassis (`chassis`); else a plain 'Mech (`record`). */
+  kind: "mech" | "omni";
   record?: MechRecord;
+  chassis?: OmniChassis;
   unreadable?: string;
   savedAt?: string;
 }
@@ -22,8 +26,13 @@ export interface FamilyStorage {
   list(): Promise<SavedEntry[]>;
   get(id: string): Promise<SavedEntry | undefined>;
   save(record: MechRecord): Promise<void>;
+  /** Saves an OmniMech chassis (every configuration of it) under `omni:<id>`. */
+  saveOmni(chassis: OmniChassis): Promise<void>;
+  /** Replaces a saved plain 'Mech with the chassis made from it, under the same id. */
+  convertToOmni(chassis: OmniChassis): Promise<void>;
   /** What is stored under the id, exactly as it is, readable or not: for a copy of a record the pages cannot show. */
   raw(id: string): Promise<unknown>;
+  /** Deletes whatever is saved under the id, a 'Mech or a chassis. */
   remove(id: string): Promise<void>;
 }
 
@@ -34,6 +43,14 @@ export interface MechFile {
   record: MechRecord;
 }
 
+/** The file of a whole OmniMech chassis. A single configuration downloads as a `MechFile` of its resolved record instead. */
+export interface OmniFile {
+  app: "salvage-rights";
+  kind: "omni";
+  version: 1;
+  chassis: OmniChassis;
+}
+
 /** What the pages say when the device store fails, so the wording is one thing. */
 export const STORAGE_WRITE_FAILED = "We could not save that on this device.";
 export const STORAGE_READ_FAILED = "We could not read what is saved on this device.";
@@ -41,6 +58,7 @@ export const STORAGE_READ_FAILED = "We could not read what is saved on this devi
 const KEY = "mordel-key";
 const EDITION = "edition";
 const MECH_PREFIX = "mech:";
+const OMNI_PREFIX = "omni:";
 
 const isObject = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
 const isString = (v: unknown): v is string => typeof v === "string";
@@ -58,8 +76,16 @@ function isMount(v: unknown): boolean {
     (v.slot === null || isNumber(v.slot)) &&
     (v.part === undefined || v.part === "structure" || v.part === "armor") &&
     (v.slots === undefined || isNumber(v.slots)) &&
-    (v.linkedTo === undefined || isString(v.linkedTo))
+    (v.linkedTo === undefined || isString(v.linkedTo)) &&
+    (v.pod === undefined || v.pod === true)
   );
+}
+
+const isStrings = (v: unknown) => Array.isArray(v) && v.every(isString);
+
+function isOmniLink(v: unknown): boolean {
+  if (v === undefined) return true;
+  return isObject(v) && isString(v.chassisId) && isString(v.configurationId) && isString(v.code) && (v.isBase === undefined || v.isBase === true) && isNumber(v.baseHeatSinks) && isStrings(v.baseMountIds);
 }
 
 function isChassis(v: unknown): boolean {
@@ -141,6 +167,58 @@ export function isMechRecord(value: unknown): value is MechRecord {
     isString(value.id) &&
     isString(value.editionId) &&
     isBody(value) &&
+    isOmniLink(value.omni) &&
+    (value.imageUrl === undefined || isString(value.imageUrl)) &&
+    isPicture(value.picture) &&
+    (value.source === undefined || isSource(value.source))
+  );
+}
+
+function isConfiguration(v: unknown): boolean {
+  if (!isObject(v)) return false;
+  return (
+    isString(v.id) &&
+    isString(v.code) &&
+    (v.name === undefined || isString(v.name)) &&
+    (v.year === undefined || v.year === null || isNumber(v.year)) &&
+    (v.rulesLevel === undefined || isString(v.rulesLevel)) &&
+    isArms(v.arms) &&
+    Array.isArray(v.mounts) &&
+    v.mounts.every(isMount) &&
+    (v.notes === undefined || (isObject(v.notes) && Object.values(v.notes).every((n) => n === undefined || isString(n)))) &&
+    (v.imageUrl === undefined || isString(v.imageUrl)) &&
+    isPicture(v.picture) &&
+    (v.source === undefined || isSource(v.source))
+  );
+}
+
+/** Checks the shape of an OmniMech chassis: the fixed part, every configuration and a Primary that names one of them. Whether it is legal is for the checks. */
+export function isOmniChassis(value: unknown): value is OmniChassis {
+  if (!isObject(value)) return false;
+  const { name, base, configurations, notes } = value;
+  return (
+    value.schema === 1 &&
+    isString(value.id) &&
+    isString(value.editionId) &&
+    isObject(name) &&
+    isString(name.chassis) &&
+    (name.alternate === undefined || isString(name.alternate)) &&
+    (value.techBase === "mixed" || isTechBase(value.techBase)) &&
+    (value.year === null || isNumber(value.year)) &&
+    isNumber(value.tons) &&
+    isString(value.body) &&
+    isObject(base) &&
+    isChassis(base.chassis) &&
+    isObject(base.armor) &&
+    Object.values(base.armor).every((a) => isObject(a) && isNumber(a.front) && (a.rear === undefined || isNumber(a.rear))) &&
+    Array.isArray(base.mounts) &&
+    base.mounts.every(isMount) &&
+    Array.isArray(configurations) &&
+    configurations.length > 0 &&
+    configurations.every(isConfiguration) &&
+    isString(value.primaryId) &&
+    isObject(notes) &&
+    Object.values(notes).every((n) => n === undefined || isString(n)) &&
     (value.imageUrl === undefined || isString(value.imageUrl)) &&
     isPicture(value.picture) &&
     (value.source === undefined || isSource(value.source))
@@ -148,9 +226,29 @@ export function isMechRecord(value: unknown): value is MechRecord {
 }
 
 /** A record saved under an edition id an earlier version used is read as the edition that id means now. */
-function migrated(record: MechRecord): MechRecord {
+function migrated<T extends { editionId: string }>(record: T): T {
   const editionId = currentEditionId(record.editionId);
   return editionId === record.editionId ? record : { ...record, editionId };
+}
+
+export function toOmniFile(chassis: OmniChassis): OmniFile {
+  return { app: "salvage-rights", kind: "omni", version: 1, chassis: structuredClone(chassis) };
+}
+
+/** Reads a file of a whole chassis; the same plain messages as `fromMechFile`. */
+export function fromOmniFile(file: unknown): { ok: true; chassis: OmniChassis } | { ok: false; message: string } {
+  if (!isObject(file)) return { ok: false, message: "This is not a Salvage Rights file." };
+  if (file.app !== "salvage-rights") return { ok: false, message: "This file was not made by Salvage Rights." };
+  if (file.kind !== "omni") return { ok: false, message: "This file does not hold an OmniMech." };
+  if (file.version !== 1) return { ok: false, message: "This file is from a version this app cannot read." };
+  if (!isOmniChassis(file.chassis)) return { ok: false, message: "The OmniMech in this file is incomplete or damaged." };
+  return { ok: true, chassis: migrated(file.chassis) };
+}
+
+/** Hands the whole chassis to the browser as a file. */
+export function downloadOmni(chassis: OmniChassis): void {
+  const base = chassis.name.chassis.replace(/[^A-Za-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+  downloadJson(`${base || "omnimech"}.omni.json`, toOmniFile(chassis));
 }
 
 export function toMechFile(record: MechRecord): MechFile {
@@ -186,16 +284,25 @@ export function downloadJson(filename: string, value: unknown): void {
   }, 1000);
 }
 
-function entryOf(id: string, stored: unknown): SavedEntry {
-  if (!isObject(stored)) return { id, unreadable: "This saved 'Mech is not in a form the app understands." };
+function entryOf(id: string, stored: unknown, kind: SavedEntry["kind"] = "mech"): SavedEntry {
+  const what = kind === "omni" ? "OmniMech" : "'Mech";
+  if (!isObject(stored)) return { id, kind, unreadable: `This saved ${what} is not in a form the app understands.` };
   const savedAt = isString(stored.savedAt) ? stored.savedAt : undefined;
-  if (!isMechRecord(stored.record)) {
-    return { id, savedAt, unreadable: "This saved 'Mech is incomplete or from a different version." };
+  if (kind === "omni") {
+    if (!isOmniChassis(stored.chassis)) return { id, kind, savedAt, unreadable: "This saved OmniMech is incomplete or from a different version." };
+    return { id, kind, chassis: migrated(stored.chassis), savedAt };
   }
-  return { id, record: migrated(stored.record), savedAt };
+  if (!isMechRecord(stored.record)) {
+    return { id, kind, savedAt, unreadable: "This saved 'Mech is incomplete or from a different version." };
+  }
+  return { id, kind, record: migrated(stored.record), savedAt };
 }
 
 function wrap(store: Store): FamilyStorage {
+  const saveOmni = (chassis: OmniChassis) => {
+    if (!isOmniChassis(chassis)) return Promise.reject(new Error("This OmniMech is incomplete and cannot be saved."));
+    return store.set(OMNI_PREFIX + chassis.id, { chassis, savedAt: new Date().toISOString() });
+  };
   return {
     persistent: store.persistent,
     getKey: () => store.get<string>(KEY),
@@ -212,20 +319,32 @@ function wrap(store: Store): FamilyStorage {
     },
     setEdition: (id) => store.set(EDITION, id),
     list: async () => {
-      const ids = (await store.keys()).filter((k) => k.startsWith(MECH_PREFIX)).map((k) => k.slice(MECH_PREFIX.length));
-      const entries = await Promise.all(ids.map(async (id) => entryOf(id, await store.get<unknown>(MECH_PREFIX + id))));
+      const keys = await store.keys();
+      const read = (prefix: string, kind: SavedEntry["kind"]) =>
+        keys.filter((k) => k.startsWith(prefix)).map(async (k) => entryOf(k.slice(prefix.length), await store.get<unknown>(k), kind));
+      const entries = await Promise.all([...read(MECH_PREFIX, "mech"), ...read(OMNI_PREFIX, "omni")]);
       return entries.sort((a, b) => (b.savedAt ?? "").localeCompare(a.savedAt ?? ""));
     },
     get: async (id) => {
       const stored = await store.get<unknown>(MECH_PREFIX + id);
-      return stored === undefined ? undefined : entryOf(id, stored);
+      if (stored !== undefined) return entryOf(id, stored);
+      const omni = await store.get<unknown>(OMNI_PREFIX + id);
+      return omni === undefined ? undefined : entryOf(id, omni, "omni");
     },
     save: (record) => {
       if (!isMechRecord(record)) return Promise.reject(new Error("This 'Mech is incomplete and cannot be saved."));
       return store.set(MECH_PREFIX + record.id, { record, savedAt: new Date().toISOString() });
     },
-    raw: (id) => store.get<unknown>(MECH_PREFIX + id),
-    remove: (id) => store.delete(MECH_PREFIX + id),
+    saveOmni,
+    convertToOmni: async (chassis) => {
+      await saveOmni(chassis);
+      await store.delete(MECH_PREFIX + chassis.id);
+    },
+    raw: async (id) => (await store.get<unknown>(MECH_PREFIX + id)) ?? (await store.get<unknown>(OMNI_PREFIX + id)),
+    remove: async (id) => {
+      await store.delete(MECH_PREFIX + id);
+      await store.delete(OMNI_PREFIX + id);
+    },
   };
 }
 

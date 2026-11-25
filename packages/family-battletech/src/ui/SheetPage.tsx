@@ -5,6 +5,8 @@ import { loadCatalog } from "../rules/catalog";
 import type { Catalog } from "../rules/catalog";
 import { runChecks } from "../rules/checks";
 import type { MechRecord } from "../rules/mech";
+import { BASE, configurationTitle, primaryOf, resolveBase, resolveConfiguration } from "../rules/omni";
+import type { OmniChassis } from "../rules/omni";
 import RecordBoundary from "./RecordBoundary";
 import RecordSheet from "./sheet/RecordSheet";
 import { sheetTitle } from "./sheet/facts";
@@ -18,7 +20,7 @@ type Loaded =
   | { state: "missing" }
   | { state: "unreadable"; message: string }
   | { state: "failed" }
-  | { state: "ready"; catalog: Catalog; record: MechRecord };
+  | { state: "ready"; catalog: Catalog; record: MechRecord; chassis?: OmniChassis };
 
 /** The sheet for the 'Mech named in the address; whatever goes wrong while drawing it is caught and offered a way out. */
 export default function SheetPage() {
@@ -34,6 +36,7 @@ export default function SheetPage() {
 function SheetLoader() {
   const [params] = useSearchParams();
   const id = params.get("id") ?? "";
+  const asked = params.get("c") ?? undefined;
   const [loaded, setLoaded] = useState<Loaded>({ state: "loading" });
 
   useEffect(() => {
@@ -44,7 +47,13 @@ function SheetLoader() {
         const entry = await storage.get(id);
         if (!live) return;
         if (!entry) setLoaded({ state: "missing" });
-        else if (!entry.record) setLoaded({ state: "unreadable", message: entry.unreadable ?? "" });
+        else if (entry.chassis) {
+          // An OmniMech prints one configuration at a time: the one named in the address, else the Primary; `c=base` is the unloaded base.
+
+          const primary = primaryOf(entry.chassis);
+          const record = asked === BASE ? resolveBase(entry.chassis) : ((asked ? resolveConfiguration(entry.chassis, asked) : undefined) ?? (primary && resolveConfiguration(entry.chassis, primary.id)) ?? resolveBase(entry.chassis));
+          setLoaded({ state: "ready", catalog, record, chassis: entry.chassis });
+        } else if (!entry.record) setLoaded({ state: "unreadable", message: entry.unreadable ?? "" });
         else setLoaded({ state: "ready", catalog, record: entry.record });
       } catch {
         if (live) setLoaded({ state: "failed" });
@@ -53,9 +62,9 @@ function SheetLoader() {
     return () => {
       live = false;
     };
-  }, [id]);
+  }, [id, asked]);
 
-  if (loaded.state === "ready") return <Sheet record={loaded.record} catalog={loaded.catalog} />;
+  if (loaded.state === "ready") return <Sheet record={loaded.record} catalog={loaded.catalog} chassis={loaded.chassis} />;
   // No heading while loading: the frame names the page after the first heading it finds, which should be the 'Mech's.
   if (loaded.state === "loading") return <div className="sr-page" role="status">Loading.</div>;
   return (
@@ -77,7 +86,7 @@ function SheetLoader() {
   );
 }
 
-function Sheet({ record, catalog }: { record: MechRecord; catalog: Catalog }) {
+function Sheet({ record, catalog, chassis }: { record: MechRecord; catalog: Catalog; chassis?: OmniChassis }) {
   const errors = useMemo(() => runChecks(record, catalog).filter((f) => f.level === "error").length, [record, catalog]);
   return (
     <div className="sr-page bt-sheetpage">
@@ -87,7 +96,7 @@ function Sheet({ record, catalog }: { record: MechRecord; catalog: Catalog }) {
           <Link className="bt-back" to={HOME}>
             <span aria-hidden="true">&larr; </span>Your 'Mechs
           </Link>
-          <Link className="bt-button bt-button--secondary" to={`/battletech/classic/editor?id=${encodeURIComponent(record.id)}`}>
+          <Link className="bt-button bt-button--secondary" to={`/battletech/classic/editor?id=${encodeURIComponent(chassis ? chassis.id : record.id)}${chassis ? `&c=${encodeURIComponent(record.omni?.configurationId ?? BASE)}` : ""}`}>
             Edit
           </Link>
           <button
@@ -101,6 +110,20 @@ function Sheet({ record, catalog }: { record: MechRecord; catalog: Catalog }) {
           </button>
         </div>
         <p className="bt-hint">Prints on one page, Letter or A4. In the print dialog, turn off headers and footers.</p>
+        {chassis && (
+          <nav aria-label="Configurations" className="bt-actions">
+            {[...chassis.configurations.map((c) => ({ id: c.id, label: configurationTitle(c) })), { id: BASE, label: "Base" }].map((c) => (
+              <Link
+                key={c.id}
+                className="bt-button bt-button--secondary"
+                aria-current={record.omni?.configurationId === c.id ? "page" : undefined}
+                to={`/battletech/classic/sheet?id=${encodeURIComponent(chassis.id)}&c=${encodeURIComponent(c.id)}`}
+              >
+                {c.label}
+              </Link>
+            ))}
+          </nav>
+        )}
         {errors > 0 && <p role="status">{`This 'Mech has ${String(errors)} rules ${errors === 1 ? "error" : "errors"}. The sheet shows it as saved.`}</p>}
       </div>
       <RecordSheet record={record} catalog={catalog} />

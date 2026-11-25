@@ -306,3 +306,36 @@ test("pick an era and a tech base in the editor and see the picker's groups and 
   await page.keyboard.press("Enter");
   await expect(toggle).toHaveAttribute("aria-expanded", "true");
 });
+
+test("build an OmniMech, add a configuration, compare them and reach a configuration's record sheet", async ({ page }) => {
+  await page.goto(HOME);
+  const form = page.getByRole("form", { name: "Build a new one" });
+  await form.getByLabel("Name").fill("Falcon");
+  await form.getByLabel("Type", { exact: true }).selectOption({ label: "OmniMech" });
+  await form.getByLabel("Tech base").selectOption("clan");
+  await form.getByLabel("Tonnage").selectOption("20");
+  await form.getByRole("button", { name: "Start building" }).click();
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Falcon Prime");
+  const tabs = page.getByRole("tablist", { name: "Base and configurations" });
+  await expect(tabs.getByRole("tab")).toHaveText(["Base", "Prime (Primary)"]);
+  // The chassis parts are fixed in the base: read-only from a configuration, editable on the base.
+  await expect(page.getByLabel("Engine rating")).toBeDisabled();
+  await page.getByRole("button", { name: "Add configuration" }).click();
+  await expect(tabs.getByRole("tab")).toHaveText(["Base", "Prime (Primary)", "A (copy)"]);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Falcon A (copy)");
+  await page.getByRole("button", { name: "Compare configurations" }).click();
+  await expect(page.getByRole("table").getByRole("columnheader")).toHaveText(["Prime", "A (copy)"]);
+  await tabs.getByRole("tab", { name: "Base" }).click();
+  await expect(page.getByLabel("Engine rating")).toBeEnabled();
+  await expect(page.getByText("The base has no Battle Value")).toBeVisible();
+  await page.getByRole("button", { name: "Save" }).click();
+  await expect(page.getByText("Saved.")).toBeVisible();
+  await page.getByRole("link", { name: "Record sheet" }).click();
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Falcon Base record sheet");
+  await page.getByRole("link", { name: "A (copy)", exact: true }).click();
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Falcon A (copy) record sheet");
+  await expect(page.getByRole("img", { name: "Falcon A (copy) record sheet" }).locator("text", { hasText: /^OmniMech record sheet$/ })).toBeVisible();
+  // The saved list shows one entry for the chassis.
+  await page.goto(HOME);
+  await expect(page.getByRole("link", { name: "Open Falcon" })).toBeVisible();
+});

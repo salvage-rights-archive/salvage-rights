@@ -134,6 +134,9 @@ export function configurationAvailable(key: string, record: Subject, everything 
   if (!row) return true;
   const industrial = industrialRulesOf(record);
   if (industrial && !industrial.configurations.includes(key)) return false;
+  // An OmniMech takes the bodies the books allow: not a Land-Air 'Mech (IO:AE p.108); the tripod's tech base is its own row's.
+  const omni = mechTypeOf(record).omni;
+  if (omni && !omni.bodies.includes(key)) return false;
   const level = partLevel("configuration", key, row);
   if (!levelAtLeast(recordLevel(record), level)) return false;
   if (everything) return true;
