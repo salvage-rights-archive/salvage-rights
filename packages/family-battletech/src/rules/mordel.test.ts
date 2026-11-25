@@ -8,7 +8,7 @@ const catalog = await loadCatalog();
 let counter = 0;
 const NOW = "2026-11-24T10:00:00.000Z";
 const run = (response: unknown) => fromMordel(response, catalog, "total-warfare", NOW, () => `rec-${++counter}`);
-function imported(response: unknown): { record: MechRecord; notes: string[] } {
+function imported(response: unknown): { record: MechRecord; notes: string[]; fixedIds?: string[] } {
   const result = run(response);
   if (!result.ok) throw new Error(result.message);
   return result;
@@ -349,7 +349,7 @@ describe("changedSinceImport", () => {
   });
 });
 
-describe("an OmniMech set (the owner's notes: omni, omni_base_id, omni_variants; the pod marker is unverified, so a variant's pods are its equipment minus the base's)", () => {
+describe("an OmniMech set (omni, omni_base_id, omni_variants; without a fixed flag a variant's pods are its equipment minus the base's)", () => {
   const fixed = [entry(5, "Jump Jet", "CT"), entry(6, "Jump Jet", "LL"), entry(7, "Jump Jet", "RL"), entry(8, "Heat Sink", "LL"), entry(9, "Heat Sink", "RL")];
   const unit = (id: number, model: string, extra: Record<string, unknown>, equipment: unknown[]) =>
     mordelWith(mordelBiped(), { id, name_parts: { name: model === "[BASE]" ? "Test Walker [BASE]" : "Test Walker", alternate_name: null, model: model === "[BASE]" ? "" : model }, equipment, ...extra });
@@ -384,6 +384,42 @@ describe("an OmniMech set (the owner's notes: omni, omni_base_id, omni_variants;
     expect(chassis.base.mounts.filter((m) => m.part === undefined).map((m) => m.name).sort()).toEqual(["Heat Sink", "Heat Sink", "Jump Jet", "Jump Jet", "Jump Jet"]);
     expect(chassis.configurations[0]?.mounts.map((m) => m.name).sort()).toEqual(["AC/10", "AC/10 Ammo"]);
     expect(notes[0]).toContain("a guess");
+  });
+
+  describe("the per-item fixed flag (live check, 2026-11-25)", () => {
+    const flag = (items: ReturnType<typeof entry>[], on: boolean) => items.map((e) => ({ ...e, fixed: on }));
+    const flagged = (model: string, pods: ReturnType<typeof entry>[], baseId: number | null) =>
+      unit(900020, model, { omni: true, omni_base_id: baseId }, [...flag(pods, false), ...flag(fixed, true)]);
+    const ids = () => {
+      let n = 0;
+      return () => `f-${++n}`;
+    };
+
+    it("rebuilds a private base from the variant: the fixed marks decide, not our guess", () => {
+      const variant = flagged("Prime", [entry(1, "AC/10", "RT", { slots: 7 }), entry(2, "Heat Sink", "LT")], null);
+      expect(omniFacts(variant)).toMatchObject({ omni: true, isBase: false, baseId: null });
+      const made = imported(variant);
+      const { chassis, notes } = importOmniSingle(made.record, catalog, ids(), "This variant names no base.", made.fixedIds);
+      expect(chassis.base.mounts.filter((m) => m.part === undefined).map((m) => m.name).sort()).toEqual(["Heat Sink", "Heat Sink", "Jump Jet", "Jump Jet", "Jump Jet"]);
+      expect(chassis.configurations[0]?.mounts.map((m) => m.name).sort()).toEqual(["AC/10", "Heat Sink"]);
+      expect(notes[0]).toContain("rebuilt the base from this variant");
+    });
+
+    it("lets the fixed marks win over the subtraction and names the items that differ, once", () => {
+      const baseUnit = unit(900010, "[BASE]", { omni: true, omni_base_id: 900010 }, flag(fixed, true));
+      const agrees = flagged("Prime", [entry(1, "AC/10", "RT", { slots: 7 })], 900010);
+      const differs = unit(900012, "A", { omni: true, omni_base_id: 900010 }, [...flag([entry(3, "Medium Laser", "LA")], true), ...flag(fixed, true)]);
+      const [b, p, a] = [baseUnit, agrees, differs].map(imported);
+      const { chassis, notes } = importOmniSet(b!.record, [p!.record, a!.record], ids(), [p!.fixedIds, a!.fixedIds]);
+      expect(chassis.configurations.map((c) => [c.code, c.mounts.map((m) => m.name)])).toEqual([["Prime", ["AC/10"]], ["A", []]]);
+      expect(notes.filter((t) => t.includes("fixed marks"))).toEqual(["A: the base's equipment list and Mordel's fixed marks disagree about Medium Laser; we used the fixed marks."]);
+    });
+
+    it("reports a fixed flag that is not a boolean and then reads the unit by subtraction", () => {
+      const made = imported(withEquipment([entry(1, "AC/10", "RT", { fixed: "yes" })]));
+      expect(made.notes).toContain("Mordel's AC/10 fixed flag is not the kind of value expected and was ignored.");
+      expect(made.fixedIds).toBeUndefined();
+    });
   });
 });
 

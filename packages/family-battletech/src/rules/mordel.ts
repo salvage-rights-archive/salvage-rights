@@ -12,7 +12,8 @@ import type { LocationCode, MechRecord, Mount, TechBase } from "./mech";
 import { defaultFixedMounts, splitRecord } from "./omni";
 import type { OmniChassis, OmniConfiguration } from "./omni";
 
-export type MordelImport = { ok: true; record: MechRecord; notes: string[] } | { ok: false; message: string };
+/** `fixedIds` is set only when every equipment entry carries a boolean `fixed`: the ids of the mounts Mordel marks as the base's own. */
+export type MordelImport = { ok: true; record: MechRecord; notes: string[]; fixedIds?: string[] } | { ok: false; message: string };
 
 // ---------------------------------------------------------------------------------------------------------------
 // Which unit a player means
@@ -335,6 +336,8 @@ function convert(response: unknown, catalog: Catalog, editionId: string, now: st
 
   // Mordel lists an industrial cockpit's Advanced Fire Control as an item with no location and no slots; here it is the cockpit's variant.
   let advancedFireControl = false;
+  const fixedFlags = new Map<string, boolean>();
+  let entryMounts = 0;
   const idToMount = new Map<number, string>();
   const links: { mountId: string; target: number }[] = [];
   const list = unit["equipment"];
@@ -368,6 +371,10 @@ function convert(response: unknown, catalog: Catalog, editionId: string, now: st
     if (!row && theirSlots !== undefined && theirSlots >= 0) mount.slots = theirSlots;
     else if (!row && slotless) mount.slots = 0;
     mounts.push(mount);
+    entryMounts += 1;
+    const fixedFlag = entry["fixed"];
+    if (typeof fixedFlag === "boolean") fixedFlags.set(mount.id, fixedFlag);
+    else if (fixedFlag !== undefined && fixedFlag !== null) wrong(`${name} fixed flag`);
     const theirId = num(entry["id"], `${name} id`);
     if (theirId !== undefined) idToMount.set(theirId, mount.id);
     const target = num(entry["associated_id"], `${name} associated_id`);
@@ -460,7 +467,13 @@ function convert(response: unknown, catalog: Catalog, editionId: string, now: st
     const { name, notes, tons, year, techBase, configuration, chassis, armor, arms, mounts } = structuredClone(record);
     record.source.baseline = { name, notes, tons, year, techBase, configuration, chassis, armor, arms, mounts };
   }
-  return { ok: true, record, notes: [...new Set(notes)] };
+  const result: MordelImport = { ok: true, record, notes: [...new Set(notes)] };
+  if (entryMounts > 0 && fixedFlags.size === entryMounts) {
+    // The items a part stands for (Triple-Strength Myomer, Clan CASE) have no entry of their own; they go with the base, as the subtraction would put them.
+    const standIns = record.mounts.filter((m) => !m.part && !fixedFlags.has(m.id)).map((m) => m.id);
+    result.fixedIds = [...[...fixedFlags].filter(([, on]) => on).map(([id]) => id), ...standIns];
+  }
+  return result;
 }
 
 /** The arm actuators to try, in the order they are given up: all present, then no hand, then no lower arm (and so no hand). */
@@ -618,7 +631,9 @@ export function changedSinceImport(record: MechRecord): Set<string> {
 // another member's private unit. A variant's pods are its equipment minus the base's. Checked against the live API on 2026-11-25 (bm 2303,
 // its PRIME bm 2304 and Baker bm 15494): `omni_variants` is a list of `{ id, name }` objects; every variant repeats the base's fixed items;
 // and each equipment entry carries a boolean `fixed` that the notes do not name, true on exactly the items the subtraction leaves on the
-// base. The subtraction and `fixed` agree on all three; `fixed` would also split a variant whose base is private, which the subtraction cannot.
+// base. The subtraction and `fixed` agree on all three. The importer lets `fixed` decide where every entry carries it (and notes any item the
+// subtraction would have placed differently); it also splits a variant whose base is private, which the subtraction cannot. Where entries
+// lack it, the subtraction (or the guess) stays.
 
 export interface MordelOmniFacts {
   omni: boolean;
@@ -672,12 +687,13 @@ const mountKey = (m: Mount) => `${m.name}|${m.techBase}|${m.location ?? ""}`;
  * places each unit's items itself, so two units' slots need not agree). A variant that lacks an item the base has, or whose chassis parts
  * differ from the base's, is reported in the notes and still imported. The first variant named Prime (else the first) is the Primary.
  */
-export function importOmniSet(base: MechRecord, variants: MechRecord[], newId: () => string): OmniImport {
+export function importOmniSet(base: MechRecord, variants: MechRecord[], newId: () => string, fixedIds: (string[] | undefined)[] = []): OmniImport {
   const notes: string[] = [];
   const baseMounts = base.mounts;
   const taken = new Set(baseMounts.map((m) => m.id));
   const configurations: OmniConfiguration[] = [];
-  for (const variant of variants) {
+  for (const [variantAt, variant] of variants.entries()) {
+    const flagged = fixedIds[variantAt];
     const remaining = new Map<string, Mount[]>();
     for (const m of baseMounts.filter((x) => x.part === undefined)) remaining.set(mountKey(m), [...(remaining.get(mountKey(m)) ?? []), m]);
     const asBase = new Map<string, string>();
@@ -689,6 +705,15 @@ export function importOmniSet(base: MechRecord, variants: MechRecord[], newId: (
       else pods.push(structuredClone(m));
     }
     const code = variant.name.model.trim() || nextFreeCode(configurations.map((c) => c.code));
+    if (flagged) {
+      // Where Mordel marks each item fixed or not, that decides; the subtraction is only a check on it.
+      const isFixed = new Set(flagged);
+      const byFlag = variant.mounts.filter((m) => m.part === undefined && !isFixed.has(m.id));
+      const bySubtraction = new Set(pods.map((m) => m.id));
+      const differ = [...new Set([...byFlag.filter((m) => !bySubtraction.has(m.id)), ...pods.filter((m) => isFixed.has(m.id))].map((m) => m.name))];
+      if (differ.length > 0) notes.push(`${code}: the base's equipment list and Mordel's fixed marks disagree about ${differ.join(", ")}; we used the fixed marks.`);
+      pods.splice(0, pods.length, ...byFlag.map((m) => structuredClone(m)));
+    }
     for (const left of remaining.values()) for (const m of left) notes.push(`${code} does not list ${m.name} (${m.location ?? "unplaced"}), which the base has; it is kept as fixed equipment.`);
     for (const part of ["engine", "gyro", "cockpit", "structure", "armorType"] as const) {
       if (JSON.stringify(variant.chassis[part]) !== JSON.stringify(base.chassis[part])) notes.push(`${code} has a different ${part === "armorType" ? "armor type" : part} from the base; a configuration cannot change it, so the base's is used.`);
@@ -749,14 +774,15 @@ function nextFreeCode(used: string[]): string {
 }
 
 /**
- * FALLBACK, for an Omni variant whose base cannot be had (private, or not fetched): the one unit becomes a one-configuration chassis. Which
+ * For an Omni variant whose base cannot be had (private, or not fetched): the one unit becomes a one-configuration chassis. With `fixedIds`
+ * (the items Mordel marks fixed) the base is rebuilt from them. Without, this is the FALLBACK and which
  * items are fixed is OUR GUESS (the structure and armor slots, heat sinks, jump jets and anything the books bar from pods; the rest are pods),
  * since the notes record no pod marker; the notes say so, and the player can correct it in the editor.
  */
-export function importOmniSingle(record: MechRecord, catalog: Catalog, newId: () => string, why: string): OmniImport {
+export function importOmniSingle(record: MechRecord, catalog: Catalog, newId: () => string, why: string, fixedIds?: string[]): OmniImport {
   const copy = structuredClone(record);
   copy.id = newId();
-  const chassis = splitRecord({ ...copy, unitType: "omnimech" }, defaultFixedMounts(copy, catalog), newId);
+  const chassis = splitRecord({ ...copy, unitType: "omnimech" }, fixedIds ?? defaultFixedMounts(copy, catalog), newId);
   chassis.name = { chassis: withoutBaseMark(copy.name.chassis) || copy.name.chassis };
   chassis.rulesLevel = "standard";
   const config = chassis.configurations[0];
@@ -768,5 +794,6 @@ export function importOmniSingle(record: MechRecord, catalog: Catalog, newId: ()
     config.rulesLevel = copy.rulesLevel !== undefined && levelAtLeast(copy.rulesLevel, "standard") ? copy.rulesLevel : "standard";
   }
   delete chassis.source;
+  if (fixedIds) return { chassis, notes: [`${why} We rebuilt the base from this variant because the base is not visible to us: the items Mordel marks as fixed are the base's, and the rest are this configuration's pods.`] };
   return { chassis, notes: [`${why} Imported as a one-configuration OmniMech: which items are fixed in the base is a guess (the structure and armor slots, heat sinks, jump jets and items the books bar from pods); change it in the editor.`] };
 }

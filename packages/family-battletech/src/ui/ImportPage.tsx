@@ -168,11 +168,12 @@ export default function ImportPage({ makeClient = defaultMakeClient }: ImportPag
           }
           const base = baseValue === undefined ? undefined : convert(baseValue);
           if (!base) {
-            made = importOmniSingle(result.record, catalog, newId, baseId === null ? "This variant names no base (its base may be another member's private unit)." : "The base chassis could not be loaded.");
+            made = importOmniSingle(result.record, catalog, newId, baseId === null ? "This variant names no base (its base may be another member's private unit)." : "The base chassis could not be loaded.", result.fixedIds);
           } else {
             const listed = omniFacts(baseValue).variantIds;
             const wanted = [...new Set([...(facts.isBase ? [] : [id]), ...listed])].slice(0, MAX_VARIANTS);
             const variants: MechRecord[] = [];
+            const variantFixed: (string[] | undefined)[] = [];
             const missed: string[] = [];
             let at = 0;
             for (const variantId of wanted) {
@@ -185,10 +186,13 @@ export default function ImportPage({ makeClient = defaultMakeClient }: ImportPag
                 if (got.ok) value = got.value;
               }
               const converted = value === undefined ? undefined : convert(value);
-              if (converted) variants.push(converted.record);
+              if (converted) {
+                variants.push(converted.record);
+                variantFixed.push(converted.fixedIds);
+              }
               else missed.push(String(variantId));
             }
-            made = importOmniSet(base.record, variants, newId);
+            made = importOmniSet(base.record, variants, newId, variantFixed);
             if (missed.length > 0) made.notes.push(`These variants could not be loaded and were left out: ${missed.join(", ")}.`);
             if (listed.length + (facts.isBase ? 0 : 1) > MAX_VARIANTS) made.notes.push(`Only the first ${String(MAX_VARIANTS)} variants were imported.`);
             made.notes.push(...base.notes);
