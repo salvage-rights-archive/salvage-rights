@@ -21,11 +21,11 @@ import {
   STRUCTURE_TYPES,
 } from "../data/chassis";
 import type { Cite, PartFacts, Span } from "../data/chassis";
-import { configurationInTime, eraOfRecord, eraOfYear, partSpans, spansFit, typeInTime, windowOf } from "./availability";
-import { locationsFor, mountableOn, mountsRequired } from "./catalog";
+import { configurationInTime, eraOfRecord, eraOfYear, partSpans, spansFit, typeInTime, typeIsPrototype, windowOf } from "./availability";
+import { locationsFor, mountableOn, mountsRequired, podMountable } from "./catalog";
 import { levelAtLeast, levelItems, levelRow } from "./levels";
 import type { Catalog, EquipmentRow } from "./catalog";
-import { armorSpread, configurationOf, engineTons, freeHeatSinks, industrialRulesOf, layout as buildLayout, maxArmor, mechTypeOf, walkMP, weights } from "./mech";
+import { ARM_FULL, armorSpread, configurationOf, engineTons, freeHeatSinks, industrialRulesOf, layout as buildLayout, maxArmor, mechTypeOf, walkMP, weights } from "./mech";
 import { locationName, type Layout, type LocationCode, type MechRecord, type Mount } from "./mech";
 import { mountedShields, missingActuators, shieldStats } from "./shields";
 import { movementPenalty, rowOf, stemOf, TSM_ROWS } from "./walk";
@@ -99,6 +99,16 @@ const gunSize = (id: string | null) => /^(light|heavy)-/.exec(id ?? "")?.[1] ?? 
 // ---------------------------------------------------------------------------------------------------------------
 // The checks
 // ---------------------------------------------------------------------------------------------------------------
+/** What the pods of a configuration weigh and what the base leaves for them: the record's weight less the base alone (the fixed mounts, the base's own heat sinks). */
+function podTons(record: MechRecord, catalog: Catalog): { pods: number; space: number } | undefined {
+  if (!record.omni) return undefined;
+  const fixed = new Set(record.omni.baseMountIds);
+  const base: MechRecord = { ...record, mounts: record.mounts.filter((m) => fixed.has(m.id)), chassis: { ...record.chassis, heatSinks: { ...record.chassis.heatSinks, count: record.omni.baseHeatSinks } } };
+  const all = weights(record, catalog.factsOf).total;
+  const own = weights(base, catalog.factsOf).total;
+  return all === null || own === null ? undefined : { pods: tidy(all - own), space: tidy(record.tons - own) };
+}
+
 function weightCheck({ record, layout, catalog }: CheckInput): Finding[] {
   const out: Finding[] = [];
   const where = { field: "tons" };
@@ -123,7 +133,16 @@ function weightCheck({ record, layout, catalog }: CheckInput): Finding[] {
     const unknown = lines.filter((l) => l.tons === null || !Number.isFinite(l.tons)).map((l) => l.label);
     out.push(finding("weight", "note", `The total weight could not be worked out; not known: ${unknown.join(", ")}.`, { where }));
   } else if (total > record.tons) {
-    out.push(finding("weight", "error", `The parts weigh ${tons(total)}, over the ${tons(record.tons)} this 'Mech may weigh.`, { where, cite: tm(PAGE.weight) }));
+    const pods = record.omni && !record.omni.isBase ? podTons(record, catalog) : undefined;
+    const podNote = pods === undefined ? "" : ` (the pods weigh ${tons(pods.pods)}; this chassis has ${tons(pods.space)} of pod space)`;
+    out.push(finding(pods === undefined ? "weight" : "omni-overweight", "error", `The parts weigh ${tons(total)}, over the ${tons(record.tons)} this 'Mech may weigh${podNote}.`, { where, cite: tm(PAGE.weight) }));
+  } else if (record.omni?.isBase) {
+    // The unloaded base is not a legal unit: what it leaves is the pod space (TechManual pp.20, 58), not waste.
+    const open = layout.locations.flatMap((loc) => {
+      const n = (layout.slots[loc] ?? []).filter((c) => c.kind === "empty").length;
+      return n > 0 ? [`${locationName(loc)} ${n}`] : [];
+    });
+    out.push(finding("omni-pod-space", "note", `Pod space: ${tons(tidy(record.tons - total))}; open slots: ${open.length > 0 ? open.join(", ") : "none"}.`, { where, cite: tm(20) }));
   } else if (total < record.tons) {
     out.push(finding("weight", "warning", `The parts weigh ${tons(total)} of ${tons(record.tons)}; ${tons(tidy(record.tons - total))} is unused.`, { where, cite: tm(PAGE.weight) }));
   }
@@ -289,14 +308,17 @@ function heatSinkCheck({ record, catalog }: CheckInput): Finding[] {
   const sinks = record.mounts.filter((m) => rowOf(catalog, record, m)?.kind === "heat-sink");
   const rating = record.chassis.engine.rating;
   if (isPositive(rating)) {
-    const held = Math.min(count, Math.floor(rating / HEAT_SINK_RULES.ratingPerHeldSink));
+    // An OmniMech's engine holds only the base's sinks critical-free: every sink a configuration adds takes slots (TechManual p.54).
+    const held = Math.min(record.omni ? record.omni.baseHeatSinks : count, count, Math.floor(rating / HEAT_SINK_RULES.ratingPerHeldSink));
     const placed = sinks.reduce((n, m) => {
       const row = rowOf(catalog, record, m);
       return n + (row ? (HEAT_SINKS.types[heatSinkTypeOf(row)]?.perMount ?? 1) : 1);
     }, 0);
     if (placed + held !== count) {
+      const podSinks = record.omni ? sinks.filter((m) => m.pod).length : 0;
+      const omni = podSinks > 0 ? ` The base's sinks are the only ones the engine holds; the ${podSinks} pod heat ${podSinks === 1 ? "sink" : "sinks"} all take slots.` : "";
       out.push(
-        finding("heat-sinks", "error", `${placed} heat sinks are placed and the engine can hold ${held}, which makes ${placed + held}; the chassis lists ${count}.`, { where, cite }),
+        finding(omni ? "omni-heat-sink-slots" : "heat-sinks", "error", `${placed} heat sinks are placed and the engine can hold ${held}, which makes ${placed + held}; the chassis lists ${count}.${omni}`, { where, cite }),
       );
     }
   }
@@ -305,7 +327,9 @@ function heatSinkCheck({ record, catalog }: CheckInput): Finding[] {
     for (const m of sinks) {
       const row = rowOf(catalog, record, m);
       const kind = row ? heatSinkTypeOf(row) : type;
-      if (kind !== type) {
+      if (kind !== type && m.pod) {
+        out.push(finding("omni-heat-sink-type", "error", `Pod heat sink ${m.name} is a ${partName(HEAT_SINKS, kind)} sink; this OmniMech's sinks are ${partName(HEAT_SINKS, type)}, and a 'Mech carries one type.`, { where: { mountId: m.id }, cite }));
+      } else if (kind !== type) {
         out.push(
           finding("heat-sinks", "error", `${m.name} is a ${partName(HEAT_SINKS, kind)} heat sink, but the chassis uses ${partName(HEAT_SINKS, type)}; a 'Mech carries one heat sink type only.`, {
             where: { mountId: m.id },
@@ -486,7 +510,10 @@ function eraCheck({ record }: CheckInput): Finding[] {
   const type = mechTypeOf(record);
   const row = configurationOf(record.configuration);
   const bodyInTime = !row || configurationInTime(record.configuration, record);
-  if (bodyInTime && !typeInTime(type, record)) {
+  if (bodyInTime && !typeInTime(type, record) && typeIsPrototype(type, record) && levelAtLeast(record.rulesLevel ?? "standard", "experimental")) {
+    const first = (record.techBase === "clan" ? (type.clanAvailability ?? type.availability) : type.availability)[0]?.from;
+    out.push(finding("availability", "note", `A ${type.label} of this date is a prototype; production begins in ${first === undefined ? "a later year" : first}. Prototypes are Experimental level.`, { where: { field: "unitType" }, cite: type.availabilityCite }));
+  } else if (bodyInTime && !typeInTime(type, record)) {
     const when = record.year !== null ? String(record.year) : `the ${eraOfRecord(record)?.name ?? "chosen"} era`;
     out.push(finding("availability", "error", `A ${type.label} is not available to ${record.techBase === "clan" ? "a Clan" : record.techBase === "mixed" ? "a mixed technology" : "an Inner Sphere"} 'Mech in ${when}; ${spansText(record.techBase === "clan" ? (type.clanAvailability ?? type.availability) : type.availability, {})}.`, { where: { field: "unitType" }, cite: type.availabilityCite }));
   }
@@ -726,7 +753,7 @@ function unitTypeCheck({ record, catalog }: CheckInput): Finding[] {
   const type = mechTypeOf(record);
   const out: Finding[] = [];
   const add = (message: string, cite: { book: string; page: number }, where?: Finding["where"]) => out.push(finding("unit-type", "error", message, { where, cite }));
-  if (!type.ready) {
+  if (!type.ready && !record.omni) {
     out.push(finding("unit-type", "note", `${type.label} rules are not built yet, so this is checked as a BattleMech.`, { where: { field: "unitType" }, cite: type.cite }));
   }
   for (const mount of record.mounts) {
@@ -784,6 +811,61 @@ function unitTypeCheck({ record, catalog }: CheckInput): Finding[] {
   return out;
 }
 
+const LAUNCHER = /^(lrm|srm|mml)-\d+-(is|clan)$/;
+// A Gauss rifle, autocannon (any kind) or PPC: the weapons that keep the lower arm and hand off the arm they sit in on an OmniMech (TechManual p.57).
+const ARM_HEAVY = /(^|-)(gauss|ppc)(-|$)|(^|-)ac-\d|-x-ac-/;
+
+/**
+ * The rules only an OmniMech's configuration has (TechManual pp.19-20, 44-58): a body an Omni may have, no pod item the books bar from pods
+ * (the catalog's `pod: false`), the lower arm and hand off any arm that carries a Gauss rifle, autocannon or PPC, and one Artemis IV state
+ * for every missile launcher (errata v8.0): if the base's launchers lack it, none has it; if they have it, every launcher does.
+ */
+function omniCheck({ record, catalog }: CheckInput): Finding[] {
+  if (!record.omni) return [];
+  const out: Finding[] = [];
+  const rules = mechTypeOf(record).omni;
+  const body = configurationOf(record.configuration);
+  if (rules && body && !rules.bodies.includes(record.configuration)) {
+    out.push(finding("omni-unit-type", "error", `${/^[AEIOU]/i.test(body.name) ? "An" : "A"} ${body.name} cannot be built as an OmniMech.`, { where: { field: "configuration" }, cite: rules.bodyCite }));
+  }
+  for (const m of record.mounts) {
+    const row = rowOf(catalog, record, m);
+    if (!row) continue;
+    if (m.pod && !podMountable(row)) {
+      out.push(finding("omni-pod-forbidden", "error", `${m.name} cannot be pod-mounted; an OmniMech can only carry it as fixed equipment in the base.`, { where: { mountId: m.id }, cite: row.podCite ?? row.cite }));
+    }
+    if ((m.location === "LA" || m.location === "RA") && ARM_HEAVY.test(row.id) && !row.id.startsWith("protomech")) {
+      const has = { ...ARM_FULL, ...record.arms?.[m.location] };
+      if (has.lowerArm || has.hand) {
+        out.push(finding("omni-arm-actuators", "error", `The ${locationName(m.location)} carries ${m.name}; on an OmniMech the lower arm and hand actuators must be removed from that arm first.`, { where: { mountId: m.id, location: m.location }, cite: tm(PAGE.techBase) }));
+      }
+    }
+  }
+  // Artemis: which launcher an Artemis belongs to is its link, else the first launcher in its location.
+  const launchers = record.mounts.filter((m) => LAUNCHER.test(m.equipmentId ?? ""));
+  const artemis = record.mounts.filter((m) => rowOf(catalog, record, m)?.needs === "launcher");
+  const hostOf = (a: Mount) => launchers.find((l) => l.id === a.linkedTo) ?? (a.linkedTo === undefined ? launchers.find((l) => l.location === a.location) : undefined);
+  const isFixed = (m: Mount) => !m.pod;
+  if (launchers.some(isFixed)) {
+    const baseHas = artemis.some((a) => isFixed(a));
+    const cite = tm(PAGE.artemis);
+    for (const a of artemis.filter((x) => x.pod)) {
+      const host = hostOf(a);
+      if (host && isFixed(host)) {
+        out.push(finding("omni-artemis", "error", `${a.name} is linked to the fixed launcher ${host.name}; Artemis on a fixed launcher is part of the base.`, { where: { mountId: a.id }, cite }));
+      } else if (!baseHas) {
+        out.push(finding("omni-artemis", "error", `The base launchers lack Artemis, so every launcher here must lack it; ${a.name} is mounted.`, { where: { mountId: a.id }, cite }));
+      }
+    }
+    if (baseHas) {
+      for (const l of launchers.filter((x) => x.pod && !artemis.some((a) => hostOf(a)?.id === x.id))) {
+        out.push(finding("omni-artemis", "error", `The base launchers have Artemis, so every launcher here must have it; ${l.name} does not.`, { where: { mountId: l.id }, cite }));
+      }
+    }
+  }
+  return out;
+}
+
 export const CHECKS: Check[] = [
   { id: "weight", editions: "all", run: weightCheck },
   { id: "slots", editions: "all", run: slotsCheck },
@@ -802,6 +884,7 @@ export const CHECKS: Check[] = [
   { id: "shields", editions: "all", run: shieldCheck },
   { id: "lam", editions: "all", run: lamCheck },
   { id: "unsupported", editions: "all", run: unsupportedCheck },
+  { id: "omni", editions: "all", run: omniCheck },
 ];
 
 const NO_LAYOUT: Layout = { supported: false, locations: [], slots: {}, unplaced: [], conflicts: [], overflow: [], partSlots: [] };

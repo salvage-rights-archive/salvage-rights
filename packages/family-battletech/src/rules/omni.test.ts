@@ -3,8 +3,12 @@ import { AMMUNITION } from "../data/equipment/ammunition";
 import { OTHER } from "../data/equipment/other";
 import { WEAPONS } from "../data/equipment/weapons";
 import { createCatalog, expand } from "./catalog";
+import { runChecks } from "./checks";
 import { bipedRecord, clanMount, gladiator } from "./fixtures";
+import { configurationLevel, omniChassisFindings, brokenBy } from "./omni";
+import type { OmniConfiguration } from "./omni";
 import { editRecord, weights } from "./mech";
+import type { MechRecord, Mount } from "./mech";
 import {
   BASE,
   addConfiguration,
@@ -131,5 +135,94 @@ describe("making a chassis", () => {
     expect(chassis.base.chassis.heatSinks.count).toBe(9);
     expect(chassis.configurations[0]?.name).toBe("TW-1");
     expect(resolveConfiguration(chassis, chassis.primaryId)?.chassis.heatSinks.count).toBe(10);
+  });
+});
+
+describe("the Omni checks (TechManual pp.19-20, 44-58)", () => {
+  const prime = () => resolveConfiguration(gladiator(), "prime") as MechRecord;
+  const found = (record: MechRecord, check: string) => runChecks(record, catalog).filter((f) => f.check === check);
+  const withPods = (change: (pods: Mount[]) => Mount[]) => {
+    const chassis = gladiator();
+    const first = chassis.configurations[0] as OmniConfiguration;
+    first.mounts = change(first.mounts);
+    return resolveConfiguration(chassis, "prime") as MechRecord;
+  };
+
+  it("pass the book's Gladiator: no error on the Prime or on the A, and the base reports its pod space as a note", () => {
+    for (const id of ["prime", "a"]) expect(runChecks(resolveConfiguration(gladiator(), id) as MechRecord, catalog).filter((f) => f.level === "error")).toEqual([]);
+    expect(found(resolveBase(gladiator()), "omni-pod-space")[0]?.message).toContain("26.5 tons");
+  });
+
+  it.each([
+    ["pod MASC is refused", (r: MechRecord) => editRecord(r, (d) => void d.mounts.push({ ...clanMount("masc-2", "masc-clan", "RT", 9), pod: true })), "omni-pod-forbidden", "cannot be pod-mounted"],
+    ["a pod heat sink of another type", (r: MechRecord) => editRecord(r, (d) => void d.mounts.push({ ...clanMount("hs-x", "heat-sink-clan", "LT", 10), pod: true })), "omni-heat-sink-type", "carries one type"],
+    ["a Gauss rifle in an arm that keeps its actuators", (r: MechRecord) => editRecord(r, (d) => void delete d.arms), "omni-arm-actuators", "lower arm and hand"],
+    ["a body an Omni may not have", (r: MechRecord) => editRecord(r, (d) => void (d.configuration = "lam")), "omni-unit-type", "cannot be built as an OmniMech"],
+    ["pods over the pod space", (r: MechRecord) => editRecord(r, (d) => void d.mounts.push({ ...clanMount("big", "gauss-rifle-clan", "RT", 9), pod: true })), "omni-overweight", "of pod space"],
+  ])("report %s", (_what, change, check, text) => {
+    const findings = found(change(prime()), check);
+    expect(findings.length).toBeGreaterThan(0);
+    expect(findings[0]?.level).toBe("error");
+    expect(findings[0]?.message).toContain(text);
+    expect(findings[0]?.cite?.page).toBeGreaterThan(0);
+  });
+
+  it("holds only the base's sinks in the engine: a pod sink always takes slots, and a base sink left unplaced is reported", () => {
+    expect(found(prime(), "heat-sinks")).toEqual([]);
+    const lost = editRecord(prime(), (d) => void (d.mounts = d.mounts.filter((m) => m.id !== "hs-base")));
+    expect(found(lost, "omni-heat-sink-slots")[0]?.message).toContain("pod heat sinks all take slots");
+    // 380 holds 15; the base lists 10, so only 10 are held and the three pod sinks are placed: 13 in all, and legal.
+    const chassis = gladiator();
+    chassis.base.chassis.heatSinks.count = 10;
+    chassis.base.mounts = chassis.base.mounts.filter((m) => m.id !== "hs-base");
+    expect(found(resolveConfiguration(chassis, "prime") as MechRecord, "heat-sinks")).toEqual([]);
+  });
+
+  it("gives every launcher the base's Artemis state: none where the base lacks it, all where it has it, and none on a fixed launcher", () => {
+    const launcher = (id: string, location: Mount["location"], slot: number): Mount => clanMount(id, "lrm-10-clan", location, slot);
+    const artemis = (id: string, location: Mount["location"], slot: number, link?: string): Mount => clanMount(id, "artemis-iv-clan", location, slot, link ? { linkedTo: link } : {});
+    const build = (fixed: Mount[], pods: Mount[]) => {
+      const chassis = gladiator();
+      chassis.base.mounts.push(...fixed);
+      (chassis.configurations[0] as OmniConfiguration).mounts.push(...pods);
+      return found(resolveConfiguration(chassis, "prime") as MechRecord, "omni-artemis");
+    };
+    expect(build([launcher("fl", "RT", 9)], [artemis("pa", "RA", 7)])[0]?.message).toContain("lack Artemis");
+    expect(build([launcher("fl", "RT", 9), artemis("fa", "RT", 10, "fl")], [launcher("pl", "LT", 8)])[0]?.message).toContain("must have it");
+    expect(build([launcher("fl", "RT", 9)], [artemis("pa", "RT", 10, "fl")])[0]?.message).toContain("part of the base");
+    expect(build([launcher("fl", "RT", 9), artemis("fa", "RT", 10, "fl")], [launcher("pl", "LT", 8), artemis("pa", "LT", 9, "pl")])).toEqual([]);
+  });
+
+  it("finds the chassis faults: one configuration, a missing Primary, a repeated code, a configuration older than its chassis, an advanced base", () => {
+    const chassis = gladiator();
+    const messages = (c: typeof chassis) => omniChassisFindings(c, catalog).map((f) => `${f.check}:${f.level}`);
+    expect(messages(chassis)).toEqual([]);
+    expect(messages({ ...chassis, configurations: [chassis.configurations[0] as OmniConfiguration] })).toEqual(["omni-configurations:note"]);
+    expect(messages({ ...chassis, primaryId: "x" })).toEqual(["omni-primary:error"]);
+    expect(messages({ ...chassis, configurations: chassis.configurations.map((c) => ({ ...c, code: "A" })) })).toEqual(["omni-primary:error"]);
+    expect(messages({ ...chassis, configurations: [{ ...(chassis.configurations[0] as OmniConfiguration), year: 3000 }, chassis.configurations[1] as OmniConfiguration] })).toEqual(["omni-era:error"]);
+    const advanced = { ...chassis, base: { ...chassis.base, mounts: [...chassis.base.mounts, clanMount("case2", "case-ii-clan", "RT", 9)] } };
+    expect(omniChassisFindings(advanced, catalog).map((f) => f.check)).toEqual(["omni-base-level"]);
+  });
+
+  it("makes a configuration's level the highest of the base and its pods, never below Standard, and refuses the type before its dates", () => {
+    expect(configurationLevel(prime(), catalog)).toBe("standard");
+    const raised = withPods((pods) => [...pods, clanMount("case2", "case-ii-clan", "LT", 10)]);
+    expect(configurationLevel(raised, catalog)).toBe("experimental");
+    expect(found(raised, "level").some((f) => f.message.includes("Experimental"))).toBe(true);
+    const early = (year: number, rulesLevel: "standard" | "experimental") => editRecord(prime(), (d) => void Object.assign(d, { year, rulesLevel }));
+    const gate = (record: MechRecord) => found(record, "availability").filter((f) => f.where?.field === "unitType");
+    expect(gate(early(2855, "standard")).map((f) => f.level)).toEqual(["error"]);
+    expect(gate(early(2855, "experimental")).map((f) => f.level)).toEqual(["note"]);
+    expect(gate(early(2856, "standard"))).toEqual([]);
+  });
+
+  it("names what a base edit breaks in each configuration and changes nothing itself", () => {
+    const chassis = gladiator();
+    const after = applyBaseEdit(chassis, editRecord(resolveBase(chassis), (d) => void (d.chassis.engine.rating = 285)));
+    const broken = brokenBy(chassis, after, catalog);
+    expect(broken.map((b) => b.code)).toEqual(["Prime", "A"]);
+    expect(broken[0]?.added.length).toBeGreaterThan(0);
+    expect(brokenBy(chassis, chassis, catalog)).toEqual([]);
   });
 });

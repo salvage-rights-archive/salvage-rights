@@ -4,6 +4,9 @@
 // Nothing here throws on a chassis it does not understand: an unknown configuration id resolves to nothing, never an exception.
 import type { RulesLevel } from "../data/chassis";
 import type { Catalog } from "./catalog";
+import { runChecks } from "./checks";
+import type { Finding } from "./checks";
+import { levelItems, levelRow, lowestLevelFor } from "./levels";
 import { layout as buildLayout, newRecord, weights } from "./mech";
 import type { LocationCode, MechRecord, Mount, NewMechOptions, OmniLink } from "./mech";
 
@@ -349,4 +352,62 @@ export function splitRecord(record: MechRecord, fixedMountIds: string[], newId: 
   if (record.picture) chassis.picture = structuredClone(record.picture);
   if (chassis.rulesLevel === undefined) delete chassis.rulesLevel;
   return chassis;
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// Checks on the chassis itself, and what a base edit breaks
+// ---------------------------------------------------------------------------------------------------------------
+const tm = (page: number) => ({ book: "TechManual", page });
+
+/** The rules level of a configuration: the highest among the base and its pods, never below Standard (the OmniMech type is Standard; no
+ * book prints a level for Omni technology itself, and the record sheets print each configuration's level from its contents). */
+export const configurationLevel = (record: MechRecord, catalog: Catalog): RulesLevel => lowestLevelFor(record, catalog);
+
+/** The checks that belong to the chassis and not to one configuration: the Primary and the configurations, their codes, ids and years, and the base's level. */
+export function omniChassisFindings(chassis: OmniChassis, catalog: Catalog): Finding[] {
+  const out: Finding[] = [];
+  const add = (check: string, level: Finding["level"], message: string, cite?: Finding["cite"], where?: Finding["where"]) => out.push({ check, level, message, cite, where });
+  const count = chassis.configurations.length;
+  if (count === 0) add("omni-configurations", "error", "This OmniMech has no configuration; there is nothing to build.", tm(20));
+  else if (count === 1) add("omni-configurations", "note", "This OmniMech has one configuration; an OmniMech has a Primary configuration and at least one Alternate.", tm(20));
+  if (count > 0 && !chassis.configurations.some((c) => c.id === chassis.primaryId)) add("omni-primary", "error", "No configuration is marked as the Primary.", tm(20));
+  const seen = new Set<string>();
+  const codes = new Set<string>();
+  for (const c of chassis.configurations) {
+    if (seen.has(c.id)) add("omni-dup-id", "error", `Two configurations share the id ${c.id}.`);
+    seen.add(c.id);
+    if (codes.has(c.code)) add("omni-primary", "error", `Two configurations are both named ${c.code}.`, tm(20));
+    codes.add(c.code);
+    if (c.year != null && chassis.year !== null && c.year < chassis.year) {
+      add("omni-era", "error", `${c.code} is dated ${c.year}, before the chassis year ${chassis.year}; a configuration is on or after its chassis.`, tm(292));
+    }
+  }
+  const base = resolveBase(chassis);
+  const level = lowestLevelFor(base, catalog);
+  if (level !== "introductory" && level !== "standard") {
+    const holds = levelItems(base, catalog).find((i) => i.what !== "type" && i.level === level);
+    if (holds) add("omni-base-level", "note", `The base holds ${holds.name}, which is ${levelRow(level).label} level; every configuration is at least that level.`, holds.cite);
+  }
+  return out;
+}
+
+export interface BrokenConfiguration {
+  id: string;
+  code: string;
+  /** The errors the edit added to this configuration, in the checks' own words. */
+  added: Finding[];
+}
+
+const keyOf = (f: Finding) => `${f.check}|${f.message}|${f.where?.mountId ?? ""}|${f.where?.field ?? ""}`;
+
+/** What an edit to the base (or anything else) broke: for each configuration, the errors after that were not there before. Nothing is changed. */
+export function brokenBy(before: OmniChassis, after: OmniChassis, catalog: Catalog): BrokenConfiguration[] {
+  const broken: BrokenConfiguration[] = [];
+  for (const c of after.configurations) {
+    const was = new Set(runChecks(resolveConfiguration(before, c.id) ?? resolveBase(before), catalog).filter((f) => f.level === "error").map(keyOf));
+    const record = resolveConfiguration(after, c.id);
+    const added = record ? runChecks(record, catalog).filter((f) => f.level === "error" && !was.has(keyOf(f))) : [];
+    if (added.length > 0) broken.push({ id: c.id, code: c.code, added });
+  }
+  return broken;
 }
