@@ -8,6 +8,7 @@ import { configurationAvailable, configurationChoices, typeAvailable } from "../
 import { techBaseChoices, withLevel } from "../rules/levels";
 import { loadCatalog } from "../rules/catalog";
 import { mechTypeOf, newRecord } from "../rules/mech";
+import { fileKind, fromMtf, wrongFileMessage } from "../rules/mordel-files";
 import { configurationTitle, newOmniChassis, resolveAll, resolveBase } from "../rules/omni";
 import { battleValue } from "../rules/bv";
 import { unitCost } from "../rules/cost";
@@ -76,6 +77,8 @@ export default function HomePage() {
   const [catalog, setCatalog] = useState<Catalog>();
   const [status, setStatus] = useState("");
   const [problem, setProblem] = useState("");
+  /** True after a vehicle file or an Alpha Strike text was picked here: the page then links to the Alpha Strike home. */
+  const [offerAs, setOfferAs] = useState(false);
   const keepRef = useRef<HTMLButtonElement>(null);
   const openerRef = useRef<HTMLElement | null>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
@@ -243,6 +246,36 @@ export default function HomePage() {
     input.value = "";
   };
 
+  /** A file downloaded from a Mordel unit page: a 'Mech file opens in the editor, unsaved, for the player to review. */
+  const uploadMordel = async (event: ChangeEvent<HTMLInputElement>) => {
+    const input = event.target;
+    const chosen = input.files?.[0];
+    if (!chosen) return;
+    say("");
+    setOfferAs(false);
+    let message = "";
+    if (chosen.size > MAX_IMPORT_BYTES) message = "That file is too large to be a Mordel file.";
+    else if (/\.pdf$/i.test(chosen.name)) message = wrongFileMessage("pdf", "mtf");
+    else {
+      try {
+        const text = await chosen.text();
+        const kind = fileKind(text, chosen.name);
+        if (kind !== "mtf") {
+          message = wrongFileMessage(kind, "mtf");
+          setOfferAs(kind === "blk" || kind === "as-conversion");
+        } else {
+          const result = fromMtf(text, await loadCatalog(), edition, new Date().toISOString(), () => crypto.randomUUID());
+          if (!result.ok) message = result.message;
+          else void navigate("/battletech/classic/editor", { state: { draft: result.record, notes: result.notes } });
+        }
+      } catch {
+        message = "We could not read that file.";
+      }
+    }
+    if (message) setProblem(message);
+    input.value = "";
+  };
+
   const askDelete = (target: { id: string; name: string }, opener: HTMLElement) => {
     openerRef.current = opener;
     setConfirming(target);
@@ -258,6 +291,13 @@ export default function HomePage() {
       <div role="alert" className="bt-problem">
         {problem}
       </div>
+      {offerAs && (
+        <p>
+          <Link className="sr-action" to="/battletech/alpha-strike/home">
+            Go to the Alpha Strike home
+          </Link>
+        </p>
+      )}
 
       <section className="bt-section" aria-labelledby="bt-edition">
         <h2 id="bt-edition">Built under</h2>
@@ -563,6 +603,21 @@ export default function HomePage() {
             Import from Mordel
           </Link>
         </p>
+        <div className="bt-field">
+          <label htmlFor="bt-mordel-file">Import a file from Mordel</label>
+          <input
+            id="bt-mordel-file"
+            type="file"
+            accept=".mtf,.blk,.txt,text/plain"
+            aria-describedby="bt-mordel-file-hint"
+            onChange={(event) => {
+              void uploadMordel(event);
+            }}
+          />
+          <p id="bt-mordel-file-hint" className="bt-hint">
+            The 'Mech file (.mtf) from a mordel.net unit page. It opens in the editor for you to review and is saved only when you save it. No key is needed.
+          </p>
+        </div>
         <div className="bt-field">
           <label htmlFor="bt-file">Import a file</label>
           <input

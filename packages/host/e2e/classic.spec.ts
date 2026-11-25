@@ -97,7 +97,7 @@ test("export a 'Mech to a file, delete it and import the file back", async ({ pa
   await page.getByRole("group", { name: "Confirm delete" }).getByRole("button", { name: "Delete" }).click();
   await expect(page.getByText("No 'Mechs saved yet.")).toBeVisible();
 
-  await page.getByLabel("Import a file").setInputFiles(file);
+  await page.getByLabel("Import a file", { exact: true }).setInputFiles(file);
   await expect(page.getByText("'Mech imported.")).toBeVisible();
   await page.getByRole("link", { name: `Open ${MECH_NAME}` }).click();
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(MECH_NAME);
