@@ -173,6 +173,25 @@ function slotsCheck({ record, layout }: CheckInput): Finding[] {
       }),
     );
   }
+  // An armor type with a place for each of its slots (stealth): the count in every location must match. A location short of
+  // slots is not reported while some armor slot is still unplaced, since that one is already an error above.
+  const spread = (own(ARMOR.types, record.chassis.armorType) ? ARMOR.types[record.chassis.armorType] : undefined)?.slotsIn?.[record.configuration === "quad" ? "quad" : "biped"];
+  if (spread) {
+    const armorMounts = record.mounts.filter((m) => m.part === "armor");
+    const anyUnplaced = armorMounts.some((m) => !m.location);
+    const type = partName(ARMOR, record.chassis.armorType);
+    for (const loc of layout.locations) {
+      const wanted = spread[loc] ?? 0;
+      const found = armorMounts.filter((m) => m.location === loc).length;
+      if (found === wanted || (found < wanted && anyUnplaced)) continue;
+      out.push(
+        finding("slots", "error", `${type} armor takes ${wanted} slot${wanted === 1 ? "" : "s"} in the ${locationName(loc)}; the record places ${found}.`, {
+          where: { location: loc, field: "chassis.armorType" },
+          cite: ARMOR.cite,
+        }),
+      );
+    }
+  }
   return out;
 }
 

@@ -112,7 +112,7 @@ export const WEAPONS: EquipmentGroup[] = [
       { id: "streak-srm-6-is", name: "Streak SRM 6", aliases: ["Streak-6"], tons: 4.5, slots: 2, availability: [{ from: 3058 }] },
       // Anti-missile systems, pods and Narc (Inner Sphere)
       { id: "ams-is", name: "Anti-Missile System", aliases: ["AMS"], tons: 0.5, slots: 1, availability: [{ from: 2617, to: 2796 }, { from: 3040 }] },
-      { id: "a-pods-is", name: "A-Pods", aliases: ["A-Pod"], tons: 0.5, slots: 1, availability: [{ from: 3055 }], locations: ["LL", "RL", "FLL", "FRL", "RLL", "RRL"] },
+      { id: "a-pods-is", name: "A-Pods", aliases: ["A-Pod", "Anti-Personnel Pod"], tons: 0.5, slots: 1, availability: [{ from: 3055 }], locations: ["LL", "RL", "FLL", "FRL", "RLL", "RRL"] },
       { id: "b-pods-is", name: "B-Pods", aliases: ["B-Pod"], tons: 1, slots: 1, availability: [{ from: 3069 }] },
       { id: "narc-missile-beacon-is", name: "Narc Missile Beacon", aliases: ["Narc"], tons: 3, slots: 2, availability: [{ from: 2587, to: 2795 }, { from: 3035 }] },
       { id: "improved-narc-launcher-is", name: "Improved Narc Launcher", aliases: ["Imp. Narc Launcher", "iNarc"], tons: 5, slots: 3, availability: [{ from: 3062 }] },
@@ -178,7 +178,7 @@ export const WEAPONS: EquipmentGroup[] = [
       { id: "streak-srm-6-clan", name: "Streak SRM 6", aliases: ["Streak-6"], tons: 3, slots: 2, availability: [{ from: 2826 }] },
       // Anti-missile systems, pods and Narc (Clan)
       { id: "ams-clan", name: "Anti-Missile System", aliases: ["AMS"], tons: 0.5, slots: 1, availability: [{ from: 2831 }] },
-      { id: "a-pods-clan", name: "A-Pods", aliases: ["A-Pod"], tons: 0.5, slots: 1, availability: [{ from: 2850 }], locations: ["LL", "RL", "FLL", "FRL", "RLL", "RRL"] },
+      { id: "a-pods-clan", name: "A-Pods", aliases: ["A-Pod", "Anti-Personnel Pod"], tons: 0.5, slots: 1, availability: [{ from: 2850 }], locations: ["LL", "RL", "FLL", "FRL", "RLL", "RRL"] },
       { id: "b-pods-clan", name: "B-Pods", aliases: ["B-Pod"], tons: 1, slots: 1, availability: [{ from: 3068 }] },
       { id: "narc-missile-beacon-clan", name: "Narc Missile Beacon", aliases: ["Narc"], tons: 2, slots: 1, availability: [{ from: 2828 }] },
     ],

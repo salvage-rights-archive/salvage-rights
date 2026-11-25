@@ -1,8 +1,8 @@
 // Turning the JSON that mordel.net returns for one unit into our 'Mech record, and finding what a player has changed since.
-// Pure functions, no network. The response is untyped input: every field is narrowed before it is used, a field of the
-// wrong type is skipped with a note, and nothing here throws whatever it is given. Mordel's own words for chassis parts
-// are mapped to our table keys by the small tables below; a word that is not in a table is stored as Mordel wrote it,
-// with a note, and the checks report it as unknown. Nothing is guessed.
+// Pure functions, no network. The response is untyped input: every field is narrowed before it is used, a field that is
+// present with the wrong type is skipped with a note, and nothing here throws whatever it is given. Mordel's own words
+// for chassis parts are mapped to our table keys by the small tables below; a word that is not in a table is stored as
+// Mordel wrote it, with a note, and the checks report it as unknown. Nothing is guessed.
 import { ARMOR, MYOMER, STRUCTURE_TYPES } from "../data/chassis";
 import type { Catalog, EquipmentRow } from "./catalog";
 import { layout } from "./mech";
@@ -35,15 +35,6 @@ export function parseMordelRef(text: string): { unitType: string; id: number } |
   }
   return null;
 }
-
-// ---------------------------------------------------------------------------------------------------------------
-// Narrowing helpers
-// ---------------------------------------------------------------------------------------------------------------
-type Json = Record<string, unknown>;
-const obj = (x: unknown): Json | undefined => (typeof x === "object" && x !== null && !Array.isArray(x) ? (x as Json) : undefined);
-const str = (x: unknown): string | undefined => (typeof x === "string" && x.trim() !== "" ? x : undefined);
-const num = (x: unknown): number | undefined => (typeof x === "number" && Number.isFinite(x) ? x : undefined);
-const own = <T>(table: Record<string, T>, key: string): T | undefined => (Object.hasOwn(table, key) ? table[key] : undefined);
 
 // ---------------------------------------------------------------------------------------------------------------
 // Mordel's words to our keys. One table per kind of part, keyed by the word with case and punctuation removed. `clan` is
@@ -115,15 +106,15 @@ const LOCATIONS: Record<string, LocationCode> = {
   RRL: "RRL",
 };
 const TORSOS: LocationCode[] = ["CT", "LT", "RT"];
+// Where structure and armor slots go when Mordel does not say: arms, side torsos, legs, then the center torso and head, lowest
+// slot first. On a quad the front legs stand in the arms' place and the rear legs in the legs'.
+const FILL_ORDER: Record<string, LocationCode[]> = {
+  biped: ["LA", "RA", "LT", "RT", "LL", "RL", "CT", "HD"],
+  quad: ["FLL", "FRL", "LT", "RT", "RLL", "RRL", "CT", "HD"],
+};
 
-/** "clan" or "is" from Mordel's technology word, or undefined when it does not say. */
-function techOf(word: unknown): TechBase | undefined {
-  const text = str(word)?.toLowerCase();
-  if (!text) return undefined;
-  if (text.includes("clan")) return "clan";
-  if (text.includes("inner") || text === "is") return "inner-sphere";
-  return undefined;
-}
+type Json = Record<string, unknown>;
+const own = <T>(table: Record<string, T>, key: string): T | undefined => (Object.hasOwn(table, key) ? table[key] : undefined);
 
 // ---------------------------------------------------------------------------------------------------------------
 // The importer
@@ -137,37 +128,70 @@ export function fromMordel(response: unknown, catalog: Catalog, editionId: strin
 }
 
 function convert(response: unknown, catalog: Catalog, editionId: string, now: string, newId: () => string): MordelImport {
-  const top = obj(response);
+  const isObject = (x: unknown): x is Json => typeof x === "object" && x !== null && !Array.isArray(x);
+  const top = isObject(response) ? response : undefined;
   if (!top) return { ok: false, message: "Mordel sent nothing this tool can read: the response is not an object." };
   if (top["status"] !== undefined && top["status"] !== "OK") {
-    const why = str(top["message"]) ?? str(top["error"]);
+    const why = typeof top["message"] === "string" ? top["message"] : typeof top["error"] === "string" ? top["error"] : "";
     return { ok: false, message: `Mordel answered with the status ${JSON.stringify(top["status"])}${why ? `: ${why}` : ""}.` };
   }
-  const unit = obj(top["unit"]);
-  if (!unit) return { ok: false, message: "The response has no unit in it." };
-  const unitType = str(unit["unit_type_short"]);
-  if (unitType !== undefined && unitType.toLowerCase() !== "bm") {
-    return { ok: false, message: `This is a ${unitType} unit; only BattleMechs (bm) can be imported.` };
+  const unitValue = top["unit"];
+  if (!isObject(unitValue)) return { ok: false, message: "The response has no unit in it." };
+  const unit = unitValue;
+  if (typeof unit["unit_type_short"] === "string" && unit["unit_type_short"].toLowerCase() !== "bm") {
+    return { ok: false, message: `This is a ${unit["unit_type_short"]} unit; only BattleMechs (bm) can be imported.` };
   }
 
   const notes: string[] = [];
   const note = (text: string) => notes.push(text);
 
+  // The narrowing helpers, once. A value that is absent or null is simply missing; one that is present with the wrong type
+  // gives a note naming the field. An empty string counts as missing.
+  const wrong = (label: string) => note(`Mordel's ${label} is not the kind of value expected and was ignored.`);
+  const str = (v: unknown, label: string): string | undefined => {
+    if (v === undefined || v === null || v === "") return undefined;
+    if (typeof v === "string" && v.trim() !== "") return v;
+    wrong(label);
+    return undefined;
+  };
+  const num = (v: unknown, label: string): number | undefined => {
+    if (v === undefined || v === null) return undefined;
+    if (typeof v === "number" && Number.isFinite(v)) return v;
+    wrong(label);
+    return undefined;
+  };
+  const text = (v: unknown, label: string): string | undefined => (typeof v === "number" && Number.isFinite(v) ? String(v) : str(v, label));
+  const sect = (v: unknown, label: string): Json | undefined => {
+    if (v === undefined || v === null) return undefined;
+    if (isObject(v)) return v;
+    wrong(label);
+    return undefined;
+  };
+  const techOf = (word: unknown, label: string): TechBase | undefined => {
+    const t = str(word, label)?.toLowerCase();
+    if (!t) return undefined;
+    if (t.includes("clan")) return "clan";
+    if (t.includes("inner") || t === "is") return "inner-sphere";
+    return undefined;
+  };
+
   // Identity and header
-  const parts = obj(unit["name_parts"]);
-  const chassisName = str(parts?.["name"]) ?? str(unit["name"]) ?? "";
+  const parts = sect(unit["name_parts"], "name_parts");
+  const chassisName = str(parts?.["name"], "name") ?? str(unit["name"], "name") ?? "";
   if (!chassisName) note("Mordel gave no name for this unit.");
-  const model = str(parts?.["model"]) ?? "";
-  const tons = num(unit["tons"]);
+  const model = str(parts?.["model"], "model") ?? "";
+  const tons = num(unit["tons"], "tonnage");
   if (tons === undefined) note("Mordel gave no tonnage; it is set to 0.");
-  const year = num(unit["year"]) ?? null;
-  const unitTech = techOf(unit["tech_base"]);
-  const isMixed = unit["mixed_tech"] === true || str(unit["tech_base"])?.toLowerCase() === "mixed";
+  const year = num(unit["year"], "year") ?? null;
+  const unitTech = techOf(unit["tech_base"], "tech base");
+  const mixedFlag = unit["mixed_tech"];
+  if (mixedFlag !== undefined && mixedFlag !== null && typeof mixedFlag !== "boolean") wrong("mixed_tech");
+  const isMixed = mixedFlag === true || str(unit["tech_base"], "tech base")?.toLowerCase() === "mixed";
   if (!isMixed && !unitTech) note("Mordel did not say the tech base; Inner Sphere is assumed.");
   const techBase: MechRecord["techBase"] = isMixed ? "mixed" : (unitTech ?? "inner-sphere");
   const unitClan = !isMixed && unitTech === "clan";
 
-  const rawConfiguration = str(unit["configuration"]);
+  const rawConfiguration = str(unit["configuration"], "configuration");
   const configuration = rawConfiguration ? rawConfiguration.toLowerCase() : "";
   if (!rawConfiguration) note("Mordel gave no configuration.");
   else if (configuration !== "biped" && configuration !== "quad") {
@@ -175,9 +199,9 @@ function convert(response: unknown, catalog: Catalog, editionId: string, now: st
   }
 
   // Chassis parts
-  const mapPart = (table: Record<string, Words>, label: string, section: unknown, tech?: unknown): string => {
-    const part = obj(section);
-    const raw = str(part?.["type"]);
+  const mapPart = (table: Record<string, Words>, label: string, sectionValue: unknown): string => {
+    const part = sect(sectionValue, label);
+    const raw = str(part?.["type"], `${label} type`);
     if (!raw) {
       note(`Mordel gave no ${label}.`);
       return "";
@@ -188,26 +212,26 @@ function convert(response: unknown, catalog: Catalog, editionId: string, now: st
       return raw;
     }
     if (words.clan === undefined) return words.is;
-    const tech2 = techOf(tech ?? part?.["technology"]);
-    if (tech2) return tech2 === "clan" ? words.clan : words.is;
+    const tech = techOf(part?.["technology"], `${label} technology`);
+    if (tech) return tech === "clan" ? words.clan : words.is;
     if (!isMixed) return unitClan ? words.clan : words.is;
     note(`Mordel did not say whether the ${label} "${raw}" is Clan; Inner Sphere is assumed.`);
     return words.is;
   };
-  const engine = obj(unit["engine"]);
-  const rating = num(engine?.["rating"]);
+  const engine = sect(unit["engine"], "engine");
+  const rating = num(engine?.["rating"], "engine rating");
   if (rating === undefined) note("Mordel gave no engine rating; it is set to 0.");
-  const heat = obj(unit["heat_sinks"]);
-  const heatCount = num(heat?.["count"]);
+  const heat = sect(unit["heat_sinks"], "heat_sinks");
+  const heatCount = num(heat?.["count"], "heat sink count");
   if (heatCount === undefined) note("Mordel gave no heat sink count; it is set to 0.");
   const chassis: MechRecord["chassis"] = {
-    engine: { type: mapPart(ENGINE_WORDS, "engine type", engine), rating: rating ?? 0 },
+    engine: { type: mapPart(ENGINE_WORDS, "engine", unit["engine"]), rating: rating ?? 0 },
     gyro: mapPart(GYRO_WORDS, "gyro", unit["gyro"]),
     cockpit: mapPart(COCKPIT_WORDS, "cockpit", unit["cockpit"]),
-    structure: mapPart(STRUCTURE_WORDS, "structure type", unit["structure"]),
-    armorType: mapPart(ARMOR_WORDS, "armor type", unit["armor"]),
+    structure: mapPart(STRUCTURE_WORDS, "structure", unit["structure"]),
+    armorType: mapPart(ARMOR_WORDS, "armor", unit["armor"]),
     myomer: mapPart(MYOMER_WORDS, "myomer", unit["myomer"]),
-    heatSinks: { type: mapPart(HEAT_SINK_WORDS, "heat sink type", heat), count: heatCount ?? 0 },
+    heatSinks: { type: mapPart(HEAT_SINK_WORDS, "heat sink", unit["heat_sinks"]), count: heatCount ?? 0 },
   };
 
   // Armor
@@ -215,22 +239,25 @@ function convert(response: unknown, catalog: Catalog, editionId: string, now: st
   const locations = unit["locations"];
   if (Array.isArray(locations)) {
     for (const item of locations) {
-      const entry = obj(item);
-      const code = str(entry?.["code"]);
+      const entry = sect(item, "location entry");
+      const code = str(entry?.["code"], "location code");
       const loc = code ? own(LOCATIONS, code.toUpperCase()) : undefined;
       if (!entry || !loc) {
-        note(`A location${code ? ` called "${code}"` : ""} is not one this tool knows and was skipped.`);
+        if (entry) note(`A location${code ? ` called "${code}"` : ""} is not one this tool knows and was skipped.`);
         continue;
       }
-      const front = num(entry["armor"]);
+      const front = num(entry["armor"], `${loc} armor`);
       if (front === undefined) {
         note(`Mordel gave no armor for the ${loc}.`);
         continue;
       }
-      const rear = num(entry["rear_armor"]);
+      const rear = num(entry["rear_armor"], `${loc} rear armor`);
       armor[loc] = rear !== undefined && (rear > 0 || TORSOS.includes(loc)) ? { front, rear } : { front };
     }
-  } else note("Mordel gave no locations, so there is no armor.");
+  } else {
+    if (locations !== undefined && locations !== null) wrong("locations list");
+    note("Mordel gave no locations, so there is no armor.");
+  }
 
   // Mounts: chassis parts that take slots, then the equipment list
   const mounts: Mount[] = [];
@@ -244,31 +271,45 @@ function convert(response: unknown, catalog: Catalog, editionId: string, now: st
   const armorType = own(ARMOR.types, chassis.armorType);
   if (armorType) partMounts("armor", armorType.name, armorType.slots);
 
+  /** Catalog row for a name: exactly, else "<weapon> (Ammo <shots>)" as the bin of that weapon with that many shots. */
+  const find = (name: string, tech: TechBase): { row?: EquipmentRow; why?: string } => {
+    const direct = catalog.match(name, tech);
+    if (direct) return { row: direct };
+    const bin = /^(.*\S)\s*\(Ammo\s+(\d+)\)$/i.exec(name);
+    if (!bin) return {};
+    const shots = Number(bin[2]);
+    const bins = [catalog.match(`${bin[1]} Ammo`, tech), catalog.match(`${bin[1]} Ammo (Half Ton)`, tech)].filter((r): r is EquipmentRow => r !== undefined);
+    const only = bins.length === 1 ? bins[0] : undefined;
+    const row = only && only.shots === undefined ? only : bins.find((r) => r.shots === shots);
+    if (row) return { row };
+    return bins.length > 0 ? { why: `${name} is an ammunition bin of a size this tool does not recognise (${shots} shots), so it is not matched.` } : {};
+  };
+
   const idToMount = new Map<number, string>();
   const links: { mountId: string; target: number }[] = [];
   const list = unit["equipment"];
-  if (list !== undefined && !Array.isArray(list)) note("Mordel's equipment list was not a list and was skipped.");
+  if (list !== undefined && list !== null && !Array.isArray(list)) wrong("equipment list");
   (Array.isArray(list) ? list : []).forEach((item, index) => {
-    const entry = obj(item);
-    const name = str(entry?.["name"]);
+    const entry = sect(item, `equipment entry ${index + 1}`);
+    const name = entry ? str(entry["name"], `equipment entry ${index + 1} name`) : undefined;
     if (!entry || !name) {
-      note(`Equipment entry ${index + 1} has no name and was skipped.`);
+      note(`Equipment entry ${index + 1} has no usable name and was skipped.`);
       return;
     }
-    const code = str(entry["location"]);
+    const where = entry["location"];
+    const code = str(where, `${name} location`);
     const loc = code ? own(LOCATIONS, code.toUpperCase()) : undefined;
     if (code && !loc) note(`${name} is in "${code}", a location this tool does not know; it is left unplaced.`);
-    const tech: TechBase = techOf(entry["technology"]) ?? (unitTech === "clan" && !isMixed ? "clan" : "inner-sphere");
-    // Mordel names an ammunition bin "<weapon> (Ammo <shots>)"; our rows are "<weapon> Ammo", so try that once.
-    // The shot count is dropped, so a half-ton bin of a machine gun matches the full-ton row.
-    const bin = /^(.*\S)\s*\(Ammo\s+\d+\)$/i.exec(name);
-    const row = catalog.match(name, tech) ?? (bin ? catalog.match(`${bin[1]} Ammo`, tech) : undefined);
-    if (!row) note(`${name} is not in our equipment table.`);
+    const tech: TechBase = techOf(entry["technology"], `${name} technology`) ?? (unitClan ? "clan" : "inner-sphere");
+    const { row, why } = find(name, tech);
+    if (!row) note(why ?? `${name} is not in our equipment table.`);
+    const theirSlots = num(entry["slots"], `${name} slots`);
     const mount: Mount = { id: `mount-${index + 1}`, equipmentId: row?.id ?? null, name, techBase: tech, location: loc ?? null, slot: null };
+    if (!row && theirSlots !== undefined && theirSlots >= 0) mount.slots = theirSlots;
     mounts.push(mount);
-    const theirId = num(entry["id"]);
+    const theirId = num(entry["id"], `${name} id`);
     if (theirId !== undefined) idToMount.set(theirId, mount.id);
-    const target = num(entry["associated_id"]);
+    const target = num(entry["associated_id"], `${name} associated_id`);
     if (target !== undefined) links.push({ mountId: mount.id, target });
   });
   for (const { mountId, target } of links) {
@@ -288,30 +329,25 @@ function convert(response: unknown, catalog: Catalog, editionId: string, now: st
     }
   }
 
-  // Clan CASE: one in each torso that carries ammunition, or a single one when the data does not say
-  const fire = obj(unit["fire_control"]);
-  if (fire?.["clan_case"] === true) {
+  // Clan CASE: Mordel only says the unit has it, not where
+  const fire = sect(unit["fire_control"], "fire_control");
+  const clanCase = fire?.["clan_case"];
+  if (clanCase !== undefined && clanCase !== null && typeof clanCase !== "boolean") wrong("clan_case");
+  if (clanCase === true) {
     const caseRow = catalog.byId("case-clan");
     if (!caseRow) note("The unit has Clan CASE, which is not in our equipment table.");
     else {
-      const isAmmo = (m: Mount) => (m.equipmentId ? catalog.byId(m.equipmentId)?.kind === "ammunition" : /\bammo\b/i.test(m.name));
-      const torsos = TORSOS.filter((t) => mounts.some((m) => m.location === t && isAmmo(m)));
-      const add = (location: LocationCode | null, n: number) =>
-        mounts.push({ id: `case-${n}`, equipmentId: caseRow.id, name: caseRow.name, techBase: "clan", location, slot: null });
-      if (torsos.length > 0) torsos.forEach((t, i) => add(t, i + 1));
-      else {
-        add(null, 1);
-        note("The unit has Clan CASE, but no torso could be told to carry ammunition; one CASE is added unplaced.");
-      }
+      mounts.push({ id: "case-1", equipmentId: caseRow.id, name: caseRow.name, techBase: "clan", location: null, slot: null });
+      note("Mordel does not say which locations Clan CASE protects; one CASE is added unplaced.");
     }
   }
 
   // Fluff
-  const fluff = obj(unit["fluff"]);
+  const fluff = sect(unit["fluff"], "fluff");
   const notesOut: MechRecord["notes"] = {};
   for (const key of ["overview", "capabilities", "deployment", "variants", "notables"] as const) {
-    const text = str(fluff?.[key]);
-    if (text) notesOut[key] = text;
+    const t = str(fluff?.[key], `fluff ${key}`);
+    if (t) notesOut[key] = t;
   }
 
   const record: MechRecord = {
@@ -330,33 +366,35 @@ function convert(response: unknown, catalog: Catalog, editionId: string, now: st
     source: {
       kind: "mordel",
       unitType: "bm",
-      id: num(unit["id"]) ?? 0,
-      designer: str(unit["designer"]) ?? "",
+      id: num(unit["id"], "unit id") ?? 0,
+      designer: str(unit["designer"], "designer") ?? "",
       fetchedAt: now,
       original: response,
       values: {},
     },
   };
-  const imageUrl = str(unit["image_url"]);
+  const imageUrl = str(unit["image_url"], "image_url");
   if (imageUrl) record.imageUrl = imageUrl;
   const values = record.source?.values;
   if (values) {
-    const bv = num(unit["battle_value"]);
-    const cost = num(unit["cost"]);
-    const rules = unit["rules_level"];
-    const era = unit["era"];
+    const bv = num(unit["battle_value"], "battle value");
+    const cost = num(unit["cost"], "cost");
+    const rules = text(unit["rules_level"], "rules level");
+    const era = text(unit["era"], "era");
     if (bv !== undefined) values.battleValue = bv;
     if (cost !== undefined) values.cost = cost;
-    if (typeof rules === "string" || typeof rules === "number") values.rulesLevel = String(rules);
-    if (typeof era === "string" || typeof era === "number") values.era = String(era);
+    if (rules !== undefined) values.rulesLevel = rules;
+    if (era !== undefined) values.era = era;
   }
 
   placeMounts(record, catalog, note);
-  return { ok: true, record, notes };
+  return { ok: true, record, notes: [...new Set(notes)] };
 }
 
-/** Gives each slot-taking mount that has a location the first run of free cells in it, in list order; one that does not
- * fit stays unplaced. The fixed cells come from layout(), so engine and gyro variants are the tables' business. */
+/** Places mounts in the free cells: first the equipment Mordel gave a location, each in the first free run of its size in
+ * list order; then, in the fixed order of FILL_ORDER, the structure and armor slots and the items a part stands for that
+ * Mordel did not place. The fixed cells come from layout(), so engine and gyro variants are the tables' business. Whatever
+ * does not fit stays unplaced. */
 function placeMounts(record: MechRecord, catalog: Catalog, note: (text: string) => void) {
   const empty = layout({ ...record, mounts: [] }, catalog.factsOf);
   if (!empty.supported) {
@@ -365,11 +403,16 @@ function placeMounts(record: MechRecord, catalog: Catalog, note: (text: string) 
   }
   const free = new Map<LocationCode, boolean[]>();
   for (const loc of empty.locations) free.set(loc, (empty.slots[loc] ?? []).map((cell) => cell.kind === "empty"));
+
   for (const mount of record.mounts) {
     if (mount.part || !mount.location) continue;
     const cells = free.get(mount.location);
-    const taken = catalog.factsOf(mount, record)?.slots ?? 1;
-    if (!cells || taken <= 0) continue;
+    if (!cells) {
+      note(`${mount.name} is in the ${mount.location}, which this ${record.configuration} does not have; it is left unplaced.`);
+      continue;
+    }
+    const taken = catalog.factsOf(mount, record)?.slots ?? mount.slots ?? 1;
+    if (taken <= 0) continue;
     for (let first = 0; first + taken <= cells.length; first++) {
       if (cells.slice(first, first + taken).every(Boolean)) {
         for (let i = 0; i < taken; i++) cells[first + i] = false;
@@ -378,6 +421,38 @@ function placeMounts(record: MechRecord, catalog: Catalog, note: (text: string) 
       }
     }
   }
+
+  // Second pass. `limit` is how many may go in each location, for an armor type with a place for every slot.
+  const order = FILL_ORDER[record.configuration] ?? [];
+  const fill = (group: Mount[], limit?: Partial<Record<LocationCode, number>>) => {
+    if (group.length === 0) return;
+    note(`Mordel does not say where the ${group.length} ${group[0]?.name ?? ""} slots are. They were placed in the first free slots.`);
+    const left = { ...limit };
+    for (const mount of group) {
+      for (const loc of order) {
+        if (limit && (left[loc] ?? 0) <= 0) continue;
+        const cells = free.get(loc);
+        const at = cells?.findIndex(Boolean) ?? -1;
+        if (!cells || at < 0) continue;
+        cells[at] = false;
+        mount.location = loc;
+        mount.slot = at;
+        if (limit) left[loc] = (left[loc] ?? 0) - 1;
+        break;
+      }
+    }
+  };
+  const armor = record.mounts.filter((m) => m.part === "armor");
+  const ruled = own(ARMOR.types, record.chassis.armorType)?.slotsIn?.[record.configuration === "quad" ? "quad" : "biped"];
+  fill(ruled ? armor : [], ruled);
+  fill(record.mounts.filter((m) => m.part === "structure"));
+  if (!ruled) fill(armor);
+  const standIns = new Map<string, Mount[]>();
+  for (const m of record.mounts) {
+    const row = m.equipmentId ? catalog.byId(m.equipmentId) : undefined;
+    if (row?.perMech !== undefined && !m.location) standIns.set(row.id, [...(standIns.get(row.id) ?? []), m]);
+  }
+  for (const group of standIns.values()) fill(group);
 }
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -387,23 +462,26 @@ function placeMounts(record: MechRecord, catalog: Catalog, note: (text: string) 
 /** Canonical text of a value: object keys in order, so two equal values written in different key orders agree. */
 function canon(value: unknown): string {
   if (Array.isArray(value)) return `[${value.map(canon).join(",")}]`;
-  const o = obj(value);
-  if (!o) return JSON.stringify(value) ?? "undefined";
-  return `{${Object.keys(o)
-    .filter((k) => o[k] !== undefined)
-    .sort()
-    .map((k) => `${JSON.stringify(k)}:${canon(o[k])}`)
-    .join(",")}}`;
+  if (typeof value === "object" && value !== null) {
+    const o = value as Json;
+    return `{${Object.keys(o)
+      .filter((k) => o[k] !== undefined)
+      .sort()
+      .map((k) => `${JSON.stringify(k)}:${canon(o[k])}`)
+      .join(",")}}`;
+  }
+  return JSON.stringify(value) ?? "undefined";
 }
 
 /** The field paths (as the checks name them), mount ids, and `mounts.removed` that differ from a fresh import of the
- * record's own saved Mordel response. Empty when the record has no source or the source cannot be read. */
+ * record's own saved Mordel response. Empty when the record has no source; the single key `source.unreadable` when the
+ * saved response can no longer be imported. */
 export function changedSinceImport(record: MechRecord, catalog: Catalog): Set<string> {
   const changed = new Set<string>();
+  if (!record.source) return changed;
   try {
-    if (!record.source) return changed;
     const fresh = fromMordel(record.source.original, catalog, record.editionId, record.source.fetchedAt, () => record.id);
-    if (!fresh.ok) return changed;
+    if (!fresh.ok) return new Set(["source.unreadable"]);
     const was = fresh.record;
     const differ = (path: string, a: unknown, b: unknown) => {
       if (canon(a) !== canon(b)) changed.add(path);
@@ -426,7 +504,7 @@ export function changedSinceImport(record: MechRecord, catalog: Catalog): Set<st
     const before = new Set(was.mounts.map((m) => m.id));
     for (const m of record.mounts) if (!before.has(m.id)) changed.add(m.id);
   } catch {
-    return changed;
+    return new Set(["source.unreadable"]);
   }
   return changed;
 }

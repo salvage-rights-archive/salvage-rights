@@ -7,6 +7,8 @@
 // double and double-clan, ferro-fibrous and ferro-fibrous-clan). A key that is not in a table is unknown to us;
 // the functions in rules/mech.ts must cope with that.
 
+import type { LocationCode } from "../rules/mech";
+
 export interface Cite {
   book: "TechManual";
   page: number;
@@ -288,13 +290,16 @@ export const HEAT_SINKS: Sourced & { types: Record<string, HeatSinkType> } = {
 // ---------------------------------------------------------------------------------------------------------------
 // Armor (BattleMech Armor Table, printed p.56). Points per ton is the base times the multiplier, the points a given
 // number of tons carries rounded down; tons for a given number of points rounded up to a half ton. Slots are
-// critical slots, placed anywhere. Stealth armor also wants 2 slots in each arm, leg and side torso and a Guardian
-// ECM Suite; that placement is not modelled here.
+// critical slots, placed anywhere except where `slotsIn` says (stealth armor takes 2 slots in each arm, leg and side torso,
+// none in the head or center torso, printed p.56 footnote; for a quad the four legs stand in for arms and legs: our reading). Stealth armor also wants a Guardian
+// ECM Suite; that part is not modelled here.
 // ---------------------------------------------------------------------------------------------------------------
+type Spread = Partial<Record<LocationCode, number>>;
 export interface ArmorType {
   name: string;
   multiplier: number;
   slots: number;
+  slotsIn?: { biped: Spread; quad: Spread }; // slots per location, where the type has to go in particular places
 }
 export const ARMOR: Sourced & { basePointsPerTon: number; types: Record<string, ArmorType> } = {
   cite: { book: "TechManual", page: 56 },
@@ -302,7 +307,15 @@ export const ARMOR: Sourced & { basePointsPerTon: number; types: Record<string, 
   basePointsPerTon: 16,
   types: {
     standard: { name: "Standard", multiplier: 1.0, slots: 0 },
-    stealth: { name: "Stealth", multiplier: 1.0, slots: 12 },
+    stealth: {
+      name: "Stealth",
+      multiplier: 1.0,
+      slots: 12,
+      slotsIn: {
+        biped: { LA: 2, RA: 2, LL: 2, RL: 2, LT: 2, RT: 2 },
+        quad: { FLL: 2, FRL: 2, RLL: 2, RRL: 2, LT: 2, RT: 2 },
+      },
+    },
     "light-ferro-fibrous": { name: "Light Ferro-Fibrous", multiplier: 1.06, slots: 7 },
     "ferro-fibrous": { name: "Ferro-Fibrous", multiplier: 1.12, slots: 14 },
     "ferro-fibrous-clan": { name: "Ferro-Fibrous (Clan)", multiplier: 1.2, slots: 7 },

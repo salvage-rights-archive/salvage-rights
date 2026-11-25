@@ -33,13 +33,18 @@ describe.skipIf(!key)("mordel.net live import", () => {
     let refused: number | undefined;
     for (const [i, id] of IDS.entries()) {
       if (i > 0) await new Promise((r) => setTimeout(r, GAP_MS));
-      const reply = await fetch(`https://mordel.net/api/v1/units/bm/${id}`, { headers: { "X-API-Key": key ?? "" } });
+      // Any failure is rethrown as a fixed message, so nothing from the request (header, key, body) can reach the output.
+      const reply = await fetch(`https://mordel.net/api/v1/units/bm/${id}`, { headers: { "X-API-Key": key ?? "" }, redirect: "error" }).catch(() => {
+        throw new Error("The request to mordel.net failed.");
+      });
       if (!reply.ok) {
         console.log(`bm ${id}: mordel.net answered ${reply.status}; stopping.`);
         refused = reply.status;
         break;
       }
-      const body: unknown = await reply.json();
+      const body: unknown = await reply.json().catch(() => {
+        throw new Error("The reply from mordel.net could not be read as JSON.");
+      });
       const result = fromMordel(body, catalog, "core-2026", new Date().toISOString(), () => `live-${id}`);
       if (!result.ok) {
         console.log(`bm ${id}: not imported: ${result.message}`);
@@ -48,7 +53,7 @@ describe.skipIf(!key)("mordel.net live import", () => {
       }
       const { record, notes } = result;
       const unmatched = record.mounts.filter((m) => !m.part && m.equipmentId === null).map((m) => m.name);
-      const unplaced = layout(record, catalog.factsOf).unplaced.filter((m) => !m.part).length;
+      const unplaced = layout(record, catalog.factsOf).unplaced.length;
       const errors = new Map<string, number>();
       for (const f of runChecks(record, catalog)) if (f.level === "error") errors.set(f.check, (errors.get(f.check) ?? 0) + 1);
       const errorText = errors.size ? [...errors].map(([check, n]) => `${check} ${n}`).join(", ") : "none";

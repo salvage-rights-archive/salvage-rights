@@ -191,3 +191,12 @@ describe("structure points, armor limits and speed", () => {
     expect(original).toEqual(snapshot);
   });
 });
+
+describe("a mount the catalog does not know", () => {
+  it("takes the slots the source gave it, and one slot when it gave none", () => {
+    const record = bipedRecord({ mounts: [{ ...mount("odd", null, "LA", 4), slots: 3 }, mount("odd-2", null, "RA", 4)] });
+    const cells = layout(record, factsOf).slots;
+    expect(cells.LA?.slice(4, 8).map((c) => c.mountId)).toEqual(["odd", "odd", "odd", undefined]);
+    expect(cells.RA?.slice(4, 6).map((c) => c.mountId)).toEqual(["odd-2", undefined]);
+  });
+});

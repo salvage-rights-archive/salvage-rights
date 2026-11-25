@@ -28,6 +28,8 @@ export interface EquipmentRow {
   yearsInferred?: true;
   /** The 'Mech carries exactly this many of the item, each one a separate one-slot mount, placed anywhere. */
   perMech?: number;
+  /** Ammunition only, for the families that come in two bin sizes: the shots one bin carries (what Mordel prints). */
+  shots?: number;
   /** A non-missile direct-fire or pulse weapon: its weight counts toward a targeting computer (TechManual p. 238). */
   directFire?: true;
   editions?: Record<string, Partial<Pick<EquipmentRow, "tons" | "slots" | "availability" | "locations" | "locationsQuad">>>;

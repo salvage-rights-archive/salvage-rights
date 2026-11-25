@@ -28,6 +28,8 @@ export interface Mount {
   techBase: TechBase;
   location: LocationCode | null;
   slot: number | null; // zero-based first slot; null when not placed
+  /** Slots the item takes when the catalog has no row for it: what the source said. Layout reads it only then. */
+  slots?: number;
   linkedTo?: string;
 }
 
@@ -189,7 +191,7 @@ export function layout(record: MechRecord, factsOf: FactsOf): Layout {
   const overflow: Layout["overflow"] = [];
   const clashes = new Map<string, { location: LocationCode; slot: number; mountIds: string[] }>();
   for (const mount of record.mounts) {
-    const taken = mount.part ? 1 : (factsOf(mount, record)?.slots ?? 1);
+    const taken = mount.part ? 1 : (factsOf(mount, record)?.slots ?? mount.slots ?? 1);
     if (taken <= 0) continue;
     const cells = mount.location ? own(slots as Record<string, SlotCell[]>, mount.location) : undefined;
     const first = mount.slot;

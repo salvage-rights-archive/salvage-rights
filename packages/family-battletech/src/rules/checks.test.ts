@@ -96,6 +96,20 @@ describe("slots", () => {
     expectFinding(found, { level: "error", text: "ac runs past the end of the Right Torso from slot 11", where: { location: "RT", mountId: "ac" } });
     expectFinding(found, { level: "error", text: "ammo has no location", where: { mountId: "ammo" } });
     expectFinding(found, { level: "error", text: "Endo Steel structure takes 14 critical slots; the record places 0", where: { field: "chassis.structure" }, page: 47 });
+
+    // Stealth armor: two slots in each arm, leg and side torso and none elsewhere, one count per location.
+    const stealth = editRecord(bipedRecord(), (d) => {
+      d.chassis.armorType = "stealth";
+      d.mounts = (["CT", "CT", "LA", "LA", "RA", "RA", "LT", "LT", "RT", "RT", "LL", "LL"] as const).map((loc, i) => ({
+        ...mount(`stealth-${i}`, null, loc, loc === "CT" ? 10 + i : 4 + (i % 2)),
+        part: "armor" as const,
+      }));
+      for (const m of d.mounts.filter((x) => x.location === "LT" || x.location === "RT")) m.slot = m.id.endsWith("6") || m.id.endsWith("8") ? 0 : 1;
+    });
+    const stealthFound = forCheck(stealth, "slots");
+    expectFinding(stealthFound, { level: "error", text: "Stealth armor takes 0 slots in the Center Torso; the record places 2", where: { location: "CT" }, page: 56 });
+    expectFinding(stealthFound, { level: "error", text: "Stealth armor takes 2 slots in the Right Leg; the record places 0", where: { location: "RL" } });
+    expect(stealthFound.filter((f) => f.message.includes("Left Arm"))).toEqual([]);
   });
 });
 

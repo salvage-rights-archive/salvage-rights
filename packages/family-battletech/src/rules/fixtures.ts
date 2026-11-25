@@ -143,6 +143,7 @@ function mordelUnit(patch: Json): Json {
       myomer: { type: "Standard" },
       locations: armorFor([["H", 9, null], ["CT", 14, 4], ["LT", 10, 3], ["RT", 10, 3], ["LA", 8, null], ["RA", 8, null], ["LL", 6, null], ["RL", 5, null]]),
       equipment: [],
+      fire_control: { artemis: false, apollo: false, clan_case: false },
       fluff: { overview: "A made-up walker.", capabilities: null, deployment: null, variants: null, notables: null },
       ...patch,
     },
@@ -189,7 +190,7 @@ export function mordelOdd(): Json {
     equipment: [
       item(10, "LRM 10", "LT", 2),
       item(11, "Artemis IV", "LT", 1, { associated_id: 10 }),
-      item(12, "Frobnicator 9000", "CT", 2),
+      item(12, "Frobnicator 9000", "LT", 2),
       item(13, "LRM 10 (Ammo 12)", "LT", 1),
       item(null, "Mystery Box", null, null),
     ],

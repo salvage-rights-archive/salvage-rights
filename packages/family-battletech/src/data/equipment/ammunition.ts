@@ -10,6 +10,9 @@
 // armor suits) and remote sensor dispenser ammunition (p. 296 gives a date but the Heavy Weapon Ammunition table has no
 // tech base line for it). The Narc and iNarc pods are lines of the p. 346 table (Inner Sphere), dated on p. 296; nail and
 // rivet gun ammunition is that table's Inner Sphere / Clan line, p. 296 giving pre-spaceflight.
+// `shots` is the shots one ton carries, from the Ammo column of the weapons tables (printed pp. 341, 343, 344: 200 for the light
+// and standard machine gun, 100 for the heavy, 300 for the nail/rivet gun); a half-ton row carries half as many. Only the
+// families that come in two bin sizes have it; the importer uses it to tell the bins apart.
 
 import type { EquipmentGroup } from "../../rules/catalog";
 
@@ -45,12 +48,12 @@ export const AMMUNITION: EquipmentGroup[] = [
       { id: "ammo-light-gauss-rifle-is", name: "Light Gauss Rifle Ammo", availability: [{ from: 3056 }] },
       { id: "ammo-gauss-rifle-is", name: "Gauss Rifle Ammo", availability: [{ from: 2590, to: 2865 }, { from: 3040 }] },
       { id: "ammo-heavy-gauss-rifle-is", name: "Heavy Gauss Rifle Ammo", availability: [{ from: 3061 }] },
-      { id: "ammo-light-machine-gun-is", name: "Light Machine Gun Ammo", availability: [{ from: 3068 }] },
-      { id: "ammo-light-machine-gun-half-is", name: "Light Machine Gun Ammo (Half Ton)", tons: 0.5, availability: [{ from: 3068 }] },
-      { id: "ammo-machine-gun-is", name: "Machine Gun Ammo", availability: [{ from: 1950 }] },
-      { id: "ammo-machine-gun-half-is", name: "Machine Gun Ammo (Half Ton)", tons: 0.5, availability: [{ from: 1950 }] },
-      { id: "ammo-heavy-machine-gun-is", name: "Heavy Machine Gun Ammo", availability: [{ from: 3068 }] },
-      { id: "ammo-heavy-machine-gun-half-is", name: "Heavy Machine Gun Ammo (Half Ton)", tons: 0.5, availability: [{ from: 3068 }] },
+      { id: "ammo-light-machine-gun-is", shots: 200, name: "Light Machine Gun Ammo", availability: [{ from: 3068 }] },
+      { id: "ammo-light-machine-gun-half-is", shots: 100, name: "Light Machine Gun Ammo (Half Ton)", tons: 0.5, availability: [{ from: 3068 }] },
+      { id: "ammo-machine-gun-is", shots: 200, name: "Machine Gun Ammo", availability: [{ from: 1950 }] },
+      { id: "ammo-machine-gun-half-is", shots: 100, name: "Machine Gun Ammo (Half Ton)", tons: 0.5, availability: [{ from: 1950 }] },
+      { id: "ammo-heavy-machine-gun-is", shots: 100, name: "Heavy Machine Gun Ammo", availability: [{ from: 3068 }] },
+      { id: "ammo-heavy-machine-gun-half-is", shots: 50, name: "Heavy Machine Gun Ammo (Half Ton)", tons: 0.5, availability: [{ from: 3068 }] },
       { id: "ammo-vehicle-flamer-is", name: "Flamer (Vehicle) Ammo", aliases: ["Vehicle Flamer Ammo"], availability: [{ from: 1950 }] },
       { id: "ammo-plasma-rifle-is", name: "Plasma Rifle Ammo", availability: [{ from: 3068 }] },
       // Missile ammunition (Inner Sphere)
@@ -102,8 +105,8 @@ export const AMMUNITION: EquipmentGroup[] = [
       { id: "ammo-improved-narc-haywire-is", name: "Improved Narc Launcher (Haywire) Ammo", aliases: ["iNarc Haywire Ammo"], availability: [{ from: 3062 }] },
       { id: "ammo-improved-narc-nemesis-is", name: "Improved Narc Launcher (Nemesis) Ammo", aliases: ["iNarc Nemesis Ammo"], availability: [{ from: 3062 }] },
       // Nail and rivet gun ammunition (Inner Sphere); the Clan year is the Clan weapon's, the table prints a dash
-      { id: "ammo-nail-rivet-gun-is", name: "Nail/Rivet Gun Ammo", availability: [{ from: 1950 }] },
-      { id: "ammo-nail-rivet-gun-half-is", name: "Nail/Rivet Gun Ammo (Half Ton)", tons: 0.5, availability: [{ from: 1950 }] },
+      { id: "ammo-nail-rivet-gun-is", shots: 300, name: "Nail/Rivet Gun Ammo", availability: [{ from: 1950 }] },
+      { id: "ammo-nail-rivet-gun-half-is", shots: 150, name: "Nail/Rivet Gun Ammo (Half Ton)", tons: 0.5, availability: [{ from: 1950 }] },
     ],
   },
   {
@@ -124,10 +127,10 @@ export const AMMUNITION: EquipmentGroup[] = [
       { id: "ammo-hyper-assault-gauss-20-clan", name: "Hyper-Assault Gauss 20 Ammo", aliases: ["HAG/20 Ammo"], availability: [{ from: 3068 }] },
       { id: "ammo-hyper-assault-gauss-30-clan", name: "Hyper-Assault Gauss 30 Ammo", aliases: ["HAG/30 Ammo"], availability: [{ from: 3068 }] },
       { id: "ammo-hyper-assault-gauss-40-clan", name: "Hyper-Assault Gauss 40 Ammo", aliases: ["HAG/40 Ammo"], availability: [{ from: 3069 }] },
-      { id: "ammo-light-machine-gun-clan", name: "Light Machine Gun Ammo", availability: [{ from: 3060 }] },
-      { id: "ammo-light-machine-gun-half-clan", name: "Light Machine Gun Ammo (Half Ton)", tons: 0.5, availability: [{ from: 3060 }] },
-      { id: "ammo-heavy-machine-gun-clan", name: "Heavy Machine Gun Ammo", availability: [{ from: 3059 }] },
-      { id: "ammo-heavy-machine-gun-half-clan", name: "Heavy Machine Gun Ammo (Half Ton)", tons: 0.5, availability: [{ from: 3059 }] },
+      { id: "ammo-light-machine-gun-clan", shots: 200, name: "Light Machine Gun Ammo", availability: [{ from: 3060 }] },
+      { id: "ammo-light-machine-gun-half-clan", shots: 100, name: "Light Machine Gun Ammo (Half Ton)", tons: 0.5, availability: [{ from: 3060 }] },
+      { id: "ammo-heavy-machine-gun-clan", shots: 100, name: "Heavy Machine Gun Ammo", availability: [{ from: 3059 }] },
+      { id: "ammo-heavy-machine-gun-half-clan", shots: 50, name: "Heavy Machine Gun Ammo (Half Ton)", tons: 0.5, availability: [{ from: 3059 }] },
       { id: "ammo-plasma-cannon-clan", name: "Plasma Cannon Ammo", availability: [{ from: 3069 }] },
       // Missile ammunition (Clan)
       { id: "ammo-atm-3-clan", name: "ATM 3 Ammo", availability: [{ from: 3054 }] },
@@ -152,8 +155,8 @@ export const AMMUNITION: EquipmentGroup[] = [
       { id: "ammo-ultra-ac-5-clan", name: "Ultra AC/5 Ammo", aliases: ["UAC/5 Ammo"], availability: [{ from: 2825 }] },
       // Gauss, machine gun, flamer and plasma ammunition (Clan)
       { id: "ammo-gauss-rifle-clan", name: "Gauss Rifle Ammo", availability: [{ from: 2828 }] },
-      { id: "ammo-machine-gun-clan", name: "Machine Gun Ammo", availability: [{ from: 2825 }] },
-      { id: "ammo-machine-gun-half-clan", name: "Machine Gun Ammo (Half Ton)", tons: 0.5, availability: [{ from: 2825 }] },
+      { id: "ammo-machine-gun-clan", shots: 200, name: "Machine Gun Ammo", availability: [{ from: 2825 }] },
+      { id: "ammo-machine-gun-half-clan", shots: 100, name: "Machine Gun Ammo (Half Ton)", tons: 0.5, availability: [{ from: 2825 }] },
       { id: "ammo-vehicle-flamer-clan", name: "Flamer (Vehicle) Ammo", aliases: ["Vehicle Flamer Ammo"], availability: [{ from: 1950 }] },
       // Missile ammunition (Clan)
       { id: "ammo-lrm-5-clan", name: "LRM 5 Ammo", availability: [{ from: 2824 }] },
@@ -176,8 +179,8 @@ export const AMMUNITION: EquipmentGroup[] = [
       { id: "ammo-swarm-clan", name: "Swarm LRM Ammo", availability: [{ from: 2824 }] },
       { id: "ammo-thunder-clan", name: "Thunder LRM Ammo", availability: [{ from: 2824 }] },
       // Nail and rivet gun ammunition (Clan); the Clan year is the Clan weapon's, the table prints a dash
-      { id: "ammo-nail-rivet-gun-clan", name: "Nail/Rivet Gun Ammo", availability: [{ from: 1950 }] },
-      { id: "ammo-nail-rivet-gun-half-clan", name: "Nail/Rivet Gun Ammo (Half Ton)", tons: 0.5, availability: [{ from: 1950 }] },
+      { id: "ammo-nail-rivet-gun-clan", shots: 300, name: "Nail/Rivet Gun Ammo", availability: [{ from: 1950 }] },
+      { id: "ammo-nail-rivet-gun-half-clan", shots: 150, name: "Nail/Rivet Gun Ammo (Half Ton)", tons: 0.5, availability: [{ from: 1950 }] },
     ],
   },
 ];
