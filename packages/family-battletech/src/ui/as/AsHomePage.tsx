@@ -8,6 +8,7 @@ import { downloadUnit, fromUnitFile, openAsStorage } from "./storage";
 import type { AsEntry, AsStorage } from "./storage";
 import AsMordelImport from "./AsMordelImport";
 import AsMulImport from "./AsMulImport";
+import AsMordelFile from "./AsMordelFile";
 import "../classic.scss";
 import "./alpha-strike.scss";
 
@@ -236,6 +237,7 @@ export default function AsHomePage() {
 
       <AsMordelImport />
       <AsMulImport />
+      <AsMordelFile />
     </div>
   );
 }

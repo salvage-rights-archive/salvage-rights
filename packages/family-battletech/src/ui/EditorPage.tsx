@@ -4,7 +4,7 @@
 import { editionName } from "../data/editions";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import type { ChangeEvent, CSSProperties, ReactNode } from "react";
-import { Link, useBlocker, useLocation, useSearchParams } from "react-router";
+import { Link, useBlocker, useLocation, useNavigate, useSearchParams } from "react-router";
 import { ARMOR, STRUCTURE_TYPES } from "../data/chassis";
 import { loadCatalog } from "../rules/catalog";
 import type { Catalog } from "../rules/catalog";
@@ -42,7 +42,7 @@ import { standardCompliance } from "../rules/official";
 import SlotsPanel from "./editor/SlotsPanel";
 import { mordelPicture, readPicture } from "./picture";
 import RecordBoundary from "./RecordBoundary";
-import { STORAGE_READ_FAILED, STORAGE_WRITE_FAILED, downloadMech, downloadOmni, openFamilyStorage } from "./storage";
+import { STORAGE_READ_FAILED, STORAGE_WRITE_FAILED, downloadMech, downloadOmni, isMechRecord, openFamilyStorage } from "./storage";
 import type { FamilyStorage } from "./storage";
 import "./classic.scss";
 
@@ -414,7 +414,7 @@ type Loaded =
   | { state: "missing" }
   | { state: "unreadable"; message: string }
   | { state: "failed" }
-  | { state: "ready"; storage: FamilyStorage; catalog: Catalog; doc: Doc };
+  | { state: "ready"; storage: FamilyStorage; catalog: Catalog; doc: Doc; unsaved?: boolean };
 
 /** What the editor holds: a plain 'Mech, or an OmniMech chassis whose selected configuration is shown as a record. */
 type Doc = MechRecord | OmniChassis;
@@ -434,6 +434,7 @@ export default function EditorPage() {
 function EditorLoader() {
   const [params] = useSearchParams();
   const id = params.get("id") ?? "";
+  const draftState = (useLocation().state as { draft?: unknown } | null)?.draft;
   const [loaded, setLoaded] = useState<Loaded>({ state: "loading" });
 
   useEffect(() => {
@@ -441,6 +442,11 @@ function EditorLoader() {
     void (async () => {
       try {
         const [storage, catalog] = await Promise.all([openFamilyStorage(), loadCatalog()]);
+        // An importer can open the editor with a 'Mech to review: nothing is saved until Save is pressed.
+        if (id === "" && isMechRecord(draftState)) {
+          if (live) setLoaded({ state: "ready", storage, catalog, doc: withLevel(draftState, catalog), unsaved: true });
+          return;
+        }
         const entry = await storage.get(id);
         if (!live) return;
         if (!entry) setLoaded({ state: "missing" });
@@ -454,9 +460,9 @@ function EditorLoader() {
     return () => {
       live = false;
     };
-  }, [id]);
+  }, [id, draftState]);
 
-  if (loaded.state === "ready") return <Editor key={loaded.doc.id} initial={loaded.doc} startAt={params.get("c") ?? undefined} catalog={loaded.catalog} storage={loaded.storage} />;
+  if (loaded.state === "ready") return <Editor key={loaded.doc.id} initial={loaded.doc} unsaved={loaded.unsaved} startAt={params.get("c") ?? undefined} catalog={loaded.catalog} storage={loaded.storage} />;
   // No heading while loading: the frame names the page after the first heading it finds, which should be the 'Mech's.
   if (loaded.state === "loading") return <div className="sr-page" role="status">Loading.</div>;
   return (
@@ -517,15 +523,18 @@ function Picture({ url, alt, onFail }: { url: string; alt: string; onFail?: () =
   );
 }
 
-function Editor({ initial, startAt, catalog, storage }: { initial: Doc; startAt?: string; catalog: Catalog; storage: FamilyStorage }) {
+function Editor({ initial, unsaved, startAt, catalog, storage }: { initial: Doc; unsaved?: boolean; startAt?: string; catalog: Catalog; storage: FamilyStorage }) {
   const [history, setHistory] = useState<History>({ past: [], present: initial, future: [] });
-  const [savedDoc, setSavedDoc] = useState<Doc>(initial);
+  /** What is on disk; undefined for a 'Mech opened for review that has not been saved yet. */
+  const [savedDoc, setSavedDoc] = useState<Doc | undefined>(unsaved ? undefined : initial);
+  const navigate = useNavigate();
   /** An OmniMech chassis shows one of its configurations, or the base, as a record; this is which. */
   const [selected, setSelected] = useState<string>(() =>
     isChassis(initial) ? (startAt === BASE || initial.configurations.some((c) => c.id === startAt) ? (startAt ?? BASE) : (primaryOf(initial)?.id ?? BASE)) : "",
   );
   const [comparing, setComparing] = useState(false);
-  const [justSaved, setJustSaved] = useState(false);
+  const routed = useLocation().state as { saved?: boolean } | null;
+  const [justSaved, setJustSaved] = useState(routed?.saved === true);
   const [status, setStatus] = useState("");
   const [problem, setProblem] = useState("");
   const [location, setLocation] = useState<LocationCode>();
@@ -546,7 +555,7 @@ function Editor({ initial, startAt, catalog, storage }: { initial: Doc; startAt?
   const inBase = record.omni?.isBase === true;
   /** Seen from a configuration, the base's parts are shown but not edited. */
   const fixedHere = chassis !== undefined && !inBase;
-  const dirty = !sameRecord(doc, savedDoc);
+  const dirty = savedDoc === undefined || !sameRecord(doc, savedDoc);
 
   /** Applies a change to what is shown: to the plain record, or written back into the base or the selected configuration. */
   const applyTo = (d: Doc, change: Change): Doc => {
@@ -681,6 +690,12 @@ function Editor({ initial, startAt, catalog, storage }: { initial: Doc; startAt?
     : [];
   const mark = (path: string) => changed.has(path);
   const notes = importNotes(useLocation().state);
+  // Once a 'Mech opened for review is saved, its address names it, so a reload finds it.
+  const savedId = unsaved && savedDoc !== undefined && !isChassis(savedDoc) ? savedDoc.id : undefined;
+  useEffect(() => {
+    if (savedId !== undefined) void navigate(`/battletech/classic/editor?id=${encodeURIComponent(savedId)}`, { replace: true, state: { notes, saved: true } });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [savedId]);
   const notesId = useId();
   const showMordel = !pictureFailed && mordelPicture(record.imageUrl);
   const showPicture = record.picture !== undefined || showMordel;
@@ -791,7 +806,7 @@ function Editor({ initial, startAt, catalog, storage }: { initial: Doc; startAt?
           </ul>
         )}
         {figures.length > 0 && <p className="bt-hint bt-figures">{`Mordel's figures: ${figures.join(", ")}`}</p>}
-        {dirty && <p className="bt-hint">You have changes that are not saved.</p>}
+        {dirty && <p className="bt-hint">{savedDoc === undefined ? "This 'Mech is not saved yet. Review it, then press Save." : "You have changes that are not saved."}</p>}
         {notes.length > 0 && (
           <details className="bt-notes" aria-labelledby={notesId}>
             <summary id={notesId}>Import notes</summary>
@@ -807,7 +822,7 @@ function Editor({ initial, startAt, catalog, storage }: { initial: Doc; startAt?
       {chassis && (
         <div className="bt-editor__omni">
           <ConfigurationBar chassis={chassis} selected={activeId} onSelect={setSelected} onChassis={editChassis} comparing={comparing} onCompare={setComparing} />
-          {isChassis(savedDoc) && <BaseBreaks saved={savedDoc} chassis={chassis} catalog={catalog} />}
+          {savedDoc !== undefined && isChassis(savedDoc) && <BaseBreaks saved={savedDoc} chassis={chassis} catalog={catalog} />}
           {comparing && <CompareView chassis={chassis} catalog={catalog} />}
           <PodSpacePanel chassis={chassis} record={record} catalog={catalog} onEditBase={() => { setSelected(BASE); }} />
         </div>
