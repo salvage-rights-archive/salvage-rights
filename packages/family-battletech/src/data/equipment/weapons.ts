@@ -207,14 +207,14 @@ export const WEAPONS: EquipmentGroup[] = [
       // Physical weapons (Inner Sphere); weight and slots follow the 'Mech's tonnage (formulas in rules/catalog.ts)
       { id: "hatchet-is", name: "Hatchet", tons: "ceil-tons-15", slots: "ceil-tons-15", heat: 0, damage: "Special", playCite: { book: "TechManual", page: 342 }, availability: [{ from: 3022 }], locations: ["LA", "RA"], cite: { book: "TechManual", page: 220 } },
       { id: "sword-is", name: "Sword", tons: "sword-tons", slots: "ceil-tons-15", heat: 0, damage: "Special", playCite: { book: "TechManual", page: 342 }, availability: [{ from: 3058 }], locations: ["LA", "RA"] },
-      { id: "retractable-blade-is", name: "Retractable Blade", tons: "blade-tons", slots: "blade-slots", availability: [{ from: 2420 }], locations: ["LA", "RA"], cite: { book: "TechManual", page: 236 } },
+      { id: "retractable-blade-is", name: "Retractable Blade", tons: "blade-tons", slots: "blade-slots", heat: 0, damage: "Special", playCite: { book: "TechManual", page: 344 }, availability: [{ from: 2420 }], locations: ["LA", "RA"], cite: { book: "TechManual", page: 236 } },
     ],
   },
   {
     defaults: { kind: "weapon", techBase: "clan", cite: { book: "TechManual", page: 237 }, checked: "page", yearsInferred: true },
     items: [
       // Physical weapons (Clan); weight and slots follow the 'Mech's tonnage (formulas in rules/catalog.ts)
-      { id: "retractable-blade-clan", name: "Retractable Blade", tons: "blade-tons", slots: "blade-slots", availability: [{ from: 2420 }], locations: ["LA", "RA"], cite: { book: "TechManual", page: 236 } },
+      { id: "retractable-blade-clan", name: "Retractable Blade", tons: "blade-tons", slots: "blade-slots", heat: 0, damage: "Special", playCite: { book: "TechManual", page: 344 }, availability: [{ from: 2420 }], locations: ["LA", "RA"], cite: { book: "TechManual", page: 236 } },
     ],
   },
 ];

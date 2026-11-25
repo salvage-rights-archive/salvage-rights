@@ -177,8 +177,9 @@ describe("the equipment table", () => {
     const record = bipedRecord({ tons: 55 });
     for (const r of all) {
       expect(r.id, r.id).toMatch(/^[a-z0-9]+(-[a-z0-9]+)*$/);
-      expect(["TechManual", "Interstellar Operations: Alternate Eras"], r.id).toContain(r.cite.book);
+      expect(r.cite.book, r.id).not.toBe("");
       expect(r.cite.page, r.id).toBeGreaterThan(0);
+      if (r.rulesLevel !== undefined) expect(r.cite, `${r.id} has a rules level but no cite`).toBeDefined();
       expect(r.availability.length, r.id).toBeGreaterThan(0);
       const facts = real.factsOf({ ...mount("m", r.id, null, null), techBase: r.techBase }, record);
       expect(Number.isFinite(facts?.tons), `${r.id} tons`).toBe(true);

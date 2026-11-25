@@ -45,6 +45,8 @@ export interface EquipmentRow {
   /** A non-missile direct-fire or pulse weapon: its weight counts toward a targeting computer (TechManual p. 238). */
   directFire?: true;
   editions?: Record<string, Partial<Pick<EquipmentRow, "tons" | "slots" | "availability" | "locations" | "locationsQuad">>>;
+  /** The rules level of the book's table the item comes from; absent means standard. Nothing filters on it yet. */
+  rulesLevel?: "standard" | "advanced" | "experimental";
   cite: { book: string; page: number };
   checked: "page" | "text";
 }
