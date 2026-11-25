@@ -183,3 +183,38 @@ test("change the rules level in the editor and see the picker and the rules chec
   await page.keyboard.press("ArrowUp");
   await expect(level).toHaveValue("fan-made");
 });
+
+test("build a 50-ton biped, place a medium laser and see Battle Value and cost under the rules check change with the pilot", async ({ page }) => {
+  await page.goto(HOME);
+  const form = page.getByRole("form", { name: "Build a new one" });
+  await form.getByLabel("Name").fill("Hammer");
+  await form.getByLabel("Tonnage").selectOption("50");
+  await form.getByRole("button", { name: "Start building" }).click();
+  const rules = page.getByRole("region", { name: "Rules check" });
+  const calc = page.getByRole("region", { name: "Battle Value and cost" });
+  // The calculator sits directly beneath the rules check.
+  const above = await rules.boundingBox();
+  const below = await calc.boundingBox();
+  expect(below?.y ?? 0).toBeGreaterThan((above?.y ?? 0) + (above?.height ?? 0) - 1);
+  const bv = () => calc.getByTestId("bv-total");
+  await expect(calc.getByTestId("cost-total")).toContainText("C-bills");
+  const bare = await bv().innerText();
+
+  await page.getByRole("button", { name: "Add equipment" }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByLabel("Search by name").fill("medium laser");
+  await dialog.getByRole("button", { name: /^Medium Laser/ }).first().click();
+  const tray = page.locator(".bt-tray");
+  await tray.getByRole("button", { name: "Actions for Medium Laser" }).click();
+  await tray.getByRole("button", { name: "Place Medium Laser", exact: true }).click();
+  // By keyboard, as the first test does: in placing mode the long slot labels can run under the side column in Firefox.
+  await page.getByRole("button", { name: "Place Medium Laser in Right Arm slot 5", exact: true }).focus();
+  await page.keyboard.press("Enter");
+  await expect(bv()).not.toHaveText(bare);
+  const armed = await bv().innerText();
+
+  await calc.getByLabel("Gunnery").selectOption("2");
+  await expect(bv()).not.toHaveText(armed);
+  await calc.getByRole("button", { name: "Show Battle Value breakdown" }).click();
+  await expect(calc.getByText("Defensive battle rating")).toBeVisible();
+});

@@ -1,5 +1,6 @@
 import { cleanup, render } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
+import { battleValue } from "../../rules/bv";
 import { loadCatalog } from "../../rules/catalog";
 import { mordelBiped, mordelQuad, mordelWith, tripodRecord } from "../../rules/fixtures";
 import { fromMordel } from "../../rules/mordel";
@@ -57,11 +58,12 @@ describe("The record sheet", () => {
     expect(svg.querySelectorAll("[data-diagram]")).toHaveLength(3);
   });
 
-  it("has no credit, no Battle Value and a blank rule for a 'Mech made here", async () => {
+  it("has no credit and prints the calculated Battle Value for a Mech made here", async () => {
     const record = await recordOf(mordelBiped());
     delete record.source;
     const { lines } = await drawn(record);
-    expect(lines).toContain("BV:");
+    const catalog = await loadCatalog();
+    expect(lines).toContain(`BV: ${battleValue(record, catalog).total.toLocaleString("en-US")} (calculated, pilot 4/5)`);
     expect(lines.some((line) => line.includes("mordel.net"))).toBe(false);
   });
 

@@ -257,6 +257,7 @@ a.bt-button {
       margin: 0 0 var(--sr-space-3) var(--sr-space-3);
       position: sticky;
       top: var(--sr-space-3);
+      // The rules check and the calculator share the column; each scrolls on its own, and together they fit the screen.
     }
 
     // The record sits beside the floated rules check, whatever its length.
@@ -268,9 +269,17 @@ a.bt-button {
       }
     }
 
-    .bt-findings {
-      max-height: calc(100vh - 2 * var(--sr-space-3));
+    .bt-findings,
+    .bt-calc {
       overflow-y: auto;
+    }
+
+    .bt-findings {
+      max-height: calc(50vh - 1.5 * var(--sr-space-3));
+    }
+
+    .bt-calc {
+      max-height: calc(50vh - 1.5 * var(--sr-space-3));
       margin-bottom: 0;
     }
   }
@@ -947,5 +956,119 @@ a.bt-button {
     break-inside: avoid;
     print-color-adjust: exact;
     -webkit-print-color-adjust: exact;
+  }
+}
+
+// Battle Value and cost
+.bt-calc {
+  h3 {
+    margin: var(--sr-space-3) 0 var(--sr-space-1);
+  }
+
+  h4 {
+    margin: var(--sr-space-2) 0 var(--sr-space-1);
+  }
+
+  &__pilot {
+    display: flex;
+    gap: var(--sr-space-3);
+
+    .bt-field {
+      flex: 1 1 0;
+      min-width: 0;
+    }
+  }
+
+  &__figure {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 700;
+    overflow-wrap: anywhere;
+  }
+
+  &__differs,
+  &__incomplete p {
+    margin: var(--sr-space-1) 0;
+    font-weight: 700;
+  }
+
+  &__toggle {
+    min-height: 44px;
+    padding: 0 var(--sr-space-1);
+    background: none;
+    border: 0;
+    color: var(--sr-accent);
+    font: inherit;
+    text-align: left;
+    text-decoration: underline;
+    cursor: pointer;
+
+    &:focus-visible {
+      outline: 3px solid var(--sr-focus);
+      outline-offset: 2px;
+    }
+  }
+
+  &__rows,
+  ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  &__rows div {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--sr-space-2);
+    padding: 2px 0;
+    border-bottom: var(--sr-border) solid var(--sr-line);
+  }
+
+  &__rows dt,
+  &__rows dd,
+  li {
+    margin: 0;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  &__rows dd {
+    flex: none;
+    text-align: right;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__lines li {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 0 var(--sr-space-2);
+    border-bottom: var(--sr-border) solid var(--sr-line);
+
+    > span:nth-child(2) {
+      flex: none;
+      white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+    }
+  }
+
+  &__how {
+    flex: 1 1 100%;
+  }
+
+  li {
+    padding: 2px 0;
+  }
+
+  &__how,
+  &__cite {
+    display: block;
+    color: var(--sr-ink-muted);
+    font-size: 0.875rem;
+  }
+
+  &__cite {
+    margin: var(--sr-space-3) 0 0;
   }
 }

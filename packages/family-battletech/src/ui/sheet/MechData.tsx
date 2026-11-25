@@ -136,10 +136,9 @@ export default function MechData({ rect, facts }: { rect: Rect; facts: SheetFact
       <line x1={x + 12} x2={x + rect.w - 12} y1={y + rect.h - 66} y2={y + rect.h - 66} stroke={INK} strokeWidth={2} />
       <text x={x + 24} y={y + rect.h - 22} fontSize={32} fill={INK}>
         <tspan fontWeight={700}>BV:</tspan>
-        {facts.battleValue !== undefined && ` ${facts.battleValue} `}
-        {facts.battleValue !== undefined && <tspan fontSize={MIN_SIZE}>(mordel.net)</tspan>}
+        {` ${facts.battleValue} `}
+        <tspan fontSize={MIN_SIZE}>{`(${facts.battleValueFrom})`}</tspan>
       </text>
-      {facts.battleValue === undefined && <line x1={x + 90} x2={x + 330} y1={y + rect.h - 24} y2={y + rect.h - 24} stroke={INK} strokeWidth={2} />}
     </Frame>
   );
 }

@@ -4,6 +4,7 @@ import { editionLine } from "../../data/editions";
 import { SHEET_HEAT_SINKS, TECH_BASE_NAMES } from "../../data/sheet";
 import { inventoryLines, ammoLines } from "../../rules/catalog";
 import type { Catalog, InventoryLine } from "../../rules/catalog";
+import { battleValue as battleValueOf } from "../../rules/bv";
 import { levelOfRecord, levelRow } from "../../rules/levels";
 import { layout as buildLayout, locationName, structurePoints, walkMP } from "../../rules/mech";
 import { movementPenalty, penalisedMovement } from "../../rules/walk";
@@ -43,7 +44,9 @@ export interface SheetFacts {
   inventory: InventoryLine[];
   /** `(LRM 5) 24, (AC/10) 10`, or "" when there is no ammunition. */
   ammo: string;
-  battleValue: string | undefined;
+  battleValue: string;
+  /** Where the Battle Value came from: Mordel gave it, or we worked it out with the default pilot (Gunnery 4, Piloting 5). */
+  battleValueFrom: string;
   heatSinks: HeatSinkFacts;
   layout: Layout;
   points: LocationPoints[];
@@ -79,7 +82,8 @@ export function sheetFacts(record: MechRecord, catalog: Catalog): SheetFacts {
   const layout = safeLayout(record, catalog);
   const structure = structurePoints(record);
   const codes = layout.supported ? layout.locations : (Object.keys(record.armor) as LocationCode[]);
-  const battleValue = record.source?.values.battleValue;
+  const imported = record.source?.values.battleValue;
+  const computed = imported === undefined ? battleValueOf(record, catalog) : undefined;
   return {
     title: sheetTitle(record),
     walk: moved === null ? DASH : String(moved.walk),
@@ -93,7 +97,8 @@ export function sheetFacts(record: MechRecord, catalog: Catalog): SheetFacts {
     year: record.year === null ? undefined : String(record.year),
     inventory: inventoryLines(record, catalog),
     ammo,
-    battleValue: battleValue === undefined ? undefined : battleValue.toLocaleString("en-US"),
+    battleValue: imported !== undefined ? imported.toLocaleString("en-US") : `${computed?.complete === false ? "at least " : ""}${(computed?.total ?? 0).toLocaleString("en-US")}`,
+    battleValueFrom: imported !== undefined ? "mordel.net" : "calculated, pilot 4/5",
     heatSinks: {
       line: `${kind?.label ?? sinks.type} Heat Sinks: ${String(sinks.count)} (${dissipation})`,
       summary: `${kind?.label ?? sinks.type}, ${String(sinks.count)} (${dissipation})`,

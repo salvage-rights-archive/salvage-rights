@@ -18,6 +18,7 @@ import type { RulesLevel } from "../data/chassis";
 import LevelSelect from "./editor/LevelSelect";
 import ArmorPanel from "./editor/ArmorPanel";
 import { dialogKeyDown } from "./editor/dialog";
+import CalculatorPanel from "./editor/CalculatorPanel";
 import FindingsPanel from "./editor/FindingsPanel";
 import SlotsPanel from "./editor/SlotsPanel";
 import { mordelPicture, readPicture } from "./picture";
@@ -689,6 +690,7 @@ function Editor({ initial, catalog, storage }: { initial: MechRecord; catalog: C
 
       <div className="bt-editor__side">
         <FindingsPanel findings={findings} targetOf={targetOf} onChoose={focusTarget} />
+        <CalculatorPanel record={record} catalog={catalog} />
       </div>
 
       <div className="bt-editor__body">
