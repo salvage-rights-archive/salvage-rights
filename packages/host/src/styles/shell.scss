@@ -259,3 +259,41 @@ h1:focus {
     padding: 0;
   }
 }
+
+// The strip under the header: offline, offline ready, new version. Empty, it takes no room but stays in the page, so a screen reader hears what appears in it.
+.sr-pwa-bar {
+  background: var(--sr-surface-sunk);
+  color: var(--sr-ink);
+
+  &__item {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--sr-space-2);
+    margin: 0;
+    padding: var(--sr-space-1) var(--sr-space-3);
+    border-bottom: var(--sr-border) solid var(--sr-line-strong);
+    border-left: 6px solid var(--sr-hazard);
+  }
+
+  &__button {
+    min-width: 44px;
+    min-height: 44px;
+    padding: 0 var(--sr-space-3);
+    background: var(--sr-accent-bg);
+    color: var(--sr-on-accent);
+    border: 0;
+    border-radius: var(--sr-radius);
+    font: inherit;
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+      background: var(--sr-accent-bg-hover);
+    }
+
+    &:disabled {
+      cursor: default;
+      opacity: .7;
+    }
+  }
+}

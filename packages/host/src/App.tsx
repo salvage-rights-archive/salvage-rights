@@ -4,6 +4,7 @@ import type { FamilyManifest } from "@salvage-rights/shared";
 import { AppErrorBoundary } from "./components/AppErrorBoundary";
 import { Footer } from "./components/Footer";
 import { Header } from "./components/Header";
+import { PwaBar } from "./components/PwaBar";
 import { AppRoutes } from "./routes";
 import { SettingsProvider, useSettings } from "./settings-context";
 
@@ -48,6 +49,7 @@ function Frame({ families, editionId }: { families: FamilyManifest[]; editionId:
   return (
     <div className="sr-frame">
       <Header />
+      <PwaBar />
       <main ref={main} className="sr-content">
         <AppRoutes families={families} editionId={editionId} />
       </main>

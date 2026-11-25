@@ -1,4 +1,6 @@
+import { useEffect, useState } from "react";
 import type { FamilyManifest } from "@salvage-rights/shared";
+import { resetAppCache, workerVersion } from "../pwa";
 
 const FONTS = [
   {
@@ -18,6 +20,48 @@ const FONTS = [
 const SOURCE_URL = "https://github.com/salvage-rights-archive/salvage-rights";
 /** The same name as NOTICES_FILE in vite/families-plugin.ts, which writes the file. */
 const NOTICES_FILE = "third-party-notices.txt";
+
+/** The app's offline copy: which version is saved, and the way out if it ever misbehaves. */
+function AppCache() {
+  // undefined while asking; null when there is no worker (or the browser has none).
+  const [version, setVersion] = useState<string | null | undefined>(() =>
+    "serviceWorker" in navigator ? undefined : null,
+  );
+  useEffect(() => {
+    if (!("serviceWorker" in navigator)) return;
+    let current = true;
+    void workerVersion().then((found) => {
+      if (current) setVersion(found);
+    });
+    return () => {
+      current = false;
+    };
+  }, []);
+  return (
+    <section aria-labelledby="cache-heading">
+      <h2 id="cache-heading">Offline copy</h2>
+      <p>
+        This site keeps a copy of itself on your device so it opens without a connection.{" "}
+        {version === undefined ? "" : version === null ? "No offline copy is installed in this browser." : `Offline copy version: ${version}.`}
+      </p>
+      <p>
+        If the app looks broken or stuck on an old version, reset it. This removes only the saved copy of the app and
+        reloads the page. Your saved 'Mechs and settings are kept.
+      </p>
+      <p>
+        <button
+          type="button"
+          className="sr-settings__button"
+          onClick={() => {
+            void resetAppCache();
+          }}
+        >
+          Reset the app cache
+        </button>
+      </p>
+    </section>
+  );
+}
 
 export function About({ families, editionId }: { families: FamilyManifest[]; editionId: string }) {
   const gplFamilies = families.filter((family) => family.credits.license.startsWith("GPL"));
@@ -75,6 +119,8 @@ export function About({ families, editionId }: { families: FamilyManifest[]; edi
           by others that this build contains, with their licenses.
         </p>
       </section>
+
+      <AppCache />
 
       <p className="sr-edition">Edition: {editionId}</p>
     </div>

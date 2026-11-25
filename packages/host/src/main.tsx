@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { RouterProvider, createBrowserRouter } from "react-router";
 import { editionId, families } from "virtual:families";
 import { App } from "./App";
+import { startPwa } from "./pwa";
 import { restoredPath } from "./restore-path";
 import { startupProblems } from "./startup";
 import "./styles/tokens.scss";
@@ -48,4 +49,6 @@ if (problems.length > 0) {
       <RouterProvider router={router} />
     </StrictMode>,
   );
+  // The offline worker belongs to built sites only; the dev server runs without one.
+  if (import.meta.env.PROD) startPwa(import.meta.env.BASE_URL);
 }

@@ -4,6 +4,7 @@ import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 import type { Plugin } from "vite";
 import { familiesPlugin, readEdition } from "./vite/families-plugin.ts";
+import { pwaPlugin } from "./vite/pwa-plugin.ts";
 
 const repoRoot = resolve(import.meta.dirname, "../..");
 
@@ -40,6 +41,15 @@ export default defineConfig(({ mode }) => {
         join(import.meta.dirname, "LICENSE"),
       ]),
       notFoundPlugin(site.basePath),
+      // The free edition is the published one and has the plain name; the others say which edition they are. Colours
+      // come from the site look: the header's dark steel and the dark theme's page colour (tokens.scss).
+      pwaPlugin({
+        name: edition.id === "free" ? "Salvage Rights" : `Salvage Rights (${edition.id})`,
+        shortName: edition.id === "free" ? "Salvage Rights" : `SR ${edition.id}`.slice(0, 12),
+        base: site.basePath,
+        themeColor: "#171a19",
+        backgroundColor: "#1c1f1e",
+      }),
     ],
     build: { outDir: join(repoRoot, "dist", edition.id), emptyOutDir: true },
   };

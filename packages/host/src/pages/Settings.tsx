@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { ChangeEvent } from "react";
 import { openableFamilies } from "@salvage-rights/shared";
 import type { FamilyManifest, Settings, Theme } from "@salvage-rights/shared";
+import { InstallApp } from "../components/InstallApp";
 import { useSettings } from "../settings-context";
 
 const THEMES: { value: Theme; label: string }[] = [
@@ -158,6 +159,8 @@ export function SettingsPage({ families }: { families: FamilyManifest[] }) {
               </p>
             </fieldset>
           )}
+
+          <InstallApp />
 
           <fieldset className="sr-settings__group">
             <legend>Back up your settings</legend>

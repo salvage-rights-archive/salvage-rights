@@ -26,7 +26,7 @@ const MESSAGES: Record<MordelFailure, string> = {
   "bad-key": "mordel.net did not accept that key. Remove it and enter a new key.",
   "not-found": "mordel.net has no unit with that number.",
   "slow-down": "mordel.net asked us to slow down. Try again in a minute.",
-  offline: "We could not reach mordel.net. You may be offline.",
+  offline: "Importing from Mordel needs a connection. We could not reach mordel.net.",
   server: "mordel.net had a problem. Try again later.",
   "bad-request": "We sent mordel.net a request it did not understand. This is a fault in the app.",
 };

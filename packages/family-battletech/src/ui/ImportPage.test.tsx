@@ -87,7 +87,7 @@ describe("Import from Mordel", () => {
       [{ ok: true, value: true }, "status", "That key works."],
       [failure("bad-key", "mordel.net did not accept that key. Remove it and enter a new key."), "alert", "mordel.net did not accept that key. Remove it and enter a new key."],
       [failure("slow-down", "mordel.net asked us to slow down. Try again in a minute."), "alert", "mordel.net asked us to slow down. Try again in a minute."],
-      [failure("offline", "We could not reach mordel.net. You may be offline."), "alert", "We could not reach mordel.net. You may be offline."],
+      [failure("offline", "Importing from Mordel needs a connection. We could not reach mordel.net."), "alert", "Importing from Mordel needs a connection. We could not reach mordel.net."],
     ];
     for (const [next, role, text] of cases) {
       result = next;
