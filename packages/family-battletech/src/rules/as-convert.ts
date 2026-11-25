@@ -2,20 +2,30 @@
 // for BattleMechs, IndustrialMechs and OmniMech configurations. Pure functions over the record and the catalog; nothing throws on a
 // record it does not understand. Each step returns its value (null when the book gives none), the working that shows how it was
 // reached (our own short wording and the page) and its findings: a part our record holds that the book has no value for is a finding,
-// never a guess. The tables are in data/as-convert.ts. Part two (the end of this file) adds each weapon's damage at Short, Medium, Long
-// and Extreme and their sums; heat, specials, role and Point Value are later pieces.
-import { ARMOR, ENGINE_TYPES, STRUCTURE_TYPES } from "../data/chassis";
+// never a guess. The tables are in data/as-convert.ts. Part two adds each weapon's damage at Short, Medium, Long and Extreme and their
+// sums. Part three (the end of this file) adds the heat steps: heat output, dissipation, heat-modified damage, the final whole-number
+// damage values, the Overheat Value and the Long-range check for the OVL ability, and `convertMech`, which runs all three parts.
+// Specials, role and Point Value are later pieces.
+import { ARMOR, ENGINE_TYPES, HEAT_SINKS, STRUCTURE_TYPES } from "../data/chassis";
 import {
   AES_ARM_IDS,
   ARMOR_DIVISOR,
   ARMOR_RULES,
+  ARTILLERY_CANNON_ROWS,
   ASC_PAGES,
   AS_WEAPON_TABLE,
+  DISSIPATION_ITEMS,
   ENGINE_MAPPING,
   FIRE_CONTROL,
+  HEAT_ITEMS_NOT_IN_BOOK,
+  HEAT_PAGES,
+  HEAT_RULES,
+  HEAT_SINK_DISSIPATION,
+  HEAT_SPECIAL,
   LARGE_ENGINE_OVER,
   MECH_SIZE_CLASSES,
   MOVE,
+  MOVEMENT_HEAT,
   MOVE_EQUIPMENT,
   STRUCTURE_RULES,
   STRUCTURE_TABLE,
@@ -30,7 +40,7 @@ import {
   WEAPON_RULES,
 } from "../data/as-convert";
 import type { AsWeaponRow, AscCite, DamageValue } from "../data/as-convert";
-import type { AsCard, AsMove } from "./as-unit";
+import type { AsCard, AsDamage, AsMove, AsUnit } from "./as-unit";
 import type { Catalog } from "./catalog";
 import { mechTypeOf, walkMP } from "./mech";
 import type { MechRecord } from "./mech";
@@ -39,7 +49,7 @@ import type { Item } from "./walk";
 
 /** One line of how a value was reached: which rule, the figures it used, and the page. */
 export interface Working {
-  step: "type" | "size" | "movement" | "tmm" | "armor" | "structure" | "weapons";
+  step: "type" | "size" | "movement" | "tmm" | "armor" | "structure" | "weapons" | "heat" | "damage" | "overheat";
   rule: string;
   detail: string;
   cite: AscCite;
@@ -101,6 +111,9 @@ export interface MovementResult {
 
 const NO_ALPHA_MOVE = ["lam", "bimodal-lam"];
 
+/** The Jumping MP the card's jump Move comes from: the jump jets less a shield's penalty, none when a large shield forbids jumping. */
+const jumpMPOf = (items: Item[], penalty: ReturnType<typeof movementPenalty>) => (penalty.noJump ? 0 : Math.max(0, jumpMP(items) - penalty.jump));
+
 export function convertMovement(record: MechRecord, catalog: Catalog): Step<MovementResult> {
   const working: Working[] = [];
   const findings: Finding[] = [];
@@ -160,7 +173,7 @@ export function convertMovement(record: MechRecord, catalog: Catalog): Step<Move
     });
   }
 
-  const jumpMPs = penalty.noJump ? 0 : Math.max(0, jumpMP(items) - penalty.jump);
+  const jumpMPs = jumpMPOf(items, penalty);
   const umuMPs = items.filter((i) => MOVE_EQUIPMENT.umu.includes(stemOf(i.row.id))).length;
   const jump = jumpMPs * MOVE.inchesPerMP.value;
   const umu = umuMPs * MOVE.inchesPerMP.value;
@@ -337,6 +350,8 @@ export interface WeaponLine {
   factors: { label: string; factor: number }[];
   /** The weapon's damage at each range: `base` times every factor, not rounded. */
   damage: RangeSet;
+  /** The heat it adds to the unit's heat output: the table's heat, or 0 for a rocket launcher or a one-shot launcher (errata v1.3, p. 115). */
+  heat: number;
   cite: AscCite;
 }
 
@@ -344,6 +359,8 @@ export interface WeaponDamage {
   /** The weapons that make up the sums: the forward ones, or the rear ones where they deliver more at every range (p. 100). */
   arc: "front" | "rear";
   lines: WeaponLine[];
+  /** Every weapon that has a table row, forward and rear: the heat step needs both arcs. */
+  all: WeaponLine[];
   /** The damage subtotal at each range: the sum of the lines, not rounded (errata v1.6, p. 101). Extreme is for aerospace and is not on a 'Mech's card. */
   subtotal: RangeSet;
   /** The subtotal rounded up to the next tenth: the heat-modified damage of a unit that has no heat reduction. The heat step (CONV-3) replaces
@@ -551,7 +568,8 @@ export function convertWeapons(record: MechRecord, catalog: Catalog): Step<Weapo
     for (const range of RANGES) damage[range] = tidy(factors.reduce((x, f) => x * f.factor, base[range]));
     const rear = item.mount.rear === true && !AES_ARMS.includes(item.mount.location as string);
     const tableRow = `${row.tech === "clan" ? "Clan" : "Inner Sphere"}: ${row.name}`;
-    const line = { mountId: item.mount.id, name: item.mount.name, tableRow, rear, base, factors, damage, cite: row.cite };
+    const noHeat = /\bOS\b/.test(item.row.type ?? "") || row.name.includes("Rocket Launcher");
+    const line = { mountId: item.mount.id, name: item.mount.name, tableRow, rear, base, factors, damage, heat: noHeat ? 0 : row.heat, cite: row.cite };
     lines.push(line);
     const parts = [`${rangesText(base)}${c.fireControl ? ` with ${c.fireControl}` : ""}`];
     for (const f of factors) parts.push(`x ${String(f.factor)} ${f.label}`);
@@ -594,5 +612,379 @@ export function convertWeapons(record: MechRecord, catalog: Catalog): Step<Weapo
     working.push({ step: "weapons", rule: `damage subtotal at ${RANGE_LABEL[range]}, not rounded`, detail: `${String(used.length)} weapon${used.length === 1 ? "" : "s"}: ${fmt(subtotal[range])}`, cite: WEAPON_PAGES.tablesIntro });
   }
   working.push({ step: "weapons", rule: "without heat reduction the subtotal is rounded up to the next tenth", detail: rangesText(roundedUp), cite: WEAPON_RULES.roundUpTo.cite });
-  return result({ arc, lines: used, subtotal, roundedUp });
+  return result({ arc, lines: used, all: lines, subtotal, roundedUp });
+}
+
+// ---- Part three: heat, heat-modified damage, final damage, Overheat Value ---------------------------------------------------------
+
+const upWhole = (x: number) => Math.ceil(tidy(x));
+const sumOf = (xs: number[]) => tidy(xs.reduce((a, b) => a + b, 0));
+
+/** The heat a unit sheds in a turn: heat sinks of each kind, coolant pods, and the single-piece systems (errata v1.3, p. 115). */
+export function convertDissipation(record: MechRecord, catalog: Catalog): Step<number> {
+  const working: Working[] = [];
+  const findings: Finding[] = [];
+  const { type, count, extra } = record.chassis.heatSinks;
+  let total = 0;
+  for (const group of [{ type, count }, ...(extra ?? [])]) {
+    const each = own(HEAT_SINK_DISSIPATION, group.type);
+    const name = own(HEAT_SINKS.types, group.type)?.name ?? group.type;
+    if (each === undefined) {
+      return stuck({ code: "heat-sink-type", part: `${name} heat sinks`, message: "The book's Heat Dissipation Table has no entry for this kind of heat sink.", cite: HEAT_PAGES.dissipation }, working);
+    }
+    total += group.count * each;
+    working.push({ step: "heat", rule: `${name} heat sinks, ${String(each)} each`, detail: `${String(group.count)} x ${String(each)} = ${String(group.count * each)}`, cite: HEAT_PAGES.dissipation });
+  }
+  const { items, unknown } = equipmentItems(record, catalog);
+  if (unknown.length > 0) {
+    findings.push({ code: "unknown-mount", part: unknown.map((m) => m.name).join(", "), message: "Our catalog does not know these items, so any heat dissipation among them is not counted.", cite: HEAT_PAGES.dissipation });
+  }
+  const pods = items.filter((i) => DISSIPATION_ITEMS.perPod.ids.includes(i.row.id)).length;
+  if (pods > 0) {
+    total += pods * DISSIPATION_ITEMS.perPod.each;
+    working.push({ step: "heat", rule: "coolant pods, 1 each", detail: `${String(pods)} x ${String(DISSIPATION_ITEMS.perPod.each)} = ${String(pods * DISSIPATION_ITEMS.perPod.each)}`, cite: HEAT_PAGES.dissipation });
+  }
+  for (const once of DISSIPATION_ITEMS.once) {
+    if (!items.some((i) => once.ids.includes(i.row.id))) continue;
+    total += once.value;
+    working.push({ step: "heat", rule: `${once.name}, counted once`, detail: `+${String(once.value)}`, cite: HEAT_PAGES.dissipation });
+  }
+  for (const item of items.filter((i) => HEAT_ITEMS_NOT_IN_BOOK.includes(i.row.id))) {
+    findings.push({ code: "heat-item-not-in-book", part: item.mount.name, message: "The book's heat tables have no entry for this item, so it changes nothing here.", cite: HEAT_PAGES.dissipation });
+  }
+  working.push({ step: "heat", rule: "total heat dissipation", detail: String(total), cite: HEAT_PAGES.dissipation });
+  return { value: total, working, findings };
+}
+
+export interface HeatOutput {
+  /** The heat of firing everything, with the special cases and the most heat-intensive movement: for the Short and Medium brackets. */
+  total: number;
+  /** The same without the weapons that have no Long-range damage value: for the Long-range check. */
+  long: number;
+}
+
+/** The heat a 'Mech adds for moving, from its jump jets and engine (errata v1.3, p. 115). */
+export function convertMovementHeat(record: MechRecord, catalog: Catalog): Step<number> {
+  const working: Working[] = [];
+  const fail = (finding: Finding): Step<number> => stuck(finding, working);
+  const type = convertType(record).value;
+  if (type === null) return fail({ code: "unit-type", part: mechTypeOf(record).id, message: "The book has no Alpha Strike type for this kind of 'Mech, so its movement heat is not known.", cite: HEAT_PAGES.output });
+  if (NO_ALPHA_MOVE.includes(record.configuration)) return fail({ code: "lam-movement", part: "Land-Air 'Mech", message: "The book gives no Move for a Land-Air 'Mech's AirMech and fighter modes, so its movement heat is not known.", cite: HEAT_PAGES.output });
+  const { items } = equipmentItems(record, catalog);
+  const unconverted = items.filter((i) => MOVE_EQUIPMENT.unconverted.includes(stemOf(i.row.id)));
+  if (unconverted.length > 0) {
+    return fail({ code: "jump-equipment", part: unconverted.map((i) => i.mount.name).join(", "), message: "The book counts jump jets only for the jumping Move, so the jumping heat of this unit is not known.", cite: ASC_PAGES.jump });
+  }
+  const jets = items.filter((i) => i.row.kind === "jump-jet");
+  const improved = jets.filter((i) => MOVEMENT_HEAT.improvedJumpJets.includes(stemOf(i.row.id))).length;
+  if (improved > 0 && improved < jets.length) {
+    return fail({ code: "mixed-jump-jets", part: "improved and standard jump jets together", message: "The book says what improved jump jets do to jumping heat but not when only some of the jets are improved.", cite: HEAT_PAGES.output });
+  }
+  const jumpMPs = jumpMPOf(items, movementPenalty(record, catalog));
+  const xxl = MOVEMENT_HEAT.xxlEngines.includes(record.chassis.engine.type);
+  let heat: number;
+  if (jumpMPs > 0) {
+    // One heat per 2 inches of jumping Move is one per Jumping MP.
+    const base = xxl ? Math.max(MOVEMENT_HEAT.xxlJumpMin, 2 * jumpMPs) : Math.max(MOVEMENT_HEAT.jumpMin, jumpMPs);
+    heat = improved > 0 ? Math.max(MOVEMENT_HEAT.improvedMin, Math.ceil(base / 2)) : base;
+    working.push({
+      step: "heat",
+      rule: `movement heat of jumping: ${xxl ? "2" : "1"} per 2 inches of jumping Move, at least ${String(xxl ? MOVEMENT_HEAT.xxlJumpMin : MOVEMENT_HEAT.jumpMin)}${xxl ? " (XXL engine)" : ""}${improved > 0 ? ", halved rounding up for improved jump jets, at least 3" : ""}`,
+      detail: `${String(jumpMPs * 2)} in of jumping Move: ${String(heat)}`,
+      cite: HEAT_PAGES.output,
+    });
+  } else {
+    heat = xxl ? MOVEMENT_HEAT.xxlWalk : type === "BM" ? MOVEMENT_HEAT.walk : 0;
+    working.push({
+      step: "heat",
+      rule: xxl ? "movement heat with an XXL engine and no jump jets" : type === "BM" ? "movement heat of a BattleMech without jump jets" : "an IndustrialMech without jump jets adds no movement heat",
+      detail: String(heat),
+      cite: HEAT_PAGES.output,
+    });
+  }
+  return { value: heat, working, findings: [] };
+}
+
+/** Maximum heat output (errata v1.3, p. 115): every weapon fired, the special cases, and movement; and the Long-range variant of it. */
+export function convertHeatOutput(record: MechRecord, catalog: Catalog, weapons: WeaponDamage): Step<HeatOutput> {
+  const working: Working[] = [];
+  const findings: Finding[] = [];
+  const { items } = equipmentItems(record, catalog);
+  /** One thing that fires: its heat, which way it faces, and whether it has a Long-range damage value. */
+  interface Source {
+    name: string;
+    heat: number;
+    rear: boolean;
+    long: boolean;
+  }
+  const sources: Source[] = weapons.all.map((l) => ({ name: l.name, heat: l.heat, rear: l.rear, long: l.base.long > 0 }));
+  let special = 0;
+  let specialLong = 0;
+  const addSpecial = (label: string, heat: number) => {
+    special += heat;
+    specialLong += heat;
+    working.push({ step: "heat", rule: label, detail: `+${String(heat)}`, cite: HEAT_PAGES.special });
+  };
+
+  // Weapons the damage step leaves out still fire and make heat (artillery, one-shot launchers aside); anti-missile systems are a special case.
+  for (const item of items) {
+    const id = item.row.id;
+    const heatOfItem = item.row.heat ?? 0;
+    if (item.row.kind !== "weapon") {
+      if (heatOfItem > 0 && !HEAT_ITEMS_NOT_IN_BOOK.includes(id)) {
+        findings.push({ code: "item-heat", part: item.mount.name, message: "Our catalog gives this item a heat, but the book adds heat only for weapons and the special cases it lists, so we did not count it.", cite: HEAT_PAGES.output });
+      }
+      continue;
+    }
+    if (HEAT_SPECIAL.ams.ids.includes(id)) {
+      addSpecial(`${item.mount.name}: anti-missile system`, HEAT_SPECIAL.ams.heat);
+    } else if (id === HEAT_SPECIAL.lams.clan.id) {
+      addSpecial(`${item.mount.name}: Clan laser anti-missile system`, HEAT_SPECIAL.lams.clan.heat);
+    } else if (id === HEAT_SPECIAL.lams.inner.id) {
+      addSpecial(`${item.mount.name}: Inner Sphere laser anti-missile system`, HEAT_SPECIAL.lams.inner.heat);
+    } else if (NOT_ADDED.get(id)?.why === "melee") {
+      if (heatOfItem > 0) findings.push({ code: "item-heat", part: item.mount.name, message: "Our catalog gives this melee item a heat, but the book's heat output counts weapons that fire, so we did not count it.", cite: HEAT_PAGES.output });
+    } else if (NOT_ADDED.has(id) || WEAPONS_IGNORED.includes(id)) {
+      if (/\bOS\b/.test(item.row.type ?? "")) {
+        working.push({ step: "heat", rule: `${item.mount.name}: a one-shot launcher adds no heat`, detail: "+0", cite: HEAT_PAGES.special });
+        continue;
+      }
+      const rowName = own(ARTILLERY_CANNON_ROWS, id);
+      const tableRow = rowName === undefined ? undefined : TABLE.get(`is/${rowName}`);
+      sources.push({ name: item.mount.name, heat: tableRow?.heat ?? heatOfItem, rear: item.mount.rear === true, long: tableRow !== undefined && (cell(tableRow.long, 0) ?? 0) > 0 });
+    }
+  }
+
+  // Rear-facing weapons: count the arm that makes more heat (errata v1.3, p. 115).
+  const heatOf = (list: Source[]) => {
+    const front = sumOf(list.filter((s) => !s.rear).map((s) => s.heat));
+    const rear = sumOf(list.filter((s) => s.rear).map((s) => s.heat));
+    return { front, rear, used: Math.max(front, rear), arc: rear > front ? ("rear" as const) : ("front" as const) };
+  };
+  const all = heatOf(sources);
+  const longOnly = heatOf(sources.filter((s) => s.long));
+  const hasRear = sources.some((s) => s.rear);
+  working.push({
+    step: "heat",
+    rule: hasRear ? `weapon heat: forward ${fmt(all.front)} against rear ${fmt(all.rear)}, the larger counts` : "heat of firing every weapon",
+    detail: `${fmt(all.used)}${hasRear ? ` (${all.arc})` : ""}`,
+    cite: HEAT_PAGES.output,
+  });
+  if (hasRear && all.arc !== weapons.arc) {
+    findings.push({ code: "arc-mismatch", part: "rear-facing weapons", message: `The damage step used the ${weapons.arc} weapons and the heat rule counts the ${all.arc} weapons' heat; the two rules each say so, and the book does not say to match them.`, cite: HEAT_PAGES.output });
+  }
+
+  if (record.chassis.armorType === HEAT_SPECIAL.stealth.armorType || items.some((i) => HEAT_SPECIAL.stealth.ids.includes(i.row.id))) addSpecial("stealth armor or a stealth system, counted once", HEAT_SPECIAL.stealth.heat);
+  if (items.some((i) => HEAT_SPECIAL.chameleon.ids.includes(i.row.id))) addSpecial("Chameleon Light Polarization Shield", HEAT_SPECIAL.chameleon.heat);
+
+  const movement = convertMovementHeat(record, catalog);
+  working.push(...movement.working);
+  findings.push(...movement.findings);
+  if (movement.value === null) return { value: null, working, findings };
+
+  const total = tidy(all.used + special + movement.value);
+  const long = tidy(longOnly.used + specialLong + movement.value);
+  working.push({ step: "heat", rule: "maximum heat output (Short and Medium)", detail: `${fmt(all.used)} + ${fmt(special)} + ${fmt(movement.value)} movement = ${fmt(total)}`, cite: HEAT_PAGES.output });
+  working.push({ step: "heat", rule: "Long-range heat output: weapons with no Long-range damage value left out", detail: `${fmt(longOnly.used)} + ${fmt(specialLong)} + ${fmt(movement.value)} movement = ${fmt(long)}`, cite: HEAT_PAGES.longCheck });
+  return { value: { total, long }, working, findings };
+}
+
+/** What the heat-modified damage formula needs, and what the Long-range check decided. */
+export interface HeatState {
+  output: number;
+  longOutput: number;
+  dissipation: number;
+  /** The unit makes more heat than it sheds plus 4, so the formula applies. */
+  reduces: boolean;
+  /** The unit qualifies for the Overheat Long ability, so its Long damage is reduced like Short and Medium. */
+  ovl: boolean;
+}
+
+export type HeatRange = "short" | "medium" | "long" | "extreme";
+
+/** The heat-modified damage of a subtotal at one bracket, rounded up to the tenth (errata v1.3, p. 115): the formula where the unit
+ * reduces, otherwise the subtotal itself. Null where the errata gives no rule (Extreme on a unit that reduces). Special-ability damage
+ * is heat-modified the same way (errata v1.6, p. 116), for the specials piece to use. */
+export function heatModifiedDamage(subtotal: number, range: HeatRange, heat: HeatState): number | null {
+  if (!heat.reduces) return upToTenth(subtotal);
+  if (range === "extreme") return null;
+  if (range === "long" && !heat.ovl) return upToTenth(subtotal);
+  return upToTenth((subtotal * heat.dissipation) / (heat.output - HEAT_RULES.margin));
+}
+
+/** A heat-modified value to a card's final base damage: up to the next whole number, 0* for more than 0 and under 0.5, a dash for none. */
+export function finalDamage(modified: number): AsDamage {
+  if (modified <= 0) return null;
+  if (modified < HEAT_RULES.minimalBelow) return { value: 0, minimal: true };
+  return { value: upWhole(modified) };
+}
+
+/** Final damage of a special ability's sum of heat-modified damage values: rounded normally, not up (errata v1.3, p. 116). */
+export function finalAbilityDamage(sumOfModified: number): AsDamage {
+  if (sumOfModified <= 0) return null;
+  if (sumOfModified < HEAT_RULES.minimalBelow) return { value: 0, minimal: true };
+  return { value: roundHalfUp(sumOfModified) };
+}
+
+export interface HeatConversion {
+  output: number;
+  longOutput: number;
+  dissipation: number;
+  state: HeatState;
+  /** The heat-modified damage of each bracket, up to the tenth. Extreme is absent where the book gives no rule for it. */
+  modified: { short: number; medium: number; long: number; extreme?: number };
+  /** The card's damage. Extreme is absent where the book gives no rule for it; a 'Mech's card does not print it. */
+  final: { short: AsDamage; medium: AsDamage; long: AsDamage; extreme?: AsDamage };
+  /** The Overheat Value, 0 to 4. */
+  ov: number;
+  /** The unit qualifies for the Overheat Long ability. */
+  ovl: boolean;
+}
+
+/** Heat output, dissipation, heat-modified damage, final damage, the Overheat Value and the Long-range check for OVL. */
+export function convertHeat(record: MechRecord, catalog: Catalog, weapons: Step<WeaponDamage> = convertWeapons(record, catalog)): Step<HeatConversion> {
+  if (weapons.value === null) return stuck({ code: "heat-needs-damage", part: "weapon damage", message: "The heat step starts from the weapon damage subtotals, which have no value yet (see the weapon findings)." });
+  const damage = weapons.value;
+  const working: Working[] = [];
+  const findings: Finding[] = [];
+  const out = convertHeatOutput(record, catalog, damage);
+  const diss = convertDissipation(record, catalog);
+  working.push(...out.working, ...diss.working);
+  findings.push(...out.findings, ...diss.findings);
+  if (out.value === null || diss.value === null) return { value: null, working, findings };
+
+  const sub = damage.subtotal;
+  const D = diss.value;
+  const margin = HEAT_RULES.margin;
+  const state: HeatState = { output: out.value.total, longOutput: out.value.long, dissipation: D, reduces: out.value.total - margin > D, ovl: false };
+  const stuckHere = (finding: Finding): Step<HeatConversion> => ({ value: null, working, findings: [...findings, finding] });
+  const finish = (s: HeatState, m: HeatConversion["modified"], overheat: number, overheatLong: boolean): HeatConversion => {
+    const final: HeatConversion["final"] = { short: finalDamage(m.short), medium: finalDamage(m.medium), long: finalDamage(m.long) };
+    if (m.extreme !== undefined) final.extreme = finalDamage(m.extreme);
+    const shown = (d: AsDamage) => (d === null ? "-" : d.minimal ? "0*" : String(d.value));
+    working.push({
+      step: "damage",
+      rule: "final damage: heat-modified damage rounded up to the next whole number; more than 0 and under 0.5 is 0*; none is a dash",
+      detail: `${fmt(m.short)}/${fmt(m.medium)}/${fmt(m.long)} gives ${shown(final.short)}/${shown(final.medium)}/${shown(final.long)}`,
+      cite: HEAT_PAGES.final,
+    });
+    return { output: s.output, longOutput: s.longOutput, dissipation: s.dissipation, state: s, modified: m, final, ov: overheat, ovl: overheatLong };
+  };
+
+  if (!state.reduces) {
+    working.push({ step: "damage", rule: "dissipation is at least the heat output minus 4: no reduction, each subtotal rounds up to the tenth", detail: `${fmt(D)} >= ${fmt(state.output)} - ${String(margin)}`, cite: HEAT_PAGES.modified });
+    const modified = { short: heatModifiedDamage(sub.short, "short", state) ?? 0, medium: heatModifiedDamage(sub.medium, "medium", state) ?? 0, long: heatModifiedDamage(sub.long, "long", state) ?? 0, extreme: heatModifiedDamage(sub.extreme, "extreme", state) ?? 0 };
+    working.push({ step: "overheat", rule: "no heat reduction: Overheat Value 0 and no OVL", detail: "0", cite: HEAT_PAGES.overheat });
+    return { value: finish(state, modified, 0, false), working, findings };
+  }
+
+  working.push({ step: "damage", rule: "the unit makes more heat than it sheds plus 4: damage is heat-modified", detail: `${fmt(D)} < ${fmt(state.output)} - ${String(margin)}; each subtotal x ${fmt(D)} / ${fmt(state.output - margin)}`, cite: HEAT_PAGES.modified });
+  const modifiedAt = (range: HeatRange) => heatModifiedDamage(sub[range], range, state) ?? 0;
+
+  // The Overheat Value: how far the Medium bracket (Short if there is none) drops, in whole numbers, at most 4.
+  const base: "medium" | "short" = sub.medium > 0 ? "medium" : "short";
+  const before = upWhole(sub[base]);
+  const afterFinal = finalDamage(modifiedAt(base));
+  if (afterFinal?.minimal) {
+    return stuckHere({ code: "ov-minimal", part: "Overheat Value", message: "The heat-modified damage used for the Overheat Value is minimal damage (0*); the book does not say how that counts against the whole number, so we leave the Overheat Value unset.", cite: HEAT_PAGES.overheat });
+  }
+  const after = afterFinal === null ? 0 : afterFinal.value;
+  const ov = Math.min(HEAT_RULES.overheatMax, Math.max(0, before - after));
+  working.push({
+    step: "overheat",
+    rule: `Overheat Value: how far ${base} damage drops, at most ${String(HEAT_RULES.overheatMax)}${base === "short" ? " (no Medium damage, so Short is used)" : ""}`,
+    detail: `${String(before)} (rounded up) - ${String(after)} (heat-modified, rounded up) = ${String(before - after)}${before - after > HEAT_RULES.overheatMax ? `, capped at ${String(HEAT_RULES.overheatMax)}` : ""}`,
+    cite: HEAT_PAGES.overheat,
+  });
+
+  // The Long-range check for OVL: the Long heat output decides whether Long damage would drop by a whole point.
+  let ovl = false;
+  if (sub.long > 0) {
+    const longBefore = upWhole(sub.long);
+    const reducesLong = state.longOutput - margin > D;
+    const raw = reducesLong ? upToTenth((sub.long * D) / (state.longOutput - margin)) : upToTenth(sub.long);
+    if (reducesLong && raw > 0 && raw < HEAT_RULES.minimalBelow) {
+      return stuckHere({ code: "ovl-minimal", part: "Overheat Long check", message: "The Long-range check ends in minimal damage (0*); the book does not say how that counts against the whole number, so we leave the damage unset.", cite: HEAT_PAGES.longCheck });
+    }
+    const longAfter = upWhole(raw);
+    const drops = longBefore - longAfter >= HEAT_RULES.ovlDrop;
+    working.push({
+      step: "overheat",
+      rule: "Long-range check: the Long heat output decides whether Long damage drops by a whole point",
+      detail: reducesLong ? `${String(longBefore)} against ${fmt(sub.long)} x ${fmt(D)} / ${fmt(state.longOutput - margin)} = ${fmt(raw)}, rounded up ${String(longAfter)}: ${drops ? "drops by at least 1" : "does not drop by 1"}` : `Long heat ${fmt(state.longOutput)} is not over ${fmt(D)} + ${String(margin)}: no drop`,
+      cite: HEAT_PAGES.longCheck,
+    });
+    if (drops && ov === 0) {
+      working.push({ step: "overheat", rule: "no OVL: the ability is given only to a unit that has an Overheat Value (errata v1.6 to p. 128)", detail: "Overheat Value 0", cite: HEAT_PAGES.ovlAbility });
+    } else if (drops) {
+      ovl = true;
+      state.ovl = true;
+      working.push({ step: "overheat", rule: "the unit has OVL: its Long damage is heat-modified with the Short and Medium heat output", detail: `${fmt(sub.long)} x ${fmt(D)} / ${fmt(state.output - margin)}`, cite: HEAT_PAGES.longCheck });
+    }
+  }
+
+  const modified: HeatConversion["modified"] = { short: modifiedAt("short"), medium: modifiedAt("medium"), long: modifiedAt("long") };
+  if (sub.extreme > 0) {
+    findings.push({ code: "extreme-heat", part: "Extreme range damage", message: "The Converting Heat errata gives no rule for heat-modifying the Extreme bracket (the printed page grouped it with Long, which the errata replaces); a 'Mech's card does not print Extreme, so we leave it unset.", cite: HEAT_PAGES.longCheck });
+  } else {
+    modified.extreme = 0;
+  }
+  return { value: finish(state, modified, ov, ovl), working, findings };
+}
+
+// ---- All three parts ---------------------------------------------------------------------------------------------------------------
+
+/** A unit the conversion has begun: the card fields parts one to three can work out, no specials, role or Point Value yet. */
+export type PartialAsUnit = Omit<Partial<AsUnit>, "card"> & { card: Partial<AsCard> };
+
+export interface MechConversion {
+  unit: PartialAsUnit;
+  /** What the later pieces (CONV-4 specials, CONV-5 role, CONV-6 Point Value) still have to set. */
+  pending: ("specials" | "role" | "pv")[];
+  /** The specials parts one to three already know the book gives (jump and underwater TMM, Overheat Long); CONV-4 adds them to `specials`. */
+  earned: { jump?: MovementResult["jumpSpecial"]; submersible?: MovementResult["submersibleSpecial"]; ovl?: boolean };
+  weapons: WeaponDamage | null;
+  heat: HeatConversion | null;
+  working: Working[];
+  findings: Finding[];
+}
+
+/** Parts one to three of the conversion for a 'Mech record: type, size, movement, TMM, armor, structure, damage by range and the Overheat
+ * Value. Where a step has a finding its fields are left out of `unit.card`; nothing is guessed. */
+export function convertMech(record: MechRecord, catalog: Catalog): MechConversion {
+  const body = convertBody(record, catalog);
+  const unit: PartialAsUnit = {
+    schema: 1,
+    kind: "as-unit",
+    name: { chassis: record.name.chassis, model: record.name.model },
+    techBase: record.techBase,
+    year: record.year,
+    card: { ...body.card },
+    source: { kind: "converted", ref: record.id, credit: "Converted from a Classic record in this app" },
+  };
+  const result: MechConversion = { unit, pending: ["specials", "role", "pv"], earned: {}, weapons: null, heat: null, working: [...body.working], findings: [...body.findings] };
+  if (body.jumpSpecial) result.earned.jump = body.jumpSpecial;
+  if (body.submersibleSpecial) result.earned.submersible = body.submersibleSpecial;
+  if (record.omni?.isBase === true) return result;
+
+  const weapons = convertWeapons(record, catalog);
+  const heat = convertHeat(record, catalog, weapons);
+  result.weapons = weapons.value;
+  result.heat = heat.value;
+  result.working.push(...weapons.working, ...heat.working);
+  result.findings.push(...weapons.findings, ...heat.findings);
+  if (heat.value !== null) {
+    unit.card.damage = { s: heat.value.final.short, m: heat.value.final.medium, l: heat.value.final.long };
+    unit.card.ov = heat.value.ov;
+    result.earned.ovl = heat.value.ovl;
+  }
+  // The same finding can come from two steps (an unknown item); keep one.
+  const seen = new Set<string>();
+  result.findings = result.findings.filter((f) => {
+    const key = `${f.code}|${f.part}|${f.message}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+  return result;
 }
