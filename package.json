@@ -19,6 +19,7 @@
     "lint": "eslint .",
     "test": "node scripts/vitest.mjs run",
     "test:watch": "node scripts/vitest.mjs",
+    "mordel:smoke": "node scripts/vitest.mjs run --config vitest.live.config.mts",
     "check:editions": "node scripts/check-edition.mjs free && node scripts/check-edition.mjs ten-thousand-fleets && node scripts/check-edition.mjs dev",
     "check": "npm run typecheck && npm run lint && npm test && npm run check:editions && npm run build:free && npm run build:tkf"
   },
