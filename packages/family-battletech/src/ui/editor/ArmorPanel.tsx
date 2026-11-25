@@ -6,7 +6,7 @@ import type { Layout, LocationCode, MechRecord } from "../../rules/mech";
 import { dollBox } from "../doll/box";
 import MechDoll from "../doll/mech-doll";
 import { PAPER } from "../doll/pen";
-import { STRUCTURE_SCALE, dollUnitFromRecord, recordCodeOf } from "../doll/layouts";
+import { STRUCTURE_SCALE, dollUnitFromRecord, recordCodeOf, shieldPointsForDoll } from "../doll/layouts";
 import type { DollUse } from "../doll/layouts";
 import { NumberField, fieldId } from "../EditorPage";
 import type { OnEdit } from "../EditorPage";
@@ -46,7 +46,12 @@ export default function ArmorPanel({
   const max = maxArmor(record);
   const points = Object.values(record.armor).reduce((sum, a) => sum + (a ? a.front + (a.rear ?? 0) : 0), 0);
   const type = Object.hasOwn(ARMOR.types, record.chassis.armorType) ? (ARMOR.types[record.chassis.armorType]?.name ?? record.chassis.armorType) : record.chassis.armorType;
-  const unit = dollUnitFromRecord(record);
+  const shields = shieldPointsForDoll(record);
+  const unit = dollUnitFromRecord(record, shields);
+  // A shield is a location on the doll with no field of its own: what it draws is said in words here.
+  const shieldNotes = ([["Left", shields.left, shields.absorbLeft], ["Right", shields.right, shields.absorbRight]] as const).flatMap(([side, capacity, absorbance]) =>
+    capacity === undefined ? [] : [`${side} arm shield: Damage Capacity ${capacity}${absorbance === undefined ? "" : `, Damage Absorbance ${absorbance}`}`],
+  );
 
   // The fields in the order they are seen on the body-shaped grid, row by row, so Tab follows the picture.
   const cellOf = (location: string, side: "front" | "rear"): Cell | undefined =>
@@ -142,6 +147,9 @@ export default function ArmorPanel({
           <div className="bt-armor__body" role="group" aria-label="Armor points by location">
             {fieldOrder.map(([location, side]) => cell(location, side))}
           </div>
+          {shieldNotes.length > 0 && (
+            <p className="bt-hint">{`${shieldNotes.join(". ")}. A shield's points come with its size; they are marked off on the record sheet.`}</p>
+          )}
           {unit && <div className="bt-armor__structure">{doll("structure", STRUCTURE_SCALE)}</div>}
         </div>
       </div>

@@ -2,7 +2,7 @@
 import { placePoint, placeShape } from "./geometry";
 import { placedPlates } from "./mech-doll";
 import { PARTS } from "./parts";
-import { labelLines, labelPoint, layoutOf, type DollUse, type IDollUnit } from "./layouts";
+import { labelLines, labelPoint, layoutOf, locationsOf, type DollUse, type IDollUnit } from "./layouts";
 
 /** Label type size and an average glyph width as a share of it, per use, to leave room for the labels. */
 export const LABEL = { armor: { size: 20, glyph: 0.62 }, structure: { size: 15, glyph: 0.62 } } as const;
@@ -12,7 +12,7 @@ const MARGIN = 12;
  * damage transfer diagram has no labels. `labelSize` is the type size the labels are drawn at, when it is not the use's own. */
 export function dollBox(unit: Pick<IDollUnit, "layoutId" | "variant">, use: DollUse, scale: number, labelSize?: number, short = false) {
   const layout = layoutOf(unit);
-  const locations = layout ? (use === "armor" ? [...layout.front, ...layout.rear] : layout.front) : [];
+  const locations = layout ? locationsOf(layout, use) : [];
   const frame = { centerX: 0, top: 0, scale };
   const xs: number[] = [];
   const ys: number[] = [];

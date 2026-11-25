@@ -66,3 +66,20 @@ export const SHEET_COLUMNS: Record<string, LocationCode[][]> = {
 export const EMPTY_SLOT = "Roll Again";
 
 export const TECH_BASE_NAMES: Record<string, string> = { "inner-sphere": "Inner Sphere", clan: "Clan", mixed: "Mixed" };
+
+/** The boxes the record sheet prints beside a shield-carrying arm, by equipment id: a shield's Damage Capacity (DC, a circle
+ * for each point) and its Damage Absorbance (DA, a diamond for each point). The 'Mech Shield Table, read against the page
+ * image. The published sheets (Record Sheets: Dark Age, 2022) print both on a plate outside the arm, DC above DA. */
+export const MECH_SHIELD_BOXES: {
+  cite: { book: string; page: number };
+  checked: "page" | "text";
+  rows: Record<string, { capacity: number; absorbance: number }>;
+} = {
+  cite: { book: "Tactical Operations: Advanced Units and Equipment", page: 103 },
+  checked: "page",
+  rows: {
+    "shield-small-is": { capacity: 11, absorbance: 3 },
+    "shield-medium-is": { capacity: 18, absorbance: 5 },
+    "shield-large-is": { capacity: 25, absorbance: 7 },
+  },
+};

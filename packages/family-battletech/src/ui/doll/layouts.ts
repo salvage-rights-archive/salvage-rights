@@ -1,4 +1,5 @@
 // Salvage Rights paper doll engine. GPL-3.0-or-later.
+import { MECH_SHIELD_BOXES } from "../../data/sheet";
 import { locationName, maxArmor, structurePoints, type LocationCode, type MechRecord } from "../../rules/mech";
 import { placePoint, type IPlacement } from "./geometry";
 import { PART_PIVOTS, PARTS, type PartId } from "./parts";
@@ -33,6 +34,14 @@ export interface IDollLocation {
     leader?: [BubblePoint, BubblePoint];
     /** Where damage goes once this location is destroyed (the damage transfer diagram's arrow). */
     transfersTo?: string;
+    /** The uses that draw this location, where it is not all of them: a shield is drawn on the armor diagram only. */
+    uses?: DollUse[];
+    /** Its points are set by what it is, not by the player: drawn and named, never a button. */
+    fixed?: boolean;
+    /** What marks each point, where it is not a circle. */
+    marks?: "diamond";
+    /** The short label's lines, where they are not the location's code over its count. */
+    shortLabel?: string[];
 }
 
 export interface IDollLayout {
@@ -81,6 +90,9 @@ export interface IDollVariant {
     arms?: 2 | 4;
     /** The Land-Air 'Mech family, on the biped: canopy head and folded wings (LAM, bimodal), a rotor (VTOL), fixed wings. */
     lam?: "lam" | "bimodal" | "vtol" | "partial-wing";
+    /** A shield carried on the left arm, the right arm or both, on any layout with arms: a shield location beside the arm
+     * (of four arms, beside the outer one on that side). */
+    shields?: { left?: boolean; right?: boolean };
 }
 
 /** What the doll needs from a unit: counts per location (already capped by the rules) and the damage marked. */
@@ -106,9 +118,13 @@ export const layoutOf = (unit: Pick<IDollUnit, "layoutId" | "variant">): IDollLa
     return made;
 };
 
+/** The locations a use draws, back to front: the front view, with the rear torsos on the armor diagram. */
+export const locationsOf = (layout: IDollLayout, use: DollUse): IDollLocation[] =>
+    (use === "armor" ? [...layout.front, ...layout.rear] : layout.front).filter((location) => !location.uses || location.uses.includes(use));
+
 /** A location label lines: its full name, or only its code (CT, LTR) where the figure is drawn too small for names. */
 export const labelLines = (location: IDollLocation, short = false): string[] =>
-    short ? (location.loc === "hd" ? ["HD"] : [location.loc.toUpperCase(), ""]) : location.label;
+    short ? (location.shortLabel ?? (location.loc === "hd" ? ["HD"] : [location.loc.toUpperCase(), ""])) : location.label;
 
 /** Where a location label starts: the head's short label rises clear of the head, which a small figure would cover. */
 export const labelPoint = (location: IDollLocation, short = false): BubblePoint =>
@@ -418,9 +434,49 @@ const RECORD_OF: Record<string, { code: LocationCode; rear: boolean }> = {
 
 const STAR_NAMES: Record<string, string> = { flt: "Front Left Torso", frt: "Front Right Torso", at: "Aft Torso", al: "Aft Leg" };
 
+/** The shield locations: the Damage Capacity boxes (lsh, rsh) and the Damage Absorbance boxes (lsha, rsha) of each side. */
+const SHIELD_LOCATIONS: Record<string, { side: "left" | "right"; counts: "capacity" | "absorbance"; name: string }> = {
+    lsh: { side: "left", counts: "capacity", name: "Left Shield Damage Capacity" },
+    rsh: { side: "right", counts: "capacity", name: "Right Shield Damage Capacity" },
+    lsha: { side: "left", counts: "absorbance", name: "Left Shield Damage Absorbance" },
+    rsha: { side: "right", counts: "absorbance", name: "Right Shield Damage Absorbance" },
+};
+
+/** What the doll draws for the shields a unit carries: the points of Damage Capacity on each arm and, where known, of
+ * Damage Absorbance. A side with no shield has no entry. */
+export interface IDollShields {
+    left?: number;
+    right?: number;
+    absorbLeft?: number;
+    absorbRight?: number;
+}
+
+/** The shield boxes of a record: for each arm, those of the first shield mounted in it (the 'Mech Shield Table,
+ * data/sheet.ts). It asks only where the shield is; whether it may be there is the rules check's business. */
+export const shieldPointsForDoll = (record: MechRecord): IDollShields => {
+    const boxes = (arm: LocationCode) => {
+        const id = record.mounts.find((mount) => mount.location === arm && mount.equipmentId !== null && Object.hasOwn(MECH_SHIELD_BOXES.rows, mount.equipmentId))?.equipmentId;
+        return id ? MECH_SHIELD_BOXES.rows[id] : undefined;
+    };
+    const left = boxes("LA"), right = boxes("RA");
+    return {
+        ...(left ? { left: left.capacity, absorbLeft: left.absorbance } : {}),
+        ...(right ? { right: right.capacity, absorbRight: right.absorbance } : {}),
+    };
+};
+
+/** The points a shield location draws; undefined for any other location. */
+const shieldCount = (loc: string, shields: IDollShields): number | undefined => {
+    const at = Object.hasOwn(SHIELD_LOCATIONS, loc) ? SHIELD_LOCATIONS[loc] : undefined;
+    if (!at) return undefined;
+    const count = at.counts === "capacity" ? (at.side === "left" ? shields.left : shields.right) : (at.side === "left" ? shields.absorbLeft : shields.absorbRight);
+    return Math.max(0, count ?? 0);
+};
+
 /** A doll location's display name, from the record's own names; the rear torsos add "(Rear)". */
 export const dollLocationName = (loc: string, arms?: 2 | 4): string => {
     const at = Object.hasOwn(RECORD_OF, loc) ? RECORD_OF[loc] : undefined;
+    if (Object.hasOwn(SHIELD_LOCATIONS, loc)) return SHIELD_LOCATIONS[loc]?.name ?? loc;
     if (at) return `${arms === 4 && (loc === "la" || loc === "ra") ? "Upper " : ""}${locationName(at.code)}${at.rear ? " (Rear)" : ""}`;
     // The legs of a hexapod or octopod are numbered from the front; these are doll codes only, with no record location yet.
     if (loc === "la2" || loc === "ra2") return `Lower ${loc === "la2" ? "Left" : "Right"} Arm`;
@@ -441,16 +497,18 @@ const recordLocation = (loc: string) => (Object.hasOwn(RECORD_OF, loc) ? RECORD_
 /** The record location (HD, LT, FLL) a doll location (lower case; the rear torsos end in "r") stands for. */
 export const recordCodeOf = (loc: string): LocationCode | undefined => recordLocation(loc)?.code;
 
-export const dollUnitFromRecord = (record: MechRecord): IDollUnit | undefined => {
+export const dollUnitFromRecord = (record: MechRecord, shields: IDollShields = shieldPointsForDoll(record)): IDollUnit | undefined => {
     const layoutId = Object.hasOwn(LAYOUT_OF_CONFIGURATION, record.configuration) ? LAYOUT_OF_CONFIGURATION[record.configuration] : undefined;
     if (!layoutId) return undefined;
     const max = maxArmor(record), structure = structurePoints(record);
     return {
         layoutId,
-        variant: { armless: false, superheavy: record.tons > 100, ...(Object.hasOwn(LAM_VARIANT, record.configuration) ? { lam: LAM_VARIANT[record.configuration] } : {}) },
+        variant: { armless: false, superheavy: record.tons > 100, ...(Object.hasOwn(LAM_VARIANT, record.configuration) ? { lam: LAM_VARIANT[record.configuration] } : {}),
+            ...(shields.left || shields.right ? { shields: { left: Boolean(shields.left), right: Boolean(shields.right) } } : {}),
+        },
         armor: (loc) => {
             const at = recordLocation(loc);
-            if (!at) return 0;
+            if (!at) return shieldCount(loc, shields) ?? 0;
             // The doll draws at most what a location can carry; the rules check reports any excess.
             const limit = max[at.code] ?? 0, entry = record.armor[at.code];
             const front = Math.max(0, Math.min(entry?.front ?? 0, limit));

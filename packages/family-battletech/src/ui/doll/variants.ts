@@ -1,6 +1,6 @@
 // Salvage Rights paper doll engine. GPL-3.0-or-later.
 import { mapPath, outline, polygonPath, slab, type IDecor } from "./parts-kit";
-import { frontPod, FIGHTER_INSET, FIXED_WING, FOLDED_WING, ROTOR } from "./parts-variants";
+import { frontPod, FIGHTER_INSET, FIXED_WING, FOLDED_WING, ROTOR, SHIELD } from "./parts-variants";
 import { HULL_TOP, STAR_AT, STAR_FACE, topPod } from "./parts-top";
 import { PARTS, type PartId } from "./parts";
 import { placePoint, type IPlacement } from "./geometry";
@@ -65,6 +65,12 @@ const superheavy = (layout: IDollLayout): IDollLayout => {
 
 const ALL_USES = ["armor", "structure", "transfer"] as const;
 
+/** On a Land-Air 'Mech: how much further out a shield's short label hangs, how much further out a shield stands beyond a
+ * fixed wing, and how much lower the fighter-mode picture stands, under the shield on the right arm. */
+const SHIELD_LABEL_OUT_LAM = 40;
+const SHIELD_OUT_WING = 90;
+const INSET_UNDER_SHIELD = 620;
+
 /** A decoration and its twin turned over on the other side. */
 const pair = (id: string, decor: IDecor, behind: boolean): IDollExtra[] => [
     { id: `${id}-left`, decor, at: { x: 0, y: 0 }, behind, uses: [...ALL_USES] },
@@ -76,12 +82,24 @@ const pair = (id: string, decor: IDecor, behind: boolean): IDollExtra[] => [
 const landAir = (layout: IDollLayout, kind: NonNullable<IDollVariant["lam"]>): IDollLayout => {
     const moveArmLabels = (location: IDollLocation): IDollLocation =>
         location.loc === "la" || location.loc === "ra" ? { ...location, labelAt: [location.labelAt[0] + (location.loc === "la" ? -28 : 28), location.labelAt[1]] } : location;
+    // Under folded wings the arm labels stand further out, so a shield's short label, which hangs in the same row at the sheet's
+    // size, hangs further out too. A fixed wing reaches out past the arm, so there the whole shield stands beyond its tip.
+    const moveShield = (location: IDollLocation): IDollLocation => {
+        if (location.part !== "shield" && location.part !== "shield-absorb") return location;
+        const side = location.at.x < 0 ? -1 : 1;
+        const hang = location.shortHangsFrom;
+        if (kind !== "partial-wing") return location.part === "shield" && hang ? { ...location, shortHangsFrom: [hang[0] + side * SHIELD_LABEL_OUT_LAM, hang[1]] } : location;
+        const dx = side * SHIELD_OUT_WING;
+        return { ...location, at: { ...location.at, x: location.at.x + dx }, labelAt: [location.labelAt[0] + dx, location.labelAt[1]], shortHangsFrom: hang && [hang[0] + dx, hang[1]] };
+    };
     const canopy = swapped({ head: "head-canopy" });
-    const landed = withParts(layout, (location) => canopy(kind === "vtol" ? location : moveArmLabels(location)));
+    const landed = withParts(layout, (location) => canopy(kind === "vtol" ? location : moveShield(moveArmLabels(location))));
+    // The fighter-mode picture stands right of the figure: beside the leg, under the shield, when the right arm carries one.
+    const insetDown = layout.front.some((location) => location.loc === "rsh") ? INSET_UNDER_SHIELD : 0;
     const extras: IDollExtra[] =
         kind === "vtol" ? [{ id: "rotor", decor: ROTOR, at: { x: 0, y: 0 }, behind: true, uses: [...ALL_USES] }]
         : kind === "partial-wing" ? pair("wing-fixed", FIXED_WING, true)
-        : [...pair("wing-folded", FOLDED_WING, true), { id: "fighter-inset", decor: FIGHTER_INSET, at: { x: 0, y: 0 }, behind: false, uses: ["armor"] }];
+        : [...pair("wing-folded", FOLDED_WING, true), { id: "fighter-inset", decor: FIGHTER_INSET, at: { x: 0, y: insetDown }, behind: false, uses: ["armor"] }];
     return { ...landed, extras: [...(layout.extras ?? []), ...extras] };
 };
 
@@ -238,10 +256,120 @@ const withArms = (layout: IDollLayout, count: ArmCount): IDollLayout => {
     return frontArms(layout, count);
 };
 
+// ---- Shields: a shield location beside the arm that carries it, outside it, on every layout that has arms. Of four arms the
+// outer one of the side (the lower pair) carries it, since nothing can stand beside the inner one; no record has four arms
+// yet, so which arm holds the shield is the doll's own choice until the rules say. A shield is two doll locations, both on
+// the armor diagram only and neither a button: the Damage Capacity boxes (lsh, rsh: circles) and the Damage Absorbance boxes
+// (lsha, rsha: diamonds). The published sheets were read for the arrangement: the shield outside the arm, DC above DA,
+// nothing on the internal structure or damage transfer diagrams.
+
+/** How far the arm seen from the front reaches from its pivot, in its own units: its outer edge and the top of its pauldron. */
+const ARM_REACH = { out: 80, up: 64 } as const;
+/** The arm seen from above: how long it is to its tip and half its width. */
+const TOP_ARM = { length: 284, half: 40 } as const;
+/** A shield beside an arm seen from above is this share of the arm's own scale, so that a full large shield is still read. */
+const TOP_SHIELD_SCALE = 0.74;
+/** How far past the hand a shield seen from above reaches, so that its near end clears the first leg: little beside the one
+ * pair of arms of a six- or eight-legged body, more beside the lower pair of four, most on the five-legged body, whose
+ * front legs stand right beside its arms. */
+const TOP_SHIELD_PAST = { hull2: 50, hull4: 90, star: 166 } as const;
+
+interface IShieldSpot {
+    at: IPlacement;
+    anchor: IDollLocation["labelAnchor"];
+    label: BubblePoint;
+    hang: BubblePoint;
+    absorbLabel: BubblePoint;
+    absorbHang: BubblePoint;
+    /** Where the carrying arm's own label moves to, out of the shield's way. */
+    arm?: { labelAt?: BubblePoint; shortHangsFrom?: BubblePoint };
+}
+
+/** The shield beside a left arm seen from the front: upright, its top a little below the pauldron's, its name over it and
+ * the absorbance count under it. `u` is the labels' scale. */
+const frontShield = (arm: IDollLocation, u: number): IShieldSpot => {
+    const s = arm.at.scale ?? 1, k = Math.max(s, 0.85 * u);
+    const top = arm.at.y - ARM_REACH.up * s + 40 * u;
+    const cx = arm.at.x - ARM_REACH.out * s - (16 + SHIELD.half) * k;
+    const bottom = top + SHIELD.length * k;
+    // An arm whose label stands left of its pauldron (a quad's) gives that place to the shield: the label moves over the pauldron.
+    const over = arm.at.x + 40 * s;
+    // At the sheet's size the shield's code hangs level with its arm's, where that is above the shield, so the two read as one row.
+    const level = arm.labelAnchor === "end" && arm.shortHangsFrom ? arm.shortHangsFrom[1] : arm.labelAt[1] - 32 * u;
+    return {
+        at: { x: cx, y: top, scale: k },
+        anchor: "middle",
+        label: [cx, top - 56 * u],
+        hang: [cx - 14 * u, level < top - 90 * u ? level : top - 100 * u],
+        absorbLabel: [cx, bottom + 26 * u],
+        absorbHang: [cx, bottom + 8 * u],
+        arm: arm.labelAnchor === "end" ? {
+            labelAt: [over, top - 40 * u - 14 - (arm.label.length - 1) * 22],
+            shortHangsFrom: arm.shortHangsFrom && [over, arm.shortHangsFrom[1]],
+        } : undefined,
+    };
+};
+
+/** The shield beside a left arm seen from above: lying along the arm on its outer side, reaching past the hand, its labels
+ * left of its outer edge. */
+const topShield = (arm: IDollLocation, kind: keyof typeof TOP_SHIELD_PAST): IShieldSpot => {
+    const s = arm.at.scale ?? 1, k = s * TOP_SHIELD_SCALE;
+    const out = TOP_ARM.half * s + 16 + SHIELD.half * k;
+    const [x, y] = placePoint([-out, -TOP_ARM.length * s - TOP_SHIELD_PAST[kind]], { x: arm.at.x, y: arm.at.y, rotate: arm.at.rotate });
+    const at: IPlacement = { x, y, rotate: arm.at.rotate, scale: k };
+    const edge = (along: number): BubblePoint => placePoint([-SHIELD.half, along], at);
+    const [tx, ty] = placePoint(PARTS["top-arm"].tip ?? [0, 0], arm.at);
+    const [nameX, nameY] = edge(0), [countX, countY] = edge(330), [innerX, innerY] = placePoint([SHIELD.half, 0], at);
+    return {
+        at,
+        anchor: "end",
+        label: [nameX - 8, nameY + 12],
+        // At the sheet's size the code stands over the far end and the absorbance count left of it, under one another.
+        hang: [innerX, Math.min(nameY, innerY) - 105],
+        absorbLabel: [countX - 8, countY + 6],
+        absorbHang: [nameX - 8, nameY + 10],
+        arm: kind === "hull2" ? { labelAt: [tx + 24, ty - 34], shortHangsFrom: [tx + 40, ty - 170] }
+            : kind === "hull4" ? { labelAt: [tx + 71, ty - 86], shortHangsFrom: [tx + 46, ty - 116] }
+            : { labelAt: [tx + 26, ty - 52], shortHangsFrom: [tx + 30, ty - 125] },
+    };
+};
+
+const SHIELD_ONLY = { uses: ["armor"], fixed: true } satisfies Partial<IDollLocation>;
+
+const withShields = (layout: IDollLayout, shields: NonNullable<IDollVariant["shields"]>): IDollLayout => {
+    // The left arm that carries: the outer one of two on a side. The right side is the left one turned over.
+    const carrier = (side: "l" | "r"): IDollLocation | undefined =>
+        layout.front.find((location) => location.loc === `${side}a2`) ?? layout.front.find((location) => location.loc === `${side}a`);
+    const left = carrier("l");
+    if (!left || (left.part !== "arm" && left.part !== "top-arm")) return layout;
+    const spot = layout.view === "front" ? frontShield(left, layout.labelScale ?? 1)
+        : topShield(left, layout.id === "pentapod" ? "star" : left.loc === "la2" ? "hull4" : "hull2");
+    const capacity: IDollLocation = { loc: "lsh", part: "shield", at: spot.at, label: ["LEFT", "SHIELD", "DC"], labelAt: spot.label, labelAnchor: spot.anchor, shortHangsFrom: spot.hang };
+    const absorb: IDollLocation = { loc: "lsha", part: "shield-absorb", at: spot.at, label: ["DA"], labelAt: spot.absorbLabel, labelAnchor: spot.anchor, shortHangsFrom: spot.absorbHang };
+    const added: IDollLocation[] = [];
+    const moved = new Map<string, IDollLocation>();
+    if (shields.left) {
+        added.push({ ...capacity, ...SHIELD_ONLY }, { ...absorb, ...SHIELD_ONLY, marks: "diamond", shortLabel: ["DA", ""] });
+        if (spot.arm) moved.set(left.loc, { ...left, labelAt: spot.arm.labelAt ?? left.labelAt, shortHangsFrom: spot.arm.shortHangsFrom ?? left.shortHangsFrom });
+    }
+    const right = carrier("r");
+    if (shields.right && right) {
+        added.push(
+            { ...mirrored(capacity, "rsh", ["RIGHT", "SHIELD", "DC"]), ...SHIELD_ONLY },
+            { ...mirrored(absorb, "rsha", ["DA"]), ...SHIELD_ONLY, marks: "diamond", shortLabel: ["DA", ""] },
+        );
+        const flip = (point: BubblePoint | undefined): BubblePoint | undefined => point && [-point[0], point[1]];
+        if (spot.arm) moved.set(right.loc, { ...right, labelAt: flip(spot.arm.labelAt) ?? right.labelAt, shortHangsFrom: flip(spot.arm.shortHangsFrom) ?? right.shortHangsFrom });
+    }
+    return { ...layout, front: [...added, ...layout.front.map((location) => moved.get(location.loc) ?? location)] };
+};
+
 /** The layout with the variant's swaps and additions; the layout itself when it has none. */
 export const applyVariant = (layout: IDollLayout, variant: IDollVariant): IDollLayout => {
     let out = layout;
     if (variant.arms) out = withArms(out, variant.arms);
+    // An armless body carries no shield.
+    if (variant.shields && !(variant.armless && layout.id === "biped")) out = withShields(out, variant.shields);
     if (variant.superheavy && (layout.id === "biped" || layout.id === "tripod")) out = superheavy(out);
     if (variant.armless && layout.id === "biped") out = withParts(out, swapped({ arm: "arm-cap" }));
     if (variant.lam && layout.id === "biped") out = landAir(out, variant.lam);

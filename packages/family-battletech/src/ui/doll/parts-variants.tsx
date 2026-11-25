@@ -1,7 +1,7 @@
 // Salvage Rights paper doll engine. GPL-3.0-or-later.
 import React from "react";
 import type { BubblePoint, Shape } from "./shape-bubbles";
-import { aroundPivot, joint, outline, pivotMark, plateFace, rivets, round, seam, seams, withBehind, type IDecor, type IPart } from "./parts-kit";
+import { aroundPivot, joint, outline, pivotMark, plateFace, rivets, round, seam, seams, slab, withBehind, type IDecor, type IPart } from "./parts-kit";
 import { HEAD_PLATE, PAULDRON_PLATE, head, torsoCenter, torsoCenterTrunk, torsoSide } from "./parts-front";
 import { INK, PAPER } from "./pen";
 
@@ -11,7 +11,7 @@ import { INK, PAPER } from "./pen";
  * the left; a layout mirrors it. Our own drawing, nothing traced.
  */
 
-export type VariantPartId = "head-canopy" | "head-super" | "torso-center-super" | "torso-center-trunk-super" | "torso-side-super" | "arm-cap";
+export type VariantPartId = "head-canopy" | "head-super" | "torso-center-super" | "torso-center-trunk-super" | "torso-side-super" | "arm-cap" | "shield" | "shield-absorb";
 
 export const VARIANT_PIVOTS = {
     "head-canopy": [0, 214],
@@ -20,6 +20,8 @@ export const VARIANT_PIVOTS = {
     "torso-center-trunk-super": [0, 206],
     "torso-side-super": [-84, 204],
     "arm-cap": [-266, 230],
+    "shield": [0, 0],
+    "shield-absorb": [0, 0],
 } satisfies Record<VariantPartId, BubblePoint>;
 
 // ---- Superheavy shells: the head and the torsos again, each with a second, slightly larger copy of itself behind it, so
@@ -72,7 +74,37 @@ const armCap = aroundPivot(VARIANT_PIVOTS["arm-cap"], {
     ),
 });
 
+// ---- Shield (left): a tall plate carried outside the arm, drawn around the middle of its top edge, with a bracket on the
+// side that faces the arm. Its upper plate takes a circle for each point of Damage Capacity; the lower plate, under a strap,
+// a diamond for each point of Damage Absorbance. The lower plate is a part of its own with no drawing, so that the two
+// counts are two doll locations filled by the same engine. Our own drawing; the published sheets were read for where the
+// shield stands and what it counts, nothing else.
+
+/** The shield as drawn: half its width and its length. */
+export const SHIELD = { half: 48, length: 416 } as const;
+const SHIELD_CAPACITY_PLATE: Shape = slab(-38, 10, 38, 280, 8);
+const SHIELD_ABSORB_PLATE: Shape = [[-38, 304], [38, 304], [38, 346], [14, 404], [-14, 404], [-38, 346]];
+
+const shield: IPart = {
+    plates: [SHIELD_CAPACITY_PLATE],
+    label: [0, 145],
+    draw: (pen, ids) => (
+        <>
+            {outline("M 44,22 L 66,22 L 66,62 L 44,62 Z", pen)}
+            {outline("M -38,0 L 38,0 L 48,10 L 48,348 L 18,416 L -18,416 L -48,348 L -48,10 Z", pen)}
+            {joint("M -47,285 L 47,285 L 47,299 L -47,299 Z", ["M -47,292 L 47,292"], pen, ids)}
+            {plateFace(SHIELD_CAPACITY_PLATE, pen)}
+            {plateFace(SHIELD_ABSORB_PLATE, pen)}
+            {rivets(SHIELD_CAPACITY_PLATE, pen)}
+        </>
+    ),
+};
+
+const shieldAbsorb: IPart = { plates: [SHIELD_ABSORB_PLATE], label: [0, 340], draw: () => <></> };
+
 export const VARIANT_PARTS: Record<VariantPartId, IPart> = {
+    "shield": shield,
+    "shield-absorb": shieldAbsorb,
     "head-canopy": headCanopy,
     "head-super": headSuper,
     "torso-center-super": torsoCenterSuper,

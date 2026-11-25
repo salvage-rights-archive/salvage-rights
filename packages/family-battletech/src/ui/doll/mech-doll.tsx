@@ -1,10 +1,10 @@
 // Salvage Rights paper doll engine. GPL-3.0-or-later.
 import React, { type JSX } from "react";
-import Bubble from "./bubble";
+import Bubble, { DAMAGE } from "./bubble";
 import { frameTransform, placePoint, placeShape, svgTransform, toSheet, type IDollFrame } from "./geometry";
-import { ARMOR_PITCH, dollLocationName, FRONT_GUIDE, labelLines, labelPoint, layoutOf, STRUCTURE_PITCH, type DollUse, type IDollExtra, type IDollLocation, type IDollUnit } from "./layouts";
+import { ARMOR_PITCH, dollLocationName, FRONT_GUIDE, labelLines, labelPoint, layoutOf, locationsOf, STRUCTURE_PITCH, type DollUse, type IDollExtra, type IDollLocation, type IDollUnit } from "./layouts";
 import { PARTS } from "./parts";
-import { DEFAULT_PEN, DEFAULT_TRANSFER_PEN, DollDefs, INK, PEN_PRESETS, penIds, type IPenStyle, type PenPreset } from "./pen";
+import { DEFAULT_PEN, DEFAULT_TRANSFER_PEN, DollDefs, INK, PAPER, PEN_PRESETS, penIds, type IPenStyle, type PenPreset } from "./pen";
 import { cornerAt, drawnBubble, edgeDistance, gridIn, insideShape, packBubbles, shapePoints, type BubblePoint, type Shape } from "./shape-bubbles";
 
 /*
@@ -152,7 +152,7 @@ export default function MechDoll(props: IMechDollProps): JSX.Element {
     const ids = penIds(suffix);
     const ink = props.ink ?? INK;
     const guide = layout.guide ?? FRONT_GUIDE;
-    const locations = use === "armor" ? [...layout.front, ...layout.rear] : layout.front;
+    const locations = locationsOf(layout, use);
     // A wing, a rotor or a pod: drawn, never a button, and clicks go through it to what is under it.
     const extras = (layout.extras ?? []).filter((extra) => extra.uses.includes(use));
     const drawExtra = (extra: IDollExtra): JSX.Element => (
@@ -175,6 +175,18 @@ export default function MechDoll(props: IMechDollProps): JSX.Element {
     const bubblesOf = (location: IDollLocation): JSX.Element[] => {
         const count = use === "armor" ? unit.armor(location.loc) : unit.structure(location.loc);
         const { points, pitch } = fillPlates(placedPlates(location, frame), count, use === "armor" ? ARMOR_PITCH : STRUCTURE_PITCH);
+        if (location.marks === "diamond") {
+            // A diamond as wide as the circle it stands in for, so that it stays inside its plate like one.
+            const { radius, strokeWidth } = drawnBubble(pitch / 2);
+            const r = round(Math.max(0, radius - 3));
+            return points.map(([x, y], index) => (
+                <path
+                    key={`${location.loc}-${index}`} data-mark="diamond"
+                    d={`M ${round(x)},${round(y - r)} L ${round(x + r)},${round(y)} L ${round(x)},${round(y + r)} L ${round(x - r)},${round(y)} Z`}
+                    fill={unit.armorDamaged(location.loc, index) ? DAMAGE : PAPER} stroke={INK} strokeWidth={strokeWidth} strokeLinejoin="round"
+                />
+            ));
+        }
         return points.map(([x, y], index) => (
             <Bubble
                 key={`${location.loc}-${index}`}
@@ -245,7 +257,11 @@ export default function MechDoll(props: IMechDollProps): JSX.Element {
             {locations.map((location) => {
                 const chosen = props.selected === location.loc;
                 const choose = () => onSelect?.(location.loc);
-                const buttonProps = interactive ? {
+                // A location whose points are not the player's to set is named, with its points, and is no button.
+                const buttonProps = interactive && location.fixed ? {
+                    role: "img",
+                    "aria-label": `${dollLocationName(location.loc, unit.variant.arms)}, ${pointsOf(location.loc)}`,
+                } : interactive ? {
                     role: "button",
                     tabIndex: 0,
                     "aria-pressed": chosen,

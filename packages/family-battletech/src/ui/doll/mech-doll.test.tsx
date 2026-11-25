@@ -307,6 +307,34 @@ describe("the paper doll", () => {
     expect([...host.querySelectorAll("[data-decor]")].map((each) => each.getAttribute("data-decor")).sort()).toEqual([...decor].sort());
   });
 
+  it("draws a shield beside the arm that carries one, on the armor diagram only, as a named picture and not a button", () => {
+    const base = bipedRecord();
+    const record = { ...base, mounts: [...base.mounts, { id: "shield", equipmentId: "shield-medium-is", name: "Shield, Medium", techBase: "inner-sphere" as const, location: "LA" as const, slot: 5 }] };
+    const host = document.createElement("div");
+    host.innerHTML = renderToStaticMarkup(<svg>{draw(record, "armor", { onSelect: () => undefined })}</svg>);
+    // The 'Mech Shield Table: a medium shield has a Damage Capacity of 18 (circles) and a Damage Absorbance of 5 (diamonds).
+    expect(host.querySelectorAll("g[data-bubbles=lsh] circle")).toHaveLength(18);
+    expect(host.querySelectorAll("g[data-bubbles=lsha] [data-mark=diamond]")).toHaveLength(5);
+    expect(host.querySelector("g[data-loc=lsh]")?.getAttribute("role")).toBe("img");
+    expect(host.querySelector("g[data-loc=lsh]")?.getAttribute("aria-label")).toBe("Left Shield Damage Capacity, 18");
+    expect(host.querySelector("g[data-loc=rsh]")).toBeNull();
+    // It stands outside the arm: every corner of its plate is left of the arm's plates.
+    const layout = layoutOf(unitOf(record));
+    const xs = (loc: string) => (layout?.front ?? []).filter((location) => location.loc === loc).flatMap((location) => placedPlates(location, FRAMES.armor)).flat().map(([x]) => x);
+    expect(Math.max(...xs("lsh"))).toBeLessThan(Math.min(...xs("la")));
+    for (const use of ["structure", "transfer"] as const) expect(markupOf(record, use)).not.toContain("data-loc=\"lsh\"");
+  });
+
+  it("draws no shield on a body without arms, and a full large shield at a size a bubble can be read on the smallest", () => {
+    const shields = { left: true, right: true };
+    for (const unit of [fullUnit("biped", { armless: true, shields }), fullUnit("quad", { shields })]) {
+      expect(layoutOf(unit)?.front.map((location) => location.loc)).not.toContain("lsh");
+    }
+    // Beside an arm seen from above the shield is at its smallest; a large shield has a Damage Capacity of 25.
+    const small = layoutOf(fullUnit("octopod", { arms: 4, shields }))?.front.find((location) => location.loc === "rsh");
+    expect(small && fillPlates(placedPlates(small, { centerX: 0, top: 0, scale: 1 }), 25, ARMOR_PITCH).pitch).toBeGreaterThanOrEqual(MIN_PITCH.armor);
+  });
+
   it.each(BODY_TYPES)("sends the damage of every location of a %s to places it has, and reaches the center torso from all but the head", (layoutId) => {
     const next = Object.fromEntries((DOLL_LAYOUTS[layoutId]?.front ?? []).map((location) => [location.loc, location.transfersTo]));
     for (const [loc, to] of Object.entries(next)) {
