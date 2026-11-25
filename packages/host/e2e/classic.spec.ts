@@ -107,11 +107,11 @@ test("build a Land-Air 'Mech through the form and see its rules level, conversio
   await page.goto(HOME);
   const form = page.getByRole("form", { name: "Build a new one" });
   await form.getByLabel("Name").fill("Hawk");
-  await form.getByLabel("Configuration").selectOption({ label: "Land-Air 'Mech (experimental)" });
+  await form.getByLabel("Configuration").selectOption({ label: "Land-Air 'Mech (experimental rules)" });
   await form.getByRole("button", { name: "Start building" }).click();
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Hawk");
   const rules = page.getByRole("region", { name: "Rules check" });
-  await expect(rules.getByText("Land-Air 'Mech is built under experimental rules, not standard rules.")).toBeVisible();
+  await expect(rules.getByText("Land-Air 'Mech is built under experimental rules, not the standard ones; check that your game allows it.")).toBeVisible();
   await expect(rules.getByText("Interstellar Operations: Alternate Eras (Catalyst Game Labs), p. 100")).toBeVisible();
   await expect(page.getByRole("list", { name: "Center Torso slots" }).getByText("Landing Gear")).toBeVisible();
   await expect(page.getByRole("list", { name: "Head slots" }).getByText("Avionics")).toBeVisible();
@@ -144,7 +144,7 @@ test("build a tripod through the form and reach its record sheet", async ({ page
   await form.getByLabel("Configuration").selectOption({ label: "Tripod (advanced rules)" });
   await form.getByRole("button", { name: "Start building" }).click();
   await expect(page.getByRole("list", { name: "Center Leg slots" })).toBeVisible();
-  await expect(page.getByRole("region", { name: "Rules check" }).getByText("Interstellar Operations: Alternate Eras, p. 158")).toBeVisible();
+  await expect(page.getByRole("region", { name: "Rules check" }).getByText("Interstellar Operations: Alternate Eras (Catalyst Game Labs), p. 158")).toBeVisible();
   await page.getByRole("link", { name: "Record sheet" }).click();
   const sheet = page.getByRole("img", { name: /record sheet$/ });
   await expect(sheet.locator("[data-location='CL']")).toBeVisible();

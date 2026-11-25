@@ -99,7 +99,7 @@ describe("Classic BattleTech home", () => {
     renderHome();
     const form = await screen.findByRole("form", { name: "Build a new one" });
     const config = within(form).getByLabelText<HTMLSelectElement>("Configuration");
-    expect([...config.options].map((o) => o.text)).toEqual(["Biped", "Quad", "Land-Air 'Mech (experimental)", "Bimodal Land-Air 'Mech (experimental)"]);
+    expect([...config.options].map((o) => o.text)).toEqual(["Biped", "Quad", "Tripod (advanced rules)", "Land-Air 'Mech (experimental rules)", "Bimodal Land-Air 'Mech (experimental rules)"]);
     await user.type(within(form).getByLabelText("Name"), "Hawk");
     await user.selectOptions(config, "lam");
     await waitFor(() => expect(within(form).getByRole<HTMLButtonElement>("button", { name: "Start building" }).disabled).toBe(false));
