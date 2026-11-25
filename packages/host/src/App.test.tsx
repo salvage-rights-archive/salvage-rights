@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { openStore, saveSettings, DEFAULT_SETTINGS } from "@salvage-rights/shared";
 import type { FamilyManifest, FamilyRoute } from "@salvage-rights/shared";
 import { App } from "./App";
+import { loadPage } from "./pages/FamilyRoutePage";
 
 function FixturePage() {
   return <h1>Fixture page</h1>;
@@ -111,6 +112,25 @@ describe("host frame", () => {
   it("shows the not-found page for a family that is not in the edition", () => {
     renderAt("/elsewhere/ready/play");
     expect(screen.getByRole("heading", { name: "Nothing here" })).toBeTruthy();
+  });
+
+  it("reloads the tab once when a page's code cannot be fetched, and lets a second failure show", async () => {
+    sessionStorage.clear();
+    const gone = () => Promise.reject(new Error("Failed to fetch dynamically imported module"));
+    const reload = vi.fn();
+    void loadPage(gone, reload);
+    await vi.waitFor(() => {
+      expect(reload).toHaveBeenCalledTimes(1);
+    });
+    await expect(loadPage(gone, reload)).rejects.toThrow("Failed to fetch");
+    expect(reload).toHaveBeenCalledTimes(1);
+    // A load that works clears the mark, so a later update gets its one reload again.
+    const page = { default: () => null };
+    await expect(loadPage(() => Promise.resolve(page), reload)).resolves.toBe(page);
+    void loadPage(gone, reload);
+    await vi.waitFor(() => {
+      expect(reload).toHaveBeenCalledTimes(2);
+    });
   });
 
   it("shows a way back when a family page throws", async () => {

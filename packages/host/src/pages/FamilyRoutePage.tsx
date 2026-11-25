@@ -6,10 +6,46 @@ import { NotFound } from "./NotFound";
 
 const lazyPages = new WeakMap<FamilyRoute, ComponentType>();
 
+const RELOADED_KEY = "sr-reloaded-for-update";
+
+/**
+ * Loads a page's code. A page's file is fetched when the page is first opened, and its name changes with every
+ * update of the site. A tab left open across an update still asks for the old name, which is gone. So when a load
+ * fails, the tab is reloaded once to pick up the current site; if the load fails again after that, the error shows.
+ */
+export async function loadPage(
+  load: FamilyRoute["load"],
+  reload: () => void = () => {
+    window.location.reload();
+  },
+): ReturnType<FamilyRoute["load"]> {
+  try {
+    const page = await load();
+    try {
+      sessionStorage.removeItem(RELOADED_KEY);
+    } catch {
+      // Without session storage there is nothing to clear.
+    }
+    return page;
+  } catch (error) {
+    let reloadedAlready = true;
+    try {
+      reloadedAlready = sessionStorage.getItem(RELOADED_KEY) === "1";
+      if (!reloadedAlready) sessionStorage.setItem(RELOADED_KEY, "1");
+    } catch {
+      // Without session storage we cannot tell a first failure from a second, so we do not reload: no loops.
+    }
+    if (reloadedAlready) throw error;
+    reload();
+    // The tab is reloading; keep showing "Loading" until it does.
+    return new Promise(() => undefined);
+  }
+}
+
 function pageOf(route: FamilyRoute): ComponentType {
   let page = lazyPages.get(route);
   if (page === undefined) {
-    page = lazy(route.load);
+    page = lazy(() => loadPage(route.load));
     lazyPages.set(route, page);
   }
   return page;
@@ -47,7 +83,17 @@ class PageErrorBoundary extends Component<{ children: ReactNode }, BoundaryState
     return (
       <div className="sr-page">
         <h1>Something went wrong</h1>
+        <p>This page could not be shown. If the site was updated while this tab was open, reloading fixes it.</p>
         <p>
+          <button
+            type="button"
+            className="sr-action"
+            onClick={() => {
+              window.location.reload();
+            }}
+          >
+            Reload
+          </button>{" "}
           <Link className="sr-action" to="/">Back to the landing page</Link>
         </p>
       </div>
