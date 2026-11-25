@@ -4,11 +4,13 @@
 // Nothing here throws on a chassis it does not understand: an unknown configuration id resolves to nothing, never an exception.
 import type { RulesLevel } from "../data/chassis";
 import type { Catalog } from "./catalog";
+import { podMountable } from "./catalog";
 import { runChecks } from "./checks";
 import type { Finding } from "./checks";
 import { levelItems, levelRow, lowestLevelFor } from "./levels";
 import { layout as buildLayout, newRecord, weights } from "./mech";
 import type { LocationCode, MechRecord, Mount, NewMechOptions, OmniLink } from "./mech";
+import { rowOf } from "./walk";
 
 export type { OmniLink };
 export type MechSource = NonNullable<MechRecord["source"]>;
@@ -313,6 +315,24 @@ export function moveConfiguration(chassis: OmniChassis, configurationId: string,
 export function newOmniChassis(options: Omit<NewMechOptions, "unitType">, editionId: string, id: string, newId: () => string = defaultId): OmniChassis {
   const record = newRecord({ ...options, unitType: "omnimech" }, editionId, id);
   return splitRecord(record, record.mounts.map((m) => m.id), newId);
+}
+
+/** The mounts "Make Omni" fixes by default: the structure and armor slots, every heat sink, every jump jet and every item the books bar from pods
+ * (MASC, Triple-Strength Myomer and the rest); weapons, ammunition and the other equipment become the Prime's pods. The player may change it. */
+export function defaultFixedMounts(record: MechRecord, catalog: Catalog): string[] {
+  return record.mounts
+    .filter((m) => {
+      const row = rowOf(catalog, record, m);
+      return m.part !== undefined || sinksIn(m) > 0 || (row !== undefined && (row.kind === "jump-jet" || !podMountable(row)));
+    })
+    .map((m) => m.id);
+}
+
+/** What a configuration's pods weigh: its weight less the base's alone; null when a weight is not known. */
+export function podTonsUsed(chassis: OmniChassis, record: MechRecord, catalog: Catalog): number | null {
+  const all = weights(record, catalog.factsOf).total;
+  const own = weights(resolveBase(chassis), catalog.factsOf).total;
+  return all === null || own === null ? null : tidy(all - own);
 }
 
 /**

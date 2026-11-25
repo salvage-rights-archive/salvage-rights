@@ -3,7 +3,7 @@
 // (data/equipment/groups.ts), each a disclosure button over its list, so no one list runs on.
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { equipmentAvailable } from "../../rules/availability";
-import { groupOf, groupRank } from "../../rules/catalog";
+import { groupOf, groupRank, podMountable } from "../../rules/catalog";
 import type { Catalog, EquipmentRow, GroupKey } from "../../rules/catalog";
 import { DEFAULT_LEVEL, equipmentLevel, levelRow } from "../../rules/levels";
 import type { MechRecord, Mount } from "../../rules/mech";
@@ -24,6 +24,7 @@ export default function Picker({
   current,
   onChoose,
   onClose,
+  podOnly = false,
 }: {
   record: MechRecord;
   catalog: Catalog;
@@ -32,6 +33,8 @@ export default function Picker({
   current?: string;
   onChoose: (row: EquipmentRow) => void;
   onClose: () => void;
+  /** Offer only what an OmniMech pod may carry (the rows without `pod: false`). */
+  podOnly?: boolean;
 }) {
   const [query, setQuery] = useState("");
   const [everything, setEverything] = useState(false);
@@ -51,6 +54,7 @@ export default function Picker({
     const byGroup = new Map<string, Group>();
     for (const base of catalog.all()) {
       const row = catalog.rowFor(base.id, record.editionId) ?? base;
+      if (podOnly && !podMountable(row)) continue;
       if (!named(row) || !(equipmentAvailable(row, record, catalog, everything) || row.id === current)) continue;
       const key = groupOf(row);
       const group = byGroup.get(key.id) ?? { ...key, rows: [] };
@@ -59,7 +63,7 @@ export default function Picker({
     }
     for (const group of byGroup.values()) group.rows.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }) || a.techBase.localeCompare(b.techBase));
     return [...byGroup.values()].sort((a, b) => groupRank(a.id) - groupRank(b.id));
-  }, [catalog, record, everything, query, current]);
+  }, [catalog, record, everything, query, current, podOnly]);
 
   const total = groups.reduce((sum, group) => sum + group.rows.length, 0);
   const isOpen = (group: Group, index: number) => toggled[group.id] ?? (query.trim() !== "" || index < OPEN_AT_FIRST);

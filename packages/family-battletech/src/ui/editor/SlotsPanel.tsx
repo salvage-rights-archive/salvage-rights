@@ -62,6 +62,7 @@ export default function SlotsPanel({
   selected,
   onSelect,
   onEdit,
+  lockedIds,
 }: {
   record: MechRecord;
   layout: Layout;
@@ -70,6 +71,8 @@ export default function SlotsPanel({
   selected: LocationCode | undefined;
   onSelect: (location: LocationCode) => void;
   onEdit: OnEdit;
+  /** Mounts that may not be changed here: the fixed equipment of an OmniMech base, seen from a configuration. Pods are the rest. */
+  lockedIds?: Set<string>;
 }) {
   const [moving, setMoving] = useState<string>();
   /** The one mount whose Actions are open. */
@@ -144,6 +147,7 @@ export default function SlotsPanel({
   /** A mount's row: its slots, name and markers, the Actions button and, when open, the actions beneath. */
   const mountRow = (mount: Mount, slots: string | undefined, key: string | number, style?: CSSProperties, unplacedItem = false) => {
     const isOpen = open === mount.id;
+    const locked = lockedIds?.has(mount.id) === true;
     return (
       <li
         key={key}
@@ -163,8 +167,9 @@ export default function SlotsPanel({
           </span>
           {changed.has(mount.id) && <Changed id={`${mountDomId(mount.id)}-changed`} />}
           {unmatched(mount) && <span className="bt-tag">Unmatched</span>}
+          {locked && <span className="bt-tag">Fixed in the base</span>}
         </span>
-        <button
+        {!locked && <button
           type="button"
           id={`actions-${mount.id}`}
           className="bt-button bt-button--secondary bt-slot__toggle"
@@ -175,8 +180,8 @@ export default function SlotsPanel({
           }}
         >
           Actions
-        </button>
-        {isOpen && (
+        </button>}
+        {isOpen && !locked && (
           <span className="bt-slot__actions">
             <button
               type="button"
@@ -319,6 +324,7 @@ export default function SlotsPanel({
 
       {picking && (
         <Picker
+          podOnly={lockedIds !== undefined}
           record={record}
           catalog={catalog}
           title={picking.replace === undefined ? "Add equipment" : `Replace ${record.mounts.find((m) => m.id === picking.replace)?.name ?? "equipment"}`}

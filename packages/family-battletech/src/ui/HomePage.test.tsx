@@ -124,9 +124,7 @@ describe("Classic BattleTech home", () => {
     const config = within(form).getByLabelText<HTMLSelectElement>("Configuration");
     const texts = (select: HTMLSelectElement) => [...select.options].map((o) => o.text);
     expect([type.value, config.value]).toEqual(["mech", "biped"]); // a new unit starts as a BattleMech biped
-    expect(texts(type)).toEqual(["BattleMech", "IndustrialMech", "OmniMech (not built yet)"]);
-    expect(type.options[2]?.disabled).toBe(true);
-    expect(within(form).getByText(/OmniMech is not offered yet: its rules are not built/)).toBeTruthy();
+    expect(texts(type)).toEqual(["BattleMech", "IndustrialMech", "OmniMech"]);
     await user.selectOptions(within(form).getByLabelText("Rules level"), "introductory");
     expect(texts(type)).toEqual(["BattleMech"]);
     await user.selectOptions(within(form).getByLabelText("Rules level"), "experimental");

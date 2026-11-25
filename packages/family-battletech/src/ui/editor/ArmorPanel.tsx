@@ -34,6 +34,7 @@ export default function ArmorPanel({
   errorLocations,
   onSelect,
   onEdit,
+  readOnly = false,
 }: {
   record: MechRecord;
   catalog: Catalog;
@@ -45,6 +46,8 @@ export default function ArmorPanel({
   errorLocations: Set<string>;
   onSelect: (location: LocationCode) => void;
   onEdit: OnEdit;
+  /** The armor is fixed in an OmniMech base: shown from a configuration, edited only on the base. */
+  readOnly?: boolean;
 }) {
   const locations = (layout.supported ? layout.locations : Object.keys(record.armor)) as LocationCode[];
   const max = maxArmor(record);
@@ -123,6 +126,7 @@ export default function ArmorPanel({
           name={rear ? `${location} rear, ${name} rear armor` : `${location}, ${hasRear ? `${name} front armor` : `${name} armor`}`}
           value={(rear ? entry?.rear : entry?.front) ?? 0}
           changed={!rear && changed.has(`armor.${location}`)}
+          disabled={readOnly}
           onValid={(value) => {
             onEdit((draft) => {
               draft.armor[location] = { ...(draft.armor[location] ?? { front: 0 }), [side]: value ?? 0 };

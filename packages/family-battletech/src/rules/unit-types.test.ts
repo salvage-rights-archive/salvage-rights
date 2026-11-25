@@ -58,12 +58,12 @@ const withChassis = (patch: Partial<MechRecord["chassis"]>) => (record: MechReco
 const forCheck = (record: MechRecord, id: string) => runChecks(record, catalog).filter((f) => f.check === id);
 
 describe("the 'Mech types", () => {
-  it("are one table the edition's unit types come from; OmniMech is listed but not ready, with the Construction Options years", () => {
-    expect(MECH_TYPES.map((t) => [t.id, t.label, t.ready])).toEqual([["mech", "BattleMech", true], ["industrialmech", "IndustrialMech", true], ["omnimech", "OmniMech", false]]);
+  it("are one table the edition's unit types come from; OmniMech is ready, with the Construction Options years and the Clan prototype year", () => {
+    expect(MECH_TYPES.map((t) => [t.id, t.label, t.ready])).toEqual([["mech", "BattleMech", true], ["industrialmech", "IndustrialMech", true], ["omnimech", "OmniMech", true]]);
     expect(EDITIONS[0]?.unitTypes.slice(0, 3)).toEqual([
       { id: "mech", name: "BattleMech", ready: true },
       { id: "industrialmech", name: "IndustrialMech", ready: true },
-      { id: "omnimech", name: "OmniMech", ready: false },
+      { id: "omnimech", name: "OmniMech", ready: true },
     ]);
     const omni = MECH_TYPES.find((t) => t.id === "omnimech");
     expect([omni?.availability, omni?.clanAvailability, omni?.availabilityCite.page]).toEqual([[{ from: 3052 }], [{ from: 2856 }], 45]);
@@ -138,7 +138,7 @@ describe("an IndustrialMech", () => {
     );
   });
 
-  it("sees only its own parts, bodies and equipment, and an OmniMech waits disabled until its rules are built", () => {
+  it("sees only its own parts, bodies and equipment, and an OmniMech is offered to a Clan record from 2856 and to a mixed one", () => {
     const record = cattleMaster();
     const keys = (kind: Parameters<typeof partChoices>[0], r: MechRecord) => partChoices(kind, r, "").map(([key]) => key);
     expect([keys("structure", record), keys("engine", record), keys("armor", record)]).toEqual([["industrial"], ["standard", "ice", "fuel-cell", "fission"], ["standard", "industrial", "commercial"]]);
@@ -158,7 +158,7 @@ describe("an IndustrialMech", () => {
       choices({ year: 3025, techBase: "mixed", unitType: "mech" }),
       choices({ year: 2900, techBase: "clan" }),
       choices({ year: 2400, unitType: "mech" }),
-    ]).toEqual([["mech", "industrialmech"], ["mech"], ["mech", "omnimech (disabled)"], ["mech", "industrialmech", "omnimech (disabled)"], ["mech"]]); // mixed: no IndustrialMech, but the Clans' OmniMech
+    ]).toEqual([["mech", "industrialmech"], ["mech"], ["mech", "omnimech"], ["mech", "industrialmech", "omnimech"], ["mech"]]); // mixed: no IndustrialMech, but the Clans' OmniMech
   });
 
   it("offers an OmniMech from its production year, and from the Clan prototype year only at Experimental level, labelled prototype (IO:AE p.45)", () => {
