@@ -481,3 +481,7 @@ a.bt-button {
     color: var(--sr-ink-muted);
   }
 }
+
+.bt-picker .bt-list li + li {
+  margin-top: var(--sr-space-1);
+}

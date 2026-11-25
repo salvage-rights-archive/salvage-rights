@@ -1,5 +1,5 @@
 import "fake-indexeddb/auto";
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { IDBFactory } from "fake-indexeddb";
 import { RouterProvider, createMemoryRouter } from "react-router";
@@ -92,16 +92,60 @@ describe("The 'Mech editor", () => {
     expect(screen.getByLabelText<HTMLSelectElement>("Gyro").value).toBe("xl");
   });
 
+  it("adds a structure type's slots unplaced in one edit that Undo takes back whole, and lists the import notes", async () => {
+    await saved(mordelBiped());
+    const user = userEvent.setup();
+    await open("imported-1", { notes: ["Mordel does not say where the heat sinks go."] });
+    expect(await screen.findByText("Mordel does not say where the heat sinks go.")).toBeTruthy();
+    expect(screen.getByText("Import notes")).toBeTruthy();
+    await user.selectOptions(screen.getByLabelText("Structure type"), "endo-steel");
+    const tray = screen.getByRole("heading", { name: "Unplaced" }).parentElement as HTMLElement;
+    expect(within(tray).getAllByText("Endo Steel")).toHaveLength(14);
+    expect(within(tray).queryAllByRole("button", { name: /^Replace/ })).toHaveLength(0);
+    await user.click(screen.getByRole("button", { name: "Undo" }));
+    expect(within(tray).queryByText("Endo Steel")).toBeNull();
+  });
+
   it("points a finding at its field, saves with a status, and asks before leaving with unsaved changes", async () => {
     await saved(mordelBiped());
     const user = userEvent.setup();
-    await open("imported-1");
+    const router = await open("imported-1");
     await user.type(await field("Tons"), "5");
     await user.click(within(rules()).getByRole("button", { name: /weighs 20 to 100 tons/ }));
     expect(document.activeElement).toBe(screen.getByLabelText("Tons"));
     await user.click(screen.getByRole("button", { name: "Save" }));
     expect((await screen.findByText("Saved.")).closest("[role=status]")).toBeTruthy();
     expect((await stored("imported-1"))?.tons).toBe(505);
+    await user.type(screen.getByLabelText("Tons"), "0");
+    void router.navigate("/battletech/classic/home");
+    expect(await screen.findByText("You have unsaved changes.")).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Stay" }));
+    expect(screen.queryByText("You have unsaved changes.")).toBeNull();
+    void router.navigate("/battletech/classic/home");
+    await user.click(await screen.findByRole("button", { name: "Leave without saving" }));
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe("/battletech/classic/home");
+    });
+  });
+
+  it("marks what was changed since the import and nothing that was not", async () => {
+    await saved(mordelBiped());
+    const user = userEvent.setup();
+    await open("imported-1");
+    await screen.findByRole("heading", { name: "Critical slots" });
+    expect(screen.queryByText("Changed since import")).toBeNull();
+    await user.selectOptions(screen.getByLabelText("Gyro"), "xl");
+    const markerOf = (label: string) => {
+      const id = screen.getByLabelText(label).getAttribute("aria-describedby");
+      return id ? document.getElementById(id)?.textContent : undefined;
+    };
+    expect(markerOf("Gyro")).toBe("Changed since import");
+    expect(markerOf("Cockpit")).toBeUndefined();
+    await user.click(within(slotList("Left Arm")).getByRole("button", { name: "Move Medium Laser" }));
+    await user.click(screen.getByRole("button", { name: "Place Medium Laser in Left Torso slot 5" }));
+    expect(within(slotList("Left Torso").querySelector("li:has(button[aria-label='Move Medium Laser'])") as HTMLElement).getByText("Changed since import")).toBeTruthy();
+    const untouched = within(slotList("Right Arm")).getByText("Medium Laser").closest("li") as HTMLElement;
+    expect(within(untouched).queryByText("Changed since import")).toBeNull();
   });
 });
 
@@ -117,7 +161,7 @@ describe("The critical slots", () => {
     const shoulder = arm.getByText("Shoulder").closest("li");
     expect(shoulder && within(shoulder).queryAllByRole("button")).toHaveLength(0);
     const laser = arm.getByText("Medium Laser").closest("li");
-    expect(laser && within(laser).getAllByRole("button").map((b) => b.textContent)).toEqual(["Move", "Remove"]);
+    expect(laser && within(laser).getAllByRole("button").map((b) => b.textContent)).toEqual(["Move", "Replace", "Remove"]);
     expect(arm.getAllByText("Empty").length).toBeGreaterThan(0);
   });
 
@@ -160,6 +204,36 @@ describe("The critical slots", () => {
     await user.click(screen.getByRole("button", { name: "Place Medium Laser in Left Arm slot 7" }));
     expect(within(slotList("Left Arm")).getByText("Medium Laser").closest("li")?.textContent).toMatch(/^7/);
     expect(within(tray).queryByText("Medium Laser")).toBeNull();
+  });
+});
+
+describe("The equipment picker", () => {
+  it("lists what the edition offers, caps the list, can lift the filters and replaces equipment in place", async () => {
+    await saved(mordelBiped());
+    const user = userEvent.setup();
+    const catalog = await loadCatalog();
+    const offered = catalog.offered("core-2026", { techBase: "inner-sphere", year: 3025 }).length;
+    const everything = catalog.all().length;
+    expect(offered).toBeLessThan(100);
+    expect(everything).toBeGreaterThan(100);
+    await open("imported-1");
+    await user.click(within(await screen.findByRole("list", { name: "Left Arm slots" })).getByRole("button", { name: "Replace Medium Laser" }));
+    const dialog = screen.getByRole("dialog", { name: "Replace Medium Laser" });
+    expect(document.activeElement).toBe(within(dialog).getByLabelText("Search by name"));
+    expect(within(dialog).getAllByRole("button", { name: /Inner Sphere/ })).toHaveLength(offered);
+    expect(within(dialog).queryByText(/^Showing 100 of/)).toBeNull();
+    await user.type(within(dialog).getByLabelText("Search by name"), "medium pulse");
+    expect(within(dialog).getByText("No equipment matches.")).toBeTruthy();
+    await user.clear(within(dialog).getByLabelText("Search by name"));
+    await user.click(within(dialog).getByRole("checkbox", { name: "Show everything" }));
+    expect(within(dialog).getAllByRole("list", { name: "Equipment" })[0]?.children).toHaveLength(100);
+    expect(within(dialog).getByText(`Showing 100 of ${everything}`)).toBeTruthy();
+    await user.type(within(dialog).getByLabelText("Search by name"), "medium pulse");
+    await user.click(within(dialog).getByRole("button", { name: /^Medium Pulse Laser Inner Sphere, 2 tons, 1 slot/ }));
+    expect(screen.queryByRole("dialog")).toBeNull();
+    const cell = within(slotList("Left Arm")).getByText("Medium Pulse Laser").closest("li");
+    expect(cell?.textContent).toMatch(/^5/);
+    expect(document.activeElement?.getAttribute("aria-label")).toBe("Replace Medium Pulse Laser");
   });
 });
 

@@ -1,6 +1,6 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import { BrowserRouter } from "react-router";
+import { RouterProvider, createBrowserRouter } from "react-router";
 import { editionId, families } from "virtual:families";
 import { App } from "./App";
 import { restoredPath } from "./restore-path";
@@ -39,11 +39,13 @@ if (problems.length > 0) {
     </main>,
   );
 } else {
+  // A data router, so a page can ask to hold a navigation (the editor does, while it has unsaved changes).
+  const router = createBrowserRouter([{ path: "*", element: <App families={families} editionId={editionId} /> }], {
+    basename: import.meta.env.BASE_URL,
+  });
   createRoot(container).render(
     <StrictMode>
-      <BrowserRouter basename={import.meta.env.BASE_URL}>
-        <App families={families} editionId={editionId} />
-      </BrowserRouter>
+      <RouterProvider router={router} />
     </StrictMode>,
   );
 }

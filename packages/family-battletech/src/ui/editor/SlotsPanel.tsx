@@ -1,11 +1,12 @@
 // The critical slots, one column per location, and the equipment that is not in a slot. Moving works by keyboard and
 // pointer alike: Move (or Place, for an unplaced item) puts the page in a mode where every slot is a button.
 import { useEffect, useRef, useState } from "react";
-import type { Catalog } from "../../rules/catalog";
+import type { Catalog, EquipmentRow } from "../../rules/catalog";
 import { locationName } from "../../rules/mech";
 import type { Layout, LocationCode, MechRecord, Mount, SlotCell } from "../../rules/mech";
 import { Changed, mountDomId } from "../EditorPage";
 import type { OnEdit } from "../EditorPage";
+import Picker from "./Picker";
 
 type Block =
   | { kind: "fixed" | "empty"; label: string; start: number; length: 1 }
@@ -50,6 +51,8 @@ export default function SlotsPanel({
   onEdit: OnEdit;
 }) {
   const [moving, setMoving] = useState<string>();
+  /** The picker is open: to replace this mount's equipment, or (`{}`) to add an item. */
+  const [picking, setPicking] = useState<{ replace?: string }>();
   const pendingFocus = useRef<string | undefined>(undefined);
   const mover = moving === undefined ? undefined : record.mounts.find((m) => m.id === moving);
 
@@ -72,6 +75,28 @@ export default function SlotsPanel({
       window.removeEventListener("keydown", cancel);
     };
   }, [moving]);
+
+  /** Closes the picker and returns focus to the button that opened it, applying the choice if there is one. */
+  const finishPicking = (row?: EquipmentRow) => {
+    if (!picking) return;
+    pendingFocus.current = picking.replace === undefined ? "add-equipment" : `replace-${picking.replace}`;
+    setPicking(undefined);
+    if (!row) return;
+    onEdit((draft) => {
+      if (picking.replace === undefined) {
+        let n = 1;
+        while (draft.mounts.some((m) => m.id === `added-${n}`)) n++;
+        draft.mounts.push({ id: `added-${n}`, equipmentId: row.id, name: row.name, techBase: row.techBase, location: null, slot: null });
+        return;
+      }
+      const target = draft.mounts.find((m) => m.id === picking.replace);
+      if (!target) return;
+      target.equipmentId = row.id;
+      target.name = row.name;
+      target.techBase = row.techBase;
+      delete target.slots;
+    });
+  };
 
   const place = (mount: Mount, location: LocationCode | null, slot: number | null) => {
     pendingFocus.current = `move-${mount.id}`;
@@ -115,9 +140,22 @@ export default function SlotsPanel({
         {mount.part ? (
           <span className="bt-hint">{`Changes with the ${mount.part} type`}</span>
         ) : (
-          <button type="button" className="bt-button bt-button--secondary" aria-label={`Remove ${mount.name}`} onClick={() => { remove(mount); }}>
-            Remove
-          </button>
+          <>
+            <button
+              type="button"
+              id={`replace-${mount.id}`}
+              className="bt-button bt-button--secondary"
+              aria-label={`Replace ${mount.name}`}
+              onClick={() => {
+                setPicking({ replace: mount.id });
+              }}
+            >
+              Replace
+            </button>
+            <button type="button" className="bt-button bt-button--secondary" aria-label={`Remove ${mount.name}`} onClick={() => { remove(mount); }}>
+              Remove
+            </button>
+          </>
         )}
       </span>
     </>
@@ -133,6 +171,18 @@ export default function SlotsPanel({
       <h2 id="bt-slots" tabIndex={-1}>
         Critical slots
       </h2>
+      <p>
+        <button
+          type="button"
+          id="add-equipment"
+          className="bt-button"
+          onClick={() => {
+            setPicking({});
+          }}
+        >
+          Add equipment
+        </button>
+      </p>
       <p role="status">{mover ? `Choose a slot for ${mover.name}. Press Escape to cancel.` : ""}</p>
       {mover && (
         <p>
@@ -214,6 +264,18 @@ export default function SlotsPanel({
             ))}
           </ul>
         </div>
+      )}
+
+      {picking && (
+        <Picker
+          record={record}
+          catalog={catalog}
+          title={picking.replace === undefined ? "Add equipment" : `Replace ${record.mounts.find((m) => m.id === picking.replace)?.name ?? "equipment"}`}
+          onChoose={finishPicking}
+          onClose={() => {
+            finishPicking();
+          }}
+        />
       )}
     </section>
   );

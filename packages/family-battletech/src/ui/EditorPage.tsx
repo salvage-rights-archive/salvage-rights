@@ -1,9 +1,9 @@
 // The 'Mech editor: one saved record, edited in place, with the rules check beside it. The page holds the record's history
 // (for Undo and Redo), derives everything else from the current record, and hands each panel what it shows and an
 // `onEdit(change)` callback. Every edit goes through `editRecord`.
-import { useEffect, useId, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
-import { Link, useLocation, useSearchParams } from "react-router";
+import { Link, useBlocker, useLocation, useSearchParams } from "react-router";
 import { ARMOR, COCKPITS, ENGINE_TYPES, GYROS, HEAT_SINKS, MYOMER, STRUCTURE_TYPES } from "../data/chassis";
 import { loadCatalog } from "../rules/catalog";
 import type { Catalog } from "../rules/catalog";
@@ -403,6 +403,13 @@ function Editor({ initial, catalog, storage }: { initial: MechRecord; catalog: C
     document.getElementById(id)?.focus();
   };
 
+  const blocker = useBlocker(dirty);
+  const stay = useRef<HTMLButtonElement>(null);
+  const blocked = blocker.state === "blocked";
+  useEffect(() => {
+    if (blocked) stay.current?.focus();
+  }, [blocked]);
+
   useEffect(() => {
     if (!dirty) return;
     const warn = (event: BeforeUnloadEvent) => {
@@ -466,7 +473,27 @@ function Editor({ initial, catalog, storage }: { initial: MechRecord; catalog: C
         <div role="alert" className="bt-problem">
           {problem}
         </div>
-        {dirty && <p className="bt-hint">You have changes that are not saved.</p>}
+        {dirty && !blocked && <p className="bt-hint">You have changes that are not saved.</p>}
+        {blocker.state === "blocked" && (
+          <div
+            className="bt-confirm"
+            role="group"
+            aria-label="Unsaved changes"
+            onKeyDown={(event) => {
+              if (event.key === "Escape") blocker.reset();
+            }}
+          >
+            <p>You have unsaved changes.</p>
+            <span className="bt-actions">
+              <button type="button" className="bt-button" onClick={blocker.proceed}>
+                Leave without saving
+              </button>
+              <button type="button" ref={stay} className="bt-button bt-button--secondary" onClick={blocker.reset}>
+                Stay
+              </button>
+            </span>
+          </div>
+        )}
         {notes.length > 0 && (
           <details className="bt-notes" aria-labelledby={notesId}>
             <summary id={notesId}>Import notes</summary>
