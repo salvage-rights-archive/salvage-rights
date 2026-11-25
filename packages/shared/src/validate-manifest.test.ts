@@ -123,6 +123,13 @@ describe("validateManifest", () => {
     expectMessage(mutate((m) => (m.artwork = { ...art, permission: "" })), "artwork.permission");
   });
 
+  it("accepts a game with or without artwork and an icon, and rejects them when incomplete", () => {
+    const art = { src: "a.png", alt: "alt", credit: "c", permission: "p" };
+    expect(mutate((m) => { m.games[0]!.artwork = art; m.games[0]!.icon = "i.png"; })).toEqual([]);
+    expectMessage(mutate((m) => { m.games[0]!.artwork = { ...art, alt: "" }; }), "games[0].artwork.alt");
+    expectMessage(mutate((m) => { m.games[0]!.icon = ""; }), "games[0].icon");
+  });
+
   it("rejects empty credits", () => {
     expectMessage(mutate((m) => (m.credits.owner = "")), "credits.owner");
     expectMessage(mutate((m) => (m.credits.license = "")), "credits.license");

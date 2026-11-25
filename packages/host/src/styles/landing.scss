@@ -182,6 +182,31 @@
     text-decoration: none;
   }
 
+  // A decorative icon beside a game's name, shown at 40 px from a 128 px picture.
+  &__icon {
+    flex: none;
+    width: 40px;
+    height: 40px;
+    margin-right: var(--sr-space-2);
+    object-fit: cover;
+  }
+
+  // A game that is not ready: the same row as a game link, but not a link, so a dashed border and no fill.
+  &__soon {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+    padding: var(--sr-space-2) var(--sr-space-3);
+    color: var(--sr-ink);
+    border: var(--sr-border) dashed var(--sr-line-strong);
+    font-family: var(--sr-font-tag);
+    overflow-wrap: anywhere;
+  }
+
+  &__soon-mark {
+    font-size: .85rem;
+  }
+
   a.sr-tile__game:focus-visible {
     outline-offset: -5px;
   }
@@ -216,6 +241,12 @@
 
     .sr-tile__game {
       background: transparent;
+      border-color: var(--sr-header-line);
+    }
+
+    .sr-tile__soon {
+      background: transparent;
+      color: var(--sr-header-ink);
       border-color: var(--sr-header-line);
     }
 

@@ -40,6 +40,15 @@ function checkReady(rec: Rec, where: string, out: string[]): void {
   if (typeof rec["ready"] !== "boolean") out.push(`${where}.ready must be true or false`);
 }
 
+function checkArtwork(artwork: unknown, where: string, out: string[]): void {
+  if (artwork === undefined) return;
+  if (!isRec(artwork)) {
+    out.push(`${where} is not an object`);
+    return;
+  }
+  for (const key of ["src", "alt", "credit", "permission"]) checkText(artwork, key, where, out);
+}
+
 /** `gameIds`, when given, are ids a route's first segment must not equal (it would hide that game's pages). */
 function checkRoutes(routes: unknown, where: string, out: string[], gameIds: string[] = []): void {
   if (!Array.isArray(routes)) {
@@ -115,14 +124,7 @@ export function validateManifest(manifest: unknown): string[] {
     });
   }
 
-  const artwork = manifest["artwork"];
-  if (artwork !== undefined) {
-    if (!isRec(artwork)) {
-      out.push("artwork is not an object");
-    } else {
-      for (const key of ["src", "alt", "credit", "permission"]) checkText(artwork, key, "artwork", out);
-    }
-  }
+  checkArtwork(manifest["artwork"], "artwork", out);
 
   const credits = manifest["credits"];
   if (!isRec(credits)) {
@@ -147,6 +149,8 @@ export function validateManifest(manifest: unknown): string[] {
       checkText(game, "fullName", at, out);
       checkRoutes(game["routes"], `${at}.routes`, out);
       checkReady(game, at, out);
+      checkArtwork(game["artwork"], `${at}.artwork`, out);
+      if (game["icon"] !== undefined) checkText(game, "icon", at, out);
       if (game["ready"] === true && Array.isArray(game["routes"]) && game["routes"].length === 0) {
         out.push(`${at}.routes must have at least one route when the game is ready`);
       }

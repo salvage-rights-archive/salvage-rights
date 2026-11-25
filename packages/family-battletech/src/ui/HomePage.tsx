@@ -21,6 +21,7 @@ import type { MechRecord, NewMechOptions } from "../rules/mech";
 import { STORAGE_READ_FAILED, STORAGE_WRITE_FAILED, downloadMech, downloadOmni, fromMechFile, fromOmniFile, openFamilyStorage } from "./storage";
 import type { FamilyStorage, SavedEntry } from "./storage";
 import emptyBay from "../artwork/empty-bay.jpg";
+import GamePicture from "./GamePicture";
 import "./classic.scss";
 
 const MAX_IMPORT_BYTES = 1024 * 1024;
@@ -284,6 +285,7 @@ export default function HomePage() {
   return (
     <div className="sr-page">
       <h1>Classic BattleTech</h1>
+      <GamePicture game="classic" />
       {storage && !storage.persistent && (
         <p className="bt-warning">This browser is not letting us save. Your 'Mechs last until you close this tab.</p>
       )}

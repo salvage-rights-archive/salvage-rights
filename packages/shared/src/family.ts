@@ -22,6 +22,13 @@ export interface FamilyRoute {
   load: () => Promise<{ default: ComponentType }>;
 }
 
+export interface Artwork {
+  src: string;
+  alt: string;
+  credit: string;
+  permission: string;
+}
+
 export interface GameManifest {
   id: string;
   shortName: string;
@@ -29,19 +36,16 @@ export interface GameManifest {
   ready: boolean;
   /** The first route is the page the game's tile entry opens; a ready game needs at least one. */
   routes: FamilyRoute[];
+  /** The game's own picture: shown on its home page and, while the game is not ready, on the family tile. */
+  artwork?: Artwork;
+  /** A small square picture, always shown beside the game's name, so it is a decorative image. */
+  icon?: string;
 }
 
 export interface UnitTypeManifest {
   id: string;
   name: string;
   ready: boolean;
-}
-
-export interface Artwork {
-  src: string;
-  alt: string;
-  credit: string;
-  permission: string;
 }
 
 export interface Credits {

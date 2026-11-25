@@ -10,6 +10,7 @@ import AsForces from "./AsForces";
 import AsMordelImport from "./AsMordelImport";
 import AsMulImport from "./AsMulImport";
 import AsMordelFile from "./AsMordelFile";
+import GamePicture from "../GamePicture";
 import "../classic.scss";
 import "./alpha-strike.scss";
 
@@ -138,6 +139,7 @@ export default function AsHomePage() {
   return (
     <div className="sr-page">
       <h1>Alpha Strike</h1>
+      <GamePicture game="alpha-strike" />
       {storage && !storage.persistent && <p className="bt-warning">This browser is not letting us save. Your units last until you close this tab.</p>}
       <div role="status">{status}</div>
       <div role="alert" className="bt-problem">
