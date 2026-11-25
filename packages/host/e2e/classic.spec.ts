@@ -119,3 +119,18 @@ test("the home, import and editor pages do not scroll sideways at 320 px wide", 
     expect(widths.scroll, `scroll width on ${address}`).toBe(widths.client);
   }
 });
+
+test("build a tripod through the form and reach its record sheet", async ({ page }) => {
+  await page.goto(HOME);
+  const form = page.getByRole("form", { name: "Build a new one" });
+  await form.getByLabel("Name").fill("Strider");
+  await form.getByLabel("Tonnage").selectOption("55");
+  await form.getByLabel("Configuration").selectOption({ label: "Tripod (advanced rules)" });
+  await form.getByRole("button", { name: "Start building" }).click();
+  await expect(page.getByRole("list", { name: "Center Leg slots" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Rules check" }).getByText("Interstellar Operations: Alternate Eras, p. 158")).toBeVisible();
+  await page.getByRole("link", { name: "Record sheet" }).click();
+  const sheet = page.getByRole("img", { name: /record sheet$/ });
+  await expect(sheet.locator("[data-location='CL']")).toBeVisible();
+  await expect(sheet.locator("[data-diagram]")).toHaveCount(3);
+});

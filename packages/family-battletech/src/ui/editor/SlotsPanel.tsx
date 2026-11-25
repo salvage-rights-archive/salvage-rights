@@ -17,6 +17,8 @@ import Picker from "./Picker";
 const SHEET_ROWS: Record<string, string[]> = {
   biped: ["la lt hd rt ra", "la lt ct rt ra", ". ll ct rl ."],
   quad: ["fll lt hd rt frl", "fll lt ct rt frl", ". rll ct rrl ."],
+  // The third leg stands under the center torso, in a row of its own.
+  tripod: ["la lt hd rt ra", "la lt ct rt ra", ". ll ct rl .", ". . cl . ."],
 };
 
 /** The locations in the order the columns are met, left to right and top to bottom in each column, so that Tab follows what
@@ -24,6 +26,7 @@ const SHEET_ROWS: Record<string, string[]> = {
 const SHEET_ORDER: Record<string, LocationCode[]> = {
   biped: ["LA", "LT", "LL", "HD", "CT", "RT", "RL", "RA"],
   quad: ["FLL", "LT", "RLL", "HD", "CT", "RT", "RRL", "FRL"],
+  tripod: ["LA", "LT", "LL", "HD", "CT", "CL", "RT", "RL", "RA"],
 };
 
 type Block =

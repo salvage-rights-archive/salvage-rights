@@ -53,11 +53,13 @@ export const CRITICAL_BOXES: { label: string; boxes: number }[] = [
   { label: "Life Support", boxes: 1 },
 ];
 
-/** The critical table's three columns, top to bottom, as the published sheet arranges them. A quad's four legs take the
+/** The critical table's columns, left to right and top to bottom, as the published sheet arranges them. A quad's four legs take the
  * arms' and legs' places. */
 export const SHEET_COLUMNS: Record<string, LocationCode[][]> = {
   biped: [["LA", "LT", "LL"], ["HD", "CT"], ["RA", "RT", "RL"]],
   quad: [["FLL", "LT", "RLL"], ["HD", "CT"], ["FRL", "RT", "RRL"]],
+  // A tripod has too much for three columns of a page, so its three legs stand together in a fourth.
+  tripod: [["LA", "LT"], ["HD", "CT"], ["RA", "RT"], ["LL", "CL", "RL"]],
 };
 
 /** What an empty critical slot prints. */

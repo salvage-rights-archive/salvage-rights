@@ -4,13 +4,13 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import type { ChangeEvent, CSSProperties, ReactNode } from "react";
 import { Link, useBlocker, useLocation, useSearchParams } from "react-router";
-import { ARMOR, COCKPITS, ENGINE_TYPES, GYROS, HEAT_SINKS, MYOMER, STRUCTURE_TYPES } from "../data/chassis";
+import { ARMOR, COCKPITS, ENGINE_TYPES, GYROS, HEAT_SINKS, MYOMER, SHEET, STRUCTURE_TYPES } from "../data/chassis";
 import { loadCatalog } from "../rules/catalog";
 import type { Catalog } from "../rules/catalog";
 import { runChecks } from "../rules/checks";
 import type { Finding } from "../rules/checks";
 import { changedSinceImport } from "../rules/mordel";
-import { ARM_FULL, editRecord, layout as buildLayout, locationName, weights as buildWeights } from "../rules/mech";
+import { ARM_FULL, configurationLabel, editRecord, layout as buildLayout, locationName, weights as buildWeights } from "../rules/mech";
 import type { Layout, LocationCode, MechRecord } from "../rules/mech";
 import ArmorPanel from "./editor/ArmorPanel";
 import { dialogKeyDown } from "./editor/dialog";
@@ -303,10 +303,7 @@ const TECH_BASES: [string, string][] = [
   ["clan", "Clan"],
   ["mixed", "Mixed"],
 ];
-const CONFIGURATIONS: [string, string][] = [
-  ["biped", "Biped"],
-  ["quad", "Quad"],
-];
+const CONFIGURATIONS: [string, string][] = Object.keys(SHEET.configurations).map((key) => [key, configurationLabel(key)]);
 
 // ---------------------------------------------------------------------------------------------------------------
 // What a finding or a changed marker can point at
@@ -786,7 +783,7 @@ function Editor({ initial, catalog, storage }: { initial: MechRecord; catalog: C
                 </div>
               ))}
             </div>
-            {record.configuration === "biped" &&
+            {(record.configuration === "biped" || record.configuration === "tripod") &&
               (["LA", "RA"] as const).map((arm) => {
                 const has = { ...ARM_FULL, ...record.arms?.[arm] };
                 const arms = locationName(arm);

@@ -76,7 +76,7 @@ export default function CriticalTable({ rect, record, layout }: { rect: Rect; re
     );
   }
   const inner = rect.w - 30;
-  const width = (inner - 2 * COLUMN_GAP) / 3;
+  const width = (inner - (columns.length - 1) * COLUMN_GAP) / columns.length;
   const columnX = (index: number) => rect.x + 15 + index * (width + COLUMN_GAP);
   const top = rect.y + 40;
   const stack = (codes: LocationCode[], index: number) => {

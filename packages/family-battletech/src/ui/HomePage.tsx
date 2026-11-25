@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ChangeEvent } from "react";
 import { Link, useNavigate } from "react-router";
-import { ENGINE_WEIGHTS, INTERNAL_STRUCTURE } from "../data/chassis";
+import { ENGINE_WEIGHTS, INTERNAL_STRUCTURE, SHEET } from "../data/chassis";
 import { DEFAULT_EDITION, EDITIONS, bookName } from "../data/editions";
-import { newRecord } from "../rules/mech";
+import { configurationLabel, newRecord } from "../rules/mech";
 import type { MechRecord, NewMechOptions, TechBase } from "../rules/mech";
 import { STORAGE_READ_FAILED, STORAGE_WRITE_FAILED, downloadMech, fromMechFile, openFamilyStorage } from "./storage";
 import type { FamilyStorage, SavedEntry } from "./storage";
@@ -382,8 +382,11 @@ export default function HomePage() {
                 value={draft.configuration}
                 onChange={(e) => setDraft({ ...draft, configuration: e.target.value as NewMechOptions["configuration"] })}
               >
-                <option value="biped">Biped</option>
-                <option value="quad">Quad</option>
+                {Object.keys(SHEET.configurations).map((key) => (
+                  <option key={key} value={key}>
+                    {configurationLabel(key)}
+                  </option>
+                ))}
               </select>
             </div>
           </div>

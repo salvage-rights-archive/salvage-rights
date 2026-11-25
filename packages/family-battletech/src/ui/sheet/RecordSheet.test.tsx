@@ -1,7 +1,7 @@
 import { cleanup, render } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { loadCatalog } from "../../rules/catalog";
-import { mordelBiped, mordelQuad, mordelWith } from "../../rules/fixtures";
+import { mordelBiped, mordelQuad, mordelWith, tripodRecord } from "../../rules/fixtures";
 import { fromMordel } from "../../rules/mordel";
 import type { MechRecord } from "../../rules/mech";
 import RecordSheet from "./RecordSheet";
@@ -60,6 +60,15 @@ describe("The record sheet", () => {
     expect(svg.querySelectorAll("[data-testid='mech-doll'][data-layout='quad']")).toHaveLength(3);
     expect(svg.querySelectorAll("[data-diagram='text']")).toHaveLength(0);
     expect(lines).toContain("FLL");
+  });
+
+  it("prints a tripod's critical table with the center leg and draws its three diagrams", async () => {
+    const { svg, lines } = await drawn(tripodRecord());
+    expect(svg.querySelector("[data-location='CL']")).not.toBeNull();
+    expect(lines).toContain("Center Leg");
+    expect(svg.querySelectorAll("[data-diagram]")).toHaveLength(3);
+    expect(svg.querySelectorAll("[data-testid='mech-doll'][data-layout='tripod']")).toHaveLength(3);
+    expect(lines).not.toContain("This sheet has no critical table for a tripod yet.");
   });
 
   it("lists each location's points as text in place of the diagrams for a body type with no doll", async () => {
