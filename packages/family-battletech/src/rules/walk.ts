@@ -109,11 +109,17 @@ export const armorPoints = (record: MechRecord) => Object.values(record.armor).r
 /** Internal structure points over every location the configuration has (0 for a tonnage the table does not list). */
 export const structureTotal = (record: MechRecord) => Object.values(structurePoints(record)).reduce((sum, n) => sum + n, 0);
 
-/** Heat Sink Capacity: the chassis's heat sinks times the heat one of its type takes away (the sheet's table, which the
- * record sheet prints from); null for a type we do not know. */
+/** Heat Sink Capacity: each group of the chassis's heat sinks times the heat one of its type takes away (the sheet's table, which the
+ * record sheet prints from), the second kind of a mixed record included; null for a type we do not know. */
 export function heatSinkCapacity(record: MechRecord): number | null {
-  const each = own(SHEET_HEAT_SINKS, record.chassis.heatSinks.type)?.perSink;
-  return each === undefined ? null : record.chassis.heatSinks.count * each;
+  const { type, count, extra } = record.chassis.heatSinks;
+  let total = 0;
+  for (const group of [{ type, count }, ...(extra ?? [])]) {
+    const each = own(SHEET_HEAT_SINKS, group.type)?.perSink;
+    if (each === undefined) return null;
+    total += group.count * each;
+  }
+  return total;
 }
 
 /** The tons of one of the weight rules' chassis lines ("Gyro", "Armor", "Engine"), null when it cannot be worked out. */

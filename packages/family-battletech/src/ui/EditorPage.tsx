@@ -15,7 +15,7 @@ import { ARM_FULL, bodyOf, configurationOf, editRecord, layout as buildLayout, l
 import type { Layout, LocationCode, MechRecord } from "../rules/mech";
 import { configurationChoices, eraOfRecord, partChoices, setEra, setYear } from "../rules/availability";
 import type { PartKind } from "../rules/availability";
-import { techBaseChoices, withLevel } from "../rules/levels";
+import { heatSinkMixAllowed, heatSinkMixPossible, techBaseChoices, withLevel } from "../rules/levels";
 import {
   BASE,
   applyBaseEdit,
@@ -311,9 +311,56 @@ const NOTE_FIELDS = [
 // The fields, as tables
 // ---------------------------------------------------------------------------------------------------------------
 
+/** `choices` replaces the part table's list of options. */
 type ChassisField =
-  | { kind: "select"; path: string; label: string; part: PartKind; read: (r: MechRecord) => string; write: (d: MechRecord, v: string) => void }
+  | { kind: "select"; path: string; label: string; part: PartKind; read: (r: MechRecord) => string; write: (d: MechRecord, v: string) => void; choices?: (r: MechRecord) => [string, string][] }
   | { kind: "number"; path: string; label: string; read: (r: MechRecord) => number; write: (d: MechRecord, v: number) => void };
+
+/** The extra heat sink groups' controls: one pair for each stored group and one to add another, offered only where some pairing could be
+ * allowed (heatSinkMixPossible; hide, do not mark). A group's choices are the kinds that may share the 'Mech with the main one (heatSinkMixAllowed)
+ * and are not already used, plus what it already stores, so a stored group stays visible. */
+function extraSinkFields(record: MechRecord): ChassisField[] {
+  if (!heatSinkMixPossible(record)) return [];
+  const { type, extra = [] } = record.chassis.heatSinks;
+  const fields: ChassisField[] = [];
+  for (let i = 0; i <= extra.length; i += 1) {
+    const here = extra[i];
+    const taken = extra.filter((_, j) => j !== i).map((g) => g.type);
+    const choices = (r: MechRecord): [string, string][] => {
+      const offered = partChoices("heatSink", r, here?.type ?? "").filter(([key]) => heatSinkMixAllowed(r, type, key) && !taken.includes(key));
+      if (here && !offered.some(([key]) => key === here.type)) offered.push([here.type, here.type]);
+      return [["", "None"], ...offered];
+    };
+    fields.push({
+      kind: "select",
+      path: `chassis.heatSinks-extra-${i}`,
+      label: extra.length === 0 && i === 0 ? "Second heat sink type" : `Extra heat sink type ${i + 1}`,
+      part: "heatSink",
+      choices,
+      read: (r) => r.chassis.heatSinks.extra?.[i]?.type ?? "",
+      write: (d, v) => {
+        const groups = d.chassis.heatSinks.extra ?? [];
+        if (v === "") groups.splice(i, 1);
+        else groups[i] = { type: v, count: groups[i]?.count ?? 0 };
+        if (groups.length === 0) delete d.chassis.heatSinks.extra;
+        else d.chassis.heatSinks.extra = groups;
+      },
+    });
+    if (here) {
+      fields.push({
+        kind: "number",
+        path: `chassis.heatSinks-extra-${i}-count`,
+        label: `Extra heat sinks ${i + 1}`,
+        read: (r) => r.chassis.heatSinks.extra?.[i]?.count ?? 0,
+        write: (d, v) => {
+          const group = d.chassis.heatSinks.extra?.[i];
+          if (group) group.count = v;
+        },
+      });
+    }
+  }
+  return fields;
+}
 
 const CHASSIS_FIELDS: ChassisField[] = [
   { kind: "select", path: "chassis.engine", label: "Engine type", part: "engine", read: (r) => r.chassis.engine.type, write: (d, v) => void (d.chassis.engine.type = v) },
@@ -690,7 +737,7 @@ function Editor({ initial, startAt, catalog, storage }: { initial: Doc; startAt?
     setProblem("");
     edit((d) => void (d.picture = { dataUrl: result.dataUrl }));
   };
-  const chassisGroups = CHASSIS_FIELDS.reduce<ChassisField[][]>((groups, field) => {
+  const chassisGroups = [...CHASSIS_FIELDS, ...extraSinkFields(record)].reduce<ChassisField[][]>((groups, field) => {
     if (field.kind === "number") groups[groups.length - 1]?.push(field);
     else groups.push([field]);
     return groups;
@@ -927,7 +974,7 @@ function Editor({ initial, startAt, catalog, storage }: { initial: Doc; startAt?
                         id={fieldId(field.path)}
                         label={field.label}
                         value={field.read(record)}
-                        options={partChoices(field.part, record, field.read(record))}
+                        options={field.choices ? field.choices(record) : partChoices(field.part, record, field.read(record))}
                         changed={mark(field.path)}
                         disabled={fixedHere}
                         onChange={(v) => { edit((d) => { field.write(d, v); }); }}
@@ -938,7 +985,7 @@ function Editor({ initial, startAt, catalog, storage }: { initial: Doc; startAt?
                         id={fieldId(field.path)}
                         label={field.label}
                         value={field.read(record)}
-                        disabled={fixedHere || (chassis !== undefined && field.path === "chassis.heatSinks-count" && !inBase)}
+                        disabled={fixedHere || (chassis !== undefined && field.path.startsWith("chassis.heatSinks-") && field.path.endsWith("count") && !inBase)}
                         onValid={(v) => { edit((d) => { field.write(d, v ?? 0); }, field.path); }}
                       />
                     ),

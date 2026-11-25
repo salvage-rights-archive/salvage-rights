@@ -87,6 +87,14 @@ describe("mech files", () => {
     expect(fromMechFile(JSON.parse(JSON.stringify(file)))).toEqual({ ok: true, record });
   });
 
+  it("reads a record with no extra heat sink groups as before and round-trips one with them", () => {
+    const old = bipedRecord();
+    expect(fromMechFile(JSON.parse(JSON.stringify(toMechFile(old))))).toEqual({ ok: true, record: old });
+    const mixed = bipedRecord({ techBase: "mixed", chassis: { ...old.chassis, heatSinks: { type: "double", count: 10, extra: [{ type: "double-clan", count: 4 }] } } });
+    expect(fromMechFile(JSON.parse(JSON.stringify(toMechFile(mixed))))).toEqual({ ok: true, record: mixed });
+    expect(isMechRecord({ ...mixed, chassis: { ...mixed.chassis, heatSinks: { type: "double", count: 10, extra: { type: "double-clan", count: 4 } } } })).toBe(false);
+  });
+
   it.each([
     ["wrong app", { app: "other", kind: "mech", version: 1 }],
     ["wrong kind", { app: "salvage-rights", kind: "list", version: 1 }],

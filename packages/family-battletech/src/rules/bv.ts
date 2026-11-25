@@ -34,7 +34,7 @@ import {
   WEAPON_BV,
 } from "../data/bv";
 import type { BvGroup, BvOptions } from "../data/bv";
-import { industrialRulesOf, walkMP } from "./mech";
+import { industrialRulesOf, totalHeatSinks, walkMP } from "./mech";
 import type { LocationCode, MechRecord, Mount } from "./mech";
 import type { Catalog, EquipmentRow } from "./catalog";
 import { armorPoints, equipmentItems, heatSinkCapacity, jumpMP as jumpJets, mascOf, movementPenalty, own, roundHalfUp, stemOf, structureTotal, tidy, tsmOf } from "./walk";
@@ -309,11 +309,12 @@ export function battleValue(record: MechRecord, catalog: Catalog, pilot: PilotSk
 
   // ---- Offensive Battle Rating ----------------------------------------------------------------------------------
   const sinkCapacity = heatSinkCapacity(record);
-  const sinks = sinkCapacity ?? chassis.heatSinks.count;
+  const sinks = sinkCapacity ?? totalHeatSinks(chassis.heatSinks);
   if (sinkCapacity === null) note(undefined, `heat sink type "${chassis.heatSinks.type}"`, "how much heat one dissipates is not known; counted as 1");
   const pods = items.filter((i) => COOLANT_POD_IDS.includes(i.row.id)).length;
   // Coolant pods: heat sinks x (pods / 5), rounded up, at most twice the heat sinks (TO:AUE p. 193).
-  const coolant = pods === 0 ? 0 : Math.min(2 * chassis.heatSinks.count, Math.ceil((chassis.heatSinks.count * pods) / 5));
+  const sinkCount = totalHeatSinks(chassis.heatSinks);
+  const coolant = pods === 0 ? 0 : Math.min(2 * sinkCount, Math.ceil((sinkCount * pods) / 5));
   const capacity = sinks + coolant + items.reduce((sum, i) => sum + (own(HEAT_EFFICIENCY_BONUS, i.row.id) ?? 0), 0);
   const jumpHeat = jumpMP === 0 ? 0 : Math.max(BV_METHOD.jumpHeatMinimum, improvedJets ? Math.ceil(jumpMP / 2) : jumpMP);
   const airMechHeat = standardLam ? Math.round(flank / 3) : 0; // one heat per 3 MP, IO:AE p. 102

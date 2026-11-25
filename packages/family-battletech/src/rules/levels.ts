@@ -1,7 +1,7 @@
 // Rules levels: the order they come in, which level an item belongs to, and the lowest level that accepts everything a
 // 'Mech uses. Pure functions over the tables in data/chassis.ts and the catalog; nothing here throws on what it does not
 // know (an unknown part or an unmatched mount simply asks nothing of the level).
-import { INTRODUCTORY_PARTS, ARMOR, COCKPITS, ENGINE_TYPES, GYROS, HEAT_SINKS, MIXED_TECHNOLOGY, RULES_LEVELS, STRUCTURE_TYPES } from "../data/chassis";
+import { INTRODUCTORY_PARTS, ARMOR, COCKPITS, ENGINE_TYPES, GYROS, HEAT_SINK_RULES, HEAT_SINKS, MIXED_TECHNOLOGY, RULES_LEVELS, STRUCTURE_TYPES } from "../data/chassis";
 import type { PartFacts, RulesLevel, RulesLevelRow, Span } from "../data/chassis";
 import type { Catalog, EquipmentRow } from "./catalog";
 import { configurationOf, mechTypeOf } from "./mech";
@@ -20,6 +20,25 @@ const rank = (level: RulesLevel) => LEVEL_ORDER.indexOf(level);
 export function levelAtLeast(a: RulesLevel, b: RulesLevel): boolean {
   return rank(a) >= rank(b);
 }
+
+/** Whether the record is a FrankenMech, the optional rule of Campaign Operations (printed p.213) that lets a 'Mech be pieced together from
+ * parts of several kinds. We build no FrankenMech yet, so this says no; the piece that adds the rule changes only this answer. */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- the record is what the real answer will read
+export const isFrankenMech = (_record: Pick<MechRecord, "name">): boolean => false;
+
+/** Whether two heat sink types may share a 'Mech. An Inner Sphere double with a Clan double: on a mixed technology record (that is itself an
+ * Advanced option, so the level check asks for Advanced). Any other pairing: only on a FrankenMech, or at Fan-made level or higher (owner's
+ * rulings of 2026-11-25). The same type twice is no mix. The standard rule is one type per 'Mech (TechManual p.53). */
+export function heatSinkMixAllowed(record: Pick<MechRecord, "name" | "techBase" | "rulesLevel">, mainType: string, extraType: string): boolean {
+  if (mainType === extraType) return false;
+  const [first, second] = HEAT_SINK_RULES.mixable;
+  if ((mainType === first && extraType === second) || (mainType === second && extraType === first)) return record.techBase === "mixed";
+  return isFrankenMech(record) || (record.rulesLevel !== undefined && levelAtLeast(record.rulesLevel, "fan-made"));
+}
+
+/** Whether the editor should offer extra heat sink groups at all: some pairing could be allowed (mixed technology, Fan-made or higher, a FrankenMech). */
+export const heatSinkMixPossible = (record: Pick<MechRecord, "name" | "techBase" | "rulesLevel">): boolean =>
+  record.techBase === "mixed" || isFrankenMech(record) || (record.rulesLevel !== undefined && levelAtLeast(record.rulesLevel, "fan-made"));
 
 /** Where a record's time falls against the mixed technology option's dates (data/chassis.ts MIXED_TECHNOLOGY): in production, in its
  * prototype years (the Clan prototype year counts, as a mixed record draws on both bases), or before either. No year or era is no limit. */
@@ -133,6 +152,7 @@ export function levelItems(record: MechRecord, catalog: Catalog): LevelItem[] {
   part("structure", STRUCTURE_TYPES, chassis.structure, "chassis.structure", "structure");
   part("armor", ARMOR, chassis.armorType, "chassis.armorType", "armor");
   part("heat sink", HEAT_SINKS, chassis.heatSinks.type, "chassis.heatSinks", "heatSink");
+  for (const group of chassis.heatSinks.extra ?? []) part("heat sink", HEAT_SINKS, group.type, "chassis.heatSinks", "heatSink");
   const cockpit = own(COCKPITS.types, chassis.cockpit) ? COCKPITS.types[chassis.cockpit] : undefined;
   if (cockpit) {
     // A cockpit that belongs to a body type takes that body type's level (the tripod's is Advanced with the tripod).

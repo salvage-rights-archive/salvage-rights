@@ -6,9 +6,9 @@ import { inventoryLines, ammoLines } from "../../rules/catalog";
 import type { Catalog, InventoryLine } from "../../rules/catalog";
 import { battleValue as battleValueOf } from "../../rules/bv";
 import { levelOfRecord, levelRow } from "../../rules/levels";
-import { layout as buildLayout, locationName, structurePoints, walkMP, weights } from "../../rules/mech";
+import { layout as buildLayout, locationName, structurePoints, totalHeatSinks, walkMP, weights } from "../../rules/mech";
 import { configurationLevel } from "../../rules/omni";
-import { movementPenalty, penalisedMovement } from "../../rules/walk";
+import { heatSinkCapacity, movementPenalty, penalisedMovement } from "../../rules/walk";
 import type { Layout, LocationCode, MechRecord } from "../../rules/mech";
 
 export const DASH = "—";
@@ -72,8 +72,15 @@ export function sheetFacts(record: MechRecord, catalog: Catalog): SheetFacts {
   const moved = walk === null ? null : penalisedMovement(walk, penalty);
   const taken = (mp: number, by: number) => String(Math.max(0, mp - by));
   const sinks = record.chassis.heatSinks;
-  const kind = Object.hasOwn(SHEET_HEAT_SINKS, sinks.type) ? SHEET_HEAT_SINKS[sinks.type] : undefined;
-  const dissipation = kind ? String(sinks.count * kind.perSink) : DASH;
+  const more = sinks.extra ?? [];
+  const capacity = heatSinkCapacity(record);
+  const dissipation = capacity === null ? DASH : String(capacity);
+  // A mixed record prints each kind with its count, `Double Heat Sinks: 10 IS + 4 Clan (28)`; the two doubles are told apart by their tech base.
+  const labelOf = (type: string) => (Object.hasOwn(SHEET_HEAT_SINKS, type) ? SHEET_HEAT_SINKS[type]?.label : undefined) ?? type;
+  const origin = (type: string) => (type === "double" ? "IS" : type === "double-clan" ? "Clan" : labelOf(type));
+  const counts = more.length > 0 ? [sinks, ...more].map((g) => `${String(g.count)} ${origin(g.type)}`).join(" + ") : String(sinks.count);
+  const label = [...new Set([sinks, ...more].map((g) => labelOf(g.type)))].join(" and ");
+  const sinkTotal = totalHeatSinks(sinks);
   const ammo = ammoLines(record, catalog)
     .map((line) => {
       const name = line.name.replace(/ Ammo\b/, "");
@@ -105,9 +112,9 @@ export function sheetFacts(record: MechRecord, catalog: Catalog): SheetFacts {
     battleValue: isBase ? DASH : imported !== undefined ? imported.toLocaleString("en-US") : `${computed?.complete === false ? "at least " : ""}${(computed?.total ?? 0).toLocaleString("en-US")}`,
     battleValueFrom: isBase ? (total === null ? "the base has none" : `the base has none; pod space ${String(Math.round((record.tons - total) * 1000) / 1000)} tons`) : imported !== undefined ? "mordel.net" : "calculated, pilot 4/5",
     heatSinks: {
-      line: `${kind?.label ?? sinks.type} Heat Sinks: ${String(sinks.count)} (${dissipation})`,
-      summary: `${kind?.label ?? sinks.type}, ${String(sinks.count)} (${dissipation})`,
-      count: Number.isFinite(sinks.count) ? Math.max(0, Math.floor(sinks.count)) : 0,
+      line: `${label} Heat Sinks: ${counts} (${dissipation})`,
+      summary: `${label}, ${counts} (${dissipation})`,
+      count: Number.isFinite(sinkTotal) ? Math.max(0, Math.floor(sinkTotal)) : 0,
     },
     layout,
     points: codes.map((code) => ({

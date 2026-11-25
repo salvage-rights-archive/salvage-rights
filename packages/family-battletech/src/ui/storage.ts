@@ -85,7 +85,7 @@ const isStrings = (v: unknown) => Array.isArray(v) && v.every(isString);
 
 function isOmniLink(v: unknown): boolean {
   if (v === undefined) return true;
-  return isObject(v) && isString(v.chassisId) && isString(v.configurationId) && isString(v.code) && (v.isBase === undefined || v.isBase === true) && isNumber(v.baseHeatSinks) && isStrings(v.baseMountIds);
+  return isObject(v) && isString(v.chassisId) && isString(v.configurationId) && isString(v.code) && (v.isBase === undefined || v.isBase === true) && isNumber(v.baseHeatSinks) && (v.baseExtraHeatSinks === undefined || (Array.isArray(v.baseExtraHeatSinks) && v.baseExtraHeatSinks.every(isNumber))) && isStrings(v.baseMountIds);
 }
 
 function isChassis(v: unknown): boolean {
@@ -102,7 +102,8 @@ function isChassis(v: unknown): boolean {
     isString(v.myomer) &&
     isObject(heatSinks) &&
     isString(heatSinks.type) &&
-    isNumber(heatSinks.count)
+    isNumber(heatSinks.count) &&
+    (heatSinks.extra === undefined || (Array.isArray(heatSinks.extra) && heatSinks.extra.every((g) => isObject(g) && isString(g.type) && isNumber(g.count))))
   );
 }
 
