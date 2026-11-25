@@ -291,7 +291,8 @@ export const HEAT_SINKS: Sourced & { types: Record<string, HeatSinkType> } = {
 // Armor (BattleMech Armor Table, printed p.56). Points per ton is the base times the multiplier, the points a given
 // number of tons carries rounded down; tons for a given number of points rounded up to a half ton. Slots are
 // critical slots, placed anywhere except where `slotsIn` says (stealth armor takes 2 slots in each arm, leg and side torso,
-// none in the head or center torso, printed p.56 footnote; for a quad the four legs stand in for arms and legs: our reading). Stealth armor also wants a Guardian
+// none in the head or center torso, printed p.56 footnote and p.55 text; the text says 2 slots in each location but those two, so on a
+// quad the four legs and the two side torsos carry them, which makes the same 12). Stealth armor also wants a Guardian
 // ECM Suite; that part is not modelled here.
 // ---------------------------------------------------------------------------------------------------------------
 type Spread = Partial<Record<LocationCode, number>>;
