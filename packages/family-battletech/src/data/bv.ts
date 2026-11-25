@@ -22,6 +22,7 @@ const TM = "TechManual";
 const TM_BV = "TechManual Battle Value v4.1";
 const TW = "Total Warfare";
 const IO = "Interstellar Operations: Alternate Eras";
+const TO = "Tactical Operations: Advanced Units and Equipment";
 
 // ---------------------------------------------------------------------------------------------------------------
 // The method's fixed numbers (TechManual Battle Value v4.1, "Calculating 'Mech BV").
@@ -167,7 +168,25 @@ export const LAM_BV: Sourced & { cruisePerJumpMP: number; flankFactor: number; a
 export const CASE_ROWS: Record<string, number> = { "case-is": 0, "case-clan": 0, "prototype-case-is": 8 };
 /** The targeting computers, and the multiplier a prototype Artemis puts on its launcher in place of 1.2. */
 export const TARGETING_COMPUTER_IDS = ["targeting-computer-is", "targeting-computer-clan"];
-export const ARTEMIS_IDS: Record<string, number> = { "artemis-iv-is": 1.2, "artemis-iv-clan": 1.2, "prototype-artemis-iv-is": 1.1 };
+// Artemis V (+30 percent) and Apollo (+15 percent, MRM launchers): TO:AUE pp. 195, 197.
+export const ARTEMIS_IDS: Record<string, number> = { "artemis-iv-is": 1.2, "artemis-iv-clan": 1.2, "prototype-artemis-iv-is": 1.1, "artemis-v-clan": 1.3, "mrm-apollo-fcs-is": 1.15 };
+/** PPC capacitors (TO:AUE pp. 194, 222): the BV of the PPC and its capacitor together replaces the PPC's, and the capacitor adds 5 to its heat. */
+export const CAPACITOR: Sourced & { heat: number; bv: Record<string, number> } = {
+  cite: { book: TO, page: 194 },
+  checked: "page",
+  heat: 5,
+  bv: { "heavy-ppc-is": 370, "ppc-is": 264, "light-ppc-is": 132, "snub-nose-ppc-is": 252, "er-ppc-is": 343 },
+};
+/** Items the TO:AUE addendum gives no BV, whose rules do something else (p. 194): a laser insulator takes 1 off its laser's heat; coolant pods add to heat sink capacity and cost 1 defensive point a slot. */
+export const LASER_INSULATOR_IDS = ["laser-insulator-is", "laser-insulator-clan"];
+export const COOLANT_POD_IDS = ["coolant-pod-is", "coolant-pod-clan"];
+/** Rows whose BV the books make depend on something the row does not say. */
+export const UNFIXED: Record<string, string> = {
+  "vehicular-mine-dispenser-is": "its BV is that of a 10-point minefield of the mine it carries, which the row does not fix (TO:AUE p. 195)",
+  "vehicular-mine-dispenser-clan": "its BV is that of a 10-point minefield of the mine it carries, which the row does not fix (TO:AUE p. 195)",
+};
+/** Equipment introduced in TechManual or in Tactical Operations: Advanced Units and Equipment that is in none of their BV tables counts as 0 (TO:AUE printed p. 192). */
+export const UNLISTED_IS_ZERO: Sourced & { books: string[] } = { cite: { book: TO, page: 192 }, checked: "page", books: [TM, TO] };
 export const MACHINE_GUN_ARRAY_IDS = ["machine-gun-array-is", "machine-gun-array-clan"];
 export const TSM_IDS = ["tsm-is", "prototype-triple-strength-myomer-is"];
 export const MASC_IDS = ["masc-is", "masc-clan"];
@@ -175,7 +194,7 @@ export const IMPROVED_JUMP_JET_IDS = ["improved-jump-jet-is", "improved-jump-jet
 /** Rows that add to Heat Efficiency (RISC emergency coolant system: +4, IO:AE p. 190). */
 export const HEAT_EFFICIENCY_BONUS: Record<string, number> = { "risc-emergency-coolant-system-is": 4 };
 /** Physical weapons: BV is the weapon's damage times the factor (the table's footnote ** says damage after TSM). Damage by 'Mech tonnage: Total Warfare p. 146, TechManual pp. 220, 236, 237. */
-export const PHYSICAL_BV: Sourced & { rows: Record<string, { factor: number; damage: "hatchet" | "sword" | "blade" }> } = {
+export const PHYSICAL_BV: Sourced & { rows: Record<string, { factor: number; damage: "hatchet" | "sword" | "blade" | number; fixed?: true }> } = {
   cite: { book: TM, page: 317 },
   checked: "page",
   rows: {
@@ -183,6 +202,8 @@ export const PHYSICAL_BV: Sourced & { rows: Record<string, { factor: number; dam
     "sword-is": { factor: 1.725, damage: "sword" },
     "retractable-blade-is": { factor: 1.725, damage: "blade" },
     "retractable-blade-clan": { factor: 1.725, damage: "blade" },
+    // The chain whip's damage (3) is not changed by TSM or the wielder's weight (TO:AUE p. 101); BV factor TO:AUE p. 195.
+    "chain-whip-is": { factor: 1.725, damage: 3, fixed: true },
   },
 };
 
@@ -197,6 +218,8 @@ export interface BvOptions {
   heat?: keyof typeof HEAT_MULTIPLIER | number;
   inert?: true;
   gauss?: true;
+  /** Counts as a Gauss weapon of this many critical slots, not its own (the hyper-velocity ACs, table note Q). */
+  gaussSlots?: number;
   defensive?: true;
   /** The ammunition's BV is defensive too (the anti-missile system's), counted up to the BV of the systems themselves. */
   defensiveAmmo?: true;
@@ -223,7 +246,7 @@ export const WEAPON_BV: BvGroup[] = [
       // Inner Sphere ballistic
       ["ac-2-is", 37, 5], ["ac-5-is", 70, 9], ["ac-10-is", 123, 15], ["ac-20-is", 178, 22],
       ["vehicle-flamer-is", 5, 1],
-      ["heavy-gauss-rifle-is", 346, 43, G], ["gauss-rifle-is", 320, 40, G], ["light-gauss-rifle-is", 159, 20, G], ["magshot-is", 15, 0, { gauss: true }],
+      ["heavy-gauss-rifle-is", 346, 43, G], ["gauss-rifle-is", 320, 40, G], ["light-gauss-rifle-is", 159, 20, G], 
       ["lb-2-x-ac-is", 42, 5, { ammo: ["ammo-lb-2-x-is", "ammo-lb-2-x-cluster-is"] }],
       ["lb-5-x-ac-is", 83, 10, { ammo: ["ammo-lb-5-x-is", "ammo-lb-5-x-cluster-is"] }],
       ["lb-10-x-ac-is", 148, 19, { ammo: ["ammo-lb-10-x-is", "ammo-lb-10-x-cluster-is"] }],
@@ -282,7 +305,7 @@ export const WEAPON_BV: BvGroup[] = [
       ["prototype-gauss-rifle-is", 320, 40, G], ["prototype-gauss-rifle-lsw-is", 320, 40, { ...G, ammo: [] }],
       ["prototype-lb-10-x-ac-is", 148, 15], ["prototype-lb-10-x-ac-lsw-is", 148, 15, { ammo: [] }],
       ["prototype-narc-missile-beacon-is", 15, 0],
-      ["prototype-small-pulse-laser-is", 11, undefined, { heat: 4 }], ["prototype-medium-pulse-laser-is", 43, undefined, { heat: 7 }],
+      ["prototype-small-pulse-laser-is", 11, undefined, { heat: 4 }], ["prototype-medium-pulse-laser-is", 43, undefined, { heat: 7 }], ["prototype-medium-pulse-laser-lsw-is", 43, undefined, { heat: 7 }],
       ["prototype-large-pulse-laser-is", 108, undefined, { heat: 13 }],
       ["prototype-rocket-launcher-10-is", 15], ["prototype-rocket-launcher-15-is", 18], ["prototype-rocket-launcher-20-is", 19],
       ["prototype-rocket-launcher-10-clan", 15], ["prototype-rocket-launcher-15-clan", 18], ["prototype-rocket-launcher-20-clan", 19],
@@ -304,8 +327,51 @@ export const WEAPON_BV: BvGroup[] = [
       ["risc-hyper-laser-is", 596, undefined, { gauss: true }], ["risc-repeating-tsemp-cannon-is", 600, undefined, { gauss: true }],
     ],
   },
+  {
+    // Tactical Operations: Advanced Units and Equipment, Inner Sphere Weapons and Equipment BV Table [Addendum], printed pp. 194-195.
+    // A cannon is the Artillery Cannon row; the artillery piece is the Artillery Weapons row. HV AC (table note Q) counts as a Gauss
+    // weapon of one slot. The Light, Medium and Large rifles are the catalog's light, medium and heavy rifles. The table gives the
+    // Bombast laser's BV only; its heat is the largest damage it can be dialled to (12, p. 132).
+    cite: { book: TO, page: 194 },
+    checked: "page",
+    rows: [
+      ["er-flamer-is", 16], ["binary-laser-is", 222], ["bombast-laser-is", 137, undefined, { heat: 12 }],
+      ["variable-speed-laser-large-is", 123], ["variable-speed-laser-medium-is", 56], ["variable-speed-laser-small-is", 22],
+      ["x-pulse-laser-small-is", 21], ["x-pulse-laser-medium-is", 71], ["x-pulse-laser-large-is", 178],
+      ["hyper-velocity-ac-2-is", 53, 7, { gaussSlots: 1 }], ["hyper-velocity-ac-5-is", 109, 14, { gaussSlots: 1 }], ["hyper-velocity-ac-10-is", 158, 20, { gaussSlots: 1 }],
+      ["fluid-gun-is", 6, 1], ["heavy-flamer-is", 15, 2], ["improved-heavy-gauss-is", 385, 48, { gauss: true }], ["magshot-is", 15, 2, { gauss: true }],
+      ["silver-bullet-gauss-is", 198, 25, { gauss: true }],
+      ["mech-mortar-1-is", 10, 1], ["mech-mortar-2-is", 14, 2], ["mech-mortar-4-is", 26, 3], ["mech-mortar-8-is", 50, 6],
+      ["light-rifle-is", 21, 3], ["medium-rifle-is", 51, 6], ["heavy-rifle-is", 91, 11],
+      ["vehicular-grenade-launcher-is", 15], ["taser-is", 40, 5, { gauss: true }],
+      ["long-tom-cannon-is", 329, 41], ["sniper-cannon-is", 77, 10], ["thumper-cannon-is", 41, 5],
+      ["enhanced-lrm-5-is", 52, 7], ["enhanced-lrm-10-is", 104, 13], ["enhanced-lrm-15-is", 157, 20], ["enhanced-lrm-20-is", 210, 26],
+      ["extended-lrm-5-is", 67, 8], ["extended-lrm-10-is", 133, 17], ["extended-lrm-15-is", 200, 25], ["extended-lrm-20-is", 268, 34],
+      ["thunderbolt-5-is", 64, 8], ["thunderbolt-10-is", 127, 16], ["thunderbolt-15-is", 229, 29], ["thunderbolt-20-is", 305, 38],
+      ["arrow-iv-is", 240, 30], ["sniper-artillery-is", 85, 11], ["thumper-artillery-is", 43, 5],
+    ],
+  },
+  {
+    // Clan Weapons and Equipment BV Table [Addendum], printed pp. 196-197. The improved heavy lasers carry the table's double dagger (Gauss weapon).
+    cite: { book: TO, page: 196 },
+    checked: "page",
+    rows: [
+      ["er-flamer-clan", 16], ["chemical-laser-small-clan", 7, 1], ["chemical-laser-medium-clan", 37, 5], ["chemical-laser-large-clan", 99, 12],
+      ["er-pulse-laser-small-clan", 36], ["er-pulse-laser-medium-clan", 117], ["er-pulse-laser-large-clan", 272],
+      ["improved-heavy-laser-small-clan", 19, undefined, { gauss: true }], ["improved-heavy-laser-medium-clan", 93, undefined, { gauss: true }],
+      ["improved-heavy-laser-large-clan", 296, undefined, { gauss: true }],
+      ["protomech-ac-2-clan", 34, 4], ["protomech-ac-4-clan", 49, 6], ["protomech-ac-8-clan", 66, 8],
+      ["rotary-ac-2-clan", 161, 20, { heat: "rotary" }], ["rotary-ac-5-clan", 345, 43, { heat: "rotary" }],
+      ["fluid-gun-clan", 6, 1], ["heavy-flamer-clan", 15, 2],
+      ["mech-mortar-1-clan", 10, 1], ["mech-mortar-2-clan", 14, 2], ["mech-mortar-4-clan", 26, 3], ["mech-mortar-8-clan", 50, 6],
+      ["vehicular-grenade-launcher-clan", 15],
+      ["long-tom-cannon-clan", 329, 41], ["sniper-cannon-clan", 77, 10], ["thumper-cannon-clan", 41, 5],
+      ["streak-lrm-5-clan", 86, 11, { heat: "streak" }], ["streak-lrm-10-clan", 173, 22, { heat: "streak" }],
+      ["streak-lrm-15-clan", 259, 32, { heat: "streak" }], ["streak-lrm-20-clan", 345, 43, { heat: "streak" }],
+      ["arrow-iv-clan", 240, 30], ["sniper-artillery-clan", 96, 11], ["thumper-artillery-clan", 48, 5],
+    ],
+  },
 ];
-
 /** "Other Equipment" and the physical and industrial items: BV added in full, never sorted by heat. */
 export const EQUIPMENT_BV: BvGroup[] = [
   {
@@ -346,6 +412,31 @@ export const EQUIPMENT_BV: BvGroup[] = [
       ["risc-advanced-pds-is", 64, 22, { defensive: true, defensiveAmmo: true }],
       ["risc-viral-jammer-decoy-is", 284, undefined, { defensive: true }], ["risc-viral-jammer-homing-is", 284, undefined, { defensive: true }],
       ["risc-emergency-coolant-system-is", 0, undefined, { none: true }],
+    ],
+  },
+  {
+    // Tactical Operations: Advanced Units and Equipment, Other Equipment and Melee Weapons rows of the addenda, printed pp. 195-197.
+    // Vibroblades and the flail are melee items with a fixed BV, so they are equipment here, not weapons sorted by heat.
+    cite: { book: TO, page: 195 },
+    checked: "page",
+    rows: [
+      ["flail-is", 11], ["vibroblade-small-is", 12], ["vibroblade-medium-is", 17], ["vibroblade-large-is", 24],
+      ["shield-small-is", 50, undefined, { defensive: true }], ["shield-medium-is", 135, undefined, { defensive: true }], ["shield-large-is", 263, undefined, { defensive: true }],
+      ["spikes-is", 4, undefined, { defensive: true }],
+      ["angel-ecm-is", 100, undefined, { defensive: true }], ["angel-ecm-clan", 100, undefined, { defensive: true }],
+      ["bloodhound-active-probe-is", 25, undefined, { defensive: true }],
+      ["c3-remote-sensor-launcher-is", 30, 6],
+      ["chaff-pod-is", 19, undefined, { defensive: true, gauss: true }], ["m-pod-is", 5, undefined, { defensive: true, gauss: true }],
+      ["electronic-warfare-equipment-is", 39, undefined, { defensive: true }],
+      ["laser-anti-missile-system-is", 45, undefined, { defensive: true }], ["laser-anti-missile-system-clan", 45, undefined, { defensive: true }],
+      ["watchdog-cews-clan", 68, undefined, { defensive: true }],
+      // No BV of their own: CASE II is used in the Defensive Battle Rating (note H), the C3 variants count only in a network (note D),
+      // Artemis V and Apollo change their launcher (notes J, L), and the capacitor, insulator and coolant pod act through the rules above.
+      ["case-ii-is", 0, undefined, { none: true }], ["case-ii-clan", 0, undefined, { none: true }],
+      ["c3-boosted-master-is", 0, undefined, { none: true }], ["c3-boosted-slave-is", 0, undefined, { none: true }], ["c3-emergency-master-is", 0, undefined, { none: true }],
+      ["artemis-v-clan", 0, undefined, { none: true }], ["mrm-apollo-fcs-is", 0, undefined, { none: true }],
+      ["ppc-capacitor-is", 0, undefined, { none: true }], ["laser-insulator-is", 0, undefined, { none: true }], ["laser-insulator-clan", 0, undefined, { none: true }],
+      ["coolant-pod-is", 0, undefined, { none: true }], ["coolant-pod-clan", 0, undefined, { none: true }],
     ],
   },
 ];

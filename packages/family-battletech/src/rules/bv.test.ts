@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { EQUIPMENT_BV, WEAPON_BV } from "../data/bv";
+import { CASE_ROWS, EQUIPMENT_BV, LAM_BV, UNLISTED_IS_ZERO, WEAPON_BV } from "../data/bv";
 import { AMMUNITION } from "../data/equipment/ammunition";
 import { OTHER } from "../data/equipment/other";
 import { WEAPONS } from "../data/equipment/weapons";
@@ -194,9 +194,10 @@ describe("the method's rules", () => {
 
 describe("what the book does not print", () => {
   it("is reported and left out, never thrown over or guessed", () => {
-    const bv = battleValue(biped([m("medium-laser-is", "RA"), m("thumper-artillery-is", "LT"), { ...m("x", null), equipmentId: null, name: "Frobnicator" }, m("ammo-inferno-is", "LT")], { chassis: { ...bipedRecord().chassis, gyro: "mystery" } }), catalog);
+    const bv = battleValue(biped([m("medium-laser-is", "RA"), m("vehicular-mine-dispenser-is", "LT"), { ...m("x", null), equipmentId: null, name: "Frobnicator" }, m("ammo-inferno-is", "LT")], { chassis: { ...bipedRecord().chassis, gyro: "mystery" } }), catalog);
     expect(bv.complete).toBe(false);
-    expect(bv.unvalued.map((u) => u.name).sort()).toEqual(["Frobnicator", "ammo-inferno-is", "gyro type \"mystery\"", "thumper-artillery-is"]);
+    expect(bv.unvalued.map((u) => u.name).sort()).toEqual(["Frobnicator", "gyro type \"mystery\"", "vehicular-mine-dispenser-is"]);
+    expect(bv.zeroByRule.map((u) => u.name)).toEqual(["ammo-inferno-is"]);
     expect(bv.offensive.weapons).toHaveLength(1);
   });
 });
@@ -206,5 +207,32 @@ describe("the tables", () => {
     const ids = new Set(catalog.all().map((r) => r.id));
     const named = [...WEAPON_BV, ...EQUIPMENT_BV].flatMap((g) => g.rows.flatMap(([id, , , o]) => [id, ...(o?.ammo ?? [])]));
     expect(named.filter((id) => !ids.has(id))).toEqual([]);
+  });
+});
+describe("Tactical Operations equipment", () => {
+  it("a PPC with a capacitor is worth the table's pair BV and runs 5 hotter", () => {
+    const ppc = m("er-ppc-is", "RA");
+    const bv = battleValue(biped([ppc, m("ppc-capacitor-is", "RA", { linkedTo: ppc.id })]), catalog);
+    expect(bv.offensive.weapons[0]).toMatchObject({ unmodifiedBv: 343, heat: 20 });
+  });
+
+  it("a laser insulator takes 1 off its laser's heat, and coolant pods add heat capacity but cost defensive points", () => {
+    const laser = m("er-large-laser-is", "RA");
+    expect(battleValue(biped([laser, m("laser-insulator-is", "RA", { linkedTo: laser.id })]), catalog).offensive.weapons[0]?.heat).toBe(11);
+    const plain = battleValue(biped([]), catalog);
+    const pods = battleValue(biped(many(5, "coolant-pod-is", "LT")), catalog);
+    expect(pods.offensive.heatEfficiency - plain.offensive.heatEfficiency).toBe(10); // 10 sinks x 5 pods / 5
+    expect(pods.defensive.explosiveAmmo).toBe(5);
+  });
+
+  it("the chain whip is its fixed damage times 1.725, whatever the 'Mech weighs", () => {
+    expect(battleValue(biped([m("chain-whip-is", "RA")]), catalog).offensive.equipment).toBe(5.175);
+  });
+
+  it("every catalog row is valued, counted 0 by the book's rule, or one the books leave open", () => {
+    const known = new Set<string>();
+    for (const g of [...WEAPON_BV, ...EQUIPMENT_BV]) for (const [id, , a, o] of g.rows) { known.add(id); if (a !== undefined) for (const x of o?.ammo ?? [`ammo-${id}`]) known.add(x); }
+    const open = catalog.all().filter((r) => !known.has(r.id) && !UNLISTED_IS_ZERO.books.includes(r.cite.book) && !["heat-sink", "jump-jet"].includes(r.kind) && !LAM_BV.fuelSlotIds.includes(r.id) && !(r.id in CASE_ROWS));
+    expect(open.map((r) => r.id)).toEqual([]);
   });
 });
