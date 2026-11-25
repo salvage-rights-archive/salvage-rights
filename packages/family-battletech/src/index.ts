@@ -1,5 +1,5 @@
 import type { FamilyManifest, FamilyRoute, GameManifest } from "@salvage-rights/shared";
-import { ERAS } from "./data/editions";
+import { EDITIONS, ERAS } from "./data/editions";
 import salvageYard from "./artwork/salvage-yard.jpg";
 
 const classicRoutes: FamilyRoute[] = [
@@ -31,7 +31,7 @@ const manifest: FamilyManifest = {
     comingSoon("aces", "Aces", "BattleTech: Aces"),
     comingSoon("gothic", "Gothic", "BattleTech: Gothic"),
   ],
-  unitTypes: [{ id: "mech", name: "BattleMech", ready: true }],
+  unitTypes: (EDITIONS[0]?.unitTypes ?? []).filter((unit) => unit.ready), // the types the edition can build (data/editions.ts)
   eras: ERAS, // the Master Unit List's twelve (data/editions.ts)
   measures: ["hexes"],
   routes: [],

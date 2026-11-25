@@ -68,6 +68,8 @@ const SCALED: Record<string, Scaled> = {
   "jump-booster": { of: "tons", times: 0.05, round: "ceil-half", perAmount: true },
   // Tracks and environmental sealing (TechManual pp. 213, 249): a tenth of the unit, up to the half ton. Extended fuel tank (p. 244): a tenth of the engine.
   "tenth-tons": { of: "tons", divide: 10, round: "ceil-half" },
+  // IndustrialMech environmental sealing (TechManual printed p.70, Enviro-Sealing table): 10 percent, rounded up to the full ton.
+  "ceil-tenth-tons": { of: "tons", divide: 10, round: "ceil" },
   "fuel-tank-tons": { of: "engine", divide: 10, round: "ceil-half" },
   // Booby trap (p. 108): a tenth of the 'Mech, up to the half ton.
   "booby-trap": { of: "tons", divide: 10, round: "ceil-half" },

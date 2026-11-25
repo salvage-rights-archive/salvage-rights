@@ -115,6 +115,38 @@ describe("Classic BattleTech home", () => {
     });
   });
 
+  it("asks for the name, model, type and configuration first, re-filters the type and configuration lists live, and builds an IndustrialMech", async () => {
+    const user = userEvent.setup();
+    renderHome();
+    const form = await screen.findByRole("form", { name: "Build a new one" });
+    expect([...form.querySelectorAll("label")].map((l) => l.textContent).slice(0, 8)).toEqual(["Name", "Model", "Type", "Configuration", "Rules level", "Tech base", "Tonnage", "Walking MP"]);
+    const type = within(form).getByLabelText<HTMLSelectElement>("Type");
+    const config = within(form).getByLabelText<HTMLSelectElement>("Configuration");
+    const texts = (select: HTMLSelectElement) => [...select.options].map((o) => o.text);
+    expect([type.value, config.value]).toEqual(["mech", "biped"]); // a new unit starts as a BattleMech biped
+    expect(texts(type)).toEqual(["BattleMech", "IndustrialMech", "OmniMech (not built yet)"]);
+    expect(type.options[2]?.disabled).toBe(true);
+    expect(within(form).getByText(/OmniMech is not offered yet: its rules are not built/)).toBeTruthy();
+    await user.selectOptions(within(form).getByLabelText("Rules level"), "introductory");
+    expect(texts(type)).toEqual(["BattleMech"]);
+    await user.selectOptions(within(form).getByLabelText("Rules level"), "experimental");
+    expect(texts(config)).toEqual(["Biped", "Quad", "Tripod", "Land-Air 'Mech", "Bimodal Land-Air 'Mech"]);
+    await user.selectOptions(config, "tripod");
+    await user.selectOptions(type, "industrialmech");
+    expect(texts(config)).toEqual(["Biped", "Quad"]); // the tripod is no IndustrialMech's body, so the choice gave way to the first that fits
+    expect(config.value).toBe("biped");
+    await user.selectOptions(within(form).getByLabelText("Rules level"), "standard");
+    const tons = within(form).getByLabelText<HTMLSelectElement>("Tonnage");
+    expect(tons.options[0]?.value).toBe("10");
+    await user.type(within(form).getByLabelText("Name"), "Hauler");
+    await user.selectOptions(tons, "10");
+    await user.click(within(form).getByRole("button", { name: "Start building" }));
+    await waitFor(async () => {
+      const [entry] = await (await openFamilyStorage()).list();
+      expect(entry?.record).toMatchObject({ unitType: "industrialmech", tons: 10, configuration: "biped", chassis: { structure: "industrial", cockpit: "industrial" } });
+    });
+  });
+
   it("lists saved 'Mechs with tonnage and designer credit, duplicates, and deletes after a confirm", async () => {
     const user = userEvent.setup();
     const storage = await openFamilyStorage();

@@ -8,6 +8,7 @@ import { battleValue } from "../../rules/bv";
 import type { BvResult } from "../../rules/bv";
 import { unitCost } from "../../rules/cost";
 import type { UnitCost } from "../../rules/cost";
+import { industrialRulesOf } from "../../rules/mech";
 import type { MechRecord } from "../../rules/mech";
 
 export const DEFAULT_PILOT = { gunnery: 4, piloting: 5 };
@@ -243,6 +244,7 @@ export default function CalculatorPanel({ record, catalog }: { record: MechRecor
       <p className="bt-calc__figure" data-testid="cost-total">
         {costText}
       </p>
+      {industrialRulesOf(deferred) === undefined && (
       <label className="bt-check" htmlFor={ids.omni}>
         <input
           id={ids.omni}
@@ -254,6 +256,7 @@ export default function CalculatorPanel({ record, catalog }: { record: MechRecor
         />
         OmniMech (cost x 1.25)
       </label>
+      )}
       {incompleteCost && (
         <div className="bt-calc__incomplete">
           <p>{`Incomplete: ${plural(cost.unpriced.length, "item has", "items have")} no price, so the total is at least this much.`}</p>

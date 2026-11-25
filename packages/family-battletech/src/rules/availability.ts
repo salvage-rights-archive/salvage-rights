@@ -7,13 +7,14 @@
 // The rule: the item's rules level is at or below the record's; its tech base is the record's (a mixed record takes either, an
 // item printed for both fits both); and it exists in the record's time. That time is the year when the record has one, else
 // the whole era (an item introduced by the era's last year and not extinct before its first year), else no limit.
-import { ARMOR, COCKPITS, ENGINE_TYPES, GYROS, HEAT_SINKS, MYOMER, SHEET, STRUCTURE_TYPES } from "../data/chassis";
-import type { ConfigurationRow, PartFacts, RulesLevel, Span } from "../data/chassis";
+import { ARMOR, COCKPITS, ENGINE_TYPES, GYROS, HEAT_SINKS, MECH_TYPES, MYOMER, SHEET, STRUCTURE_TYPES } from "../data/chassis";
+import type { ConfigurationRow, MechType, MechTypeRow, PartFacts, RulesLevel, Span } from "../data/chassis";
 import { ERAS } from "../data/editions";
 import type { EraRow } from "../data/editions";
 import { mountableOn } from "./catalog";
 import type { Catalog, EquipmentRow } from "./catalog";
 import { DEFAULT_LEVEL, equipmentLevel, levelAtLeast, partLevel } from "./levels";
+import { industrialRulesOf, mechTypeOf } from "./mech";
 import type { MechRecord } from "./mech";
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -69,7 +70,7 @@ export function windowOf(record: Pick<MechRecord, "era" | "year">): Window | nul
 // The rule
 // ---------------------------------------------------------------------------------------------------------------
 
-type Subject = Pick<MechRecord, "techBase" | "year" | "era" | "rulesLevel"> & { configuration?: string };
+type Subject = Pick<MechRecord, "techBase" | "year" | "era" | "rulesLevel" | "unitType"> & { configuration?: string };
 // `everything`, where a function takes it, lifts the tech base and time limits (the picker's "Show everything") and never the rules level.
 const recordLevel = (record: Subject): RulesLevel => record.rulesLevel ?? DEFAULT_LEVEL;
 
@@ -85,7 +86,7 @@ export function spansFit(spans: Span[] | undefined, window: Window | null): bool
 
 /** An equipment row: at or below the level, the record's tech base, and in the record's time (read through the record's edition). */
 export function equipmentAvailable(row: EquipmentRow, record: Subject & Pick<MechRecord, "editionId">, catalog: Catalog, everything = false): boolean {
-  if (!mountableOn(row, "mech")) return false; // a row whose `units` leaves out the BattleMech is never offered to a mech, not even with Show everything
+  if (!mountableOn(row, mechTypeOf(record).unit)) return false; // a row whose `units` leaves out the unit's type is never offered to it, not even with Show everything
   if (!levelAtLeast(recordLevel(record), equipmentLevel(row))) return false;
   if (everything) return true;
   if (!baseFits(row.techBase, record.techBase)) return false;
@@ -119,6 +120,9 @@ export function partAvailable(kind: PartKind, key: string, record: Subject, ever
   const types = PART_TABLES[kind].types;
   const part = Object.hasOwn(types, key) ? types[key] : undefined;
   if (!part) return true;
+  // The type decides first: an IndustrialMech takes the parts its rules name, and any other 'Mech none printed for IndustrialMechs.
+  const industrial = industrialRulesOf(record);
+  if (industrial ? !industrial.parts[kind].includes(key) : part.industrial) return false;
   if (!levelAtLeast(recordLevel(record), partLevel(kind, key, part))) return false;
   if (part.only !== undefined && part.only !== record.configuration) return false;
   if (everything) return true;
@@ -142,6 +146,8 @@ export function configurationInTime(key: string, record: Pick<Subject, "techBase
 export function configurationAvailable(key: string, record: Subject, everything = false): boolean {
   const row = configurationRow(key);
   if (!row) return true;
+  const industrial = industrialRulesOf(record);
+  if (industrial && !industrial.configurations.includes(key)) return false;
   if (!levelAtLeast(recordLevel(record), partLevel("configuration", key, row))) return false;
   return everything || configurationInTime(key, record);
 }
@@ -155,9 +161,50 @@ const NOT_HERE = " (not available here)";
 /** A chassis part table's rows as select options: those available to the record, and the record's current value even if it is not (marked). */
 export function partChoices(kind: PartKind, record: Subject, current: string): [string, string][] {
   const out: [string, string][] = [];
+  const renamed = kind === "armor" ? industrialRulesOf(record)?.armorNames : undefined;
   for (const [key, row] of Object.entries(PART_TABLES[kind].types)) {
-    if (partAvailable(kind, key, record)) out.push([key, row.name]);
-    else if (key === current) out.push([key, row.name + NOT_HERE]);
+    const name = (renamed && Object.hasOwn(renamed, key) ? renamed[key] : undefined) ?? row.name;
+    if (partAvailable(kind, key, record)) out.push([key, name]);
+    else if (key === current) out.push([key, name + NOT_HERE]);
+  }
+  return out;
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// The 'Mech type (BattleMech, IndustrialMech, OmniMech)
+// ---------------------------------------------------------------------------------------------------------------
+
+/** A type's years against the record: the production years of its row, the Clan ones where the row has them; a mixed record takes either. */
+export function typeInTime(row: MechTypeRow, record: Pick<Subject, "techBase" | "year" | "era">): boolean {
+  const window = windowOf(record);
+  const forIs = spansFit(row.availability, window);
+  const forClan = spansFit(row.clanAvailability ?? row.availability, window);
+  return record.techBase === "inner-sphere" ? forIs : record.techBase === "clan" ? forClan : forIs || forClan;
+}
+
+/** A 'Mech type for a record: at or below its rules level, and (unless `everything`) in its tech base and time. A key we do not know fits nothing. */
+export function typeAvailable(id: MechType, record: Subject, everything = false): boolean {
+  const row = MECH_TYPES.find((r) => r.id === id);
+  if (!row) return false;
+  if (!levelAtLeast(recordLevel(record), row.rulesLevel)) return false;
+  if (row.industrial && !row.industrial.techBases.some((base) => base === record.techBase)) return false; // not mixed (TechManual p.64)
+  return everything || typeInTime(row, record);
+}
+
+export interface TypeChoice {
+  id: MechType;
+  label: string;
+  /** Set for a type listed but not choosable yet: why. */
+  disabled?: string;
+}
+/** The 'Mech types to offer: those available to the record (a type whose rules are not built is listed, disabled, with its reason), and
+ * the record's current type even if it is not (marked). */
+export function typeChoices(record: Subject): TypeChoice[] {
+  const current = mechTypeOf(record).id;
+  const out: TypeChoice[] = [];
+  for (const row of MECH_TYPES) {
+    if (typeAvailable(row.id, record)) out.push(row.ready ? { id: row.id, label: row.label } : { id: row.id, label: `${row.label} (not built yet)`, disabled: row.notReady ?? "Its rules are not built yet." });
+    else if (row.id === current) out.push({ id: row.id, label: row.label + NOT_HERE });
   }
   return out;
 }

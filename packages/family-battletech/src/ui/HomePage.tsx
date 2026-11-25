@@ -1,13 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ChangeEvent } from "react";
 import { Link, useNavigate } from "react-router";
-import { ENGINE_WEIGHTS, INTERNAL_STRUCTURE } from "../data/chassis";
+import { ENGINE_WEIGHTS, INTERNAL_STRUCTURE, MECH_TYPES } from "../data/chassis";
+import type { MechType } from "../data/chassis";
 import { DEFAULT_EDITION, EDITIONS, PLAY_ONLY_BOOK, bookName } from "../data/editions";
-import { configurationChoices } from "../rules/availability";
+import { configurationAvailable, configurationChoices, typeAvailable } from "../rules/availability";
 import { withLevel } from "../rules/levels";
 import { loadCatalog } from "../rules/catalog";
-import { newRecord } from "../rules/mech";
+import { mechTypeOf, newRecord } from "../rules/mech";
 import LevelSelect from "./editor/LevelSelect";
+import TypeSelect from "./editor/TypeSelect";
 import type { MechRecord, NewMechOptions, TechBase } from "../rules/mech";
 import { STORAGE_READ_FAILED, STORAGE_WRITE_FAILED, downloadMech, fromMechFile, openFamilyStorage } from "./storage";
 import type { FamilyStorage, SavedEntry } from "./storage";
@@ -41,6 +43,7 @@ export default function HomePage() {
     walk: 4,
     techBase: "inner-sphere",
     configuration: "biped",
+    unitType: "mech",
     rulesLevel: "standard",
   });
 
@@ -119,13 +122,25 @@ export default function HomePage() {
     if (await reload(storage)) say("Deleted.");
   };
 
+  // What the form offers follows the rules level and tech base: a choice that no longer fits gives way to the first that does, so the Type
+  // and Configuration lists re-filter as those fields change and nothing offered is out of the rules.
+  const subject = { techBase: draft.techBase, year: null, rulesLevel: draft.rulesLevel };
+  const usable = (id: MechType) => MECH_TYPES.find((t) => t.id === id)?.ready === true && typeAvailable(id, subject);
+  const unitType: MechType = draft.unitType !== undefined && usable(draft.unitType) ? draft.unitType : (MECH_TYPES.find((t) => usable(t.id))?.id ?? "mech");
+  const typed = { ...subject, unitType };
+  const configurations = configurationChoices(typed, "");
+  const configuration = configurationAvailable(draft.configuration, typed) ? draft.configuration : ((configurations[0]?.[0] ?? "biped") as NewMechOptions["configuration"]);
+  const limits = mechTypeOf({ unitType }).tonnage;
+  const tonnages = TONNAGES.filter((t) => t >= limits.min && t <= limits.max);
+  const tons = tonnages.includes(draft.tons) ? draft.tons : (tonnages.find((t) => t >= draft.tons) ?? tonnages.at(-1) ?? draft.tons);
+
   // The walking speeds the largest engine in the table allows at this tonnage.
-  const walks = Array.from({ length: Math.floor(MAX_RATING / draft.tons) }, (_, i) => i + 1);
+  const walks = Array.from({ length: Math.floor(MAX_RATING / tons) }, (_, i) => i + 1);
 
   const build = async () => {
     if (!storage || !draft.chassis.trim()) return;
     const record = newRecord(
-      { ...draft, chassis: draft.chassis.trim(), model: draft.model.trim(), walk: Math.min(draft.walk, walks.at(-1) ?? 1), year: null },
+      { ...draft, unitType, configuration, tons, chassis: draft.chassis.trim(), model: draft.model.trim(), walk: Math.min(draft.walk, walks.at(-1) ?? 1), year: null },
       edition,
       crypto.randomUUID(),
     );
@@ -361,13 +376,35 @@ export default function HomePage() {
               <label htmlFor="bt-new-model">Model</label>
               <input id="bt-new-model" value={draft.model} onChange={(e) => setDraft({ ...draft, model: e.target.value })} />
             </div>
+            <TypeSelect id="bt-new-type" record={typed} onChange={(next) => { setDraft({ ...draft, unitType: next }); }} />
+            <div className="bt-field">
+              <label htmlFor="bt-new-config">Configuration</label>
+              <select
+                id="bt-new-config"
+                value={configuration}
+                onChange={(e) => setDraft({ ...draft, configuration: e.target.value as NewMechOptions["configuration"] })}
+              >
+                {configurations.map(([key, label]) => (
+                  <option key={key} value={key}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </div>
             <LevelSelect id="bt-new-level" record={draft} onChange={(rulesLevel) => { setDraft({ ...draft, rulesLevel }); }} />
             <div className="bt-field">
+              <label htmlFor="bt-new-tech">Tech base</label>
+              <select id="bt-new-tech" value={draft.techBase} onChange={(e) => setDraft({ ...draft, techBase: e.target.value as TechBase })}>
+                <option value="inner-sphere">Inner Sphere</option>
+                <option value="clan">Clan</option>
+              </select>
+            </div>
+            <div className="bt-field">
               <label htmlFor="bt-new-tons">Tonnage</label>
-              <select id="bt-new-tons" value={draft.tons} onChange={(e) => setDraft({ ...draft, tons: Number(e.target.value) })}>
-                {TONNAGES.map((tons) => (
-                  <option key={tons} value={tons}>
-                    {tons} tons
+              <select id="bt-new-tons" value={tons} onChange={(e) => setDraft({ ...draft, tons: Number(e.target.value) })}>
+                {tonnages.map((each) => (
+                  <option key={each} value={each}>
+                    {each} tons
                   </option>
                 ))}
               </select>
@@ -377,36 +414,15 @@ export default function HomePage() {
               <select id="bt-new-walk" value={Math.min(draft.walk, walks.at(-1) ?? 1)} onChange={(e) => setDraft({ ...draft, walk: Number(e.target.value) })}>
                 {walks.map((walk) => (
                   <option key={walk} value={walk}>
-                    {walk} (engine rating {walk * draft.tons})
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="bt-field">
-              <label htmlFor="bt-new-tech">Tech base</label>
-              <select id="bt-new-tech" value={draft.techBase} onChange={(e) => setDraft({ ...draft, techBase: e.target.value as TechBase })}>
-                <option value="inner-sphere">Inner Sphere</option>
-                <option value="clan">Clan</option>
-              </select>
-            </div>
-            <div className="bt-field">
-              <label htmlFor="bt-new-config">Configuration</label>
-              <select
-                id="bt-new-config"
-                value={draft.configuration}
-                onChange={(e) => setDraft({ ...draft, configuration: e.target.value as NewMechOptions["configuration"] })}
-              >
-                {configurationChoices({ techBase: draft.techBase, year: null, rulesLevel: draft.rulesLevel }, draft.configuration).map(([key, label]) => (
-                  <option key={key} value={key}>
-                    {label}
+                    {walk} (engine rating {walk * tons})
                   </option>
                 ))}
               </select>
             </div>
           </div>
           <p className="bt-hint">
-            You start with standard parts, ten heat sinks, no armor and no equipment. The editor's rules check shows
-            what is left to do.
+            {unitType === "industrialmech" ? "You start with an industrial frame and cockpit, a standard fusion engine" : "You start with standard parts"}, ten
+            heat sinks, no armor and no equipment. The editor's rules check shows what is left to do.
           </p>
           <button type="submit" className="bt-button" disabled={!storage}>
             Start building

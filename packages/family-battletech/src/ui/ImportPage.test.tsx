@@ -139,7 +139,7 @@ describe("Import from Mordel", () => {
     await user.type(box, "cv 12");
     await user.click(screen.getByRole("button", { name: "Import" }));
     await waitFor(() => {
-      expect(screen.getByRole("alert").textContent).toBe("Only BattleMechs can be imported so far.");
+      expect(screen.getByRole("alert").textContent).toBe("Only BattleMechs and IndustrialMechs can be imported so far.");
     });
     expect(unit).not.toHaveBeenCalled();
 

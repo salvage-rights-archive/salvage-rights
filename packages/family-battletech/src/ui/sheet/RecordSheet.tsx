@@ -3,6 +3,7 @@
 // below. One SVG of 1700 by 2200 units (Letter proportions); the type never goes under 20 units, 6.6 pt at Letter width.
 // Pure: it reads nothing but its props, so it can be tested and reused. The sheet is paper: white, with black ink.
 import type { Catalog } from "../../rules/catalog";
+import { mechTypeOf } from "../../rules/mech";
 import type { MechRecord } from "../../rules/mech";
 import { ArmorDiagram, StructureDiagram } from "./Diagrams";
 import CriticalTable from "./CriticalTable";
@@ -50,7 +51,7 @@ export default function RecordSheet({ record, catalog }: { record: MechRecord; c
           {name}
         </text>
         <text x={42} y={170} fontSize={34} fontWeight={700} fill={INK}>
-          BattleMech record sheet
+          {`${mechTypeOf(record).label} record sheet`}
         </text>
         <text className="bt-sheet__head" x={1090} y={170} fontSize={24} textAnchor="end" letterSpacing={3} fill={INK}>
           SALVAGE RIGHTS

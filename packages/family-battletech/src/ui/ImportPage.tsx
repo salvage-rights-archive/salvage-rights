@@ -4,7 +4,7 @@ import { Link, useNavigate } from "react-router";
 import { EDITIONS } from "../data/editions";
 import { loadCatalog } from "../rules/catalog";
 import { DEFAULT_LEVEL, levelRow } from "../rules/levels";
-import { fromMordel, parseMordelRef } from "../rules/mordel";
+import { UNIT_TYPE_OF, fromMordel, parseMordelRef } from "../rules/mordel";
 import { createMordelClient } from "./mordel-client";
 import type { MordelClient, MordelListRow } from "./mordel-client";
 import { STORAGE_READ_FAILED, STORAGE_WRITE_FAILED, openFamilyStorage } from "./storage";
@@ -123,8 +123,8 @@ export default function ImportPage({ makeClient = defaultMakeClient }: ImportPag
       if (!storage || !storedKey) return;
       setProblem("");
       setStatus("");
-      if (unitType !== "bm") {
-        setProblem("Only BattleMechs can be imported so far.");
+      if (!Object.hasOwn(UNIT_TYPE_OF, unitType)) {
+        setProblem("Only BattleMechs and IndustrialMechs can be imported so far.");
         return;
       }
       setBusy(true);
@@ -137,9 +137,7 @@ export default function ImportPage({ makeClient = defaultMakeClient }: ImportPag
           setProblem(fetched.message);
           return;
         }
-        const result = fromMordel(fetched.value, catalog, await storage.getEdition(), new Date().toISOString(), () =>
-          crypto.randomUUID(),
-        );
+        const result = fromMordel(fetched.value, catalog, await storage.getEdition(), new Date().toISOString(), () => crypto.randomUUID(), unitType);
         if (!result.ok) {
           setProblem(result.message);
           return;

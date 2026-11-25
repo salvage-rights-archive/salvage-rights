@@ -4,7 +4,7 @@
 import { INTRODUCTORY_PARTS, ARMOR, COCKPITS, ENGINE_TYPES, GYROS, HEAT_SINKS, RULES_LEVELS, STRUCTURE_TYPES } from "../data/chassis";
 import type { RulesLevel, RulesLevelRow } from "../data/chassis";
 import type { Catalog, EquipmentRow } from "./catalog";
-import { configurationOf } from "./mech";
+import { configurationOf, mechTypeOf } from "./mech";
 import type { LocationCode, MechRecord } from "./mech";
 
 export const LEVEL_ORDER: RulesLevel[] = RULES_LEVELS.map((row) => row.id);
@@ -45,7 +45,7 @@ export function equipmentLevel(row: EquipmentRow): RulesLevel {
 
 /** One thing a 'Mech uses that asks something of the rules level. */
 export interface LevelItem {
-  what: "equipment" | "configuration" | "structure" | "armor" | "engine" | "gyro" | "cockpit" | "heat sink" | "tech base";
+  what: "equipment" | "configuration" | "structure" | "armor" | "engine" | "gyro" | "cockpit" | "heat sink" | "tech base" | "type";
   name: string;
   level: RulesLevel;
   cite?: { book: string; page: number };
@@ -65,6 +65,9 @@ export const partLevel = (table: keyof typeof INTRODUCTORY_PARTS, key: string, r
 export function levelItems(record: MechRecord, catalog: Catalog): LevelItem[] {
   const items: LevelItem[] = [];
   const chassis = record.chassis;
+  const type = mechTypeOf(record);
+  // A BattleMech is the unit the lowest level is built on, so only the other types ask something of the level.
+  if (type.id !== "mech") items.push({ what: "type", name: type.label, level: type.rulesLevel, cite: type.cite, where: { field: "unitType" } });
   const config = configurationOf(record.configuration);
   if (config) {
     const level = config.rulesLevel === DEFAULT_LEVEL ? partLevel("configuration", record.configuration) : config.rulesLevel;

@@ -16,6 +16,7 @@ import {
   HEAT_EFFICIENCY_BONUS,
   HEAT_MULTIPLIER,
   IMPROVED_JUMP_JET_IDS,
+  INDUSTRIAL_BV,
   LAM_BV,
   LASER_INSULATOR_IDS,
   MACHINE_GUN_ARRAY_IDS,
@@ -32,7 +33,7 @@ import {
   WEAPON_BV,
 } from "../data/bv";
 import type { BvGroup, BvOptions } from "../data/bv";
-import { walkMP } from "./mech";
+import { industrialRulesOf, walkMP } from "./mech";
 import type { LocationCode, MechRecord, Mount } from "./mech";
 import type { Catalog, EquipmentRow } from "./catalog";
 import { armorPoints, equipmentItems, heatSinkCapacity, jumpMP as jumpJets, mascOf, movementPenalty, own, roundHalfUp, stemOf, structureTotal, tidy, tsmOf } from "./walk";
@@ -92,7 +93,7 @@ export interface BvResult {
     speedFactor: number;
     rating: number;
   };
-  modifiers: { smallCockpit: boolean; torsoCockpit: boolean; tsm: boolean };
+  modifiers: { smallCockpit: boolean; torsoCockpit: boolean; tsm: boolean; industrialTsm: boolean; noFireControl: boolean };
   unvalued: Unvalued[];
   /** Items counted as 0 because the books say equipment in none of their BV tables counts as 0 (TO:AUE p. 192). */
   zeroByRule: Unvalued[];
@@ -298,7 +299,8 @@ export function battleValue(record: MechRecord, catalog: Catalog, pilot: PilotSk
   const capacity = sinks + coolant + items.reduce((sum, i) => sum + (own(HEAT_EFFICIENCY_BONUS, i.row.id) ?? 0), 0);
   const jumpHeat = jumpMP === 0 ? 0 : Math.max(BV_METHOD.jumpHeatMinimum, improvedJets ? Math.ceil(jumpMP / 2) : jumpMP);
   const airMechHeat = standardLam ? Math.round(flank / 3) : 0; // one heat per 3 MP, IO:AE p. 102
-  const movementHeat = Math.max(BV_METHOD.runningHeat, jumpHeat, airMechHeat) + (stealth ? BV_METHOD.stealthHeat : 0);
+  // An IndustrialMech with an internal combustion engine makes no heat by moving (v4.1, Determine Movement Heat Value).
+  const movementHeat = INDUSTRIAL_BV.noMovementHeatEngines.includes(chassis.engine.type) ? 0 : Math.max(BV_METHOD.runningHeat, jumpHeat, airMechHeat) + (stealth ? BV_METHOD.stealthHeat : 0);
   const heatEfficiency = (isLam ? BV_METHOD.lamHeatEfficiency : BV_METHOD.baseHeatEfficiency) + capacity - movementHeat;
 
   // Each weapon's unmodified BV, heat and place.
@@ -438,13 +440,17 @@ export function battleValue(record: MechRecord, catalog: Catalog, pilot: PilotSk
     else if (!entry && !LAM_BV.fuelSlotIds.includes(row.id) && own(CASE_ROWS, row.id) === undefined) unlisted({ mount, row }, "the books print no Battle Value for it");
   }
 
-  const tonnage = record.tons * (tsm ? BV_METHOD.tsmTonnage : 1);
+  // Industrial TSM counts the tonnage 1.15 times (v4.1, Calculate Weapon Battle Rating, step 8); it is not TSM for movement or physical damage.
+  const industrialTsm = chassis.myomer === "industrial-tsm" || items.some((i) => i.row.id === "industrial-tsm-is");
+  const tonnage = record.tons * (tsm ? BV_METHOD.tsmTonnage : industrialTsm ? INDUSTRIAL_BV.tsmTonnage : 1);
   weaponRating += ammunition + equipment + tonnage;
 
   const runForSpeed = runMP;
   const speedMP = standardLam ? runForSpeed + Math.round(flank / 2) : runForSpeed + Math.ceil(jumpMP / 2);
   const speed = speedFactor(speedMP);
-  const offensiveRating = weaponRating * speed;
+  // An IndustrialMech without Advanced Fire Control multiplies its Offensive Battle Rating by 0.9 (v4.1, Determine Speed Factor).
+  const noFireControl = industrialRulesOf(record) !== undefined && chassis.cockpit !== INDUSTRIAL_BV.fireControlCockpit;
+  const offensiveRating = weaponRating * speed * (noFireControl ? INDUSTRIAL_BV.offensiveFactor : 1);
 
   // ---- Final ----------------------------------------------------------------------------------------------------
   const smallCockpit = chassis.cockpit === "small";
@@ -483,7 +489,7 @@ export function battleValue(record: MechRecord, catalog: Catalog, pilot: PilotSk
       speedFactor: speed,
       rating: tidy(offensiveRating),
     },
-    modifiers: { smallCockpit, torsoCockpit, tsm },
+    modifiers: { smallCockpit, torsoCockpit, tsm, industrialTsm, noFireControl },
     unvalued,
     zeroByRule,
   };

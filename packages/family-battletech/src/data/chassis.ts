@@ -8,6 +8,7 @@
 // the functions in rules/mech.ts must cope with that.
 
 import type { LocationCode } from "../rules/mech";
+import type { UnitId } from "./units";
 
 export interface Cite {
   book: "TechManual" | "Interstellar Operations: Alternate Eras" | "Tactical Operations: Advanced Units and Equipment";
@@ -75,6 +76,10 @@ export const INTERNAL_STRUCTURE: Sourced & { rows: Record<number, StructureRow> 
   cite: { book: "TechManual", page: 47 },
   checked: "page",
   rows: {
+    // 10 and 15 tons are the IndustrialMech Ultra-Light Internal Structure Table (printed p.66, read against the page image); a
+    // BattleMech starts at 20 tons (p.46), so only an IndustrialMech may use them (see MECH_TYPES).
+    10: { ct: 4, side: 3, arm: 1, leg: 2 },
+    15: { ct: 5, side: 4, arm: 2, leg: 3 },
     20: { ct: 6, side: 5, arm: 3, leg: 4 },
     25: { ct: 8, side: 6, arm: 4, leg: 6 },
     30: { ct: 10, side: 7, arm: 5, leg: 7 },
@@ -191,7 +196,7 @@ export const STRUCTURE_TYPES: Sourced & { types: Record<string, StructureType> }
       introduced: { is: 2350 },
       cite: { book: "TechManual", page: 67 },
       checked: "page",
-      rules: "A 'Mech built on an industrial frame is an IndustrialMech, which has its own construction rules.",
+      rules: "Weighs 20 percent of the 'Mech, twice a standard BattleMech's structure, and takes no critical slots; only an IndustrialMech uses it.",
     },
   },
 };
@@ -461,10 +466,11 @@ export const COCKPITS: Sourced & { types: Record<string, CockpitType> } = {
         "No pilot damage from hits to the center torso; the 'Mech is not destroyed when its head is. Piloting Skill rolls take +1, ejection is impossible, and it survives 2 sensor hits (+2, then +4 to hit).",
       rulesCite: { book: TO, page: 113 },
     },
-    // IndustrialMech cockpits (TechManual printed pp.68-69): 3 tons, the default slots of a standard cockpit. Advanced Fire Control
+    // IndustrialMech cockpits (TechManual printed pp.68-69; production 2470 in the Universal table, IO:AE printed p.33, read against the
+    // page image: the 2350 cockpit there is the Primitive IndustrialMech's): 3 tons, the default slots of a standard cockpit. Advanced Fire Control
     // only doubles the cost (the cost table, p.277); it takes no tonnage or space. Neither has the ejection a BattleMech's has.
-    industrial: { name: "Industrial", tons: 3, cockpit: [3], sensors: [2, 5], lifeSupport: [1, 6], techBase: "both", industrial: true, introduced: { is: 2350 }, cite: { book: "TechManual", page: 69 }, checked: "page", rules: "No pilot ejection and no targeting aids; printed for IndustrialMechs." },
-    "industrial-afc": { name: "Industrial (Advanced Fire Control)", tons: 3, cockpit: [3], sensors: [2, 5], lifeSupport: [1, 6], techBase: "both", industrial: true, introduced: { is: 2350 }, cite: { book: "TechManual", page: 69 }, checked: "page", rules: "An industrial cockpit with Advanced Fire Control, which adds no weight or space." },
+    industrial: { name: "Industrial", tons: 3, cockpit: [3], sensors: [2, 5], lifeSupport: [1, 6], techBase: "both", industrial: true, availability: [{ from: 2470 }], availabilityCite: UTA(33), cite: { book: "TechManual", page: 69 }, checked: "page", rules: "No pilot ejection, and every attack takes +1 to hit; Artemis IV, Beagle Active Probe, C3 and targeting computers may not be mounted without Advanced Fire Control." },
+    "industrial-afc": { name: "Industrial (Advanced Fire Control)", tons: 3, cockpit: [3], sensors: [2, 5], lifeSupport: [1, 6], techBase: "both", industrial: true, availability: [{ from: 2470 }], availabilityCite: UTA(33), cite: { book: "TechManual", page: 69 }, checked: "page", rules: "An industrial cockpit with Advanced Fire Control: no +1 to hit, and Artemis IV, Beagle Active Probe, C3 and targeting computers may be mounted. It adds no weight or space." },
     // BattleMech interface cockpit (Interstellar Operations: Alternate Eras, rules printed p.110, table p.213): replaces the standard cockpit,
     // weighs 4 tons and takes one extra cockpit slot (the book does not say which slot; the free fourth is used).
     interface: { name: "Interface", tons: 4, cockpit: [3, 4], sensors: [2, 5], lifeSupport: [1, 6], techBase: "inner-sphere", rulesLevel: "experimental", introduced: { is: 3078, prototype: true }, cite: { book: IO, page: 213 }, checked: "text", rules: "Lets a MechWarrior in an interface suit control the 'Mech through a neural link." },
@@ -766,6 +772,8 @@ export const MYOMER: Sourced & { types: Record<string, MyomerType> } = {
     "super-cooled": { name: "Super-Cooled Myomer", catalogId: "super-cooled-myomer-is", percentOfTons: 0, slots: 6, techBase: "inner-sphere", rulesLevel: "experimental", introduced: { is: 3132, prototype: true }, cite: { book: IO, page: 88 }, checked: "page" },
     "masc-clan": { name: "MASC (Clan)", percentOfTons: 4, slots: "percent", techBase: "clan", availability: [{ from: 2827 }], availabilityCite: UTA(29) },
     tsm: { name: "Triple-Strength Myomer", catalogId: "tsm-is", percentOfTons: 0, slots: 6, techBase: "inner-sphere", availability: [{ from: 3050 }], availabilityCite: UTA(42) },
+    // IndustrialMech Triple-Strength Myomer (TechManual printed p.70; production 3045, IO:AE printed p.42): weightless, twelve slots anywhere.
+    "industrial-tsm": { name: "Industrial Triple-Strength Myomer", catalogId: "industrial-tsm-is", percentOfTons: 0, slots: 12, techBase: "inner-sphere", industrial: true, availability: [{ from: 3045 }], availabilityCite: UTA(42), cite: { book: "TechManual", page: 70 }, checked: "page", rules: "Twice as bulky as battlefield TSM and difficult to use in combat. The Battle Value counts it as tonnage times 1.15, not as extra movement." },
   },
 };
 
@@ -968,3 +976,145 @@ export const SHEET = {
     "bimodal-lam": { ...LAM_ROW, name: "Bimodal Land-Air 'Mech", availability: [{ from: 2684, to: 2781 }], clanAvailability: [{ from: 2684, to: 2801 }] },
   } satisfies Record<string, ConfigurationRow>,
 };
+
+// ---------------------------------------------------------------------------------------------------------------
+// 'Mech types: what kind of 'Mech a record is. The edition's unit-type list (data/editions.ts) is built from this table for its
+// 'Mech entries. A type has its own tonnage limits and construction rules. A BattleMech (the combat 'Mech) takes every part not
+// printed for IndustrialMechs; an IndustrialMech takes only the parts its `industrial` rules name.
+// `availability` is the Construction Options table of Interstellar Operations: Alternate Eras (printed pp.44-45, read against the
+// page image), the production year of the standard 'Mech of the type: Standard BattleMechs and Standard IndustrialMechs 2470 (the
+// Primitive kinds, 2443 and 2350, have their own construction rules, IO:AE p.116, which this tool does not build); Omni Technology
+// 2856 for the Clans and 3052 for the Inner Sphere (p.45: "IS Intro: 3052").
+// ---------------------------------------------------------------------------------------------------------------
+export type MechType = "mech" | "industrialmech" | "omnimech";
+export interface IndustrialRules {
+  /** The page each rule is read from: TechManual's IndustrialMech Construction chapter (printed pp.64-75). */
+  cites: Record<"techBase" | "configuration" | "structure" | "engine" | "heatSinks" | "jump" | "cockpit" | "gyro" | "myomer" | "armor" | "powerAmplifier" | "fireControl", Cite>;
+  /** Inner Sphere or Clan, not mixed (p.64: "one of two available technology bases"). */
+  techBases: ("inner-sphere" | "clan")[];
+  /** Only biped and quad bodies: "design type (biped or four-legged)". */
+  configurations: string[];
+  /** Part keys (the tables above) an IndustrialMech may use, per table. Standard armor is the book's Heavy Industrial. */
+  parts: Record<"structure" | "engine" | "gyro" | "cockpit" | "heatSink" | "myomer" | "armor", string[]>;
+  /** What an IndustrialMech's book calls a part the BattleMech tables name otherwise: the standard armor is "Heavy Industrial" (p.72). */
+  armorNames: Record<string, string>;
+  /** Heat sinks that cost no tonnage with each engine type (the IndustrialMech Bonus Heat Sinks Table, p.71). */
+  freeHeatSinks: Record<string, number>;
+  /** Engines whose IndustrialMech may mount jump jets (fusion and fission). Only standard jump jets, in torso and legs. */
+  jumpEngines: string[];
+  /** Engines whose energy weapons need power amplifiers: a share of the energy weapons' weight, up to the half ton, no slots. */
+  powerAmplifier: { engines: string[]; share: number };
+  /** Catalog rows barred unless the cockpit has Advanced Fire Control (Artemis IV, Beagle Active Probe or its Clan equivalent, C3 and C3i units, targeting computers). */
+  needsFireControl: string[];
+}
+export interface MechTypeRow {
+  id: MechType;
+  label: string;
+  /** The words the screens show beside the choice. */
+  description: string;
+  /** The unit type the equipment table is read as (data/units.ts): an OmniMech mounts what a BattleMech does. */
+  unit: UnitId;
+  rulesLevel: RulesLevel;
+  /** False while the rules for the type are not built: the choice is listed, disabled, with `notReady` beside it. */
+  ready: boolean;
+  notReady?: string;
+  /** The page where the type's construction rules start, and the page that says its years. */
+  cite: Cite;
+  availabilityCite: Cite;
+  checked: Checked;
+  availability: Span[];
+  clanAvailability?: Span[];
+  tonnage: { min: number; max: number; step: number; cite: Cite };
+  industrial?: IndustrialRules;
+}
+const TM_P = (page: number): Cite => ({ book: "TechManual", page });
+export const MECH_TYPES: MechTypeRow[] = [
+  {
+    id: "mech",
+    label: "BattleMech",
+    description: "The combat 'Mech of Total Warfare play, built by the BattleMech construction rules.",
+    unit: "mech",
+    rulesLevel: "introductory", // the Introductory game is BattleMechs of 3025 technology (Total Warfare p.275); IndustrialMechs begin at Standard
+    ready: true,
+    cite: TM_P(44),
+    availabilityCite: { book: IO_AE, page: 44 },
+    checked: "page",
+    availability: [{ from: 2470 }],
+    tonnage: { min: 20, max: 100, step: 5, cite: TM_P(46) },
+  },
+  {
+    id: "industrialmech",
+    label: "IndustrialMech",
+    description: "A civilian work 'Mech with its own construction rules: industrial structure, a simple cockpit, engines that need not be fusion, and armor from commercial to heavy industrial.",
+    unit: "industrialmech",
+    rulesLevel: "standard",
+    ready: true,
+    cite: TM_P(64),
+    availabilityCite: { book: IO_AE, page: 44 },
+    checked: "page",
+    availability: [{ from: 2470 }],
+    tonnage: { min: 10, max: 100, step: 5, cite: TM_P(64) },
+    industrial: {
+      cites: {
+        techBase: TM_P(64),
+        configuration: TM_P(65),
+        structure: TM_P(67),
+        engine: TM_P(68),
+        jump: TM_P(69),
+        cockpit: TM_P(69),
+        gyro: TM_P(69),
+        myomer: TM_P(70),
+        heatSinks: TM_P(71),
+        armor: TM_P(72),
+        powerAmplifier: TM_P(74),
+        fireControl: TM_P(69),
+      },
+      techBases: ["inner-sphere", "clan"],
+      configurations: ["biped", "quad"],
+      parts: {
+        structure: ["industrial"],
+        engine: ["standard", "ice", "fuel-cell", "fission"],
+        gyro: ["standard"],
+        cockpit: ["industrial", "industrial-afc"],
+        heatSink: ["single"],
+        myomer: ["standard", "industrial-tsm"],
+        armor: ["standard", "industrial", "commercial"],
+      },
+      armorNames: { standard: "Heavy Industrial" },
+      freeHeatSinks: { standard: 10, ice: 0, "fuel-cell": 1, fission: 5 },
+      jumpEngines: ["standard", "fission"],
+      powerAmplifier: { engines: ["ice", "fuel-cell"], share: 0.1 },
+      needsFireControl: [
+        "artemis-iv-is",
+        "artemis-iv-clan",
+        "prototype-artemis-iv-is",
+        "beagle-active-probe-is",
+        "prototype-beagle-active-probe-is",
+        "active-probe-clan",
+        "c3-computer-master-is",
+        "c3-computer-slave-is",
+        "improved-c3-computer-is",
+        "c3-boosted-master-is",
+        "c3-boosted-slave-is",
+        "c3-emergency-master-is",
+        "targeting-computer-is",
+        "targeting-computer-clan",
+      ],
+    },
+  },
+  {
+    id: "omnimech",
+    label: "OmniMech",
+    description: "A 'Mech built on a base chassis that keeps its fixed parts and carries interchangeable pods in several configurations, Prime being the mainstay layout.",
+    unit: "mech",
+    rulesLevel: "standard",
+    ready: false,
+    notReady: "its rules are not built; an OmniMech chassis needs its pod configurations.",
+    cite: TM_P(19),
+    availabilityCite: { book: IO_AE, page: 45 },
+    checked: "page",
+    availability: [{ from: 3052 }],
+    clanAvailability: [{ from: 2856 }],
+    tonnage: { min: 20, max: 100, step: 5, cite: TM_P(46) },
+  },
+];
