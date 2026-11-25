@@ -4,7 +4,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import type { Catalog, EquipmentRow } from "../../rules/catalog";
-import { locationName } from "../../rules/mech";
+import { bodyOf, locationName } from "../../rules/mech";
 import type { Layout, LocationCode, MechRecord, Mount, SlotCell } from "../../rules/mech";
 import { Changed, mountDomId } from "../EditorPage";
 import type { OnEdit } from "../EditorPage";
@@ -221,8 +221,9 @@ export default function SlotsPanel({
   const drawn = new Set(layout.locations.flatMap((loc) => (layout.slots[loc] ?? []).flatMap((c) => (c.mountId ? [c.mountId] : []))));
   const unplacedIds = new Set(layout.unplaced.map((m) => m.id));
   const other = record.mounts.filter((m) => !drawn.has(m.id) && !unplacedIds.has(m.id));
-  const sheet = Object.hasOwn(SHEET_ROWS, record.configuration) ? SHEET_ROWS[record.configuration] : undefined;
-  const known = Object.hasOwn(SHEET_ORDER, record.configuration) ? (SHEET_ORDER[record.configuration] ?? []) : [];
+  const body = bodyOf(record.configuration);
+  const sheet = Object.hasOwn(SHEET_ROWS, body) ? SHEET_ROWS[body] : undefined;
+  const known = Object.hasOwn(SHEET_ORDER, body) ? (SHEET_ORDER[body] ?? []) : [];
   const columns = [...known.filter((l) => layout.locations.includes(l)), ...layout.locations.filter((l) => !known.includes(l))];
   const sheetStyle = sheet ? ({ "--bt-areas": sheet.map((row) => `"${row}"`).join(" ") } as CSSProperties) : undefined;
 

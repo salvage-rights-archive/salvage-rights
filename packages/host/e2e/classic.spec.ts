@@ -103,6 +103,21 @@ test("export a 'Mech to a file, delete it and import the file back", async ({ pa
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(MECH_NAME);
 });
 
+test("build a Land-Air 'Mech through the form and see its rules level, conversion parts and weight in the editor", async ({ page }) => {
+  await page.goto(HOME);
+  const form = page.getByRole("form", { name: "Build a new one" });
+  await form.getByLabel("Name").fill("Hawk");
+  await form.getByLabel("Configuration").selectOption({ label: "Land-Air 'Mech (experimental)" });
+  await form.getByRole("button", { name: "Start building" }).click();
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Hawk");
+  const rules = page.getByRole("region", { name: "Rules check" });
+  await expect(rules.getByText("Land-Air 'Mech is built under experimental rules, not standard rules.")).toBeVisible();
+  await expect(rules.getByText("Interstellar Operations: Alternate Eras (Catalyst Game Labs), p. 100")).toBeVisible();
+  await expect(page.getByRole("list", { name: "Center Torso slots" }).getByText("Landing Gear")).toBeVisible();
+  await expect(page.getByRole("list", { name: "Head slots" }).getByText("Avionics")).toBeVisible();
+  await expect(page.getByText("Conversion equipment").first()).toBeVisible();
+});
+
 test("the home, import and editor pages do not scroll sideways at 320 px wide", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 700 });
   await importMech(page, DEV);

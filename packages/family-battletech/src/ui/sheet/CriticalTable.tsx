@@ -1,7 +1,7 @@
 // The critical table: each location's slots numbered 1 to 6 as on the published sheets, the hit boxes under the center torso
 // and the damage transfer diagram. Slot labels are the editor's own, from `layout`.
 import { CRITICAL_BOXES, EMPTY_SLOT, SHEET_COLUMNS } from "../../data/sheet";
-import { locationName } from "../../rules/mech";
+import { bodyOf, locationName } from "../../rules/mech";
 import type { LocationCode, Layout, MechRecord } from "../../rules/mech";
 import { dollUnitFromRecord } from "../doll/layouts";
 import { fitDoll } from "../doll/box";
@@ -65,7 +65,8 @@ function Location({ code, layout, x, y, width }: { code: LocationCode; layout: L
 const heightOf = (code: LocationCode, layout: Layout) => 40 + Math.max(1, Math.ceil((layout.slots[code]?.length ?? 0) / 6)) * (6 * PITCH + 12) + 6;
 
 export default function CriticalTable({ rect, record, layout }: { rect: Rect; record: MechRecord; layout: Layout }) {
-  const columns = Object.hasOwn(SHEET_COLUMNS, record.configuration) ? SHEET_COLUMNS[record.configuration] : undefined;
+  const body = bodyOf(record.configuration);
+  const columns = Object.hasOwn(SHEET_COLUMNS, body) ? SHEET_COLUMNS[body] : undefined;
   if (!layout.supported || !columns) {
     return (
       <Frame rect={rect} title="CRITICAL TABLE">

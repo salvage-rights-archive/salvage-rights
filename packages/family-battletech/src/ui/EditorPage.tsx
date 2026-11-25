@@ -10,7 +10,7 @@ import type { Catalog } from "../rules/catalog";
 import { runChecks } from "../rules/checks";
 import type { Finding } from "../rules/checks";
 import { changedSinceImport } from "../rules/mordel";
-import { ARM_FULL, configurationLabel, editRecord, layout as buildLayout, locationName, weights as buildWeights } from "../rules/mech";
+import { ARM_FULL, bodyOf, configurationLabel, editRecord, layout as buildLayout, locationName, weights as buildWeights } from "../rules/mech";
 import type { Layout, LocationCode, MechRecord } from "../rules/mech";
 import ArmorPanel from "./editor/ArmorPanel";
 import { dialogKeyDown } from "./editor/dialog";
@@ -783,7 +783,7 @@ function Editor({ initial, catalog, storage }: { initial: MechRecord; catalog: C
                 </div>
               ))}
             </div>
-            {(record.configuration === "biped" || record.configuration === "tripod") &&
+            {(bodyOf(record.configuration) === "biped" || bodyOf(record.configuration) === "tripod") &&
               (["LA", "RA"] as const).map((arm) => {
                 const has = { ...ARM_FULL, ...record.arms?.[arm] };
                 const arms = locationName(arm);

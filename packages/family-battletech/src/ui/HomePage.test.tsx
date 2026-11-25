@@ -94,6 +94,23 @@ describe("Classic BattleTech home", () => {
     });
   });
 
+  it("offers the Land-Air 'Mech with its rules level and starts one with its three jump jets", async () => {
+    const user = userEvent.setup();
+    renderHome();
+    const form = await screen.findByRole("form", { name: "Build a new one" });
+    const config = within(form).getByLabelText<HTMLSelectElement>("Configuration");
+    expect([...config.options].map((o) => o.text)).toEqual(["Biped", "Quad", "Land-Air 'Mech (experimental)", "Bimodal Land-Air 'Mech (experimental)"]);
+    await user.type(within(form).getByLabelText("Name"), "Hawk");
+    await user.selectOptions(config, "lam");
+    await waitFor(() => expect(within(form).getByRole<HTMLButtonElement>("button", { name: "Start building" }).disabled).toBe(false));
+    await user.click(within(form).getByRole("button", { name: "Start building" }));
+    await waitFor(async () => {
+      const [entry] = await (await openFamilyStorage()).list();
+      expect(entry?.record?.configuration).toBe("lam");
+      expect(entry?.record?.mounts.filter((m) => m.equipmentId === "jump-jet-is")).toHaveLength(3);
+    });
+  });
+
   it("lists saved 'Mechs with tonnage and designer credit, duplicates, and deletes after a confirm", async () => {
     const user = userEvent.setup();
     const storage = await openFamilyStorage();

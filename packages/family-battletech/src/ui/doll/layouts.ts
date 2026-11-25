@@ -431,7 +431,10 @@ export const dollLocationName = (loc: string, arms?: 2 | 4): string => {
 };
 
 /** The layout each configuration draws with; none is drawn for the rest yet. */
-const LAYOUT_OF_CONFIGURATION: Record<string, DollLayoutId> = { biped: "biped", quad: "quad", tripod: "tripod" };
+const LAYOUT_OF_CONFIGURATION: Record<string, DollLayoutId> = { biped: "biped", quad: "quad", tripod: "tripod", lam: "biped", "bimodal-lam": "biped" };
+
+/** The Land-Air 'Mech picture (canopy head, folded wings, fighter-mode inset) for the configurations that are one. */
+const LAM_VARIANT: Record<string, IDollVariant["lam"]> = { lam: "lam", "bimodal-lam": "bimodal" };
 
 const recordLocation = (loc: string) => (Object.hasOwn(RECORD_OF, loc) ? RECORD_OF[loc] : undefined);
 
@@ -444,7 +447,7 @@ export const dollUnitFromRecord = (record: MechRecord): IDollUnit | undefined =>
     const max = maxArmor(record), structure = structurePoints(record);
     return {
         layoutId,
-        variant: { armless: false, superheavy: record.tons > 100 },
+        variant: { armless: false, superheavy: record.tons > 100, ...(Object.hasOwn(LAM_VARIANT, record.configuration) ? { lam: LAM_VARIANT[record.configuration] } : {}) },
         armor: (loc) => {
             const at = recordLocation(loc);
             if (!at) return 0;

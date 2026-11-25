@@ -1,7 +1,7 @@
 // Armor points per location, with the paper doll beside them: the armor diagram (front and rear) and the internal
 // structure at a smaller scale. Choosing a location anywhere selects it for the whole page.
 import { ARMOR } from "../../data/chassis";
-import { locationName, maxArmor } from "../../rules/mech";
+import { bodyOf, locationName, maxArmor } from "../../rules/mech";
 import type { Layout, LocationCode, MechRecord } from "../../rules/mech";
 import { dollBox } from "../doll/box";
 import MechDoll from "../doll/mech-doll";
@@ -50,7 +50,7 @@ export default function ArmorPanel({
 
   // The fields in the order they are seen on the body-shaped grid, row by row, so Tab follows the picture.
   const cellOf = (location: string, side: "front" | "rear"): Cell | undefined =>
-    (BODY_CELLS[record.configuration] ?? {})[side === "rear" ? `${location}-rear` : location];
+    (BODY_CELLS[Object.hasOwn(BODY_CELLS, record.configuration) ? record.configuration : bodyOf(record.configuration)] ?? {})[side === "rear" ? `${location}-rear` : location];
   const fieldOrder = locations
     .flatMap((location): [LocationCode, "front" | "rear"][] =>
       WITH_REAR.includes(location) || record.armor[location]?.rear !== undefined ? [[location, "front"], [location, "rear"]] : [[location, "front"]],
