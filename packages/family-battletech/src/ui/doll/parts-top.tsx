@@ -1,8 +1,9 @@
 // Salvage Rights paper doll engine. GPL-3.0-or-later.
 import React from "react";
+import { INK, PAPER } from "./pen";
 import type { BubblePoint, Shape } from "./shape-bubbles";
 import {
-    aroundPivot, bar, inner, joint, octagon, offsetShape, outline, plateFace, polygonPath, rivets, seams, slab, type IPart,
+    aroundPivot, bar, inner, joint, octagon, offsetShape, outline, plateFace, polygonPath, rivets, round, seams, slab, type IDecor, type IPart,
 } from "./parts-kit";
 
 /*
@@ -165,4 +166,24 @@ export const TOP_PARTS: Record<TopPartId, IPart> = {
     "hull-aft-center": aftCenter,
     "hull-aft-side": aftSide,
     "top-leg": topLeg,
+};
+
+/** A track unit under a foot seen from above, centered on the foot point and lying along the way the leg runs out of it. */
+export const topPod = ([fx, fy]: BubblePoint, [dx, dy]: BubblePoint): IDecor => {
+    const angle = Math.atan2(-dx, dy) * 180 / Math.PI, length = 104, width = 50, r = width / 2;
+    const turn = angle * Math.PI / 180;
+    const corners: Shape = ([[-r, -length / 2], [r, -length / 2], [r, length / 2], [-r, length / 2]] as BubblePoint[])
+        .map(([x, y]): BubblePoint => [fx + x * Math.cos(turn) - y * Math.sin(turn), fy + x * Math.sin(turn) + y * Math.cos(turn)]);
+    const stadium = (w: number, l: number): string =>
+        `M ${-w / 2},${-l / 2 + w / 2} A ${w / 2},${w / 2} 0 0 1 ${w / 2},${-l / 2 + w / 2} L ${w / 2},${l / 2 - w / 2} A ${w / 2},${w / 2} 0 0 1 ${-w / 2},${l / 2 - w / 2} Z`;
+    return {
+        bounds: corners,
+        draw: (pen) => (
+            <g transform={`translate(${fx} ${fy}) rotate(${round(angle)})`}>
+                <path d={stadium(width, length)} fill={PAPER} stroke={INK} strokeWidth={pen.contour} strokeLinejoin="round" />
+                {pen.panel > 0 ? <path d={stadium(width - 14, length - 14)} fill="none" stroke={INK} strokeWidth={round(pen.panel * 2.4)} strokeDasharray="4 5" /> : null}
+                {[-30, 0, 30].map((y) => <circle key={y} cx={0} cy={y} r={9} fill={PAPER} stroke={INK} strokeWidth={round(Math.max(pen.panel, pen.contour * 0.5))} />)}
+            </g>
+        ),
+    };
 };

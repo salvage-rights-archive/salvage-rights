@@ -2,7 +2,7 @@
 import React, { type JSX } from "react";
 import Bubble from "./bubble";
 import { frameTransform, placePoint, placeShape, svgTransform, toSheet, type IDollFrame } from "./geometry";
-import { ARMOR_PITCH, dollLocationName, FRONT_GUIDE, labelLines, labelPoint, layoutOf, STRUCTURE_PITCH, type DollUse, type IDollLocation, type IDollUnit } from "./layouts";
+import { ARMOR_PITCH, dollLocationName, FRONT_GUIDE, labelLines, labelPoint, layoutOf, STRUCTURE_PITCH, type DollUse, type IDollExtra, type IDollLocation, type IDollUnit } from "./layouts";
 import { PARTS } from "./parts";
 import { DEFAULT_PEN, DEFAULT_TRANSFER_PEN, DollDefs, INK, PEN_PRESETS, penIds, type IPenStyle, type PenPreset } from "./pen";
 import { cornerAt, drawnBubble, edgeDistance, gridIn, insideShape, packBubbles, shapePoints, type BubblePoint, type Shape } from "./shape-bubbles";
@@ -153,6 +153,15 @@ export default function MechDoll(props: IMechDollProps): JSX.Element {
     const ink = props.ink ?? INK;
     const guide = layout.guide ?? FRONT_GUIDE;
     const locations = use === "armor" ? [...layout.front, ...layout.rear] : layout.front;
+    // A wing, a rotor or a pod: drawn, never a button, and clicks go through it to what is under it.
+    const extras = (layout.extras ?? []).filter((extra) => extra.uses.includes(use));
+    const drawExtra = (extra: IDollExtra): JSX.Element => (
+        <g key={extra.id} data-decor={extra.id} aria-hidden="true" pointerEvents="none">
+            <g transform={frameTransform(frame)}>
+                <g transform={svgTransform(extra.at)}>{extra.decor.draw(pen, ids)}</g>
+            </g>
+        </g>
+    );
     const anchorOf = (loc: string): BubblePoint | undefined => {
         const location = locations.find((each) => each.loc === loc);
         return location ? placePoint(PARTS[location.part].label, location.at) : undefined;
@@ -226,6 +235,7 @@ export default function MechDoll(props: IMechDollProps): JSX.Element {
                     </g>
                 ) : null}
             </g>
+            {extras.filter((extra) => extra.behind).map(drawExtra)}
             {locations.map((location) => {
                 const chosen = props.selected === location.loc;
                 const choose = () => onSelect?.(location.loc);
@@ -247,13 +257,14 @@ export default function MechDoll(props: IMechDollProps): JSX.Element {
                     style: { cursor: "pointer" },
                 } : {};
                 return (
-                    <g key={location.loc} data-loc={location.loc} {...buttonProps}>
+                    <g key={location.loc} data-loc={location.loc} data-part={location.part} {...buttonProps}>
                         <g transform={frameTransform(frame)}>
                             <g transform={svgTransform(location.at)}>{PARTS[location.part].draw(pen, ids)}</g>
                         </g>
                     </g>
                 );
             })}
+            {extras.filter((extra) => !extra.behind).map(drawExtra)}
             {interactive ? (
                 <g aria-hidden="true" pointerEvents="none" data-outlines="">
                     {locations.filter((location) => location.loc === props.selected || wrong(location.loc)).map((location) => (

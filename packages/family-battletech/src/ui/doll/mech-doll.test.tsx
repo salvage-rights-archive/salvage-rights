@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { bipedRecord, quadRecord } from "../../rules/fixtures";
 import { editRecord, maxArmor, structurePoints, type MechRecord } from "../../rules/mech";
 import type { IDollFrame } from "./geometry";
-import { ARMOR_PITCH, DOLL_LAYOUTS, dollUnitFromRecord, STRUCTURE_PITCH, STRUCTURE_SCALE, type DollLayoutId, type DollUse, type IDollUnit } from "./layouts";
+import { ARMOR_PITCH, DOLL_LAYOUTS, dollUnitFromRecord, STRUCTURE_PITCH, STRUCTURE_SCALE, layoutOf, type DollLayoutId, type DollUse, type IDollUnit, type IDollVariant } from "./layouts";
 import MechDoll, { fillPlates, placedPlates } from "./mech-doll";
 import type { PenPreset } from "./pen";
 import { edgeDistance, insideShape } from "./shape-bubbles";
@@ -37,30 +37,36 @@ const MIN_PITCH = { armor: 12, structure: 10 };
 /** The most each doll location holds at 100 tons: the head 9 armor and 3 structure, the rest twice and once the rows of the
  * internal structure table, any leg (a tripod's or monoped's center leg too) taking the leg row. A rear torso holds a sixth of
  * its torso's armor, which the front then lacks. */
-const FULL = (() => {
-  const row = structurePoints(bipedRecord({ tons: 100 }));
+const fullOf = (superheavy: boolean) => {
+  // A superheavy of 200 tons: Interstellar Operations: Alternate Eras, Superheavy 'Mech Structure Table, p. 155, and its head
+  // holds 12 armor (same page). The table is not in the rules module yet.
+  const row = superheavy ? { CT: 60, LT: 42, LA: 33, LL: 42 } : structurePoints(bipedRecord({ tons: 100 }));
+  const head = superheavy ? { armor: 12, structure: 4 } : { armor: 9, structure: 3 };
   const structure = (loc: string): number =>
-    loc === "hd" ? 3 : loc === "ct" ? row.CT ?? 0 : loc === "lt" || loc === "rt" ? row.LT ?? 0 : loc === "la" || loc === "ra" ? row.LA ?? 0 : row.LL ?? 0;
+    loc === "hd" ? head.structure : loc === "ct" ? row.CT ?? 0 : loc === "lt" || loc === "rt" ? row.LT ?? 0 : loc === "la" || loc === "ra" ? row.LA ?? 0 : row.LL ?? 0;
   const rearOf = (loc: string): number => Math.floor((structure(loc) * 2) / 6);
   const isRear = (loc: string): boolean => loc === "ctr" || loc === "ltr" || loc === "rtr";
   return {
     structure: (loc: string): number => (isRear(loc) ? 0 : structure(loc)),
     armor: (loc: string): number => {
       if (isRear(loc)) return rearOf(loc.slice(0, 2) === "ct" ? "ct" : `${loc[0]}t`);
-      const max = loc === "hd" ? 9 : structure(loc) * 2;
+      const max = loc === "hd" ? head.armor : structure(loc) * 2;
       return loc === "ct" || loc === "lt" || loc === "rt" ? max - rearOf(loc) : max;
     },
   };
-})();
+};
 
-const fullUnit = (layoutId: DollLayoutId): IDollUnit => ({
-  layoutId,
-  variant: { tracks: false, armless: false, superheavy: false },
-  armor: FULL.armor,
-  structure: FULL.structure,
-  armorDamaged: () => false,
-  structureDamaged: () => false,
-});
+const fullUnit = (layoutId: DollLayoutId, variant: Partial<IDollVariant> = {}): IDollUnit => {
+  const full = fullOf(variant.superheavy === true);
+  return {
+    layoutId,
+    variant: { armless: false, superheavy: false, ...variant },
+    armor: full.armor,
+    structure: full.structure,
+    armorDamaged: () => false,
+    structureDamaged: () => false,
+  };
+};
 
 const BODY_TYPES = (Object.keys(DOLL_LAYOUTS) as DollLayoutId[]).filter((id) => !id.startsWith("micro"));
 
@@ -247,9 +253,13 @@ describe("the paper doll", () => {
     expect([unit.armor("cl"), unit.armor("ll"), unit.structure("cl")]).toEqual([30, 6, 21]);
   });
 
-  it.each(BODY_TYPES)("draws every point of a 100-ton %s at full armor and structure, at a size a bubble can be read", (layoutId) => {
-    const unit = fullUnit(layoutId);
-    const layout = DOLL_LAYOUTS[layoutId];
+  it.each<[string, DollLayoutId, Partial<IDollVariant>]>([
+    ...BODY_TYPES.map((id): [string, DollLayoutId, Partial<IDollVariant>] => [`100-ton ${id}`, id, {}]),
+    ["200-ton superheavy biped", "biped", { superheavy: true }],
+    ["200-ton superheavy tripod", "tripod", { superheavy: true }],
+  ])("draws every point of a %s at full armor and structure, at a size a bubble can be read", (_name, layoutId, variant) => {
+    const unit = fullUnit(layoutId, variant);
+    const layout = layoutOf(unit);
     const frame = { centerX: 0, top: 0, scale: 1 };
     const armor = countsOf(renderToStaticMarkup(<svg><MechDoll unit={unit} use="armor" frame={frame} suffix="t" /></svg>));
     const structure = countsOf(renderToStaticMarkup(<svg><MechDoll unit={unit} use="structure" frame={frame} suffix="t" /></svg>));
@@ -262,6 +272,29 @@ describe("the paper doll", () => {
       expect(fillPlates(plates, unit.armor(location.loc), ARMOR_PITCH).pitch, `${location.loc} armor`).toBeGreaterThanOrEqual(MIN_PITCH.armor);
       expect(fillPlates(plates, unit.structure(location.loc), STRUCTURE_PITCH).pitch, `${location.loc} structure`).toBeGreaterThanOrEqual(MIN_PITCH.structure);
     }
+  });
+
+  it.each<[string, DollLayoutId, Partial<IDollVariant>, Record<string, string>, string[]]>([
+    ["superheavy biped", "biped", { superheavy: true }, { hd: "head-super", ct: "torso-center-super", lt: "torso-side-super" }, []],
+    ["superheavy tripod", "tripod", { superheavy: true }, { hd: "head-super", ct: "torso-center-super", rt: "torso-side-super" }, []],
+    ["Land-Air 'Mech", "biped", { lam: "lam" }, { hd: "head-canopy" }, ["wing-folded-left", "wing-folded-right", "fighter-inset"]],
+    ["bimodal Land-Air 'Mech", "biped", { lam: "bimodal" }, { hd: "head-canopy" }, ["wing-folded-left", "wing-folded-right", "fighter-inset"]],
+    ["VTOL Land-Air 'Mech", "biped", { lam: "vtol" }, { hd: "head-canopy" }, ["rotor"]],
+    ["Partial-wing 'Mech", "biped", { lam: "partial-wing" }, { hd: "head-canopy" }, ["wing-fixed-left", "wing-fixed-right"]],
+    ["QuadVee on tracks", "quad", { pods: "tracks" }, { fll: "quad-leg-front" }, ["pod-fll", "pod-frl", "pod-rll", "pod-rrl"]],
+    ["QuadVee on wheels", "quad", { pods: "wheels" }, { rrl: "quad-leg-rear" }, ["pod-fll", "pod-frl", "pod-rll", "pod-rrl"]],
+    ["tracked octopod", "octopod", { pods: "tracks" }, { l4: "top-leg" }, ["l1", "r1", "l2", "r2", "l3", "r3", "l4", "r4"].map((loc) => `pod-${loc}`)],
+    ["armless biped", "biped", { armless: true }, { la: "arm-cap", ra: "arm-cap" }, []],
+  ])("swaps the parts of a %s and leaves its locations as they were", (_name, layoutId, variant, parts, decor) => {
+    const frame = { centerX: 0, top: 0, scale: 1 };
+    const host = document.createElement("div");
+    host.innerHTML = renderToStaticMarkup(<svg><MechDoll unit={fullUnit(layoutId, variant)} use="armor" frame={frame} suffix="v" /></svg>);
+    const base = DOLL_LAYOUTS[layoutId];
+    const wanted = [...(base?.front ?? []), ...(base?.rear ?? [])].map((location) => location.loc);
+    const drawn = [...host.querySelectorAll("g[data-loc]")];
+    expect(drawn.map((group) => group.getAttribute("data-loc"))).toEqual(wanted);
+    for (const [loc, part] of Object.entries(parts)) expect(host.querySelector(`g[data-loc=${loc}]`)?.getAttribute("data-part"), loc).toBe(part);
+    expect([...host.querySelectorAll("[data-decor]")].map((each) => each.getAttribute("data-decor")).sort()).toEqual([...decor].sort());
   });
 
   it.each(BODY_TYPES)("sends the damage of every location of a %s to places it has, and reaches the center torso from all but the head", (layoutId) => {

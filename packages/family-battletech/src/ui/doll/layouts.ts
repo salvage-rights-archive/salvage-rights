@@ -2,7 +2,8 @@
 import { locationName, maxArmor, structurePoints, type LocationCode, type MechRecord } from "../../rules/mech";
 import { placePoint, type IPlacement } from "./geometry";
 import { PART_PIVOTS, PARTS, type PartId } from "./parts";
-import { mapPath } from "./parts-kit";
+import { mapPath, type IDecor } from "./parts-kit";
+import { applyVariant, FRONT_GUIDE, scaleLocation } from "./variants";
 import { BAY, HEAD_CENTER, HIP_X, ROW } from "./parts-top";
 import type { BubblePoint } from "./shape-bubbles";
 
@@ -38,6 +39,8 @@ export interface IDollLayout {
     /** Drawn in this order, back to front. */
     front: IDollLocation[];
     rear: IDollLocation[];
+    /** Drawings that are no location, from a variant. */
+    extras?: IDollExtra[];
     /** The blueprint pen's center line and cross lines, where the figure's own are not the biped's. */
     guide?: IDollGuide;
     /** The labels' type size as a share of the use's own: a figure drawn small has its labels drawn small with it. */
@@ -51,12 +54,28 @@ export interface IDollGuide {
     cross: string;
 }
 
-export const FRONT_GUIDE: IDollGuide = { armor: "M 0,40 L 0,950 M 0,962 L 0,1170", other: "M 0,40 L 0,950", cross: "M -360,230 L 360,230 M -360,520 L 360,520" };
+export { FRONT_GUIDE };
 
+/** A drawing on a figure that is no location: a wing, a rotor, a pod, a picture beside it. It is drawn in the figure's units
+ * at `at`, behind the locations or over them, in the uses listed. */
+export interface IDollExtra {
+    id: string;
+    decor: IDecor;
+    at: IPlacement;
+    behind: boolean;
+    uses: DollUse[];
+}
+
+/** The part swaps and additions a unit asks for; each applies to the layouts it fits and leaves the locations as they are. */
 export interface IDollVariant {
-    tracks: boolean;
+    /** Track pods or wheel pods under every leg (wheels on the front-view layouts only). */
+    pods?: "tracks" | "wheels";
+    /** A shoulder cap in place of each arm, on the biped. */
     armless: boolean;
+    /** The superheavy head and shells, on the biped and the tripod. */
     superheavy: boolean;
+    /** The Land-Air 'Mech family, on the biped: canopy head and folded wings (LAM, bimodal), a rotor (VTOL), fixed wings. */
+    lam?: "lam" | "bimodal" | "vtol" | "partial-wing";
 }
 
 /** What the doll needs from a unit: counts per location (already capped by the rules) and the damage marked. */
@@ -70,7 +89,17 @@ export interface IDollUnit {
 }
 
 /** The layout a unit is drawn with. */
-export const layoutOf = (unit: Pick<IDollUnit, "layoutId" | "variant">): IDollLayout | undefined => DOLL_LAYOUTS[unit.layoutId];
+const resolved = new Map<string, IDollLayout>();
+export const layoutOf = (unit: Pick<IDollUnit, "layoutId" | "variant">): IDollLayout | undefined => {
+    const base = DOLL_LAYOUTS[unit.layoutId];
+    if (!base) return undefined;
+    const key = `${unit.layoutId}|${JSON.stringify(unit.variant)}`;
+    const known = resolved.get(key);
+    if (known) return known;
+    const made = applyVariant(base, unit.variant);
+    resolved.set(key, made);
+    return made;
+};
 
 /** A location label lines: its full name, or only its code (CT, LTR) where the figure is drawn too small for names. */
 export const labelLines = (location: IDollLocation, short = false): string[] =>
@@ -295,12 +324,7 @@ const OCTOPOD = hullLayout("octopod", 4, legPairs(4, numbered(4)), [], HULL_TOP 
 /** The same figure at a smaller scale, for the very small 'Mechs: every part, position and label moved in by `k`, the
  * labels' type with them, so that a given bubble is larger against the figure. */
 const scaledLayout = (base: IDollLayout, id: DollLayoutId, k: number): IDollLayout => {
-    const scale = (location: IDollLocation): IDollLocation => ({
-        ...location,
-        at: { ...location.at, x: location.at.x * k, y: location.at.y * k, scale: (location.at.scale ?? 1) * k },
-        labelAt: [location.labelAt[0] * k, location.labelAt[1] * k],
-        shortHangsFrom: location.shortHangsFrom && [location.shortHangsFrom[0] * k, location.shortHangsFrom[1] * k],
-    });
+    const scale = (location: IDollLocation): IDollLocation => scaleLocation(location, k);
     const guide = base.guide ?? FRONT_GUIDE;
     const guideScaled = (d: string): string => mapPath(d, ([x, y]) => [x * k, y * k]);
     return {
@@ -362,7 +386,7 @@ export const dollUnitFromRecord = (record: MechRecord): IDollUnit | undefined =>
     const max = pointsFor(record, maxArmor), structure = pointsFor(record, structurePoints);
     return {
         layoutId,
-        variant: { tracks: false, armless: false, superheavy: record.tons > 100 },
+        variant: { armless: false, superheavy: record.tons > 100 },
         armor: (loc) => {
             const at = recordLocation(loc);
             if (!at) return 0;

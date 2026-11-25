@@ -1,5 +1,5 @@
 // How much room a doll needs on its sheet.
-import { placePoint } from "./geometry";
+import { placePoint, placeShape } from "./geometry";
 import { placedPlates } from "./mech-doll";
 import { PARTS } from "./parts";
 import { labelLines, labelPoint, layoutOf, type DollUse, type IDollUnit } from "./layouts";
@@ -37,6 +37,13 @@ export function dollBox(unit: Pick<IDollUnit, "layoutId" | "variant">, use: Doll
     const [from, to] = location.labelAnchor === "start" ? [x, x + width] : location.labelAnchor === "end" ? [x - width, x] : [x - width / 2, x + width / 2];
     xs.push(from, to);
     ys.push(y - size, y + labelLines(location, short).length * (size + 2));
+  }
+  for (const extra of layout?.extras ?? []) {
+    if (!extra.uses.includes(use)) continue;
+    for (const [x, y] of placeShape(extra.decor.bounds, extra.at)) {
+      xs.push(x * scale);
+      ys.push(y * scale);
+    }
   }
   const left = Math.min(...xs) - MARGIN;
   const top = Math.min(...ys) - MARGIN;
