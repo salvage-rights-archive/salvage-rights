@@ -6,8 +6,8 @@ import { afterEach, describe, expect, it } from "vitest";
 import { bipedRecord, quadRecord } from "../../rules/fixtures";
 import { editRecord, maxArmor, structurePoints, type MechRecord } from "../../rules/mech";
 import type { IDollFrame } from "./geometry";
-import { DOLL_LAYOUTS, dollUnitFromRecord, STRUCTURE_SCALE, type DollUse } from "./layouts";
-import MechDoll, { placedPlates } from "./mech-doll";
+import { ARMOR_PITCH, DOLL_LAYOUTS, dollUnitFromRecord, STRUCTURE_PITCH, STRUCTURE_SCALE, type DollLayoutId, type DollUse, type IDollUnit } from "./layouts";
+import MechDoll, { fillPlates, placedPlates } from "./mech-doll";
 import type { PenPreset } from "./pen";
 import { edgeDistance, insideShape } from "./shape-bubbles";
 
@@ -30,6 +30,39 @@ const draw = (record: MechRecord, use: DollUse, extra: { pen?: PenPreset; select
 );
 
 afterEach(cleanup);
+
+/** The smallest spacing, in layout units, at which a full location must still be drawn. */
+const MIN_PITCH = { armor: 12, structure: 10 };
+
+/** The most each doll location holds at 100 tons: the head 9 armor and 3 structure, the rest twice and once the rows of the
+ * internal structure table, any leg (a tripod's or monoped's center leg too) taking the leg row. A rear torso holds a sixth of
+ * its torso's armor, which the front then lacks. */
+const FULL = (() => {
+  const row = structurePoints(bipedRecord({ tons: 100 }));
+  const structure = (loc: string): number =>
+    loc === "hd" ? 3 : loc === "ct" ? row.CT ?? 0 : loc === "lt" || loc === "rt" ? row.LT ?? 0 : loc === "la" || loc === "ra" ? row.LA ?? 0 : row.LL ?? 0;
+  const rearOf = (loc: string): number => Math.floor((structure(loc) * 2) / 6);
+  const isRear = (loc: string): boolean => loc === "ctr" || loc === "ltr" || loc === "rtr";
+  return {
+    structure: (loc: string): number => (isRear(loc) ? 0 : structure(loc)),
+    armor: (loc: string): number => {
+      if (isRear(loc)) return rearOf(loc.slice(0, 2) === "ct" ? "ct" : `${loc[0]}t`);
+      const max = loc === "hd" ? 9 : structure(loc) * 2;
+      return loc === "ct" || loc === "lt" || loc === "rt" ? max - rearOf(loc) : max;
+    },
+  };
+})();
+
+const fullUnit = (layoutId: DollLayoutId): IDollUnit => ({
+  layoutId,
+  variant: { tracks: false, armless: false, superheavy: false },
+  armor: FULL.armor,
+  structure: FULL.structure,
+  armorDamaged: () => false,
+  structureDamaged: () => false,
+});
+
+const BODY_TYPES = (Object.keys(DOLL_LAYOUTS) as DollLayoutId[]).filter((id) => !id.startsWith("micro"));
 
 const markupOf = (record: MechRecord, use: DollUse, extra: { pen?: PenPreset } = {}) =>
   renderToStaticMarkup(<svg>{draw(record, use, extra)}</svg>);
@@ -204,6 +237,40 @@ describe("the paper doll", () => {
   });
 
   it("draws no doll for a configuration with no layout", () => {
-    expect(dollUnitFromRecord(quadRecord({ configuration: "tripod" }))).toBeUndefined();
+    expect(dollUnitFromRecord(quadRecord({ configuration: "hexapod" }))).toBeUndefined();
+  });
+
+  it("draws a tripod record with its center leg, which has the structure of the other legs", () => {
+    const record = editRecord(bipedRecord({ tons: 100, configuration: "tripod" }), (draft) => void (draft.armor.CL = { front: 30 }));
+    const unit = unitOf(record);
+    expect(unit.layoutId).toBe("tripod");
+    expect([unit.armor("cl"), unit.armor("ll"), unit.structure("cl")]).toEqual([30, 6, 21]);
+  });
+
+  it.each(BODY_TYPES)("draws every point of a 100-ton %s at full armor and structure, at a size a bubble can be read", (layoutId) => {
+    const unit = fullUnit(layoutId);
+    const layout = DOLL_LAYOUTS[layoutId];
+    const frame = { centerX: 0, top: 0, scale: 1 };
+    const armor = countsOf(renderToStaticMarkup(<svg><MechDoll unit={unit} use="armor" frame={frame} suffix="t" /></svg>));
+    const structure = countsOf(renderToStaticMarkup(<svg><MechDoll unit={unit} use="structure" frame={frame} suffix="t" /></svg>));
+    const wanted = (use: "armor" | "structure") =>
+      Object.fromEntries([...(layout?.front ?? []), ...(use === "armor" ? (layout?.rear ?? []) : [])].map((location) => [location.loc, unit[use](location.loc)]));
+    expect(armor).toEqual(wanted("armor"));
+    expect(structure).toEqual(wanted("structure"));
+    for (const location of [...(layout?.front ?? []), ...(layout?.rear ?? [])]) {
+      const plates = placedPlates(location, frame);
+      expect(fillPlates(plates, unit.armor(location.loc), ARMOR_PITCH).pitch, `${location.loc} armor`).toBeGreaterThanOrEqual(MIN_PITCH.armor);
+      expect(fillPlates(plates, unit.structure(location.loc), STRUCTURE_PITCH).pitch, `${location.loc} structure`).toBeGreaterThanOrEqual(MIN_PITCH.structure);
+    }
+  });
+
+  it.each(BODY_TYPES)("sends the damage of every location of a %s to places it has, and reaches the center torso from all but the head", (layoutId) => {
+    const next = Object.fromEntries((DOLL_LAYOUTS[layoutId]?.front ?? []).map((location) => [location.loc, location.transfersTo]));
+    for (const [loc, to] of Object.entries(next)) {
+      if (to !== undefined) expect(Object.keys(next), loc).toContain(to);
+      let at: string | undefined = loc;
+      for (let hops = 0; hops < 4 && at && at !== "ct"; hops++) at = next[at];
+      if (loc !== "hd") expect(at, loc).toBe("ct");
+    }
   });
 });

@@ -2,7 +2,7 @@
 import { placePoint } from "./geometry";
 import { placedPlates } from "./mech-doll";
 import { PARTS } from "./parts";
-import { DOLL_LAYOUTS, labelLines, labelPoint, type DollLayoutId, type DollUse } from "./layouts";
+import { labelLines, labelPoint, layoutOf, type DollUse, type IDollUnit } from "./layouts";
 
 /** Label type size and an average glyph width as a share of it, per use, to leave room for the labels. */
 export const LABEL = { armor: { size: 20, glyph: 0.62 }, structure: { size: 15, glyph: 0.62 } } as const;
@@ -10,14 +10,14 @@ const MARGIN = 12;
 
 /** The box a doll needs, in sheet units: every plate and label of the layout at that scale, so nothing is clipped. The
  * damage transfer diagram has no labels. `labelSize` is the type size the labels are drawn at, when it is not the use's own. */
-export function dollBox(layoutId: DollLayoutId, use: DollUse, scale: number, labelSize?: number, short = false) {
-  const layout = DOLL_LAYOUTS[layoutId];
+export function dollBox(unit: Pick<IDollUnit, "layoutId" | "variant">, use: DollUse, scale: number, labelSize?: number, short = false) {
+  const layout = layoutOf(unit);
   const locations = layout ? (use === "armor" ? [...layout.front, ...layout.rear] : layout.front) : [];
-  const unit = { centerX: 0, top: 0, scale };
+  const frame = { centerX: 0, top: 0, scale };
   const xs: number[] = [];
   const ys: number[] = [];
   for (const location of locations) {
-    for (const plate of placedPlates(location, unit)) {
+    for (const plate of placedPlates(location, frame)) {
       for (const [x, y] of plate) {
         xs.push(x);
         ys.push(y);
@@ -44,11 +44,11 @@ export function dollBox(layoutId: DollLayoutId, use: DollUse, scale: number, lab
 }
 
 /** The largest scale at which the doll's box fits the room, or undefined when it fits at none. */
-export function fitDoll(layoutId: DollLayoutId, use: DollUse, width: number, height: number, labelSize?: number, short = false): { scale: number; box: ReturnType<typeof dollBox> } | undefined {
+export function fitDoll(unit: Pick<IDollUnit, "layoutId" | "variant">, use: DollUse, width: number, height: number, labelSize?: number, short = false): { scale: number; box: ReturnType<typeof dollBox> } | undefined {
   let low = 0.05;
   let high = 1.5;
   const fits = (scale: number) => {
-    const box = dollBox(layoutId, use, scale, labelSize, short);
+    const box = dollBox(unit, use, scale, labelSize, short);
     return box.width <= width && box.height <= height;
   };
   if (!fits(low)) return undefined;
@@ -57,5 +57,5 @@ export function fitDoll(layoutId: DollLayoutId, use: DollUse, width: number, hei
     if (fits(middle)) low = middle;
     else high = middle;
   }
-  return { scale: low, box: dollBox(layoutId, use, low, labelSize, short) };
+  return { scale: low, box: dollBox(unit, use, low, labelSize, short) };
 }

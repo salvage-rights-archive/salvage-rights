@@ -64,7 +64,7 @@ describe("The record sheet", () => {
 
   it("lists each location's points as text in place of the diagrams for a body type with no doll", async () => {
     const record = await recordOf(mordelQuad());
-    record.configuration = "tripod";
+    record.configuration = "hexapod";
     const { svg, lines } = await drawn(record);
     expect(svg.querySelectorAll("[data-testid='mech-doll']")).toHaveLength(0);
     expect(svg.querySelectorAll("[data-diagram='text']")).toHaveLength(2);

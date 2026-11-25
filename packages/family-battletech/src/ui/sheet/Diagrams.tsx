@@ -38,7 +38,7 @@ function TextBox({ rect, title, lines, center }: { rect: Rect; title: string; li
 function Doll({ rect, record, use, title, suffix }: { rect: Rect; record: MechRecord; use: "armor" | "structure"; title: string; suffix: string }) {
   const unit = dollUnitFromRecord(record);
   const room = { width: rect.w - 2 * INSET, height: rect.h - 2 * INSET - 14 };
-  const fit = unit ? fitDoll(unit.layoutId, use, room.width, room.height, LABEL, true) : undefined;
+  const fit = unit ? fitDoll(unit, use, room.width, room.height, LABEL, true) : undefined;
   return (
     <Frame rect={rect} title={title} center>
       {unit && fit && (

@@ -18,6 +18,8 @@ type Cell = [row: number, column: number];
 const BODY_CELLS: Record<string, Record<string, Cell>> = {
   biped: { HD: [1, 3], LA: [2, 1], LT: [2, 2], CT: [2, 3], RT: [2, 4], RA: [2, 5], "LT-rear": [3, 2], "CT-rear": [3, 3], "RT-rear": [3, 4], LL: [4, 2], RL: [4, 4] },
   quad: { HD: [1, 3], FLL: [2, 1], LT: [2, 2], CT: [2, 3], RT: [2, 4], FRL: [2, 5], "LT-rear": [3, 2], "CT-rear": [3, 3], "RT-rear": [3, 4], RLL: [4, 2], RRL: [4, 4] },
+  // A tripod's center leg stands between its two side legs.
+  tripod: { HD: [1, 3], LA: [2, 1], LT: [2, 2], CT: [2, 3], RT: [2, 4], RA: [2, 5], "LT-rear": [3, 2], "CT-rear": [3, 3], "RT-rear": [3, 4], LL: [4, 2], CL: [4, 3], RL: [4, 4] },
 };
 
 export default function ArmorPanel({
@@ -66,7 +68,7 @@ export default function ArmorPanel({
 
   const doll = (use: Exclude<DollUse, "transfer">, scale: number) => {
     if (!unit) return null;
-    const box = dollBox(unit.layoutId, use, scale);
+    const box = dollBox(unit, use, scale);
     return (
       <svg
         className={`bt-doll bt-doll--${use}`}

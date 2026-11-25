@@ -96,7 +96,7 @@ export default function CriticalTable({ rect, record, layout }: { rect: Rect; re
   const unit = dollUnitFromRecord(record);
   const diagramTop = hitsTop + CRITICAL_BOXES.length * 34 + 14;
   const diagramRoom = { width: width - 40, height: rect.y + rect.h - 40 - diagramTop };
-  const fit = unit ? fitDoll(unit.layoutId, "transfer", diagramRoom.width, diagramRoom.height) : undefined;
+  const fit = unit ? fitDoll(unit, "transfer", diagramRoom.width, diagramRoom.height) : undefined;
   const middleX = columnX(1);
   return (
     <Frame rect={rect} title="CRITICAL TABLE">

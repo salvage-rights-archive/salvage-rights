@@ -55,6 +55,9 @@ export interface IDollUnit {
     structureDamaged(loc: string, index: number): boolean;
 }
 
+/** The layout a unit is drawn with. */
+export const layoutOf = (unit: Pick<IDollUnit, "layoutId" | "variant">): IDollLayout | undefined => DOLL_LAYOUTS[unit.layoutId];
+
 /** A location label lines: its full name, or only its code (CT, LTR) where the figure is drawn too small for names. */
 export const labelLines = (location: IDollLocation, short = false): string[] =>
     short ? (location.loc === "hd" ? ["HD"] : [location.loc.toUpperCase(), ""]) : location.label;
@@ -144,16 +147,89 @@ const QUAD: IDollLayout = {
     rear: REAR_TORSOS,
 };
 
+/** A location moved down the sheet by `dy`, its label with it. */
+const moved = (location: IDollLocation, dy: number): IDollLocation => ({
+    ...location,
+    at: { ...location.at, y: location.at.y + dy },
+    labelAt: [location.labelAt[0], location.labelAt[1] + dy],
+    shortHangsFrom: location.shortHangsFrom && [location.shortHangsFrom[0], location.shortHangsFrom[1] + dy],
+});
+
+/** The rear torsos moved to clear what hangs below or above the front view. */
+const rearTorsosMoved = (dy: number): IDollLocation[] => REAR_TORSOS.map((location) => moved(location, dy));
+
+// A tripod: the biped with a third, center leg between the two side legs. The legs stand as the biped's do; the center leg
+// hangs low, so that the center torso's label fits above it, and its label sits under its foot, which pushes the rear torsos
+// down. A destroyed center leg's damage goes to the center torso, a side leg's to the torso on its side (Interstellar
+// Operations: Alternate Eras, Tripod 'Mech Game Rules, p. 159).
+const CENTER_LEG: IDollLocation = { loc: "cl", part: "center-leg", at: home("center-leg"), label: ["CENTER", "LEG"], labelAt: [0, 968], labelAnchor: "middle", shortHangsFrom: [0, 950], transfersTo: "ct" };
+
+const TRIPOD: IDollLayout = {
+    id: "tripod",
+    view: "front",
+    front: [
+        CENTER_LEG,
+        LEFT_LEG,
+        mirrored(LEFT_LEG, "rl", ["RIGHT", "LEG"], "rt"),
+        LEFT_TORSO,
+        mirrored(LEFT_TORSO, "rt", ["RIGHT", "TORSO"], "ct"),
+        LEFT_ARM,
+        mirrored(LEFT_ARM, "ra", ["RIGHT", "ARM"], "rt"),
+        { ...CENTER_TORSO, labelAt: [0, 640] },
+        HEAD,
+    ],
+    rear: rearTorsosMoved(70),
+};
+
+// A monoped: one broad piston leg in the middle, its label beside the foot. The rules for these are not in the app yet, so
+// the arrows are provisional: each arm's damage goes to the torso on its side, a side torso's to the center torso, and the
+// center leg's to the center torso.
+const MONO_LEG: IDollLocation = { loc: "cl", part: "mono-leg", at: home("mono-leg"), label: ["CENTER", "LEG"], labelAt: [150, 912], labelAnchor: "start", shortHangsFrom: [150, 892], transfersTo: "ct" };
+
+const MONOPED: IDollLayout = {
+    id: "monoped",
+    view: "front",
+    front: [
+        MONO_LEG,
+        LEFT_TORSO,
+        mirrored(LEFT_TORSO, "rt", ["RIGHT", "TORSO"], "ct"),
+        LEFT_ARM,
+        mirrored(LEFT_ARM, "ra", ["RIGHT", "ARM"], "rt"),
+        { ...CENTER_TORSO, labelAt: [112, 540], labelAnchor: "start" },
+        HEAD,
+    ],
+    rear: REAR_TORSOS,
+};
+
+// A legless 'Mech: the torsos and arms over a thruster skirt that is part of the center torso, with the center torso's label
+// under the skirt. Arrows are provisional until the rules are read, as for the monoped.
+const LEGLESS: IDollLayout = {
+    id: "legless",
+    view: "front",
+    front: [
+        LEFT_TORSO,
+        mirrored(LEFT_TORSO, "rt", ["RIGHT", "TORSO"], "ct"),
+        LEFT_ARM,
+        mirrored(LEFT_ARM, "ra", ["RIGHT", "ARM"], "rt"),
+        { ...CENTER_TORSO, part: "torso-center-legless", at: home("torso-center-legless"), label: ["CENTER TORSO", ""], labelAt: [0, 776], shortHangsFrom: [0, 762] },
+        HEAD,
+    ],
+    rear: rearTorsosMoved(-150),
+};
+
 export const DOLL_LAYOUTS: Partial<Record<DollLayoutId, IDollLayout>> = {
     biped: BIPED,
     quad: QUAD,
+    tripod: TRIPOD,
+    monoped: MONOPED,
+    legless: LEGLESS,
 };
 
 /** The record location a doll location reads, and whether it reads the rear armor. */
 const RECORD_OF: Record<string, { code: LocationCode; rear: boolean }> = {
     hd: { code: "HD", rear: false }, ct: { code: "CT", rear: false }, lt: { code: "LT", rear: false },
     rt: { code: "RT", rear: false }, la: { code: "LA", rear: false }, ra: { code: "RA", rear: false },
-    ll: { code: "LL", rear: false }, rl: { code: "RL", rear: false },
+    ll: { code: "LL", rear: false }, rl: { code: "RL", rear: false }, cl: { code: "CL", rear: false },
     fll: { code: "FLL", rear: false }, frl: { code: "FRL", rear: false }, rll: { code: "RLL", rear: false }, rrl: { code: "RRL", rear: false },
     ctr: { code: "CT", rear: true }, ltr: { code: "LT", rear: true }, rtr: { code: "RT", rear: true },
 };
@@ -165,7 +241,15 @@ export const dollLocationName = (loc: string): string => {
 };
 
 /** The layout each configuration draws with; none is drawn for the rest yet. */
-const LAYOUT_OF_CONFIGURATION: Record<string, DollLayoutId> = { biped: "biped", quad: "quad" };
+const LAYOUT_OF_CONFIGURATION: Record<string, DollLayoutId> = { biped: "biped", quad: "quad", tripod: "tripod" };
+
+/** A tripod's limits and structure are a biped's with a third leg that has the same structure as the other two (Interstellar
+ * Operations: Alternate Eras, Tripod 'Mech Construction Rules, p. 159); the rules module has no tripod table yet. */
+const pointsFor = (record: MechRecord, of: (record: MechRecord) => Partial<Record<LocationCode, number>>): Partial<Record<LocationCode, number>> => {
+    if (record.configuration !== "tripod") return of(record);
+    const points = of({ ...record, configuration: "biped" });
+    return points.LL === undefined ? points : { ...points, CL: points.LL };
+};
 
 const recordLocation = (loc: string) => (Object.hasOwn(RECORD_OF, loc) ? RECORD_OF[loc] : undefined);
 
@@ -175,7 +259,7 @@ export const recordCodeOf = (loc: string): LocationCode | undefined => recordLoc
 export const dollUnitFromRecord = (record: MechRecord): IDollUnit | undefined => {
     const layoutId = Object.hasOwn(LAYOUT_OF_CONFIGURATION, record.configuration) ? LAYOUT_OF_CONFIGURATION[record.configuration] : undefined;
     if (!layoutId) return undefined;
-    const max = maxArmor(record), structure = structurePoints(record);
+    const max = pointsFor(record, maxArmor), structure = pointsFor(record, structurePoints);
     return {
         layoutId,
         variant: { tracks: false, armless: false, superheavy: record.tons > 100 },

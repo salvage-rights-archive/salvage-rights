@@ -2,7 +2,7 @@
 import React, { type JSX } from "react";
 import Bubble from "./bubble";
 import { frameTransform, placePoint, placeShape, svgTransform, toSheet, type IDollFrame } from "./geometry";
-import { ARMOR_PITCH, DOLL_LAYOUTS, dollLocationName, labelLines, labelPoint, STRUCTURE_PITCH, type DollUse, type IDollLocation, type IDollUnit } from "./layouts";
+import { ARMOR_PITCH, dollLocationName, labelLines, labelPoint, layoutOf, STRUCTURE_PITCH, type DollUse, type IDollLocation, type IDollUnit } from "./layouts";
 import { PARTS } from "./parts";
 import { DEFAULT_PEN, DEFAULT_TRANSFER_PEN, DollDefs, INK, PEN_PRESETS, penIds, type IPenStyle, type PenPreset } from "./pen";
 import { cornerAt, drawnBubble, edgeDistance, gridIn, insideShape, packBubbles, shapePoints, type BubblePoint, type Shape } from "./shape-bubbles";
@@ -144,7 +144,7 @@ const transferArrow = (from: BubblePoint, to: BubblePoint, key: string, arrowId:
 export default function MechDoll(props: IMechDollProps): JSX.Element {
     const { unit, use, frame, suffix } = props;
     const [focused, setFocused] = React.useState<string | undefined>(undefined);
-    const layout = DOLL_LAYOUTS[unit.layoutId];
+    const layout = layoutOf(unit);
     if (!layout) {
         return <g data-testid="mech-doll" data-layout={unit.layoutId} data-use={use} />;
     }
