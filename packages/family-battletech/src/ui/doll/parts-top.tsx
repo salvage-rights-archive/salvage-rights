@@ -30,9 +30,8 @@ export const ROW = 150;
 const GAP = 20;
 const MARGIN = 9;
 
-/** The height of the deck above the spine's first plate, where the center torso's label is printed. */
-export const BAY = 116;
-export const HEAD_CENTER = -BAY - 44;
+/** The head sits just above the spine's first plate. */
+export const HEAD_CENTER = -52;
 /** The hull's flank edge, where each hip joint sits. */
 export const HIP_X = -170;
 
@@ -61,7 +60,7 @@ const hullHead: IPart = {
     ),
 };
 
-// ---- Spine: a deck for the label, then a plate for each row of legs with a ribbed joint between rows.
+// ---- Spine: a plate for each row of legs with a ribbed joint between rows.
 
 const rowTop = (i: number): number => i * ROW;
 const rowBottom = (i: number): number => (i + 1) * ROW - GAP;
@@ -76,8 +75,6 @@ const spine = (rows: number): IPart => {
                 {Array.from({ length: rows - 1 }, (_, i) => (
                     <React.Fragment key={i}>{joint(polygonPath([[-46, rowBottom(i) - 4], [46, rowBottom(i) - 4], [46, rowTop(i + 1) + 4], [-46, rowTop(i + 1) + 4]]), [`M -46,${rowBottom(i) + GAP / 2} L 46,${rowBottom(i) + GAP / 2}`], pen, ids)}</React.Fragment>
                 ))}
-                {outline(polygonPath(slab(-70, -BAY, 70, -8, 16)), pen)}
-                {joint(polygonPath([[-46, -12], [46, -12], [46, rowTop(0) + 4], [-46, rowTop(0) + 4]]), [], pen, ids)}
                 {plates.map((plate, i) => <React.Fragment key={i}>{slabbed(plate, pen)}</React.Fragment>)}
             </>
         ),

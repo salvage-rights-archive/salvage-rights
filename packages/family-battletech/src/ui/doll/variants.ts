@@ -20,6 +20,7 @@ export const scaleLocation = (location: IDollLocation, k: number): IDollLocation
     at: { ...location.at, x: location.at.x * k, y: location.at.y * k, scale: (location.at.scale ?? 1) * k },
     labelAt: [location.labelAt[0] * k, location.labelAt[1] * k],
     shortHangsFrom: location.shortHangsFrom && [location.shortHangsFrom[0] * k, location.shortHangsFrom[1] * k],
+    leader: location.leader && [[location.leader[0][0] * k, location.leader[0][1] * k], [location.leader[1][0] * k, location.leader[1][1] * k]],
 });
 
 /** A superheavy is drawn this much larger than a 'Mech of 100 tons, so that its larger counts still fit at a size a bubble
@@ -68,6 +69,18 @@ const landAir = (layout: IDollLayout, kind: NonNullable<IDollVariant["lam"]>): I
 
 /** A pod under the foot of every leg of the figure: tracks on any layout, wheels (QuadVee) on the front-view ones. */
 const withPods = (layout: IDollLayout, kind: "tracks" | "wheels"): IDollLayout => {
+    // A pod hangs below the foot and, from above, reaches past it: the label that sits under a foot moves down and a side
+    // label out, clear of it.
+    const clear = (location: IDollLocation): IDollLocation => {
+        if (!PARTS[location.part].foot) return location;
+        const [x, y] = location.labelAt;
+        const hang = location.shortHangsFrom;
+        if (layout.view === "top") {
+            const out = location.labelAnchor === "end" ? -POD_CLEARANCE_TOP : POD_CLEARANCE_TOP;
+            return { ...location, labelAt: [x + out, y], shortHangsFrom: hang && [hang[0] + out, hang[1]] };
+        }
+        return location.labelAnchor === "middle" ? { ...location, labelAt: [x, y + POD_CLEARANCE_FRONT], shortHangsFrom: hang && [hang[0], hang[1] + POD_CLEARANCE_FRONT] } : location;
+    };
     const extras = layout.front.flatMap((location): IDollExtra[] => {
         const part = PARTS[location.part];
         if (!part.foot) return [];
@@ -76,8 +89,19 @@ const withPods = (layout: IDollLayout, kind: "tracks" | "wheels"): IDollLayout =
             : frontPod(kind, part.foot, part.footWidth ?? 150);
         return [{ id: `pod-${location.loc}`, decor, at: location.at, behind: false, uses: [...ALL_USES] }];
     });
-    return { ...layout, extras: [...(layout.extras ?? []), ...extras] };
+    // Labels moved down make the rear torsos below them move down too.
+    const down = (location: IDollLocation): IDollLocation => ({
+        ...location,
+        at: { ...location.at, y: location.at.y + POD_CLEARANCE_FRONT },
+        labelAt: [location.labelAt[0], location.labelAt[1] + POD_CLEARANCE_FRONT],
+        shortHangsFrom: location.shortHangsFrom && [location.shortHangsFrom[0], location.shortHangsFrom[1] + POD_CLEARANCE_FRONT],
+    });
+    const rear = layout.view === "front" ? layout.rear.map(down) : layout.rear;
+    return { ...layout, front: layout.front.map(clear), rear, extras: [...(layout.extras ?? []), ...extras] };
 };
+
+const POD_CLEARANCE_FRONT = 30;
+const POD_CLEARANCE_TOP = 40;
 
 /** The layout with the variant's swaps and additions; the layout itself when it has none. */
 export const applyVariant = (layout: IDollLayout, variant: IDollVariant): IDollLayout => {

@@ -216,6 +216,12 @@ export default function MechDoll(props: IMechDollProps): JSX.Element {
         ));
     });
 
+    const leaders = use === "transfer" ? [] : locations.flatMap((location) => {
+        if (!location.leader) return [];
+        const [[ax, ay], [bx, by]] = [toSheet(location.leader[0], frame), toSheet(location.leader[1], frame)];
+        return [<line key={`${location.loc}-leader`} data-leader={location.loc} x1={round(ax)} y1={round(ay)} x2={round(bx)} y2={round(by)} stroke={ink} strokeWidth={2.5} strokeLinecap="round" aria-hidden="true" />];
+    });
+
     const arrows = use !== "transfer" ? [] : locations.flatMap((location) => {
         const from = anchorOf(location.loc), to = location.transfersTo ? anchorOf(location.transfersTo) : undefined;
         return from && to ? [transferArrow(from, to, `${location.loc}>${location.transfersTo}`, ids.arrow, layout.labelScale ?? 1)] : [];
@@ -293,6 +299,7 @@ export default function MechDoll(props: IMechDollProps): JSX.Element {
                 </g>
             )}
             {arrows.length > 0 ? <g aria-hidden="true" transform={frameTransform(frame)}>{arrows}</g> : null}
+            {leaders}
             {labels}
         </g>
     );

@@ -4,7 +4,7 @@ import { placePoint, type IPlacement } from "./geometry";
 import { PART_PIVOTS, PARTS, type PartId } from "./parts";
 import { mapPath, type IDecor } from "./parts-kit";
 import { applyVariant, FRONT_GUIDE, scaleLocation } from "./variants";
-import { BAY, HEAD_CENTER, HIP_X, ROW } from "./parts-top";
+import { HEAD_CENTER, HIP_X, ROW } from "./parts-top";
 import type { BubblePoint } from "./shape-bubbles";
 
 /*
@@ -29,6 +29,8 @@ export interface IDollLocation {
     labelAnchor: "start" | "middle" | "end";
     /** Where a short label (the code, on a figure drawn small) hangs from: its top edge, so it clears the part above. */
     shortHangsFrom?: BubblePoint;
+    /** A short line from the label to the location it names, where the label stands clear of it (armor and structure). */
+    leader?: [BubblePoint, BubblePoint];
     /** Where damage goes once this location is destroyed (the damage transfer diagram's arrow). */
     transfersTo?: string;
 }
@@ -128,6 +130,7 @@ const mirrored = (left: IDollLocation, loc: string, label: string[], transfersTo
     labelAt: [-left.labelAt[0], left.labelAt[1]],
     labelAnchor: flipAnchor(left.labelAnchor),
     shortHangsFrom: left.shortHangsFrom && [-left.shortHangsFrom[0], left.shortHangsFrom[1]],
+    leader: left.leader && [[-left.leader[0][0], left.leader[0][1]], [-left.leader[1][0], left.leader[1][1]]],
     transfersTo,
 });
 
@@ -218,7 +221,8 @@ const TRIPOD: IDollLayout = {
         mirrored(LEFT_TORSO, "rt", ["RIGHT", "TORSO"], "ct"),
         LEFT_ARM,
         mirrored(LEFT_ARM, "ra", ["RIGHT", "ARM"], "rt"),
-        { ...CENTER_TORSO, labelAt: [0, 640] },
+        // The short label hangs under the center torso's hatched skirt plate, which ends at y 604.
+        { ...CENTER_TORSO, labelAt: [0, 640], shortHangsFrom: [0, 614] },
         HEAD,
     ],
     rear: rearTorsosMoved(70),
@@ -277,11 +281,16 @@ const topLeg = (loc: string, row: number, rows: number, label: string[], transfe
     return { loc, part: "top-leg", at, label, labelAt: [fx - 60, fy - up + 8], labelAnchor: "end", shortHangsFrom: [fx - 56, fy - 18], transfersTo };
 };
 
-/** A hull of `rows` leg pairs, whose legs are `legs` (left, right), and the aft plates `aftTop` down the sheet. */
-const hullLayout = (id: DollLayoutId, rows: 2 | 3 | 4, legs: IDollLocation[], tail: IDollLocation[], aftTop: number): IDollLayout => {
+/** A hull of `rows` leg pairs, whose legs are `legs` (left, right). The center torso's label stands under the spine (at `ctX`,
+ * with a leader up to it) and each flank's above its top plate with a leader down to it; the aft plates start below the
+ * lowest foot, so that no leg label meets theirs. */
+const hullLayout = (id: DollLayoutId, rows: 2 | 3 | 4, legs: IDollLocation[], tail: IDollLocation[], ctX = 0): IDollLayout => {
+    const hullBottom = HULL_TOP + rows * ROW - 20;
+    const lowestFoot = Math.max(...[...legs, ...tail].map((leg) => placePoint(PARTS["top-leg"].foot ?? [0, 0], leg.at)[1]));
+    const aftTop = Math.max(hullBottom + 170, lowestFoot + 130);
     const head: IDollLocation = { loc: "hd", part: "hull-head", at: { x: 0, y: HULL_TOP + HEAD_CENTER }, label: ["HEAD"], labelAt: [0, HULL_TOP + HEAD_CENTER - 54], labelAnchor: "middle" };
-    const center: IDollLocation = { loc: "ct", part: `hull-center-${rows}`, at: { x: 0, y: HULL_TOP }, label: ["CENTER", "TORSO"], labelAt: [0, HULL_TOP - 62], labelAnchor: "middle", shortHangsFrom: [0, HULL_TOP - BAY + 8] };
-    const flankLeft: IDollLocation = { loc: "lt", part: `hull-flank-${rows}`, at: { x: 0, y: HULL_TOP }, label: ["LEFT", "TORSO"], labelAt: [-76, HULL_TOP - 165], labelAnchor: "end", shortHangsFrom: [-104, HULL_TOP - 190], transfersTo: "ct" };
+    const center: IDollLocation = { loc: "ct", part: `hull-center-${rows}`, at: { x: 0, y: HULL_TOP }, label: ["CENTER", "TORSO"], labelAt: [ctX, hullBottom + 42], labelAnchor: ctX === 0 ? "middle" : "end", shortHangsFrom: [ctX, hullBottom + 24], leader: ctX === 0 ? [[0, hullBottom + 10], [0, hullBottom + 22]] : [[ctX + 12, hullBottom + 22], [ctX + 30, hullBottom + 10]] };
+    const flankLeft: IDollLocation = { loc: "lt", part: `hull-flank-${rows}`, at: { x: 0, y: HULL_TOP }, label: ["LEFT", "TORSO"], labelAt: [-136, HULL_TOP - 88], labelAnchor: "end", shortHangsFrom: [-190, HULL_TOP - 210], leader: [[-121, HULL_TOP - 44], [-121, HULL_TOP - 10]], transfersTo: "ct" };
     const aftSide: IDollLocation = { loc: "ltr", part: "hull-aft-side", at: { x: -158, y: aftTop }, label: ["LEFT TORSO", "(REAR)"], labelAt: [-262, aftTop + 46], labelAnchor: "end" };
     return {
         id,
@@ -291,7 +300,7 @@ const hullLayout = (id: DollLayoutId, rows: 2 | 3 | 4, legs: IDollLocation[], ta
         ],
         rear: [
             aftSide, mirrored(aftSide, "rtr", ["RIGHT TORSO", "(REAR)"]),
-            { loc: "ctr", part: "hull-aft-center", at: { x: 0, y: aftTop }, label: ["CENTER TORSO (REAR)"], labelAt: [0, aftTop + 176], labelAnchor: "middle" },
+            { loc: "ctr", part: "hull-aft-center", at: { x: 0, y: aftTop }, label: ["CENTER TORSO (REAR)"], labelAt: [0, aftTop + 176], labelAnchor: "middle", shortHangsFrom: [0, aftTop + 158] },
         ],
         guide: { armor: `M 0,40 L 0,${aftTop + 150}`, other: `M 0,40 L 0,${HULL_TOP + rows * ROW}`, cross: "" },
     };
@@ -317,9 +326,9 @@ const PENTAPOD_TAIL: IDollLocation = (() => {
 const PENTAPOD = hullLayout("pentapod", 2, legPairs(2, [
     ["fll", ["FRONT", "LEFT", "LEG"], "frl", ["FRONT", "RIGHT", "LEG"]],
     ["rll", ["REAR", "LEFT", "LEG"], "rrl", ["REAR", "RIGHT", "LEG"]],
-]), [PENTAPOD_TAIL], 830);
-const HEXAPOD = hullLayout("hexapod", 3, legPairs(3, numbered(3)), [], HULL_TOP + 3 * ROW + 140);
-const OCTOPOD = hullLayout("octopod", 4, legPairs(4, numbered(4)), [], HULL_TOP + 4 * ROW + 140);
+]), [PENTAPOD_TAIL], -66);
+const HEXAPOD = hullLayout("hexapod", 3, legPairs(3, numbered(3)), []);
+const OCTOPOD = hullLayout("octopod", 4, legPairs(4, numbered(4)), []);
 
 /** The same figure at a smaller scale, for the very small 'Mechs: every part, position and label moved in by `k`, the
  * labels' type with them, so that a given bubble is larger against the figure. */
