@@ -43,6 +43,10 @@ export interface EquipmentRow {
   locationsQuad?: LocationCode[]; // the quad rule, where the book's rule differs from the biped one; [] means not allowed
   splittable?: boolean; // true only where the book lets the item span adjacent locations
   needs?: string; // what the item must be paired with, in the same location: "launcher", "machine-gun"
+  /** What a humanoid arm that carries the item gives up (TechManual printed pp.241-248): the hand actuator, or the lower arm and hand actuators. */
+  armRemoves?: "hand" | "lower-arm";
+  /** True for an item the books count as a heavy energy weapon though it is not in the Energy group: the spot welder, for the power amplifiers of an internal combustion or fuel cell engine (TechManual printed pp.247-248). */
+  heavyEnergy?: true;
   /** True when `availability` is not a year the book prints for this tech base (a dash in the book's table, or one date
    * printed for both tech bases). The availability check reports such rows as notes, not errors. */
   yearsInferred?: true;
@@ -218,7 +222,7 @@ export function createCatalog(rows: EquipmentRow[]): Catalog {
     const slots = resolve(row.slots, row, record, mount);
     if (tons === undefined || slots === undefined) return undefined;
     // An energy weapon is what an IndustrialMech's power amplifiers are a share of (the picker's Energy weapons group).
-    return row.kind === "weapon" && groupOf(row).id === "energy" ? ({ tons, slots, energy: true } satisfies MountFacts) : ({ tons, slots } satisfies MountFacts);
+    return row.heavyEnergy || (row.kind === "weapon" && groupOf(row).id === "energy") ? ({ tons, slots, energy: true } satisfies MountFacts) : ({ tons, slots } satisfies MountFacts);
   };
 
   const catalog: Catalog = {

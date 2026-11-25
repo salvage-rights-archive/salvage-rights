@@ -232,8 +232,8 @@ export const CONFIGURATION_COST: Record<string, { structureFactor?: number; conv
 // (printed p.282). A catalog row with no key here is reported as unpriced, never guessed.
 // ---------------------------------------------------------------------------------------------------------------
 /** C-bills each; or per whole ton of the item's weight; or per ton of the 'Mech (the book's "xTT" formulas: spikes are 50 x tonnage). */
-export type Price = number | { perTon: number } | { perUnitTon: number } | { perRating: number } | { perWeight: number };
-// `perWeight` is C-bills for each ton of the item's own weight, not rounded to whole tons (a turret: 5,000 x the turret's tonnage).
+export type Price = number | { perTon: number } | { perUnitTon: number } | { perRating: number } | { perWeight: number; base?: number };
+// `perWeight` is C-bills for each ton of the item's own weight, not rounded to whole tons (a turret: 5,000 x the turret's tonnage), plus `base` where the table prints one (the drone operating system).
 interface PriceGroup extends Sourced {
   prices: Record<string, Price>;
 }
@@ -456,6 +456,7 @@ export const EQUIPMENT_COST: PriceGroup[] = [
     prices: {
       "searchlight": 2_000, "ejection-seat": 25_000, "extended-fuel-tank": { perTon: 500 }, "communications-equipment": { perTon: 10_000 },
       "cargo-standard": 0, "cargo-liquid": { perTon: 100 }, "cargo-insulated": { perTon: 250 },
+      "cargo-container": 0, "dumper": 5_000, "paramedic-equipment": 7_500,
     },
   },
   {
@@ -497,6 +498,12 @@ export const EQUIPMENT_COST: PriceGroup[] = [
     cite: { book: TM, page: 279 },
     checked: "page",
     prices: { turret: { perWeight: 5_000 } },
+  },
+  {
+    // Tactical Operations: Advanced Units and Equipment, Construction Data table (printed p. 219): 5,000 + (10,000 x item tonnage).
+    cite: { book: TO, page: 219 },
+    checked: "page",
+    prices: { "drone-operating-system": { base: 5_000, perWeight: 10_000 } },
   },
   {
     // TechManual pp.298-301 (Conventional Infantry Weapons: the weapon's price; the clip's price is in the row's `infantry.clip`)

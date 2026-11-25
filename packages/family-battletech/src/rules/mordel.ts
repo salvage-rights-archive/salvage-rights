@@ -108,6 +108,7 @@ const ARMOR_WORDS: Record<string, Words> = {
   impactresistant: { is: "impact-resistant" },
   commercial: { is: "commercial" },
   industrial: { is: "industrial" },
+  heavyindustrial: { is: "standard" }, // the IndustrialMech chapter's name for standard armor (TechManual p.72)
 };
 const MYOMER_WORDS: Record<string, Words> = {
   standard: { is: "standard" },
@@ -314,20 +315,24 @@ function convert(response: unknown, catalog: Catalog, editionId: string, now: st
   const armorType = own(ARMOR.types, chassis.armorType);
   if (armorType) partMounts("armor", armorType.name, armorType.slots);
 
-  /** Catalog row for a name: exactly, else "<weapon> (Ammo <shots>)" as the bin of that weapon with that many shots. */
+  /** Catalog row for a name: exactly, else "<weapon> (Ammo <shots>)" as the bin of that weapon with that many shots. A trailing
+   * "[LRM]" or "[SRM]" (a multiple-missile launcher's bin) names the ammunition; any other tag ("[Water]") is dropped. */
   const find = (name: string, tech: TechBase): { row?: EquipmentRow; why?: string } => {
     const direct = catalog.match(name, tech);
     if (direct) return { row: direct };
-    const bin = /^(.*\S)\s*\(Ammo\s+(\d+)\)$/i.exec(name);
+    const bin = /^(.*\S)\s*\(Ammo\s+(\d+)\)(?:\s*\[([^\]]+)\])?$/i.exec(name);
     if (!bin) return {};
     const shots = Number(bin[2]);
-    const bins = [catalog.match(`${bin[1]} Ammo`, tech), catalog.match(`${bin[1]} Ammo (Half Ton)`, tech)].filter((r): r is EquipmentRow => r !== undefined);
+    const stems = [bin[3] ? `${bin[1]} ${bin[3]}` : undefined, bin[1]].filter((x): x is string => x !== undefined);
+    const bins = stems.flatMap((stem) => [catalog.match(`${stem} Ammo`, tech), catalog.match(`${stem} Ammo (Half Ton)`, tech)]).filter((r): r is EquipmentRow => r !== undefined);
     const only = bins.length === 1 ? bins[0] : undefined;
     const row = only && only.shots === undefined ? only : bins.find((r) => r.shots === shots);
     if (row) return { row };
     return bins.length > 0 ? { why: `${name} is an ammunition bin of a size this tool does not recognise (${shots} shots), so it is not matched.` } : {};
   };
 
+  // Mordel lists an industrial cockpit's Advanced Fire Control as an item with no location and no slots; here it is the cockpit's variant.
+  let advancedFireControl = false;
   const idToMount = new Map<number, string>();
   const links: { mountId: string; target: number }[] = [];
   const list = unit["equipment"];
@@ -337,6 +342,10 @@ function convert(response: unknown, catalog: Catalog, editionId: string, now: st
     const name = entry ? str(entry["name"], `equipment entry ${index + 1} name`) : undefined;
     if (!entry || !name) {
       note(`Equipment entry ${index + 1} has no usable name and was skipped.`);
+      return;
+    }
+    if (/^advanced fire control system$/i.test(name) && entry["location"] == null && !catalog.match(name, unitClan ? "clan" : "inner-sphere")) {
+      advancedFireControl = true;
       return;
     }
     const where = entry["location"];
@@ -350,6 +359,10 @@ function convert(response: unknown, catalog: Catalog, editionId: string, now: st
     const mount: Mount = { id: `mount-${index + 1}`, equipmentId: row?.id ?? null, name, techBase: tech, location: loc ?? null, slot: null };
     // An item that is not in the table keeps the slots Mordel gave it; one with no id and no location takes none.
     const slotless = entry["id"] == null && entry["location"] == null;
+    // An item sold by size (cargo, communications equipment): Mordel gives its size as a count of the table's steps.
+    const stack = sect(entry["stacks"], `${name} stacks`);
+    const steps = num(stack?.["count"], `${name} stack count`);
+    if (row?.amount && steps !== undefined && steps > 0) mount.amount = steps * row.amount.step;
     if (!row && theirSlots !== undefined && theirSlots >= 0) mount.slots = theirSlots;
     else if (!row && slotless) mount.slots = 0;
     mounts.push(mount);
@@ -363,6 +376,11 @@ function convert(response: unknown, catalog: Catalog, editionId: string, now: st
     const mount = mounts.find((m) => m.id === mountId);
     if (mount && to && to !== mountId) mount.linkedTo = to;
     else note(`${mount?.name ?? "An item"} is associated with item ${target}, which is not in the equipment list.`);
+  }
+
+  if (advancedFireControl) {
+    if (chassis.cockpit === "industrial") chassis.cockpit = "industrial-afc";
+    else note("The unit lists Advanced Fire Control, which only an industrial cockpit has; it was left out.");
   }
 
   // Parts named only in the chassis that the catalog stands for with mounts (Triple-Strength Myomer)
@@ -456,10 +474,18 @@ function inferArms(record: MechRecord, catalog: Catalog, note: (text: string) =>
       const cells = layout({ ...record, mounts: [], arms: step && { [arm]: step } }, catalog.factsOf).slots[arm] ?? [];
       return cells.filter((cell) => cell.kind === "empty").length;
     };
-    const stepAt = ARM_STEPS.findIndex((step) => freeWith(step) >= needed);
-    const step = ARM_STEPS[stepAt < 0 ? ARM_STEPS.length - 1 : stepAt];
+    // An arm that carries a tool gives up the actuators the tool replaces (TechManual printed pp.241-248), whatever the room.
+    const tools = record.mounts.filter((m) => !m.part && m.location === arm && m.equipmentId !== null).map((m) => catalog.byId(m.equipmentId ?? ""));
+    const floor = tools.some((row) => row?.armRemoves === "lower-arm") ? 2 : tools.some((row) => row?.armRemoves === "hand") ? 1 : 0;
+    const found = ARM_STEPS.findIndex((step, i) => i >= floor && freeWith(step) >= needed);
+    const stepAt = found < 0 ? ARM_STEPS.length - 1 : found;
+    const step = ARM_STEPS[stepAt];
     if (!step) continue;
     record.arms = { ...record.arms, [arm]: { ...step } };
+    if (stepAt === floor) {
+      note(`The ${tools.find((row) => row?.armRemoves)?.name ?? "tool"} in the ${locationName(arm)} replaces the ${floor === 2 ? "lower arm and hand actuators" : "hand actuator"}, so ${floor === 2 ? "they were" : "it was"} left out.`);
+      continue;
+    }
     note(
       `Mordel does not say which actuators the ${locationName(arm)} has. The equipment listed there needs ${needed} slots, so the ${step.lowerArm ? "hand" : "lower arm and hand"} actuator${step.lowerArm ? " was" : "s were"} left out.`,
     );

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { loadCatalog } from "./catalog";
 import { mordelBiped, mordelOdd, mordelQuad, mordelWith } from "./fixtures";
-import { editRecord, layout, type LocationCode, type MechRecord } from "./mech";
+import { editRecord, layout, weights, type LocationCode, type MechRecord } from "./mech";
 import { changedSinceImport, fromMordel, parseMordelRef } from "./mordel";
 
 const catalog = await loadCatalog();
@@ -251,6 +251,75 @@ describe("fromMordel", () => {
     const result = run(response);
     if (message === null) expect(result.ok).toBe(true);
     else expect(result).toMatchObject({ ok: false, message: expect.stringMatching(message) as unknown });
+  });
+});
+
+describe("fromMordel: IndustrialMechs (unit type im)", () => {
+  const IS = "Inner Sphere";
+  /** A hand-made 25-ton ICE IndustrialMech: industrial cockpit and structure, Heavy Industrial armor, as Mordel words them. */
+  const industrial = (equipment: unknown[] = [], patch: Record<string, unknown> = {}) =>
+    mordelWith(mordelBiped(), {
+      unit_type_short: "im",
+      tons: 25,
+      engine: { type: "Internal Combustion", technology: IS, rating: 100 },
+      cockpit: { type: "Industrial", technology: IS },
+      structure: { type: "Industrial", technology: IS },
+      armor: { type: "Heavy Industrial", technology: IS, points: 40, tons: 2.5 },
+      heat_sinks: { count: 1, type: "Single", technology: IS },
+      equipment,
+      ...patch,
+    });
+  const facts = (record: MechRecord, mount: ReturnType<typeof mountOf>) => (mount ? catalog.factsOf(mount, record) : undefined);
+
+  it.each<[string, Record<string, unknown>, string, (record: MechRecord) => string]>([
+    ["internal combustion, industrial cockpit and structure, Heavy Industrial armor", {}, "industrialmech ice industrial industrial standard", (r) => `${r.unitType} ${r.chassis.engine.type} ${r.chassis.cockpit} ${r.chassis.structure} ${r.chassis.armorType}`],
+    ["a fuel cell", { engine: { type: "Fuel Cell", technology: IS, rating: 100 } }, "fuel-cell", (r) => r.chassis.engine.type],
+    ["fission", { engine: { type: "Fission", technology: IS, rating: 100 } }, "fission", (r) => r.chassis.engine.type],
+    ["commercial armor", { armor: { type: "Commercial", technology: IS, points: 40 } }, "commercial", (r) => r.chassis.armorType],
+    ["industrial armor", { armor: { type: "Industrial", technology: IS, points: 40 } }, "industrial", (r) => r.chassis.armorType],
+    ["industrial triple-strength myomer", { myomer: { type: "Industrial Triple-Strength Myomer", technology: IS } }, "industrial-tsm", (r) => r.chassis.myomer],
+  ])("reads %s by Mordel's words", (_name, patch, expected, read) => {
+    const { record, notes } = imported(industrial([], patch));
+    expect(read(record)).toBe(expected);
+    expect(notes.filter((n) => /not one this tool knows/.test(n))).toEqual([]);
+  });
+
+  it("makes the cockpit's Advanced Fire Control, which Mordel lists as an item with no place, the industrial cockpit's variant", () => {
+    const { record } = imported(industrial([entry(null, "Advanced Fire Control System", null, { slots: 0 }), entry(1, "Medium Laser", "RA")]));
+    expect(record.chassis.cockpit).toBe("industrial-afc");
+    expect(record.mounts.map((m) => m.name)).toEqual(["Medium Laser"]);
+  });
+
+  it("takes the size of cargo and communications equipment from Mordel's stacks, and a dumper's weight from the cargo it is linked to", () => {
+    const { record } = imported(
+      industrial([
+        entry(1, "Cargo, Standard", "LT", { slots: 8, stacks: { count: 16, unit: "increments" } }),
+        entry(2, "Dumper", "LT", { associated_id: 1 }),
+        entry(3, "Communications Equipment", "CT", { slots: 3, stacks: { count: 3, unit: "increments" } }),
+      ]),
+    );
+    expect(record.mounts.map((m) => m.amount)).toEqual([8, undefined, 3]);
+    expect(facts(record, mountOf(record, "Cargo, Standard"))).toMatchObject({ tons: 8, slots: 8 });
+    expect(facts(record, mountOf(record, "Dumper"))).toMatchObject({ tons: 0.5, slots: 1 });
+    expect(facts(record, mountOf(record, "Communications Equipment"))).toMatchObject({ tons: 3, slots: 3 });
+  });
+
+  it("matches an ammunition bin by the launcher's tag, and drops a tag it has no use for", () => {
+    const { record } = imported(
+      industrial([entry(1, "MML 7 (Ammo 17) [LRM]", "LT"), entry(2, "MML 7 (Ammo 14) [SRM]", "LT"), entry(3, "Fluid Gun (Ammo 20) [Water]", "RT")]),
+    );
+    expect(record.mounts.map((m) => m.equipmentId)).toEqual(["ammo-mml-7-lrm-is", "ammo-mml-7-srm-is", "ammo-fluid-gun-is"]);
+  });
+
+  it("takes the hand actuator out of an arm that carries a tool that replaces it, and both lower arm and hand for a pile driver", () => {
+    const { record, notes } = imported(industrial([entry(1, "Backhoe", "LA", { slots: 6 }), entry(2, "Heavy Duty Pile-Driver", "RA", { slots: 8 })]));
+    expect(record.arms).toEqual({ LA: { lowerArm: true, hand: false }, RA: { lowerArm: false, hand: false } });
+    expect(notes).toEqual([expect.stringMatching(/Backhoe in the Left Arm replaces the hand actuator/), expect.stringMatching(/Pile-Driver in the Right Arm replaces the lower arm and hand actuators/)]);
+  });
+
+  it("counts a spot welder as a heavy energy weapon, so an internal combustion engine carries power amplifiers for it", () => {
+    const { record } = imported(industrial([entry(1, "Spot Welder", "RA")]));
+    expect(weights(record, catalog.factsOf).lines.find((l) => l.label === "Power amplifiers")?.tons).toBe(0.5);
   });
 });
 
