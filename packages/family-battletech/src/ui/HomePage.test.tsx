@@ -68,6 +68,30 @@ describe("Classic BattleTech home", () => {
     });
   });
 
+  it("builds a new 'Mech from a name, tonnage and walking speed, offering only speeds an engine exists for", async () => {
+    const user = userEvent.setup();
+    renderHome();
+    const form = await screen.findByRole("form", { name: "Build a new one" });
+    await user.type(within(form).getByLabelText("Name"), " Digger ");
+    await user.selectOptions(within(form).getByLabelText("Tonnage"), "75");
+    const walk = within(form).getByLabelText<HTMLSelectElement>("Walking MP");
+    expect([...walk.options].map((o) => o.value)).toEqual(["1", "2", "3", "4", "5"]);
+    await user.selectOptions(walk, "5");
+    await user.selectOptions(within(form).getByLabelText("Configuration"), "quad");
+    await waitFor(() => expect(within(form).getByRole<HTMLButtonElement>("button", { name: "Start building" }).disabled).toBe(false));
+    await user.click(within(form).getByRole("button", { name: "Start building" }));
+    await waitFor(async () => {
+      const [entry] = await (await openFamilyStorage()).list();
+      expect(entry?.record).toMatchObject({
+        name: { chassis: "Digger", model: "" },
+        tons: 75,
+        configuration: "quad",
+        editionId: "core-2026",
+        chassis: { engine: { type: "standard", rating: 375 } },
+      });
+    });
+  });
+
   it("lists saved 'Mechs with tonnage and designer credit, duplicates, and deletes after a confirm", async () => {
     const user = userEvent.setup();
     const storage = await openFamilyStorage();

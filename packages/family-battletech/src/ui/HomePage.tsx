@@ -1,14 +1,19 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ChangeEvent } from "react";
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
+import { ENGINE_WEIGHTS, INTERNAL_STRUCTURE } from "../data/chassis";
 import { DEFAULT_EDITION, EDITIONS, bookName } from "../data/editions";
-import type { MechRecord } from "../rules/mech";
+import { newRecord } from "../rules/mech";
+import type { MechRecord, NewMechOptions, TechBase } from "../rules/mech";
 import { STORAGE_READ_FAILED, STORAGE_WRITE_FAILED, downloadMech, fromMechFile, openFamilyStorage } from "./storage";
 import type { FamilyStorage, SavedEntry } from "./storage";
 import emptyBay from "../artwork/empty-bay.jpg";
 import "./classic.scss";
 
 const MAX_IMPORT_BYTES = 1024 * 1024;
+// The choices a new 'Mech starts from, read from the book's own tables.
+const TONNAGES = Object.keys(INTERNAL_STRUCTURE.rows).map(Number);
+const MAX_RATING = Math.max(...Object.keys(ENGINE_WEIGHTS.rows).map(Number));
 
 const nameOf = (record: MechRecord) => `${record.name.chassis} ${record.name.model}`.trim();
 
@@ -24,6 +29,15 @@ export default function HomePage() {
   const headingRef = useRef<HTMLHeadingElement>(null);
   const emptyRef = useRef<HTMLParagraphElement>(null);
   const focusList = useRef(false);
+  const navigate = useNavigate();
+  const [draft, setDraft] = useState<Omit<NewMechOptions, "year">>({
+    chassis: "",
+    model: "",
+    tons: 50,
+    walk: 4,
+    techBase: "inner-sphere",
+    configuration: "biped",
+  });
 
   /** Runs a storage action; when it rejects, shows the fixed message and returns false. */
   const attempt = useCallback(async (message: string, action: () => Promise<void>): Promise<boolean> => {
@@ -98,6 +112,20 @@ export default function HomePage() {
     if (!(await attempt(STORAGE_WRITE_FAILED, () => storage.remove(id)))) return;
     focusList.current = true;
     if (await reload(storage)) say("Deleted.");
+  };
+
+  // The walking speeds the largest engine in the table allows at this tonnage.
+  const walks = Array.from({ length: Math.floor(MAX_RATING / draft.tons) }, (_, i) => i + 1);
+
+  const build = async () => {
+    if (!storage || !draft.chassis.trim()) return;
+    const record = newRecord(
+      { ...draft, chassis: draft.chassis.trim(), model: draft.model.trim(), walk: Math.min(draft.walk, walks.at(-1) ?? 1), year: null },
+      edition,
+      crypto.randomUUID(),
+    );
+    if (!(await attempt(STORAGE_WRITE_FAILED, () => storage.save(record)))) return;
+    void navigate(`/battletech/classic/editor?id=${encodeURIComponent(record.id)}`);
   };
 
   const cancel = () => {
@@ -295,6 +323,71 @@ export default function HomePage() {
 
       <section className="bt-section" aria-labelledby="bt-add">
         <h2 id="bt-add">Add a 'Mech</h2>
+        <form
+          className="bt-new"
+          aria-labelledby="bt-new-heading"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void build();
+          }}
+        >
+          <h3 id="bt-new-heading">Build a new one</h3>
+          <div className="bt-grid">
+            <div className="bt-field">
+              <label htmlFor="bt-new-chassis">Name</label>
+              <input id="bt-new-chassis" required value={draft.chassis} onChange={(e) => setDraft({ ...draft, chassis: e.target.value })} />
+            </div>
+            <div className="bt-field">
+              <label htmlFor="bt-new-model">Model</label>
+              <input id="bt-new-model" value={draft.model} onChange={(e) => setDraft({ ...draft, model: e.target.value })} />
+            </div>
+            <div className="bt-field">
+              <label htmlFor="bt-new-tons">Tonnage</label>
+              <select id="bt-new-tons" value={draft.tons} onChange={(e) => setDraft({ ...draft, tons: Number(e.target.value) })}>
+                {TONNAGES.map((tons) => (
+                  <option key={tons} value={tons}>
+                    {tons} tons
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="bt-field">
+              <label htmlFor="bt-new-walk">Walking MP</label>
+              <select id="bt-new-walk" value={Math.min(draft.walk, walks.at(-1) ?? 1)} onChange={(e) => setDraft({ ...draft, walk: Number(e.target.value) })}>
+                {walks.map((walk) => (
+                  <option key={walk} value={walk}>
+                    {walk} (engine rating {walk * draft.tons})
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="bt-field">
+              <label htmlFor="bt-new-tech">Tech base</label>
+              <select id="bt-new-tech" value={draft.techBase} onChange={(e) => setDraft({ ...draft, techBase: e.target.value as TechBase })}>
+                <option value="inner-sphere">Inner Sphere</option>
+                <option value="clan">Clan</option>
+              </select>
+            </div>
+            <div className="bt-field">
+              <label htmlFor="bt-new-config">Configuration</label>
+              <select
+                id="bt-new-config"
+                value={draft.configuration}
+                onChange={(e) => setDraft({ ...draft, configuration: e.target.value as NewMechOptions["configuration"] })}
+              >
+                <option value="biped">Biped</option>
+                <option value="quad">Quad</option>
+              </select>
+            </div>
+          </div>
+          <p className="bt-hint">
+            You start with standard parts, ten heat sinks, no armor and no equipment. The editor's rules check shows
+            what is left to do.
+          </p>
+          <button type="submit" className="bt-button" disabled={!storage}>
+            Start building
+          </button>
+        </form>
         <p>
           <Link className="sr-action" to="/battletech/classic/import">
             Import from Mordel

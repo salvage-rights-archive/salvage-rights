@@ -73,6 +73,19 @@ a.bt-button {
   text-decoration: none;
 }
 
+.bt-new {
+  container-type: inline-size;
+  margin-bottom: var(--sr-space-4);
+  padding: var(--sr-space-3);
+  background: var(--sr-surface);
+  border: var(--sr-border) solid var(--sr-line);
+  border-radius: var(--sr-radius);
+
+  h3 {
+    margin-top: 0;
+  }
+}
+
 .bt-empty {
   max-width: 36rem;
 

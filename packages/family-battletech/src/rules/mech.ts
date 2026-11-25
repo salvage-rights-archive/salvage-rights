@@ -339,6 +339,62 @@ export function walkMP(record: MechRecord): number | null {
   return Number.isInteger(mp) && mp > 0 ? mp : null;
 }
 
+export interface NewMechOptions {
+  chassis: string;
+  model: string;
+  tons: number;
+  /** Walking MP; the engine rating is tons times this. */
+  walk: number;
+  techBase: TechBase;
+  configuration: "biped" | "quad";
+  year: number | null;
+}
+
+/**
+ * A bare design to build on: standard parts throughout, a fusion engine sized for the walking speed, the ten heat
+ * sinks every 'Mech starts with, every location at zero armor and no equipment. The rules check says what it lacks.
+ */
+export function newRecord(options: NewMechOptions, editionId: string, id: string): MechRecord {
+  const record: MechRecord = {
+    schema: 1,
+    id,
+    editionId,
+    name: { chassis: options.chassis, model: options.model },
+    techBase: options.techBase,
+    year: options.year,
+    tons: options.tons,
+    configuration: options.configuration,
+    chassis: {
+      engine: { type: "standard", rating: options.tons * options.walk },
+      gyro: "standard",
+      cockpit: "standard",
+      structure: "standard",
+      armorType: "standard",
+      myomer: "standard",
+      heatSinks: { type: "single", count: HEAT_SINK_RULES.freeWithEngine },
+    },
+    armor: {},
+    mounts: [],
+    notes: {},
+  };
+  for (const loc of Object.keys(structurePoints(record)) as LocationCode[]) {
+    record.armor[loc] = ["CT", "LT", "RT"].includes(loc) ? { front: 0, rear: 0 } : { front: 0 };
+  }
+  // The heat sinks the engine cannot hold wait unplaced, for the builder to give each a slot.
+  const held = Math.floor(record.chassis.engine.rating / HEAT_SINK_RULES.ratingPerHeldSink);
+  for (let n = 1; n <= HEAT_SINK_RULES.freeWithEngine - held; n += 1) {
+    record.mounts.push({
+      id: `heat-sink-${n}`,
+      equipmentId: options.techBase === "clan" ? "heat-sink-clan" : "heat-sink-is",
+      name: "Heat Sink",
+      techBase: options.techBase,
+      location: null,
+      slot: null,
+    });
+  }
+  return record;
+}
+
 /** A new record with the change applied to a copy; the original and its nested parts are untouched. */
 export function editRecord(record: MechRecord, change: (draft: MechRecord) => void): MechRecord {
   const draft = structuredClone(record);

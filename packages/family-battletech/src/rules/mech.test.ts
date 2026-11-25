@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { bipedRecord, factsOf, mount, quadRecord } from "./fixtures";
 import {
   editRecord,
+  newRecord,
   layout,
   maxArmor,
   structurePoints,
@@ -186,6 +187,29 @@ describe("structure points, armor limits and speed", () => {
     expect(walkMP(bipedRecord())).toBe(4);
     expect(walkMP(chassis({ engine: { type: "standard", rating: 200 } }, { tons: 60 }))).toBeNull();
     expect(walkMP(bipedRecord({ tons: 0 }))).toBeNull();
+  });
+
+  it("starts a new design bare: engine sized for the walk, ten heat sinks, zero armor in each location of its configuration", () => {
+    const options = { chassis: "Digger", model: "", tons: 55, walk: 5, techBase: "clan", year: null } as const;
+    const biped = newRecord({ ...options, configuration: "biped" }, "core-2026", "new-1");
+    expect(biped.chassis.engine).toEqual({ type: "standard", rating: 275 });
+    expect(walkMP(biped)).toBe(5);
+    expect(biped.chassis.heatSinks).toEqual({ type: "single", count: 10 });
+    expect(biped.armor).toEqual({
+      HD: { front: 0 }, CT: { front: 0, rear: 0 }, LT: { front: 0, rear: 0 }, RT: { front: 0, rear: 0 },
+      LA: { front: 0 }, RA: { front: 0 }, LL: { front: 0 }, RL: { front: 0 },
+    });
+    expect([biped.source, biped.techBase, biped.editionId]).toEqual([undefined, "clan", "core-2026"]);
+    // A 275 engine holds eleven sinks, so none wait; a 200 holds eight, so two wait unplaced.
+    expect(biped.mounts).toEqual([]);
+    const slow = newRecord({ ...options, tons: 50, walk: 4, techBase: "inner-sphere", configuration: "biped" }, "core-2026", "new-3");
+    expect(slow.mounts.map((m) => [m.equipmentId, m.location, m.slot])).toEqual([
+      ["heat-sink-is", null, null],
+      ["heat-sink-is", null, null],
+    ]);
+    expect(Object.keys(newRecord({ ...options, configuration: "quad" }, "core-2026", "new-2").armor)).toEqual(
+      ["HD", "CT", "LT", "RT", "FLL", "FRL", "RLL", "RRL"],
+    );
   });
 
   it("edits a copy and leaves the original and its nested parts alone", () => {
