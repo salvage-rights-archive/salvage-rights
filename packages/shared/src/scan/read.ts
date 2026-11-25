@@ -37,7 +37,7 @@ async function readField(
 ): Promise<Pick<FieldResult, "value" | "confidence" | "note">> {
   switch (field.kind) {
     case "bubbles":
-      return countBubbles(gray, box, cardLevel, field.max);
+      return countBubbles(gray, box, cardLevel, field.max, field.shape);
     case "pip":
       return readPip(gray, box, cardLevel);
     case "digits":

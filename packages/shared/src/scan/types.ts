@@ -60,6 +60,8 @@ export interface BubblesField extends FieldBase {
   kind: "bubbles";
   /** The most circles the row can hold; a count above it is marked unsure. */
   max?: number;
+  /** Circles are open rings (the default) or filled discs. */
+  shape?: "ring" | "disc";
 }
 
 /** A pip or checkbox: the value is true when it is filled in. */

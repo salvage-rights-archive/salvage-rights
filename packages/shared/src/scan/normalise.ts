@@ -36,14 +36,17 @@ function polygonArea(points: Point[]): number {
   return Math.abs(sum) / 2;
 }
 
-/** The brightness of the photo edge, which is taken to be the surface the card lies on. */
+/**
+ * The brightness of the surface the card lies on, taken from the four corner patches of the photo (a card with
+ * rounded corners, or one that does not fill the frame, leaves the surface showing there).
+ */
 function backgroundLevel(image: Gray): number {
-  const margin = Math.max(1, Math.round(Math.min(image.width, image.height) * 0.02));
+  const patch = Math.max(2, Math.round(Math.min(image.width, image.height) * 0.03));
   const values: number[] = [];
-  for (let y = 0; y < image.height; y++) {
-    for (let x = 0; x < image.width; x++) {
-      if (x < margin || y < margin || x >= image.width - margin || y >= image.height - margin) {
-        values.push(image.data[y * image.width + x]!);
+  for (const x0 of [0, image.width - patch]) {
+    for (const y0 of [0, image.height - patch]) {
+      for (let y = y0; y < y0 + patch; y++) {
+        for (let x = x0; x < x0 + patch; x++) values.push(image.data[y * image.width + x]!);
       }
     }
   }

@@ -51,6 +51,12 @@ describe("card scanning engine", () => {
     expect(structure.note).toMatch(/other mark/);
   });
 
+  it("counts filled discs instead of rings when the layout says so", async () => {
+    const layout = { ...EXAMPLE_LAYOUT, fields: [{ id: "structure", kind: "bubbles" as const, shape: "disc" as const, rect: { x: 0.1, y: 0.6, w: 0.8, h: 0.1 } }] };
+    const out = await scanCard(DEFAULT_PHOTO, layout, { recogniser: nobody });
+    expect(out.ok && out.fields[0]?.value).toBe(1);
+  });
+
   it("reads a pip as filled or empty", async () => {
     const { fields } = await scan(DEFAULT_PHOTO);
     expect(field(fields, "filled").value).toBe(true);

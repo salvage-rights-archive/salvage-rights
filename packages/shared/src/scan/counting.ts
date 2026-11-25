@@ -34,7 +34,7 @@ export function cardDarkLevel(card: Gray): number {
  * shape that is about as wide as tall, has a light middle and is about the size of the other rings. Filled discs and
  * stray marks are not counted; they lower the confidence instead. `max` is the most the row can hold.
  */
-export function countBubbles(card: Gray, box: PixelRect, cardLevel: number, max?: number): Counted {
+export function countBubbles(card: Gray, box: PixelRect, cardLevel: number, max?: number, shape: "ring" | "disc" = "ring"): Counted {
   const level = darkLevel(card, box, cardLevel);
   const { w, h } = box;
   const dark = new Uint8Array(w * h);
@@ -80,7 +80,8 @@ export function countBubbles(card: Gray, box: PixelRect, cardLevel: number, max?
     const cy = y0 + Math.floor(bh / 2);
     const lightMiddle = !dark[cy * w + cx];
     // A ring of any thickness fills between a fifth and three quarters of its box (a disc fills about 0.79).
-    const ring = bw >= 5 && bh >= 5 && aspect > 0.7 && aspect < 1.43 && fill > 0.2 && fill < 0.75 && lightMiddle;
+    const round = bw >= 5 && bh >= 5 && aspect > 0.7 && aspect < 1.43;
+    const ring = shape === "ring" ? round && fill > 0.2 && fill < 0.75 && lightMiddle : round && fill >= 0.6;
     blobs.push({ area, width: bw, height: bh, ring });
   }
 
