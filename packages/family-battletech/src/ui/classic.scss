@@ -1,0 +1,120 @@
+// Styles for the Classic BattleTech pages. Theme tokens only; every class starts with bt-.
+
+.bt-section {
+  margin: 0 0 var(--sr-space-4);
+}
+
+.bt-hint {
+  color: var(--sr-ink-muted);
+}
+
+.bt-field {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sr-space-2);
+  margin-bottom: var(--sr-space-2);
+
+  label {
+    flex: 1 1 100%;
+  }
+
+  input,
+  select {
+    flex: 1 1 14rem;
+    min-width: 0;
+    min-height: 44px;
+    padding: 0 var(--sr-space-2);
+    background: var(--sr-field-bg);
+    color: var(--sr-field-ink);
+    border: var(--sr-border) solid var(--sr-field-line);
+    border-radius: var(--sr-radius);
+    font: inherit;
+
+    &:focus {
+      background: var(--sr-field-bg-focus);
+    }
+  }
+
+  input[type="file"] {
+    padding: var(--sr-space-2);
+  }
+}
+
+.bt-button {
+  min-height: 44px;
+  padding: 0 var(--sr-space-3);
+  background: var(--sr-accent-bg);
+  color: var(--sr-on-accent);
+  border: 0;
+  border-radius: var(--sr-radius);
+  font: inherit;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--sr-accent-bg-hover);
+  }
+
+  &--secondary {
+    background: var(--sr-secondary-bg);
+    color: var(--sr-on-secondary);
+
+    &:hover {
+      background: var(--sr-secondary-bg-hover);
+    }
+  }
+}
+
+// A link that looks like the secondary button.
+a.bt-button {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+}
+
+.bt-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.bt-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sr-space-2);
+  padding: var(--sr-space-2) var(--sr-space-3);
+  background: var(--sr-surface);
+  border: var(--sr-border) solid var(--sr-line);
+  border-radius: var(--sr-radius);
+
+  & + & {
+    margin-top: var(--sr-space-2);
+  }
+
+  &__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sr-space-2);
+  }
+}
+
+.bt-problem {
+  color: var(--sr-danger);
+}
+
+.bt-warning {
+  padding: var(--sr-space-2) var(--sr-space-3);
+  background: var(--sr-surface-alt);
+  border: var(--sr-border) solid var(--sr-hazard);
+  border-radius: var(--sr-radius);
+}
+
+.bt-confirm {
+  margin-top: var(--sr-space-3);
+  padding: var(--sr-space-3);
+  background: var(--sr-surface-sunk);
+  border: var(--sr-border) solid var(--sr-line-strong);
+  border-radius: var(--sr-radius);
+}
