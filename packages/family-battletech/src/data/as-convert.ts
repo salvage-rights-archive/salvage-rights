@@ -4,17 +4,18 @@
 //
 // Book: Alpha Strike Companion (ASC, 2014), "BattleTech Conversions" pp. 91-99, with its errata v1.6 (6 December 2022), which
 // the book's own errata calls current for these chapters. Where the errata changes a figure the row says so in `errata`.
-// The 2025 Converting Heat errata v1.3 does not touch these steps (it replaces heat only); CONV-4 reads it.
+// The 2025 Converting Heat errata v1.3 does not touch these steps (it replaces heat only); part three (the end of this file) reads it.
 
 export interface AscCite {
   book: "Alpha Strike Companion";
   /** Printed page. */
   page: number;
-  /** The errata entry that adds to or replaces the printed page (ASC errata v1.6). */
-  errata?: "v1.6";
+  /** The errata entry that adds to or replaces the printed page: ASC errata v1.6 (6 December 2022), or the Converting Heat errata v1.3
+   * (2025), which replaces the heat and final-damage sections of pp. 115-116. */
+  errata?: "v1.6" | "heat-v1.3";
   checked: "page";
 }
-const asc = (page: number, errata?: "v1.6"): AscCite => (errata ? { book: "Alpha Strike Companion", page, errata, checked: "page" } : { book: "Alpha Strike Companion", page, checked: "page" });
+const asc = (page: number, errata?: "v1.6" | "heat-v1.3"): AscCite => (errata ? { book: "Alpha Strike Companion", page, errata, checked: "page" } : { book: "Alpha Strike Companion", page, checked: "page" });
 
 /** The pages the steps read. */
 export const ASC_PAGES = {
@@ -745,4 +746,93 @@ export const WEAPON_RULES = {
   /** The damage subtotal is not rounded; the heat-modified damage is the subtotal rounded up to the next tenth where no heat reduction
    * applies (errata v1.6 p. 99-101 and Converting Heat errata v1.3). */
   roundUpTo: { value: 0.1, cite: WEAPON_PAGES.tablesIntro, checked: "page" as const },
+};
+
+// ==== Part three: heat, heat-modified damage, final damage and the Overheat Value =================================================
+//
+// "Converting Heat" and "Determining Final Damage Values" (ASC pp. 115-116) as the Converting Heat errata v1.3 (2025) replaces them, which
+// is the newer text and so the one we follow (ASC errata v1.6 itself says to replace both sections with it). The errata's page 1 holds
+// heat output, the Heat Dissipation Table, the formula and the Overheat Value; its page 2 the Long-range check for the Overheat Long
+// ability (OVL), final damage, minimal damage and special-ability rounding. Figures were read from the page images of the errata, and of
+// ASC pp. 99, 115, 116 and 128 for what the errata leaves in place. Everything is our own wording; no publisher text is kept.
+
+export const HEAT_PAGES = {
+  tracking: asc(115, "heat-v1.3"),
+  output: asc(115, "heat-v1.3"),
+  special: asc(115, "heat-v1.3"),
+  dissipation: asc(115, "heat-v1.3"),
+  modified: asc(115, "heat-v1.3"),
+  overheat: asc(115, "heat-v1.3"),
+  longCheck: asc(115, "heat-v1.3"),
+  final: asc(116, "heat-v1.3"),
+  /** The ability's own page, with the errata v1.6 entry that makes it depend on an Overheat Value. */
+  ovlAbility: asc(128, "v1.6"),
+  /** Minimal damage for a unit's whole attack values (the general rule the errata points back to). */
+  minimal: asc(99, "v1.6"),
+  /** Special unit ability damage is heat-modified too (errata v1.6 deletes "not subject to heat modification" from p. 116). */
+  abilityDamage: asc(116, "v1.6"),
+} as const;
+
+/** The Heat Dissipation Table (errata v1.3, p. 115): the heat a heat sink of each of our types takes away, per sink. The book prints these
+ * as negative modifiers; we keep them as the positive amount dissipated. Standard and compact are one, double and laser are two. */
+export const HEAT_SINK_DISSIPATION: Record<string, number> = { single: 1, compact: 1, double: 2, "double-clan": 2, laser: 2 };
+
+/** Equipment that dissipates heat: per piece (coolant pods), or once however many are mounted (the others; a partial wing is two mounts
+ * but one wing). Catalog ids. */
+export const DISSIPATION_ITEMS = {
+  perPod: { ids: ["coolant-pod-is", "coolant-pod-clan"], each: 1 },
+  once: [
+    { name: "partial wing", ids: ["partial-wing-is", "partial-wing-clan"], value: 3 },
+    { name: "radical heat sink system", ids: ["radical-heat-sink-is"], value: 1 },
+    { name: "RISC emergency coolant system", ids: ["risc-emergency-coolant-system-is"], value: 1 },
+  ],
+};
+
+/** Items that change heat in play but are not in the book's tables: a finding, not a guess. */
+export const HEAT_ITEMS_NOT_IN_BOOK = ["risc-heat-sink-override-kit-is"];
+
+/** The special-case heat rules (errata v1.3, p. 115). */
+export const HEAT_SPECIAL = {
+  /** Heat for each anti-missile system; the laser kind is more (Clan, then Inner Sphere). */
+  ams: { ids: ["ams-is", "ams-clan"], heat: 1 },
+  lams: { clan: { id: "laser-anti-missile-system-clan", heat: 5 }, inner: { id: "laser-anti-missile-system-is", heat: 7 } },
+  /** Stealth armor, the Null-Signature System or the Void-Signature System: added once. */
+  stealth: { armorType: "stealth", ids: ["null-signature-system-is", "void-signature-system-is"], heat: 10 },
+  chameleon: { ids: ["chameleon-lps-is"], heat: 6 },
+};
+
+/** Movement heat of a 'Mech (errata v1.3, p. 115). */
+export const MOVEMENT_HEAT = {
+  /** A BattleMech without jump jets (an IndustrialMech without jump jets adds none). */
+  walk: 2,
+  /** A jumping unit: 1 per 2 inches of jumping Move, at least 3. */
+  jumpMin: 3,
+  /** An XXL engine ignores the above: 6 without jump jets, otherwise 2 per 2 inches of jumping Move, at least 6. */
+  xxlWalk: 6,
+  xxlJumpMin: 6,
+  /** Improved jump jets halve the jumping heat, rounding up, to at least 3 (also for the XXL case). */
+  improvedMin: 3,
+  xxlEngines: ["xxl", "xxl-clan"],
+  improvedJumpJets: ["improved-jump-jet"],
+};
+
+/** The artillery cannons the weapon tables list (p. 104): their heat and whether they have a Long-range damage value come from the row. */
+export const ARTILLERY_CANNON_ROWS: Record<string, string> = {
+  "thumper-cannon-is": "Thumper Artillery Cannon",
+  "thumper-cannon-clan": "Thumper Artillery Cannon",
+  "sniper-cannon-is": "Sniper Artillery Cannon",
+  "sniper-cannon-clan": "Sniper Artillery Cannon",
+  "long-tom-cannon-is": "Long Tom Artillery Cannon",
+  "long-tom-cannon-clan": "Long Tom Artillery Cannon",
+};
+
+export const HEAT_RULES = {
+  /** A unit overheats when its heat output is more than its dissipation plus this (the formula's "minus 4"). */
+  margin: 4,
+  /** The Overheat Value never goes over this. */
+  overheatMax: 4,
+  /** The Long-range check: the heat-modified whole value is at least this much under the whole subtotal. */
+  ovlDrop: 1,
+  /** A heat-modified bracket above 0 and under this is minimal damage (0*). */
+  minimalBelow: 0.5,
 };

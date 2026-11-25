@@ -4,7 +4,25 @@ import { AMMUNITION } from "../data/equipment/ammunition";
 import { OTHER } from "../data/equipment/other";
 import { WEAPONS } from "../data/equipment/weapons";
 import { ARMOR, ENGINE_TYPES, STRUCTURE_TYPES } from "../data/chassis";
-import { convertArmor, convertBody, convertMovement, convertSize, convertStructure, convertType, convertWeapons, tmmOf } from "./as-convert";
+import {
+  convertArmor,
+  convertBody,
+  convertDissipation,
+  convertHeat,
+  convertHeatOutput,
+  convertMech,
+  convertMovement,
+  convertMovementHeat,
+  convertSize,
+  convertStructure,
+  convertType,
+  convertWeapons,
+  finalAbilityDamage,
+  finalDamage,
+  heatModifiedDamage,
+  tmmOf,
+} from "./as-convert";
+import type { Step, WeaponDamage, WeaponLine } from "./as-convert";
 import { createCatalog, expand } from "./catalog";
 import { bipedRecord, mount } from "./fixtures";
 import type { MechRecord, Mount } from "./mech";
@@ -241,5 +259,155 @@ describe("weapon damage by range (ASC pp. 99-110, errata v1.6)", () => {
       expect(find(entry.tech, entry.name), entry.id).toBeDefined();
       expect(catalog.byId(entry.id), entry.id).toBeDefined();
     }
+  });
+});
+
+// ---- Part three: heat, damage, Overheat Value (ASC pp. 115-116 as the Converting Heat errata v1.3 replaces them) ----------------
+
+describe("heat dissipation (errata v1.3, p. 115)", () => {
+  const sinks = (type: string, count: number, extra?: { type: string; count: number }[]): Partial<MechRecord["chassis"]> => ({ heatSinks: { type, count, ...(extra ? { extra } : {}) } });
+  it.each([
+    ["ten single sinks", mech(50, 4, [], sinks("single", 10)), 10],
+    ["the book's example: ten double sinks and a coolant pod make 21", mech(50, 4, [item("coolant-pod-is")], sinks("double", 10)), 21],
+    ["mixed groups: ten Inner Sphere doubles and four Clan doubles", mech(50, 4, [], sinks("double", 10, [{ type: "double-clan", count: 4 }])), 28],
+    ["compact sinks are one each", mech(50, 4, [], sinks("compact", 12)), 12],
+    ["laser sinks are two each", mech(50, 4, [], sinks("laser", 10)), 20],
+    ["a partial wing (two mounts), the radical system and the RISC coolant system count once each", mech(50, 4, [item("partial-wing-is", "LT"), item("partial-wing-is", "RT"), item("radical-heat-sink-is"), item("risc-emergency-coolant-system-is")], sinks("single", 10)), 15],
+  ] as [string, MechRecord, number][])("%s", (_name, record, total) => {
+    const step = convertDissipation(record, catalog);
+    expect(step.value).toBe(total);
+    expect(step.working.at(-1)?.cite).toMatchObject({ page: 115, errata: "heat-v1.3" });
+  });
+  it("a heat sink kind the table does not list is a finding and no value", () => {
+    const step = convertDissipation(mech(50, 4, [], { heatSinks: { type: "mystery", count: 10 } }), catalog);
+    expect(step.value).toBeNull();
+    expect(step.findings.map((f) => f.code)).toEqual(["heat-sink-type"]);
+  });
+});
+
+describe("heat output: movement and the special cases (errata v1.3, p. 115)", () => {
+  const jets = (count: number, id = "jump-jet-is") => many(count, id);
+  it.each([
+    ["a BattleMech without jump jets adds 2", mech(50, 4), 2],
+    ["an IndustrialMech without jump jets adds none", mech(50, 4, [], {}, { unitType: "industrialmech" }), 0],
+    ["jumping is 1 per 2 inches: 5 jets", mech(50, 4, jets(5)), 5],
+    ["but at least 3", mech(50, 4, jets(2)), 3],
+    ["an XXL engine without jump jets: 6", mech(50, 4, [], { engine: { type: "xxl", rating: 200 } }), 6],
+    ["an XXL engine jumping: 2 per 2 inches, 8 for 4 jets", mech(50, 4, jets(4), { engine: { type: "xxl", rating: 200 } }), 8],
+    ["improved jump jets halve it rounding up, at least 3: 8 jets give 4", mech(50, 4, jets(8, "improved-jump-jet-is")), 4],
+    ["improved jets with an XXL engine are 1 per 2 inches: 5 jets give 5", mech(50, 4, jets(5, "improved-jump-jet-is"), { engine: { type: "xxl", rating: 200 } }), 5],
+    ["improved jets with an XXL engine, at least 3: 2 jets give 3", mech(50, 4, jets(2, "improved-jump-jet-is"), { engine: { type: "xxl", rating: 200 } }), 3],
+  ] as [string, MechRecord, number][])("%s", (_name, record, heat) => {
+    expect(convertMovementHeat(record, catalog).value).toBe(heat);
+  });
+
+  const output = (record: MechRecord) => {
+    const weapons = convertWeapons(record, catalog);
+    return weapons.value && convertHeatOutput(record, catalog, weapons.value).value;
+  };
+  it.each([
+    // Short and Medium output, then Long output (weapons with no Long damage value left out).
+    ["two medium lasers (3 each) and 2 for walking; they have no Long damage", mech(50, 4, many(2, "medium-laser-is")), 8, 2],
+    ["a machine gun is heat-neutral; an anti-missile system adds 1 even at Long", mech(50, 4, [item("machine-gun-is"), item("ppc-is"), item("ams-is")]), 13, 13],
+    ["laser anti-missile systems add 5 (Clan) and 7 (Inner Sphere)", mech(50, 4, [item("laser-anti-missile-system-clan"), item("laser-anti-missile-system-is")]), 14, 14],
+    ["a rocket launcher adds no heat", mech(50, 4, [item("rocket-launcher-10-is"), item("medium-laser-is")]), 5, 2],
+    ["the rear weapons' heat counts when it is larger than the forward weapons'", mech(50, 4, [item("medium-laser-is", "LA"), { ...item("ppc-is", "CT"), rear: true }]), 12, 12],
+    ["stealth armor adds 10 and the Chameleon shield 6", mech(50, 4, [item("chameleon-lps-is")], { armorType: "stealth" }), 18, 18],
+  ] as [string, MechRecord, number, number][])("%s", (_name, record, total, long) => {
+    expect(output(record)).toEqual({ total, long });
+  });
+});
+
+describe("heat-modified damage, final damage and the Overheat Value (errata v1.3, pp. 115-116)", () => {
+  const cite = { book: "Alpha Strike Companion" as const, page: 101, checked: "page" as const };
+  /** A weapons step made by hand: each entry is [heat, has Long damage]; the subtotals are what the book's example gives. */
+  const weaponsStep = (heats: [number, boolean][], subtotal: [number, number, number, number?]): Step<WeaponDamage> => {
+    const lines: WeaponLine[] = heats.map(([heat, long], n) => ({
+      mountId: `w${String(n)}`,
+      name: `weapon ${String(n)}`,
+      tableRow: "made up",
+      rear: false,
+      base: { short: 1, medium: 1, long: long ? 1 : 0, extreme: 0 },
+      factors: [],
+      damage: { short: 1, medium: 1, long: 1, extreme: 0 },
+      heat,
+      cite,
+    }));
+    const [short, medium, long, extreme = 0] = subtotal;
+    const sub = { short, medium, long, extreme };
+    return { value: { arc: "front", lines, all: lines, subtotal: sub, roundedUp: sub }, working: [], findings: [] };
+  };
+  const shown = (d: { value: number; minimal?: true } | null | undefined) => (d === undefined ? "?" : d === null ? "-" : d.minimal ? "0*" : String(d.value));
+  const card = (record: MechRecord, step: Step<WeaponDamage>) => {
+    const heat = convertHeat(record, catalog, step).value;
+    return heat && `${shown(heat.final.short)}/${shown(heat.final.medium)}/${shown(heat.final.long)} OV${String(heat.ov)}${heat.ovl ? " OVL" : ""}`;
+  };
+  const sinks = (count: number) => mech(50, 4, [], { heatSinks: { type: "single", count } });
+
+  it.each([
+    // The errata's own example: Long subtotal 4.5, 50 weapon heat at Long and 3 more that cannot reach Long, 2 for walking, 40 dissipation.
+    // Long heat 52 gives 3.8, whole 4, one under the whole subtotal 5: OVL. The actual Long damage then uses 53 + 2 - 4: 3.6, so 4.
+    ["the book's Long-range example: 4.5 subtotal, 40 dissipation", sinks(40), weaponsStep([[50, true], [3, false]], [4.5, 4.5, 4.5]), "4/4/4 OV1 OVL"],
+    ["no reduction when dissipation is the heat output minus 4 or more: subtotals only round up to the tenth (0.401 and 0.901 are the book's examples)", sinks(10), weaponsStep([[12, true]], [0.401, 0.901, 0.2]), "1/1/0* OV0"],
+    ["a bracket with no damage is a dash", sinks(10), weaponsStep([[3, false]], [0.5, 0.5, 0]), "1/1/- OV0"],
+    ["the Overheat Value is at most 4", sinks(10), weaponsStep([[40, true]], [10, 10, 0]), "3/3/- OV4"],
+    ["minimal damage: more than 0 and under 0.5 after heat-modification is 0*", sinks(14), weaponsStep([[30, true]], [0.5, 2, 0]), "0*/1/- OV1"],
+    ["a unit with no Medium damage takes its Overheat Value from Short", sinks(5), weaponsStep([[30, false]], [6, 0, 0]), "2/-/- OV4"],
+  ] as [string, MechRecord, Step<WeaponDamage>, string][])("%s", (_name, record, step, expected) => {
+    expect(card(record, step)).toBe(expected);
+  });
+
+  it("heat-modified damage and the final rounding of a bracket: up to the tenth, then up to the whole; 0* under 0.5; special abilities round normally", () => {
+    const state = { output: 55, longOutput: 52, dissipation: 40, reduces: true, ovl: true };
+    expect(heatModifiedDamage(4.5, "long", state)).toBe(3.6);
+    expect(finalDamage(3.6)).toEqual({ value: 4 });
+    expect(heatModifiedDamage(4.5, "long", { ...state, ovl: false })).toBe(4.5); // without OVL the Long subtotal is not reduced
+    expect(finalDamage(0.4)).toEqual({ value: 0, minimal: true });
+    expect(finalDamage(0.5)).toEqual({ value: 1 });
+    expect(finalDamage(0)).toBeNull();
+    expect(finalAbilityDamage(2.4)).toEqual({ value: 2 });
+    expect(finalAbilityDamage(2.5)).toEqual({ value: 3 });
+  });
+});
+
+describe("a part the heat rules have no answer for is a finding, not a guess", () => {
+  it.each([
+    ["a mechanical jump booster", mech(50, 4, [item("mechanical-jump-booster-is"), item("medium-laser-is")]), "jump-equipment"],
+    ["improved and standard jump jets together", mech(50, 4, [...many(3, "jump-jet-is"), ...many(2, "improved-jump-jet-is"), item("medium-laser-is")]), "mixed-jump-jets"],
+    ["a heat sink kind the table lacks", mech(50, 4, [item("medium-laser-is")], { heatSinks: { type: "mystery", count: 10 } }), "heat-sink-type"],
+    ["a weapon the weapon tables cannot place", mech(50, 4, [item("centurion-weapon-system-is")]), "no-table-row"],
+  ] as [string, MechRecord, string][])("%s leaves damage and Overheat Value unset", (_name, record, code) => {
+    const result = convertMech(record, catalog);
+    expect(result.findings.map((f) => f.code)).toContain(code);
+    expect(result.unit.card.damage).toBeUndefined();
+    expect(result.unit.card.ov).toBeUndefined();
+    expect(result.unit.card.armor).toBeDefined(); // the earlier parts still convert
+  });
+  it("an item with a heat the book does not name, and Extreme damage on a unit that reduces, are findings beside the values", () => {
+    const record = mech(50, 4, [item("spot-welder-is", "RA"), ...many(4, "ac-2-is"), ...many(3, "ammo-ac-2-is"), ...many(8, "medium-laser-is")]);
+    const result = convertMech(record, catalog);
+    expect(result.findings.map((f) => f.code)).toEqual(expect.arrayContaining(["item-heat", "extreme-heat"]));
+    expect(result.heat?.final.extreme).toBeUndefined();
+    expect(result.unit.card.damage).toBeDefined();
+  });
+});
+
+describe("convertMech runs parts one to three", () => {
+  it("a made-up 50-ton 'Mech with more heat than it sheds: body, damage, Overheat Value and OVL, with the specials, role and Point Value left to later pieces", () => {
+    // Two ER PPCs (15 heat, 1/1/1 each) and two Large Lasers (8 heat, 0.8/0.8 each), ten single heat sinks, walking: output 48, Long output 32.
+    // Subtotals 3.6/3.6/2. Short and Medium: 3.6 x 10 / 44 = 0.82, up to 0.9, final 1; Medium drops from 4 to 1: Overheat Value 3.
+    // Long check: 2 x 10 / 28 = 0.72, up to 0.8, whole 1, one under 2: OVL; the Long damage is 2 x 10 / 44 = 0.46, up to 0.5, final 1.
+    const result = convertMech(mech(50, 4, [...many(2, "er-ppc-is"), ...many(2, "large-laser-is")]), catalog);
+    expect(result.unit.card).toMatchObject({ type: "BM", size: 2, tmm: 1, damage: { s: { value: 1 }, m: { value: 1 }, l: { value: 1 } }, ov: 3 });
+    expect(result.unit.card.move?.map((m) => m.inches)).toEqual([8]);
+    expect(result.earned.ovl).toBe(true);
+    expect(result.heat).toMatchObject({ output: 48, longOutput: 32, dissipation: 10, ov: 3 });
+    expect(result.pending).toEqual(["specials", "role", "pv"]);
+    expect(result.unit.card.specials).toBeUndefined();
+    expect(result.unit.card.role).toBeUndefined();
+    expect(result.unit.card.pv).toBeUndefined();
+    expect(result.unit.source?.kind).toBe("converted");
+    expect(new Set(result.working.map((w) => w.step))).toEqual(new Set(["type", "size", "movement", "tmm", "armor", "structure", "weapons", "heat", "damage", "overheat"]));
+    expect(result.findings).toEqual([]);
   });
 });
