@@ -127,14 +127,14 @@ export const OTHER: EquipmentGroup[] = [
     defaults: { kind: "weapon", techBase: "inner-sphere", cite: { book: "TechManual", page: 344 }, checked: "page" },
     items: [
       // Industrial equipment a BattleMech may mount (Inner Sphere)
-      { id: "backhoe-is", name: "Backhoe", tons: 5, slots: 6, heat: 0, damage: "6", availability: [{ from: 1950 }], locations: ["LA", "RA"], locationsQuad: ["LT", "RT"], units: ["mech", "industrialmech", "vehicle"], by: { vehicle: { slots: 1 } } },
-      { id: "chainsaw-is", name: "Chainsaw", tons: 5, slots: 5, heat: 0, damage: "5", availability: [{ from: 1950 }], locations: ["LA", "RA"], locationsQuad: ["LT", "RT"], units: ["mech", "industrialmech", "vehicle"], by: { vehicle: { slots: 1 } } },
-      { id: "combine-is", name: "Combine", tons: 2.5, slots: 4, heat: 0, damage: "3", availability: [{ from: 1950 }], locations: ["LA", "RA"], locationsQuad: ["LT", "RT"], units: ["mech", "industrialmech", "vehicle"], by: { vehicle: { slots: 1 } } },
-      { id: "dual-saw-is", name: "Dual Saw", tons: 7, slots: 7, heat: 0, damage: "7", availability: [{ from: 1950 }], locations: ["LA", "RA"], locationsQuad: ["LT", "RT"], units: ["mech", "industrialmech", "vehicle"], by: { vehicle: { slots: 1 } } },
-      { id: "heavy-duty-pile-driver-is", name: "Heavy Duty Pile-Driver", aliases: ["Pile Driver"], tons: 10, slots: 8, heat: 0, damage: "9", availability: [{ from: 1950 }], locations: ["LA", "RA"], locationsQuad: ["LT", "RT"], units: ["mech", "industrialmech", "vehicle"], by: { vehicle: { slots: 1, note: "Support vehicle: 1* slots" } } },
-      { id: "mining-drill-is", name: "Mining Drill", tons: 3, slots: 4, heat: 0, damage: "4", availability: [{ from: 1950 }], locations: ["LA", "RA"], locationsQuad: ["LT", "RT"], units: ["mech", "industrialmech", "vehicle"], by: { vehicle: { slots: 1 } } },
-      { id: "rock-cutter-is", name: "Rock-Cutter", aliases: ["Rock Cutter"], tons: 5, slots: 5, heat: 0, damage: "5", availability: [{ from: 1950 }], locations: ["LA", "RA"], locationsQuad: ["LT", "RT"], units: ["mech", "industrialmech", "vehicle"], by: { vehicle: { slots: 1 } } },
-      { id: "spot-welder-is", name: "Spot Welder", tons: 2, slots: 1, heat: 2, damage: "5", availability: [{ from: 2320 }], prototypeYear: 2312, locations: ["LA", "RA"], locationsQuad: ["LT", "RT"], units: ["mech", "industrialmech", "vehicle"] },
+      { id: "backhoe-is", name: "Backhoe", tons: 5, slots: 6, heat: 0, damage: "6", availability: [{ from: 1950 }], locations: ["LA", "RA"], armRemoves: "hand", locationsQuad: ["LT", "RT"], units: ["mech", "industrialmech", "vehicle"], by: { vehicle: { slots: 1 } } },
+      { id: "chainsaw-is", name: "Chainsaw", tons: 5, slots: 5, heat: 0, damage: "5", availability: [{ from: 1950 }], locations: ["LA", "RA"], armRemoves: "hand", locationsQuad: ["LT", "RT"], units: ["mech", "industrialmech", "vehicle"], by: { vehicle: { slots: 1 } } },
+      { id: "combine-is", name: "Combine", tons: 2.5, slots: 4, heat: 0, damage: "3", availability: [{ from: 1950 }], locations: ["LA", "RA"], armRemoves: "hand", locationsQuad: ["LT", "RT"], units: ["mech", "industrialmech", "vehicle"], by: { vehicle: { slots: 1 } } },
+      { id: "dual-saw-is", name: "Dual Saw", tons: 7, slots: 7, heat: 0, damage: "7", availability: [{ from: 1950 }], locations: ["LA", "RA"], armRemoves: "hand", locationsQuad: ["LT", "RT"], units: ["mech", "industrialmech", "vehicle"], by: { vehicle: { slots: 1 } } },
+      { id: "heavy-duty-pile-driver-is", name: "Heavy Duty Pile-Driver", aliases: ["Pile Driver"], tons: 10, slots: 8, heat: 0, damage: "9", availability: [{ from: 1950 }], locations: ["LA", "RA"], armRemoves: "lower-arm", locationsQuad: ["LT", "RT"], units: ["mech", "industrialmech", "vehicle"], by: { vehicle: { slots: 1, note: "Support vehicle: 1* slots" } } },
+      { id: "mining-drill-is", name: "Mining Drill", tons: 3, slots: 4, heat: 0, damage: "4", availability: [{ from: 1950 }], locations: ["LA", "RA"], armRemoves: "hand", locationsQuad: ["LT", "RT"], units: ["mech", "industrialmech", "vehicle"], by: { vehicle: { slots: 1 } } },
+      { id: "rock-cutter-is", name: "Rock-Cutter", aliases: ["Rock Cutter"], tons: 5, slots: 5, heat: 0, damage: "5", availability: [{ from: 1950 }], locations: ["LA", "RA"], armRemoves: "hand", locationsQuad: ["LT", "RT"], units: ["mech", "industrialmech", "vehicle"], by: { vehicle: { slots: 1 } } },
+      { id: "spot-welder-is", name: "Spot Welder", tons: 2, slots: 1, heat: 2, damage: "5", availability: [{ from: 2320 }], prototypeYear: 2312, locations: ["LA", "RA"], armRemoves: "hand", heavyEnergy: true, locationsQuad: ["LT", "RT"], units: ["mech", "industrialmech", "vehicle"] },
       { id: "nail-rivet-gun-is", name: "Nail/Rivet Gun", aliases: ["Nail Gun", "Rivet Gun"], tons: 0.5, slots: 1, heat: 0, damage: "0", range: [0, 1, 0, 0], availability: [{ from: 2310 }], prototypeYear: 2309, units: ["mech", "industrialmech", "vehicle"], by: { vehicle: { note: "Support vehicle: 1** slots" } } },
     ],
   },
@@ -142,14 +142,14 @@ export const OTHER: EquipmentGroup[] = [
     defaults: { kind: "weapon", techBase: "inner-sphere", cite: { book: "TechManual", page: 345 }, checked: "page" },
     items: [
       // Industrial equipment a BattleMech may mount (Inner Sphere)
-      { id: "wrecking-ball-is", name: "Wrecking Ball", tons: 4, slots: 5, heat: 0, damage: "8", availability: [{ from: 1950 }], locations: ["LA", "RA"], locationsQuad: [], units: ["mech", "industrialmech", "vehicle"], by: { vehicle: { slots: 1 } } },
+      { id: "wrecking-ball-is", name: "Wrecking Ball", tons: 4, slots: 5, heat: 0, damage: "8", availability: [{ from: 1950 }], locations: ["LA", "RA"], armRemoves: "hand", locationsQuad: [], units: ["mech", "industrialmech", "vehicle"], by: { vehicle: { slots: 1 } } },
     ],
   },
   {
     defaults: { kind: "other", techBase: "inner-sphere", cite: { book: "TechManual", page: 344 }, checked: "page" },
     items: [
       // Industrial equipment a BattleMech may mount (Inner Sphere)
-      { id: "salvage-arm-is", name: "Salvage Arm", tons: 3, slots: 2, heat: 0, availability: [{ from: 2415 }], prototypeYear: 2400, locations: ["LA", "RA"], locationsQuad: [] },
+      { id: "salvage-arm-is", name: "Salvage Arm", tons: 3, slots: 2, heat: 0, availability: [{ from: 2415 }], prototypeYear: 2400, locations: ["LA", "RA"], armRemoves: "hand", locationsQuad: [] },
       { id: "sprayer-is", name: "Sprayer", tons: 0.5, slots: 1, heat: 0, range: [0, 0, 0, 1], availability: [{ from: 2300 }], needs: "liquid-cargo" },
       { id: "light-fluid-suction-system-is", name: "Light Fluid Suction System", tons: 0.5, slots: 1, heat: 0, availability: [{ from: 1950 }], needs: "liquid-cargo" },
       { id: "remote-sensor-dispenser-is", name: "Remote Sensor Dispenser", tons: 0.5, slots: 1, heat: 0, range: [0, 0, 0, 0], availability: [{ from: 2200 }], units: ["mech", "industrialmech", "vehicle", "aero", "smallcraft", "dropship"], by: { dropship: { slots: 0 } } },
@@ -226,14 +226,14 @@ export const OTHER: EquipmentGroup[] = [
     defaults: { kind: "weapon", techBase: "clan", cite: { book: "TechManual", page: 344 }, checked: "page", yearsInferred: true },
     items: [
       // Industrial equipment a BattleMech may mount (Clan)
-      { id: "backhoe-clan", name: "Backhoe", tons: 5, slots: 6, heat: 0, damage: "6", availability: [{ from: 1950 }], locations: ["LA", "RA"], locationsQuad: ["LT", "RT"], units: ["mech", "industrialmech", "vehicle"], by: { vehicle: { slots: 1 } } },
-      { id: "chainsaw-clan", name: "Chainsaw", tons: 5, slots: 5, heat: 0, damage: "5", availability: [{ from: 1950 }], locations: ["LA", "RA"], locationsQuad: ["LT", "RT"], units: ["mech", "industrialmech", "vehicle"], by: { vehicle: { slots: 1 } } },
-      { id: "combine-clan", name: "Combine", tons: 2.5, slots: 4, heat: 0, damage: "3", availability: [{ from: 1950 }], locations: ["LA", "RA"], locationsQuad: ["LT", "RT"], units: ["mech", "industrialmech", "vehicle"], by: { vehicle: { slots: 1 } } },
-      { id: "dual-saw-clan", name: "Dual Saw", tons: 7, slots: 7, heat: 0, damage: "7", availability: [{ from: 1950 }], locations: ["LA", "RA"], locationsQuad: ["LT", "RT"], units: ["mech", "industrialmech", "vehicle"], by: { vehicle: { slots: 1 } } },
-      { id: "heavy-duty-pile-driver-clan", name: "Heavy Duty Pile-Driver", aliases: ["Pile Driver"], tons: 10, slots: 8, heat: 0, damage: "9", availability: [{ from: 1950 }], locations: ["LA", "RA"], locationsQuad: ["LT", "RT"], units: ["mech", "industrialmech", "vehicle"], by: { vehicle: { slots: 1, note: "Support vehicle: 1* slots" } } },
-      { id: "mining-drill-clan", name: "Mining Drill", tons: 3, slots: 4, heat: 0, damage: "4", availability: [{ from: 1950 }], locations: ["LA", "RA"], locationsQuad: ["LT", "RT"], units: ["mech", "industrialmech", "vehicle"], by: { vehicle: { slots: 1 } } },
-      { id: "rock-cutter-clan", name: "Rock-Cutter", aliases: ["Rock Cutter"], tons: 5, slots: 5, heat: 0, damage: "5", availability: [{ from: 1950 }], locations: ["LA", "RA"], locationsQuad: ["LT", "RT"], units: ["mech", "industrialmech", "vehicle"], by: { vehicle: { slots: 1 } } },
-      { id: "spot-welder-clan", name: "Spot Welder", tons: 2, slots: 1, heat: 2, damage: "5", availability: [{ from: 2320 }], locations: ["LA", "RA"], locationsQuad: ["LT", "RT"], units: ["mech", "industrialmech", "vehicle"] },
+      { id: "backhoe-clan", name: "Backhoe", tons: 5, slots: 6, heat: 0, damage: "6", availability: [{ from: 1950 }], locations: ["LA", "RA"], armRemoves: "hand", locationsQuad: ["LT", "RT"], units: ["mech", "industrialmech", "vehicle"], by: { vehicle: { slots: 1 } } },
+      { id: "chainsaw-clan", name: "Chainsaw", tons: 5, slots: 5, heat: 0, damage: "5", availability: [{ from: 1950 }], locations: ["LA", "RA"], armRemoves: "hand", locationsQuad: ["LT", "RT"], units: ["mech", "industrialmech", "vehicle"], by: { vehicle: { slots: 1 } } },
+      { id: "combine-clan", name: "Combine", tons: 2.5, slots: 4, heat: 0, damage: "3", availability: [{ from: 1950 }], locations: ["LA", "RA"], armRemoves: "hand", locationsQuad: ["LT", "RT"], units: ["mech", "industrialmech", "vehicle"], by: { vehicle: { slots: 1 } } },
+      { id: "dual-saw-clan", name: "Dual Saw", tons: 7, slots: 7, heat: 0, damage: "7", availability: [{ from: 1950 }], locations: ["LA", "RA"], armRemoves: "hand", locationsQuad: ["LT", "RT"], units: ["mech", "industrialmech", "vehicle"], by: { vehicle: { slots: 1 } } },
+      { id: "heavy-duty-pile-driver-clan", name: "Heavy Duty Pile-Driver", aliases: ["Pile Driver"], tons: 10, slots: 8, heat: 0, damage: "9", availability: [{ from: 1950 }], locations: ["LA", "RA"], armRemoves: "lower-arm", locationsQuad: ["LT", "RT"], units: ["mech", "industrialmech", "vehicle"], by: { vehicle: { slots: 1, note: "Support vehicle: 1* slots" } } },
+      { id: "mining-drill-clan", name: "Mining Drill", tons: 3, slots: 4, heat: 0, damage: "4", availability: [{ from: 1950 }], locations: ["LA", "RA"], armRemoves: "hand", locationsQuad: ["LT", "RT"], units: ["mech", "industrialmech", "vehicle"], by: { vehicle: { slots: 1 } } },
+      { id: "rock-cutter-clan", name: "Rock-Cutter", aliases: ["Rock Cutter"], tons: 5, slots: 5, heat: 0, damage: "5", availability: [{ from: 1950 }], locations: ["LA", "RA"], armRemoves: "hand", locationsQuad: ["LT", "RT"], units: ["mech", "industrialmech", "vehicle"], by: { vehicle: { slots: 1 } } },
+      { id: "spot-welder-clan", name: "Spot Welder", tons: 2, slots: 1, heat: 2, damage: "5", availability: [{ from: 2320 }], locations: ["LA", "RA"], armRemoves: "hand", heavyEnergy: true, locationsQuad: ["LT", "RT"], units: ["mech", "industrialmech", "vehicle"] },
       { id: "nail-rivet-gun-clan", name: "Nail/Rivet Gun", aliases: ["Nail Gun", "Rivet Gun"], tons: 0.5, slots: 1, heat: 0, damage: "0", range: [0, 1, 0, 0], availability: [{ from: 2310 }], units: ["mech", "industrialmech", "vehicle"], by: { vehicle: { note: "Support vehicle: 1** slots" } } },
     ],
   },
@@ -241,14 +241,14 @@ export const OTHER: EquipmentGroup[] = [
     defaults: { kind: "weapon", techBase: "clan", cite: { book: "TechManual", page: 345 }, checked: "page", yearsInferred: true },
     items: [
       // Industrial equipment a BattleMech may mount (Clan)
-      { id: "wrecking-ball-clan", name: "Wrecking Ball", tons: 4, slots: 5, heat: 0, damage: "8", availability: [{ from: 1950 }], locations: ["LA", "RA"], locationsQuad: [], units: ["mech", "industrialmech", "vehicle"], by: { vehicle: { slots: 1 } } },
+      { id: "wrecking-ball-clan", name: "Wrecking Ball", tons: 4, slots: 5, heat: 0, damage: "8", availability: [{ from: 1950 }], locations: ["LA", "RA"], armRemoves: "hand", locationsQuad: [], units: ["mech", "industrialmech", "vehicle"], by: { vehicle: { slots: 1 } } },
     ],
   },
   {
     defaults: { kind: "other", techBase: "clan", cite: { book: "TechManual", page: 344 }, checked: "page", yearsInferred: true },
     items: [
       // Industrial equipment a BattleMech may mount (Clan)
-      { id: "salvage-arm-clan", name: "Salvage Arm", tons: 3, slots: 2, heat: 0, availability: [{ from: 2415 }], locations: ["LA", "RA"], locationsQuad: [] },
+      { id: "salvage-arm-clan", name: "Salvage Arm", tons: 3, slots: 2, heat: 0, availability: [{ from: 2415 }], locations: ["LA", "RA"], armRemoves: "hand", locationsQuad: [] },
       { id: "sprayer-clan", name: "Sprayer", tons: 0.5, slots: 1, heat: 0, range: [0, 0, 0, 1], availability: [{ from: 2300 }], needs: "liquid-cargo" },
       { id: "light-fluid-suction-system-clan", name: "Light Fluid Suction System", tons: 0.5, slots: 1, heat: 0, availability: [{ from: 1950 }], needs: "liquid-cargo" },
       { id: "remote-sensor-dispenser-clan", name: "Remote Sensor Dispenser", tons: 0.5, slots: 1, heat: 0, range: [0, 0, 0, 0], availability: [{ from: 2200 }], units: ["mech", "industrialmech", "vehicle", "aero", "smallcraft", "dropship"], by: { dropship: { slots: 0 } } },
@@ -329,6 +329,8 @@ export const OTHER: EquipmentGroup[] = [
       // Electronics and other equipment, pp. 218-219
       { id: "chaff-pod-is", name: "Chaff Pod", tons: 1, slots: 1, type: "PB, E, OS, X", heat: 0, availability: [{ from: 3079 }], prototypeYear: 3069, rulesLevel: "experimental" },
       { id: "coolant-pod-is", name: "Coolant Pod", tons: 1, slots: 1, type: "PE, OS, X", availability: [{ from: 3079 }], prototypeYear: 3049, rulesLevel: "experimental" },
+      // Drone Operating System (table p. 219, rules p. 118): a tenth of the drone unit's weight plus the half-ton sensor system the rules require with it (one item here), one slot, "ES" in both columns (written as 2200). Price: 5,000 plus 10,000 for each ton of the item.
+      { id: "drone-operating-system-is", name: "Drone Operating System", aliases: ["Drone OS"], tons: "drone-os-tons", slots: 1, type: "E", availability: [{ from: 2200 }], rulesLevel: "advanced", units: ["mech", "industrialmech", "vehicle", "aero"] },
       { id: "electronic-warfare-equipment-is", name: "Electronic Warfare Equipment", aliases: ["EW Equipment"], tons: 7.5, slots: 4, type: "E", range: [0, 0, 0, 3], availability: [{ from: 3025 }], prototypeYear: 3020, rulesLevel: "experimental" },
     ],
   },
@@ -336,6 +338,8 @@ export const OTHER: EquipmentGroup[] = [
     defaults: { kind: "other", techBase: "clan", cite: { book: TO, page: 219 }, playCite: { book: TO, page: 218 }, checked: "page" },
     items: [
       // Electronics and other equipment, pp. 218-219
+      // Drone Operating System (table p. 219, rules p. 118): a tenth of the drone unit's weight plus the half-ton sensor system the rules require with it (one item here), one slot, "ES" in both columns (written as 2200). Price: 5,000 plus 10,000 for each ton of the item.
+      { id: "drone-operating-system-clan", name: "Drone Operating System", aliases: ["Drone OS"], tons: "drone-os-tons", slots: 1, type: "E", availability: [{ from: 2200 }], rulesLevel: "advanced", units: ["mech", "industrialmech", "vehicle", "aero"] },
       { id: "coolant-pod-clan", name: "Coolant Pod", tons: 1, slots: 1, type: "PE, OS, X", availability: [{ from: 3079 }], prototypeYear: 3056, rulesLevel: "experimental" },
     ],
   },
@@ -474,25 +478,33 @@ export const OTHER: EquipmentGroup[] = [
   {
     defaults: { kind: "other", techBase: "inner-sphere", cite: { book: "TechManual", page: 344 }, checked: "page" },
     items: [
-      { id: "searchlight-is", name: "Searchlight", aliases: ["Searchlight (Mounted)", "Mounted Searchlight"], tons: 0.5, slots: 1, heat: 0, range: [0, 0, 0, 170], availability: [{ from: 1950 }], units: ["mech", "industrialmech", "vehicle", "aero", "smallcraft", "dropship"], by: { aero: { slots: 0 }, smallcraft: { slots: 0 }, dropship: { slots: 0 } } },
+      { id: "searchlight-is", name: "Searchlight", aliases: ["Searchlight (Mounted)", "Searchlight, Mounted", "Mounted Searchlight"], tons: 0.5, slots: 1, heat: 0, range: [0, 0, 0, 170], availability: [{ from: 1950 }], units: ["mech", "industrialmech", "vehicle", "aero", "smallcraft", "dropship"], by: { aero: { slots: 0 }, smallcraft: { slots: 0 }, dropship: { slots: 0 } } },
       { id: "ejection-seat-is", name: "Ejection Seat", tons: 0.5, slots: 1, availability: [{ from: 2445 }], prototypeYear: 2430, locations: ["HD"], units: ["industrialmech", "vehicle"], by: { vehicle: { tons: 0.1, slots: 0, note: "Support vehicle" } } },
       { id: "extended-fuel-tank-is", name: "Extended Fuel Tank", aliases: ["Fuel Tank", "Extended Fuel Tanks"], tons: "fuel-tank-tons", slots: "fuel-tank-slots", availability: [{ from: 2300 }], locations: ["CT", "LT", "RT"], units: ["industrialmech", "vehicle"], by: { vehicle: { slots: 1 } } },
       { id: "communications-equipment-is", name: "Communications Equipment", aliases: ["CommsGear", "Comm. Equipment"], tons: "chosen-tons", slots: "ceil-amount", availability: [{ from: 1950 }], amount: { unit: "tons", min: 1, max: 15, step: 1 }, units: ["mech", "industrialmech", "vehicle", "aero", "smallcraft", "dropship"], by: { vehicle: { slots: 1 }, aero: { slots: 0 }, smallcraft: { slots: 0 }, dropship: { slots: 0 } } },
       { id: "cargo-standard-is", name: "Cargo, Standard", aliases: ["Cargo", "Cargo Bay"], tons: "chosen-tons", slots: "ceil-amount", availability: [{ from: 1950 }], amount: { unit: "tons", min: 0.5, step: 0.5 }, units: ["mech", "industrialmech", "vehicle"], by: { vehicle: { slots: 1 } } },
       { id: "cargo-liquid-is", name: "Cargo, Liquid", aliases: ["Liquid Storage", "Liquid Cargo"], tons: "chosen-tons", slots: "ceil-amount", availability: [{ from: 1950 }], amount: { unit: "tons", min: 0.5, step: 0.5 }, units: ["mech", "industrialmech", "vehicle"], by: { vehicle: { slots: 1 } } },
       { id: "cargo-insulated-is", name: "Cargo, Insulated", aliases: ["Insulated Cargo"], tons: "chosen-tons", slots: "ceil-amount", availability: [{ from: 1950 }], amount: { unit: "tons", min: 0.5, step: 0.5 }, units: ["mech", "industrialmech", "vehicle"], by: { vehicle: { slots: 1 } } },
+      // Dumper (p. 243): 5 percent of the cargo it empties, so a formula that reads the cargo mount it is linked to; paramedic equipment (p. 233): a quarter ton; container bay (p. 239): one 10-ton container to a slot, IndustrialMechs only.
+      { id: "dumper-is", name: "Dumper", tons: "dumper-tons", slots: 1, availability: [{ from: 1950 }], units: ["industrialmech", "vehicle"] },
+      { id: "paramedic-equipment-is", name: "Paramedic Equipment", tons: 0.25, slots: 1, availability: [{ from: 1950 }], units: ["industrialmech", "vehicle"] },
+      { id: "cargo-container-is", name: "Cargo Container", aliases: ["Cargo, Container"], tons: 10, slots: 1, availability: [{ from: 1950 }], units: ["industrialmech", "vehicle"] },
     ],
   },
   {
     defaults: { kind: "other", techBase: "clan", cite: { book: "TechManual", page: 344 }, checked: "page", yearsInferred: true },
     items: [
-      { id: "searchlight-clan", name: "Searchlight", aliases: ["Searchlight (Mounted)", "Mounted Searchlight"], tons: 0.5, slots: 1, heat: 0, range: [0, 0, 0, 170], availability: [{ from: 1950 }], units: ["mech", "industrialmech", "vehicle", "aero", "smallcraft", "dropship"], by: { aero: { slots: 0 }, smallcraft: { slots: 0 }, dropship: { slots: 0 } } },
+      { id: "searchlight-clan", name: "Searchlight", aliases: ["Searchlight (Mounted)", "Searchlight, Mounted", "Mounted Searchlight"], tons: 0.5, slots: 1, heat: 0, range: [0, 0, 0, 170], availability: [{ from: 1950 }], units: ["mech", "industrialmech", "vehicle", "aero", "smallcraft", "dropship"], by: { aero: { slots: 0 }, smallcraft: { slots: 0 }, dropship: { slots: 0 } } },
       { id: "ejection-seat-clan", name: "Ejection Seat", tons: 0.5, slots: 1, availability: [{ from: 2445 }], locations: ["HD"], units: ["industrialmech", "vehicle"], by: { vehicle: { tons: 0.1, slots: 0, note: "Support vehicle" } } },
       { id: "extended-fuel-tank-clan", name: "Extended Fuel Tank", aliases: ["Fuel Tank", "Extended Fuel Tanks"], tons: "fuel-tank-tons", slots: "fuel-tank-slots", availability: [{ from: 2300 }], locations: ["CT", "LT", "RT"], units: ["industrialmech", "vehicle"], by: { vehicle: { slots: 1 } } },
       { id: "communications-equipment-clan", name: "Communications Equipment", aliases: ["CommsGear", "Comm. Equipment"], tons: "chosen-tons", slots: "ceil-amount", availability: [{ from: 1950 }], amount: { unit: "tons", min: 1, max: 15, step: 1 }, units: ["mech", "industrialmech", "vehicle", "aero", "smallcraft", "dropship"], by: { vehicle: { slots: 1 }, aero: { slots: 0 }, smallcraft: { slots: 0 }, dropship: { slots: 0 } } },
       { id: "cargo-standard-clan", name: "Cargo, Standard", aliases: ["Cargo", "Cargo Bay"], tons: "chosen-tons", slots: "ceil-amount", availability: [{ from: 1950 }], amount: { unit: "tons", min: 0.5, step: 0.5 }, units: ["mech", "industrialmech", "vehicle"], by: { vehicle: { slots: 1 } } },
       { id: "cargo-liquid-clan", name: "Cargo, Liquid", aliases: ["Liquid Storage", "Liquid Cargo"], tons: "chosen-tons", slots: "ceil-amount", availability: [{ from: 1950 }], amount: { unit: "tons", min: 0.5, step: 0.5 }, units: ["mech", "industrialmech", "vehicle"], by: { vehicle: { slots: 1 } } },
       { id: "cargo-insulated-clan", name: "Cargo, Insulated", aliases: ["Insulated Cargo"], tons: "chosen-tons", slots: "ceil-amount", availability: [{ from: 1950 }], amount: { unit: "tons", min: 0.5, step: 0.5 }, units: ["mech", "industrialmech", "vehicle"], by: { vehicle: { slots: 1 } } },
+      // Dumper (p. 243): 5 percent of the cargo it empties, so a formula that reads the cargo mount it is linked to; paramedic equipment (p. 233): a quarter ton; container bay (p. 239): one 10-ton container to a slot, IndustrialMechs only.
+      { id: "dumper-clan", name: "Dumper", tons: "dumper-tons", slots: 1, availability: [{ from: 1950 }], units: ["industrialmech", "vehicle"] },
+      { id: "paramedic-equipment-clan", name: "Paramedic Equipment", tons: 0.25, slots: 1, availability: [{ from: 1950 }], units: ["industrialmech", "vehicle"] },
+      { id: "cargo-container-clan", name: "Cargo Container", aliases: ["Cargo, Container"], tons: 10, slots: 1, availability: [{ from: 1950 }], units: ["industrialmech", "vehicle"] },
     ],
   },
   {

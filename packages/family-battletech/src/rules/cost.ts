@@ -266,7 +266,7 @@ export function unitCost(record: MechRecord, catalog: Catalog, options: CostOpti
     else if ("perUnitTon" in found.price) add(equipment, mount.name, found.price.perUnitTon * (tonsKnown ? tons : 0), `${money(found.price.perUnitTon)} x ${tons}`, found);
     else if ("perWeight" in found.price) {
       if (itemTons === undefined) skip(mount.name, "its weight could not be worked out", row.id);
-      else add(equipment, mount.name, found.price.perWeight * itemTons, `${money(found.price.perWeight)} x ${itemTons} tons`, found);
+      else add(equipment, mount.name, found.price.perWeight * itemTons + (found.price.base ?? 0), `${found.price.base ? `${money(found.price.base)} + ` : ""}${money(found.price.perWeight)} x ${itemTons} tons`, found);
     } else {
       if (itemTons === undefined) skip(mount.name, "its weight could not be worked out", row.id);
       else add(equipment, mount.name, perTonCost(found.price.perTon, itemTons), `${money(found.price.perTon)} x ${Math.ceil(itemTons)} tons`, found);

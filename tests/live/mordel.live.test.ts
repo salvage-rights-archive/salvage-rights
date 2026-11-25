@@ -1,10 +1,11 @@
-// Fetches six real units from mordel.net and imports each with the real catalog. Run by hand: `npm run mordel:smoke`.
+// Fetches six real units, and one IndustrialMech, from mordel.net and imports each with the real catalog. Run by hand: `npm run mordel:smoke`.
 // Not part of `npm test`. The key comes from the git-ignored .env.mordel and goes only in the X-API-Key header; this file
 // never prints it, the request headers or a response body, and never writes a response to disk.
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { loadCatalog } from "@salvage-rights/family-battletech/src/rules/catalog";
+import { battleValue } from "@salvage-rights/family-battletech/src/rules/bv";
 import { runChecks } from "@salvage-rights/family-battletech/src/rules/checks";
 import { layout } from "@salvage-rights/family-battletech/src/rules/mech";
 import { fromMordel } from "@salvage-rights/family-battletech/src/rules/mordel";
@@ -70,5 +71,31 @@ describe.skipIf(!key)("mordel.net live import", () => {
       for (const n of notes.slice(0, 8)) console.log(`    note: ${n}`);
     }
     expect(refused).toBeUndefined();
+  });
+
+  it("imports one IndustrialMech (the TechManual WI-DM DemolitionMech, im 136) and finds its battle value", async () => {
+    const reply = await fetch("https://mordel.net/api/v1/units/im/136", { headers: { "X-API-Key": key ?? "" }, redirect: "error" }).catch(() => {
+      throw new Error("The request to mordel.net failed.");
+    });
+    if (!reply.ok) {
+      console.log(`im 136: mordel.net answered ${reply.status}; stopping.`);
+      expect(reply.ok).toBe(true);
+      return;
+    }
+    const body: unknown = await reply.json().catch(() => {
+      throw new Error("The reply from mordel.net could not be read as JSON.");
+    });
+    const catalog = await loadCatalog();
+    const result = fromMordel(body, catalog, "core-2026", new Date().toISOString(), () => "live-im-136", "im");
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const { record } = result;
+    const unmatched = record.mounts.filter((m) => !m.part && m.equipmentId === null).map((m) => m.name);
+    const errors = runChecks(record, catalog).filter((f) => f.level === "error");
+    const bv = battleValue(record, catalog).total;
+    console.log(`im 136 ${record.name.chassis} ${record.name.model}: ${record.unitType}; ${unmatched.length} unmatched; ${errors.length} rule errors; battle value ${bv} (mordel.net says ${String(record.source?.values.battleValue)})`);
+    expect(record.unitType).toBe("industrialmech");
+    expect(unmatched).toEqual([]);
+    expect(errors).toEqual([]);
   });
 });

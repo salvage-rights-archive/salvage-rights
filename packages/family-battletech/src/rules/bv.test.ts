@@ -305,3 +305,25 @@ describe("Dark Age, signature and enhancement rules (TO:AUE pp. 192-194, IO:AE p
     for (const [id, bv] of [["bulldozer-is", 10], ["aquatic-survival-system-clan", 9]] as const) expect(battleValue(biped([m(id, "RA")]), catalog).defensive.equipment, id).toBe(bv);
   });
 });
+
+
+describe("items an IndustrialMech check against mordel.net turned up", () => {
+  it("counts a fluid gun ammunition as inert (it carries water unless told otherwise) but an extended fuel tank slots as explosive", () => {
+    const water = battleValue(biped([m("fluid-gun-is", "RA"), m("ammo-fluid-gun-is", "RT")]), catalog);
+    expect(water.defensive.explosiveAmmo).toBe(0);
+    const tank = battleValue(biped([m("extended-fuel-tank-is", "CT")]), catalog);
+    expect(tank.defensive.explosiveAmmo).toBeGreaterThan(0);
+    expect(tank.defensive.explosiveAmmo % 15).toBe(0);
+  });
+
+  it("quarters the heat of a one-shot rocket launcher", () => {
+    expect(battleValue(biped([m("rocket-launcher-10-is", "RA")]), catalog).offensive.totalWeaponHeat).toBe(0.75);
+  });
+
+  it("multiplies the weapons by 0.8 and the final BV by 0.95 for a drone operating system", () => {
+    const without = battleValue(biped([m("large-laser-is", "RA")]), catalog);
+    const drone = battleValue(biped([m("large-laser-is", "RA"), m("drone-operating-system-is", "HD")]), catalog);
+    expect(drone.offensive.weapons[0]?.modifiedBv).toBeCloseTo((without.offensive.weapons[0]?.modifiedBv ?? 0) * 0.8);
+    expect(drone.baseBv).toBeLessThan(without.baseBv * 0.96);
+  });
+});
