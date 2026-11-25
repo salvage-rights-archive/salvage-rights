@@ -99,6 +99,7 @@ export const BOOKS: Record<string, BookDates> = {
   "BattleTech Core Rulebook": { printing: "first printing", printed: "2026-05", approx: true, errata: "v0.1", errataDated: "2026-08-10" },
   "Quick-Strike: Introductory 'Mech Cards": { printing: "2012 cards", printed: "2012-01", approx: true },
   "BattleTech Quick-Start Rules": { printing: "2021 rules", printed: "2021-01", approx: true },
+  "Alpha Strike Companion": { printing: "first and only printing", printed: "2014-01", approx: true, errata: "v1.6", errataDated: "2022-12-06" },
 };
 
 /** The later of a book's printing and errata dates; undefined for a book not in BOOKS. */
@@ -126,6 +127,7 @@ const PUBLISHERS: Record<string, string> = {
   "Tactical Operations: Advanced Units and Equipment": "Catalyst Game Labs",
   "Quick-Strike: Introductory 'Mech Cards": "Catalyst Game Labs",
   "BattleTech Quick-Start Rules": "Catalyst Game Labs",
+  "Alpha Strike Companion": "Catalyst Game Labs",
 };
 
 /** A book's title with its publisher, as citations show it: `TechManual (Catalyst Game Labs)`. */
