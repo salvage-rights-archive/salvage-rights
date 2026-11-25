@@ -162,9 +162,10 @@ describe("unitCost", () => {
   });
 
   it("reports a part or item it has no price for, and still prices the rest without throwing", () => {
-    const record = withChassis({ engine: { type: "warp", rating: 200 }, armorType: "unobtanium" }, { mounts: [mount("x", null, "CT", null), mount("y", "no-such-row", "HD", null), mount("ml", "medium-laser-is", "RA", null)] });
+    // MASC named as the myomer without a MASC mount has no weight to price it by
+    const record = withChassis({ engine: { type: "warp", rating: 200 }, armorType: "unobtanium", myomer: "masc" }, { mounts: [mount("x", null, "CT", null), mount("y", "no-such-row", "HD", null), mount("ml", "medium-laser-is", "RA", null)] });
     const cost = unitCost(record, catalog);
-    expect(cost.unpriced.map((u) => u.name)).toEqual(expect.arrayContaining(['Engine "warp" 200', 'Armor "unobtanium"', "x", "y"]));
+    expect(cost.unpriced.map((u) => u.name)).toEqual(expect.arrayContaining(['Engine "warp" 200', 'Armor "unobtanium"', 'Myomer "masc"', "x", "y"]));
     expect(cost.equipment).toBe(40_000);
     expect(cost.total).toBeGreaterThan(0);
   });

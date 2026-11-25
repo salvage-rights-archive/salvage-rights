@@ -1,12 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { CASE_ROWS, EQUIPMENT_BV, LAM_BV, UNLISTED_IS_ZERO, WEAPON_BV } from "../data/bv";
+import { CASE_ROWS, EQUIPMENT_BV, LAM_BV, SPECIAL_MUNITIONS, UNFIXED, UNLISTED_IS_ZERO, WEAPON_BV } from "../data/bv";
 import { AMMUNITION } from "../data/equipment/ammunition";
 import { OTHER } from "../data/equipment/other";
 import { WEAPONS } from "../data/equipment/weapons";
 import { battleValue, skillMultiplier, speedFactor } from "./bv";
 import { createCatalog, expand } from "./catalog";
+import type { EquipmentRow } from "./catalog";
 import { bipedRecord, mount } from "./fixtures";
 import type { LocationCode, MechRecord, Mount } from "./mech";
+import { stemOf } from "./walk";
 
 const catalog = createCatalog(expand([...WEAPONS, ...AMMUNITION, ...OTHER]));
 
@@ -70,11 +72,11 @@ describe("worked examples from the book (TechManual Battle Value v4.1, pp. 304-3
     expect(halved.map((w) => w.modifiedBv)).toEqual([77.5]);
   });
 
-  it("the Thunderbolt's weapon rating is the printed 646 plus the computer's own 103.75, which the printed example leaves out", () => {
-    // Table note E gives a targeting computer a BV of 25 percent of its linked weapons (229 + 3 x 62 = 415); the example's 646 omits it.
+  it("the Thunderbolt is the printed 2,008: the targeting computer's 25 percent is its weapons' x1.25, counted once", () => {
     const bv = battleValue(thunderbolt, catalog);
-    expect(bv.offensive.equipment).toBe(103.75);
-    expect(bv.offensive.weaponRating - bv.offensive.equipment).toBe(646);
+    expect(bv.offensive.equipment).toBe(0);
+    expect(bv.offensive.weaponRating).toBe(646);
+    expect(bv.baseBv).toBe(2008);
   });
 });
 
@@ -119,8 +121,9 @@ describe("the method's rules", () => {
       ["center torso, standard engine", {}, "CT", [], 15],
       ["side torso without CASE", {}, "LT", [], 15],
       ["side torso with CASE", {}, "LT", ["LT"], 0],
-      ["arm with CASE in the arm only", {}, "LA", ["LA"], 15],
-      ["arm with CASE in the arm and the torso", {}, "LA", ["LA", "LT"], 0],
+      ["arm without CASE", {}, "LA", [], 15],
+      ["arm with CASE in the arm", {}, "LA", ["LA"], 0],
+      ["arm with CASE in the next location inward", {}, "LA", ["LT"], 0],
       ["leg, even with CASE", {}, "LL", ["LL"], 15],
       ["Inner Sphere XL engine, CASE does not help", { chassis: { ...bipedRecord().chassis, engine: { type: "xl", rating: 200 } } }, "LT", ["LT"], 15],
       ["Clan 'Mech, side torso", { techBase: "clan" }, "LT", [], 0],
@@ -136,9 +139,9 @@ describe("the method's rules", () => {
     expect(battleValue(biped([m("ammo-ac-5-is", "LT"), m("prototype-case-is", "LT")]), catalog).defensive.explosiveAmmo).toBe(8);
   });
 
-  it("Gauss weapons cost one point a slot, but the Gauss ammunition is not explosive", () => {
-    const bv = battleValue(biped([m("gauss-rifle-is", "RT"), m("ammo-gauss-rifle-is", "RT")]), catalog);
-    expect(bv.defensive.explosiveAmmo).toBe(7);
+  it("Gauss weapons, and the items the books treat as one, cost one point a slot, but the Gauss ammunition is not explosive", () => {
+    expect(battleValue(biped([m("gauss-rifle-is", "RT"), m("ammo-gauss-rifle-is", "RT")]), catalog).defensive.explosiveAmmo).toBe(7);
+    expect(battleValue(biped([m("risc-emergency-coolant-system-is", "RT")]), catalog).defensive.explosiveAmmo).toBe(1);
   });
 
   it("ammunition counts up to the BV of its weapons and no more", () => {
@@ -167,10 +170,11 @@ describe("the method's rules", () => {
     expect(stealth.defensive.targetModifier - plain.defensive.targetModifier).toBe(2);
   });
 
-  it("triple-strength myomer multiplies tonnage by 1.5 and adds 2 to the walking speed", () => {
+  it("triple-strength myomer multiplies tonnage by 1.5 and adds 1 to the walking speed; MASC doubles it, named or mounted", () => {
     const bv = battleValue(biped([m("tsm-is", "LT")]), catalog);
     expect(bv.offensive.tonnage).toBe(75);
-    expect(bv.offensive.runMP).toBe(9); // walk 4 + 2, times 1.5
+    expect(bv.offensive.runMP).toBe(8); // walk 4 + 2 at 9 heat, less the 1 that heat takes: 5 x 1.5, rounded up
+    expect(battleValue(biped([], { chassis: { ...bipedRecord().chassis, myomer: "masc" } }), catalog).offensive.runMP).toBe(8);
   });
 
   it("a small cockpit takes 5 percent off the total", () => {
@@ -193,11 +197,12 @@ describe("the method's rules", () => {
 });
 
 describe("what the book does not print", () => {
-  it("is reported and left out, never thrown over or guessed", () => {
-    const bv = battleValue(biped([m("medium-laser-is", "RA"), m("vehicular-mine-dispenser-is", "LT"), { ...m("x", null), equipmentId: null, name: "Frobnicator" }, m("ammo-inferno-is", "LT")], { chassis: { ...bipedRecord().chassis, gyro: "mystery" } }), catalog);
+  it("is reported and left out, never thrown over or guessed; equipment in no table counts 0, a special munition does not", () => {
+    const mounts = [m("medium-laser-is", "RA"), m("vehicular-mine-dispenser-is", "LT"), { ...m("x", null), equipmentId: null, name: "Frobnicator" }, m("ammo-inferno-is", "LT"), m("lift-hoist-is", "LA")];
+    const bv = battleValue(biped(mounts, { chassis: { ...bipedRecord().chassis, gyro: "mystery", heatSinks: { type: "laser", count: 10 } } }), catalog);
     expect(bv.complete).toBe(false);
-    expect(bv.unvalued.map((u) => u.name).sort()).toEqual(["Frobnicator", "gyro type \"mystery\"", "vehicular-mine-dispenser-is"]);
-    expect(bv.zeroByRule.map((u) => u.name)).toEqual(["ammo-inferno-is"]);
+    expect(bv.unvalued.map((u) => u.name).sort()).toEqual(["Frobnicator", "ammo-inferno-is", "gyro type \"mystery\"", "heat sink type \"laser\"", "vehicular-mine-dispenser-is"]);
+    expect(bv.zeroByRule.map((u) => u.name)).toEqual(["lift-hoist-is"]);
     expect(bv.offensive.weapons).toHaveLength(1);
   });
 });
@@ -214,6 +219,7 @@ describe("Tactical Operations equipment", () => {
     const ppc = m("er-ppc-is", "RA");
     const bv = battleValue(biped([ppc, m("ppc-capacitor-is", "RA", { linkedTo: ppc.id })]), catalog);
     expect(bv.offensive.weapons[0]).toMatchObject({ unmodifiedBv: 343, heat: 20 });
+    expect(bv.defensive.explosiveAmmo).toBe(4); // the pair is a Gauss weapon for the defensive rating: 3 + 1 slots
   });
 
   it("a laser insulator takes 1 off its laser's heat, and coolant pods add heat capacity but cost defensive points", () => {
@@ -232,7 +238,9 @@ describe("Tactical Operations equipment", () => {
   it("every catalog row is valued, counted 0 by the book's rule, or one the books leave open", () => {
     const known = new Set<string>();
     for (const g of [...WEAPON_BV, ...EQUIPMENT_BV]) for (const [id, , a, o] of g.rows) { known.add(id); if (a !== undefined) for (const x of o?.ammo ?? [`ammo-${id}`]) known.add(x); }
-    const open = catalog.all().filter((r) => !known.has(r.id) && !UNLISTED_IS_ZERO.books.includes(r.cite.book) && !["heat-sink", "jump-jet"].includes(r.kind) && !LAM_BV.fuelSlotIds.includes(r.id) && !(r.id in CASE_ROWS));
+    const zero = (r: EquipmentRow) => r.kind !== "ammunition" && UNLISTED_IS_ZERO.books.includes(r.cite.book);
+    const leftOpen = (r: EquipmentRow) => r.id in UNFIXED || SPECIAL_MUNITIONS.stems.includes(stemOf(r.id));
+    const open = catalog.all().filter((r) => !known.has(r.id) && !zero(r) && !leftOpen(r) && !["heat-sink", "jump-jet"].includes(r.kind) && !LAM_BV.fuelSlotIds.includes(r.id) && !(r.id in CASE_ROWS));
     expect(open.map((r) => r.id)).toEqual([]);
   });
 });

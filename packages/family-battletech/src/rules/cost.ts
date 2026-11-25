@@ -26,7 +26,7 @@ import type { Price } from "../data/cost";
 import type { Catalog, EquipmentRow } from "./catalog";
 import { configurationOf } from "./mech";
 import type { LocationCode, MechRecord, Mount } from "./mech";
-import { equipmentItems, own, stemOf, tsmOf, TSM_ROWS, weightLine } from "./walk";
+import { equipmentItems, mascOf, own, stemOf, tsmOf, TSM_ROWS, weightLine } from "./walk";
 
 export interface CostLine {
   label: string;
@@ -202,6 +202,9 @@ export function unitCost(record: MechRecord, catalog: Catalog, options: CostOpti
   for (const mount of unknown) {
     skip(mount.name, mount.equipmentId === null ? "not in our equipment table" : `the equipment table has no row "${mount.equipmentId}"`, mount.equipmentId);
   }
+  // MASC is priced by its weight, which only a MASC mount carries; a chassis that names MASC without one cannot be priced for it.
+  const masc = mascOf(record, items);
+  if (masc.named && masc.mounts.length === 0) skip(`Myomer "${chassis.myomer}"`, "MASC is named but not mounted, so its weight and price are not known");
   const jets = new Map<string, Mount[]>();
   for (const { mount, row, tons: itemTons } of items) {
     if (row.kind === "heat-sink") continue; // paid for by count, above
@@ -214,9 +217,8 @@ export function unitCost(record: MechRecord, catalog: Catalog, options: CostOpti
       continue;
     }
     if (stemOf(row.id) === "masc") {
-      const mascTons = itemTons;
-      if (mascTons === undefined || !Number.isFinite(chassis.engine.rating)) skip(mount.name, "its weight or the engine rating is not known", row.id);
-      else add(equipment, mount.name, mascCost(chassis.engine.rating, mascTons), `${money(MASC_COST.perRatingTon)} x ${chassis.engine.rating} x ${mascTons}`, MASC_COST);
+      if (itemTons === undefined || !Number.isFinite(chassis.engine.rating)) skip(mount.name, "its weight or the engine rating is not known", row.id);
+      else add(equipment, mount.name, mascCost(chassis.engine.rating, itemTons), `${money(MASC_COST.perRatingTon)} x ${chassis.engine.rating} x ${itemTons}`, MASC_COST);
       continue;
     }
     if (stemOf(row.id) === "retractable-blade") {

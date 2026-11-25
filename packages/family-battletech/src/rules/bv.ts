@@ -20,6 +20,7 @@ import {
   MACHINE_GUN_ARRAY_IDS,
   PHYSICAL_BV,
   SKILL_MULTIPLIER,
+  SPECIAL_MUNITIONS,
   SPEED_FACTOR,
   STRUCTURE_BV_MODIFIER,
   TARGET_MODIFIER,
@@ -32,7 +33,7 @@ import type { BvGroup, BvOptions } from "../data/bv";
 import { walkMP } from "./mech";
 import type { LocationCode, MechRecord, Mount } from "./mech";
 import type { Catalog, EquipmentRow } from "./catalog";
-import { armorPoints, equipmentItems, heatSinkCapacity, jumpMP as jumpJets, mascOf, own, roundHalfUp, structureTotal, tidy, tsmOf } from "./walk";
+import { armorPoints, equipmentItems, heatSinkCapacity, jumpMP as jumpJets, mascOf, own, roundHalfUp, stemOf, structureTotal, tidy, tsmOf } from "./walk";
 import type { Item } from "./walk";
 
 export interface PilotSkills {
@@ -150,11 +151,12 @@ const INWARD: Partial<Record<LocationCode, LocationCode>> = { LA: "LT", RA: "RT"
 export function battleValue(record: MechRecord, catalog: Catalog, pilot: PilotSkills = { gunnery: 4, piloting: 5 }): BvResult {
   const unvalued: Unvalued[] = [];
   const zeroByRule: Unvalued[] = [];
-  /** An item with no table line: 0 by the books' rule if it comes from TechManual or Tactical Operations, else reported as unvalued. */
+  /** An item with no table line: 0 by the books' rule if it is equipment from TechManual or Tactical Operations, else reported
+   * as unvalued. Ammunition is never 0 by that rule: a special munition carries its launcher's ammunition BV (TO:AUE p. 198). */
   const unlisted = (item: { mount: Mount; row: EquipmentRow }, why: string) => {
-    const fixed = own(UNFIXED, item.row.id);
+    const fixed = own(UNFIXED, item.row.id) ?? (SPECIAL_MUNITIONS.stems.includes(stemOf(item.row.id)) ? SPECIAL_MUNITIONS.why : undefined);
     if (fixed) unvalued.push({ mountId: item.mount.id, name: item.mount.name, why: fixed });
-    else if (UNLISTED_IS_ZERO.books.includes(item.row.cite.book)) zeroByRule.push({ mountId: item.mount.id, name: item.mount.name, why: "in none of the BV tables: counts as 0 (TO:AUE p. 192)" });
+    else if (item.row.kind !== "ammunition" && UNLISTED_IS_ZERO.books.includes(item.row.cite.book)) zeroByRule.push({ mountId: item.mount.id, name: item.mount.name, why: "in none of the BV tables: counts as 0 (TO:AUE p. 192)" });
     else unvalued.push({ mountId: item.mount.id, name: item.mount.name, why });
   };
   const note = (mount: Mount | undefined, name: string, why: string) => unvalued.push({ mountId: mount?.id, name, why });
@@ -170,11 +172,14 @@ export function battleValue(record: MechRecord, catalog: Catalog, pilot: PilotSk
   const standardLam = record.configuration === "lam";
   const stealth = chassis.armorType === "stealth";
   const tsm = tsmOf(record, items) !== undefined;
-  const masc = mascOf(record, items).mounts.length > 0;
+  const mascFound = mascOf(record, items);
+  const masc = mascFound.named || mascFound.mounts.length > 0;
 
   // ---- Movement -------------------------------------------------------------------------------------------------
   const walk = walkMP(record) ?? Math.max(0, Math.floor(chassis.engine.rating / Math.max(1, record.tons)));
-  const walkMax = tsm ? walk + 2 : walk; // Total Warfare p. 143
+  // TSM adds 2 Walking MP from 9 heat (Total Warfare p. 143), where the heat scale has already taken 1 (p. 159): the most it
+  // can legally generate is 1 more than its Walking MP.
+  const walkMax = tsm ? walk + BV_METHOD.tsmWalkBonus : walk;
   const runMP = masc ? walk * 2 : Math.ceil(walkMax * 1.5); // MASC: double the Walking MP, Total Warfare p. 137; running: p. 53
   const jumpMP = jumpJets(items);
   const improvedJets = has(IMPROVED_JUMP_JET_IDS);
@@ -231,22 +236,35 @@ export function battleValue(record: MechRecord, catalog: Catalog, pilot: PilotSk
     const own1 = caseAt(loc);
     const prototype = (v: number | undefined) => (v === undefined ? 1 : v === 0 ? 0 : v / BV_METHOD.explosiveAmmoPerSlot);
     if (ARMS.includes(loc)) {
-      // An arm is safe only with CASE in the arm and in the next location inward (one reading of the book's "or in the next location inward").
-      const inward = caseAt(INWARD[loc] ?? null);
-      return own1 === undefined || inward === undefined ? 1 : Math.max(prototype(own1), prototype(inward));
+      // The penalty falls on arm ammunition "not protected by CASE in its location, or in the next location inward": CASE in
+      // either place protects it, the better of the two counting.
+      return Math.min(prototype(own1), prototype(caseAt(INWARD[loc] ?? null)));
     }
     if (loc === "LT" || loc === "RT") return prototype(own1);
     return 1; // center torso, head and every leg
   };
+  // PPC capacitors, each with the PPC it is paired with: the one it is linked to, else an unpaired one in its location that
+  // the pair table lists; undefined when there is none.
+  const capacitors = new Map<Item, Item | undefined>();
+  for (const cap of items.filter((i) => CAPACITOR.ids.includes(i.row.id))) {
+    const taken = new Set(capacitors.values());
+    const host = items.find((i) => i.mount.id === cap.mount.linkedTo) ?? items.find((i) => !taken.has(i) && i.mount.location === cap.mount.location && own(CAPACITOR.bv, i.row.id) !== undefined);
+    capacitors.set(cap, host && own(CAPACITOR.bv, host.row.id) !== undefined ? host : undefined);
+  }
+  const gaussPoints = (item: Item, slots: number) => slots * BV_METHOD.gaussPerSlot * (exposure(item.mount.location) > 0 ? 1 : 0);
+
   let explosive = 0;
-  for (const { mount, row, slots } of items) {
+  // A PPC with its capacitor is treated as a Gauss weapon (the table's double dagger, TO:AUE p. 194): every slot of the pair.
+  for (const [cap, host] of capacitors) if (host) explosive += gaussPoints(cap, cap.slots) + gaussPoints(host, host.slots);
+  for (const item of items) {
+    const { mount, row, slots } = item;
     const ammoEntry = row.kind === "ammunition" ? AMMO.get(row.id) : undefined;
     const fuel = isLam && LAM_BV.fuelSlotIds.includes(row.id);
     if ((row.kind === "ammunition" && !ammoEntry?.options.inert) || fuel) {
       explosive += slots * BV_METHOD.explosiveAmmoPerSlot * exposure(mount.location);
     }
     const entry = WEAPONS.get(row.id) ?? EQUIPMENT.get(row.id);
-    if (entry?.options.gauss || entry?.options.gaussSlots) explosive += (entry.options.gaussSlots ?? slots) * BV_METHOD.gaussPerSlot * (exposure(mount.location) > 0 ? 1 : 0);
+    if (entry?.options.gauss || entry?.options.gaussSlots) explosive += gaussPoints(item, entry.options.gaussSlots ?? slots);
     if (COOLANT_POD_IDS.includes(row.id)) explosive += slots; // 1 point a slot (TO:AUE p. 193)
   }
   const defensiveSubtotal = Math.max(BV_METHOD.minimumDefensive, armor + structureBv + gyro + defensiveEquipment - explosive);
@@ -260,7 +278,9 @@ export function battleValue(record: MechRecord, catalog: Catalog, pilot: PilotSk
   const defensiveRating = defensiveSubtotal * factor;
 
   // ---- Offensive Battle Rating ----------------------------------------------------------------------------------
-  const sinks = heatSinkCapacity(record) ?? chassis.heatSinks.count;
+  const sinkCapacity = heatSinkCapacity(record);
+  const sinks = sinkCapacity ?? chassis.heatSinks.count;
+  if (sinkCapacity === null) note(undefined, `heat sink type "${chassis.heatSinks.type}"`, "how much heat one dissipates is not known; counted as 1");
   const pods = items.filter((i) => COOLANT_POD_IDS.includes(i.row.id)).length;
   // Coolant pods: heat sinks x (pods / 5), rounded up, at most twice the heat sinks (TO:AUE p. 193).
   const coolant = pods === 0 ? 0 : Math.min(2 * chassis.heatSinks.count, Math.ceil((chassis.heatSinks.count * pods) / 5));
@@ -294,6 +314,18 @@ export function battleValue(record: MechRecord, catalog: Catalog, pilot: PilotSk
     weapons.push({ item, entry, heat, bv: entry.bv, rearHalf: false, mod: entry.bv, notes: [] });
   }
 
+  // A PPC capacitor: the pair is worth the table's combined BV and runs 5 hotter.
+  for (const [cap, hostItem] of capacitors) {
+    const host = weapons.find((w) => w.item === hostItem);
+    const pair = host && own(CAPACITOR.bv, host.item.row.id);
+    if (host && pair !== undefined) {
+      host.bv = pair;
+      host.mod = pair;
+      host.heat += CAPACITOR.heat;
+      host.notes.push("PPC capacitor: pair BV, +5 heat");
+    } else note(cap.mount, cap.mount.name, "not paired with a PPC the table lists, so its BV and heat are not counted");
+  }
+
   // Rear-firing weapons in the torsos, legs and head count half; if the forward ones there are worth less, they are halved instead.
   const bodyMounted = (w: W) => !ARMS.includes(w.item.mount.location as LocationCode);
   const rearBv = weapons.filter((w) => w.item.mount.rear && bodyMounted(w)).reduce((s, w) => s + w.bv, 0);
@@ -307,18 +339,6 @@ export function battleValue(record: MechRecord, catalog: Catalog, pilot: PilotSk
     }
   }
 
-  // A PPC capacitor: the pair is worth the table's combined BV and runs 5 hotter.
-  for (const { mount, row } of items) {
-    if (row.id !== "ppc-capacitor-is") continue;
-    const host = weapons.find((w) => w.item.mount.id === mount.linkedTo) ?? weapons.find((w) => w.item.mount.location === mount.location && own(CAPACITOR.bv, w.item.row.id) !== undefined);
-    const pair = host && own(CAPACITOR.bv, host.item.row.id);
-    if (host && pair !== undefined) {
-      host.bv = pair;
-      host.mod = pair;
-      host.heat += CAPACITOR.heat;
-      host.notes.push("PPC capacitor: pair BV, +5 heat");
-    } else note(mount, mount.name, "not paired with a PPC the table lists, so its BV and heat are not counted");
-  }
   // A laser insulator takes 1 off the heat of its laser.
   for (const { mount, row } of items) {
     if (!LASER_INSULATOR_IDS.includes(row.id)) continue;
@@ -389,9 +409,8 @@ export function battleValue(record: MechRecord, catalog: Catalog, pilot: PilotSk
   let ammunition = 0;
   for (const [id, bv] of ammoBv) ammunition += WEAPONS.has(id) ? Math.min(bv, modelBv.get(id) ?? 0) : bv;
 
-  // Other equipment, added in full.
+  // Other equipment, added in full. A targeting computer adds nothing here: its 25 percent is the x1.25 on its weapons above.
   let equipment = 0;
-  const directFireBv = (w: W) => w.bv * (w.item.mount.rear && bodyMounted(w) ? 0.5 : 1);
   for (const { mount, row } of items) {
     if (row.kind === "heat-sink" || row.kind === "jump-jet" || row.kind === "ammunition" || WEAPONS.has(row.id)) continue;
     const physical = own(PHYSICAL_BV.rows, row.id);
@@ -401,8 +420,6 @@ export function battleValue(record: MechRecord, catalog: Catalog, pilot: PilotSk
       const d = physical.damage;
       const damage = typeof d === "number" ? d : d === "hatchet" ? Math.ceil(t / 5) : d === "sword" ? Math.ceil(t / 10) + 1 : Math.ceil(t / 10);
       equipment += damage * (tsm && !physical.fixed ? 2 : 1) * physical.factor;
-    } else if (TARGETING_COMPUTER_IDS.includes(row.id)) {
-      equipment += BV_METHOD.targetingComputerBv * weapons.filter((w) => w.item.row.directFire).reduce((s, w) => s + directFireBv(w), 0);
     } else if (MACHINE_GUN_ARRAY_IDS.includes(row.id)) {
       const guns = weapons.filter((w) => /machine-gun-(is|clan)$/.test(w.item.row.id) && w.item.mount.location === mount.location);
       equipment += BV_METHOD.machineGunArray * guns.reduce((s, w) => s + w.bv, 0);

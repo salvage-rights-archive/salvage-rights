@@ -116,10 +116,11 @@ export const ENGINE_COST: Sourced & { divisor: number; rows: Record<string, { pe
     "xl-clan": { perRating: 20_000, assumed: true },
     light: { perRating: 15_000 },
     compact: { perRating: 10_000 },
-    // Extralight engines, Tactical Operations: Advanced Units and Equipment p.219 (both tech bases) and IO:AE p.211 (prototype)
+    // XXL engines, Tactical Operations: Advanced Units and Equipment p.219 (both tech bases); the prototype extralight (XL)
+    // engine of the Age of War, IO:AE p.211
     xxl: { perRating: 100_000, cite: { book: TO, page: 219 } },
     "xxl-clan": { perRating: 100_000, cite: { book: TO, page: 219 } },
-    "prototype-xxl": { perRating: 100_000, cite: { book: IO, page: 211 } },
+    "prototype-xl": { perRating: 100_000, cite: { book: IO, page: 211 } },
     // Non-fusion engines, printed p.278 (a BattleMech may not use them; an IndustrialMech may)
     ice: { perRating: 1_250 },
     "fuel-cell": { perRating: 3_500 },

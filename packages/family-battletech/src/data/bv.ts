@@ -35,7 +35,6 @@ export const BV_METHOD: Sourced & {
   minimumDefensive: number;
   artemis: number;
   targetingComputer: number;
-  targetingComputerBv: number;
   machineGunArray: number;
   baseHeatEfficiency: number;
   lamHeatEfficiency: number;
@@ -43,6 +42,7 @@ export const BV_METHOD: Sourced & {
   jumpHeatMinimum: number;
   stealthHeat: number;
   stealthTargetModifier: number;
+  tsmWalkBonus: number;
   tsmTonnage: number;
   smallCockpit: number;
   halved: number;
@@ -55,15 +55,20 @@ export const BV_METHOD: Sourced & {
   gaussPerSlot: 1,
   minimumDefensive: 1,
   artemis: 1.2,
+  // Each linked weapon x1.25. Table note E (TechManual p. 317) gives the computer "25 percent of the BV of the weapons it links":
+  // the same 25 percent, not a second one. The v4.1 Thunderbolt example (p. 304) counts it once and comes to 2,008.
   targetingComputer: 1.25,
-  targetingComputerBv: 0.25, // the computer's own BV: 25 percent of the BV of the weapons it links (table note E, TechManual p. 317)
-  machineGunArray: 0.67, // table note F, TechManual p. 317
+  // Table note F, TechManual p. 317; errata v8.0 copies the Inner Sphere entry and its note to the Clan table.
+  machineGunArray: 0.67,
   baseHeatEfficiency: 6,
   lamHeatEfficiency: 9, // Interstellar Operations: Alternate Eras p. 186
   runningHeat: 2, // Total Warfare p. 53
   jumpHeatMinimum: 3, // Total Warfare p. 53
   stealthHeat: 10,
   stealthTargetModifier: 2, // the long-range modifier (Total Warfare p. 142: +1 medium, +2 long); the book's "maximum effect"
+  // "The maximum MP it can legally generate": TSM's +2 Walking MP comes at 9 heat (Total Warfare p. 143), where the heat scale
+  // takes 1 (p. 159), so +1.
+  tsmWalkBonus: 1,
   tsmTonnage: 1.5,
   smallCockpit: 0.95,
   halved: 0.5,
@@ -170,10 +175,13 @@ export const CASE_ROWS: Record<string, number> = { "case-is": 0, "case-clan": 0,
 export const TARGETING_COMPUTER_IDS = ["targeting-computer-is", "targeting-computer-clan"];
 // Artemis V (+30 percent) and Apollo (+15 percent, MRM launchers): TO:AUE pp. 195, 197.
 export const ARTEMIS_IDS: Record<string, number> = { "artemis-iv-is": 1.2, "artemis-iv-clan": 1.2, "prototype-artemis-iv-is": 1.1, "artemis-v-clan": 1.3, "mrm-apollo-fcs-is": 1.15 };
-/** PPC capacitors (TO:AUE pp. 194, 222): the BV of the PPC and its capacitor together replaces the PPC's, and the capacitor adds 5 to its heat. */
-export const CAPACITOR: Sourced & { heat: number; bv: Record<string, number> } = {
+/** PPC capacitors (TO:AUE pp. 194, 222): the BV of the PPC and its capacitor together replaces the PPC's, and the capacitor adds
+ * 5 to its heat. The pair rows carry the double dagger (treat as a Gauss weapon for the Defensive Battle Rating), so every slot
+ * of the pair costs 1 point where it is exposed. */
+export const CAPACITOR: Sourced & { ids: string[]; heat: number; bv: Record<string, number> } = {
   cite: { book: TO, page: 194 },
   checked: "page",
+  ids: ["ppc-capacitor-is"],
   heat: 5,
   bv: { "heavy-ppc-is": 370, "ppc-is": 264, "light-ppc-is": 132, "snub-nose-ppc-is": 252, "er-ppc-is": 343 },
 };
@@ -184,6 +192,22 @@ export const COOLANT_POD_IDS = ["coolant-pod-is", "coolant-pod-clan"];
 export const UNFIXED: Record<string, string> = {
   "vehicular-mine-dispenser-is": "its BV is that of a 10-point minefield of the mine it carries, which the row does not fix (TO:AUE p. 195)",
   "vehicular-mine-dispenser-clan": "its BV is that of a 10-point minefield of the mine it carries, which the row does not fix (TO:AUE p. 195)",
+};
+/** Special munitions: one catalog row per munition and launcher family (the `-is`/`-clan` stem here), not per launcher size.
+ * Their BV is the base ammunition BV of the launcher that fires them, with the Alternative Munitions Table's modifier for some
+ * (TO:AUE printed p. 198), so they are not "equipment in none of the tables" (0); the row does not say which launcher, so they
+ * are reported as unvalued. */
+export const SPECIAL_MUNITIONS: Sourced & { stems: string[]; why: string } = {
+  cite: { book: TO, page: 198 },
+  checked: "page",
+  stems: [
+    "ammo-armor-piercing", "ammo-flechette", "ammo-precision", "ammo-artemis-capable", "ammo-narc-capable", "ammo-fragmentation",
+    "ammo-harpoon", "ammo-inferno", "ammo-tear-gas", "ammo-semi-guided", "ammo-swarm", "ammo-swarm-i", "ammo-thunder",
+    "ammo-thunder-augmented", "ammo-thunder-inferno", "ammo-thunder-vibrabomb", "ammo-thunder-active", "ammo-narc-explosive",
+    "ammo-improved-narc-ecm", "ammo-improved-narc-explosive", "ammo-improved-narc-haywire", "ammo-improved-narc-nemesis",
+    "ammo-er-atm", "ammo-he-atm",
+  ],
+  why: "a special munition: its BV is its launcher's ammunition BV (TO:AUE p. 198), and the row does not say which launcher",
 };
 /** Equipment introduced in TechManual or in Tactical Operations: Advanced Units and Equipment that is in none of their BV tables counts as 0 (TO:AUE printed p. 192). */
 export const UNLISTED_IS_ZERO: Sourced & { books: string[] } = { cite: { book: TO, page: 192 }, checked: "page", books: [TM, TO] };
@@ -409,7 +433,8 @@ export const EQUIPMENT_BV: BvGroup[] = [
       ["nova-cews-clan", 68, undefined, { defensive: true }],
       ["risc-advanced-pds-is", 64, 22, { defensive: true, defensiveAmmo: true }],
       ["risc-viral-jammer-decoy-is", 284, undefined, { defensive: true }], ["risc-viral-jammer-homing-is", 284, undefined, { defensive: true }],
-      ["risc-emergency-coolant-system-is", 0, undefined, { none: true }],
+      // The table's double section mark: treat as a Gauss weapon critical space for the Defensive Battle Rating (p. 191).
+      ["risc-emergency-coolant-system-is", 0, undefined, { none: true, gauss: true }],
     ],
   },
   {
