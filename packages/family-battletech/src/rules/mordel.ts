@@ -615,10 +615,10 @@ export function changedSinceImport(record: MechRecord): Set<string> {
 // What the owner's notes on the API record (2026-11-06 mapping, sections 2.1 and 4): a unit carries `omni` (boolean), `omni_base_id` and,
 // on a base, `omni_variants` (only the variants the key can see). Each variant is its own unit with its full equipment list; the base is a
 // unit named like "Fire Falcon [BASE]" (bm 2303) that lists itself as its own base; `omni_base_id` is null for a variant whose base is
-// another member's private unit. The notes name NO per-item "pod" or "fixed" marker, so this importer works on the notes' footing: a
-// variant's pods are its equipment minus the base's. NOT VERIFIED against the live API: a check on bm 2303 and one variant must confirm
-// (1) that no equipment entry carries a pod marker (if one does, it should replace the subtraction), (2) that `omni_variants` is a list of
-// unit ids (a list of objects with an `id` is also read), and (3) that a variant lists every fixed item of the base, so the subtraction finds it.
+// another member's private unit. A variant's pods are its equipment minus the base's. Checked against the live API on 2026-11-25 (bm 2303,
+// its PRIME bm 2304 and Baker bm 15494): `omni_variants` is a list of `{ id, name }` objects; every variant repeats the base's fixed items;
+// and each equipment entry carries a boolean `fixed` that the notes do not name, true on exactly the items the subtraction leaves on the
+// base. The subtraction and `fixed` agree on all three; `fixed` would also split a variant whose base is private, which the subtraction cannot.
 
 export interface MordelOmniFacts {
   omni: boolean;
