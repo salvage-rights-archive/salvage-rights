@@ -35,7 +35,10 @@ const manifest: FamilyManifest = {
     },
   ],
   measures: ["inches"],
-  routes: [],
+  routes: [
+    // The card reader's test page: pick a photo and a layout, see the fields and crops. Dev edition only.
+    { path: "scan-test", label: "Card reader test", section: "workshop", load: () => import("./ScanTestPage") },
+  ],
   credits: {
     owner: "Example Yard is made by the Salvage Rights Team.",
     license: "Apache-2.0",

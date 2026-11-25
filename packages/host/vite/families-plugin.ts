@@ -199,7 +199,7 @@ function readTextFile(file: string): string | undefined {
 }
 
 /** `noticeFiles` are text files added to the end of the notices file as they are (fonts and pictures). */
-export function familiesPlugin(editionPath: string, noticeFiles: string[] = []): Plugin {
+export function familiesPlugin(editionPath: string, noticeFiles: string[] = [], extraNotices: string[] = []): Plugin {
   const edition = readEdition(editionPath);
   const cache = new Map<string, PackageInfo | undefined>();
   const read: ReadPackageJson = (file) => {
@@ -231,7 +231,7 @@ export function familiesPlugin(editionPath: string, noticeFiles: string[] = []):
       if (problems.length > 0) {
         this.error(`Edition "${edition.id}" bundle check failed:\n${problems.map((p) => `  - ${p}`).join("\n")}`);
       }
-      const extras = noticeFiles.flatMap((file) => readTextFile(file) ?? []);
+      const extras = [...noticeFiles.flatMap((file) => readTextFile(file) ?? []), ...extraNotices];
       this.emitFile({
         type: "asset",
         fileName: NOTICES_FILE,

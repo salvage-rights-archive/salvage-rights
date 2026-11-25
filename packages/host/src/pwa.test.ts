@@ -62,12 +62,12 @@ describe("resetAppCache", () => {
     const reload = vi.fn();
     await resetAppCache({
       registrations: () => Promise.resolve([{ unregister }]),
-      cacheNames: () => Promise.resolve(["sr-shell-abc", "someone-elses", "sr-shell-old"]),
+      cacheNames: () => Promise.resolve(["sr-shell-abc", "someone-elses", "sr-ocr-abc", "sr-shell-old"]),
       deleteCache,
       reload,
     });
     expect(unregister).toHaveBeenCalledOnce();
-    expect(deleteCache.mock.calls.map(([name]) => name)).toEqual(["sr-shell-abc", "sr-shell-old"]);
+    expect(deleteCache.mock.calls.map(([name]) => name)).toEqual(["sr-shell-abc", "sr-ocr-abc", "sr-shell-old"]);
     expect(reload).toHaveBeenCalledOnce();
   });
 });
