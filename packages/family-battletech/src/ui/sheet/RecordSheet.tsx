@@ -59,9 +59,9 @@ export default function RecordSheet({ record, catalog }: { record: MechRecord; c
         <MechData rect={RECTS.mech} facts={facts} />
         <WarriorData rect={RECTS.warrior} />
         <UnitPicture rect={RECTS.picture} record={record} label={`${name}, unit picture`} />
-        <ArmorDiagram rect={RECTS.armor} record={record} points={facts.points} />
+        <ArmorDiagram rect={RECTS.armor} record={record} catalog={catalog} points={facts.points} />
         <CriticalTable rect={RECTS.critical} record={record} layout={facts.layout} />
-        <StructureDiagram rect={RECTS.structure} record={record} points={facts.points} />
+        <StructureDiagram rect={RECTS.structure} record={record} catalog={catalog} points={facts.points} />
         <HeatScale rect={RECTS.scale} />
         <HeatData rect={RECTS.heat} facts={facts} />
 

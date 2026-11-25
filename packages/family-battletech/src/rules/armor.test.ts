@@ -164,12 +164,12 @@ describe("shields", () => {
     expect(penalisedMovement(5, movementPenalty(walker([], { armorType: "hardened" }), catalog))).toEqual({ walk: 5, run: 7 });
   });
 
-  it("shieldPoints gives each arm's Damage Capacity, less 1 for each missing actuator", () => {
+  it("shieldPoints gives each arm's Damage Capacity and Absorption, less 1 for each missing actuator", () => {
     const record = walker([shield("medium", "LA"), shield("large", "RA")]);
-    expect(shieldPoints(record, catalog)).toEqual({ left: 18, right: 25 });
+    expect(shieldPoints(record, catalog)).toEqual({ left: 18, absorbLeft: 5, right: 25, absorbRight: 7 });
     const noHand = editRecord(record, (d) => void (d.arms = { RA: { lowerArm: true, hand: false } }));
-    expect(shieldPoints(noHand, catalog)).toEqual({ left: 18, right: 24 });
-    expect(shieldPoints(walker([shield("small", "LA")]), catalog)).toEqual({ left: 11 });
+    expect(shieldPoints(noHand, catalog)).toEqual({ left: 18, absorbLeft: 5, right: 24, absorbRight: 6 });
+    expect(shieldPoints(walker([shield("small", "LA")]), catalog)).toEqual({ left: 11, absorbLeft: 3 });
     expect(shieldPoints(quadRecord({ mounts: [shield("small", "LT")] }), catalog)).toEqual({});
   });
 });

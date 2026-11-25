@@ -1,5 +1,5 @@
 // Salvage Rights paper doll engine. GPL-3.0-or-later.
-import { MECH_SHIELD_BOXES } from "../../data/sheet";
+import type { ShieldPoints } from "../../rules/shields";
 import { locationName, maxArmor, structurePoints, type LocationCode, type MechRecord } from "../../rules/mech";
 import { placePoint, type IPlacement } from "./geometry";
 import { PART_PIVOTS, PARTS, type PartId } from "./parts";
@@ -442,28 +442,9 @@ const SHIELD_LOCATIONS: Record<string, { side: "left" | "right"; counts: "capaci
     rsha: { side: "right", counts: "absorbance", name: "Right Shield Damage Absorbance" },
 };
 
-/** What the doll draws for the shields a unit carries: the points of Damage Capacity on each arm and, where known, of
- * Damage Absorbance. A side with no shield has no entry. */
-export interface IDollShields {
-    left?: number;
-    right?: number;
-    absorbLeft?: number;
-    absorbRight?: number;
-}
-
-/** The shield boxes of a record: for each arm, those of the first shield mounted in it (the 'Mech Shield Table,
- * data/sheet.ts). It asks only where the shield is; whether it may be there is the rules check's business. */
-export const shieldPointsForDoll = (record: MechRecord): IDollShields => {
-    const boxes = (arm: LocationCode) => {
-        const id = record.mounts.find((mount) => mount.location === arm && mount.equipmentId !== null && Object.hasOwn(MECH_SHIELD_BOXES.rows, mount.equipmentId))?.equipmentId;
-        return id ? MECH_SHIELD_BOXES.rows[id] : undefined;
-    };
-    const left = boxes("LA"), right = boxes("RA");
-    return {
-        ...(left ? { left: left.capacity, absorbLeft: left.absorbance } : {}),
-        ...(right ? { right: right.capacity, absorbRight: right.absorbance } : {}),
-    };
-};
+/** What the doll draws for the shields a unit carries (rules/shields.ts `shieldPoints`): the points of Damage Capacity on each arm and
+ * of Damage Absorption. A side with no shield has no entry. */
+export type IDollShields = ShieldPoints;
 
 /** The points a shield location draws; undefined for any other location. */
 const shieldCount = (loc: string, shields: IDollShields): number | undefined => {
@@ -497,7 +478,7 @@ const recordLocation = (loc: string) => (Object.hasOwn(RECORD_OF, loc) ? RECORD_
 /** The record location (HD, LT, FLL) a doll location (lower case; the rear torsos end in "r") stands for. */
 export const recordCodeOf = (loc: string): LocationCode | undefined => recordLocation(loc)?.code;
 
-export const dollUnitFromRecord = (record: MechRecord, shields: IDollShields = shieldPointsForDoll(record)): IDollUnit | undefined => {
+export const dollUnitFromRecord = (record: MechRecord, shields: IDollShields = {}): IDollUnit | undefined => {
     const layoutId = Object.hasOwn(LAYOUT_OF_CONFIGURATION, record.configuration) ? LAYOUT_OF_CONFIGURATION[record.configuration] : undefined;
     if (!layoutId) return undefined;
     const max = maxArmor(record), structure = structurePoints(record);

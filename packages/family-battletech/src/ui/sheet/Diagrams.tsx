@@ -1,6 +1,8 @@
 // The armor diagram and the internal structure diagram: the paper doll where the body type has one, else a framed list of
 // each location's points as text, so the sheet is still usable.
+import type { Catalog } from "../../rules/catalog";
 import type { MechRecord } from "../../rules/mech";
+import { shieldPoints } from "../../rules/shields";
 import { dollUnitFromRecord } from "../doll/layouts";
 import { fitDoll } from "../doll/box";
 import MechDoll from "../doll/mech-doll";
@@ -35,8 +37,8 @@ function TextBox({ rect, title, lines, center }: { rect: Rect; title: string; li
   );
 }
 
-function Doll({ rect, record, use, title, suffix }: { rect: Rect; record: MechRecord; use: "armor" | "structure"; title: string; suffix: string }) {
-  const unit = dollUnitFromRecord(record);
+function Doll({ rect, record, catalog, use, title, suffix }: { rect: Rect; record: MechRecord; catalog: Catalog; use: "armor" | "structure"; title: string; suffix: string }) {
+  const unit = dollUnitFromRecord(record, shieldPoints(record, catalog));
   const room = { width: rect.w - 2 * INSET, height: rect.h - 2 * INSET - 14 };
   const fit = unit ? fitDoll(unit, use, room.width, room.height, LABEL, true) : undefined;
   return (
@@ -50,17 +52,17 @@ function Doll({ rect, record, use, title, suffix }: { rect: Rect; record: MechRe
   );
 }
 
-export function ArmorDiagram({ rect, record, points }: { rect: Rect; record: MechRecord; points: LocationPoints[] }) {
+export function ArmorDiagram({ rect, record, catalog, points }: { rect: Rect; record: MechRecord; catalog: Catalog; points: LocationPoints[] }) {
   return dollUnitFromRecord(record) ? (
-    <Doll rect={rect} record={record} use="armor" title="ARMOR DIAGRAM" suffix="sheet-armor" />
+    <Doll rect={rect} record={record} catalog={catalog} use="armor" title="ARMOR DIAGRAM" suffix="sheet-armor" />
   ) : (
     <TextBox rect={rect} title="ARMOR DIAGRAM" lines={points.map(armorText)} center />
   );
 }
 
-export function StructureDiagram({ rect, record, points }: { rect: Rect; record: MechRecord; points: LocationPoints[] }) {
+export function StructureDiagram({ rect, record, catalog, points }: { rect: Rect; record: MechRecord; catalog: Catalog; points: LocationPoints[] }) {
   return dollUnitFromRecord(record) ? (
-    <Doll rect={rect} record={record} use="structure" title="INTERNAL STRUCTURE DIAGRAM" suffix="sheet-structure" />
+    <Doll rect={rect} record={record} catalog={catalog} use="structure" title="INTERNAL STRUCTURE DIAGRAM" suffix="sheet-structure" />
   ) : (
     <TextBox rect={rect} title="INTERNAL STRUCTURE DIAGRAM" lines={points.map(structureText)} center />
   );

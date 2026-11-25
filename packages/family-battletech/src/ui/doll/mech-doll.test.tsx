@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { bipedRecord, quadRecord } from "../../rules/fixtures";
 import { editRecord, maxArmor, structurePoints, type MechRecord } from "../../rules/mech";
 import type { IDollFrame } from "./geometry";
-import { ARMOR_PITCH, DOLL_LAYOUTS, dollUnitFromRecord, STRUCTURE_PITCH, STRUCTURE_SCALE, layoutOf, type DollLayoutId, type DollUse, type IDollUnit, type IDollVariant } from "./layouts";
+import { ARMOR_PITCH, DOLL_LAYOUTS, dollUnitFromRecord, STRUCTURE_PITCH, STRUCTURE_SCALE, layoutOf, type DollLayoutId, type DollUse, type IDollShields, type IDollUnit, type IDollVariant } from "./layouts";
 import MechDoll, { fillPlates, placedPlates } from "./mech-doll";
 import type { PenPreset } from "./pen";
 import { edgeDistance, insideShape } from "./shape-bubbles";
@@ -19,14 +19,14 @@ const FRAMES: Record<DollUse, IDollFrame> = {
 
 const CODES: Record<string, string> = { hd: "HD", ct: "CT", lt: "LT", rt: "RT", la: "LA", ra: "RA", ll: "LL", rl: "RL" };
 
-const unitOf = (record: MechRecord) => {
-  const unit = dollUnitFromRecord(record);
+const unitOf = (record: MechRecord, shields?: IDollShields) => {
+  const unit = dollUnitFromRecord(record, shields);
   if (!unit) throw new Error("no doll for this record");
   return unit;
 };
 
-const draw = (record: MechRecord, use: DollUse, extra: { pen?: PenPreset; selected?: string; onSelect?: (loc: string) => void } = {}) => (
-  <MechDoll unit={unitOf(record)} use={use} frame={FRAMES[use]} suffix="t" {...extra} />
+const draw = (record: MechRecord, use: DollUse, extra: { pen?: PenPreset; selected?: string; onSelect?: (loc: string) => void; shields?: IDollShields } = {}) => (
+  <MechDoll unit={unitOf(record, extra.shields)} use={use} frame={FRAMES[use]} suffix="t" pen={extra.pen} selected={extra.selected} onSelect={extra.onSelect} />
 );
 
 afterEach(cleanup);
@@ -70,7 +70,7 @@ const fullUnit = (layoutId: DollLayoutId, variant: Partial<IDollVariant> = {}): 
 
 const BODY_TYPES = (Object.keys(DOLL_LAYOUTS) as DollLayoutId[]).filter((id) => !id.startsWith("micro"));
 
-const markupOf = (record: MechRecord, use: DollUse, extra: { pen?: PenPreset } = {}) =>
+const markupOf = (record: MechRecord, use: DollUse, extra: { pen?: PenPreset; shields?: IDollShields } = {}) =>
   renderToStaticMarkup(<svg>{draw(record, use, extra)}</svg>);
 
 type Ring = { x: number; y: number; outer: number };
@@ -310,8 +310,9 @@ describe("the paper doll", () => {
   it("draws a shield beside the arm that carries one, on the armor diagram only, as a named picture and not a button", () => {
     const base = bipedRecord();
     const record = { ...base, mounts: [...base.mounts, { id: "shield", equipmentId: "shield-medium-is", name: "Shield, Medium", techBase: "inner-sphere" as const, location: "LA" as const, slot: 5 }] };
+    const shields = { left: 18, absorbLeft: 5 };
     const host = document.createElement("div");
-    host.innerHTML = renderToStaticMarkup(<svg>{draw(record, "armor", { onSelect: () => undefined })}</svg>);
+    host.innerHTML = renderToStaticMarkup(<svg>{draw(record, "armor", { onSelect: () => undefined, shields })}</svg>);
     // The 'Mech Shield Table: a medium shield has a Damage Capacity of 18 (circles) and a Damage Absorbance of 5 (diamonds).
     expect(host.querySelectorAll("g[data-bubbles=lsh] circle")).toHaveLength(18);
     expect(host.querySelectorAll("g[data-bubbles=lsha] [data-mark=diamond]")).toHaveLength(5);
@@ -319,10 +320,10 @@ describe("the paper doll", () => {
     expect(host.querySelector("g[data-loc=lsh]")?.getAttribute("aria-label")).toBe("Left Shield Damage Capacity, 18");
     expect(host.querySelector("g[data-loc=rsh]")).toBeNull();
     // It stands outside the arm: every corner of its plate is left of the arm's plates.
-    const layout = layoutOf(unitOf(record));
+    const layout = layoutOf(unitOf(record, shields));
     const xs = (loc: string) => (layout?.front ?? []).filter((location) => location.loc === loc).flatMap((location) => placedPlates(location, FRAMES.armor)).flat().map(([x]) => x);
     expect(Math.max(...xs("lsh"))).toBeLessThan(Math.min(...xs("la")));
-    for (const use of ["structure", "transfer"] as const) expect(markupOf(record, use)).not.toContain("data-loc=\"lsh\"");
+    for (const use of ["structure", "transfer"] as const) expect(markupOf(record, use, { shields })).not.toContain("data-loc=\"lsh\"");
   });
 
   it("draws no shield on a body without arms, and a full large shield at a size a bubble can be read on the smallest", () => {

@@ -839,6 +839,7 @@ function Editor({ initial, catalog, storage }: { initial: MechRecord; catalog: C
 
         <ArmorPanel
           record={record}
+          catalog={catalog}
           layout={layout}
           armorTons={weights.lines.find((l) => l.label === "Armor")?.tons ?? null}
           changed={changed}

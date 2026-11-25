@@ -1,13 +1,15 @@
 // Armor points per location, with the paper doll beside them: the armor diagram (front and rear) and the internal
 // structure at a smaller scale. Choosing a location anywhere selects it for the whole page.
 import { ARMOR } from "../../data/chassis";
+import type { Catalog } from "../../rules/catalog";
 import { bodyOf, locationName, maxArmor } from "../../rules/mech";
 import type { Layout, LocationCode, MechRecord } from "../../rules/mech";
 import { dollBox } from "../doll/box";
 import MechDoll from "../doll/mech-doll";
 import { PAPER } from "../doll/pen";
-import { STRUCTURE_SCALE, dollUnitFromRecord, recordCodeOf, shieldPointsForDoll } from "../doll/layouts";
+import { STRUCTURE_SCALE, dollUnitFromRecord, recordCodeOf } from "../doll/layouts";
 import type { DollUse } from "../doll/layouts";
+import { shieldPoints } from "../../rules/shields";
 import { NumberField, fieldId } from "../EditorPage";
 import type { OnEdit } from "../EditorPage";
 
@@ -24,6 +26,7 @@ const BODY_CELLS: Record<string, Record<string, Cell>> = {
 
 export default function ArmorPanel({
   record,
+  catalog,
   layout,
   armorTons,
   changed,
@@ -33,6 +36,7 @@ export default function ArmorPanel({
   onEdit,
 }: {
   record: MechRecord;
+  catalog: Catalog;
   layout: Layout;
   armorTons: number | null;
   changed: Set<string>;
@@ -46,7 +50,7 @@ export default function ArmorPanel({
   const max = maxArmor(record);
   const points = Object.values(record.armor).reduce((sum, a) => sum + (a ? a.front + (a.rear ?? 0) : 0), 0);
   const type = Object.hasOwn(ARMOR.types, record.chassis.armorType) ? (ARMOR.types[record.chassis.armorType]?.name ?? record.chassis.armorType) : record.chassis.armorType;
-  const shields = shieldPointsForDoll(record);
+  const shields = shieldPoints(record, catalog);
   const unit = dollUnitFromRecord(record, shields);
   // A shield is a location on the doll with no field of its own: what it draws is said in words here.
   const shieldNotes = ([["Left", shields.left, shields.absorbLeft], ["Right", shields.right, shields.absorbRight]] as const).flatMap(([side, capacity, absorbance]) =>
