@@ -43,6 +43,7 @@ export const FRONT_PIVOTS = {
     "torso-side-rear": [-82, 978],
     "arm": [-266, 230],
     "leg": [-118, 520],
+    "leg-center": [0, 520],
     "quad-leg-front": QUAD_LEGS.front.hip,
     "quad-leg-rear": QUAD_LEGS.rear.hip,
     "mono-leg": QUAD_LEGS.mono.hip,
@@ -51,7 +52,7 @@ export const FRONT_PIVOTS = {
     "torso-side-wide": [-84, 204],
 } satisfies Record<FrontPartId, BubblePoint>;
 
-export type FrontPartId = "head" | "torso-center" | "torso-side" | "torso-center-rear" | "torso-side-rear" | "arm" | "leg"
+export type FrontPartId = "head" | "torso-center" | "torso-side" | "torso-center-rear" | "torso-side-rear" | "arm" | "leg" | "leg-center"
     | "quad-leg-front" | "quad-leg-rear" | "mono-leg" | "torso-center-legless" | "torso-center-trunk" | "torso-side-wide";
 
 
@@ -220,6 +221,42 @@ const leg = aroundPivot(FRONT_PIVOTS.leg, {
     ),
 });
 
+// ---- A tripod's center leg: the leg above seen square on, so every piece of it is the same either side of its own center
+// line, which is the body's. The same hip, thigh, knee guard, calf, ankle and foot at the same heights and sizes, with a
+// piston each side.
+
+const CENTER_THIGH_PLATE: Shape = [[-46, 510], [46, 510], [53, 550], [51, 640], [40, 688], [-40, 688], [-51, 640], [-53, 550]];
+const CENTER_KNEE_PLATE: Shape = [[-24, 698], [24, 698], [34, 712], [33, 734], [13, 752], [-13, 752], [-33, 734], [-34, 712]];
+const CENTER_SHIN_PLATE: Shape = [[-35, 781], [35, 781], [46, 806], [49, 867], [-49, 867], [-46, 806]];
+
+const legCenter = aroundPivot(FRONT_PIVOTS["leg-center"], {
+    plates: [CENTER_THIGH_PLATE, CENTER_KNEE_PLATE, CENTER_SHIN_PLATE],
+    label: [0, 600],
+    foot: [0, 930],
+    footDir: [0, 1],
+    footWidth: 182,
+    draw: (pen, ids) => (
+        <>
+            {joint("M -54,464 L 54,464 C 64,476 66,492 60,504 L -60,504 C -66,492 -64,476 -54,464 Z", ["M -59,477 L 59,477", "M -62,490 L 62,490"], pen, ids)}
+            {joint("M -49,694 L 49,694 L 51,768 L -51,768 Z", ["M -50,718 L 50,718", "M -50,742 L 50,742"], pen, ids)}
+            {outline("M -64,500 C -36,488 36,488 64,500 C 68,560 62,640 50,704 L -50,704 C -62,640 -68,560 -64,500 Z", pen)}
+            {plateFace(CENTER_THIGH_PLATE, pen)}
+            {rivets(CENTER_THIGH_PLATE, pen)}
+            {joint("M -48,877 L 48,877 L 50,899 L -50,899 Z", ["M -49,888 L 49,888"], pen, ids)}
+            {outline("M -46,754 L 46,754 C 58,790 62,840 61,882 L -61,882 C -62,840 -58,790 -46,754 Z", pen)}
+            {plateFace(CENTER_SHIN_PLATE, pen)}
+            {rivets(CENTER_SHIN_PLATE, pen)}
+            {outline("M -38,690 C -16,680 16,680 38,690 L 47,738 C 34,758 14,768 0,770 C -14,768 -34,758 -47,738 Z", pen)}
+            {plateFace(CENTER_KNEE_PLATE, pen)}
+            {outline("M -47,889 L 47,889 L 82,913 L 91,940 L -91,940 L -82,913 Z", pen)}
+            {seams(["M -86,926 L 86,926", "M -24,890 L -30,926", "M 24,890 L 30,926"], pen)}
+            {[-1, 1].map((side) => <React.Fragment key={side}>{piston([side * 62, 600], [side * 57, 790], pen)}</React.Fragment>)}
+            {pivotMark([0, 484], pen)}
+            {pivotMark([0, 888], pen)}
+        </>
+    ),
+});
+
 // ---- Quad leg (left): a short, heavy walking leg seen from the front. A ribbed hip, a broad thigh, a knee guard, a
 // flared shin and a wide foot, drawn once around its own center line with the hip at the origin, then stretched and
 // moved to a corner of the body by `quadLeg`. Distances below are in those local units.
@@ -339,7 +376,7 @@ const spring = (x: number, top: number, bottom: number, half: number, coils: num
 };
 
 // ---- A monoped's leg: the stocky leg drawn broader, hanging straight under the body, with a heavy ram each side and a coil
-// spring at each heel. (A tripod's center leg is the side leg's own drawing, set between the two.)
+// spring at each heel.
 
 const monoLeg = quadLeg(QUAD_LEGS.mono, {
     bothSides: true,
@@ -375,6 +412,7 @@ export const FRONT_PARTS: Record<FrontPartId, IPart> = {
     "torso-side-rear": torsoSideRear,
     "arm": arm,
     "leg": leg,
+    "leg-center": legCenter,
     "quad-leg-front": quadLeg(QUAD_LEGS.front),
     "quad-leg-rear": quadLeg(QUAD_LEGS.rear),
     "mono-leg": monoLeg,

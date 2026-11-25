@@ -196,11 +196,11 @@ const moved = (location: IDollLocation, dy: number): IDollLocation => ({
 /** The rear torsos moved to clear what hangs below or above the front view. */
 const rearTorsosMoved = (dy: number): IDollLocation[] => REAR_TORSOS.map((location) => moved(location, dy));
 
-// A tripod: the biped without its pelvis and with a third leg, the same drawing as the side legs, hung from the center torso
-// between them, the side legs set a little wider apart to make room. The center leg's label sits under its foot, which
+// A tripod: the biped without its pelvis and with a third leg, the side legs' drawing seen square on, hung straight down from
+// the center torso on the body's center line, the side legs set a little wider apart to make room. The center leg's label sits under its foot, which
 // pushes the rear torsos down. A destroyed center leg's damage goes to the center torso, a side leg's to the torso on its side (Interstellar
 // Operations: Alternate Eras, Tripod 'Mech Game Rules, p. 159).
-const CENTER_LEG: IDollLocation = { loc: "cl", part: "leg", at: { x: 12, y: 520 }, label: ["CENTER", "LEG"], labelAt: [0, 968], labelAnchor: "middle", shortHangsFrom: [0, 950], transfersTo: "ct" };
+const CENTER_LEG: IDollLocation = { loc: "cl", part: "leg-center", at: home("leg-center"), label: ["CENTER", "LEG"], labelAt: [0, 968], labelAnchor: "middle", shortHangsFrom: [0, 950], transfersTo: "ct" };
 const SIDE_LEG: IDollLocation = { ...LEFT_LEG, at: { ...home("leg"), x: home("leg").x - 12 } };
 
 const TRIPOD: IDollLayout = {
