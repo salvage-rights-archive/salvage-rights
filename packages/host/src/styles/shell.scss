@@ -113,6 +113,8 @@ h1:focus {
   background: var(--sr-surface);
   border: var(--sr-border) solid var(--sr-line);
   border-radius: var(--sr-radius);
+  // Credit notes carry web addresses, which must wrap on a narrow screen.
+  overflow-wrap: anywhere;
 }
 
 .sr-footer {
