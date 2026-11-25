@@ -1,6 +1,6 @@
 import "fake-indexeddb/auto";
 import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
-import { MemoryRouter } from "react-router";
+import { RouterProvider, createMemoryRouter } from "react-router";
 import userEvent from "@testing-library/user-event";
 import { IDBFactory } from "fake-indexeddb";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -44,11 +44,11 @@ const testbed: FamilyManifest = {
 };
 
 function renderAt(path: string) {
-  return render(
-    <MemoryRouter initialEntries={[path]}>
-      <App families={[testbed]} editionId="testbed-edition" />
-    </MemoryRouter>,
-  );
+  // The same shape main.tsx runs: a data router with one catch-all route holding the app.
+  const router = createMemoryRouter([{ path: "*", element: <App families={[testbed]} editionId="testbed-edition" /> }], {
+    initialEntries: [path],
+  });
+  return render(<RouterProvider router={router} />);
 }
 
 beforeEach(() => {

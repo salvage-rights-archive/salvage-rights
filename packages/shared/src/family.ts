@@ -17,7 +17,8 @@ export interface FamilyRoute {
   path: string;
   label: string;
   section: Section;
-  /** The host provides the page's `<main>`; a family page must not render its own. */
+  /** The host provides the page's `<main>`; a family page must not render its own. Pages run inside a react-router
+   * data router, so hooks such as `useBlocker` are available. */
   load: () => Promise<{ default: ComponentType }>;
 }
 
