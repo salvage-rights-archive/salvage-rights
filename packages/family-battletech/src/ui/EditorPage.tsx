@@ -2,7 +2,7 @@
 // (for Undo and Redo), derives everything else from the current record, and hands each panel what it shows and an
 // `onEdit(change)` callback. Every edit goes through `editRecord`.
 import { useEffect, useId, useMemo, useRef, useState } from "react";
-import type { ReactNode } from "react";
+import type { KeyboardEvent, ReactNode } from "react";
 import { Link, useBlocker, useLocation, useSearchParams } from "react-router";
 import { ARMOR, COCKPITS, ENGINE_TYPES, GYROS, HEAT_SINKS, MYOMER, STRUCTURE_TYPES } from "../data/chassis";
 import { loadCatalog } from "../rules/catalog";
@@ -20,10 +20,35 @@ import type { FamilyStorage } from "./storage";
 import "./classic.scss";
 
 export type Change = (draft: MechRecord) => void;
-export type OnEdit = (change: Change) => void;
+/** Applies an edit. Edits with the same `field` in a row (one visit to a field) are one Undo step. */
+export type OnEdit = (change: Change, field?: string) => void;
 
 const HISTORY_LIMIT = 100;
 const HOME = "/battletech/classic/home";
+
+const FOCUSABLE = "button:not([disabled]), input:not([disabled]), select:not([disabled]), [href]";
+
+/** The keys a modal dialog answers to, for the picker and the unsaved-changes confirm: Escape asks to close, and Tab
+ * stays inside the dialog. */
+export function dialogKeyDown(event: KeyboardEvent<HTMLElement>, container: HTMLElement | null, onEscape: () => void): void {
+  if (event.key === "Escape") {
+    event.stopPropagation();
+    onEscape();
+    return;
+  }
+  if (event.key !== "Tab" || !container) return;
+  const items = [...container.querySelectorAll<HTMLElement>(FOCUSABLE)];
+  const first = items[0];
+  const last = items[items.length - 1];
+  if (!first || !last) return;
+  if (event.shiftKey && document.activeElement === first) {
+    event.preventDefault();
+    last.focus();
+  } else if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault();
+    first.focus();
+  }
+}
 
 // ---------------------------------------------------------------------------------------------------------------
 // Small shared pieces: the ids that findings and change markers point at, and the labelled fields.
@@ -48,17 +73,19 @@ function Field({
   label,
   changed,
   hint,
+  className,
   children,
 }: {
   id: string;
   label: string;
   changed?: boolean;
   hint?: string;
+  className?: string;
   children: (describedBy: string | undefined) => ReactNode;
 }) {
   const parts = [changed ? `${id}-changed` : "", hint ? `${id}-hint` : ""].filter(Boolean);
   return (
-    <div className="bt-field">
+    <div className={className ? `bt-field ${className}` : "bt-field"}>
       <label htmlFor={id}>{label}</label>
       {children(parts.length > 0 ? parts.join(" ") : undefined)}
       {changed && <Changed id={`${id}-changed`} />}
@@ -81,9 +108,14 @@ export function NumberField({
   changed,
   after,
   onFocus,
+  name,
+  className,
 }: {
   id: string;
   label: string;
+  /** The accessible name, when the visible label is a short form of it. */
+  name?: string;
+  className?: string;
   value: number | null;
   onValid: (value: number | null) => void;
   allowEmpty?: boolean;
@@ -105,11 +137,12 @@ export function NumberField({
   const showDraft = draft !== undefined && (invalid || parsed === value);
   const shown = showDraft ? draft : value === null ? "" : String(value);
   return (
-    <Field id={id} label={label} changed={changed} hint={invalid ? "Enter a number." : undefined}>
+    <Field id={id} label={label} className={className} changed={changed} hint={invalid ? "Enter a number." : undefined}>
       {(describedBy) => (
         <>
           <input
             id={id}
+            aria-label={name}
             type="text"
             inputMode="decimal"
             value={shown}
@@ -346,6 +379,60 @@ interface History {
 
 const sameRecord = (a: MechRecord, b: MechRecord) => a === b || JSON.stringify(a) === JSON.stringify(b);
 
+/** What the weight summary says: the total, or what is known of it and how many items could not be weighed. */
+export function weightSummary(weights: { lines: { tons: number | null }[]; total: number | null }, tons: number): string {
+  const unknown = weights.lines.filter((l) => l.tons === null).length;
+  if (weights.total !== null) return `${weights.total} of ${tons} tons`;
+  if (unknown === 0) return "Weight unknown";
+  const known = Math.round(weights.lines.reduce((sum, l) => sum + (l.tons ?? 0), 0) * 1000) / 1000;
+  return `${known} of ${tons} tons, not counting ${unknown} ${unknown === 1 ? "item" : "items"} of unknown weight`;
+}
+
+/** Mordel's picture of the 'Mech; `onFail` is called when it cannot be loaded, so the page can take its place away. */
+function Picture({ url, alt, onFail }: { url: string; alt: string; onFail: () => void }) {
+  return <img className="bt-picture" src={url} alt={alt} width={160} loading="lazy" referrerPolicy="no-referrer" onError={onFail} />;
+}
+
+/** The unsaved-changes question, a modal dialog like the picker: focus goes to Stay and comes back there. */
+function LeaveConfirm({ proceed, reset }: { proceed: () => void; reset: () => void }) {
+  const box = useRef<HTMLDivElement>(null);
+  const stay = useRef<HTMLButtonElement>(null);
+  const before = useRef<Element | null>(null);
+  const messageId = useId();
+  useEffect(() => {
+    before.current = document.activeElement;
+    stay.current?.focus();
+  }, []);
+  const keep = () => {
+    reset();
+    if (before.current instanceof HTMLElement) before.current.focus();
+  };
+  return (
+    <div className="bt-picker-backdrop">
+      <div
+        ref={box}
+        className="bt-picker bt-confirm"
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby={messageId}
+        onKeyDown={(event) => {
+          dialogKeyDown(event, box.current, keep);
+        }}
+      >
+        <p id={messageId}>You have unsaved changes.</p>
+        <span className="bt-actions">
+          <button type="button" className="bt-button" onClick={proceed}>
+            Leave without saving
+          </button>
+          <button type="button" ref={stay} className="bt-button bt-button--secondary" onClick={keep}>
+            Stay
+          </button>
+        </span>
+      </div>
+    </div>
+  );
+}
+
 function Editor({ initial, catalog, storage }: { initial: MechRecord; catalog: Catalog; storage: FamilyStorage }) {
   const [history, setHistory] = useState<History>({ past: [], present: initial, future: [] });
   const [savedRecord, setSavedRecord] = useState(initial);
@@ -353,23 +440,39 @@ function Editor({ initial, catalog, storage }: { initial: MechRecord; catalog: C
   const [status, setStatus] = useState("");
   const [problem, setProblem] = useState("");
   const [selected, setSelected] = useState<LocationCode>();
+  /** The field whose edits are being typed in a row; they make one history step. */
+  const lastField = useRef<string | undefined>(undefined);
+  /** Changing the key starts the slots panel afresh, which ends move mode and closes whatever is open. */
+  const [panelKey, setPanelKey] = useState(0);
+  const refocus = useRef<string | undefined>(undefined);
+  const [pictureFailed, setPictureFailed] = useState(false);
   const record = history.present;
   const dirty = !sameRecord(record, savedRecord);
 
-  const edit: OnEdit = (change) => {
+  const edit: OnEdit = (change, field) => {
+    const joins = field !== undefined && lastField.current === field;
+    lastField.current = field;
     setJustSaved(false);
     setStatus("");
-    setHistory((h) => ({ past: [...h.past, h.present].slice(-HISTORY_LIMIT), present: editRecord(h.present, change), future: [] }));
+    setHistory((h) => {
+      const next = editRecord(h.present, change);
+      if (sameRecord(next, h.present)) return h;
+      return { past: joins ? h.past : [...h.past, h.present].slice(-HISTORY_LIMIT), present: next, future: [] };
+    });
   };
   const undo = () => {
+    lastField.current = undefined;
     setJustSaved(false);
+    setPanelKey((k) => k + 1);
     setHistory((h) => {
       const previous = h.past[h.past.length - 1];
       return previous ? { past: h.past.slice(0, -1), present: previous, future: [h.present, ...h.future] } : h;
     });
   };
   const redo = () => {
+    lastField.current = undefined;
     setJustSaved(false);
+    setPanelKey((k) => k + 1);
     setHistory((h) => {
       const next = h.future[0];
       return next ? { past: [...h.past, h.present].slice(-HISTORY_LIMIT), present: next, future: h.future.slice(1) } : h;
@@ -399,21 +502,24 @@ function Editor({ initial, catalog, storage }: { initial: MechRecord; catalog: C
   const armorLocations = layout.supported ? layout.locations : Object.keys(record.armor);
   const fields = fieldTargets(armorLocations);
   const targetOf = (where: Finding["where"]) => targetFor(where, record, fields);
+  // Choosing a finding first ends move mode (the mounts' own elements are not on the page then), then moves focus.
   const focusTarget = (id: string) => {
-    document.getElementById(id)?.focus();
+    refocus.current = id;
+    setPanelKey((k) => k + 1);
   };
+  useEffect(() => {
+    if (refocus.current === undefined) return;
+    document.getElementById(refocus.current)?.focus();
+    refocus.current = undefined;
+  });
 
   const blocker = useBlocker(dirty);
-  const stay = useRef<HTMLButtonElement>(null);
-  const blocked = blocker.state === "blocked";
-  useEffect(() => {
-    if (blocked) stay.current?.focus();
-  }, [blocked]);
 
   useEffect(() => {
     if (!dirty) return;
     const warn = (event: BeforeUnloadEvent) => {
       event.preventDefault();
+      event.returnValue = "";
     };
     window.addEventListener("beforeunload", warn);
     return () => {
@@ -434,153 +540,168 @@ function Editor({ initial, catalog, storage }: { initial: MechRecord; catalog: C
   const mark = (path: string) => changed.has(path);
   const notes = importNotes(useLocation().state);
   const notesId = useId();
+  const showPicture = !pictureFailed && record.imageUrl !== undefined && record.imageUrl.startsWith("https://");
+  const chassisGroups = CHASSIS_FIELDS.reduce<ChassisField[][]>((groups, field) => {
+    if (field.kind === "number") groups[groups.length - 1]?.push(field);
+    else groups.push([field]);
+    return groups;
+  }, []);
 
   return (
-    <div className="sr-page bt-editor">
-      <header className="bt-editor__header">
-        <h1>{title || "Unnamed 'Mech"}</h1>
-        {source && (
-          <p className="bt-credit">
-            Designed by {source.designer || "an unnamed designer"} on mordel.net
-          </p>
-        )}
-        {figures.length > 0 && <p className="bt-hint bt-figures">{`Mordel's figures: ${figures.join(", ")}`}</p>}
-        {changed.has("source.unreadable") && (
-          <p className="bt-hint">The original from mordel.net could not be read, so changes since import are not marked.</p>
-        )}
-        <div className="bt-actions">
-          <button type="button" className="bt-button" disabled={!dirty} onClick={() => void save()}>
-            Save
-          </button>
-          <button type="button" className="bt-button bt-button--secondary" disabled={history.past.length === 0} onClick={undo}>
-            Undo
-          </button>
-          <button type="button" className="bt-button bt-button--secondary" disabled={history.future.length === 0} onClick={redo}>
-            Redo
-          </button>
-          <button
-            type="button"
-            className="bt-button bt-button--secondary"
-            onClick={() => {
-              downloadMech(record);
-              setStatus("Export started.");
-            }}
-          >
-            Export
-          </button>
-        </div>
-        <div role="status">{justSaved && !dirty ? "Saved." : status}</div>
-        <div role="alert" className="bt-problem">
-          {problem}
-        </div>
-        {dirty && !blocked && <p className="bt-hint">You have changes that are not saved.</p>}
-        {blocker.state === "blocked" && (
-          <div
-            className="bt-confirm"
-            role="group"
-            aria-label="Unsaved changes"
-            onKeyDown={(event) => {
-              if (event.key === "Escape") blocker.reset();
-            }}
-          >
-            <p>You have unsaved changes.</p>
-            <span className="bt-actions">
-              <button type="button" className="bt-button" onClick={blocker.proceed}>
-                Leave without saving
-              </button>
-              <button type="button" ref={stay} className="bt-button bt-button--secondary" onClick={blocker.reset}>
-                Stay
-              </button>
-            </span>
+    <div
+      className="sr-page bt-editor"
+      onBlur={() => {
+        lastField.current = undefined;
+      }}
+    >
+      <div className="bt-editor__record">
+        <header className="bt-editor__header">
+          <div className="bt-editor__title">
+            <h1>{title || "Unnamed 'Mech"}</h1>
+            {source && <p className="bt-credit">Designed by {source.designer || "an unnamed designer"} on mordel.net</p>}
           </div>
-        )}
-        {notes.length > 0 && (
-          <details className="bt-notes" aria-labelledby={notesId}>
-            <summary id={notesId}>Import notes</summary>
-            <ul>
-              {notes.map((note, index) => (
-                <li key={index}>{note}</li>
-              ))}
-            </ul>
-          </details>
-        )}
-      </header>
+          <div className="bt-actions">
+            <button type="button" className="bt-button" disabled={!dirty} onClick={() => void save()}>
+              Save
+            </button>
+            <button type="button" className="bt-button bt-button--secondary" disabled={history.past.length === 0} onClick={undo}>
+              Undo
+            </button>
+            <button type="button" className="bt-button bt-button--secondary" disabled={history.future.length === 0} onClick={redo}>
+              Redo
+            </button>
+            <button
+              type="button"
+              className="bt-button bt-button--secondary"
+              onClick={() => {
+                downloadMech(record);
+                setStatus("Export started.");
+              }}
+            >
+              Export
+            </button>
+            <details className="bt-weight">
+              <summary>{weightSummary(weights, record.tons)}</summary>
+              <ul>
+                {weights.lines.map((line, index) => (
+                  <li key={index}>{`${line.label}: ${line.tons === null ? "unknown" : `${line.tons} tons`}`}</li>
+                ))}
+              </ul>
+            </details>
+          </div>
+          <div role="status">{justSaved && !dirty ? "Saved." : status}</div>
+          <div role="alert" className="bt-problem">
+            {problem}
+          </div>
+        </header>
 
-      <aside className="bt-editor__side">
+        <div className="bt-editor__info">
+          {figures.length > 0 && <p className="bt-hint bt-figures">{`Mordel's figures: ${figures.join(", ")}`}</p>}
+          {changed.has("source.unreadable") && (
+            <p className="bt-hint">The original from mordel.net could not be read, so changes since import are not marked.</p>
+          )}
+          {dirty && <p className="bt-hint">You have changes that are not saved.</p>}
+          {notes.length > 0 && (
+            <details className="bt-notes" aria-labelledby={notesId}>
+              <summary id={notesId}>Import notes</summary>
+              <ul>
+                {notes.map((note, index) => (
+                  <li key={index}>{note}</li>
+                ))}
+              </ul>
+            </details>
+          )}
+        </div>
+
+        <div className="bt-editor__body">
+          <div className="bt-editor__fields" data-picture={showPicture}>
+          {record.imageUrl && showPicture && (
+            <Picture
+              key={record.imageUrl}
+              url={record.imageUrl}
+              alt={`${title}, picture from mordel.net`}
+              onFail={() => {
+                setPictureFailed(true);
+              }}
+            />
+          )}
+          <section className="bt-panel" aria-labelledby="bt-identity">
+            <h2 id="bt-identity">Identity</h2>
+            <div className="bt-grid">
+              <TextField id="field-name" label="Chassis name" value={record.name.chassis} changed={mark("name")} onChange={(v) => { edit((d) => void (d.name.chassis = v), "name"); }} />
+              <TextField id="field-name-model" label="Model" value={record.name.model} onChange={(v) => { edit((d) => void (d.name.model = v), "name-model"); }} />
+              <SelectField
+                id="field-techBase"
+                label="Tech base"
+                value={record.techBase}
+                options={TECH_BASES}
+                changed={mark("techBase")}
+                onChange={(v) => { edit((d) => void (d.techBase = v as MechRecord["techBase"])); }}
+              />
+              <NumberField id="field-year" label="Year" value={record.year} allowEmpty changed={mark("year")} onValid={(v) => { edit((d) => void (d.year = v), "year"); }} />
+              <NumberField id="field-tons" label="Tons" value={record.tons} changed={mark("tons")} onValid={(v) => { edit((d) => void (d.tons = v ?? d.tons), "tons"); }} />
+              <SelectField
+                id="field-configuration"
+                label="Configuration"
+                value={record.configuration}
+                options={CONFIGURATIONS}
+                changed={mark("configuration")}
+                onChange={(v) => { edit((d) => void (d.configuration = v)); }}
+              />
+            </div>
+          </section>
+
+          <section className="bt-panel" aria-labelledby="bt-chassis">
+            <h2 id="bt-chassis">Chassis</h2>
+            <div className="bt-grid">
+              {chassisGroups.map((group) => (
+                <div key={group[0]?.path} className={group.length > 1 ? "bt-pair" : undefined}>
+                  {group.map((field) =>
+                    field.kind === "select" ? (
+                      <SelectField
+                        key={field.path}
+                        id={fieldId(field.path)}
+                        label={field.label}
+                        value={field.read(record)}
+                        options={field.options}
+                        changed={mark(field.path)}
+                        onChange={(v) => { edit((d) => { field.write(d, v); }); }}
+                      />
+                    ) : (
+                      <NumberField
+                        key={field.path}
+                        id={fieldId(field.path)}
+                        label={field.label}
+                        value={field.read(record)}
+                        onValid={(v) => { edit((d) => { field.write(d, v ?? 0); }, field.path); }}
+                      />
+                    ),
+                  )}
+                </div>
+              ))}
+            </div>
+          </section>
+          </div>
+
+          <ArmorPanel
+            record={record}
+            layout={layout}
+            armorTons={weights.lines.find((l) => l.label === "Armor")?.tons ?? null}
+            changed={changed}
+            selected={selected}
+            onSelect={setSelected}
+            onEdit={edit}
+          />
+
+          <SlotsPanel key={panelKey} record={record} layout={layout} catalog={catalog} changed={changed} selected={selected} onSelect={setSelected} onEdit={edit} />
+        </div>
+      </div>
+
+      <aside className="bt-editor__side" tabIndex={0} aria-label="Rules check">
         <FindingsPanel findings={findings} targetOf={targetOf} onChoose={focusTarget} />
       </aside>
 
-      <div className="bt-editor__body">
-        <details className="bt-weight">
-          <summary>{weights.total === null ? "Weight unknown" : `${weights.total} of ${record.tons} tons`}</summary>
-          <ul>
-            {weights.lines.map((line, index) => (
-              <li key={index}>{`${line.label}: ${line.tons === null ? "unknown" : `${line.tons} tons`}`}</li>
-            ))}
-          </ul>
-        </details>
-
-        <section className="bt-panel" aria-labelledby="bt-identity">
-          <h2 id="bt-identity">Identity</h2>
-          <TextField id="field-name" label="Chassis name" value={record.name.chassis} changed={mark("name")} onChange={(v) => { edit((d) => void (d.name.chassis = v)); }} />
-          <TextField id="field-name-model" label="Model" value={record.name.model} onChange={(v) => { edit((d) => void (d.name.model = v)); }} />
-          <SelectField
-            id="field-techBase"
-            label="Tech base"
-            value={record.techBase}
-            options={TECH_BASES}
-            changed={mark("techBase")}
-            onChange={(v) => { edit((d) => void (d.techBase = v as MechRecord["techBase"])); }}
-          />
-          <NumberField id="field-year" label="Year" value={record.year} allowEmpty changed={mark("year")} onValid={(v) => { edit((d) => void (d.year = v)); }} />
-          <NumberField id="field-tons" label="Tons" value={record.tons} changed={mark("tons")} onValid={(v) => { edit((d) => void (d.tons = v ?? d.tons)); }} />
-          <SelectField
-            id="field-configuration"
-            label="Configuration"
-            value={record.configuration}
-            options={CONFIGURATIONS}
-            changed={mark("configuration")}
-            onChange={(v) => { edit((d) => void (d.configuration = v)); }}
-          />
-        </section>
-
-        <section className="bt-panel" aria-labelledby="bt-chassis">
-          <h2 id="bt-chassis">Chassis</h2>
-          {CHASSIS_FIELDS.map((field) =>
-            field.kind === "select" ? (
-              <SelectField
-                key={field.path}
-                id={fieldId(field.path)}
-                label={field.label}
-                value={field.read(record)}
-                options={field.options}
-                changed={mark(field.path)}
-                onChange={(v) => { edit((d) => { field.write(d, v); }); }}
-              />
-            ) : (
-              <NumberField
-                key={field.path}
-                id={fieldId(field.path)}
-                label={field.label}
-                value={field.read(record)}
-                onValid={(v) => { edit((d) => { field.write(d, v ?? 0); }); }}
-              />
-            ),
-          )}
-        </section>
-
-        <ArmorPanel
-          record={record}
-          layout={layout}
-          armorTons={weights.lines.find((l) => l.label === "Armor")?.tons ?? null}
-          changed={changed}
-          selected={selected}
-          onSelect={setSelected}
-          onEdit={edit}
-        />
-
-        <SlotsPanel record={record} layout={layout} catalog={catalog} changed={changed} selected={selected} onSelect={setSelected} onEdit={edit} />
-      </div>
+      {blocker.state === "blocked" && <LeaveConfirm proceed={blocker.proceed} reset={blocker.reset} />}
     </div>
   );
 }

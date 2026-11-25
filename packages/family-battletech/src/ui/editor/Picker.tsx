@@ -1,8 +1,8 @@
 // The equipment picker: an in-page dialog over the catalog, for replacing a mount's equipment or adding a new item.
 import { useEffect, useId, useMemo, useRef, useState } from "react";
-import type { KeyboardEvent } from "react";
 import type { Catalog, EquipmentKind, EquipmentRow } from "../../rules/catalog";
 import type { MechRecord, Mount } from "../../rules/mech";
+import { dialogKeyDown } from "../EditorPage";
 
 const CAP = 100;
 const KINDS: [EquipmentKind | "all", string][] = [
@@ -15,8 +15,6 @@ const KINDS: [EquipmentKind | "all", string][] = [
 ];
 const TECH_BASE_NAMES = { "inner-sphere": "Inner Sphere", clan: "Clan" };
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
-
-const FOCUSABLE = "button:not([disabled]), input:not([disabled]), select:not([disabled])";
 
 export default function Picker({
   record,
@@ -60,30 +58,12 @@ export default function Picker({
     return parts.join(", ");
   };
 
-  const onKeyDown = (event: KeyboardEvent) => {
-    if (event.key === "Escape") {
-      event.stopPropagation();
-      onClose();
-      return;
-    }
-    if (event.key !== "Tab" || !dialog.current) return;
-    const items = [...dialog.current.querySelectorAll<HTMLElement>(FOCUSABLE)];
-    const first = items[0];
-    const last = items[items.length - 1];
-    if (!first || !last) return;
-    if (event.shiftKey && document.activeElement === first) {
-      event.preventDefault();
-      last.focus();
-    } else if (!event.shiftKey && document.activeElement === last) {
-      event.preventDefault();
-      first.focus();
-    }
-  };
-
   const shown = matches.slice(0, CAP);
   return (
     <div className="bt-picker-backdrop">
-      <div ref={dialog} className="bt-picker" role="dialog" aria-modal="true" aria-labelledby={titleId} onKeyDown={onKeyDown}>
+      <div ref={dialog} className="bt-picker" role="dialog" aria-modal="true" aria-labelledby={titleId} onKeyDown={(event) => {
+          dialogKeyDown(event, dialog.current, onClose);
+        }}>
         <h2 id={titleId}>{title}</h2>
         <div className="bt-field">
           <label htmlFor="bt-picker-search">Search by name</label>

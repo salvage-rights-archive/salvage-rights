@@ -133,34 +133,77 @@ a.bt-button {
 // The editor
 // ---------------------------------------------------------------------------------------------------------------
 
+// Narrow: one column in the order header, picture and notes, rules check, then the record. The record's wrapper
+// dissolves so its parts can be ordered among the grid's.
 .bt-editor {
+  // The editor wants the width: a sheet of five slot columns beside the rules check.
+  max-width: 96rem;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: var(--sr-space-3);
 
+  &__record {
+    display: contents;
+  }
+
+  &__header {
+    order: 0;
+  }
+
+  &__info {
+    order: 1;
+  }
+
+  &__side {
+    order: 2;
+  }
+
+  &__body {
+    order: 3;
+  }
+
   &__header,
+  &__info,
   &__body,
   &__side {
     min-width: 0;
   }
 
+  &__title h1 {
+    margin: 0;
+    font-size: 1.5rem;
+  }
+
+  &__header {
+    padding: var(--sr-space-2) var(--sr-space-3);
+    background: var(--sr-surface);
+    border: var(--sr-border) solid var(--sr-line);
+    border-radius: var(--sr-radius);
+  }
+
   @media (min-width: 900px) {
-    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
-    grid-template-areas:
-      "head side"
-      "body side";
+    grid-template-columns: minmax(0, 3fr) minmax(0, 1fr);
     align-items: start;
 
-    &__header {
-      grid-area: head;
+    &__record {
+      display: block;
+      min-width: 0;
     }
 
-    &__body {
-      grid-area: body;
+    // Name, actions and weight stay in view while the record scrolls.
+    &__header {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--sr-space-1) var(--sr-space-3);
+      margin-bottom: var(--sr-space-3);
     }
 
     &__side {
-      grid-area: side;
       position: sticky;
       top: var(--sr-space-3);
       max-height: calc(100vh - 2 * var(--sr-space-3));
@@ -169,11 +212,33 @@ a.bt-button {
   }
 }
 
+.bt-editor__info {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 var(--sr-space-3);
+  margin-bottom: var(--sr-space-2);
+
+  p {
+    margin: 0 0 var(--sr-space-1);
+  }
+}
+
+// Mordel's picture sits beside identity and chassis when there is room, above them when there is not.
+.bt-picture {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 0 0 var(--sr-space-2);
+  border: var(--sr-border) solid var(--sr-line);
+  border-radius: var(--sr-radius);
+}
+
 .bt-actions {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: var(--sr-space-2);
-  margin: var(--sr-space-2) 0;
 
   .bt-button:disabled {
     background: var(--sr-surface-sunk);
@@ -199,8 +264,7 @@ a.bt-button {
   color: var(--sr-ink-muted);
 }
 
-.bt-notes,
-.bt-weight {
+.bt-notes {
   margin: var(--sr-space-2) 0;
 
   summary {
@@ -208,6 +272,29 @@ a.bt-button {
     display: flex;
     align-items: center;
     cursor: pointer;
+  }
+}
+
+.bt-weight {
+  position: relative;
+
+  summary {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+  }
+
+  ul {
+    position: absolute;
+    right: 0;
+    z-index: 20;
+    min-width: 14rem;
+    margin: 0;
+    padding: var(--sr-space-2) var(--sr-space-3) var(--sr-space-2) var(--sr-space-4);
+    background: var(--sr-surface-alt);
+    border: var(--sr-border) solid var(--sr-line-strong);
+    border-radius: var(--sr-radius);
   }
 }
 
@@ -229,6 +316,66 @@ a.bt-button {
   font-size: 0.875rem;
 }
 
+// Identity and chassis side by side when there is room for both.
+.bt-editor__fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  column-gap: var(--sr-space-3);
+
+  @container (min-width: 56rem) {
+    grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+    align-items: start;
+
+    &[data-picture="true"] {
+      grid-template-columns: minmax(0, 2fr) minmax(0, 3fr) 160px;
+
+      .bt-picture {
+        grid-column: 3;
+        grid-row: 1;
+      }
+    }
+  }
+}
+
+.bt-editor__body {
+  container-type: inline-size;
+}
+
+.bt-panel {
+  container-type: inline-size;
+}
+
+// Fields in a grid by the width of their panel: three across when it is wide, two when it is middling, one below.
+.bt-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--sr-space-1) var(--sr-space-3);
+
+  @container (min-width: 14rem) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  @container (min-width: 26rem) {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .bt-field {
+    margin: 0;
+
+    input,
+    select {
+      flex-basis: 6rem;
+    }
+  }
+}
+
+// Engine type and rating, or heat sink type and count, share one cell.
+.bt-pair {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: var(--sr-space-2);
+}
+
 .bt-field input[aria-invalid="true"] {
   border-color: var(--sr-danger);
   border-width: 2px;
@@ -242,12 +389,18 @@ a.bt-button {
 .bt-slot__name:focus-visible,
 .bt-slotcol__head:focus-visible,
 .bt-picker input:focus-visible,
-.bt-picker select:focus-visible {
+.bt-picker select:focus-visible,
+.bt-picker__result:focus-visible,
+.bt-editor__side:focus-visible,
+.bt-weight summary:focus-visible,
+.bt-notes summary:focus-visible,
+#bt-move-status:focus-visible {
   outline: 3px solid var(--sr-focus);
   outline-offset: 2px;
 }
 
-.bt-slot__name:focus {
+.bt-slot__name:focus,
+#bt-move-status:focus {
   outline: 3px solid var(--sr-focus);
   outline-offset: 2px;
 }
@@ -296,58 +449,105 @@ a.bt-button {
   }
 }
 
-// Armor
+// Armor: the doll beside the fields, the fields laid out like the body.
 .bt-armor {
   display: grid;
   gap: var(--sr-space-3);
   grid-template-columns: minmax(0, 1fr);
 
-  &__dolls {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--sr-space-3);
-    align-items: flex-start;
+  @media (min-width: 900px) {
+    grid-template-columns: minmax(0, 24rem) minmax(0, 1fr);
+    align-items: start;
   }
 
-  &__fields {
+  &__doll,
+  &__side {
     min-width: 0;
   }
 
-  &__row {
-    padding: var(--sr-space-1) 0;
-    border-bottom: var(--sr-border) solid var(--sr-line);
+  &__body {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: var(--sr-space-1);
+  }
+
+  &__cell {
+    min-width: 0;
+    padding: var(--sr-space-1);
+    border: var(--sr-border) solid var(--sr-line);
+    border-radius: var(--sr-radius);
 
     &[data-selected="true"] {
-      border-left: 4px solid var(--sr-accent);
-      padding-left: var(--sr-space-2);
+      border: 3px solid var(--sr-accent);
+      padding: calc(var(--sr-space-1) - 2px);
     }
+
+    .bt-field {
+      margin: 0;
+      gap: 0 var(--sr-space-1);
+
+      label {
+        font-size: 0.875rem;
+      }
+
+      input {
+        flex: 1 1 3rem;
+        padding: 0 var(--sr-space-1);
+      }
+    }
+  }
+
+  &__structure {
+    margin-top: var(--sr-space-3);
   }
 }
 
 .bt-doll {
-  flex: 1 1 12rem;
-  min-width: 0;
-  max-width: 100%;
+  display: block;
+  width: 100%;
+  max-width: 24rem;
   height: auto;
   color: var(--sr-paper-ink);
 
   &--structure {
-    flex: 0 1 8rem;
+    max-width: 11rem;
   }
 }
 
-// Critical slots
+// Critical slots. The panel is the container, so the sheet's five columns appear when the panel is wide enough for them.
+.bt-panel--slots {
+  container-type: inline-size;
+}
+
 .bt-slots {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 11rem), 1fr));
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--sr-space-2);
+
+  @container (min-width: 30rem) {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  @container (min-width: 46rem) {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-areas: var(--bt-areas, none);
+
+    .bt-slotcol {
+      grid-area: var(--bt-area, auto);
+    }
+  }
 }
 
 .bt-slotcol {
   min-width: 0;
+  align-self: start;
   background: var(--sr-surface-alt);
   border: var(--sr-border) solid var(--sr-line);
   border-radius: var(--sr-radius);
+
+  h3 {
+    margin: 0;
+  }
 
   &[data-selected="true"] {
     border: 3px solid var(--sr-accent);
@@ -366,6 +566,7 @@ a.bt-button {
 
   &__cells {
     display: grid;
+    grid-auto-rows: minmax(44px, auto);
     gap: 1px;
     margin: 0;
     padding: 0;
@@ -373,20 +574,17 @@ a.bt-button {
   }
 }
 
+// One row per slot; a mount that covers several is one taller row. Its actions open in a row beneath it.
 .bt-slot {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: 1.5rem minmax(0, 1fr) auto;
   align-items: center;
-  gap: var(--sr-space-1);
-  min-height: 44px;
-  padding: var(--sr-space-1) var(--sr-space-2);
+  gap: 0 var(--sr-space-1);
+  padding: 0 var(--sr-space-1);
   background: var(--sr-surface);
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 
-  &--fixed {
-    color: var(--sr-ink-muted);
-  }
-
+  &--fixed,
   &--empty {
     color: var(--sr-ink-muted);
   }
@@ -396,42 +594,84 @@ a.bt-button {
   }
 
   &__n {
-    min-width: 2.5rem;
     color: var(--sr-ink-muted);
     font-size: 0.875rem;
+  }
+
+  &__main {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--sr-space-1);
+    min-width: 0;
+    grid-column: span 2;
+  }
+
+  &--mount &__main {
+    grid-column: auto;
   }
 
   &__name {
     font-weight: 700;
   }
 
+  &__toggle {
+    min-width: 44px;
+    padding: 0 var(--sr-space-1);
+    font-size: 0.8rem;
+  }
+
   &__actions {
+    grid-column: 1 / -1;
     display: flex;
     flex-wrap: wrap;
     gap: var(--sr-space-1);
-    flex: 1 1 100%;
-  }
+    padding: var(--sr-space-1) 0;
 
-  .bt-button {
-    padding: 0 var(--sr-space-2);
+    .bt-button {
+      padding: 0 var(--sr-space-2);
+    }
   }
 
   &__place {
-    flex: 1 1 100%;
-    justify-content: flex-start;
+    padding: var(--sr-space-1) var(--sr-space-2);
     text-align: left;
+  }
+}
+
+.bt-slots__bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sr-space-2);
+
+  h2 {
+    margin: 0;
+  }
+}
+
+#bt-move-status {
+  margin: var(--sr-space-1) 0;
+
+  &:empty {
+    margin: 0;
   }
 }
 
 .bt-tray {
   margin-bottom: var(--sr-space-3);
 
-  .bt-slot + .bt-slot {
-    margin-top: 1px;
+  h3 {
+    margin: var(--sr-space-2) 0 var(--sr-space-1);
+  }
+
+  .bt-slotcol__cells {
+    max-width: 30rem;
   }
 }
 
-// The picker
+// The picker, and the unsaved-changes question that uses the same frame
 .bt-picker-backdrop {
   position: fixed;
   inset: 0;
@@ -457,6 +697,10 @@ a.bt-button {
     margin-top: 0;
   }
 
+  .bt-list li + li {
+    margin-top: var(--sr-space-1);
+  }
+
   &__result {
     display: flex;
     flex-wrap: wrap;
@@ -480,8 +724,4 @@ a.bt-button {
   &__detail {
     color: var(--sr-ink-muted);
   }
-}
-
-.bt-picker .bt-list li + li {
-  margin-top: var(--sr-space-1);
 }

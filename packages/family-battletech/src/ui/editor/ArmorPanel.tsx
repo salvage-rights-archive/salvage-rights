@@ -10,6 +10,12 @@ import { NumberField, fieldId } from "../EditorPage";
 import type { OnEdit } from "../EditorPage";
 
 const WITH_REAR: string[] = ["CT", "LT", "RT"];
+/** Where each location's field sits in the body-shaped grid: [row, column]. A quad's legs take the arms' and legs' places. */
+type Cell = [row: number, column: number];
+const BODY_CELLS: Record<string, Record<string, Cell>> = {
+  biped: { HD: [1, 3], LA: [2, 1], LT: [2, 2], CT: [2, 3], RT: [2, 4], RA: [2, 5], "LT-rear": [3, 2], "CT-rear": [3, 3], "RT-rear": [3, 4], LL: [4, 2], RL: [4, 4] },
+  quad: { HD: [1, 3], FLL: [2, 1], LT: [2, 2], CT: [2, 3], RT: [2, 4], FRL: [2, 5], "LT-rear": [3, 2], "CT-rear": [3, 3], "RT-rear": [3, 4], RLL: [4, 2], RRL: [4, 4] },
+};
 /** Label type size and an average glyph width as a share of it, per use, to leave room for the labels. */
 const LABEL = { armor: { size: 20, glyph: 0.62 }, structure: { size: 15, glyph: 0.62 } } as const;
 const MARGIN = 12;
@@ -95,59 +101,59 @@ export default function ArmorPanel({
     );
   };
 
+  /** One location's field: its short code shows, its full name is the accessible name, and the most it can carry follows. */
+  const cell = (location: LocationCode, side: "front" | "rear") => {
+    const entry = record.armor[location];
+    const limit = max[location];
+    const name = locationName(location);
+    const rear = side === "rear";
+    const at = (BODY_CELLS[record.configuration] ?? {})[rear ? `${location}-rear` : location];
+    const id = rear ? `${fieldId(`armor.${location}`)}-rear` : fieldId(`armor.${location}`);
+    const hasRear = WITH_REAR.includes(location) || entry?.rear !== undefined;
+    return (
+      <div
+        key={id}
+        className="bt-armor__cell"
+        data-selected={selected === location}
+        style={at ? { gridRow: at[0], gridColumn: at[1] } : undefined}
+      >
+        <NumberField
+          id={id}
+          label={rear ? `${location} rear` : location}
+          name={rear ? `${name} rear armor` : hasRear ? `${name} front armor` : `${name} armor`}
+          value={(rear ? entry?.rear : entry?.front) ?? 0}
+          changed={!rear && changed.has(`armor.${location}`)}
+          onValid={(value) => {
+            onEdit((draft) => {
+              draft.armor[location] = { ...(draft.armor[location] ?? { front: 0 }), [side]: value ?? 0 };
+            }, id);
+          }}
+          onFocus={() => {
+            onSelect(location);
+          }}
+          after={!rear && limit !== undefined ? <span className="bt-hint">{`/ ${limit}`}</span> : undefined}
+        />
+      </div>
+    );
+  };
+
   return (
     <section className="bt-panel" aria-labelledby="bt-armor">
       <h2 id="bt-armor">Armor</h2>
       <p>{`${points} points, ${armorTons === null ? "weight unknown" : `${armorTons} tons`} of ${type}`}</p>
       <div className="bt-armor">
-        <div className="bt-armor__fields">
-          {locations.map((location) => {
-            const name = locationName(location);
-            const entry = record.armor[location];
-            const limit = max[location];
-            const rear = WITH_REAR.includes(location) || entry?.rear !== undefined;
-            const change = (side: "front" | "rear") => (value: number | null) => {
-              onEdit((draft) => {
-                draft.armor[location] = { ...(draft.armor[location] ?? { front: 0 }), [side]: value ?? 0 };
-              });
-            };
-            return (
-              <div key={location} className="bt-armor__row" data-selected={selected === location}>
-                <NumberField
-                  id={fieldId(`armor.${location}`)}
-                  label={rear ? `${name} front armor` : `${name} armor`}
-                  value={entry?.front ?? 0}
-                  changed={changed.has(`armor.${location}`)}
-                  onValid={change("front")}
-                  onFocus={() => {
-                    onSelect(location);
-                  }}
-                  after={limit === undefined ? undefined : <span>{`of ${limit}`}</span>}
-                />
-                {rear && (
-                  <NumberField
-                    id={`${fieldId(`armor.${location}`)}-rear`}
-                    label={`${name} rear armor`}
-                    value={entry?.rear ?? 0}
-                    onValid={change("rear")}
-                    onFocus={() => {
-                      onSelect(location);
-                    }}
-                    after={<span className="bt-hint">front and rear together</span>}
-                  />
-                )}
-              </div>
-            );
-          })}
-        </div>
         {unit ? (
-          <div className="bt-armor__dolls">
-            {doll("armor", 1)}
-            {doll("structure", STRUCTURE_SCALE)}
-          </div>
+          <div className="bt-armor__doll">{doll("armor", 1)}</div>
         ) : (
           <p className="bt-hint">No doll is drawn for this body type yet.</p>
         )}
+        <div className="bt-armor__side">
+          <div className="bt-armor__body" role="group" aria-label="Armor points by location">
+            {locations.map((location) => cell(location, "front"))}
+            {locations.filter((location) => WITH_REAR.includes(location) || record.armor[location]?.rear !== undefined).map((location) => cell(location, "rear"))}
+          </div>
+          {unit && <div className="bt-armor__structure">{doll("structure", STRUCTURE_SCALE)}</div>}
+        </div>
       </div>
     </section>
   );

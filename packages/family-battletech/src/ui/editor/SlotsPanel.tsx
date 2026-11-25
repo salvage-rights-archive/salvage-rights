@@ -1,12 +1,23 @@
-// The critical slots, one column per location, and the equipment that is not in a slot. Moving works by keyboard and
-// pointer alike: Move (or Place, for an unplaced item) puts the page in a mode where every slot is a button.
+// The critical slots, laid out like a record sheet, and the equipment that is not in a slot. Every slot is one compact
+// row; a mount's row ends in one Actions button that opens Move, Replace and Remove. Moving works by keyboard and pointer
+// alike: Move (or Place, for an unplaced item) puts the page in a mode where every slot is a button.
 import { useEffect, useRef, useState } from "react";
+import type { CSSProperties } from "react";
 import type { Catalog, EquipmentRow } from "../../rules/catalog";
 import { locationName } from "../../rules/mech";
 import type { Layout, LocationCode, MechRecord, Mount, SlotCell } from "../../rules/mech";
 import { Changed, mountDomId } from "../EditorPage";
 import type { OnEdit } from "../EditorPage";
 import Picker from "./Picker";
+
+/** The record sheet's arrangement from the width of five columns up: one string per row of the grid, a location's lower-case
+ * code naming its place and a dot an empty one. The head sits over the center torso; the legs under the arms. */
+const SHEET_ROWS: Record<string, string[]> = {
+  // The arms and side torsos are as tall as the head and half the center torso together, so the legs fit beside the
+  // rest of the center torso.
+  biped: ["la lt hd rt ra", "la lt ct rt ra", "ll . ct . rl"],
+  quad: ["fll lt hd rt frl", "fll lt ct rt frl", "rll . ct . rrl"],
+};
 
 type Block =
   | { kind: "fixed" | "empty"; label: string; start: number; length: 1 }
@@ -31,7 +42,7 @@ function blocksOf(cells: SlotCell[], seen: Set<string>): Block[] {
   return blocks;
 }
 
-const range = (start: number, length: number) => (length === 1 ? `${start + 1}` : `${start + 1}–${start + length}`);
+const range = (start: number, length: number) => (length === 1 ? `${start + 1}` : `${start + 1}-${start + length}`);
 
 export default function SlotsPanel({
   record,
@@ -51,12 +62,14 @@ export default function SlotsPanel({
   onEdit: OnEdit;
 }) {
   const [moving, setMoving] = useState<string>();
+  /** The one mount whose Actions are open. */
+  const [open, setOpen] = useState<string>();
   /** The picker is open: to replace this mount's equipment, or (`{}`) to add an item. */
   const [picking, setPicking] = useState<{ replace?: string }>();
   const pendingFocus = useRef<string | undefined>(undefined);
   const mover = moving === undefined ? undefined : record.mounts.find((m) => m.id === moving);
 
-  // Focus moves after the edit has rendered, to where the mount's controls now are.
+  // Focus moves after the edit has rendered, to where the control now is.
   useEffect(() => {
     if (pendingFocus.current === undefined) return;
     document.getElementById(pendingFocus.current)?.focus();
@@ -110,6 +123,7 @@ export default function SlotsPanel({
   };
   const remove = (mount: Mount) => {
     pendingFocus.current = "bt-slots";
+    setOpen(undefined);
     onEdit((draft) => {
       draft.mounts = draft.mounts.filter((m) => m.id !== mount.id);
     });
@@ -117,61 +131,94 @@ export default function SlotsPanel({
 
   const unmatched = (m: Mount) => !m.part && (m.equipmentId === null || !catalog.byId(m.equipmentId));
 
-  /** A mount's name, its markers and its buttons. */
-  const controls = (mount: Mount, unplacedItem = false) => (
-    <>
-      <span id={mountDomId(mount.id)} tabIndex={-1} className="bt-slot__name">
-        {mount.name}
-      </span>
-      {changed.has(mount.id) && <Changed id={`${mountDomId(mount.id)}-changed`} />}
-      {unmatched(mount) && <span className="bt-tag">Unmatched</span>}
-      <span className="bt-slot__actions">
+  /** A mount's row: its slots, name and markers, the Actions button and, when open, the actions beneath. */
+  const mountRow = (mount: Mount, slots: string | undefined, key: string | number, style?: CSSProperties, unplacedItem = false) => {
+    const isOpen = open === mount.id;
+    return (
+      <li
+        key={key}
+        className="bt-slot bt-slot--mount"
+        style={style}
+        onKeyDown={(event) => {
+          if (event.key !== "Escape" || !isOpen) return;
+          event.stopPropagation();
+          setOpen(undefined);
+          document.getElementById(`actions-${mount.id}`)?.focus();
+        }}
+      >
+        <span className="bt-slot__n">{slots}</span>
+        <span className="bt-slot__main">
+          <span id={mountDomId(mount.id)} tabIndex={-1} className="bt-slot__name">
+            {mount.name}
+          </span>
+          {changed.has(mount.id) && <Changed id={`${mountDomId(mount.id)}-changed`} />}
+          {unmatched(mount) && <span className="bt-tag">Unmatched</span>}
+        </span>
         <button
           type="button"
-          id={`move-${mount.id}`}
-          className="bt-button bt-button--secondary"
-          aria-label={`${unplacedItem ? "Place" : "Move"} ${mount.name}`}
+          id={`actions-${mount.id}`}
+          className="bt-button bt-button--secondary bt-slot__toggle"
+          aria-expanded={isOpen}
+          aria-label={`Actions for ${mount.name}`}
           onClick={() => {
-            setMoving(mount.id);
+            setOpen(isOpen ? undefined : mount.id);
           }}
         >
-          {unplacedItem ? "Place" : "Move"}
+          Actions
         </button>
-        {mount.part ? (
-          <span className="bt-hint">{`Changes with the ${mount.part} type`}</span>
-        ) : (
-          <>
+        {isOpen && (
+          <span className="bt-slot__actions">
             <button
               type="button"
-              id={`replace-${mount.id}`}
+              id={`move-${mount.id}`}
               className="bt-button bt-button--secondary"
-              aria-label={`Replace ${mount.name}`}
+              aria-label={`${unplacedItem ? "Place" : "Move"} ${mount.name}`}
               onClick={() => {
-                setPicking({ replace: mount.id });
+                pendingFocus.current = "bt-move-status";
+                setMoving(mount.id);
               }}
             >
-              Replace
+              {unplacedItem ? "Place" : "Move"}
             </button>
-            <button type="button" className="bt-button bt-button--secondary" aria-label={`Remove ${mount.name}`} onClick={() => { remove(mount); }}>
-              Remove
-            </button>
-          </>
+            {mount.part ? (
+              <span className="bt-hint">{`Changes with the ${mount.part} type`}</span>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  id={`replace-${mount.id}`}
+                  className="bt-button bt-button--secondary"
+                  aria-label={`Replace ${mount.name}`}
+                  onClick={() => {
+                    setPicking({ replace: mount.id });
+                  }}
+                >
+                  Replace
+                </button>
+                <button type="button" className="bt-button bt-button--secondary" aria-label={`Remove ${mount.name}`} onClick={() => { remove(mount); }}>
+                  Remove
+                </button>
+              </>
+            )}
+          </span>
         )}
-      </span>
-    </>
-  );
+      </li>
+    );
+  };
 
   const seen = new Set<string>();
   const drawn = new Set(layout.locations.flatMap((loc) => (layout.slots[loc] ?? []).flatMap((c) => (c.mountId ? [c.mountId] : []))));
   const unplacedIds = new Set(layout.unplaced.map((m) => m.id));
   const other = record.mounts.filter((m) => !drawn.has(m.id) && !unplacedIds.has(m.id));
+  const sheet = Object.hasOwn(SHEET_ROWS, record.configuration) ? SHEET_ROWS[record.configuration] : undefined;
+  const sheetStyle = sheet ? ({ "--bt-areas": sheet.map((row) => `"${row}"`).join(" ") } as CSSProperties) : undefined;
 
   return (
-    <section className="bt-panel" aria-labelledby="bt-slots">
-      <h2 id="bt-slots" tabIndex={-1}>
-        Critical slots
-      </h2>
-      <p>
+    <section className="bt-panel bt-panel--slots" aria-labelledby="bt-slots">
+      <div className="bt-slots__bar">
+        <h2 id="bt-slots" tabIndex={-1}>
+          Critical slots
+        </h2>
         <button
           type="button"
           id="add-equipment"
@@ -182,8 +229,10 @@ export default function SlotsPanel({
         >
           Add equipment
         </button>
+      </div>
+      <p role="status" id="bt-move-status" tabIndex={-1}>
+        {mover ? `Choose a slot for ${mover.name}. Press Escape to cancel.` : ""}
       </p>
-      <p role="status">{mover ? `Choose a slot for ${mover.name}. Press Escape to cancel.` : ""}</p>
       {mover && (
         <p>
           <button type="button" className="bt-button bt-button--secondary" onClick={() => { place(mover, null, null); }}>
@@ -193,28 +242,20 @@ export default function SlotsPanel({
       )}
       {changed.has("mounts.removed") && <p className="bt-hint">Some equipment from the import has been removed.</p>}
 
-      <div className="bt-tray">
-        <h3>Unplaced</h3>
-        {layout.unplaced.length === 0 ? (
-          <p className="bt-hint">Everything is in a slot.</p>
-        ) : (
-          <ul className="bt-list">
-            {layout.unplaced.map((mount) => (
-              <li key={mount.id} className="bt-slot bt-slot--mount">
-                {controls(mount, true)}
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
+      {layout.unplaced.length > 0 && (
+        <div className="bt-tray">
+          <h3>Unplaced</h3>
+          <ul className="bt-list bt-slotcol__cells">{layout.unplaced.map((mount) => mountRow(mount, undefined, mount.id, undefined, true))}</ul>
+        </div>
+      )}
 
       {layout.supported ? (
-        <div className="bt-slots">
+        <div className="bt-slots" style={sheetStyle}>
           {layout.locations.map((location) => {
             const cells = layout.slots[location] ?? [];
             const name = locationName(location);
             return (
-              <div key={location} className="bt-slotcol" data-selected={selected === location}>
+              <div key={location} className="bt-slotcol" data-selected={selected === location} style={sheet ? ({ "--bt-area": location.toLowerCase() } as CSSProperties) : undefined}>
                 <h3>
                   <button type="button" className="bt-slotcol__head" aria-pressed={selected === location} onClick={() => { onSelect(location); }}>
                     {name}
@@ -236,11 +277,13 @@ export default function SlotsPanel({
                         </li>
                       ))
                     : blocksOf(cells, seen).map((block) => {
+                        const span = { gridRow: `span ${block.length}` };
                         const mount = block.kind === "mount" ? record.mounts.find((m) => m.id === block.mountId) : undefined;
+                        if (mount && block.kind === "mount" && block.first) return mountRow(mount, range(block.start, block.length), block.start, span);
                         return (
-                          <li key={block.start} className={`bt-slot bt-slot--${block.kind}`} style={{ gridRow: `span ${block.length}` }}>
+                          <li key={block.start} className={`bt-slot bt-slot--${block.kind}`} style={span}>
                             <span className="bt-slot__n">{range(block.start, block.length)}</span>
-                            {block.kind === "mount" ? (mount && block.first ? controls(mount) : <span>{block.label}</span>) : <span>{block.kind === "empty" ? "Empty" : block.label}</span>}
+                            <span className="bt-slot__main">{block.kind === "empty" ? "Empty" : block.label}</span>
                           </li>
                         );
                       })}
@@ -256,13 +299,7 @@ export default function SlotsPanel({
       {other.length > 0 && (
         <div className="bt-tray">
           <h3>Sharing a slot, or taking none</h3>
-          <ul className="bt-list">
-            {other.map((mount) => (
-              <li key={mount.id} className="bt-slot bt-slot--mount">
-                {controls(mount)}
-              </li>
-            ))}
-          </ul>
+          <ul className="bt-list bt-slotcol__cells">{other.map((mount) => mountRow(mount, undefined, mount.id))}</ul>
         </div>
       )}
 
