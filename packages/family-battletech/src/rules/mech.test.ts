@@ -1,11 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { bipedRecord, factsOf, mount, quadRecord } from "./fixtures";
+import { bipedRecord, factsOf, mount, quadRecord, tripodRecord } from "./fixtures";
 import {
   editRecord,
   newRecord,
   layout,
   maxArmor,
   structurePoints,
+  structureTons,
   walkMP,
   weights,
   type FactsOf,
@@ -123,8 +124,17 @@ describe("layout", () => {
     expect(weights(bipedRecord({ arms: { LA: { lowerArm: false, hand: false } } }), factsOf).total).toBe(40);
   });
 
+  it("lays a tripod out as a biped with a center leg of six slots and the leg's four actuators, the head as on any 'Mech", () => {
+    const l = layout(tripodRecord(), factsOf);
+    expect(l.locations).toEqual(["HD", "CT", "LT", "RT", "LA", "RA", "LL", "RL", "CL"]);
+    expect(l.slots.CL).toHaveLength(6);
+    expect(labels(l, "CL").slice(0, 5)).toEqual(["Hip", "Upper Leg Actuator", "Lower Leg Actuator", "Foot Actuator", "jj-4"]);
+    expect(labels(l, "HD")).toEqual(labels(layout(bipedRecord(), factsOf), "HD"));
+    expect(l.conflicts).toEqual([]);
+  });
+
   it("does not throw for an unknown configuration or unknown chassis keys", () => {
-    const l = layout(bipedRecord({ configuration: "tripod" }), factsOf);
+    const l = layout(bipedRecord({ configuration: "hexapod" }), factsOf);
     expect(l).toMatchObject({ supported: false, locations: [], slots: {} });
     const odd = chassis({ engine: { type: "quantum", rating: 7 }, gyro: "?", cockpit: "?", structure: "?", armorType: "?" }, { tons: 77 });
     expect(() => [layout(odd, factsOf), weights(odd, factsOf), structurePoints(odd), maxArmor(odd), walkMP(odd)]).not.toThrow();
@@ -183,6 +193,27 @@ describe("structure points, armor limits and speed", () => {
     },
   );
 
+  // The center leg has the structure of the side legs (IO:AE printed p.159, leg column of TechManual p.47) and may carry twice it.
+  it.each<[number, number, number]>([[20, 4, 8], [55, 13, 26], [100, 21, 42]])(
+    "gives a %i-ton tripod a center leg of %i structure points and at most %i armor, as its side legs",
+    (tons, structure, armor) => {
+      const record = bipedRecord({ tons, configuration: "tripod" });
+      expect([structurePoints(record).CL, structurePoints(record).LL, maxArmor(record).CL, maxArmor(record).RL]).toEqual([structure, structure, armor, armor]);
+    },
+  );
+
+  // A tripod's internal structure of any type weighs 10 percent more, rounded up to a half ton (IO:AE printed p.159); the
+  // 45-ton endo steel row shows the increase is made on the weight rounded to a half ton: 2.5 becomes 2.75, and so 3.
+  it.each<[string, number, string, number]>([
+    ["standard", 55, "biped", 5.5],
+    ["standard", 55, "tripod", 6.5],
+    ["standard", 100, "tripod", 11],
+    ["endo-steel", 45, "biped", 2.5],
+    ["endo-steel", 45, "tripod", 3],
+  ])("weighs %s structure on %i tons (%s) at %f tons", (type, tons, configuration, expected) => {
+    expect(structureTons(type, tons, configuration)).toBe(expected);
+  });
+
   it("works out walking MP as rating over tonnage, null when it is not a whole number", () => {
     expect(walkMP(bipedRecord())).toBe(4);
     expect(walkMP(chassis({ engine: { type: "standard", rating: 200 } }, { tons: 60 }))).toBeNull();
@@ -210,6 +241,10 @@ describe("structure points, armor limits and speed", () => {
     expect(Object.keys(newRecord({ ...options, configuration: "quad" }, "core-2026", "new-2").armor)).toEqual(
       ["HD", "CT", "LT", "RT", "FLL", "FRL", "RLL", "RRL"],
     );
+    // A tripod starts with its own cockpit and a center leg.
+    const tripod = newRecord({ ...options, configuration: "tripod" }, "core-2026", "new-4");
+    expect(Object.keys(tripod.armor)).toEqual(["HD", "CT", "LT", "RT", "LA", "RA", "LL", "RL", "CL"]);
+    expect(tripod.chassis.cockpit).toBe("tripod");
   });
 
   it("edits a copy and leaves the original and its nested parts alone", () => {

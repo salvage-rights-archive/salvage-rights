@@ -10,7 +10,7 @@
 import type { LocationCode } from "../rules/mech";
 
 export interface Cite {
-  book: "TechManual";
+  book: "TechManual" | "Interstellar Operations: Alternate Eras";
   page: number;
 }
 export type Checked = "page" | "text";
@@ -237,12 +237,20 @@ export const GYROS: Sourced & { types: Record<string, GyroType> } = {
   },
 };
 
+// Interstellar Operations: Alternate Eras, printed p.158 (Tripod 'Mech Game Rules, which state the rules level) and p.159
+// (Tripod 'Mech Construction Rules). Both were read against the page image.
+const IO_TRIPOD_RULES: Cite = { book: "Interstellar Operations: Alternate Eras", page: 158 };
+const IO_TRIPOD_CONSTRUCTION: Cite = { book: "Interstellar Operations: Alternate Eras", page: 159 };
+
 // ---------------------------------------------------------------------------------------------------------------
 // Cockpit (BattleMech Cockpit Table, printed p.52). Default head slots are the book's own numbering, counted from 1.
 // ---------------------------------------------------------------------------------------------------------------
 export interface CockpitType {
   name: string;
   tons: number;
+  /** The one configuration that may mount this cockpit; absent means any configuration that does not require another. */
+  only?: string;
+  cite?: Cite; // where the cockpit is printed, when it is not the table's page
   cockpit: number[];
   sensors: number[];
   lifeSupport: number[];
@@ -253,6 +261,9 @@ export const COCKPITS: Sourced & { types: Record<string, CockpitType> } = {
   types: {
     standard: { name: "Standard", tons: 3, cockpit: [3], sensors: [2, 5], lifeSupport: [1, 6] },
     small: { name: "Small", tons: 2, cockpit: [3], sensors: [2, 4], lifeSupport: [1] },
+    // The tripod's special cockpit weighs 4 tons up to 100 tons and takes the same slots as the standard one (Interstellar
+    // Operations: Alternate Eras, Tripod 'Mech Construction Rules, printed p.159). Its 5-ton superheavy version is out of scope.
+    tripod: { name: "Tripod", tons: 4, only: "tripod", cite: IO_TRIPOD_CONSTRUCTION, cockpit: [3], sensors: [2, 5], lifeSupport: [1, 6] },
   },
 };
 
@@ -292,7 +303,8 @@ export const HEAT_SINKS: Sourced & { types: Record<string, HeatSinkType> } = {
 // number of tons carries rounded down; tons for a given number of points rounded up to a half ton. Slots are
 // critical slots, placed anywhere except where `slotsIn` says (stealth armor takes 2 slots in each arm, leg and side torso,
 // none in the head or center torso, printed p.56 footnote and p.55 text; the text says 2 slots in each location but those two, so on a
-// quad the four legs and the two side torsos carry them, which makes the same 12). Stealth armor also wants a Guardian
+// quad the four legs and the two side torsos carry them, which makes the same 12; a tripod's center leg carries 2 more, 14,
+// per Interstellar Operations: Alternate Eras printed p.159: the rule says the third leg takes the extra slots, not how many). Stealth armor also wants a Guardian
 // ECM Suite; that part is not modelled here.
 // ---------------------------------------------------------------------------------------------------------------
 type Spread = Partial<Record<LocationCode, number>>;
@@ -300,7 +312,7 @@ export interface ArmorType {
   name: string;
   multiplier: number;
   slots: number;
-  slotsIn?: { biped: Spread; quad: Spread }; // slots per location, where the type has to go in particular places
+  slotsIn?: { biped: Spread; quad: Spread; tripod: Spread }; // slots per location, where the type has to go in particular places
 }
 export const ARMOR: Sourced & { basePointsPerTon: number; types: Record<string, ArmorType> } = {
   cite: { book: "TechManual", page: 56 },
@@ -315,6 +327,8 @@ export const ARMOR: Sourced & { basePointsPerTon: number; types: Record<string, 
       slotsIn: {
         biped: { LA: 2, RA: 2, LL: 2, RL: 2, LT: 2, RT: 2 },
         quad: { FLL: 2, FRL: 2, RLL: 2, RRL: 2, LT: 2, RT: 2 },
+        // A tripod's third leg takes its share of distributed equipment such as stealth armor (IO:AE printed p.159).
+        tripod: { LA: 2, RA: 2, LL: 2, RL: 2, CL: 2, LT: 2, RT: 2 },
       },
     },
     "light-ferro-fibrous": { name: "Light Ferro-Fibrous", multiplier: 1.06, slots: 7 },
@@ -355,7 +369,26 @@ export const MYOMER: Sourced & { types: Record<string, MyomerType> } = {
 // published record sheets (Catalyst Game Labs, "Record Sheets: Jihad", 2022): the center torso carries `engineAbove`
 // engine cells, then the gyro, then the rest of the engine, whatever the gyro's size; side-torso engine cells are the
 // first slots of the side torso. Combinations no sheet shows follow the same pattern.
+//
+// Each configuration is one row. `rulesLevel` is the rules level the book prints for the body type; the biped and the quad are
+// standard and say nothing more. A tripod is Advanced (Interstellar Operations: Alternate Eras, printed p.158) and follows the
+// biped's construction rules with the changes the row names (printed p.159): `structureExtra` is the fraction added to the
+// weight of the internal structure of any type, rounded up to a half ton, and `cockpit` is the only cockpit it may mount. The
+// book gives no slot table for the third leg; "the same construction rules as a biped" makes it a leg of 6 slots with the other
+// legs' four actuators, which is our reading and so `checked` is "text" on that row.
 // ---------------------------------------------------------------------------------------------------------------
+export interface ConfigurationRow {
+  name: string;
+  rulesLevel: "standard" | "advanced";
+  levelCite?: Cite; // the page that states a rules level other than standard
+  construction?: Sourced; // the page that states this body type's construction changes
+  structureExtra?: number;
+  cockpit?: string;
+  size: Spread;
+  fixed: Partial<Record<LocationCode, readonly string[]>>;
+}
+const LEG = ["Hip", "Upper Leg Actuator", "Lower Leg Actuator", "Foot Actuator"];
+const ARM = ["Shoulder", "Upper Arm Actuator", "Lower Arm Actuator", "Hand Actuator"];
 export const SHEET = {
   // Labels and their order rest on the record sheet (p.24); the slot counts on the Critical Space Table (p.45).
   cites: { labels: { book: "TechManual", page: 24 }, counts: { book: "TechManual", page: 45 } } satisfies Record<string, Cite>,
@@ -363,22 +396,26 @@ export const SHEET = {
   engineAbove: 3,
   configurations: {
     biped: {
+      name: "Biped",
+      rulesLevel: "standard",
       size: { HD: 6, CT: 12, LT: 12, RT: 12, LA: 12, RA: 12, LL: 6, RL: 6 },
-      fixed: {
-        LA: ["Shoulder", "Upper Arm Actuator", "Lower Arm Actuator", "Hand Actuator"],
-        RA: ["Shoulder", "Upper Arm Actuator", "Lower Arm Actuator", "Hand Actuator"],
-        LL: ["Hip", "Upper Leg Actuator", "Lower Leg Actuator", "Foot Actuator"],
-        RL: ["Hip", "Upper Leg Actuator", "Lower Leg Actuator", "Foot Actuator"],
-      },
+      fixed: { LA: ARM, RA: ARM, LL: LEG, RL: LEG },
     },
     quad: {
+      name: "Quad",
+      rulesLevel: "standard",
       size: { HD: 6, CT: 12, LT: 12, RT: 12, FLL: 6, FRL: 6, RLL: 6, RRL: 6 },
-      fixed: {
-        FLL: ["Hip", "Upper Leg Actuator", "Lower Leg Actuator", "Foot Actuator"],
-        FRL: ["Hip", "Upper Leg Actuator", "Lower Leg Actuator", "Foot Actuator"],
-        RLL: ["Hip", "Upper Leg Actuator", "Lower Leg Actuator", "Foot Actuator"],
-        RRL: ["Hip", "Upper Leg Actuator", "Lower Leg Actuator", "Foot Actuator"],
-      },
+      fixed: { FLL: LEG, FRL: LEG, RLL: LEG, RRL: LEG },
     },
-  },
-} as const;
+    tripod: {
+      name: "Tripod",
+      rulesLevel: "advanced",
+      levelCite: IO_TRIPOD_RULES,
+      construction: { cite: IO_TRIPOD_CONSTRUCTION, checked: "text" },
+      structureExtra: 0.1,
+      cockpit: "tripod",
+      size: { HD: 6, CT: 12, LT: 12, RT: 12, LA: 12, RA: 12, LL: 6, RL: 6, CL: 6 },
+      fixed: { LA: ARM, RA: ARM, LL: LEG, RL: LEG, CL: LEG },
+    },
+  } satisfies Record<string, ConfigurationRow>,
+};

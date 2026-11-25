@@ -118,9 +118,9 @@ describe("fromMordel", () => {
     expect(layout(record, catalog.factsOf).unplaced.map((m) => m.name)).not.toContain("Mystery Box");
 
     const odd = imported(mordelOdd());
-    expect(odd.record).toMatchObject({ configuration: "tripod", year: null, chassis: { myomer: "" } });
-    expect(odd.notes.join("\n")).toMatch(/tripod[^]*myomer|myomer[^]*tripod/);
-    // The center leg is kept: its armor, and its laser in the location, though a tripod has no slots laid out.
+    expect(odd.record).toMatchObject({ configuration: "hexapod", year: null, chassis: { myomer: "" } });
+    expect(odd.notes.join("\n")).toMatch(/hexapod[^]*myomer|myomer[^]*hexapod/);
+    // The center leg is kept: its armor, and its laser in the location, though a hexapod has no slots laid out.
     expect(odd.record.armor.CL).toEqual({ front: 6 });
     expect(odd.record.mounts.find((m) => m.location === "CL")).toMatchObject({ name: "Medium Laser", slot: null });
     expect(imported(mordelWith(mordelBiped(), { engine: { type: "Plasma Drive", rating: 200 } })).record.chassis.engine.type).toBe("Plasma Drive");

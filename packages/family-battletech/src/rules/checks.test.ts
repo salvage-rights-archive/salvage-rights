@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import { OTHER } from "../data/equipment/other";
 import { createCatalog, expand, type EquipmentGroup } from "./catalog";
 import { CHECKS, runChecks, type Finding } from "./checks";
-import { bipedRecord, mount, quadRecord } from "./fixtures";
-import { editRecord, type LocationCode, type MechRecord } from "./mech";
+import { bipedRecord, mount, quadRecord, tripodRecord } from "./fixtures";
+import { editRecord, newRecord, type LocationCode, type MechRecord } from "./mech";
 
 // The stub items the fixtures name, a few launchers and guns, and an item that is only weight, beside the real "other" table.
 const TM = { book: "TechManual", page: 341 };
@@ -54,9 +54,17 @@ describe("the shared fixtures", () => {
   it.each([
     ["biped", bipedRecord()],
     ["quad", quadRecord()],
-  ])("the %s is legal: no error findings, and the ten checks run in order", (_name, record) => {
+    ["tripod", tripodRecord()],
+  ])("the %s is legal: no error findings, and the eleven checks run in order", (_name, record) => {
     expect(errors(runChecks(record, catalog))).toEqual([]);
-    expect(CHECKS.map((c) => c.id)).toEqual(["weight", "slots", "armor", "engine", "heat-sinks", "jump", "placement", "availability", "unmatched", "unsupported"]);
+    expect(CHECKS.map((c) => c.id)).toEqual(["weight", "slots", "armor", "engine", "heat-sinks", "jump", "placement", "availability", "configuration", "unmatched", "unsupported"]);
+  });
+
+  it("starts a new tripod with no error findings, and the page that makes it an advanced-rules design", () => {
+    const record = newRecord({ chassis: "Digger", model: "", tons: 55, walk: 5, techBase: "inner-sphere", configuration: "tripod", year: null }, "core-2026", "t-1");
+    const findings = runChecks(record, catalog);
+    expect(errors(findings)).toEqual([]);
+    expectFinding(findings.filter((f) => f.check === "configuration"), { level: "note", text: "advanced rules", where: { field: "configuration" }, page: 158 });
   });
 });
 
@@ -231,13 +239,22 @@ describe("unmatched", () => {
   });
 });
 
+describe("configuration", () => {
+  it("wants the tripod cockpit on a tripod and keeps it off other bodies, citing the construction rules page", () => {
+    const onTripod = forCheck(editRecord(tripodRecord(), (d) => void (d.chassis.cockpit = "standard")), "configuration");
+    expectFinding(onTripod, { level: "error", text: "must mount the Tripod cockpit", where: { field: "chassis.cockpit" }, page: 159 });
+    const onBiped = forCheck(editRecord(bipedRecord(), (d) => void (d.chassis.cockpit = "tripod")), "configuration");
+    expectFinding(onBiped, { level: "error", text: "for a tripod only", page: 159 });
+  });
+});
+
 describe("unsupported", () => {
-  it("gives one note for a tripod, and nothing from the checks that read the layout", () => {
-    const tripod = editRecord(bipedRecord(), (d) => void (d.configuration = "tripod"));
+  it("gives one note for a hexapod, and nothing from the checks that read the layout", () => {
+    const tripod = editRecord(bipedRecord(), (d) => void (d.configuration = "hexapod"));
     const findings = runChecks(tripod, catalog);
-    expect(findings.filter((f) => f.check === "unsupported")).toMatchObject([{ level: "note", message: expect.stringContaining("tripod") }]);
+    expect(findings.filter((f) => f.check === "unsupported")).toMatchObject([{ level: "note", message: expect.stringContaining("hexapod") }]);
     expect(findings.filter((f) => ["slots", "placement"].includes(f.check))).toEqual([]);
-    expect(findings.filter((f) => f.check === "weight")).toMatchObject([{ level: "note", message: expect.stringMatching(/not checked for the tripod.*for information only/) }]);
+    expect(findings.filter((f) => f.check === "weight")).toMatchObject([{ level: "note", message: expect.stringMatching(/not checked for the hexapod.*for information only/) }]);
     expect(findings.find((f) => f.check === "unsupported")?.message).toContain("weight");
   });
 });

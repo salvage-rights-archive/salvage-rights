@@ -5,7 +5,7 @@
 // Mordel wrote it, with a note, and the checks report it as unknown. Nothing is guessed.
 import { ARMOR, MYOMER, STRUCTURE_TYPES } from "../data/chassis";
 import type { Catalog, EquipmentRow } from "./catalog";
-import { ARM_FULL, layout, locationName, slotsTaken } from "./mech";
+import { ARM_FULL, armorSpread, configurationOf, layout, locationName, slotsTaken } from "./mech";
 import type { LocationCode, MechRecord, Mount, TechBase } from "./mech";
 
 export type MordelImport = { ok: true; record: MechRecord; notes: string[] } | { ok: false; message: string };
@@ -112,6 +112,7 @@ const TORSOS: LocationCode[] = ["CT", "LT", "RT"];
 const FILL_ORDER: Record<string, LocationCode[]> = {
   biped: ["LA", "RA", "LT", "RT", "LL", "RL", "CT", "HD"],
   quad: ["FLL", "FRL", "LT", "RT", "RLL", "RRL", "CT", "HD"],
+  tripod: ["LA", "RA", "LT", "RT", "LL", "RL", "CL", "CT", "HD"],
 };
 
 type Json = Record<string, unknown>;
@@ -195,7 +196,7 @@ function convert(response: unknown, catalog: Catalog, editionId: string, now: st
   const rawConfiguration = str(unit["configuration"], "configuration");
   const configuration = rawConfiguration ? rawConfiguration.toLowerCase() : "";
   if (!rawConfiguration) note("Mordel gave no configuration.");
-  else if (configuration !== "biped" && configuration !== "quad") {
+  else if (!configurationOf(configuration)) {
     note(`The configuration "${rawConfiguration}" is not one this tool lays out; it is stored as "${configuration}".`);
   }
 
@@ -405,7 +406,7 @@ const ARM_STEPS = [undefined, { lowerArm: true, hand: false }, { lowerArm: false
 /** Mordel does not say which arm actuators a design has. Where the equipment listed in an arm cannot fit with them all, the
  * hand actuator is taken out, and then the lower arm actuator, as far as the equipment needs. */
 function inferArms(record: MechRecord, catalog: Catalog, note: (text: string) => void) {
-  if (record.configuration !== "biped") return;
+  if (record.configuration !== "biped" && record.configuration !== "tripod") return;
   for (const arm of ["LA", "RA"] as const) {
     const needed = record.mounts.filter((m) => !m.part && m.location === arm).reduce((sum, m) => sum + Math.max(0, slotsTaken(m, record, catalog.factsOf)), 0);
     const freeWith = (step: (typeof ARM_STEPS)[number]) => {
@@ -475,7 +476,7 @@ function placeMounts(record: MechRecord, catalog: Catalog, note: (text: string) 
     }
   };
   const armor = record.mounts.filter((m) => m.part === "armor");
-  const ruled = own(ARMOR.types, record.chassis.armorType)?.slotsIn?.[record.configuration === "quad" ? "quad" : "biped"];
+  const ruled = armorSpread(own(ARMOR.types, record.chassis.armorType), record.configuration);
   fill(ruled ? armor : [], ruled);
   fill(record.mounts.filter((m) => m.part === "structure"));
   if (!ruled) fill(armor);

@@ -97,6 +97,21 @@ export function quadRecord(overrides: Partial<MechRecord> = {}): MechRecord {
   };
 }
 
+/** The biped as a tripod (50 tons, a 200 engine): the tripod cockpit, and a center leg with armor and a jump jet. Legal under every check. */
+export function tripodRecord(overrides: Partial<MechRecord> = {}): MechRecord {
+  const biped = bipedRecord();
+  return {
+    ...biped,
+    id: "fixture-tripod",
+    name: { chassis: "Test Strider", model: "TS-3" },
+    configuration: "tripod",
+    chassis: { ...biped.chassis, cockpit: "tripod" },
+    armor: { ...biped.armor, CL: { front: 5 } },
+    mounts: [...biped.mounts, mount("jj-4", "jump-jet", "CL", 4)],
+    ...overrides,
+  };
+}
+
 // ---------------------------------------------------------------------------------------------------------------
 // Made-up units in the shape of Mordel's detail response (see rules/mordel.ts). Not real designs.
 // ---------------------------------------------------------------------------------------------------------------
@@ -180,11 +195,11 @@ export function mordelQuad(): Json {
 }
 
 /** Everything awkward at once: an unknown configuration, a null field, an item not in our table, an item that takes no
- * slot, an Artemis IV associated with its launcher, and a tripod's center leg with armor and a laser. */
+ * slot, an Artemis IV associated with its launcher, and a center leg with armor and a laser. */
 export function mordelOdd(): Json {
   return mordelUnit({
     name_parts: { name: "Test Oddity", alternate_name: null, model: "TO-X" },
-    configuration: "Tripod",
+    configuration: "Hexapod",
     year: null,
     myomer: null,
     locations: armorFor([["H", 9, null], ["CT", 14, 4], ["LT", 10, 3], ["RT", 10, 3], ["LA", 8, null], ["RA", 8, null], ["LL", 6, null], ["RL", 5, null], ["CL", 6, null]]),

@@ -433,14 +433,6 @@ export const dollLocationName = (loc: string, arms?: 2 | 4): string => {
 /** The layout each configuration draws with; none is drawn for the rest yet. */
 const LAYOUT_OF_CONFIGURATION: Record<string, DollLayoutId> = { biped: "biped", quad: "quad", tripod: "tripod" };
 
-/** A tripod's limits and structure are a biped's with a third leg that has the same structure as the other two (Interstellar
- * Operations: Alternate Eras, Tripod 'Mech Construction Rules, p. 159); the rules module has no tripod table yet. */
-const pointsFor = (record: MechRecord, of: (record: MechRecord) => Partial<Record<LocationCode, number>>): Partial<Record<LocationCode, number>> => {
-    if (record.configuration !== "tripod") return of(record);
-    const points = of({ ...record, configuration: "biped" });
-    return points.LL === undefined ? points : { ...points, CL: points.LL };
-};
-
 const recordLocation = (loc: string) => (Object.hasOwn(RECORD_OF, loc) ? RECORD_OF[loc] : undefined);
 
 /** The record location (HD, LT, FLL) a doll location (lower case; the rear torsos end in "r") stands for. */
@@ -449,7 +441,7 @@ export const recordCodeOf = (loc: string): LocationCode | undefined => recordLoc
 export const dollUnitFromRecord = (record: MechRecord): IDollUnit | undefined => {
     const layoutId = Object.hasOwn(LAYOUT_OF_CONFIGURATION, record.configuration) ? LAYOUT_OF_CONFIGURATION[record.configuration] : undefined;
     if (!layoutId) return undefined;
-    const max = pointsFor(record, maxArmor), structure = pointsFor(record, structurePoints);
+    const max = maxArmor(record), structure = structurePoints(record);
     return {
         layoutId,
         variant: { armless: false, superheavy: record.tons > 100 },

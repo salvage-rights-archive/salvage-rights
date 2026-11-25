@@ -18,8 +18,9 @@ import {
   SHEET,
   STRUCTURE_TYPES,
 } from "../data/chassis";
+import { locationsFor } from "./catalog";
 import type { Catalog, EquipmentRow } from "./catalog";
-import { engineTons, layout as buildLayout, maxArmor, walkMP, weights } from "./mech";
+import { armorSpread, configurationOf, engineTons, layout as buildLayout, maxArmor, walkMP, weights } from "./mech";
 import { locationName, type Layout, type LocationCode, type MechRecord, type Mount } from "./mech";
 
 export interface Finding {
@@ -105,7 +106,7 @@ function weightCheck({ record, layout, catalog }: CheckInput): Finding[] {
   }
   const { lines, total } = weights(record, catalog.factsOf);
   if (!layout.supported) {
-    // The weights are worked out for a biped or a quad; any other body has parts this tool does not know, so no over or under figure.
+    // The weights are worked out for a biped, a quad or a tripod; any other body has parts this tool does not know, so no over or under figure.
     const known = total !== null && Number.isFinite(total) ? ` The parts it knows add up to ${tons(total)}, for information only.` : "";
     out.push(finding("weight", "note", `The weight is not checked for the ${record.configuration} configuration.${known}`, { where }));
     return out;
@@ -165,7 +166,7 @@ function slotsCheck({ record, layout }: CheckInput): Finding[] {
   }
   // An armor type with a place for each of its slots (stealth): the count in every location must match. A location short of
   // slots is not reported while some armor slot is still unplaced, since that one is already an error above.
-  const spread = (own(ARMOR.types, record.chassis.armorType) ? ARMOR.types[record.chassis.armorType] : undefined)?.slotsIn?.[record.configuration === "quad" ? "quad" : "biped"];
+  const spread = armorSpread(own(ARMOR.types, record.chassis.armorType) ? ARMOR.types[record.chassis.armorType] : undefined, record.configuration);
   if (spread) {
     const armorMounts = record.mounts.filter((m) => m.part === "armor");
     const anyUnplaced = armorMounts.some((m) => !m.location);
@@ -377,7 +378,7 @@ function placementCheck({ record, layout, catalog }: CheckInput): Finding[] {
       }
     }
     if (!row || !mount.location) continue;
-    const allowed = record.configuration === "quad" ? (row.locationsQuad ?? row.locations) : row.locations;
+    const allowed = locationsFor(row, record.configuration);
     if (allowed && !allowed.includes(mount.location)) {
       const message =
         allowed.length === 0
@@ -475,6 +476,40 @@ function unmatchedCheck({ record, catalog }: CheckInput): Finding[] {
   return out;
 }
 
+/** Body types built under advanced rules say so, with the page; a tripod also needs its own cockpit and no other body may use it. */
+function configurationCheck({ record }: CheckInput): Finding[] {
+  const row = configurationOf(record.configuration);
+  if (!row) return [];
+  const out: Finding[] = [];
+  if (row.rulesLevel !== "standard" && row.levelCite) {
+    const clan = record.techBase === "clan" ? " The book gives the tripod's technology as Inner Sphere, and this record is Clan." : "";
+    out.push(
+      finding("configuration", "note", `${row.name} 'Mechs are built under ${row.rulesLevel} rules, not the standard ones; check that your game allows them.${clan}`, {
+        where: { field: "configuration" },
+        cite: row.levelCite,
+      }),
+    );
+  }
+  const cockpit = own(COCKPITS.types, record.chassis.cockpit) ? COCKPITS.types[record.chassis.cockpit] : undefined;
+  if (row.cockpit && record.chassis.cockpit !== row.cockpit) {
+    const needed = partName(COCKPITS, row.cockpit);
+    out.push(
+      finding("configuration", "error", `A ${record.configuration} must mount the ${needed} cockpit; ${partName(COCKPITS, record.chassis.cockpit)} is not allowed.`, {
+        where: { field: "chassis.cockpit" },
+        cite: COCKPITS.types[row.cockpit]?.cite ?? COCKPITS.cite,
+      }),
+    );
+  } else if (cockpit?.only && cockpit.only !== record.configuration) {
+    out.push(
+      finding("configuration", "error", `The ${cockpit.name} cockpit is for a ${cockpit.only} only; this is a ${record.configuration}.`, {
+        where: { field: "chassis.cockpit" },
+        cite: cockpit.cite ?? COCKPITS.cite,
+      }),
+    );
+  }
+  return out;
+}
+
 function unsupportedCheck({ record, layout }: CheckInput): Finding[] {
   if (layout.supported) return [];
   return [
@@ -496,6 +531,7 @@ export const CHECKS: Check[] = [
   { id: "jump", editions: "all", run: jumpCheck },
   { id: "placement", editions: "all", run: placementCheck },
   { id: "availability", editions: "all", run: availabilityCheck },
+  { id: "configuration", editions: "all", run: configurationCheck },
   { id: "unmatched", editions: "all", run: unmatchedCheck },
   { id: "unsupported", editions: "all", run: unsupportedCheck },
 ];

@@ -48,6 +48,14 @@ export interface EquipmentRow {
   cite: { book: string; page: number };
   checked: "page" | "text";
 }
+/** Where the book lets a row go on a configuration; undefined means anywhere. A quad has its own rule where it differs. A tripod
+ * mounts equipment as a 'Mech of equal weight does (IO:AE printed p.159), so its center leg is allowed wherever the side legs both are. */
+export function locationsFor(row: EquipmentRow, configuration: string): LocationCode[] | undefined {
+  if (configuration === "quad") return row.locationsQuad ?? row.locations;
+  const listed = row.locations;
+  return configuration === "tripod" && listed?.includes("LL") && listed.includes("RL") ? [...listed, "CL"] : listed;
+}
+
 export interface EquipmentGroup {
   defaults: Partial<EquipmentRow>;
   items: (Partial<EquipmentRow> & { id: string; name: string })[];

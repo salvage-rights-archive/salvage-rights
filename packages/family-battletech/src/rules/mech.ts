@@ -16,6 +16,7 @@ import {
   STRUCTURE_TYPES,
   STRUCTURE_WEIGHT,
 } from "../data/chassis";
+import type { ArmorType, ConfigurationRow } from "../data/chassis";
 
 export type LocationCode = "HD" | "CT" | "LT" | "RT" | "LA" | "RA" | "LL" | "RL" | "CL" | "FLL" | "FRL" | "RLL" | "RRL";
 export const LOCATION_NAMES: Record<LocationCode, string> = {
@@ -62,7 +63,7 @@ export interface MechRecord {
   techBase: TechBase | "mixed";
   year: number | null;
   tons: number;
-  configuration: string; // "biped" | "quad" | the source's own word
+  configuration: string; // "biped" | "quad" | "tripod" | the source's own word
   chassis: {
     engine: { type: string; rating: number };
     gyro: string;
@@ -128,9 +129,22 @@ function own<T>(table: Record<string | number, T>, key: string | number): T | un
   return Object.hasOwn(table, key) ? table[key] : undefined;
 }
 
-type ConfigurationName = keyof typeof SHEET.configurations;
-function configurationOf(name: string) {
-  return Object.hasOwn(SHEET.configurations, name) ? SHEET.configurations[name as ConfigurationName] : undefined;
+/** The configuration's row in the chassis tables, or undefined for a body type we have no layout for. */
+export function configurationOf(name: string): ConfigurationRow | undefined {
+  return Object.hasOwn(SHEET.configurations, name) ? (SHEET.configurations as Record<string, ConfigurationRow>)[name] : undefined;
+}
+
+/** A configuration's name as the build form and editor show it, with its rules level when that is not the standard one:
+ * `Tripod (advanced rules)`. A key we do not know prints as itself. */
+export function configurationLabel(name: string): string {
+  const row = configurationOf(name);
+  return row ? (row.rulesLevel === "standard" ? row.name : `${row.name} (${row.rulesLevel} rules)`) : name;
+}
+
+/** Where an armor type's slots must go on this configuration, if it has to go in particular places; a body type the type has
+ * no spread of its own for takes the biped's. */
+export function armorSpread(armor: ArmorType | undefined, configuration: string): Partial<Record<LocationCode, number>> | undefined {
+  return armor?.slotsIn && (own(armor.slotsIn, configuration) ?? armor.slotsIn.biped);
 }
 
 /** Rounds up to the next half ton, ignoring float noise. */
@@ -146,11 +160,14 @@ export function engineTons(type: string, rating: number): number | null {
   return engine && standard !== undefined ? ceilHalf(standard * engine.weightFactor) : null;
 }
 
-/** Structure weight: a tenth of the tonnage, times the type's factor, rounded up to a half ton. null if unknown. */
-export function structureTons(type: string, tons: number): number | null {
+/** Structure weight: a tenth of the tonnage, times the type's factor, rounded up to a half ton; a tripod's is then 10 percent
+ * heavier, rounded up to a half ton again (IO:AE printed p.159). null if unknown. */
+export function structureTons(type: string, tons: number, configuration = "biped"): number | null {
   const structure = own(STRUCTURE_TYPES.types, type);
   if (!structure || !own(INTERNAL_STRUCTURE.rows, tons)) return null;
-  return ceilHalf(tons * STRUCTURE_WEIGHT.fractionOfTons * structure.weightFactor);
+  const base = ceilHalf(tons * STRUCTURE_WEIGHT.fractionOfTons * structure.weightFactor);
+  const extra = configurationOf(configuration)?.structureExtra;
+  return extra === undefined ? base : ceilHalf(base * (1 + extra));
 }
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -220,7 +237,10 @@ export function layout(record: MechRecord, factsOf: FactsOf): Layout {
   }
   const armor = own(ARMOR.types, record.chassis.armorType);
   if (armor) {
-    partSlots.push({ part: "armor", needed: armor.slots, present: record.mounts.filter((m) => m.part === "armor").length });
+    // A type with a place for each slot takes as many as the configuration's places add up to (a tripod's third leg takes some).
+    const spread = armorSpread(armor, record.configuration);
+    const needed = spread ? Object.values(spread).reduce((sum, n) => sum + n, 0) : armor.slots;
+    partSlots.push({ part: "armor", needed, present: record.mounts.filter((m) => m.part === "armor").length });
   }
 
   const config = configurationOf(record.configuration);
@@ -277,7 +297,7 @@ export function weights(record: MechRecord, factsOf: FactsOf): { lines: WeightLi
   const { chassis } = record;
   const lines: WeightLine[] = [];
 
-  lines.push({ label: "Structure", tons: structureTons(chassis.structure, record.tons) });
+  lines.push({ label: "Structure", tons: structureTons(chassis.structure, record.tons, record.configuration) });
   lines.push({ label: "Engine", tons: engineTons(chassis.engine.type, chassis.engine.rating) });
 
   const gyro = own(GYROS.types, chassis.gyro);
@@ -318,10 +338,10 @@ export function structurePoints(record: MechRecord): Partial<Record<LocationCode
   const row = own(INTERNAL_STRUCTURE.rows, record.tons);
   if (!row) return {};
   const points: Partial<Record<LocationCode, number>> = { HD: HEAD_STRUCTURE.points, CT: row.ct, LT: row.side, RT: row.side };
-  if (record.configuration === "biped") {
-    Object.assign(points, { LA: row.arm, RA: row.arm, LL: row.leg, RL: row.leg });
-  } else if (record.configuration === "quad") {
-    Object.assign(points, { FLL: row.leg, FRL: row.leg, RLL: row.leg, RRL: row.leg });
+  // Every limb of a configuration we lay out: the arms take the arm column, every leg the leg column. A tripod's third leg has
+  // the same points as its other two (IO:AE printed p.159).
+  for (const loc of Object.keys(configurationOf(record.configuration)?.size ?? {}) as LocationCode[]) {
+    if (!(loc in points)) points[loc] = loc === "LA" || loc === "RA" ? row.arm : row.leg;
   }
   return points;
 }
@@ -349,7 +369,7 @@ export interface NewMechOptions {
   /** Walking MP; the engine rating is tons times this. */
   walk: number;
   techBase: TechBase;
-  configuration: "biped" | "quad";
+  configuration: "biped" | "quad" | "tripod";
   year: number | null;
 }
 
@@ -370,7 +390,7 @@ export function newRecord(options: NewMechOptions, editionId: string, id: string
     chassis: {
       engine: { type: "standard", rating: options.tons * options.walk },
       gyro: "standard",
-      cockpit: "standard",
+      cockpit: configurationOf(options.configuration)?.cockpit ?? "standard",
       structure: "standard",
       armorType: "standard",
       myomer: "standard",
