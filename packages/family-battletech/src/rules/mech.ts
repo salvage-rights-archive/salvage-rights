@@ -203,6 +203,19 @@ export function bodyOf(name: string): string {
   return configurationOf(name)?.body ?? name;
 }
 
+/** The arm actuator settings that count: a body without arms (a quad) has none, whatever a saved record still holds. An unknown body
+ * keeps what it has. */
+export function armsOf(record: Pick<MechRecord, "configuration" | "arms">): MechRecord["arms"] {
+  const config = configurationOf(record.configuration);
+  return config && !("LA" in config.size) ? undefined : record.arms;
+}
+
+/** Changes a record's body, and drops the arm actuator settings the new body has no arms for. */
+export function setConfiguration(draft: MechRecord, configuration: string): void {
+  draft.configuration = configuration;
+  if (armsOf(draft) !== draft.arms) delete draft.arms;
+}
+
 /** Conversion equipment of a Land-Air 'Mech, a percentage of its tonnage rounded up to a whole ton (IO:AE p.108); null for any other configuration. */
 export function conversionTons(record: MechRecord): number | null {
   const percent = own(LAM.conversionPercent, record.configuration);
@@ -297,7 +310,7 @@ function fixedLabels(record: MechRecord, config: NonNullable<ReturnType<typeof c
 
   // An arm without its lower arm actuator has no hand either; the freed cells are ordinary empty slots.
   for (const arm of ["LA", "RA"] as const) {
-    const has = record.arms?.[arm];
+    const has = armsOf(record)?.[arm];
     if (!has) continue;
     const lacking = [has.lowerArm ? "" : ARM_LABELS.lowerArm, has.lowerArm && has.hand ? "" : ARM_LABELS.hand];
     labels[arm]?.forEach((label, i) => {

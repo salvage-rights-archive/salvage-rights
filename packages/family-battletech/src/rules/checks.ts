@@ -26,7 +26,7 @@ import { locationsFor, mountableOn, mountsRequired, podMountable } from "./catal
 import { levelAtLeast, levelIn, levelItems, levelRow } from "./levels";
 import { datesText, partIsPrototypeOnly, partPrototype } from "./time";
 import type { Catalog, EquipmentRow } from "./catalog";
-import { ARM_FULL, armorSpread, configurationOf, engineTons, freeHeatSinks, industrialRulesOf, layout as buildLayout, maxArmor, mechTypeOf, walkMP, weights } from "./mech";
+import { ARM_FULL, armorSpread, armsOf, configurationOf, engineTons, freeHeatSinks, industrialRulesOf, layout as buildLayout, maxArmor, mechTypeOf, walkMP, weights } from "./mech";
 import { locationName, type Layout, type LocationCode, type MechRecord, type Mount } from "./mech";
 import { mountedShields, missingActuators, shieldStats } from "./shields";
 import { movementPenalty, rowOf, stemOf, TSM_ROWS } from "./walk";
@@ -629,7 +629,7 @@ function lamCheck({ record, catalog }: CheckInput): Finding[] {
     add(`${partName(ARMOR, armorType)} armor takes critical slots, which a Land-Air 'Mech may not use.`, { field: "chassis.armorType" });
   }
   for (const arm of ["LA", "RA"] as const) {
-    if (record.arms?.[arm]?.lowerArm === false) add(`A Land-Air 'Mech must have both lower arm actuators; the ${locationName(arm)} has none.`, { location: arm });
+    if (armsOf(record)?.[arm]?.lowerArm === false) add(`A Land-Air 'Mech must have both lower arm actuators; the ${locationName(arm)} has none.`, { location: arm });
   }
   const jets = record.mounts.filter((m) => rowOf(catalog, record, m)?.kind === "jump-jet").length;
   if (jets < LAM.minJumpMP) add(`A Land-Air 'Mech needs at least ${LAM.minJumpMP} jump jets; this one has ${jets}.`);
@@ -856,7 +856,7 @@ function omniCheck({ record, catalog }: CheckInput): Finding[] {
       out.push(finding("omni-pod-forbidden", "error", `${m.name} cannot be pod-mounted; an OmniMech can only carry it as fixed equipment in the base.`, { where: { mountId: m.id }, cite: row.podCite ?? row.cite }));
     }
     if ((m.location === "LA" || m.location === "RA") && ARM_HEAVY.test(row.id) && !row.id.startsWith("protomech")) {
-      const has = { ...ARM_FULL, ...record.arms?.[m.location] };
+      const has = { ...ARM_FULL, ...armsOf(record)?.[m.location] };
       if (has.lowerArm || has.hand) {
         out.push(finding("omni-arm-actuators", "error", `The ${locationName(m.location)} carries ${m.name}; on an OmniMech the lower arm and hand actuators must be removed from that arm first.`, { where: { mountId: m.id, location: m.location }, cite: tm(PAGE.techBase) }));
       }

@@ -4,7 +4,7 @@
 import { SHIELDS } from "../data/chassis";
 import type { ShieldRow } from "../data/chassis";
 import type { Catalog } from "./catalog";
-import { configurationOf } from "./mech";
+import { armsOf, configurationOf } from "./mech";
 import type { LocationCode, MechRecord, Mount } from "./mech";
 
 const ARMS = ["LA", "RA"] as const;
@@ -31,7 +31,7 @@ export function mountedShields(record: MechRecord, catalog: Catalog): MountedShi
 
 /** The arm and hand actuators the arm lacks: the lower arm (which takes the hand with it) and the hand. The shoulder and upper arm are always there. */
 export function missingActuators(record: MechRecord, arm: Arm): number {
-  const has = record.arms?.[arm];
+  const has = armsOf(record)?.[arm];
   return has ? Number(!has.lowerArm) + Number(!has.hand) : 0;
 }
 

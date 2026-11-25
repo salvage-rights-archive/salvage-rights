@@ -11,7 +11,7 @@ import type { Catalog } from "../rules/catalog";
 import { runChecks } from "../rules/checks";
 import type { Finding } from "../rules/checks";
 import { changedSinceImport } from "../rules/mordel";
-import { ARM_FULL, bodyOf, configurationOf, editRecord, layout as buildLayout, locationName, mechTypeOf, weights as buildWeights } from "../rules/mech";
+import { ARM_FULL, bodyOf, configurationOf, editRecord, layout as buildLayout, locationName, mechTypeOf, setConfiguration, weights as buildWeights } from "../rules/mech";
 import type { Layout, LocationCode, MechRecord } from "../rules/mech";
 import { configurationChoices, eraOfRecord, partChoices, setEra, setYear } from "../rules/availability";
 import type { PartKind } from "../rules/availability";
@@ -879,7 +879,7 @@ function Editor({ initial, startAt, catalog, storage }: { initial: Doc; startAt?
                 options={configurationChoices(record, record.configuration)}
                 changed={mark("configuration")}
                 disabled={fixedHere}
-                onChange={(v) => { edit((d) => void (d.configuration = v)); }}
+                onChange={(v) => { edit((d) => { setConfiguration(d, v); }); }}
               />
               <LevelSelect record={record} onChange={(level) => { edit((d) => void (d.rulesLevel = level)); }} />
               <SelectField

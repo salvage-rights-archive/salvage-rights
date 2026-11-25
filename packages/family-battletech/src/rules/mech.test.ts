@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { bipedRecord, factsOf, lamRecord, mount, quadRecord, tripodRecord } from "./fixtures";
 import {
+  armsOf,
   editRecord,
   newRecord,
+  setConfiguration,
   layout,
   maxArmor,
   structurePoints,
@@ -282,5 +284,25 @@ describe("a mount the catalog does not know", () => {
     const cells = layout(record, factsOf).slots;
     expect(cells.LA?.slice(4, 8).map((c) => c.mountId)).toEqual(["odd", "odd", "odd", undefined]);
     expect(cells.RA?.slice(4, 6).map((c) => c.mountId)).toEqual(["odd-2", undefined]);
+  });
+});
+
+describe("arm actuator settings", () => {
+  const arms = { LA: { lowerArm: false, hand: false } };
+
+  it("are dropped when the configuration changes to a body without arms, and kept for a body with them", () => {
+    const to = (configuration: string) =>
+      editRecord(bipedRecord({ arms }), (d) => {
+        setConfiguration(d, configuration);
+      });
+    expect(to("quad").configuration).toBe("quad");
+    expect(to("quad").arms).toBeUndefined();
+    expect(to("tripod").arms).toEqual(arms);
+  });
+
+  it("are ignored when a record already saved with them has no arms", () => {
+    expect(armsOf(quadRecord({ arms }))).toBeUndefined();
+    expect(armsOf(lamRecord({ arms }))).toEqual(arms);
+    expect(armsOf(bipedRecord({ configuration: "hexapod", arms }))).toEqual(arms); // a body we do not know: nothing is dropped
   });
 });
