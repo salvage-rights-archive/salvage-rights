@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_EDITION, EDITIONS } from "../data/editions";
-import { createCatalog, expand, loadCatalog, type EquipmentGroup } from "./catalog";
+import { ammoLines, createCatalog, expand, inventoryLines, loadCatalog, type EquipmentGroup } from "./catalog";
 import { bipedRecord, mount } from "./fixtures";
 
 const TM = { book: "TechManual", page: 341 };
@@ -56,6 +56,14 @@ describe("expand", () => {
   ])("throws naming the id for %s", (_label, change, id) => {
     const item = { ...OK, name: "Item", ...change };
     const groups = [{ defaults: {}, items: [{ ...OK, id: "dup-is", name: "First" }, item] }];
+    expect(() => expand(groups as unknown as EquipmentGroup[])).toThrow(id);
+  });
+
+  it.each([
+    ["a range that runs backwards", { id: "range-is", range: [0, 6, 4, 9] }, "range-is"],
+    ["a negative heat", { id: "heat-is", heat: -1 }, "heat-is"],
+  ])("throws naming the id for %s", (_label, change, id) => {
+    const groups = [{ defaults: {}, items: [{ ...OK, name: "Item", ...change }] }];
     expect(() => expand(groups as unknown as EquipmentGroup[])).toThrow(id);
   });
 
@@ -177,6 +185,75 @@ describe("the equipment table", () => {
       expect(Number.isFinite(facts?.tons), `${r.id} tons`).toBe(true);
       expect(Number.isInteger(facts?.slots), `${r.id} slots`).toBe(true);
     }
+  });
+});
+
+describe("play statistics", () => {
+  // Heat, damage and range as TechManual's Weapons and Equipment tables (printed pp. 341-343) print them.
+  it.each([
+    ["medium-laser-is", 3, "5", [0, 3, 6, 9]],
+    ["large-laser-is", 8, "8", [0, 5, 10, 15]],
+    ["ppc-is", 10, "10", [3, 6, 12, 18]],
+    ["ac-10-is", 3, "10", [0, 5, 10, 15]],
+    ["lrm-20-is", 6, "1/Msl", [6, 7, 14, 21]],
+    ["srm-6-is", 4, "2/Msl", [0, 3, 6, 9]],
+    ["er-large-laser-clan", 12, "10", [0, 8, 15, 25]],
+    ["gauss-rifle-is", 1, "15", [2, 7, 15, 22]],
+  ])("%s prints the book's heat, damage and range", async (id, heat, damage, range) => {
+    expect((await loadCatalog()).byId(id)).toMatchObject({ heat, damage, range });
+  });
+
+  const STATS = createCatalog(
+    expand([
+      {
+        defaults: { kind: "weapon", techBase: "inner-sphere", cite: TM, checked: "page", tons: 1, slots: 1, availability: [{ from: 1 }] },
+        items: [
+          { id: "ml", name: "Medium Laser", heat: 3, damage: "5", range: [0, 3, 6, 9] },
+          { id: "ppc", name: "PPC", heat: 10, damage: "10", range: [3, 6, 12, 18] },
+          { id: "mg", name: "Machine Gun" },
+        ],
+      },
+      {
+        defaults: { kind: "ammunition", techBase: "inner-sphere", cite: TM, checked: "page", tons: 1, slots: 1, availability: [{ from: 1 }] },
+        items: [
+          { id: "ammo-ac", name: "AC/10 Ammo", shotsPerTon: 10 },
+          { id: "ammo-mg-half", name: "MG Ammo (Half Ton)", shots: 100, tons: 0.5 },
+          { id: "ammo-none", name: "Other Ammo" },
+        ],
+      },
+    ]),
+  );
+
+  it("lists one line per weapon per location in record-sheet order, with dashes for what is missing", () => {
+    const record = bipedRecord({
+      mounts: [
+        mount("p", "ppc", "RA", 0),
+        mount("m1", "ml", "LA", 0),
+        mount("m2", "ml", "LA", 1),
+        mount("x", null, "CT", 0),
+        mount("g", "mg", "HD", 0),
+        mount("a", "ammo-ac", "LT", 0),
+        mount("u", "ml", null, null),
+      ],
+    });
+    expect(inventoryLines(record, STATS)).toEqual([
+      { qty: 1, name: "Machine Gun", location: "HD", heat: "—", damage: "—", min: "—", short: "—", medium: "—", long: "—" },
+      { qty: 1, name: "x", location: "CT", heat: "—", damage: "—", min: "—", short: "—", medium: "—", long: "—" },
+      { qty: 2, name: "Medium Laser", location: "LA", heat: "3", damage: "5", min: "—", short: "3", medium: "6", long: "9" },
+      { qty: 1, name: "PPC", location: "RA", heat: "10", damage: "10", min: "3", short: "6", medium: "12", long: "18" },
+      { qty: 1, name: "Medium Laser", location: "—", heat: "3", damage: "5", min: "—", short: "3", medium: "6", long: "9" },
+    ]);
+  });
+
+  it("sums an ammunition item's shots over its bins and gives null where the row has no figure", () => {
+    const record = bipedRecord({
+      mounts: [mount("a1", "ammo-ac", "LT", 0), mount("a2", "ammo-ac", "RT", 0), mount("h", "ammo-mg-half", "CT", 0), mount("n", "ammo-none", "LL", 0)],
+    });
+    expect(ammoLines(record, STATS)).toEqual([
+      { name: "AC/10 Ammo", shots: 20 },
+      { name: "MG Ammo (Half Ton)", shots: 100 },
+      { name: "Other Ammo", shots: null },
+    ]);
   });
 });
 

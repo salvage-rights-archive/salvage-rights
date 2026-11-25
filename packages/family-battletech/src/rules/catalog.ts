@@ -30,6 +30,18 @@ export interface EquipmentRow {
   perMech?: number;
   /** Ammunition only, for the families that come in two bin sizes: the shots one bin carries (what Mordel prints). */
   shots?: number;
+  /** Play statistics, as the book prints them for one weapon. `heat` is per firing (per shot for the rotary and ultra
+   * autocannons); `damage` is the text the record sheet shows ("5", "1/Msl", "25/20/10", "Special"); `type` is the
+   * weapons table's Type column; `range` is minimum, short, medium and long in hexes (minimum 0 where the table prints a
+   * dash). */
+  heat?: number;
+  damage?: string;
+  type?: string;
+  range?: [min: number, short: number, medium: number, long: number];
+  /** Ammunition only: the shots one ton carries (the Ammo per Ton column of the weapons table). */
+  shotsPerTon?: number;
+  /** The page the play figures came from, when it is not `cite`. */
+  playCite?: { book: string; page: number };
   /** A non-missile direct-fire or pulse weapon: its weight counts toward a targeting computer (TechManual p. 238). */
   directFire?: true;
   editions?: Record<string, Partial<Pick<EquipmentRow, "tons" | "slots" | "availability" | "locations" | "locationsQuad">>>;
@@ -47,7 +59,7 @@ const TECH_BASES: string[] = ["inner-sphere", "clan"];
 
 /** Rows from groups: each item takes its group's defaults and may override them. Throws, naming the id, on a missing
  * required field, a repeated id, an unknown kind or tech base, a `tons` or `slots` string that is not a formula, or an
- * empty or backwards availability. `aliases` is optional and defaults to none. */
+ * empty or backwards availability, or on play figures that are not numbers in range. `aliases` is optional and defaults to none. */
 export function expand(groups: EquipmentGroup[]): EquipmentRow[] {
   const rows: EquipmentRow[] = [];
   const seen = new Set<string>();
@@ -71,6 +83,14 @@ export function expand(groups: EquipmentGroup[]): EquipmentRow[] {
       }
       if (!Array.isArray(row.availability) || row.availability.length === 0) bad("availability is empty");
       if (row.availability.some((s) => s.to !== undefined && s.to < s.from)) bad("a span ends before it starts");
+      if (row.heat !== undefined && !(Number.isFinite(row.heat) && row.heat >= 0)) bad("heat is not a number of zero or more");
+      if (row.range !== undefined) {
+        const r = row.range;
+        const numbers = Array.isArray(r) && r.length === 4 && r.every((n) => Number.isFinite(n) && n >= 0);
+        if (!numbers) bad("range is not four numbers of zero or more");
+        else if (!(r[1] <= r[2] && r[2] <= r[3])) bad("range is not short <= medium <= long");
+      }
+      if (row.shotsPerTon !== undefined && !(Number.isInteger(row.shotsPerTon) && row.shotsPerTon > 0)) bad("shotsPerTon is not a whole number above zero");
       rows.push(row);
     }
   }
@@ -210,4 +230,82 @@ export function loadCatalog(): Promise<Catalog> {
     throw error;
   });
   return loading;
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// The record sheet's inventory: what each weapon prints, and the ammunition on board.
+// ---------------------------------------------------------------------------------------------------------------
+export interface InventoryLine {
+  qty: number;
+  name: string;
+  location: string;
+  heat: string;
+  damage: string;
+  min: string;
+  short: string;
+  medium: string;
+  long: string;
+}
+
+const DASH = "—";
+const BIPED_ORDER: LocationCode[] = ["HD", "CT", "LT", "RT", "LA", "RA", "LL", "RL"];
+const QUAD_ORDER: LocationCode[] = ["HD", "CT", "LT", "RT", "FLL", "FRL", "RLL", "RRL"];
+
+/** Position of a location in record-sheet order for the record's configuration; codes outside it sort after the rest. */
+function locationRank(record: MechRecord, location: LocationCode | null): number {
+  const order = record.configuration === "quad" ? QUAD_ORDER : BIPED_ORDER;
+  if (location === null) return order.length + 1;
+  const at = order.indexOf(location);
+  return at === -1 ? order.length : at;
+}
+
+/** One line per distinct weapon per location (`qty` the number mounted there), by location in record-sheet order and then
+ * by name; unplaced mounts come last with location "—". Mounts of other kinds appear only when their row has a range
+ * or a damage. A figure the row lacks, and every figure of an unmatched mount, prints as an em dash; a minimum range of 0
+ * also prints as one. */
+export function inventoryLines(record: MechRecord, catalog: Catalog): InventoryLine[] {
+  const groups = new Map<string, { qty: number; name: string; location: LocationCode | null; row: EquipmentRow | undefined }>();
+  for (const mount of record.mounts) {
+    if (mount.part) continue;
+    const row = mount.equipmentId === null ? undefined : catalog.byId(mount.equipmentId);
+    if (mount.equipmentId !== null && !row) continue;
+    if (row && row.kind !== "weapon" && row.range === undefined && row.damage === undefined) continue;
+    const key = `${mount.location ?? "-"}|${mount.equipmentId ?? `?${mount.name}`}`;
+    const group = groups.get(key);
+    if (group) group.qty += 1;
+    else groups.set(key, { qty: 1, name: row?.name ?? mount.name, location: mount.location, row });
+  }
+  return [...groups.values()]
+    .sort((a, b) => locationRank(record, a.location) - locationRank(record, b.location) || a.name.localeCompare(b.name))
+    .map(({ qty, name, location, row }) => {
+      const range = row?.range;
+      return {
+        qty,
+        name,
+        location: location ?? DASH,
+        heat: row?.heat === undefined ? DASH : String(row.heat),
+        damage: row?.damage ?? DASH,
+        min: range === undefined || range[0] === 0 ? DASH : String(range[0]),
+        short: range === undefined ? DASH : String(range[1]),
+        medium: range === undefined ? DASH : String(range[2]),
+        long: range === undefined ? DASH : String(range[3]),
+      };
+    });
+}
+
+/** One entry per distinct ammunition item, shots summed over its bins: a row's `shotsPerTon` times the bin's tons, or its
+ * own `shots` where that is what the row carries (a half-ton bin row holds its own count). `null` when the row has no
+ * figure. Items come in the order of their first bin. */
+export function ammoLines(record: MechRecord, catalog: Catalog): { name: string; shots: number | null }[] {
+  const totals = new Map<string, { name: string; shots: number | null }>();
+  for (const mount of record.mounts) {
+    const row = mount.equipmentId === null ? undefined : catalog.byId(mount.equipmentId);
+    if (row?.kind !== "ammunition") continue;
+    const tons = typeof row.tons === "number" ? row.tons : 1;
+    const perBin = row.shots ?? (row.shotsPerTon === undefined ? undefined : row.shotsPerTon * tons);
+    const entry = totals.get(row.id) ?? { name: row.name, shots: null };
+    if (perBin !== undefined) entry.shots = (entry.shots ?? 0) + perBin;
+    totals.set(row.id, entry);
+  }
+  return [...totals.values()];
 }
