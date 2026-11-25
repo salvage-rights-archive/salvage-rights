@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import { Link, useNavigate } from "react-router";
-import { EDITIONS } from "../data/editions";
+import { editionName } from "../data/editions";
 import { loadCatalog } from "../rules/catalog";
 import { DEFAULT_LEVEL, levelRow } from "../rules/levels";
 import { UNIT_TYPE_OF, fromMordel, parseMordelRef } from "../rules/mordel";
@@ -54,7 +54,7 @@ export default function ImportPage({ makeClient = defaultMakeClient }: ImportPag
         setStorage(s);
         setStoredKey(await s.getKey());
         const edition = await s.getEdition();
-        setBuiltUnder(EDITIONS.find((e) => e.id === edition)?.name ?? edition);
+        setBuiltUnder(editionName(edition));
       } catch {
         setProblem(STORAGE_READ_FAILED);
       }

@@ -3,7 +3,7 @@ import type { ChangeEvent } from "react";
 import { Link, useNavigate } from "react-router";
 import { ENGINE_WEIGHTS, INTERNAL_STRUCTURE, MECH_TYPES } from "../data/chassis";
 import type { MechType } from "../data/chassis";
-import { DEFAULT_EDITION, EDITIONS, PLAY_ONLY_BOOK, bookName } from "../data/editions";
+import { DEFAULT_EDITION, EDITIONS, bookName, editionName } from "../data/editions";
 import { configurationAvailable, configurationChoices, typeAvailable } from "../rules/availability";
 import { techBaseChoices, withLevel } from "../rules/levels";
 import { loadCatalog } from "../rules/catalog";
@@ -222,8 +222,8 @@ export default function HomePage() {
         </div>
         {bookLine && <p className="bt-hint">{bookLine}</p>}
         <p className="bt-hint">
-          The {PLAY_ONLY_BOOK.title} ({PLAY_ONLY_BOOK.printing}) is a play book only. Its construction rules are not
-          published yet, so 'Mechs are built under the books above.
+          Both editions build from the TechManual; the Core Rulebook publishes no construction rules. They differ in the play
+          book the sheet and the rules check cite.
         </p>
       </section>
 
@@ -268,7 +268,7 @@ export default function HomePage() {
                   <span className="bt-row__text">
                     <strong>{name}</strong> {record.tons} tons
                     <span className="bt-row__credit">
-                      Built under {EDITIONS.find((e) => e.id === record.editionId)?.name ?? record.editionId}
+                      Built under {editionName(record.editionId)}
                     </span>
                     {record.source && (
                       <span className="bt-row__credit">

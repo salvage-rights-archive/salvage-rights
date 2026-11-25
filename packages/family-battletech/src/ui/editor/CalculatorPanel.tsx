@@ -2,7 +2,7 @@
 // rules/cost.ts) and shown with the lines they come from. Nothing here is stored on the record: the pilot's skills and the
 // OmniMech choice are the player's questions of the moment ("what would it be with a Gunnery 3 pilot?"), not facts of the unit.
 import { useDeferredValue, useEffect, useId, useMemo, useRef, useState } from "react";
-import { bookName } from "../../data/editions";
+import { bookName, playCites } from "../../data/editions";
 import type { Catalog } from "../../rules/catalog";
 import { battleValue } from "../../rules/bv";
 import type { BvResult } from "../../rules/bv";
@@ -274,7 +274,7 @@ export default function CalculatorPanel({ record, catalog }: { record: MechRecor
       </Disclosure>
 
       <p className="bt-calc__cite">
-        {`Battle Value: ${bookName("TechManual")}, Battle Value v4.1 (replaces pp. 302-314), tables pp. 315-317. Cost: ${bookName("TechManual")}, p. 285, errata v8.0. Pilot skill and OmniMech are not saved with the 'Mech.`}
+        {`Battle Value: ${bookName("TechManual")}, Battle Value v4.1 (replaces pp. 302-314), tables pp. 315-317. Cost: ${bookName("TechManual")}, p. 285, errata v8.0. Pilot skill and OmniMech are not saved with the 'Mech. Play rules it counts, from the play book of this 'Mech's edition: ${playCites(record.editionId)}`}
       </p>
     </section>
   );

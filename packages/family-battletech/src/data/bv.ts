@@ -58,7 +58,9 @@ export const BV_METHOD: Sourced & {
   // Each linked weapon x1.25. Table note E (TechManual p. 317) gives the computer "25 percent of the BV of the weapons it links":
   // the same 25 percent, not a second one. The v4.1 Thunderbolt example (p. 304) counts it once and comes to 2,008.
   targetingComputer: 1.25,
-  // Table note F, TechManual p. 317; errata v8.0 copies the Inner Sphere entry and its note to the Clan table.
+  // Table note F, TechManual p. 317; errata v8.0 copies the Inner Sphere entry and its note to the Clan table. Conflict: Tactical
+  // Operations: Advanced Units and Equipment p. 198 note L says x0.1. Later source: TechManual, errata v8.0 p. 36 (22 August 2024,
+  // after the seventh printing); see CONFLICTS.md in the archive.
   machineGunArray: 0.67,
   baseHeatEfficiency: 6,
   lamHeatEfficiency: 9, // Interstellar Operations: Alternate Eras p. 186
@@ -156,6 +158,8 @@ export const ADVANCED_BV_MODIFIERS: { armor: Record<string, ModifierRow>; struct
     reactive: row(1.5, TO_ARMOR_MODIFIERS),
     "reactive-clan": row(1.5, TO_ARMOR_MODIFIERS),
     "anti-penetrative-ablation": row(1.2, IO_ARMOR_MODIFIERS),
+    // Heat-dissipating 1.05 and ballistic-reinforced 1.2 are this table's (p. 185); the book's equipment table on p. 190 prints 1.1 and 1.5.
+    // Same book and printing (second and third are equal), so no later source: undated, the modifiers table kept; see CONFLICTS.md.
     "heat-dissipating": row(1.05, IO_ARMOR_MODIFIERS),
     "impact-resistant": row(1.0, IO_ARMOR_MODIFIERS),
     "ballistic-reinforced": row(1.2, IO_ARMOR_MODIFIERS),
@@ -486,7 +490,7 @@ export const WEAPON_BV: BvGroup[] = [
       ["x-pulse-laser-small-is", 21], ["x-pulse-laser-medium-is", 71], ["x-pulse-laser-large-is", 178],
       ["hyper-velocity-ac-2-is", 53, 7, { gaussSlots: 1 }], ["hyper-velocity-ac-5-is", 109, 14, { gaussSlots: 1 }], ["hyper-velocity-ac-10-is", 158, 20, { gaussSlots: 1 }],
       // The fluid gun carries Water ammunition unless the design says otherwise, and water does not explode (TO:AUE, Fluid Gun and Flamer/Fluid Gun/Sprayer Ammunition), so its bins are inert.
-      ["fluid-gun-is", 6, 1, { inert: true }], ["heavy-flamer-is", 15, 2], ["improved-heavy-gauss-is", 385, 48, { gauss: true }], ["magshot-is", 15, 2, { gauss: true }],
+      ["fluid-gun-is", 6, 1, { inert: true }], ["heavy-flamer-is", 15, 2], ["improved-heavy-gauss-is", 385, 48, { gauss: true }], /* Ammunition BV 0, not Tactical Operations' 2 (p. 194): later source: TechManual, errata v8.0 p. 35. */ ["magshot-is", 15, 0, { gauss: true }],
       ["silver-bullet-gauss-is", 198, 25, { gauss: true }],
       ["mech-mortar-1-is", 10, 1], ["mech-mortar-2-is", 14, 2], ["mech-mortar-4-is", 26, 3], ["mech-mortar-8-is", 50, 6],
       ["light-rifle-is", 21, 3], ["medium-rifle-is", 51, 6], ["heavy-rifle-is", 91, 11],

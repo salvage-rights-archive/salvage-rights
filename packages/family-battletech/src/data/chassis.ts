@@ -384,6 +384,9 @@ export const ENGINE_TYPES: Sourced & { types: Record<string, EngineType> } = {
       techBase: "clan",
       rulesLevel: "experimental",
       introduced: { clan: 3084 },
+      // Conflict: the Alternate Eras table prints ~2954 for the Clan prototype, and so does this book's own box (p. 121); its cost
+      // table (p. 219) prints 3030P. Later source over Alternate Eras: Tactical Operations, p. 219 (seventh printing, 2024). The two
+      // Tactical Operations entries are one book: undated, the table kept (CONFLICTS.md).
       prototypeYear: 3030,
       cite: { book: TO, page: 120 },
       checked: "page",
@@ -517,7 +520,7 @@ export const COCKPITS: Sourced & { types: Record<string, CockpitType> } = {
     // Era table, printed p.215 for the first two and p.217 for the tripod's; Advanced rules level, the table's Rules Level column). A superheavy
     // 'Mech is 101 to 200 tons and its cockpit weighs 4 tons (5 for the tripod's) and keeps the standard head slots. The app builds no superheavy
     // 'Mech yet: `only` names a body the editor does not offer, so no picker shows these and the rows are data only. The dates are the table's Latest
-    // Intro Date; the Universal Technology Advancement Table prints 3135 (not 2940) for the tripod cockpit, a conflict the book leaves.
+    // Intro Date; the Universal Technology Advancement Table prints 3135 (not 2940) for the tripod cockpit, a conflict the book leaves: one book and printing, so undated, the cost table's 2940 kept (CONFLICTS.md).
     superheavy: { name: "Superheavy", tons: 4, only: "superheavy", tonnage: { min: 101, max: 200 }, techBase: "inner-sphere", rulesLevel: "advanced", availability: [{ from: 3076 }], prototypeYear: 3060, cite: { book: IO, page: 215 }, checked: "page", cockpit: [3], sensors: [2, 5], lifeSupport: [1, 6], rules: "The reinforced cockpit gives the head 4 points of structure and room for 12 armor points. A biped or quad superheavy may add a Command Console; no other cockpit type fits." },
     "superheavy-industrial": { name: "Superheavy Industrial", tons: 4, only: "superheavy", tonnage: { min: 101, max: 200 }, techBase: "inner-sphere", rulesLevel: "advanced", industrial: true, availability: [{ from: 2940 }], prototypeYear: 2905, cite: { book: IO, page: 215 }, checked: "page", cockpit: [3], sensors: [2, 5], lifeSupport: [1, 6], rules: "For superheavy IndustrialMechs." },
     "superheavy-tripod": { name: "Superheavy Tripod", tons: 5, only: "superheavy-tripod", tonnage: { min: 101, max: 200 }, techBase: "inner-sphere", rulesLevel: "advanced", availability: [{ from: 2940 }], cite: { book: IO, page: 217 }, checked: "page", cockpit: [3], sensors: [2, 5], lifeSupport: [1, 6], rules: "Takes the place of the superheavy cockpit and duplicates a Command Console, so a superheavy tripod mounts no separate one." },
@@ -722,6 +725,7 @@ export const ARMOR: Sourced & { basePointsPerTon: number; types: Record<string, 
       slots: 6,
       techBase: "both",
       rulesLevel: "advanced",
+      // Clan 3125 is the rules page (IO:AE p. 82); the book's cost table (p. 215) prints 3126. One book, undated: the rules page kept (CONFLICTS.md).
       introduced: { is: 3123, clan: 3125 },
       prototypeYear: { is: 3111 },
       cite: IO_ARMOR,
@@ -926,7 +930,7 @@ export interface RulesLevelRow {
 }
 export const RULES_LEVELS: RulesLevelRow[] = [
   { id: "introductory", label: "Introductory", description: "3025 technology only: Inner Sphere 'Mechs like those of the Introductory Box Set, with the Succession Wars era's standard equipment.", cite: { book: "Total Warfare", page: 275 }, see: [{ book: "Quick-Strike: Introductory 'Mech Cards", page: 2 }], checked: "page" },
-  { id: "standard", label: "Standard", description: "The tournament-legal rules of Total Warfare and TechManual.", cite: { book: "Total Warfare", page: 10 }, checked: "page" },
+  { id: "standard", label: "Standard", description: "The tournament-legal rules of the core rulebook and TechManual (the rules levels are Total Warfare's; the Core Rulebook has none).", cite: { book: "Total Warfare", page: 10 }, checked: "page" },
   { id: "advanced", label: "Advanced", description: "Mainstream technology beyond the tournament rules, such as Tactical Operations equipment.", cite: { book: "Tactical Operations: Advanced Units and Equipment", page: 87 }, checked: "page" },
   { id: "experimental", label: "Experimental", description: "Technology that has not reached mass production: prototypes, lost technology and rarities.", cite: { book: "Tactical Operations: Advanced Units and Equipment", page: 87 }, checked: "page" },
   { id: "licensed-noncanon", label: "Licensed non-canon", description: "Published under license but not canon, or canon since retconned." },
@@ -1086,7 +1090,7 @@ export const MECH_TYPES: MechTypeRow[] = [
   {
     id: "mech",
     label: "BattleMech",
-    description: "The combat 'Mech of Total Warfare play, built by the BattleMech construction rules.",
+    description: "The combat 'Mech of the core rules' play, built by the BattleMech construction rules.",
     unit: "mech",
     rulesLevel: "introductory", // the Introductory game is BattleMechs of 3025 technology (Total Warfare p.275); IndustrialMechs begin at Standard
     ready: true,

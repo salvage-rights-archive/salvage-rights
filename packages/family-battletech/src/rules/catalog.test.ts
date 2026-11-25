@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_EDITION, EDITIONS } from "../data/editions";
+import { DEFAULT_EDITION, EDITIONS, editionName, newer, playCites } from "../data/editions";
 import { ammoLines, createCatalog, expand, inventoryLines, loadCatalog, type EquipmentGroup } from "./catalog";
 import { bipedRecord, mount } from "./fixtures";
 
@@ -311,10 +311,37 @@ describe("Interstellar Operations: Alternate Eras unit-type columns", () => {
 });
 
 describe("EDITIONS", () => {
-  it("starts with total-warfare, a play book and a construction book", () => {
-    expect(EDITIONS[0]?.id).toBe("total-warfare");
+  it("offers Total Warfare and the Core Rulebook, each with a play book and the one construction book, and defaults to Total Warfare", () => {
+    expect(EDITIONS.map((e) => e.id)).toEqual(["total-warfare", "bcr-tm"]);
     expect(DEFAULT_EDITION).toBe("total-warfare");
-    expect(EDITIONS[0]?.books.map((b) => b.role).sort()).toEqual(["construction", "play"]);
+    for (const edition of EDITIONS) expect(edition.books.map((b) => b.role).sort()).toEqual(["construction", "play"]);
+    expect(EDITIONS.map((e) => e.books.find((b) => b.role === "construction")?.title)).toEqual(["TechManual", "TechManual"]);
     expect(EDITIONS[0]?.unitTypes.find((u) => u.id === "mech")?.ready).toBe(true);
+  });
+
+  it("names the edition on a sheet line and cites its own play book's pages", () => {
+    expect(editionName("bcr-tm")).toBe("Core Rulebook (BCR) / TechManual");
+    expect(playCites("total-warfare")).toContain("Total Warfare (Catalyst Game Labs): weapon figures p. 303-304");
+    expect(playCites("bcr-tm")).toContain("target movement modifier p. 68");
+  });
+
+  it("applies a row's bcr-tm override only under that edition, from the real table", async () => {
+    const catalog = await loadCatalog();
+    expect(catalog.rowFor("lb-10-x-ac-is", "total-warfare")?.type).toBe("DB, C/S/F");
+    expect(catalog.rowFor("lb-10-x-ac-is", "bcr-tm")?.type).toBe("DB, S");
+    expect(catalog.rowFor("lb-10-x-ac-is", "bcr-tm")?.heat).toBe(catalog.rowFor("lb-10-x-ac-is", "total-warfare")?.heat);
+  });
+});
+
+describe("newer: the book whose printing or errata is latest wins a disagreement", () => {
+  it.each([
+    ["TechManual", "Tactical Operations: Advanced Units and Equipment", "TechManual"], // errata 22 Aug 2024 over the 2024-06 printing
+    ["Tactical Operations: Advanced Units and Equipment", "Interstellar Operations: Alternate Eras", "Tactical Operations: Advanced Units and Equipment"],
+    ["Total Warfare", "BattleTech Core Rulebook", "BattleTech Core Rulebook"],
+    ["TechManual", "TechManual", undefined],
+    ["TechManual", "A Book Not Listed", undefined],
+  ])("%s against %s: %s", (a, b, expected) => {
+    expect(newer(a, b)).toBe(expected);
+    expect(newer(b, a)).toBe(expected);
   });
 });

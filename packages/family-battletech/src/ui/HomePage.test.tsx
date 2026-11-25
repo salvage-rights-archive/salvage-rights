@@ -62,9 +62,11 @@ describe("Classic BattleTech home", () => {
     expect(await screen.findByText("No 'Mechs saved yet.")).toBeTruthy();
     expect(screen.getByRole("link", { name: "Import from Mordel" }).getAttribute("href")).toBe("/battletech/classic/import");
     expect(await rawEdition()).toBeUndefined();
-    await user.selectOptions(select, "total-warfare");
+    expect(within(select).getAllByRole("option").map((o) => o.textContent)).toEqual(["Total Warfare / TechManual", "Core Rulebook (BCR) / TechManual"]);
+    await user.selectOptions(select, "bcr-tm");
+    expect(screen.getByText(/^Play: BattleTech Core Rulebook \(Catalyst Game Labs\), 2026, first printing, errata v0\.1 \(10 August 2026\)\. Construction: TechManual/)).toBeTruthy();
     await waitFor(async () => {
-      expect(await rawEdition()).toBe("total-warfare");
+      expect(await rawEdition()).toBe("bcr-tm");
     });
   });
 

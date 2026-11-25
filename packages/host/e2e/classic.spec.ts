@@ -222,9 +222,13 @@ test("build a 50-ton biped, place a medium laser and see Battle Value and cost u
   const form = page.getByRole("form", { name: "Build a new one" });
   await form.getByLabel("Name").fill("Hammer");
   await form.getByLabel("Tonnage").selectOption("50");
+  // Built under the Core Rulebook: the editor header names the edition and the calculator cites that play book.
+  await page.getByLabel("Edition").selectOption("bcr-tm");
   await form.getByRole("button", { name: "Start building" }).click();
+  await expect(page.getByText("Built under: Core Rulebook (BCR) / TechManual")).toBeVisible();
   const rules = page.getByRole("region", { name: "Rules check" });
   const calc = page.getByRole("region", { name: "Battle Value and cost" });
+  await expect(calc).toContainText("BattleTech Core Rulebook (Catalyst Game Labs): weapon figures p. 248-252");
   // The calculator sits directly beneath the rules check.
   const above = await rules.boundingBox();
   const below = await calc.boundingBox();

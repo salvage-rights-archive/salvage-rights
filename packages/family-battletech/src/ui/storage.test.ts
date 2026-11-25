@@ -63,15 +63,15 @@ describe("family storage", () => {
 });
 
 describe("an edition id from an earlier version", () => {
-  it("reads as Total Warfare / TechManual in the setting, a saved 'Mech and a file, and never throws", async () => {
+  it("reads as Core Rulebook (BCR) / TechManual in the setting, a saved 'Mech and a file, and never throws", async () => {
     const storage = await openFamilyStorage();
     await (await openStore("battletech")).set("edition", "core-2026");
-    expect(await storage.getEdition()).toBe("total-warfare");
+    expect(await storage.getEdition()).toBe("bcr-tm");
     const old = bipedRecord({ editionId: "core-2026" });
     await storage.save(old);
-    expect((await storage.get(old.id))?.record?.editionId).toBe("total-warfare");
+    expect((await storage.get(old.id))?.record?.editionId).toBe("bcr-tm");
     const file = fromMechFile(JSON.parse(JSON.stringify(toMechFile(old))));
-    expect(file.ok && file.record.editionId).toBe("total-warfare");
+    expect(file.ok && file.record.editionId).toBe("bcr-tm");
   });
 });
 
