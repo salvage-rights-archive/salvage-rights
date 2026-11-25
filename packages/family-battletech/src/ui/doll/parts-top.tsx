@@ -16,13 +16,13 @@ import {
 
 export type TopPartId =
     | "hull-head" | "hull-center-2" | "hull-center-3" | "hull-center-4" | "hull-flank-2" | "hull-flank-3" | "hull-flank-4"
-    | "hull-aft-center" | "hull-aft-side" | "top-leg";
+    | "hull-aft-center" | "hull-aft-side" | "top-leg" | "star-turret" | "star-ring" | "star-face";
 
 /** Each is drawn around its own origin, which a layout moves to where it goes. */
 export const TOP_PIVOTS: Record<TopPartId, BubblePoint> = {
     "hull-head": [0, 0], "hull-center-2": [0, 0], "hull-center-3": [0, 0], "hull-center-4": [0, 0],
     "hull-flank-2": [0, 0], "hull-flank-3": [0, 0], "hull-flank-4": [0, 0],
-    "hull-aft-center": [0, 0], "hull-aft-side": [0, 0], "top-leg": [0, 0],
+    "hull-aft-center": [0, 0], "hull-aft-side": [0, 0], "top-leg": [0, 0], "star-turret": [0, 0], "star-ring": [0, 0], "star-face": [0, 0],
 };
 
 /** Row pitch down the hull (one leg pair to a row), the gap between the rows' plates, and the width of the outline margin. */
@@ -156,6 +156,63 @@ const topLeg: IPart = aroundPivot([0, 0], {
     ),
 });
 
+// ---- The five-legged 'Mech, a starfish: a turret head at the middle, the center torso as a ring of five plates around it, a
+// face torso on each of the pentagon's five sides, and a leg radiating from each face torso. Drawn pointing at one face
+// (the side facing straight up); a layout turns each copy to its own face. Apothems, from the middle, in layout units.
+
+const TAN36 = Math.tan(36 * Math.PI / 180);
+export const STAR_RING = [48, 110] as const;
+export const STAR_FACE = [118, 206] as const;
+
+/** The trapezoid between two apothems on the face that looks straight up. */
+const faceTrapezoid = (near: number, far: number): Shape =>
+    [[-far * TAN36, -far], [far * TAN36, -far], [near * TAN36, -near], [-near * TAN36, -near]];
+
+const turned = (shape: Shape, degrees: number): Shape => {
+    const c = Math.cos(degrees * Math.PI / 180), s = Math.sin(degrees * Math.PI / 180);
+    return shape.map(([x, y]): BubblePoint => [x * c - y * s, x * s + y * c]);
+};
+
+const TURRET_PLATE: Shape = Array.from({ length: 20 }, (_, i): BubblePoint => [27 * Math.cos(i * Math.PI / 10), 27 * Math.sin(i * Math.PI / 10)]);
+
+const starTurret: IPart = {
+    plates: [TURRET_PLATE],
+    label: [0, 0],
+    draw: (pen, ids) => (
+        <>
+            <circle cx={0} cy={0} r={45} fill={pen.hatchJoints ? `url(#${ids.hatch})` : PAPER} stroke={INK} strokeWidth={round(pen.contour * 0.8)} />
+            <circle cx={0} cy={0} r={37} fill={PAPER} stroke={INK} strokeWidth={pen.contour} />
+            {seams(Array.from({ length: 12 }, (_, i) => {
+                const a = i * Math.PI / 6;
+                return `M ${round(39 * Math.cos(a))},${round(39 * Math.sin(a))} L ${round(44 * Math.cos(a))},${round(44 * Math.sin(a))}`;
+            }), pen)}
+            {plateFace(TURRET_PLATE, pen)}
+            {rivets(TURRET_PLATE, pen)}
+            {pen.panel > 0 ? <path d="M 0,-43 L 5,-36 L -5,-36 Z" fill={INK} stroke={INK} strokeWidth={1} strokeLinejoin="round" /> : null}
+        </>
+    ),
+};
+
+const RING_PLATES: Shape[] = [-36, 36, 108, 180, 252].map((turn) => turned(offsetShape(faceTrapezoid(...STAR_RING), -12), turn));
+
+const starRing: IPart = {
+    plates: RING_PLATES,
+    label: [0, -80],
+    draw: (pen) => (
+        <>
+            {RING_PLATES.map((plate, i) => <React.Fragment key={i}>{slabbed(plate, pen)}</React.Fragment>)}
+        </>
+    ),
+};
+
+const FACE_PLATE: Shape = offsetShape(faceTrapezoid(...STAR_FACE), -14);
+
+const starFace: IPart = {
+    plates: [FACE_PLATE],
+    label: [0, -158],
+    draw: (pen) => slabbed(FACE_PLATE, pen),
+};
+
 export const TOP_PARTS: Record<TopPartId, IPart> = {
     "hull-head": hullHead,
     "hull-center-2": spine(2), "hull-center-3": spine(3), "hull-center-4": spine(4),
@@ -163,10 +220,15 @@ export const TOP_PARTS: Record<TopPartId, IPart> = {
     "hull-aft-center": aftCenter,
     "hull-aft-side": aftSide,
     "top-leg": topLeg,
+    "star-turret": starTurret,
+    "star-ring": starRing,
+    "star-face": starFace,
 };
 
 /** A track unit under a foot seen from above, centered on the foot point and lying along the way the leg runs out of it. */
-export const topPod = ([fx, fy]: BubblePoint, [dx, dy]: BubblePoint): IDecor => {
+export const topPod = ([px, py]: BubblePoint, [dx, dy]: BubblePoint): IDecor => {
+    // Centered a little beyond the foot point, so that it covers the pad and not the shin.
+    const fx = px + dx * 24, fy = py + dy * 24;
     const angle = Math.atan2(-dx, dy) * 180 / Math.PI, length = 104, width = 50, r = width / 2;
     const turn = angle * Math.PI / 180;
     const corners: Shape = ([[-r, -length / 2], [r, -length / 2], [r, length / 2], [-r, length / 2]] as BubblePoint[])

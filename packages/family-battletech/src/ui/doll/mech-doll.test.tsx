@@ -43,7 +43,7 @@ const fullOf = (superheavy: boolean) => {
   const row = superheavy ? { CT: 60, LT: 42, LA: 33, LL: 42 } : structurePoints(bipedRecord({ tons: 100 }));
   const head = superheavy ? { armor: 12, structure: 4 } : { armor: 9, structure: 3 };
   const structure = (loc: string): number =>
-    loc === "hd" ? head.structure : loc === "ct" ? row.CT ?? 0 : loc === "lt" || loc === "rt" ? row.LT ?? 0 : loc === "la" || loc === "ra" ? row.LA ?? 0 : row.LL ?? 0;
+    loc === "hd" ? head.structure : loc === "ct" ? row.CT ?? 0 : loc === "lt" || loc === "rt" || loc === "flt" || loc === "frt" || loc === "at" ? row.LT ?? 0 : loc === "la" || loc === "ra" ? row.LA ?? 0 : row.LL ?? 0;
   const rearOf = (loc: string): number => Math.floor((structure(loc) * 2) / 6);
   const isRear = (loc: string): boolean => loc === "ctr" || loc === "ltr" || loc === "rtr";
   return {

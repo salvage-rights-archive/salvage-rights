@@ -286,22 +286,22 @@ const topLeg = (loc: string, row: number, rows: number, label: string[], transfe
     return { loc, part: "top-leg", at, label, labelAt: [fx - 60, fy - up + 8], labelAnchor: "end", shortHangsFrom: [fx - 56, fy - 18], transfersTo };
 };
 
-/** A hull of `rows` leg pairs, whose legs are `legs` (left, right). The center torso's label stands under the spine (at `ctX`,
- * with a leader up to it) and each flank's above its top plate with a leader down to it; the aft plates start below the
- * lowest foot, so that no leg label meets theirs. */
-const hullLayout = (id: DollLayoutId, rows: 2 | 3 | 4, legs: IDollLocation[], tail: IDollLocation[], ctX = 0): IDollLayout => {
+/** A hull of `rows` leg pairs, whose legs are `legs` (left, right). The three torso labels stand in one row under the hull,
+ * each beneath its own column (left flank, spine, right flank); the aft plates start below the lowest foot, so that no
+ * leg label meets theirs. */
+const hullLayout = (id: DollLayoutId, rows: 2 | 3 | 4, legs: IDollLocation[]): IDollLayout => {
     const hullBottom = HULL_TOP + rows * ROW - 20;
-    const lowestFoot = Math.max(...[...legs, ...tail].map((leg) => placePoint(PARTS["top-leg"].foot ?? [0, 0], leg.at)[1]));
+    const lowestFoot = Math.max(...legs.map((leg) => placePoint(PARTS["top-leg"].foot ?? [0, 0], leg.at)[1]));
     const aftTop = Math.max(hullBottom + 170, lowestFoot + 130);
     const head: IDollLocation = { loc: "hd", part: "hull-head", at: { x: 0, y: HULL_TOP + HEAD_CENTER }, label: ["HEAD"], labelAt: [0, HULL_TOP + HEAD_CENTER - 54], labelAnchor: "middle" };
-    const center: IDollLocation = { loc: "ct", part: `hull-center-${rows}`, at: { x: 0, y: HULL_TOP }, label: ["CENTER", "TORSO"], labelAt: [ctX, hullBottom + 42], labelAnchor: ctX === 0 ? "middle" : "end", shortHangsFrom: [ctX, hullBottom + 24], leader: ctX === 0 ? [[0, hullBottom + 10], [0, hullBottom + 22]] : [[ctX + 12, hullBottom + 22], [ctX + 30, hullBottom + 10]] };
-    const flankLeft: IDollLocation = { loc: "lt", part: `hull-flank-${rows}`, at: { x: 0, y: HULL_TOP }, label: ["LEFT", "TORSO"], labelAt: [-136, HULL_TOP - 88], labelAnchor: "end", shortHangsFrom: [-190, HULL_TOP - 210], leader: [[-121, HULL_TOP - 44], [-121, HULL_TOP - 10]], transfersTo: "ct" };
+    const center: IDollLocation = { loc: "ct", part: `hull-center-${rows}`, at: { x: 0, y: HULL_TOP }, label: ["CENTER", "TORSO", ""], labelAt: [0, hullBottom + 42], labelAnchor: "middle", shortHangsFrom: [0, hullBottom + 22] };
+    const flankLeft: IDollLocation = { loc: "lt", part: `hull-flank-${rows}`, at: { x: 0, y: HULL_TOP }, label: ["LEFT", "TORSO", ""], labelAt: [-121, hullBottom + 42], labelAnchor: "middle", shortHangsFrom: [-150, hullBottom + 22], transfersTo: "ct" };
     const aftSide: IDollLocation = { loc: "ltr", part: "hull-aft-side", at: { x: -158, y: aftTop }, label: ["LEFT TORSO", "(REAR)"], labelAt: [-262, aftTop + 46], labelAnchor: "end" };
     return {
         id,
         view: "top",
         front: [
-            ...tail, ...legs, flankLeft, mirrored(flankLeft, "rt", ["RIGHT", "TORSO"], "ct"), center, head,
+            ...legs, flankLeft, mirrored(flankLeft, "rt", ["RIGHT", "TORSO", ""], "ct"), center, head,
         ],
         rear: [
             aftSide, mirrored(aftSide, "rtr", ["RIGHT TORSO", "(REAR)"]),
@@ -321,19 +321,81 @@ const legPairs = (rows: 2 | 3 | 4, names: [string, string[], string, string[]][]
 const numbered = (rows: 3 | 4): [string, string[], string, string[]][] =>
     Array.from({ length: rows }, (_, i): [string, string[], string, string[]] => [`l${i + 1}`, ["LEFT", `LEG ${i + 1}`], `r${i + 1}`, ["RIGHT", `LEG ${i + 1}`]]);
 
-/** A pentapod: the quad's four legs and a fifth, the tail leg, pointing back from the rear center. */
-const PENTAPOD_TAIL: IDollLocation = (() => {
-    const at: IPlacement = { x: 0, y: HULL_TOP + 2 * ROW - 30, rotate: -90, scale: 0.9 };
-    const [fx, fy] = placePoint(PARTS["top-leg"].foot ?? [0, 0], at);
-    return { loc: "cl", part: "top-leg", at, label: ["CENTER", "LEG"], labelAt: [fx + 64, fy - 12], labelAnchor: "start", shortHangsFrom: [fx + 56, fy - 22], transfersTo: "ct" };
-})();
+// ---- The five-legged 'Mech, a starfish seen from above (the owner's design): a turret head at the middle, the center torso
+// a ring of five plates around it, five face torsos on the sides of the pentagon, and a leg radiating from each face torso.
+// A vertex points forward and a flat side faces aft, so one leg goes straight back and the others are front left, front
+// right, left and right. Each face torso is its own outward face: there are no rear-armor plates. The rules for this body
+// are not in the app yet: each face torso takes the side torso's points and each leg the leg's, and the arrows are
+// provisional (each leg to its own face torso, each face torso to the center torso). Each face torso has 6 critical spaces;
+// the center torso keeps its 12, filled as on any 'Mech, and holds the cockpit as on a tripod; the turret head has 12 spaces;
+// to be worked out further with the owner when its rules are written (owner's design, 2026-11-25).
 
-const PENTAPOD = hullLayout("pentapod", 2, legPairs(2, [
-    ["fll", ["FRONT", "LEFT", "LEG"], "frl", ["FRONT", "RIGHT", "LEG"]],
-    ["rll", ["REAR", "LEFT", "LEG"], "rrl", ["REAR", "RIGHT", "LEG"]],
-]), [PENTAPOD_TAIL], -66);
-const HEXAPOD = hullLayout("hexapod", 3, legPairs(3, numbered(3)), []);
-const OCTOPOD = hullLayout("octopod", 4, legPairs(4, numbered(4)), []);
+const STAR_AT: BubblePoint = [0, 440];
+const STAR_LEG_AT = 216;
+/** Each face: its torso and leg codes, the direction it faces (degrees clockwise from the sheet's +x), which way its torso label
+ * leans along the face (away from the leader lines that go to the head and the center torso), and its names. */
+const STAR_FACES: { torso: string; leg: string; angle: number; lean: 1 | -1; torsoLabel: string[]; legLabel: string[] }[] = [
+    { torso: "flt", leg: "fll", angle: -126, lean: -1, torsoLabel: ["FRONT LEFT", "TORSO"], legLabel: ["FRONT", "LEFT", "LEG"] },
+    { torso: "frt", leg: "frl", angle: -54, lean: 1, torsoLabel: ["FRONT RIGHT", "TORSO"], legLabel: ["FRONT", "RIGHT", "LEG"] },
+    { torso: "rt", leg: "rl", angle: 18, lean: -1, torsoLabel: ["RIGHT", "TORSO"], legLabel: ["RIGHT", "LEG"] },
+    { torso: "at", leg: "al", angle: 90, lean: -1, torsoLabel: ["AFT", "TORSO"], legLabel: ["AFT", "LEG"] },
+    { torso: "lt", leg: "ll", angle: 162, lean: 1, torsoLabel: ["LEFT", "TORSO"], legLabel: ["LEFT", "LEG"] },
+];
+
+/** A point `radius` out from the middle of the star along `angle` degrees. */
+const starPoint = (angle: number, radius: number, across = 0): BubblePoint => {
+    const a = angle * Math.PI / 180;
+    return [STAR_AT[0] + Math.cos(a) * radius - Math.sin(a) * across, STAR_AT[1] + Math.sin(a) * radius + Math.cos(a) * across];
+};
+
+const starLocations = (): IDollLocation[] => {
+    const legs = STAR_FACES.map(({ leg, torso, angle, legLabel }): IDollLocation => {
+        const right = Math.cos(angle * Math.PI / 180) > 0.1 || angle === 90;
+        const [px, py] = starPoint(angle, STAR_LEG_AT);
+        const at: IPlacement = { x: px, y: py, rotate: right ? angle : angle - 180, mirror: right || undefined };
+        const [fx, fy] = placePoint(PARTS["top-leg"].foot ?? [0, 0], at);
+        const nx = Math.cos(angle * Math.PI / 180), ny = Math.sin(angle * Math.PI / 180);
+        const anchor: IDollLocation["labelAnchor"] = nx < -0.3 ? "end" : nx > 0.3 ? "start" : "middle";
+        const x = fx + nx * 64, y = ny > 0.5 ? fy + 76 : fy + ny * 40 - (legLabel.length - 1) * 11;
+        return { loc: leg, part: "top-leg", at, label: legLabel, labelAt: [x, y], labelAnchor: anchor, shortHangsFrom: [fx + nx * 125, ny > 0.5 ? fy + 60 : fy - 14 + ny * 95], transfersTo: torso };
+    });
+    const faces = STAR_FACES.map(({ torso, angle, lean, torsoLabel }): IDollLocation => {
+        const nx = Math.cos(angle * Math.PI / 180), ny = Math.sin(angle * Math.PI / 180);
+        // The label sits just outside the face, beside its leg, on the side away from the head and center torso lines.
+        const reach = 212 + Math.abs(nx) * 70 + Math.abs(ny) * 26 + (torso === "lt" || torso === "rt" ? 130 : 0);
+        const [x, y] = starPoint(angle, reach, lean * 120);
+        // At the record sheet's size the codes are large against the figure: they stand further out.
+        const [sx, sy] = starPoint(angle, reach + 75, lean * 150);
+        return {
+            loc: torso, part: "star-face", at: { x: STAR_AT[0], y: STAR_AT[1], rotate: angle + 90 },
+            label: torsoLabel, labelAt: [x, y - 5], labelAnchor: "middle", shortHangsFrom: [sx, sy - 26], transfersTo: "ct",
+        };
+    });
+    return [...legs, ...faces];
+};
+
+const starPentapod = (): IDollLayout => {
+    const [hx, hy] = starPoint(-90, 330), [cx, cy] = starPoint(126, 340);
+    const turret: IDollLocation = {
+        loc: "hd", part: "star-turret", at: { x: STAR_AT[0], y: STAR_AT[1] }, label: ["HEAD"], labelAt: [hx, hy - 8], labelAnchor: "middle",
+        shortHangsFrom: [hx, hy - 24], leader: [[hx, hy + 6], starPoint(-90, 52)],
+    };
+    const ring: IDollLocation = {
+        loc: "ct", part: "star-ring", at: { x: STAR_AT[0], y: STAR_AT[1] }, label: ["CENTER", "TORSO"], labelAt: [cx, cy - 5], labelAnchor: "middle",
+        shortHangsFrom: [cx, cy - 26], leader: [starPoint(126, 305), starPoint(126, 136)],
+    };
+    return {
+        id: "pentapod",
+        view: "top",
+        front: [...starLocations(), ring, turret],
+        rear: [],
+        guide: { armor: "M 0,60 L 0,900", other: "M 0,60 L 0,900", cross: "" },
+    };
+};
+
+const PENTAPOD = starPentapod();
+const HEXAPOD = hullLayout("hexapod", 3, legPairs(3, numbered(3)));
+const OCTOPOD = hullLayout("octopod", 4, legPairs(4, numbered(4)));
 
 /** The same figure at a smaller scale, for the very small 'Mechs: every part, position and label moved in by `k`, the
  * labels' type with them, so that a given bubble is larger against the figure. */
@@ -369,13 +431,17 @@ const RECORD_OF: Record<string, { code: LocationCode; rear: boolean }> = {
     ctr: { code: "CT", rear: true }, ltr: { code: "LT", rear: true }, rtr: { code: "RT", rear: true },
 };
 
+const STAR_NAMES: Record<string, string> = { flt: "Front Left Torso", frt: "Front Right Torso", at: "Aft Torso", al: "Aft Leg" };
+
 /** A doll location's display name, from the record's own names; the rear torsos add "(Rear)". */
 export const dollLocationName = (loc: string): string => {
     const at = Object.hasOwn(RECORD_OF, loc) ? RECORD_OF[loc] : undefined;
     if (at) return `${locationName(at.code)}${at.rear ? " (Rear)" : ""}`;
     // The legs of a hexapod or octopod are numbered from the front; these are doll codes only, with no record location yet.
     const numbered = /^([lr])([1-4])$/.exec(loc);
-    return numbered ? `${numbered[1] === "l" ? "Left" : "Right"} Leg ${numbered[2]}` : loc;
+    if (numbered) return `${numbered[1] === "l" ? "Left" : "Right"} Leg ${numbered[2]}`;
+    // The five-legged body's face torsos and aft leg are doll codes only too.
+    return STAR_NAMES[loc] ?? loc;
 };
 
 /** The layout each configuration draws with; none is drawn for the rest yet. */
