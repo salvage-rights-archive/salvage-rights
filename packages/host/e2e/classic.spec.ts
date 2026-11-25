@@ -115,7 +115,8 @@ test("build a Land-Air 'Mech through the form and see its rules level, conversio
   await expect(rules.getByText("Interstellar Operations: Alternate Eras (Catalyst Game Labs), p. 100")).toBeVisible();
   await expect(page.getByRole("list", { name: "Center Torso slots" }).getByText("Landing Gear")).toBeVisible();
   await expect(page.getByRole("list", { name: "Head slots" }).getByText("Avionics")).toBeVisible();
-  await expect(page.getByText("Conversion equipment").first()).toBeVisible();
+  // 5 structure, 5 conversion equipment, 10 engine, 3 gyro, 3 cockpit and 10 heat sinks' share: the parts add up to 36 tons.
+  await expect(page.getByText("36 of 50 tons")).toBeVisible();
 });
 
 test("the home, import and editor pages do not scroll sideways at 320 px wide", async ({ page }) => {
