@@ -74,6 +74,8 @@ export interface OmniLink {
   isBase?: true;
   /** The heat sinks the base carries; the engine's critical-free ones are the lesser of this and its rating divided by 25 (TechManual p.54). */
   baseHeatSinks: number;
+  /** The base's sinks of each further kind on a mixed chassis (parallel to `chassis.heatSinks.extra`); pods may add more of those kinds. */
+  baseExtraHeatSinks?: number[];
   /** Which mounts are fixed equipment of the base; every other mount is a pod item. */
   baseMountIds: string[];
 }
@@ -105,7 +107,9 @@ export interface MechRecord {
     structure: string;
     armorType: string;
     myomer: string;
-    heatSinks: { type: string; count: number };
+    /** `type` and `count` are the main kind and hold the engine's free sinks. `extra` lists further kinds (an Inner Sphere double with a
+     * Clan double on a mixed technology record; other mixes only where `heatSinkMixAllowed` says); none of their sinks is engine-integral. */
+    heatSinks: { type: string; count: number; extra?: { type: string; count: number }[] };
   };
   armor: Partial<Record<LocationCode, { front: number; rear?: number }>>;
   /** Which arm actuators a biped's arm has. Absent (or an arm absent from it) means the lower arm and the hand are both there. */
@@ -179,6 +183,9 @@ export function freeHeatSinks(record: Pick<MechRecord, "unitType" | "chassis">):
   const free = industrialRulesOf(record)?.freeHeatSinks;
   return free === undefined ? HEAT_SINK_RULES.freeWithEngine : (own(free, record.chassis.engine.type) ?? HEAT_SINK_RULES.freeWithEngine);
 }
+
+/** Every heat sink on the chassis, both kinds: the number that dissipates heat and counts for Battle Value. */
+export const totalHeatSinks = (heatSinks: MechRecord["chassis"]["heatSinks"]): number => heatSinks.count + (heatSinks.extra ?? []).reduce((n, g) => n + g.count, 0);
 
 /** The configuration's row in the chassis tables, or undefined for a body type we have no layout for. */
 export function configurationOf(name: string): ConfigurationRow | undefined {
@@ -409,7 +416,10 @@ export function weights(record: MechRecord, factsOf: FactsOf): { lines: WeightLi
   lines.push({ label: "Cockpit", tons: own(COCKPITS.types, chassis.cockpit)?.tons ?? null });
 
   const extraSinks = Math.max(0, chassis.heatSinks.count - freeHeatSinks(record));
-  lines.push({ label: "Heat sinks", tons: Number.isFinite(extraSinks) ? extraSinks * (own(HEAT_SINKS.types, chassis.heatSinks.type)?.tonsEach ?? HEAT_SINK_RULES.tonsEach) : null });
+  const tonsEach = (type: string) => own(HEAT_SINKS.types, type)?.tonsEach ?? HEAT_SINK_RULES.tonsEach;
+  // The further kinds of a mixed record are never integral to the engine, so every one of their sinks weighs.
+  const sinkTons = (chassis.heatSinks.extra ?? []).reduce((sum, g) => sum + g.count * tonsEach(g.type), extraSinks * tonsEach(chassis.heatSinks.type));
+  lines.push({ label: "Heat sinks", tons: Number.isFinite(sinkTons) ? sinkTons : null });
 
   const armorType = own(ARMOR.types, chassis.armorType);
   const points = Object.values(record.armor).reduce((sum, a) => sum + (a ? a.front + (a.rear ?? 0) : 0), 0);

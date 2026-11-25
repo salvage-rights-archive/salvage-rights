@@ -24,7 +24,7 @@ import {
 import type { Cite, PartFacts, Span } from "../data/chassis";
 import { configurationInTime, equipmentPhase, eraOfRecord, eraOfYear, partPhase, partSpans, typeInTime, windowOf } from "./availability";
 import { locationsFor, mountableOn, mountsRequired, podMountable } from "./catalog";
-import { levelAtLeast, levelIn, levelItems, levelRow, mixedPhase } from "./levels";
+import { heatSinkMixAllowed, levelAtLeast, levelIn, levelItems, levelRow, mixedPhase } from "./levels";
 import { datesText, partIsPrototypeOnly, partPrototype } from "./time";
 import type { Catalog, EquipmentRow } from "./catalog";
 import { ARM_FULL, armorSpread, armsOf, configurationOf, engineTons, freeHeatSinks, industrialRulesOf, layout as buildLayout, maxArmor, mechTypeOf, walkMP, weights } from "./mech";
@@ -108,7 +108,7 @@ const gunSize = (id: string | null) => /^(light|heavy)-/.exec(id ?? "")?.[1] ?? 
 function podTons(record: MechRecord, catalog: Catalog): { pods: number; space: number } | undefined {
   if (!record.omni) return undefined;
   const fixed = new Set(record.omni.baseMountIds);
-  const base: MechRecord = { ...record, mounts: record.mounts.filter((m) => fixed.has(m.id)), chassis: { ...record.chassis, heatSinks: { ...record.chassis.heatSinks, count: record.omni.baseHeatSinks } } };
+  const base: MechRecord = { ...record, mounts: record.mounts.filter((m) => fixed.has(m.id)), chassis: { ...record.chassis, heatSinks: { ...record.chassis.heatSinks, count: record.omni.baseHeatSinks, ...(record.chassis.heatSinks.extra ? { extra: record.chassis.heatSinks.extra.map((g, i) => ({ ...g, count: record.omni?.baseExtraHeatSinks?.[i] ?? 0 })) } : {}) } } };
   const all = weights(record, catalog.factsOf).total;
   const own = weights(base, catalog.factsOf).total;
   return all === null || own === null ? undefined : { pods: tidy(all - own), space: tidy(record.tons - own) };
@@ -300,12 +300,37 @@ function engineCheck({ record }: CheckInput): Finding[] {
 
 function heatSinkCheck({ record, catalog }: CheckInput): Finding[] {
   const out: Finding[] = [];
-  const { type, count } = record.chassis.heatSinks;
+  const { type, count, extra } = record.chassis.heatSinks;
   const where = { field: "chassis.heatSinks" };
   const cite = HEAT_SINK_RULES.cite;
   if (!isCount(count)) {
     return [finding("heat-sinks", "error", `The heat sink count is ${num(count)}; it must be a whole number, zero or more.`, { where, cite })];
   }
+  // The standard rule is one heat sink type per 'Mech (TechManual p.53). The owner ruled (2026-11-25) that an Inner Sphere and a Clan double may
+  // share a mixed technology 'Mech (TO:AUE p.189 leaves the mix to the players' judgment; mixed technology is itself Advanced, so the level
+  // check asks for that), and that any other mix needs a FrankenMech or Fan-made rules or higher. heatSinkMixAllowed answers for every pair.
+  const groups = [{ type, count }, ...(extra ?? [])];
+  for (const [index, group] of (extra ?? []).entries()) {
+    if (!isCount(group.count)) {
+      out.push(finding("heat-sinks", "error", `The extra heat sink group ${index + 1} has ${num(group.count)} sinks; it must be a whole number, zero or more.`, { where, cite }));
+    }
+  }
+  groups.forEach((a, i) => {
+    groups.slice(i + 1).forEach((b) => {
+      if (heatSinkMixAllowed(record, a.type, b.type)) return;
+      // Compact and laser sinks (the rows with a page of their own) keep their own rule against mixing; the rest fall to the one-type rule.
+      const barred = [a.type, b.type].map((t) => (own(HEAT_SINKS.types, t) ? HEAT_SINKS.types[t] : undefined)).find((t) => t?.cite !== undefined);
+      const doubles = [a.type, b.type].every((t) => HEAT_SINK_RULES.mixable.includes(t)) && a.type !== b.type;
+      const why = a.type === b.type ? "are listed twice; give the sinks of one type a single count" : doubles ? "may be mixed only on a mixed technology 'Mech" : "may be mixed only on a FrankenMech or at Fan-made rules or higher";
+      out.push(finding("heat-sinks", "error", `${partName(HEAT_SINKS, a.type)} and ${partName(HEAT_SINKS, b.type)} heat sinks ${why}; the standard rules allow one type.`, { where, cite: barred?.cite ?? cite }));
+    });
+  });
+  const allowed = groups.map((g) => g.type);
+  const extraCount = (extra ?? []).reduce((n, g) => n + (isCount(g.count) ? g.count : 0), 0);
+  const sinksOf = (m: Mount): number => {
+    const row = rowOf(catalog, record, m);
+    return row ? (HEAT_SINKS.types[heatSinkTypeOf(row)]?.perMount ?? 1) : 1;
+  };
   const free = freeHeatSinks(record);
   if (count < free) {
     out.push(finding("heat-sinks", "error", `The chassis has ${count} heat sinks; a 'Mech has at least the ${free} heat sinks its engine provides.`, { where, cite: industrialRulesOf(record)?.cites.heatSinks ?? cite }));
@@ -315,32 +340,38 @@ function heatSinkCheck({ record, catalog }: CheckInput): Finding[] {
   if (isPositive(rating)) {
     // An OmniMech's engine holds only the base's sinks critical-free: every sink a configuration adds takes slots (TechManual p.54).
     const held = Math.min(record.omni ? record.omni.baseHeatSinks : count, count, Math.floor(rating / HEAT_SINK_RULES.ratingPerHeldSink));
-    const placed = sinks.reduce((n, m) => {
-      const row = rowOf(catalog, record, m);
-      return n + (row ? (HEAT_SINKS.types[heatSinkTypeOf(row)]?.perMount ?? 1) : 1);
-    }, 0);
-    if (placed + held !== count) {
+    const placed = sinks.reduce((n, m) => n + sinksOf(m), 0);
+    if (placed + held !== count + extraCount) {
       const podSinks = record.omni ? sinks.filter((m) => m.pod).length : 0;
       const omni = podSinks > 0 ? ` The base's sinks are the only ones the engine holds; the ${podSinks} pod heat ${podSinks === 1 ? "sink" : "sinks"} all take slots.` : "";
       out.push(
-        finding(omni ? "omni-heat-sink-slots" : "heat-sinks", "error", `${placed} heat sinks are placed and the engine can hold ${held}, which makes ${placed + held}; the chassis lists ${count}.${omni}`, { where, cite }),
+        finding(omni ? "omni-heat-sink-slots" : "heat-sinks", "error", `${placed} heat sinks are placed and the engine can hold ${held}, which makes ${placed + held}; the chassis lists ${count + extraCount}.${omni}`, { where, cite }),
       );
+    } else {
+      // The totals agree; each further kind must still be the sinks placed of its own type, since none of them come with the engine.
+      for (const group of extra ?? []) {
+        if (!isCount(group.count)) continue;
+        const ofKind = sinks.reduce((n, m) => {
+          const row = rowOf(catalog, record, m);
+          return row !== undefined && heatSinkTypeOf(row) === group.type ? n + sinksOf(m) : n;
+        }, 0);
+        if (ofKind !== group.count) {
+          out.push(finding("heat-sinks", "error", `The chassis lists ${group.count} ${partName(HEAT_SINKS, group.type)} heat sinks, none held by the engine, but ${ofKind} are placed.`, { where, cite }));
+        }
+      }
     }
   }
   if (own(HEAT_SINKS.types, type)) {
-    // The book allows one heat sink type per 'Mech, free engine sinks included, so a mismatch is an error.
+    // The standard rule is one heat sink type per 'Mech, free engine sinks included, so a mismatch is an error; a mixed record's second group is the other kind.
+    const names = allowed.map((t) => partName(HEAT_SINKS, t)).join(" and ");
     for (const m of sinks) {
       const row = rowOf(catalog, record, m);
       const kind = row ? heatSinkTypeOf(row) : type;
-      if (kind !== type && m.pod) {
-        out.push(finding("omni-heat-sink-type", "error", `Pod heat sink ${m.name} is a ${partName(HEAT_SINKS, kind)} sink; this OmniMech's sinks are ${partName(HEAT_SINKS, type)}, and a 'Mech carries one type.`, { where: { mountId: m.id }, cite }));
-      } else if (kind !== type) {
-        out.push(
-          finding("heat-sinks", "error", `${m.name} is a ${partName(HEAT_SINKS, kind)} heat sink, but the chassis uses ${partName(HEAT_SINKS, type)}; a 'Mech carries one heat sink type only.`, {
-            where: { mountId: m.id },
-            cite,
-          }),
-        );
+      if (allowed.includes(kind)) continue;
+      if (m.pod) {
+        out.push(finding("omni-heat-sink-type", "error", `Pod heat sink ${m.name} is a ${partName(HEAT_SINKS, kind)} sink; this OmniMech's sinks are ${names}, and a 'Mech carries one type.`, { where: { mountId: m.id }, cite }));
+      } else {
+        out.push(finding("heat-sinks", "error", `${m.name} is a ${partName(HEAT_SINKS, kind)} heat sink, but the chassis uses ${names}; a 'Mech carries one heat sink type only.`, { where: { mountId: m.id }, cite }));
       }
     }
   }
@@ -556,6 +587,7 @@ function unmatchedCheck({ record, catalog }: CheckInput): Finding[] {
     ["myomer", chassis.myomer, MYOMER.types, "chassis.myomer"],
     ["heat sink type", chassis.heatSinks.type, HEAT_SINKS.types, "chassis.heatSinks"],
   ];
+  for (const group of chassis.heatSinks.extra ?? []) parts.push(["extra heat sink type", group.type, HEAT_SINKS.types, "chassis.heatSinks"]);
   for (const [label, key, table, field] of parts) {
     if (!own(table, key)) {
       out.push(finding("unmatched", "note", `The ${label} ${quoted(key)} is not in our tables, so what depends on it is not checked.`, { where: { field } }));
@@ -682,6 +714,7 @@ function partsCheck({ record, catalog }: CheckInput): Finding[] {
     ["heat sink", HEAT_SINKS, chassis.heatSinks.type, "chassis.heatSinks"],
     ["myomer", MYOMER, chassis.myomer, "chassis.myomer"],
   ];
+  for (const group of chassis.heatSinks.extra ?? []) parts.push(["heat sink", HEAT_SINKS, group.type, "chassis.heatSinks"]);
   for (const [what, table, key, field] of parts) {
     const part = own(table.types, key) ? table.types[key] : undefined;
     if (!part) continue;
@@ -809,6 +842,7 @@ function unitTypeCheck({ record, catalog }: CheckInput): Finding[] {
     ["myomer", MYOMER, chassis.myomer, rules.parts.myomer, "chassis.myomer", rules.cites.myomer],
     ["armor", ARMOR, chassis.armorType, rules.parts.armor, "chassis.armorType", rules.cites.armor, rules.armorNames],
   ];
+  for (const group of chassis.heatSinks.extra ?? []) parts.push(["heat sink", HEAT_SINKS, group.type, rules.parts.heatSink, "chassis.heatSinks", rules.cites.heatSinks]);
   for (const [what, table, key, allowed, field, cite, renamed] of parts) {
     if (own(table.types, key) && !allowed.includes(key)) {
       const name = renamed !== undefined && own(renamed, key) ? (renamed[key] ?? key) : partName(table, key);

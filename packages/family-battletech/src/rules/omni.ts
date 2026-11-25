@@ -75,6 +75,13 @@ const SINK = /^(?:double-|compact-|laser-)?heat-sink-(?:is|clan)$/;
 /** How many heat sinks a mount stands for: one, two for a compact one (two to a slot), none for anything else. */
 export const sinksIn = (mount: Pick<Mount, "equipmentId">): number => (mount.equipmentId !== null && SINK.test(mount.equipmentId) ? (mount.equipmentId.startsWith("compact-") ? 2 : 1) : 0);
 
+/** The heat sinks a set of pod mounts adds, split between the chassis's main kind and each of its further kinds (a mixed chassis). */
+function podSinkSplit(mounts: Pick<Mount, "equipmentId">[], extra: { type: string }[] | undefined): { main: number; extra: number[] } {
+  const typeOf = (id: string | null) => (id?.startsWith("double-") ? (id.endsWith("-clan") ? "double-clan" : "double") : id?.startsWith("compact-") ? "compact" : id?.startsWith("laser-") ? "laser" : "single");
+  const more = (extra ?? []).map((g) => mounts.reduce((n, m) => n + (typeOf(m.equipmentId) === g.type ? sinksIn(m) : 0), 0));
+  return { main: mounts.reduce((n, m) => n + sinksIn(m), 0) - more.reduce((a, b) => a + b, 0), extra: more };
+}
+
 const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
 
 /** The model line of a configuration: its code, then its name. */
@@ -83,8 +90,10 @@ export const configurationTitle = (c: Pick<OmniConfiguration, "code" | "name">) 
 function build(chassis: OmniChassis, configuration: OmniConfiguration | undefined): MechRecord {
   const pods = (configuration?.mounts ?? []).map((m): Mount => ({ ...structuredClone(m), pod: true }));
   const fixed = chassis.base.mounts.map((m) => structuredClone(m));
-  const podSinks = pods.reduce((n, m) => n + sinksIn(m), 0);
   const base = chassis.base.chassis;
+  const podSinks = podSinkSplit(pods, base.heatSinks.extra);
+  const heatSinks: MechRecord["chassis"]["heatSinks"] = { ...structuredClone(base.heatSinks), count: base.heatSinks.count + podSinks.main };
+  heatSinks.extra?.forEach((g, i) => void (g.count += podSinks.extra[i] ?? 0));
   const record: MechRecord = {
     schema: 1,
     id: `${chassis.id}:${configuration?.id ?? BASE}`,
@@ -94,10 +103,10 @@ function build(chassis: OmniChassis, configuration: OmniConfiguration | undefine
     year: configuration && configuration.year !== undefined ? configuration.year : chassis.year,
     rulesLevel: configuration?.rulesLevel ?? chassis.rulesLevel,
     unitType: "omnimech",
-    omni: { chassisId: chassis.id, configurationId: configuration?.id ?? BASE, code: configuration?.code ?? "Base", baseHeatSinks: base.heatSinks.count, baseMountIds: fixed.map((m) => m.id) },
+    omni: { chassisId: chassis.id, configurationId: configuration?.id ?? BASE, code: configuration?.code ?? "Base", baseHeatSinks: base.heatSinks.count, ...(base.heatSinks.extra ? { baseExtraHeatSinks: base.heatSinks.extra.map((g) => g.count) } : {}), baseMountIds: fixed.map((m) => m.id) },
     tons: chassis.tons,
     configuration: chassis.body,
-    chassis: { ...structuredClone(base), heatSinks: { ...base.heatSinks, count: base.heatSinks.count + podSinks } },
+    chassis: { ...structuredClone(base), heatSinks },
     armor: structuredClone(chassis.base.armor),
     mounts: [...fixed, ...pods],
     notes: structuredClone(configuration?.notes ?? chassis.notes),
@@ -346,7 +355,9 @@ export function splitRecord(record: MechRecord, fixedMountIds: string[], newId: 
   const fixed = new Set(fixedMountIds);
   const isFixed = (m: Mount) => m.part !== undefined || fixed.has(m.id);
   const pods = record.mounts.filter((m) => !isFixed(m));
-  const podSinks = pods.reduce((n, m) => n + sinksIn(m), 0);
+  const podSinks = podSinkSplit(pods, record.chassis.heatSinks.extra);
+  const baseSinks: MechRecord["chassis"]["heatSinks"] = { ...structuredClone(record.chassis.heatSinks), count: Math.max(0, record.chassis.heatSinks.count - podSinks.main) };
+  baseSinks.extra?.forEach((g, i) => void (g.count = Math.max(0, g.count - (podSinks.extra[i] ?? 0))));
   const prime: OmniConfiguration = { id: newId(), code: "Prime", mounts: pods.map(stripPod) };
   if (record.name.model.trim()) prime.name = record.name.model.trim();
   if (record.arms) prime.arms = structuredClone(record.arms);
@@ -361,7 +372,7 @@ export function splitRecord(record: MechRecord, fixedMountIds: string[], newId: 
     tons: record.tons,
     body: record.configuration,
     base: {
-      chassis: { ...structuredClone(record.chassis), heatSinks: { ...record.chassis.heatSinks, count: Math.max(0, record.chassis.heatSinks.count - podSinks) } },
+      chassis: { ...structuredClone(record.chassis), heatSinks: baseSinks },
       armor: structuredClone(record.armor),
       mounts: record.mounts.filter(isFixed).map(stripPod),
     },

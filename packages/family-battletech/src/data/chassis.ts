@@ -545,12 +545,16 @@ export const HEAT_SINK_RULES: Sourced & {
   freeWithEngine: number;
   tonsEach: number;
   ratingPerHeldSink: number; // read by the checks (Task 3), not by layout or weights
+  /** The two types a mixed technology record may carry together (the owner's ruling of 2026-11-25 under TO:AUE p.189; the standard rule of
+   * TechManual p.53 is one type per 'Mech). Compact and laser sinks keep their own "may not be mixed" rule (TO:AUE p.217). */
+  mixable: [string, string];
 } = {
   cite: { book: "TechManual", page: 53 },
-  checked: "text",
+  checked: "page",
   freeWithEngine: 10,
   tonsEach: 1,
   ratingPerHeldSink: 25,
+  mixable: ["double", "double-clan"],
 };
 export const HEAT_SINKS: Sourced & { types: Record<string, HeatSinkType> } = {
   cite: { book: "TechManual", page: 54 },

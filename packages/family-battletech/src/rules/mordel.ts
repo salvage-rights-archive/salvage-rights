@@ -3,7 +3,7 @@
 // present with the wrong type is skipped with a note, and nothing here throws whatever it is given. Mordel's own words
 // for chassis parts are mapped to our table keys by the small tables below; a word that is not in a table is stored as
 // Mordel wrote it, with a note, and the checks report it as unknown. Nothing is guessed.
-import { ARMOR, MYOMER, STRUCTURE_TYPES } from "../data/chassis";
+import { ARMOR, HEAT_SINK_RULES, MYOMER, STRUCTURE_TYPES } from "../data/chassis";
 import type { MechType } from "../data/chassis";
 import type { Catalog, EquipmentRow } from "./catalog";
 import { levelAtLeast, lowestLevelFor } from "./levels";
@@ -385,6 +385,28 @@ function convert(response: unknown, catalog: Catalog, editionId: string, now: st
     const mount = mounts.find((m) => m.id === mountId);
     if (mount && to && to !== mountId) mount.linkedTo = to;
     else note(`${mount?.name ?? "An item"} is associated with item ${target}, which is not in the equipment list.`);
+  }
+
+  // A mixed unit may list both kinds of double heat sink: the section names the main kind, and the other kind's sinks in the equipment
+  // list become the second group (the owner's ruling of 2026-11-25). Whether the section's count is the total or the main kind alone is read
+  // from the placed sinks: the engine holds floor(rating / 25) of them, and the rest are listed.
+  const doubles = (type: string) => (type === "double" ? "double-heat-sink-is" : "double-heat-sink-clan");
+  const mainType = chassis.heatSinks.type;
+  const otherType = mainType === "double" ? "double-clan" : mainType === "double-clan" ? "double" : undefined;
+  if (isMixed && otherType !== undefined) {
+    const listed = (id: string) => mounts.filter((m) => m.equipmentId === id).length;
+    const others = listed(doubles(otherType));
+    if (others > 0) {
+      const held = Math.min(chassis.heatSinks.count, Math.floor(chassis.engine.rating / HEAT_SINK_RULES.ratingPerHeldSink));
+      const asked = chassis.heatSinks.count;
+      const listedMain = held + listed(doubles(mainType));
+      chassis.heatSinks.extra = [{ type: otherType, count: others }];
+      if (asked !== listedMain) {
+        // The count is the total of both kinds (or does not add up; the total is what we read it as).
+        chassis.heatSinks.count = Math.max(0, asked - others);
+        if (asked !== listedMain + others) note("Mordel's heat sink count does not match the heat sinks it lists; it is read as the total of both kinds.");
+      }
+    }
   }
 
   if (advancedFireControl) {

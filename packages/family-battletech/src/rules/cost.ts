@@ -195,6 +195,14 @@ export function unitCost(record: MechRecord, catalog: Catalog, options: CostOpti
     const paid = Math.max(0, chassis.heatSinks.count - free);
     add(structural, `Heat sinks (${chassis.heatSinks.type}, ${paid} paid for)`, heatSinkCost(sinks.each, free, chassis.heatSinks.count), `${money(sinks.each)} x ${paid}`, HEAT_SINK_COST);
   } else skip(`Heat sinks "${chassis.heatSinks.type}"`, "the cost table has no such heat sink");
+  // The second kind of a mixed record is priced at its own figure, and none of its sinks come free with the engine.
+  for (const group of chassis.heatSinks.extra ?? []) {
+    const row = own(HEAT_SINK_COST.rows, group.type);
+    if (row && Number.isFinite(group.count)) {
+      if (row.assumed) assume(`Heat sinks "${group.type}"`);
+      add(structural, `Heat sinks (${group.type}, ${group.count} paid for)`, row.each * group.count, `${money(row.each)} x ${group.count}`, HEAT_SINK_COST);
+    } else skip(`Heat sinks "${group.type}"`, "the cost table has no such heat sink");
+  }
 
   // Armor
   const armor = own(ARMOR_COST.rows, chassis.armorType);
