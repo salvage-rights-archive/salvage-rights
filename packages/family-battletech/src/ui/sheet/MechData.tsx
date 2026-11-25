@@ -15,6 +15,9 @@ const SIZES: { pitch: number; size: number }[] = [
   { pitch: 20.5, size: MIN_SIZE },
 ];
 
+/** What a mode line of a multi-mode launcher starts with: two no-break spaces, which an SVG text keeps. */
+const SUB_INDENT = String.fromCodePoint(160).repeat(2);
+
 /** Columns of the inventory: where each is, in units from the left edge of the frame, and how wide its text may be. */
 const COLUMNS = {
   qty: { at: 36, anchor: "middle" as const },
@@ -70,15 +73,15 @@ function Inventory({ x, top, bottom, lines }: { x: number; top: number; bottom: 
         };
         return (
           <g key={index} data-line="">
-            {cell("qty", String(line.qty))}
-            {cell("type", line.name)}
-            {cell("loc", line.location)}
-            {cell("ht", line.heat)}
-            {cell("dmg", line.damage)}
-            {cell("min", line.min)}
-            {cell("sht", line.short)}
-            {cell("med", line.medium)}
-            {cell("lng", line.long)}
+            {!line.sub && cell("qty", String(line.qty))}
+            {cell("type", line.sub ? `${SUB_INDENT}${line.name}` : line.name)}
+            {!line.sub && cell("loc", line.location)}
+            {!line.sub && cell("ht", line.heat)}
+            {line.damage !== "" && cell("dmg", line.damage)}
+            {line.min !== "" && cell("min", line.min)}
+            {line.short !== "" && cell("sht", line.short)}
+            {line.medium !== "" && cell("med", line.medium)}
+            {line.long !== "" && cell("lng", line.long)}
           </g>
         );
       })}

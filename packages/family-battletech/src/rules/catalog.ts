@@ -84,6 +84,12 @@ export interface EquipmentRow {
   range?: [min: number, short: number, medium: number, long: number];
   /** Ammunition only: the shots one ton carries (the Ammo per Ton column of the weapons table). */
   shotsPerTon?: number;
+  /** Special munitions only: the launcher families the munition fits. A ton of it carries the shots a ton of that launcher's standard
+   * ammunition does (Total Warfare p. 140: all of the slot's shots go to the special munition, except the half-count ones, which are
+   * autocannon rounds), so it has no `shotsPerTon` of its own; see `ammoLines`. */
+  feeds?: ("lrm" | "srm" | "mml")[];
+  /** A multi-mode launcher (MML) only: what each mode fires, as its own line under the weapon on the record sheet. `range` is as above. */
+  modes?: { name: string; damage: string; range: [min: number, short: number, medium: number, long: number] }[];
   /** The page the play figures came from, when it is not `cite`. */
   playCite?: { book: string; page: number };
   /** Conventional infantry weapons only: the per-trooper figures (see InfantryStats). */
@@ -169,6 +175,7 @@ export function expand(groups: EquipmentGroup[]): EquipmentRow[] {
         }
       }
       if (row.shotsPerTon !== undefined && !(Number.isInteger(row.shotsPerTon) && row.shotsPerTon > 0)) bad("shotsPerTon is not a whole number above zero");
+      if (row.feeds !== undefined && row.shotsPerTon !== undefined) bad("a special munition takes its launcher's shots, so it has no shotsPerTon");
       rows.push(row);
     }
   }
@@ -297,6 +304,8 @@ export interface InventoryLine {
   short: string;
   medium: string;
   long: string;
+  /** True for a line under the weapon above it: one mode of a multi-mode launcher, which has only a name, damage and ranges. */
+  sub?: true;
 }
 
 const DASH = "—";
@@ -329,38 +338,75 @@ export function inventoryLines(record: MechRecord, catalog: Catalog): InventoryL
   }
   return [...groups.values()]
     .sort((a, b) => locationRank(record, a.location) - locationRank(record, b.location) || a.name.localeCompare(b.name))
-    .map(({ qty, name, location, row }) => {
-      const range = row?.range;
-      return {
-        qty,
-        name,
-        location: location ?? DASH,
-        heat: row?.heat === undefined ? DASH : String(row.heat),
-        damage: row?.damage ?? DASH,
+    .flatMap(({ qty, name, location, row }): InventoryLine[] => {
+      const bands = (range: EquipmentRow["range"]) => ({
         min: range === undefined || range[0] === 0 ? DASH : String(range[0]),
         short: range === undefined || range[1] === 0 ? DASH : String(range[1]),
         medium: range === undefined || range[2] === 0 ? DASH : String(range[2]),
         long: range === undefined || range[3] === 0 ? DASH : String(range[3]),
-      };
+      });
+      const modes = row?.modes;
+      // A multi-mode launcher prints its name and heat, then one line per mode with that mode's damage and ranges.
+      const first: InventoryLine = modes
+        ? { qty, name, location: location ?? DASH, heat: row?.heat === undefined ? DASH : String(row.heat), damage: "", min: "", short: "", medium: "", long: "" }
+        : { qty, name, location: location ?? DASH, heat: row?.heat === undefined ? DASH : String(row.heat), damage: row?.damage ?? DASH, ...bands(row?.range) };
+      return [first, ...(modes ?? []).map((m): InventoryLine => ({ qty: 0, name: m.name, location: "", heat: "", damage: m.damage, ...bands(m.range), sub: true }))];
     });
 }
 
+export interface AmmoLine {
+  name: string;
+  shots: number | null;
+  /** A special munition that more than one launcher on the unit could fire, with the shots the bin carries for each; `shots` is null then. */
+  choices?: { launcher: string; shots: number }[];
+}
+
 /** One entry per distinct ammunition item, shots summed over its bins: a row's `shotsPerTon` times the bin's tons, or its
- * own `shots` where that is what the row carries (a half-ton bin row holds its own count). `null` when the row has no
- * figure. Items come in the order of their first bin. */
-export function ammoLines(record: MechRecord, catalog: Catalog): { name: string; shots: number | null }[] {
-  const totals = new Map<string, { name: string; shots: number | null }>();
+ * own `shots` where that is what the row carries (a half-ton bin row holds its own count). A special munition carries the shots
+ * of the standard ammunition of the launcher it feeds (Total Warfare p. 140), found among the unit's launchers: one figure when
+ * every launcher it fits gives the same, `choices` when they differ, and `null` when the unit has no launcher it fits. `null`
+ * too when the row has no figure. Items come in the order of their first bin. */
+export function ammoLines(record: MechRecord, catalog: Catalog): AmmoLine[] {
+  const totals = new Map<string, AmmoLine & { tons: number }>();
   for (const mount of record.mounts) {
     const row = mount.equipmentId === null ? undefined : catalog.byId(mount.equipmentId);
     if (row?.kind !== "ammunition") continue;
     const tons = typeof row.tons === "number" ? row.tons : 1;
     const perBin = row.shots ?? (row.shotsPerTon === undefined ? undefined : row.shotsPerTon * tons);
-    const entry = totals.get(row.id) ?? { name: row.name, shots: null };
+    const entry = totals.get(row.id) ?? { name: row.name, shots: null, tons: 0 };
+    entry.tons += tons;
     if (perBin !== undefined) entry.shots = (entry.shots ?? 0) + perBin;
     totals.set(row.id, entry);
   }
-  return [...totals.values()];
+  return [...totals.entries()].map(([id, { tons, ...line }]): AmmoLine => {
+    const feeds = catalog.byId(id)?.feeds;
+    if (!feeds) return line;
+    const choices = launcherShots(record, catalog, feeds).map((c) => ({ launcher: c.launcher, shots: c.perTon * tons }));
+    const distinct = new Set(choices.map((c) => c.shots));
+    if (distinct.size === 1) return { ...line, shots: choices[0]?.shots ?? null };
+    return distinct.size === 0 ? line : { ...line, choices };
+  });
 }
+
+/** The standard ammunition of each launcher on the unit that a special munition of these families fits: the launcher's name and its
+ * shots per ton. A multi-mode launcher gives one entry for each mode. */
+function launcherShots(record: MechRecord, catalog: Catalog, feeds: NonNullable<EquipmentRow["feeds"]>): { launcher: string; perTon: number }[] {
+  const found = new Map<string, { launcher: string; perTon: number }>();
+  for (const mount of record.mounts) {
+    const match = /^(lrm|srm|mml)-(\d+)-(is|clan)$/.exec(mount.equipmentId ?? "");
+    const family = match?.[1] as "lrm" | "srm" | "mml" | undefined;
+    if (!match || !family || !feeds.includes(family)) continue;
+    const size = match[2] ?? "";
+    const side = match[3] ?? "";
+    for (const mode of family === "mml" ? ["lrm", "srm"] : [family]) {
+      const ammoId = family === "mml" ? `ammo-mml-${size}-${mode}-${side}` : `ammo-${family}-${size}-${side}`;
+      const perTon = catalog.byId(ammoId)?.shotsPerTon;
+      if (perTon !== undefined) found.set(ammoId, { launcher: family === "mml" ? `MML ${size} ${mode.toUpperCase()}` : `${family.toUpperCase()} ${size}`, perTon });
+    }
+  }
+  return [...found.values()];
+}
+
 
 // ---------------------------------------------------------------------------------------------------------------
 // Groups for the equipment picker: derived from each row's id by the patterns in data/equipment/groups.ts

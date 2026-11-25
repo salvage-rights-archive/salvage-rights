@@ -8,7 +8,8 @@
 // the book's text, with "Special" for the items whose damage the table leaves to the item rules (**). `range` is minimum,
 // short, medium and long: the table's Min/Sht/Med/Lng, so a minimum of 0 is the book's dash. The Heavy Machine Gun's
 // long range prints a dash too: a band the book prints as a dash is stored as 0. A multi-mode launcher (MML) has heat
-// and damage text but no range, since the book gives one range per mode. Items with no printed figures (the retractable blade) carry none. The Type
+// and damage text but no single range: its `modes` hold the book's two lines (LRM 1/Msl, 6/7/14/21; SRM 2/Msl, 0/3/6/9, table printed p. 342,
+// read against the page image), which the record sheet prints under the launcher as the official sheets do. Items with no printed figures (the retractable blade) carry none. The Type
 // column is not in TechManual: it comes from the play book's Weapons and Equipment Tables, read against the page images. A row's
 // `type` is Total Warfare's (printed pp. 303-304) and its `editions["bcr-tm"].type` the Core Rulebook's (printed pp. 248-252) where
 // they differ (see BCR below); a row only the Core Rulebook lists has its type for both, and a row neither table lists (the hatchet,
@@ -94,12 +95,17 @@
 // space station and DropShip equipment, the Long Tom, cruise missiles, satellite imagers and the sub-capital weapons), and the
 // improved one-shot launcher, a modifier.
 
-import type { EquipmentGroup } from "../../rules/catalog";
+import type { EquipmentGroup, EquipmentRow } from "../../rules/catalog";
 
 const IO = "Interstellar Operations: Alternate Eras";
 const TO = "Tactical Operations: Advanced Units and Equipment";
 /** The Type column as the Core Rulebook prints it, for the rows where it differs from Total Warfare's (pp. 303-304; the Core Rulebook's tables, printed pp. 248-252, were compared row by row against them: every heat, damage, range and ammunition figure they share is equal, and only these 29 Types differ). A row's own `type` is Total Warfare's; where only the Core Rulebook prints a row, the row's type is the Core Rulebook's for both. */
 const BCR = (type: string) => ({ "bcr-tm": { type } });
+
+const MML_MODES: NonNullable<EquipmentRow["modes"]> = [
+  { name: "LRM", damage: "1/Msl", range: [6, 7, 14, 21] },
+  { name: "SRM", damage: "2/Msl", range: [0, 3, 6, 9] },
+];
 
 export const WEAPONS: EquipmentGroup[] = [
   {
@@ -167,10 +173,10 @@ export const WEAPONS: EquipmentGroup[] = [
     defaults: { kind: "weapon", techBase: "inner-sphere", cite: { book: "TechManual", page: 342 }, checked: "page" },
     items: [
       // Missile launchers (Inner Sphere)
-      { id: "mml-3-is", name: "MML 3", tons: 1.5, slots: 2, type: "C, M, S", heat: 2, damage: "1/Msl, 2/Msl", availability: [{ from: 3068 }], prototypeYear: 3067, units: ["mech", "industrialmech", "vehicle", "aero", "smallcraft", "dropship"], by: { vehicle: { slots: 1, note: "Support vehicle: 2 slots" }, aero: { slots: 1, damage: "2", rangeClass: "Long" }, smallcraft: { slots: 1 }, dropship: { slots: 1 } } },
-      { id: "mml-5-is", name: "MML 5", tons: 3, slots: 3, type: "C, M, S", heat: 3, damage: "1/Msl, 2/Msl", availability: [{ from: 3068 }], prototypeYear: 3067, units: ["mech", "industrialmech", "vehicle", "aero", "smallcraft", "dropship"], by: { vehicle: { slots: 1, note: "Support vehicle: 3 slots" }, aero: { slots: 1, damage: "3", rangeClass: "Long" }, smallcraft: { slots: 1 }, dropship: { slots: 1 } } },
-      { id: "mml-7-is", name: "MML 7", tons: 4.5, slots: 4, type: "C, M, S", heat: 4, damage: "1/Msl, 2/Msl", availability: [{ from: 3068 }], prototypeYear: 3067, units: ["mech", "industrialmech", "vehicle", "aero", "smallcraft", "dropship"], by: { vehicle: { slots: 1, note: "Support vehicle: 4 slots" }, aero: { slots: 1, damage: "4", rangeClass: "Long" }, smallcraft: { slots: 1 }, dropship: { slots: 1 } } },
-      { id: "mml-9-is", name: "MML 9", tons: 6, slots: 5, type: "C, M, S", heat: 5, damage: "1/Msl, 2/Msl", availability: [{ from: 3068 }], prototypeYear: 3067, units: ["mech", "industrialmech", "vehicle", "aero", "smallcraft", "dropship"], by: { vehicle: { slots: 1, note: "Support vehicle: 5 slots" }, aero: { slots: 1, damage: "5", rangeClass: "Long" }, smallcraft: { slots: 1 }, dropship: { slots: 1 } } },
+      { id: "mml-3-is", name: "MML 3", tons: 1.5, slots: 2, type: "C, M, S", heat: 2, damage: "1/Msl, 2/Msl", modes: MML_MODES, availability: [{ from: 3068 }], prototypeYear: 3067, units: ["mech", "industrialmech", "vehicle", "aero", "smallcraft", "dropship"], by: { vehicle: { slots: 1, note: "Support vehicle: 2 slots" }, aero: { slots: 1, damage: "2", rangeClass: "Long" }, smallcraft: { slots: 1 }, dropship: { slots: 1 } } },
+      { id: "mml-5-is", name: "MML 5", tons: 3, slots: 3, type: "C, M, S", heat: 3, damage: "1/Msl, 2/Msl", modes: MML_MODES, availability: [{ from: 3068 }], prototypeYear: 3067, units: ["mech", "industrialmech", "vehicle", "aero", "smallcraft", "dropship"], by: { vehicle: { slots: 1, note: "Support vehicle: 3 slots" }, aero: { slots: 1, damage: "3", rangeClass: "Long" }, smallcraft: { slots: 1 }, dropship: { slots: 1 } } },
+      { id: "mml-7-is", name: "MML 7", tons: 4.5, slots: 4, type: "C, M, S", heat: 4, damage: "1/Msl, 2/Msl", modes: MML_MODES, availability: [{ from: 3068 }], prototypeYear: 3067, units: ["mech", "industrialmech", "vehicle", "aero", "smallcraft", "dropship"], by: { vehicle: { slots: 1, note: "Support vehicle: 4 slots" }, aero: { slots: 1, damage: "4", rangeClass: "Long" }, smallcraft: { slots: 1 }, dropship: { slots: 1 } } },
+      { id: "mml-9-is", name: "MML 9", tons: 6, slots: 5, type: "C, M, S", heat: 5, damage: "1/Msl, 2/Msl", modes: MML_MODES, availability: [{ from: 3068 }], prototypeYear: 3067, units: ["mech", "industrialmech", "vehicle", "aero", "smallcraft", "dropship"], by: { vehicle: { slots: 1, note: "Support vehicle: 5 slots" }, aero: { slots: 1, damage: "5", rangeClass: "Long" }, smallcraft: { slots: 1 }, dropship: { slots: 1 } } },
       { id: "srm-2-is", name: "SRM 2", tons: 1, slots: 1, type: "C, M, S", heat: 2, damage: "2/Msl", range: [0, 3, 6, 9], availability: [{ from: 2370 }], prototypeYear: 2365, units: ["mech", "industrialmech", "vehicle", "aero", "smallcraft", "dropship"], by: { aero: { damage: "2", rangeClass: "Short" } } },
       { id: "srm-4-is", name: "SRM 4", tons: 2, slots: 1, type: "C, M, S", heat: 3, damage: "2/Msl", range: [0, 3, 6, 9], availability: [{ from: 2370 }], prototypeYear: 2365, units: ["mech", "industrialmech", "vehicle", "aero", "smallcraft", "dropship"], by: { aero: { damage: "4", rangeClass: "Short" } } },
       { id: "srm-6-is", name: "SRM 6", tons: 3, slots: 2, type: "C, M, S", heat: 4, damage: "2/Msl", range: [0, 3, 6, 9], availability: [{ from: 2370 }], prototypeYear: 2365, units: ["mech", "industrialmech", "vehicle", "aero", "smallcraft", "dropship"], by: { vehicle: { slots: 1, note: "Support vehicle: 2 slots" }, aero: { slots: 1, damage: "8", rangeClass: "Short" }, smallcraft: { slots: 1 }, dropship: { slots: 1 } } },

@@ -7,6 +7,7 @@ import { fromMordel } from "../../rules/mordel";
 import { editRecord } from "../../rules/mech";
 import type { MechRecord } from "../../rules/mech";
 import RecordSheet from "./RecordSheet";
+import { sheetFacts } from "./facts";
 import { inventoryStep } from "./MechData";
 import { MAX_SINKS_DRAWN } from "./HeatData";
 
@@ -133,5 +134,25 @@ describe("The record sheet", () => {
     expect(inventoryStep(19, room).size).toBe(20);
     expect(inventoryStep(19, room).capacity).toBeGreaterThanOrEqual(19);
     expect(inventoryStep(30, room).capacity).toBeLessThan(30);
+  });
+});
+
+describe("Multi-mode launchers and special munitions on the sheet", () => {
+  const mounts = (...ids: string[]) => ids.map((id, i) => ({ id: `m${String(i)}`, equipmentId: id, name: id, techBase: "inner-sphere" as const, location: "LT" as const, slot: i }));
+  const factsFor = async (...ids: string[]) => sheetFacts(editRecord(await recordOf(mordelBiped()), (d) => void (d.mounts = mounts(...ids))), await loadCatalog());
+
+  it("prints an MML as its own line and one line each for LRM and SRM with that mode's damage and ranges", async () => {
+    const { inventory } = await factsFor("mml-5-is");
+    expect(inventory.map((l) => [l.name, l.heat, l.damage, l.min, l.short, l.medium, l.long])).toEqual([
+      ["MML 5", "3", "", "", "", "", ""],
+      ["LRM", "", "1/Msl", "6", "7", "14", "21"],
+      ["SRM", "", "2/Msl", "—", "3", "6", "9"],
+    ]);
+  });
+
+  it("gives a special munition its launcher's shots, and each choice when two launchers could take it", async () => {
+    expect((await factsFor("lrm-15-is", "ammo-artemis-capable-is")).ammo).toBe("(Artemis-Capable Missile) 8");
+    expect((await factsFor("srm-4-is", "srm-6-is", "ammo-inferno-is")).ammo).toBe("(Inferno SRM) 25 for SRM 4 or 15 for SRM 6");
+    expect((await factsFor("ammo-inferno-is")).ammo).toBe("(Inferno SRM)");
   });
 });

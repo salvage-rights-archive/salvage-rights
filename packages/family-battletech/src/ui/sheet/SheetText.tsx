@@ -46,7 +46,7 @@ export default function SheetText({ facts, record }: { facts: SheetFacts; record
         <tbody>
           {facts.inventory.map((line, index) => (
             <tr key={index}>
-              <td>{line.qty}</td>
+              <td>{line.sub ? "" : line.qty}</td>
               <td>{line.name}</td>
               <td>{line.location}</td>
               <td>{line.heat}</td>
