@@ -77,6 +77,7 @@ export function sheetFacts(record: MechRecord, catalog: Catalog): SheetFacts {
   const ammo = ammoLines(record, catalog)
     .map((line) => {
       const name = line.name.replace(/ Ammo\b/, "");
+      if (line.choices) return `(${name}) ${line.choices.map((c) => `${String(c.shots)} for ${c.launcher}`).join(" or ")}`;
       return line.shots === null ? `(${name})` : `(${name}) ${String(line.shots)}`;
     })
     .join(", ");
