@@ -2,10 +2,12 @@
 // 'Mech uses. Pure functions over the tables in data/chassis.ts and the catalog; nothing here throws on what it does not
 // know (an unknown part or an unmatched mount simply asks nothing of the level).
 import { INTRODUCTORY_PARTS, ARMOR, COCKPITS, ENGINE_TYPES, GYROS, HEAT_SINKS, RULES_LEVELS, STRUCTURE_TYPES } from "../data/chassis";
-import type { RulesLevel, RulesLevelRow } from "../data/chassis";
+import type { PartFacts, RulesLevel, RulesLevelRow, Span } from "../data/chassis";
 import type { Catalog, EquipmentRow } from "./catalog";
 import { configurationOf, mechTypeOf } from "./mech";
 import type { LocationCode, MechRecord } from "./mech";
+import { datesText, partPrototype, partSpans, phaseIn, rowPhase, windowOf } from "./time";
+import type { Phase } from "./time";
 
 export const LEVEL_ORDER: RulesLevel[] = RULES_LEVELS.map((row) => row.id);
 export const DEFAULT_LEVEL: RulesLevel = "standard";
@@ -43,16 +45,28 @@ export function equipmentLevel(row: EquipmentRow): RulesLevel {
   return inSale ? "introductory" : DEFAULT_LEVEL;
 }
 
+/** The level an item needs in a phase. In production it is its own. In its prototype phase it is Experimental (IO:AE printed p.27: prototype
+ * items "must be considered Experimental-level items"), unless the books print the item at a lower level for those years (`prototypeLevel`). */
+export function levelIn(level: RulesLevel, phase: Phase | null, prototypeLevel?: RulesLevel): RulesLevel {
+  return phase === "prototype" ? (prototypeLevel ?? "experimental") : level;
+}
+
 /** One thing a 'Mech uses that asks something of the rules level. */
 export interface LevelItem {
   what: "equipment" | "configuration" | "structure" | "armor" | "engine" | "gyro" | "cockpit" | "heat sink" | "tech base" | "type";
   name: string;
   level: RulesLevel;
+  /** Set when the record's time falls in the item's prototype phase: its two dates in words ("Prototype 2854, production 2856"). `level` is then the prototype's. */
+  prototype?: string;
   cite?: { book: string; page: number };
   where: { field?: string; mountId?: string; location?: LocationCode };
 }
 
 const own = (table: object, key: string) => Object.hasOwn(table, key);
+const firstFrom = (spans: Span[] | undefined): number | undefined => (spans === undefined || spans.length === 0 ? undefined : Math.min(...spans.map((s) => s.from)));
+/** What a phase adds to a level item: the level in that phase and, in the prototype phase, the dates. */
+const inPhase = (level: RulesLevel, phase: Phase | null, prototype: number | undefined, spans: Span[] | undefined, prototypeLevel?: RulesLevel) =>
+  phase === "prototype" ? { level: levelIn(level, phase, prototypeLevel), prototype: datesText(prototype, firstFrom(spans)) } : { level };
 /** A part's level: the level its row states when above Standard (hardened armor is Advanced, say), else Introductory for the
  * 3025 parts, else Standard. */
 export const partLevel = (table: keyof typeof INTRODUCTORY_PARTS, key: string, row?: { rulesLevel?: RulesLevel }): RulesLevel => {
@@ -66,18 +80,33 @@ export function levelItems(record: MechRecord, catalog: Catalog): LevelItem[] {
   const items: LevelItem[] = [];
   const chassis = record.chassis;
   const type = mechTypeOf(record);
-  // A BattleMech is the unit the lowest level is built on, so only the other types ask something of the level.
-  if (type.id !== "mech") items.push({ what: "type", name: type.label, level: type.rulesLevel, cite: type.cite, where: { field: "unitType" } });
+  const window = windowOf(record);
+  // The dates come with the phase: a prototype asks for Experimental rules, whatever level its book prints it at (IO:AE printed p.27).
+  const typePhase = rowPhase(type, record.techBase, window);
+  // A BattleMech is the unit the lowest level is built on, so only the other types ask something of the level, and a BattleMech only as a prototype.
+  if (type.id !== "mech" || typePhase === "prototype") {
+    const prototype = record.techBase === "clan" ? (type.clanPrototypeYear ?? type.prototypeYear) : type.prototypeYear;
+    items.push({ what: "type", name: type.label, ...inPhase(type.rulesLevel, typePhase, prototype, record.techBase === "clan" ? (type.clanAvailability ?? type.availability) : type.availability), cite: type.cite, where: { field: "unitType" } });
+  }
   const config = configurationOf(record.configuration);
   if (config) {
     const level = config.rulesLevel === DEFAULT_LEVEL ? partLevel("configuration", record.configuration) : config.rulesLevel;
-    items.push({ what: "configuration", name: config.name, level, cite: config.levelCite, where: { field: "configuration" } });
+    const phase = rowPhase(config, record.techBase, window);
+    const prototype = record.techBase === "clan" ? (config.clanPrototypeYear ?? config.prototypeYear) : config.prototypeYear;
+    items.push({ what: "configuration", name: config.name, ...inPhase(level, phase, prototype, record.techBase === "clan" ? (config.clanAvailability ?? config.availability) : config.availability), cite: config.levelCite, where: { field: "configuration" } });
   }
   if (record.techBase !== "inner-sphere") {
     items.push({ what: "tech base", name: record.techBase === "clan" ? "Clan technology" : "Mixed technology", level: DEFAULT_LEVEL, where: { field: "techBase" } });
   }
-  const part = (what: LevelItem["what"], table: { cite: { book: string; page: number }; types: Record<string, { name: string; rulesLevel?: RulesLevel }> }, key: string, field: string, kind: keyof typeof INTRODUCTORY_PARTS) => {
-    if (own(table.types, key)) items.push({ what, name: table.types[key]?.name ?? key, level: partLevel(kind, key, table.types[key]), cite: table.cite, where: { field } });
+  /** A part's level item: its level, raised to the prototype's while the record's time is in the part's prototype phase. */
+  const partItem = (what: LevelItem["what"], part: PartFacts & { name: string }, level: RulesLevel, cite: LevelItem["cite"], field: string): LevelItem => {
+    const spans = partSpans(part, record.techBase);
+    const prototype = partPrototype(part, record.techBase);
+    return { what, name: part.name, ...inPhase(level, phaseIn(spans, prototype, window), prototype, spans, part.prototypeLevel), cite, where: { field } };
+  };
+  const part = (what: LevelItem["what"], table: { cite: { book: string; page: number }; types: Record<string, PartFacts & { name: string }> }, key: string, field: string, kind: keyof typeof INTRODUCTORY_PARTS) => {
+    const row = own(table.types, key) ? table.types[key] : undefined;
+    if (row) items.push(partItem(what, row, partLevel(kind, key, row), table.cite, field));
   };
   part("engine", ENGINE_TYPES, chassis.engine.type, "chassis.engine", "engine");
   part("gyro", GYROS, chassis.gyro, "chassis.gyro", "gyro");
@@ -88,13 +117,8 @@ export function levelItems(record: MechRecord, catalog: Catalog): LevelItem[] {
   if (cockpit) {
     // A cockpit that belongs to a body type takes that body type's level (the tripod's is Advanced with the tripod).
     const owner = cockpit.only === undefined ? undefined : configurationOf(cockpit.only);
-    items.push({
-      what: "cockpit",
-      name: cockpit.name,
-      level: owner && owner.rulesLevel !== DEFAULT_LEVEL ? owner.rulesLevel : partLevel("cockpit", chassis.cockpit, cockpit),
-      cite: cockpit.cite ?? COCKPITS.cite,
-      where: { field: "chassis.cockpit" },
-    });
+    const level = owner && owner.rulesLevel !== DEFAULT_LEVEL ? owner.rulesLevel : partLevel("cockpit", chassis.cockpit, cockpit);
+    items.push(partItem("cockpit", cockpit, level, cockpit.cite ?? COCKPITS.cite, "chassis.cockpit"));
   }
   const seen = new Set<string>();
   for (const mount of record.mounts) {
@@ -102,7 +126,7 @@ export function levelItems(record: MechRecord, catalog: Catalog): LevelItem[] {
     const row = catalog.rowFor(mount.equipmentId, record.editionId);
     if (!row) continue;
     seen.add(row.id);
-    items.push({ what: "equipment", name: row.name, level: equipmentLevel(row), cite: row.cite, where: { mountId: mount.id } });
+    items.push({ what: "equipment", name: row.name, ...inPhase(equipmentLevel(row), phaseIn(row.availability, row.prototypeYear, window), row.prototypeYear, row.availability, row.prototypeLevel), cite: row.cite, where: { mountId: mount.id } });
   }
   return items;
 }

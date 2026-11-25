@@ -21,9 +21,10 @@ import {
   STRUCTURE_TYPES,
 } from "../data/chassis";
 import type { Cite, PartFacts, Span } from "../data/chassis";
-import { configurationInTime, eraOfRecord, eraOfYear, partSpans, spansFit, typeInTime, windowOf } from "./availability";
+import { configurationInTime, equipmentPhase, eraOfRecord, eraOfYear, partPhase, partSpans, typeInTime, windowOf } from "./availability";
 import { locationsFor, mountableOn, mountsRequired } from "./catalog";
-import { levelAtLeast, levelItems, levelRow } from "./levels";
+import { levelAtLeast, levelIn, levelItems, levelRow } from "./levels";
+import { datesText, partIsPrototypeOnly, partPrototype } from "./time";
 import type { Catalog, EquipmentRow } from "./catalog";
 import { armorSpread, configurationOf, engineTons, freeHeatSinks, industrialRulesOf, layout as buildLayout, maxArmor, mechTypeOf, walkMP, weights } from "./mech";
 import { locationName, type Layout, type LocationCode, type MechRecord, type Mount } from "./mech";
@@ -56,6 +57,9 @@ const tm = (page: number) => ({ book: "TechManual", page });
 // from walking speed (p.48), jump jets (p.51), armor weight (p.55), tech base of equipment (p.57), Artemis IV (p.207),
 // machine gun arrays (p.228), the first page of the cost and availability tables (p.290; they run to p.293).
 const PAGE = { weight: 46, engineRating: 48, jump: 51, armorTons: 55, techBase: 57, artemis: 207, machineGunArray: 228, availability: 290 };
+
+// The rule for the Universal Technology Advancement Table's two dates: a prototype, or an item fielded between its prototype and production years, is Experimental level.
+const IO_UTA = { book: "Interstellar Operations: Alternate Eras", page: 27 };
 
 const TECH_BASE_NAMES: Record<string, string> = { "inner-sphere": "Inner Sphere", clan: "Clan", mixed: "Mixed" };
 
@@ -434,7 +438,7 @@ function placementCheck({ record, layout, catalog }: CheckInput): Finding[] {
 function unavailableBecause(row: EquipmentRow, name: string, year: number): string {
   const spans = [...row.availability].sort((a, b) => a.from - b.from);
   const first = spans[0];
-  if (first && year < first.from) return `${name} is not yet introduced in ${year}; it first appears in ${first.from}.`;
+  if (first && year < first.from) return `${name} is not yet introduced in ${year}; ${row.prototypeYear !== undefined ? `${datesText(row.prototypeYear, first.from).toLowerCase()}` : `it first appears in ${first.from}`}.`;
   const last = [...spans].reverse().find((s) => s.from <= year);
   const next = spans.find((s) => s.from > year);
   if (next && last?.to !== undefined) return `${name} is extinct in ${year}: gone after ${last.to}, and not reintroduced until ${next.from}.`;
@@ -456,12 +460,21 @@ function availabilityCheck({ record, catalog }: CheckInput): Finding[] {
       );
     }
     const window = windowOf(record);
-    if (record.year === null && window !== null && !catalog.availableBetween(row, record.editionId, window.from, window.to)) {
+    // The catalog says whether the item is in production; only when it is not do its prototype years matter.
+    const inProduction = record.year !== null ? catalog.available(row, record.editionId, record.year) : window === null || catalog.availableBetween(row, record.editionId, window.from, window.to);
+    const phase = inProduction ? "production" : equipmentPhase(row, record, catalog);
+    if (phase === "prototype") {
+      // A prototype is Experimental-level equipment until its production year (IO:AE printed p.27); the level check reports a unit built lower.
+      const when = record.year !== null ? String(record.year) : `the ${eraOfRecord(record)?.name ?? "chosen"} era`;
+      const needs = levelRow(levelIn("standard", phase, row.prototypeLevel)).label;
+      out.push(finding("availability", "note", `${mount.name} is a prototype in ${when} (${datesText(row.prototypeYear, row.availability[0]?.from).toLowerCase()}); it needs ${needs} rules.`, { where, cite: IO_UTA }));
+    }
+    if (record.year === null && window !== null && phase === null) {
       const era = eraOfRecord(record);
       const reason = `${mount.name} is not available in the ${era?.name ?? "chosen"} era (${window.from} to ${Number.isFinite(window.to) ? window.to : "on"}).`;
       out.push(finding("availability", row.yearsInferred ? "note" : "error", `${reason} Set a year to check it against one.`, { where, cite: tm(PAGE.availability) }));
     }
-    if (record.year !== null && !catalog.available(row, record.editionId, record.year)) {
+    if (record.year !== null && phase === null) {
       // The dates come from the cost and availability tables, pp.290-293; a row that cites a page there keeps its page.
       const fromRow = row.cite.page >= PAGE.availability && row.cite.page <= PAGE.availability + 3;
       const reason = unavailableBecause(row, mount.name, record.year);
@@ -488,11 +501,11 @@ function eraCheck({ record }: CheckInput): Finding[] {
   const bodyInTime = !row || configurationInTime(record.configuration, record);
   if (bodyInTime && !typeInTime(type, record)) {
     const when = record.year !== null ? String(record.year) : `the ${eraOfRecord(record)?.name ?? "chosen"} era`;
-    out.push(finding("availability", "error", `A ${type.label} is not available to ${record.techBase === "clan" ? "a Clan" : record.techBase === "mixed" ? "a mixed technology" : "an Inner Sphere"} 'Mech in ${when}; ${spansText(record.techBase === "clan" ? (type.clanAvailability ?? type.availability) : type.availability, {})}.`, { where: { field: "unitType" }, cite: type.availabilityCite }));
+    out.push(finding("availability", "error", `A ${type.label} is not available to ${record.techBase === "clan" ? "a Clan" : record.techBase === "mixed" ? "a mixed technology" : "an Inner Sphere"} 'Mech in ${when}; ${spansText(record.techBase === "clan" ? (type.clanAvailability ?? type.availability) : type.availability, prototypeOf(record.techBase === "clan" ? (type.clanPrototypeYear ?? type.prototypeYear) : type.prototypeYear))}.`, { where: { field: "unitType" }, cite: type.availabilityCite }));
   }
   if (row && !bodyInTime) {
     const when = record.year !== null ? String(record.year) : `the ${eraOfRecord(record)?.name ?? "chosen"} era`;
-    out.push(finding("availability", "error", `A ${row.name} is not available to ${record.techBase === "clan" ? "a Clan" : record.techBase === "mixed" ? "a mixed technology" : "an Inner Sphere"} 'Mech in ${when}.`, { where: { field: "configuration" }, cite: { book: "Interstellar Operations: Alternate Eras", page: 44 } }));
+    out.push(finding("availability", "error", `A ${row.name} is not available to ${record.techBase === "clan" ? "a Clan" : record.techBase === "mixed" ? "a mixed technology" : "an Inner Sphere"} 'Mech in ${when}; ${spansText(record.techBase === "clan" ? (row.clanAvailability ?? row.availability) : row.availability, prototypeOf(record.techBase === "clan" ? (row.clanPrototypeYear ?? row.prototypeYear) : row.prototypeYear))}.`, { where: { field: "configuration" }, cite: { book: "Interstellar Operations: Alternate Eras", page: 44 } }));
   }
   return out;
 }
@@ -531,7 +544,8 @@ function levelCheck({ record, catalog }: CheckInput): Finding[] {
     .filter((item) => !levelAtLeast(level, item.level))
     .map((item) => {
       const needs = levelRow(item.level).label;
-      return finding("level", "error", `${item.name} (${item.what}) is ${needs} level; this unit is built at ${levelRow(level).label} level. It needs ${needs} or higher.`, {
+      const why = item.prototype === undefined ? `is ${needs} level` : `is a prototype in this unit's time (${item.prototype.toLowerCase()}), and prototypes are ${needs} level`;
+      return finding("level", "error", `${item.name} (${item.what}) ${why}; this unit is built at ${levelRow(level).label} level. It needs ${needs} or higher.`, {
         where: item.where,
         cite: item.cite ?? tm(PAGE.techBase),
       });
@@ -608,11 +622,18 @@ function lamCheck({ record, catalog }: CheckInput): Finding[] {
   return out;
 }
 
+/** The dates of a body or 'Mech type row as the part-like facts `spansText` reads. */
+const prototypeOf = (year: number | undefined): PartFacts => (year === undefined ? {} : { prototypeYear: year });
+
 /** What a part's dates say, in words: "it appears in 2579" or "it is available 2487 to 2850 and from 3035". */
-function spansText(spans: Span[], part: PartFacts): string {
+function spansText(spans: Span[], part: PartFacts, techBase: MechRecord["techBase"] = "inner-sphere"): string {
   const [only] = spans;
-  if (spans.length === 1 && only !== undefined && only.to === undefined) return part.introduced?.prototype && part.availability === undefined ? `prototypes appear in ${only.from}` : `it appears in ${only.from}`;
-  return `it is available ${spans.map((s) => (s.to === undefined ? `from ${s.from}` : `${s.from} to ${s.to}`)).join(" and ")}`;
+  const prototype = partPrototype(part, techBase);
+  const early = prototype === undefined ? "" : `its prototype appears in ${prototype} and `;
+  if (spans.length === 1 && only !== undefined && only.to === undefined) {
+    return partIsPrototypeOnly(part, techBase) ? `prototypes appear in ${only.from}` : prototype === undefined ? `it appears in ${only.from}` : `${early}production begins in ${only.from}`;
+  }
+  return `${early}it is available ${spans.map((s) => (s.to === undefined ? `from ${s.from}` : `${s.from} to ${s.to}`)).join(" and ")}`;
 }
 
 /**
@@ -632,7 +653,6 @@ function partsCheck({ record, catalog }: CheckInput): Finding[] {
     ["heat sink", HEAT_SINKS, chassis.heatSinks.type, "chassis.heatSinks"],
     ["myomer", MYOMER, chassis.myomer, "chassis.myomer"],
   ];
-  const window = windowOf(record);
   for (const [what, table, key, field] of parts) {
     const part = own(table.types, key) ? table.types[key] : undefined;
     if (!part) continue;
@@ -644,9 +664,13 @@ function partsCheck({ record, catalog }: CheckInput): Finding[] {
       out.push(finding("parts", "error", `${part.name} ${what} is ${clanOnly ? "Clan" : "Inner Sphere"} technology; this is ${record.techBase === "clan" ? "a Clan" : "an Inner Sphere"} 'Mech.`, { where, cite }));
     }
     const spans = partSpans(part, record.techBase);
-    if (spans !== undefined && !spansFit(spans, window)) {
-      const when = record.year !== null ? String(record.year) : `the ${eraOfRecord(record)?.name ?? "chosen"} era`;
-      out.push(finding("parts", "error", `${part.name} ${what} is not available in ${when}; ${spansText(spans, part)}.`, { where, cite: part.availabilityCite ?? cite }));
+    const phase = partPhase(part, record);
+    const when = record.year !== null ? String(record.year) : `the ${eraOfRecord(record)?.name ?? "chosen"} era`;
+    if (spans !== undefined && phase === null) {
+      out.push(finding("parts", "error", `${part.name} ${what} is not available in ${when}; ${spansText(spans, part, record.techBase)}.`, { where, cite: part.availabilityCite ?? cite }));
+    } else if (phase === "prototype") {
+      const needs = levelRow(levelIn("standard", phase, part.prototypeLevel)).label;
+      out.push(finding("parts", "note", `${part.name} ${what} is a prototype in ${when} (${datesText(partPrototype(part, record.techBase), spans?.[0]?.from).toLowerCase()}); it needs ${needs} rules.`, { where, cite: IO_UTA }));
     }
     if (part.industrial && industrialRulesOf(record) === undefined) {
       out.push(finding("parts", "error", `${part.name} ${what} is printed for IndustrialMechs; a ${mechTypeOf(record).label} may not use it.`, { where, cite }));
