@@ -12,6 +12,7 @@ const classicRoutes: FamilyRoute[] = [
 const alphaStrikeRoutes: FamilyRoute[] = [
   { path: "home", label: "Alpha Strike", section: "workshop", load: () => import("./ui/as/AsHomePage") },
   { path: "unit", label: "Alpha Strike unit", section: "workshop", load: () => import("./ui/as/AsUnitPage") },
+  { path: "force", label: "Alpha Strike force", section: "workshop", load: () => import("./ui/as/AsForcePage") },
 ];
 
 function comingSoon(id: string, shortName: string, fullName: string): GameManifest {

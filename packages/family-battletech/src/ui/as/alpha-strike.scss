@@ -86,3 +86,57 @@
 .as-findings {
   margin-top: var(--sr-space-3);
 }
+
+// Forces
+.as-over {
+  color: var(--sr-danger);
+  font-weight: 700;
+}
+
+.as-totals {
+  margin: var(--sr-space-3) 0;
+  padding: var(--sr-space-3);
+  background: var(--sr-surface-sunk);
+  border: var(--sr-border) solid var(--sr-line-strong);
+  border-radius: var(--sr-radius);
+
+  p {
+    margin: 0;
+  }
+
+  &__main {
+    font-size: 1.25rem;
+  }
+}
+
+.as-member {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+
+  &__name {
+    grid-column: 1;
+  }
+
+  &__pv {
+    grid-column: 2;
+    font-weight: 700;
+    text-align: right;
+  }
+
+  .bt-field,
+  .bt-button {
+    grid-column: 1 / -1;
+  }
+
+  @media (min-width: 40rem) {
+    grid-template-columns: minmax(0, 2fr) auto minmax(0, 1fr) minmax(0, 1fr) auto;
+
+    &__name,
+    &__pv,
+    .bt-field,
+    .bt-button {
+      grid-column: auto;
+    }
+  }
+}

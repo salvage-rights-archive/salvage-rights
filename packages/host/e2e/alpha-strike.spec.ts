@@ -1,5 +1,5 @@
 import { readFile, writeFile } from "node:fs/promises";
-import { AS_UNIT_ID, DEV, FAKE_KEY, expect, test } from "./fixtures";
+import { AS_UNIT_ID, DEV, FAKE_KEY, expect, saveAsUnit, test } from "./fixtures";
 
 const ALPHA = "/battletech/alpha-strike";
 
@@ -94,4 +94,38 @@ test("import a saved Master Unit List page, see it marked OFFICIAL, and see the 
   await page.screenshot({ path: testInfo.outputPath("mul-review.png") });
   await page.getByLabel("Point Value (PV)").fill("29");
   await expect(page.getByText("NOT OFFICIAL: changed from the published design")).toBeVisible();
+});
+
+test("build a four-unit force, change skills and watch the totals, copy it, and fit 320 px", async ({ page }, testInfo) => {
+  test.setTimeout(90_000);
+  for (const [name, pv] of [["Archer", 35], ["Banshee", 39], ["Cicada", 14], ["Dervish", 29]] as const) await saveAsUnit(page, DEV, name, pv);
+  await page.goto(`${DEV}${ALPHA}/home`);
+  await page.getByRole("button", { name: "Start a new force" }).click();
+  await page.getByLabel("Name", { exact: true }).fill("Strike lance");
+  await page.getByLabel("PV limit").fill("110");
+  for (const name of ["Archer", "Banshee", "Cicada", "Dervish"]) {
+    await page.getByLabel("Unit", { exact: true }).selectOption({ label: `${name} (PV ${name === "Archer" ? 35 : name === "Banshee" ? 39 : name === "Cicada" ? 14 : 29})` });
+    await page.getByRole("button", { name: "Add to force" }).click();
+  }
+  const totals = page.getByRole("region", { name: "Totals" });
+  await expect(totals).toContainText("117 PV of 110 (7 over the limit)");
+  await page.getByLabel("Skill").first().selectOption("6");
+  await expect(totals).toContainText("109 PV of 110 (1 to spare)");
+  await page.screenshot({ path: testInfo.outputPath("force.png"), fullPage: true });
+
+  await page.reload();
+  await expect(totals).toContainText("109 PV of 110");
+  await page.getByRole("button", { name: "Duplicate" }).click();
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Strike lance copy");
+  await expect(totals).toContainText("109 PV of 110");
+
+  await page.setViewportSize({ width: 320, height: 700 });
+  const widths = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, client: document.documentElement.clientWidth }));
+  expect(widths.scroll).toBe(widths.client);
+  for (const control of await page.locator("button, input, select").all()) {
+    const box = await control.boundingBox();
+    if (box) expect(box.height).toBeGreaterThanOrEqual(44);
+  }
+  await page.goto(`${DEV}${ALPHA}/home`);
+  await expect(page.getByRole("list").getByText("Strike lance copy")).toBeVisible();
 });

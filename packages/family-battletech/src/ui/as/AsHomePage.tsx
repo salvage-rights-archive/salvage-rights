@@ -6,6 +6,7 @@ import { unitTitle } from "../../rules/as-unit";
 import { STORAGE_READ_FAILED, STORAGE_WRITE_FAILED, downloadJson } from "../storage";
 import { downloadUnit, fromUnitFile, openAsStorage } from "./storage";
 import type { AsEntry, AsStorage } from "./storage";
+import AsForces from "./AsForces";
 import AsMordelImport from "./AsMordelImport";
 import AsMulImport from "./AsMulImport";
 import AsMordelFile from "./AsMordelFile";
@@ -235,6 +236,7 @@ export default function AsHomePage() {
         </div>
       </section>
 
+      <AsForces />
       <AsMordelImport />
       <AsMulImport />
       <AsMordelFile />

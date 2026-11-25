@@ -4,7 +4,9 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { openStore } from "@salvage-rights/shared";
 import { newAsUnit, parseSpecials } from "../../rules/as-unit";
 import type { AsUnit } from "../../rules/as-unit";
-import { fromUnitFile, isAsUnit, openAsStorage, toUnitFile } from "./storage";
+import { newAsForce } from "../../rules/as-force";
+import type { AsForce } from "../../rules/as-force";
+import { fromForceFile, fromUnitFile, isAsUnit, openAsStorage, planForceImport, toForceFile, toUnitFile } from "./storage";
 
 beforeEach(() => {
   globalThis.indexedDB = new IDBFactory();
@@ -75,5 +77,36 @@ describe("Alpha Strike unit storage", () => {
       [{ ...file, unit: { schema: 1 } }, "The unit in this file is incomplete or damaged."],
     ];
     for (const [input, message] of cases) expect(fromUnitFile(input)).toEqual({ ok: false, message });
+  });
+
+  it("saves forces apart from units, lists an unreadable force, and round trips a force file with the units it names", async () => {
+    const storage = await openAsStorage();
+    const other = newAsUnit("u2");
+    const force = { ...newAsForce("f1", "Lance"), pvLimit: 300, members: [{ unitId: "u1", skill: 3, pilot: "Ada" }] };
+    await storage.save(full());
+    await storage.save(other);
+    await storage.saveForce(force);
+    await (await openStore("battletech")).set("as-force:bad", { force: { schema: 1 } });
+    expect((await storage.list()).map((e) => e.id).sort()).toEqual(["u1", "u2"]);
+    const forces = await storage.listForces();
+    expect(forces.map((e) => e.id).sort()).toEqual(["bad", "f1"]);
+    expect(forces.find((e) => e.id === "bad")?.unreadable).toMatch(/incomplete/);
+    expect(forces.find((e) => e.id === "f1")?.force).toEqual(force);
+    await expect(storage.saveForce({ schema: 1 } as AsForce)).rejects.toThrow();
+
+    const file = toForceFile(force, [full(), other]);
+    expect(file.units.map((u) => u.id)).toEqual(["u1"]);
+    expect(fromForceFile(JSON.parse(JSON.stringify(file)))).toEqual({ ok: true, force, units: [full()] });
+    expect(fromForceFile({ ...file, kind: "as-unit" })).toEqual({ ok: false, message: "This file does not hold an Alpha Strike force." });
+    expect(fromForceFile({ ...file, units: [{ schema: 1 }] })).toEqual({ ok: false, message: "A unit in this file is incomplete or damaged." });
+  });
+
+  it("plans a force import: new units are added, the same unit is left, and a unit with the same id but other values is a conflict", () => {
+    const changed = { ...full(), id: "u3", card: { ...full().card, pv: 40 } };
+    const same = { ...full(), id: "u2" };
+    const mine = [full(), { ...changed, card: { ...changed.card, pv: 41 } }, JSON.parse(JSON.stringify(same)) as AsUnit];
+    const plan = planForceImport([full(), changed, same, { ...full(), id: "u4" }], mine);
+    expect(plan.add.map((u) => u.id)).toEqual(["u4"]);
+    expect(plan.conflicts.map((u) => u.id)).toEqual(["u3"]);
   });
 });
