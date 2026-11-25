@@ -75,7 +75,9 @@ const SCALED: Record<string, Scaled> = {
 export const FORMULAS: Record<string, Formula> = {
   ...Object.fromEntries(Object.entries(SCALED).map(([name, spec]) => [name, scaled(spec)])),
   // Jump pack (TO:AUE p. 105): the tons the player chose.
-  "chosen-tons": (_row, _record, _catalog, mount) => mount?.amount ?? 0,
+  "chosen-tons": (row, _record, _catalog, mount) => mount?.amount ?? row.amount?.min ?? 0,
+  // One slot for each ton of the chosen size or fraction of one (cargo, communications equipment and fuel tanks on a 'Mech, TM pp. 212, 239, 244).
+  "ceil-amount": (row, _record, _catalog, mount) => Math.ceil(mount?.amount ?? row.amount?.min ?? 0),
   // Jump Jets table (TM p. 51): per jet, by 'Mech tonnage band 10-55, 60-85, 90-100.
   "jump-jet": jumpJet,
   // Improved jump jets (p. 51): twice the standard weight per jet (two slots, in the data).

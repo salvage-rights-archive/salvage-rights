@@ -248,6 +248,12 @@ export const LASER_INSULATOR_IDS = ["laser-insulator-is", "laser-insulator-clan"
 export const COOLANT_POD_IDS = ["coolant-pod-is", "coolant-pod-clan"];
 /** Rows whose BV the books make depend on something the row does not say. */
 export const UNFIXED: Record<string, string> = {
+  // Interstellar Operations: Alternate Eras items whose BV-table entries (p.189-190) have not been read for them yet
+  "radical-heat-sink-is": "its entry in the IO:AE BV table (p.190) was not read for this item yet",
+  "super-cooled-myomer-is": "its entry in the IO:AE BV table (p.190) was not read for this item yet",
+  "risc-heat-sink-override-kit-is": "its entry in the IO:AE BV table (p.190) was not read for this item yet",
+  "risc-laser-pulse-module-is": "its entry in the IO:AE BV table (p.190) was not read for this item yet",
+  "remote-drone-command-console-is": "its entry in the IO:AE BV table (p.190) was not read for this item yet",
   // Items whose BV is a modifier or a figure that depends on the unit, which the BV rules here do not compute (TO:AUE pp.192-197).
   "aes-arm-is": "it multiplies the BV of the weapons linked to it by 1.25 (TO:AUE p.195, note G)",
   "aes-arm-clan": "it multiplies the BV of the weapons linked to it by 1.25 (TO:AUE p.195, note G)",

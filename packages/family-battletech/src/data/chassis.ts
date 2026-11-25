@@ -758,6 +758,8 @@ export const MYOMER: Sourced & { types: Record<string, MyomerType> } = {
   types: {
     standard: { name: "Standard", percentOfTons: 0, slots: 0 },
     masc: { name: "MASC", percentOfTons: 5, slots: "percent", techBase: "inner-sphere", availability: [{ from: 2740, to: 2795 }, { from: 3035 }], availabilityCite: UTA(29) },
+    // RISC super-cooled myomer (Interstellar Operations: Alternate Eras printed p.88): six slots, one in each arm, leg and side torso; BattleMechs only.
+    "super-cooled": { name: "Super-Cooled Myomer", catalogId: "super-cooled-myomer-is", percentOfTons: 0, slots: 6, techBase: "inner-sphere", rulesLevel: "experimental", introduced: { is: 3132, prototype: true }, cite: { book: IO, page: 88 }, checked: "page" },
     "masc-clan": { name: "MASC (Clan)", percentOfTons: 4, slots: "percent", techBase: "clan", availability: [{ from: 2827 }], availabilityCite: UTA(29) },
     tsm: { name: "Triple-Strength Myomer", catalogId: "tsm-is", percentOfTons: 0, slots: 6, techBase: "inner-sphere", availability: [{ from: 3050 }], availabilityCite: UTA(42) },
   },

@@ -66,6 +66,9 @@ export function sheetNameVariants(name: string): string[] {
   if (prototype?.[1]) out.push(`Prototype ${prototype[1]}`, `Prototype ${prototype[1].replace(/^Ultra AC\/(\d+)$/i, "Ultra Autocannon/$1")}`);
   const counted = /^(.*?)\s*\(\d+\)$/.exec(tidy);
   if (counted?.[1]) out.push(counted[1]);
+  // Items sold by size carry the size in the sheet's name: "Cargo (2 tons)", "Liquid Storage:1t", "CommsGear:2t"
+  const sized = /^(.*?)(?:\s*\(\d+(?:\.\d+)? tons?\)|:\d+(?:\.\d+)?t)$/i.exec(tidy);
+  if (sized?.[1]) out.push(sized[1]);
   const er = /^ER (Small|Medium|Large) Pulse(?: Laser)?$/i.exec(tidy);
   if (er?.[1]) out.push(`ER Pulse Laser, ${er[1]}`);
   const heavy = /^Imp\. Heavy (Small|Medium|Large)(?: Laser)?$/i.exec(tidy);

@@ -457,4 +457,55 @@ export const OTHER: EquipmentGroup[] = [
       { id: "laser-heat-sink-clan", name: "Laser Heat Sink", aliases: ["Laser Heat Sinks"], techBase: "clan", slots: 2, availability: [{ from: 3051 }], rulesLevel: "advanced" },
     ],
   },
+  // -------------------------------------------------------------------------------------------------------------
+  // TechManual industrial equipment the earlier pass left out: items sold by size or placed by a rule. Weight, slots and range are
+  // the Industrial Equipment table (printed pp. 344-345), dates and cost the Industrial Equipment tables (pp. 292-293), all read
+  // against the page images; the rules are the item entries (pp. 212, 239, 243-245). The books print one date for both tech bases
+  // (the Clan column is a dash), so the Clan rows are marked inferred, as for the rows above. `units` is the table's Space columns
+  // that are not NA; `by` is where a column differs from the BattleMech or IndustrialMech's.
+  // Cargo and communications equipment take one slot per ton or fraction of a ton on a 'Mech (pp. 212, 239); the extended fuel tank
+  // too, torso locations only (p. 244). Left out of this table: the dumper (weight is a share of the cargo it empties), tracks,
+  // environmental sealing and ladders (weight by a rule on the unit), the bulldozer, field kitchen, MASH, quarters and the other
+  // vehicle-only equipment (next pass).
+  // -------------------------------------------------------------------------------------------------------------
+  {
+    defaults: { kind: "other", techBase: "inner-sphere", cite: { book: "TechManual", page: 344 }, checked: "page" },
+    items: [
+      { id: "searchlight-is", name: "Searchlight", aliases: ["Searchlight (Mounted)", "Mounted Searchlight"], tons: 0.5, slots: 1, heat: 0, range: [0, 0, 0, 170], availability: [{ from: 1950 }], units: ["mech", "industrialmech", "vehicle", "aero", "smallcraft", "dropship"], by: { aero: { slots: 0 }, smallcraft: { slots: 0 }, dropship: { slots: 0 } } },
+      { id: "ejection-seat-is", name: "Ejection Seat", tons: 0.5, slots: 1, availability: [{ from: 2445 }], locations: ["HD"], units: ["industrialmech", "vehicle"], by: { vehicle: { tons: 0.1, slots: 0, note: "Support vehicle" } } },
+      { id: "extended-fuel-tank-is", name: "Extended Fuel Tank", aliases: ["Fuel Tank", "Extended Fuel Tanks"], tons: "chosen-tons", slots: "ceil-amount", availability: [{ from: 2300 }], locations: ["CT", "LT", "RT"], amount: { unit: "tons", min: 0.5, step: 0.5 }, units: ["industrialmech", "vehicle"], by: { vehicle: { slots: 1 } } },
+      { id: "communications-equipment-is", name: "Communications Equipment", aliases: ["CommsGear", "Comm. Equipment"], tons: "chosen-tons", slots: "ceil-amount", availability: [{ from: 1950 }], amount: { unit: "tons", min: 1, max: 15, step: 1 }, units: ["mech", "industrialmech", "vehicle", "aero", "smallcraft", "dropship"], by: { vehicle: { slots: 1 }, aero: { slots: 0 }, smallcraft: { slots: 0 }, dropship: { slots: 0 } } },
+      { id: "cargo-standard-is", name: "Cargo, Standard", aliases: ["Cargo", "Cargo Bay"], tons: "chosen-tons", slots: "ceil-amount", availability: [{ from: 1950 }], amount: { unit: "tons", min: 0.5, step: 0.5 }, units: ["mech", "industrialmech", "vehicle"], by: { vehicle: { slots: 1 } } },
+      { id: "cargo-liquid-is", name: "Cargo, Liquid", aliases: ["Liquid Storage", "Liquid Cargo"], tons: "chosen-tons", slots: "ceil-amount", availability: [{ from: 1950 }], amount: { unit: "tons", min: 0.5, step: 0.5 }, units: ["mech", "industrialmech", "vehicle"], by: { vehicle: { slots: 1 } } },
+      { id: "cargo-insulated-is", name: "Cargo, Insulated", aliases: ["Insulated Cargo"], tons: "chosen-tons", slots: "ceil-amount", availability: [{ from: 1950 }], amount: { unit: "tons", min: 0.5, step: 0.5 }, units: ["mech", "industrialmech", "vehicle"], by: { vehicle: { slots: 1 } } },
+    ],
+  },
+  {
+    defaults: { kind: "other", techBase: "clan", cite: { book: "TechManual", page: 344 }, checked: "page", yearsInferred: true },
+    items: [
+      { id: "searchlight-clan", name: "Searchlight", aliases: ["Searchlight (Mounted)", "Mounted Searchlight"], tons: 0.5, slots: 1, heat: 0, range: [0, 0, 0, 170], availability: [{ from: 1950 }], units: ["mech", "industrialmech", "vehicle", "aero", "smallcraft", "dropship"], by: { aero: { slots: 0 }, smallcraft: { slots: 0 }, dropship: { slots: 0 } } },
+      { id: "ejection-seat-clan", name: "Ejection Seat", tons: 0.5, slots: 1, availability: [{ from: 2445 }], locations: ["HD"], units: ["industrialmech", "vehicle"], by: { vehicle: { tons: 0.1, slots: 0, note: "Support vehicle" } } },
+      { id: "extended-fuel-tank-clan", name: "Extended Fuel Tank", aliases: ["Fuel Tank", "Extended Fuel Tanks"], tons: "chosen-tons", slots: "ceil-amount", availability: [{ from: 2300 }], locations: ["CT", "LT", "RT"], amount: { unit: "tons", min: 0.5, step: 0.5 }, units: ["industrialmech", "vehicle"], by: { vehicle: { slots: 1 } } },
+      { id: "communications-equipment-clan", name: "Communications Equipment", aliases: ["CommsGear", "Comm. Equipment"], tons: "chosen-tons", slots: "ceil-amount", availability: [{ from: 1950 }], amount: { unit: "tons", min: 1, max: 15, step: 1 }, units: ["mech", "industrialmech", "vehicle", "aero", "smallcraft", "dropship"], by: { vehicle: { slots: 1 }, aero: { slots: 0 }, smallcraft: { slots: 0 }, dropship: { slots: 0 } } },
+      { id: "cargo-standard-clan", name: "Cargo, Standard", aliases: ["Cargo", "Cargo Bay"], tons: "chosen-tons", slots: "ceil-amount", availability: [{ from: 1950 }], amount: { unit: "tons", min: 0.5, step: 0.5 }, units: ["mech", "industrialmech", "vehicle"], by: { vehicle: { slots: 1 } } },
+      { id: "cargo-liquid-clan", name: "Cargo, Liquid", aliases: ["Liquid Storage", "Liquid Cargo"], tons: "chosen-tons", slots: "ceil-amount", availability: [{ from: 1950 }], amount: { unit: "tons", min: 0.5, step: 0.5 }, units: ["mech", "industrialmech", "vehicle"], by: { vehicle: { slots: 1 } } },
+      { id: "cargo-insulated-clan", name: "Cargo, Insulated", aliases: ["Insulated Cargo"], tons: "chosen-tons", slots: "ceil-amount", availability: [{ from: 1950 }], amount: { unit: "tons", min: 0.5, step: 0.5 }, units: ["mech", "industrialmech", "vehicle"], by: { vehicle: { slots: 1 } } },
+    ],
+  },
+  {
+    // Interstellar Operations: Alternate Eras, Dark Age Equipment (Construction Data table, printed p. 215, read against the page
+    // image; rules pp. 83, 87-88): the items the earlier pass left out for an asterisk. Radical heat sink: the table's 4 tons and 3
+    // slots, in a torso (p. 83; the rules text adds no other weight). RISC laser pulse module: 1 ton and 1 slot in the laser's location
+    // (p. 87). Heat sink override kit: no weight or space. Super-cooled myomer: 6 slots, one in each arm, leg and side torso (p. 88),
+    // so on a quad each leg and side torso; it is a myomer (data/chassis.ts) as well as these mounts. Remote drone command console:
+    // the table's 2 tons and one slot.
+    defaults: { kind: "other", techBase: "inner-sphere", cite: { book: IO, page: 215 }, checked: "page" },
+    items: [
+      { id: "radical-heat-sink-is", name: "Radical Heat Sink System", aliases: ["Radical Heat Sink"], tons: 4, slots: 3, availability: [{ from: 3122 }], rulesLevel: "advanced", locations: ["CT", "LT", "RT"], units: ["mech", "industrialmech", "aero"] },
+      { id: "super-cooled-myomer-is", name: "Super-Cooled Myomer", aliases: ["RISC Super-Cooled Myomer"], tons: 0, slots: 1, availability: [{ from: 3132 }], rulesLevel: "experimental", perMech: 6, splitWeight: true, locations: ["LA", "RA", "LL", "RL", "LT", "RT"], locationsQuad: ["FLL", "FRL", "RLL", "RRL", "LT", "RT"] },
+      { id: "risc-heat-sink-override-kit-is", name: "RISC Heat Sink Override Kit", aliases: ["Heat Sink Override Kit"], tons: 0, slots: 0, availability: [{ from: 3134 }], rulesLevel: "experimental" },
+      { id: "risc-laser-pulse-module-is", name: "RISC Laser Pulse Module", aliases: ["RISC Laser Module", "Laser Pulse Module"], tons: 1, slots: 1, availability: [{ from: 3137 }], rulesLevel: "experimental", needs: "laser" },
+      { id: "remote-drone-command-console-is", name: "Remote Drone Command Console", aliases: ["Remote Drone"], tons: 2, slots: 1, availability: [{ from: 3140 }], rulesLevel: "experimental" },
+    ],
+  },
 ];

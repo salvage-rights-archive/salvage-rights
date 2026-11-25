@@ -215,7 +215,7 @@ export function unitCost(record: MechRecord, catalog: Catalog, options: CostOpti
     }
     const itemTons = row.splitWeight && mountTons !== undefined ? items.filter((i) => i.row.id === row.id).reduce((sum, i) => sum + (i.tons ?? 0), 0) : mountTons;
     if (row.kind === "heat-sink") continue; // paid for by count, above
-    if (TSM_ROWS.includes(row.id)) continue; // the TSM slots are the musculature priced above
+    if (TSM_ROWS.includes(row.id) || row.id === "super-cooled-myomer-is") continue; // the myomer slots are the musculature priced above
     if (row.kind === "ammunition") continue; // ammunition is not bought for a unit's cost (p.282)
     if (stemOf(row.id) === "umu") {
       jets.set("umu", [...(jets.get("umu") ?? []), mount]);

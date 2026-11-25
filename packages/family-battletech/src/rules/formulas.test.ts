@@ -36,6 +36,9 @@ describe("formula rows", () => {
     ["jump-pack-is", 50, { amount: 4.5 }, 4.5, 0], // the tons chosen
     ["booby-trap-is", 55, {}, 5.5, 1], // a tenth of 55 = 5.5, already a half ton
     ["umu-is", 70, {}, 1, 1], // as a jump jet of 60-85 tons
+    ["cargo-liquid-is", 50, { amount: 2.5 }, 2.5, 3], // a slot for each ton or part of one
+    ["communications-equipment-is", 50, { amount: 3 }, 3, 3],
+    ["extended-fuel-tank-is", 50, { amount: 4 }, 4, 4],
   ];
   it.each(cases)("%s on a %d-ton 'Mech", (id, tons, options, expectedTons, expectedSlots) => {
     expect(facts(id, tons, options)).toEqual({ tons: expectedTons, slots: expectedSlots });
@@ -66,6 +69,9 @@ describe("sheet names", () => {
     ["Laser AMS (C)", "clan", "laser-anti-missile-system-clan"],
     ["Partial Wing (C)", "clan", "partial-wing-clan"],
     ["Chameleon LPS", "inner-sphere", "chameleon-lps-is"],
+    ["Liquid Storage:1t", "inner-sphere", "cargo-liquid-is"],
+    ["Cargo (11 tons)", "clan", "cargo-standard-clan"],
+    ["Radical Heat Sink", "inner-sphere", "radical-heat-sink-is"],
   ];
   it.each(names)("%s", (sheet, techBase, id) => {
     expect(catalog.match(sheet, techBase as "inner-sphere" | "clan")?.id).toBe(id);

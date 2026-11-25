@@ -78,6 +78,8 @@ export const MUSCULATURE_COST: Sourced & { rows: Record<string, PerTon> } = {
     standard: { perTon: 2_000 },
     tsm: { perTon: 16_000 },
     "industrial-tsm": { perTon: 12_000 },
+    // IO:AE p.215 (RISC super-cooled myomer, 10,000 x tonnage)
+    "super-cooled": { perTon: 10_000, cite: { book: IO, page: 215 } },
     // Interstellar Operations: Alternate Eras, printed p.213 (prototype TSM, 32,000 x tonnage) and p.215 (primitive, 1,000 x tonnage)
     "prototype-tsm": { perTon: 32_000, cite: { book: IO, page: 213 } },
     primitive: { perTon: 1_000, cite: { book: IO, page: 215 } },
@@ -214,6 +216,12 @@ interface PriceGroup extends Sourced {
   prices: Record<string, Price>;
 }
 export const EQUIPMENT_COST: PriceGroup[] = [
+  {
+    // IO:AE p.215 (Dark Age Equipment)
+    cite: { book: IO, page: 215 },
+    checked: "page",
+    prices: { "radical-heat-sink": 250_000, "risc-heat-sink-override-kit": 500, "risc-laser-pulse-module": 200_000, "remote-drone-command-console": 50_000 },
+  },
   {
     // p.290: autocannons, Gauss rifles, machine guns, flamers, the first lasers
     cite: { book: TM, page: 290 },
@@ -416,6 +424,16 @@ export const EQUIPMENT_COST: PriceGroup[] = [
     prices: {
       "cockpit-command-console": 500_000, "collapsible-command-module": 500_000, "full-head-ejection-system": 1_725_000, "chameleon-lps": 600_000,
       "null-signature-system": 1_400_000, "aquatic-survival-system": 4_000, "supercharger": { perRating: 10_000 }, "void-signature-system": 2_000_000,
+    },
+  },
+  {
+    // TechManual pp.292-293 (Industrial Equipment): searchlight (mounted), ejection seat (IndustrialMech), extended fuel tanks, communications
+    // equipment, and the cargo bays a 'Mech may carry, each per ton of the item's weight where the table says "per ton".
+    cite: { book: TM, page: 292 },
+    checked: "page",
+    prices: {
+      "searchlight": 2_000, "ejection-seat": 25_000, "extended-fuel-tank": { perTon: 500 }, "communications-equipment": { perTon: 10_000 },
+      "cargo-standard": 0, "cargo-liquid": { perTon: 100 }, "cargo-insulated": { perTon: 250 },
     },
   },
 ];
