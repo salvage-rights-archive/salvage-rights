@@ -7,7 +7,7 @@ import { ARMOR, MYOMER, STRUCTURE_TYPES } from "../data/chassis";
 import type { MechType } from "../data/chassis";
 import type { Catalog, EquipmentRow } from "./catalog";
 import { levelAtLeast, lowestLevelFor } from "./levels";
-import { ARM_FULL, armorSpread, configurationOf, layout, locationName, slotsTaken } from "./mech";
+import { ARM_FULL, armorSpread, armsOf, configurationOf, layout, locationName, slotsTaken } from "./mech";
 import type { LocationCode, MechRecord, Mount, TechBase } from "./mech";
 import { defaultFixedMounts, splitRecord } from "./omni";
 import type { OmniChassis, OmniConfiguration } from "./omni";
@@ -597,7 +597,7 @@ export function changedSinceImport(record: MechRecord): Set<string> {
   for (const loc of new Set([...Object.keys(record.armor), ...Object.keys(was.armor)])) {
     differ(`armor.${loc}`, record.armor[loc as LocationCode], was.armor[loc as LocationCode]);
   }
-  for (const arm of ["LA", "RA"] as const) differ(`arms.${arm}`, record.arms?.[arm] ?? ARM_FULL, was.arms?.[arm] ?? ARM_FULL);
+  for (const arm of ["LA", "RA"] as const) differ(`arms.${arm}`, armsOf(record)?.[arm] ?? ARM_FULL, armsOf(was)?.[arm] ?? ARM_FULL);
   const now = new Map(record.mounts.map((m) => [m.id, m]));
   for (const m of was.mounts) {
     const here = now.get(m.id);

@@ -61,6 +61,17 @@ describe("resolving a configuration (TechManual pp.19-20, 58)", () => {
 });
 
 describe("editing", () => {
+  it("leaves a configuration's arm settings out of its record once the base becomes a quad", () => {
+    const chassis = gladiator();
+    const prime = resolveConfiguration(chassis, "prime");
+    if (!prime) throw new Error("no prime");
+    const withArms = applyConfigurationEdit(chassis, "prime", editRecord(prime, (d) => void (d.arms = { LA: { lowerArm: false, hand: false } })));
+    expect(resolveConfiguration(withArms, "prime")?.arms).toBeDefined();
+    const quad = applyBaseEdit(withArms, editRecord(resolveBase(withArms), (d) => void (d.configuration = "quad")));
+    expect(quad.configurations[0]?.arms).toBeUndefined();
+    expect(resolveConfiguration(quad, "prime")?.arms).toBeUndefined();
+  });
+
   it("writes a configuration's pods and arms back and drops any change to the fixed parts, armor or chassis", () => {
     const chassis = gladiator();
     const prime = resolveConfiguration(chassis, "prime");

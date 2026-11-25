@@ -8,7 +8,7 @@ import { podMountable } from "./catalog";
 import { runChecks } from "./checks";
 import type { Finding } from "./checks";
 import { levelItems, levelRow, lowestLevelFor } from "./levels";
-import { layout as buildLayout, newRecord, weights } from "./mech";
+import { armsOf, layout as buildLayout, newRecord, weights } from "./mech";
 import type { LocationCode, MechRecord, Mount, NewMechOptions, OmniLink } from "./mech";
 import { rowOf } from "./walk";
 
@@ -104,7 +104,8 @@ function build(chassis: OmniChassis, configuration: OmniConfiguration | undefine
   };
   if (!configuration) record.omni = { ...(record.omni as OmniLink), isBase: true };
   if (chassis.era !== undefined) record.era = chassis.era;
-  if (configuration?.arms) record.arms = structuredClone(configuration.arms);
+  const arms = armsOf({ configuration: chassis.body, arms: configuration?.arms });
+  if (arms) record.arms = structuredClone(arms);
   const imageUrl = configuration?.imageUrl ?? chassis.imageUrl;
   if (imageUrl !== undefined) record.imageUrl = imageUrl;
   const picture = configuration?.picture ?? chassis.picture;
@@ -234,6 +235,7 @@ export function applyBaseEdit(chassis: OmniChassis, edited: MechRecord): OmniCha
   else next.rulesLevel = edited.rulesLevel;
   next.tons = edited.tons;
   next.body = edited.configuration;
+  if (armsOf({ configuration: next.body, arms: {} }) === undefined) for (const c of next.configurations) delete c.arms;
   next.notes = structuredClone(edited.notes);
   if (edited.imageUrl === undefined) delete next.imageUrl;
   else next.imageUrl = edited.imageUrl;

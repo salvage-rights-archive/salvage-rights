@@ -26,7 +26,7 @@ import {
 } from "../data/cost";
 import type { Price } from "../data/cost";
 import type { Catalog, EquipmentRow } from "./catalog";
-import { configurationOf, industrialRulesOf } from "./mech";
+import { armsOf, configurationOf, industrialRulesOf } from "./mech";
 import type { LocationCode, MechRecord, Mount } from "./mech";
 import { equipmentItems, mascOf, own, stemOf, tsmOf, TSM_ROWS, weightLine } from "./walk";
 
@@ -159,7 +159,7 @@ export function unitCost(record: MechRecord, catalog: Catalog, options: CostOpti
     const parts: string[] = [];
     for (const loc of limbs) {
       if (LIMBS.arms.includes(loc)) {
-        const arm = record.arms?.[loc as "LA" | "RA"] ?? { lowerArm: true, hand: true };
+        const arm = armsOf(record)?.[loc as "LA" | "RA"] ?? { lowerArm: true, hand: true };
         const each = A.upperArm + (arm.lowerArm ? A.lowerArm : 0) + (arm.hand ? A.hand : 0);
         actuators += each * tons;
         parts.push(`${loc} ${each}`);
