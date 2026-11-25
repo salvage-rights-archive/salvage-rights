@@ -36,8 +36,30 @@
 // comes from Total Warfare's weapons tables, which print the plasma rifle and plasma cannon as DE (direct-fire energy,
 // with heat effect) and the AP Gauss rifle as DB (direct-fire ballistic), so all three count.
 // A formula name (a string in `tons` or `slots`) is defined in rules/catalog.ts.
+//
+// Interstellar Operations: Alternate Eras (corrected second printing): the Additional Alternate Era Weapons and Equipment
+// table, printed pp. 210-215, read against the page images. Its play figures are pp. 210, 212 and 214 (Type, Heat, Damage,
+// Range, Ammo, Rules Level) and its tons, slots and Latest Intro Date are the facing pp. 211, 213 and 215: `cite` is the
+// second, `playCite` the first. The table prints one date per tech base and no extinction, so each row has one open span;
+// a P on a year means the item existed only as a prototype, and a ~ is a circa year, both written as the year. Rules level
+// is the table's Rules Level column ("Exp" experimental, "Adv" advanced, "TL" tournament legal, written standard). Items the
+// book prints for both tech bases with one date (the prototype rocket launchers) are a row for each. `directFire` is the
+// table's TC Comp column (Y). The damage column's cluster size (C5/10 and the like) is not kept, as for the TechManual rows;
+// "Special" stands for the table's asterisk. Types are as printed, including the ultra autocannon prototypes' "M, C" and
+// the improved ATMs' "S*". The Late Succession Wars repeats of a prototype already listed (Gauss rifle, LB 10-X, medium pulse
+// laser) carry the era in the name. Heat that the table prints as a base plus a die roll (the prototype pulse lasers and
+// ER large laser) is left out rather than stored as the base. The table's To-Hit Modifier column has no field and is not kept.
+// Not added: items whose weight, slots or both carry an asterisk (prototype double heat sink, radical heat sink, HarJel II
+// and III, laser pulse module, remote drone command console, super-cooled myomer, and the special munitions: anti-TSM,
+// Listen-Kill, Dead-Fire, RS Streak SRM, SS Narc, IMP and IIW ATM), items with no BattleMech space (Fusillade launcher,
+// magnetic clamp, ProtoMech quad melee system), conversion and structure items (LAM and QuadVee conversion equipment and
+// wheels, tripod and superheavy structure, cockpits, primitive musculature, extended jump jet system, primitive
+// prototype jump jets), armor types, the Heat Sink Override Kit (0 tons, 0 slots), implants, interface and drone systems,
+// thermobaric ordnance, weapons of mass destruction and nuclear weapons.
 
 import type { EquipmentGroup } from "../../rules/catalog";
+
+const IO = "Interstellar Operations: Alternate Eras";
 
 export const WEAPONS: EquipmentGroup[] = [
   {
@@ -215,6 +237,136 @@ export const WEAPONS: EquipmentGroup[] = [
     items: [
       // Physical weapons (Clan); weight and slots follow the 'Mech's tonnage (formulas in rules/catalog.ts)
       { id: "retractable-blade-clan", name: "Retractable Blade", tons: "blade-tons", slots: "blade-slots", heat: 0, damage: "Special", playCite: { book: "TechManual", page: 344 }, availability: [{ from: 2420 }], locations: ["LA", "RA"], cite: { book: "TechManual", page: 236 } },
+    ],
+  },
+  {
+    defaults: { kind: "weapon", techBase: "inner-sphere", cite: { book: IO, page: 211 }, playCite: { book: IO, page: 210 }, checked: "page", rulesLevel: "experimental" },
+    items: [
+      // Primitive prototype weapons (Age of War); the Latest Intro Date column prints a P, the item existed only as a prototype
+      { id: "primitive-prototype-ac-2-is", name: "Primitive Prototype Autocannon/2", tons: 6, slots: 1, type: "DB, S", heat: 1, damage: "2", range: [4, 8, 16, 24], availability: [{ from: 2290 }], directFire: true },
+      { id: "primitive-prototype-ac-5-is", name: "Primitive Prototype Autocannon/5", tons: 8, slots: 4, type: "DB, S", heat: 1, damage: "5", range: [3, 6, 12, 18], availability: [{ from: 2240 }], directFire: true },
+      { id: "primitive-prototype-ac-10-is", name: "Primitive Prototype Autocannon/10", tons: 12, slots: 7, type: "DB, S", heat: 3, damage: "10", range: [0, 5, 10, 15], availability: [{ from: 2450 }], directFire: true },
+      { id: "primitive-prototype-ac-20-is", name: "Primitive Prototype Autocannon/20", tons: 14, slots: 10, type: "DB, S", heat: 7, damage: "20", range: [0, 3, 6, 9], availability: [{ from: 2488 }], directFire: true, splittable: true },
+      { id: "primitive-prototype-small-laser-is", name: "Primitive Prototype Small Laser", tons: 0.5, slots: 1, type: "DE", heat: 2, damage: "3", range: [0, 1, 2, 3], availability: [{ from: 2290 }], directFire: true },
+      { id: "primitive-prototype-medium-laser-is", name: "Primitive Prototype Medium Laser", tons: 1, slots: 1, type: "DE", heat: 5, damage: "5", range: [0, 3, 6, 9], availability: [{ from: 2290 }], directFire: true },
+      { id: "primitive-prototype-large-laser-is", name: "Primitive Prototype Large Laser", tons: 5, slots: 2, type: "DE", heat: 12, damage: "8", range: [0, 5, 10, 15], availability: [{ from: 2306 }], directFire: true },
+      { id: "primitive-prototype-lrm-5-is", name: "Primitive Prototype LRM 5", tons: 2, slots: 1, type: "M, C, S", heat: 2, damage: "1/Msl", range: [6, 7, 14, 21], availability: [{ from: 2295 }] },
+      { id: "primitive-prototype-lrm-10-is", name: "Primitive Prototype LRM 10", tons: 5, slots: 2, type: "M, C, S", heat: 4, damage: "1/Msl", range: [6, 7, 14, 21], availability: [{ from: 2295 }] },
+      { id: "primitive-prototype-lrm-15-is", name: "Primitive Prototype LRM 15", tons: 7, slots: 3, type: "M, C, S", heat: 5, damage: "1/Msl", range: [6, 7, 14, 21], availability: [{ from: 2295 }] },
+      { id: "primitive-prototype-lrm-20-is", name: "Primitive Prototype LRM 20", tons: 10, slots: 5, type: "M, C, S", heat: 6, damage: "1/Msl", range: [6, 7, 14, 21], availability: [{ from: 2295 }] },
+      { id: "primitive-prototype-srm-2-is", name: "Primitive Prototype SRM 2", tons: 1, slots: 1, type: "M, C, S", heat: 2, damage: "2/Msl", range: [0, 4, 8, 12], availability: [{ from: 2365 }] },
+      { id: "primitive-prototype-srm-4-is", name: "Primitive Prototype SRM 4", tons: 2, slots: 1, type: "M, C, S", heat: 3, damage: "2/Msl", range: [0, 4, 8, 12], availability: [{ from: 2365 }] },
+      { id: "primitive-prototype-srm-6-is", name: "Primitive Prototype SRM 6", tons: 3, slots: 2, type: "M, C, S", heat: 4, damage: "2/Msl", range: [0, 4, 8, 12], availability: [{ from: 2365 }] },
+      { id: "primitive-prototype-ppc-is", name: "Primitive Prototype PPC", tons: 7, slots: 3, type: "DE", heat: 15, damage: "10", range: [3, 6, 12, 18], availability: [{ from: 2439 }], directFire: true },
+      { id: "prototype-arrow-iv-is", name: "Prototype Arrow IV", tons: 16, slots: 16, type: "AE, S, F", heat: 10, damage: "20A", availability: [{ from: 2593 }], splittable: true },
+      { id: "prototype-gauss-rifle-is", name: "Prototype Gauss Rifle", tons: 15, slots: 8, type: "DB, X", heat: 1, damage: "15", range: [2, 7, 15, 22], availability: [{ from: 2587 }], splittable: true },
+      { id: "prototype-lb-10-x-ac-is", name: "Prototype LB 10-X Autocannon", tons: 11, slots: 7, type: "DB, C, F, S", heat: 2, damage: "10", range: [0, 6, 12, 18], availability: [{ from: 2590 }] },
+      { id: "prototype-narc-missile-beacon-is", name: "Prototype Narc Missile Beacon", tons: 3, slots: 2, type: "M, E, S", heat: 0, damage: "Special", range: [0, 3, 6, 9], availability: [{ from: 2580 }] },
+      { id: "prototype-small-pulse-laser-is", name: "Prototype Small Pulse Laser", tons: 1, slots: 1, type: "P", damage: "3", range: [0, 1, 2, 3], availability: [{ from: 2595 }], directFire: true },
+      { id: "prototype-medium-pulse-laser-is", name: "Prototype Medium Pulse Laser", tons: 2, slots: 1, type: "P", damage: "6", range: [0, 2, 4, 6], availability: [{ from: 2595 }], directFire: true },
+      { id: "prototype-large-pulse-laser-is", name: "Prototype Large Pulse Laser", tons: 7, slots: 2, type: "P", damage: "9", range: [0, 3, 7, 10], availability: [{ from: 2595 }], directFire: true },
+    ],
+  },
+  {
+    defaults: { kind: "weapon", techBase: "inner-sphere", cite: { book: IO, page: 211 }, playCite: { book: IO, page: 210 }, checked: "page", rulesLevel: "experimental" },
+    items: [
+      // Prototype rocket launchers (Inner Sphere and Clan, one-shot); the book prints ~2320P for both
+      { id: "prototype-rocket-launcher-10-is", name: "Prototype Rocket Launcher 10", tons: 0.5, slots: 1, type: "M, C, OS", heat: 3, damage: "1/Msl", range: [0, 5, 11, 18], availability: [{ from: 2320 }] },
+      { id: "prototype-rocket-launcher-15-is", name: "Prototype Rocket Launcher 15", tons: 1, slots: 2, type: "M, C, OS", heat: 4, damage: "1/Msl", range: [0, 4, 9, 15], availability: [{ from: 2320 }] },
+      { id: "prototype-rocket-launcher-20-is", name: "Prototype Rocket Launcher 20", tons: 1.5, slots: 3, type: "M, C, OS", heat: 5, damage: "1/Msl", range: [0, 3, 7, 12], availability: [{ from: 2320 }] },
+    ],
+  },
+  {
+    defaults: { kind: "weapon", techBase: "clan", cite: { book: IO, page: 211 }, playCite: { book: IO, page: 210 }, checked: "page", rulesLevel: "experimental" },
+    items: [
+      { id: "prototype-rocket-launcher-10-clan", name: "Prototype Rocket Launcher 10", tons: 0.5, slots: 1, type: "M, C, OS", heat: 3, damage: "1/Msl", range: [0, 5, 11, 18], availability: [{ from: 2320 }] },
+      { id: "prototype-rocket-launcher-15-clan", name: "Prototype Rocket Launcher 15", tons: 1, slots: 2, type: "M, C, OS", heat: 4, damage: "1/Msl", range: [0, 4, 9, 15], availability: [{ from: 2320 }] },
+      { id: "prototype-rocket-launcher-20-clan", name: "Prototype Rocket Launcher 20", tons: 1.5, slots: 3, type: "M, C, OS", heat: 5, damage: "1/Msl", range: [0, 3, 7, 12], availability: [{ from: 2320 }] },
+    ],
+  },
+  {
+    defaults: { kind: "weapon", techBase: "inner-sphere", cite: { book: IO, page: 211 }, playCite: { book: IO, page: 210 }, checked: "page", rulesLevel: "experimental" },
+    items: [
+      // Star League equipment
+      { id: "centurion-weapon-system-is", name: "Centurion Weapon System", tons: 5, slots: 2, type: "DE, E", heat: 4, damage: "Special", range: [0, 6, 12, 18], availability: [{ from: 2762 }], directFire: true },
+    ],
+  },
+  {
+    defaults: { kind: "weapon", techBase: "clan", cite: { book: IO, page: 211 }, playCite: { book: IO, page: 210 }, checked: "page", rulesLevel: "experimental" },
+    items: [
+      // Early Clan equipment (improved and prototype Clan weapons)
+      { id: "improved-ac-2-clan", name: "Improved Autocannon/2", tons: 5, slots: 1, type: "DB, S", heat: 1, damage: "2", range: [4, 8, 16, 24], availability: [{ from: 2818 }], directFire: true },
+      { id: "improved-ac-5-clan", name: "Improved Autocannon/5", tons: 7, slots: 2, type: "DB, S", heat: 1, damage: "5", range: [3, 6, 12, 18], availability: [{ from: 2818 }], directFire: true },
+      { id: "improved-ac-10-clan", name: "Improved Autocannon/10", tons: 11, slots: 6, type: "DB, S", heat: 3, damage: "10", range: [0, 5, 10, 15], availability: [{ from: 2818 }], directFire: true },
+      { id: "improved-ac-20-clan", name: "Improved Autocannon/20", tons: 13, slots: 9, type: "DB, S", heat: 7, damage: "20", range: [0, 3, 6, 9], availability: [{ from: 2818 }], directFire: true, splittable: true },
+      { id: "improved-gauss-rifle-clan", name: "Improved Gauss Rifle", tons: 13, slots: 6, type: "DB, X", heat: 1, damage: "15", range: [2, 7, 15, 22], availability: [{ from: 2822 }], directFire: true },
+      { id: "improved-large-laser-clan", name: "Improved Large Laser", tons: 4, slots: 1, type: "DE", heat: 8, damage: "8", range: [0, 5, 10, 15], availability: [{ from: 2818 }], directFire: true },
+      { id: "improved-large-pulse-laser-clan", name: "Improved Large Pulse Laser", tons: 6, slots: 2, type: "P", heat: 10, damage: "9", range: [0, 3, 7, 10], availability: [{ from: 2820 }], directFire: true },
+      { id: "improved-ppc-clan", name: "Improved PPC", tons: 6, slots: 2, type: "DE", heat: 10, damage: "10", range: [3, 6, 12, 18], availability: [{ from: 2820 }], directFire: true },
+      { id: "enhanced-ppc-clan", name: "Enhanced PPC", tons: 7, slots: 3, type: "DE", heat: 15, damage: "12", range: [0, 7, 14, 23], availability: [{ from: 2823 }], directFire: true },
+      { id: "improved-lrm-5-clan", name: "Improved LRM 5", tons: 1, slots: 1, type: "M, C, S", heat: 2, damage: "1/Msl", range: [6, 7, 14, 21], availability: [{ from: 2818 }] },
+      { id: "improved-lrm-10-clan", name: "Improved LRM 10", tons: 2.5, slots: 1, type: "M, C, S", heat: 4, damage: "1/Msl", range: [6, 7, 14, 21], availability: [{ from: 2818 }] },
+      { id: "improved-lrm-15-clan", name: "Improved LRM 15", tons: 3.5, slots: 2, type: "M, C, S", heat: 5, damage: "1/Msl", range: [6, 7, 14, 21], availability: [{ from: 2818 }] },
+    ],
+  },
+  {
+    defaults: { kind: "weapon", techBase: "clan", cite: { book: IO, page: 213 }, playCite: { book: IO, page: 212 }, checked: "page", rulesLevel: "experimental" },
+    items: [
+      { id: "improved-lrm-20-clan", name: "Improved LRM 20", tons: 5, slots: 4, type: "M, C, S", heat: 6, damage: "1/Msl", range: [6, 7, 14, 21], availability: [{ from: 2818 }] },
+      { id: "improved-srm-2-clan", name: "Improved SRM 2", tons: 1, slots: 1, type: "M, C, S", heat: 2, damage: "2/Msl", range: [0, 4, 8, 12], availability: [{ from: 2817 }] },
+      { id: "improved-srm-4-clan", name: "Improved SRM 4", tons: 2, slots: 1, type: "M, C, S", heat: 3, damage: "2/Msl", range: [0, 4, 8, 12], availability: [{ from: 2817 }] },
+      { id: "improved-srm-6-clan", name: "Improved SRM 6", tons: 3, slots: 2, type: "M, C, S", heat: 4, damage: "2/Msl", range: [0, 4, 8, 12], availability: [{ from: 2817 }] },
+      { id: "prototype-er-small-laser-clan", name: "Prototype ER Small Laser", tons: 0.5, slots: 1, type: "DE", heat: 2, damage: "3", range: [0, 2, 4, 5], availability: [{ from: 2819 }], directFire: true },
+      { id: "prototype-er-medium-laser-clan", name: "Prototype ER Medium Laser", tons: 1.5, slots: 1, type: "DE", heat: 5, damage: "5", range: [0, 4, 8, 12], availability: [{ from: 2819 }], directFire: true },
+      { id: "prototype-lb-2-x-ac-clan", name: "Prototype LB 2-X Autocannon", tons: 6, slots: 5, type: "DB, C, S, F", heat: 1, damage: "2", range: [4, 9, 18, 27], availability: [{ from: 2820 }], directFire: true },
+      { id: "prototype-lb-5-x-ac-clan", name: "Prototype LB 5-X Autocannon", tons: 8, slots: 6, type: "DB, C, S, F", heat: 1, damage: "5", range: [3, 7, 14, 21], availability: [{ from: 2820 }], directFire: true },
+      { id: "prototype-lb-20-x-ac-clan", name: "Prototype LB 20-X Autocannon", tons: 14, slots: 12, type: "DB, C, S, F", heat: 6, damage: "20", range: [0, 4, 8, 12], availability: [{ from: 2820 }], directFire: true, splittable: true },
+      { id: "prototype-streak-srm-4-clan", name: "Prototype Streak SRM 4", tons: 3, slots: 2, type: "M, C", heat: 3, damage: "2/Msl", range: [0, 3, 6, 9], availability: [{ from: 2819 }] },
+      { id: "prototype-streak-srm-6-clan", name: "Prototype Streak SRM 6", tons: 4.5, slots: 2, type: "M, C", heat: 4, damage: "2/Msl", range: [0, 3, 6, 9], availability: [{ from: 2819 }] },
+      { id: "prototype-ultra-ac-2-clan", name: "Prototype Ultra Autocannon/2", tons: 7, slots: 4, type: "M, C", heat: 1, damage: "2/Shot", range: [3, 8, 17, 25], availability: [{ from: 2820 }], directFire: true },
+      { id: "prototype-ultra-ac-10-clan", name: "Prototype Ultra Autocannon/10", tons: 13, slots: 8, type: "M, C", heat: 4, damage: "10/Shot", range: [0, 6, 12, 18], availability: [{ from: 2820 }], directFire: true, splittable: true },
+      { id: "prototype-ultra-ac-20-clan", name: "Prototype Ultra Autocannon/20", tons: 15, slots: 11, type: "M, C", heat: 8, damage: "20/Shot", range: [0, 3, 7, 10], availability: [{ from: 2820 }], directFire: true, splittable: true },
+    ],
+  },
+  {
+    defaults: { kind: "weapon", techBase: "inner-sphere", cite: { book: IO, page: 213 }, playCite: { book: IO, page: 212 }, checked: "page", rulesLevel: "experimental" },
+    items: [
+      // Late Succession Wars prototypes; the book prints a P on each year. Heat for the pulse and ER large lasers is printed as a base plus a die roll, so it is left out
+      { id: "prototype-er-large-laser-is", name: "Prototype ER Large Laser", tons: 5, slots: 2, type: "DE", damage: "8", range: [0, 7, 14, 19], availability: [{ from: 3030 }], directFire: true },
+      { id: "prototype-medium-pulse-laser-lsw-is", name: "Prototype Medium Pulse Laser (Late Succession Wars)", tons: 2, slots: 1, type: "P", damage: "6", range: [0, 2, 4, 6], availability: [{ from: 3031 }], directFire: true },
+      { id: "prototype-gauss-rifle-lsw-is", name: "Prototype Gauss Rifle (Late Succession Wars)", tons: 15, slots: 8, type: "DB, X", heat: 1, damage: "15", range: [2, 7, 15, 22], availability: [{ from: 3038 }], splittable: true },
+      { id: "prototype-lb-10-x-ac-lsw-is", name: "Prototype LB 10-X Autocannon (Late Succession Wars)", tons: 11, slots: 7, type: "DB, C, F, S", heat: 2, damage: "10", range: [0, 6, 12, 18], availability: [{ from: 3030 }] },
+      { id: "prototype-ultra-ac-5-is", name: "Prototype Ultra Autocannon/5", tons: 9, slots: 6, type: "M, C", heat: 1, damage: "5/Shot", range: [2, 6, 13, 20], availability: [{ from: 3029 }], directFire: true },
+    ],
+  },
+  {
+    defaults: { kind: "weapon", techBase: "clan", cite: { book: IO, page: 213 }, playCite: { book: IO, page: 212 }, checked: "page", rulesLevel: "advanced" },
+    items: [
+      // Wars of Reaving equipment: improved ATMs (every size prints heat 2)
+      { id: "improved-atm-3-clan", name: "Improved ATM 3", tons: 1.5, slots: 2, type: "M, C, S*", heat: 2, damage: "6", range: [4, 5, 10, 15], availability: [{ from: 3070 }] },
+      { id: "improved-atm-6-clan", name: "Improved ATM 6", tons: 3.5, slots: 3, type: "M, C, S*", heat: 2, damage: "12", range: [4, 5, 10, 15], availability: [{ from: 3070 }] },
+      { id: "improved-atm-9-clan", name: "Improved ATM 9", tons: 5, slots: 4, type: "M, C, S*", heat: 2, damage: "18", range: [4, 5, 10, 15], availability: [{ from: 3070 }] },
+      { id: "improved-atm-12-clan", name: "Improved ATM 12", tons: 7, slots: 5, type: "M, C, S*", heat: 2, damage: "24", range: [4, 5, 10, 15], availability: [{ from: 3070 }] },
+    ],
+  },
+  {
+    defaults: { kind: "weapon", techBase: "inner-sphere", cite: { book: IO, page: 215 }, playCite: { book: IO, page: 214 }, checked: "page", rulesLevel: "advanced" },
+    items: [
+      // Dark Age equipment
+      { id: "small-re-engineered-laser-is", name: "Small Re-Engineered Laser", tons: 1.5, slots: 1, type: "P", heat: 4, damage: "4", range: [0, 1, 2, 3], availability: [{ from: 3130 }], directFire: true },
+      { id: "medium-re-engineered-laser-is", name: "Medium Re-Engineered Laser", tons: 2.5, slots: 2, type: "P", heat: 6, damage: "6", range: [0, 3, 6, 9], availability: [{ from: 3130 }], directFire: true },
+      { id: "large-re-engineered-laser-is", name: "Large Re-Engineered Laser", tons: 8, slots: 5, type: "P", heat: 9, damage: "9", range: [0, 5, 10, 15], availability: [{ from: 3130 }], directFire: true },
+      { id: "tsemp-cannon-is", name: "TSEMP Cannon", tons: 6, slots: 5, type: "DE, X", heat: 10, damage: "Special", range: [0, 5, 10, 15], availability: [{ from: 3109 }], directFire: true },
+      { id: "tsemp-one-shot-is", name: "TSEMP One-Shot", tons: 4, slots: 3, type: "DE, X, OS", heat: 10, damage: "Special", range: [0, 5, 10, 15], availability: [{ from: 3095 }], directFire: true },
+      { id: "risc-advanced-pds-is", name: "RISC Advanced PDS", tons: 3, slots: 2, type: "PD", heat: 2, damage: "0", range: [0, 0, 0, 3], shotsPerTon: 12, availability: [{ from: 3137 }] },
+    ],
+  },
+  {
+    defaults: { kind: "weapon", techBase: "inner-sphere", cite: { book: IO, page: 215 }, playCite: { book: IO, page: 214 }, checked: "page", rulesLevel: "experimental" },
+    items: [
+      // RISC equipment
+      { id: "risc-hyper-laser-is", name: "RISC Hyper Laser", tons: 8, slots: 6, type: "DE, X", heat: 24, damage: "20", range: [0, 8, 15, 25], availability: [{ from: 3134 }], directFire: true },
+      { id: "risc-repeating-tsemp-cannon-is", name: "RISC Repeating TSEMP Cannon", tons: 8, slots: 7, type: "DE, X", heat: 10, damage: "Special", range: [0, 5, 10, 15], availability: [{ from: 3133 }], directFire: true },
     ],
   },
 ];

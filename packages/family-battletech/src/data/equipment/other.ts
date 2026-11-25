@@ -54,6 +54,8 @@
 
 import type { EquipmentGroup } from "../../rules/catalog";
 
+const IO = "Interstellar Operations: Alternate Eras";
+
 export const OTHER: EquipmentGroup[] = [
   {
     defaults: { kind: "heat-sink", techBase: "inner-sphere", cite: { book: "TechManual", page: 54 }, checked: "page", tons: 0 },
@@ -250,6 +252,49 @@ export const OTHER: EquipmentGroup[] = [
       { id: "bridgelayer-light-clan", name: "Bridgelayer (Light)", aliases: ["Light Bridgelayer"], tons: 1, slots: 2, heat: 0, availability: [{ from: 1950 }], locations: [], locationsQuad: ["CT", "LT", "RT"] },
       { id: "bridgelayer-medium-clan", name: "Bridgelayer (Medium)", aliases: ["Medium Bridgelayer"], tons: 2, slots: 4, heat: 0, availability: [{ from: 1950 }], locations: [], locationsQuad: ["CT", "LT", "RT"] },
       { id: "bridgelayer-heavy-clan", name: "Bridgelayer (Heavy)", aliases: ["Heavy Bridgelayer"], tons: 6, slots: 12, heat: 0, availability: [{ from: 1950 }], locations: [], locationsQuad: ["CT", "LT", "RT"] },
+    ],
+  },
+  {
+    defaults: { kind: "other", techBase: "inner-sphere", cite: { book: IO, page: 211 }, playCite: { book: IO, page: 210 }, checked: "page", rulesLevel: "experimental" },
+    items: [
+      // Age of War prototype electronics and equipment (Inner Sphere), the book prints a P on each year
+      { id: "prototype-artemis-iv-is", name: "Prototype Artemis IV FCS", tons: 1, slots: 1, availability: [{ from: 2592 }], needs: "launcher" },
+      { id: "prototype-beagle-active-probe-is", name: "Prototype Beagle Active Probe", tons: 2, slots: 3, type: "E", heat: 0, range: [0, 0, 0, 4], availability: [{ from: 2560 }] },
+      { id: "prototype-case-is", name: "Prototype CASE", tons: 0.5, slots: 1, heat: 0, availability: [{ from: 2452 }] },
+      { id: "prototype-guardian-ecm-suite-is", name: "Prototype Guardian ECM Suite", tons: 2, slots: 3, type: "E", heat: 0, range: [0, 0, 0, 6], availability: [{ from: 2595 }] },
+      { id: "prototype-remote-sensors-is", name: "Prototype Remote Sensors", tons: 0.5, slots: 1, type: "E", heat: 0, range: [0, 0, 0, 0], availability: [{ from: 2586 }] },
+      { id: "prototype-tag-is", name: "Prototype TAG", tons: 1.5, slots: 1, type: "E", heat: 0, range: [0, 5, 9, 15], availability: [{ from: 2593 }] },
+    ],
+  },
+  {
+    defaults: { kind: "other", techBase: "inner-sphere", cite: { book: IO, page: 213 }, playCite: { book: IO, page: 212 }, checked: "page", rulesLevel: "experimental" },
+    items: [
+      // Late Succession Wars prototype: six one-slot items, 0 tons, placed anywhere (as the standard Triple-Strength Myomer)
+      { id: "prototype-triple-strength-myomer-is", name: "Prototype Triple-Strength Myomer", tons: 0, slots: 1, availability: [{ from: 3028 }], perMech: 6 },
+    ],
+  },
+  {
+    defaults: { kind: "other", techBase: "clan", cite: { book: IO, page: 213 }, playCite: { book: IO, page: 212 }, checked: "page", rulesLevel: "experimental" },
+    items: [
+      // Wars of Reaving equipment
+      { id: "nova-cews-clan", name: "Nova CEWS", tons: 1.5, slots: 1, type: "E", heat: 2, damage: "0", range: [0, 0, 0, 3], availability: [{ from: 3065 }] },
+    ],
+  },
+  {
+    defaults: { kind: "other", techBase: "inner-sphere", cite: { book: IO, page: 215 }, playCite: { book: IO, page: 214 }, checked: "page", rulesLevel: "experimental" },
+    items: [
+      // RISC and Dark Age electronics and equipment
+      { id: "risc-emergency-coolant-system-is", name: "RISC Emergency Coolant System", tons: 2, slots: 1, type: "PE, X", availability: [{ from: 3136 }] },
+      { id: "risc-viral-jammer-decoy-is", name: "RISC Viral Jammer (Decoy)", tons: 2.5, slots: 1, type: "E", heat: 12, range: [0, 0, 0, 17], availability: [{ from: 3135 }] },
+      { id: "risc-viral-jammer-homing-is", name: "RISC Viral Jammer (Homing)", tons: 2.5, slots: 1, type: "E", heat: 12, range: [0, 0, 0, 17], availability: [{ from: 3135 }] },
+    ],
+  },
+  {
+    defaults: { kind: "other", techBase: "inner-sphere", cite: { book: IO, page: 215 }, checked: "page", rulesLevel: "standard" },
+    items: [
+      // Land-Air BattleMech equipment (Tournament Legal); LAMs only, which the catalog does not check. LAM Fuel Tanks print ES, written as 2200
+      { id: "lam-bomb-bay-is", name: "LAM Bomb Bay", tons: 1, slots: 1, availability: [{ from: 2680 }] },
+      { id: "lam-fuel-tanks-is", name: "LAM Fuel Tanks", tons: 1, slots: 1, availability: [{ from: 2200 }] },
     ],
   },
 ];

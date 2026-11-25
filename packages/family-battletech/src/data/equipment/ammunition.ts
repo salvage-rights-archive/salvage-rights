@@ -16,6 +16,8 @@
 
 import type { EquipmentGroup } from "../../rules/catalog";
 
+const IO = "Interstellar Operations: Alternate Eras";
+
 export const AMMUNITION: EquipmentGroup[] = [
   {
     defaults: { kind: "ammunition", techBase: "inner-sphere", cite: { book: "TechManual", page: 57 }, checked: "page", tons: 1, slots: 1 },
@@ -181,6 +183,81 @@ export const AMMUNITION: EquipmentGroup[] = [
       // Nail and rivet gun ammunition (Clan); the Clan year is the Clan weapon's, the table prints a dash
       { id: "ammo-nail-rivet-gun-clan", shots: 300, name: "Nail/Rivet Gun Ammo", availability: [{ from: 1950 }] },
       { id: "ammo-nail-rivet-gun-half-clan", shots: 150, name: "Nail/Rivet Gun Ammo (Half Ton)", tons: 0.5, availability: [{ from: 1950 }] },
+    ],
+  },
+  {
+    defaults: { kind: "ammunition", techBase: "inner-sphere", cite: { book: IO, page: 211 }, playCite: { book: IO, page: 210 }, checked: "page", rulesLevel: "experimental" },
+    items: [
+      // Ammunition for the Age of War prototypes (Inner Sphere): the Ammo column of the table; the bin is one ton in one slot (TechManual p. 57)
+      { id: "ammo-primitive-prototype-ac-2-is", name: "Primitive Prototype Autocannon/2 Ammo", tons: 1, slots: 1, shotsPerTon: 34, availability: [{ from: 2290 }] },
+      { id: "ammo-primitive-prototype-ac-5-is", name: "Primitive Prototype Autocannon/5 Ammo", tons: 1, slots: 1, shotsPerTon: 15, availability: [{ from: 2240 }] },
+      { id: "ammo-primitive-prototype-ac-10-is", name: "Primitive Prototype Autocannon/10 Ammo", tons: 1, slots: 1, shotsPerTon: 8, availability: [{ from: 2450 }] },
+      { id: "ammo-primitive-prototype-ac-20-is", name: "Primitive Prototype Autocannon/20 Ammo", tons: 1, slots: 1, shotsPerTon: 4, availability: [{ from: 2488 }] },
+      { id: "ammo-primitive-prototype-lrm-5-is", name: "Primitive Prototype LRM 5 Ammo", tons: 1, slots: 1, shotsPerTon: 18, availability: [{ from: 2295 }] },
+      { id: "ammo-primitive-prototype-lrm-10-is", name: "Primitive Prototype LRM 10 Ammo", tons: 1, slots: 1, shotsPerTon: 9, availability: [{ from: 2295 }] },
+      { id: "ammo-primitive-prototype-lrm-15-is", name: "Primitive Prototype LRM 15 Ammo", tons: 1, slots: 1, shotsPerTon: 6, availability: [{ from: 2295 }] },
+      { id: "ammo-primitive-prototype-lrm-20-is", name: "Primitive Prototype LRM 20 Ammo", tons: 1, slots: 1, shotsPerTon: 4, availability: [{ from: 2295 }] },
+      { id: "ammo-primitive-prototype-srm-2-is", name: "Primitive Prototype SRM 2 Ammo", tons: 1, slots: 1, shotsPerTon: 37, availability: [{ from: 2365 }] },
+      { id: "ammo-primitive-prototype-srm-4-is", name: "Primitive Prototype SRM 4 Ammo", tons: 1, slots: 1, shotsPerTon: 18, availability: [{ from: 2365 }] },
+      { id: "ammo-primitive-prototype-srm-6-is", name: "Primitive Prototype SRM 6 Ammo", tons: 1, slots: 1, shotsPerTon: 11, availability: [{ from: 2365 }] },
+      { id: "ammo-prototype-arrow-iv-is", name: "Prototype Arrow IV Ammo", tons: 1, slots: 1, shotsPerTon: 3, availability: [{ from: 2593 }] },
+      { id: "ammo-prototype-lb-10-x-ac-is", name: "Prototype LB 10-X Autocannon Ammo", tons: 1, slots: 1, shotsPerTon: 10, availability: [{ from: 2590 }] },
+      { id: "ammo-prototype-narc-missile-beacon-is", name: "Prototype Narc Missile Beacon Ammo", tons: 1, slots: 1, shotsPerTon: 5, availability: [{ from: 2580 }] },
+    ],
+  },
+  {
+    defaults: { kind: "ammunition", techBase: "clan", cite: { book: IO, page: 211 }, playCite: { book: IO, page: 210 }, checked: "page", rulesLevel: "experimental" },
+    items: [
+      // Ammunition for the early Clan weapons
+      { id: "ammo-improved-ac-2-clan", name: "Improved Autocannon/2 Ammo", tons: 1, slots: 1, shotsPerTon: 45, availability: [{ from: 2818 }] },
+      { id: "ammo-improved-ac-5-clan", name: "Improved Autocannon/5 Ammo", tons: 1, slots: 1, shotsPerTon: 20, availability: [{ from: 2818 }] },
+      { id: "ammo-improved-ac-10-clan", name: "Improved Autocannon/10 Ammo", tons: 1, slots: 1, shotsPerTon: 10, availability: [{ from: 2818 }] },
+      { id: "ammo-improved-ac-20-clan", name: "Improved Autocannon/20 Ammo", tons: 1, slots: 1, shotsPerTon: 5, availability: [{ from: 2818 }] },
+      { id: "ammo-improved-gauss-rifle-clan", name: "Improved Gauss Rifle Ammo", tons: 1, slots: 1, shotsPerTon: 8, availability: [{ from: 2822 }] },
+      { id: "ammo-improved-lrm-5-clan", name: "Improved LRM 5 Ammo", tons: 1, slots: 1, shotsPerTon: 24, availability: [{ from: 2818 }] },
+      { id: "ammo-improved-lrm-10-clan", name: "Improved LRM 10 Ammo", tons: 1, slots: 1, shotsPerTon: 12, availability: [{ from: 2818 }] },
+      { id: "ammo-improved-lrm-15-clan", name: "Improved LRM 15 Ammo", tons: 1, slots: 1, shotsPerTon: 8, availability: [{ from: 2818 }] },
+    ],
+  },
+  {
+    defaults: { kind: "ammunition", techBase: "clan", cite: { book: IO, page: 213 }, playCite: { book: IO, page: 212 }, checked: "page", rulesLevel: "experimental" },
+    items: [
+      { id: "ammo-improved-lrm-20-clan", name: "Improved LRM 20 Ammo", tons: 1, slots: 1, shotsPerTon: 6, availability: [{ from: 2818 }] },
+      { id: "ammo-improved-srm-2-clan", name: "Improved SRM 2 Ammo", tons: 1, slots: 1, shotsPerTon: 50, availability: [{ from: 2817 }] },
+      { id: "ammo-improved-srm-4-clan", name: "Improved SRM 4 Ammo", tons: 1, slots: 1, shotsPerTon: 25, availability: [{ from: 2817 }] },
+      { id: "ammo-improved-srm-6-clan", name: "Improved SRM 6 Ammo", tons: 1, slots: 1, shotsPerTon: 15, availability: [{ from: 2817 }] },
+      { id: "ammo-prototype-lb-2-x-ac-clan", name: "Prototype LB 2-X Autocannon Ammo", tons: 1, slots: 1, shotsPerTon: 45, availability: [{ from: 2820 }] },
+      { id: "ammo-prototype-lb-5-x-ac-clan", name: "Prototype LB 5-X Autocannon Ammo", tons: 1, slots: 1, shotsPerTon: 20, availability: [{ from: 2820 }] },
+      { id: "ammo-prototype-lb-20-x-ac-clan", name: "Prototype LB 20-X Autocannon Ammo", tons: 1, slots: 1, shotsPerTon: 5, availability: [{ from: 2820 }] },
+      { id: "ammo-prototype-streak-srm-4-clan", name: "Prototype Streak SRM 4 Ammo", tons: 1, slots: 1, shotsPerTon: 25, availability: [{ from: 2819 }] },
+      { id: "ammo-prototype-streak-srm-6-clan", name: "Prototype Streak SRM 6 Ammo", tons: 1, slots: 1, shotsPerTon: 15, availability: [{ from: 2819 }] },
+      { id: "ammo-prototype-ultra-ac-2-clan", name: "Prototype Ultra Autocannon/2 Ammo", tons: 1, slots: 1, shotsPerTon: 45, availability: [{ from: 2820 }] },
+      { id: "ammo-prototype-ultra-ac-10-clan", name: "Prototype Ultra Autocannon/10 Ammo", tons: 1, slots: 1, shotsPerTon: 10, availability: [{ from: 2820 }] },
+      { id: "ammo-prototype-ultra-ac-20-clan", name: "Prototype Ultra Autocannon/20 Ammo", tons: 1, slots: 1, shotsPerTon: 5, availability: [{ from: 2820 }] },
+    ],
+  },
+  {
+    defaults: { kind: "ammunition", techBase: "inner-sphere", cite: { book: IO, page: 213 }, playCite: { book: IO, page: 212 }, checked: "page", rulesLevel: "experimental" },
+    items: [
+      // Ammunition for the Late Succession Wars prototype Ultra AC/5
+      { id: "ammo-prototype-ultra-ac-5-is", name: "Prototype Ultra Autocannon/5 Ammo", tons: 1, slots: 1, shotsPerTon: 20, availability: [{ from: 3029 }] },
+    ],
+  },
+  {
+    defaults: { kind: "ammunition", techBase: "clan", cite: { book: IO, page: 213 }, playCite: { book: IO, page: 212 }, checked: "page", rulesLevel: "advanced" },
+    items: [
+      // Ammunition for the improved ATMs
+      { id: "ammo-improved-atm-3-clan", name: "Improved ATM 3 Ammo", tons: 1, slots: 1, shotsPerTon: 20, availability: [{ from: 3070 }] },
+      { id: "ammo-improved-atm-6-clan", name: "Improved ATM 6 Ammo", tons: 1, slots: 1, shotsPerTon: 10, availability: [{ from: 3070 }] },
+      { id: "ammo-improved-atm-9-clan", name: "Improved ATM 9 Ammo", tons: 1, slots: 1, shotsPerTon: 7, availability: [{ from: 3070 }] },
+      { id: "ammo-improved-atm-12-clan", name: "Improved ATM 12 Ammo", tons: 1, slots: 1, shotsPerTon: 5, availability: [{ from: 3070 }] },
+    ],
+  },
+  {
+    defaults: { kind: "ammunition", techBase: "inner-sphere", cite: { book: IO, page: 215 }, playCite: { book: IO, page: 214 }, checked: "page", rulesLevel: "advanced" },
+    items: [
+      // Ammunition for the RISC Advanced PDS
+      { id: "ammo-risc-advanced-pds-is", name: "RISC Advanced PDS Ammo", tons: 1, slots: 1, shotsPerTon: 12, availability: [{ from: 3137 }] },
     ],
   },
 ];
