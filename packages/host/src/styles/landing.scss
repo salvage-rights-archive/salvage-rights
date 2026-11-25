@@ -191,44 +191,20 @@
     object-fit: cover;
   }
 
-  // A game that is not ready: not a link, so it is a plain card with the picture first and the name under it.
+  // A game that is not ready: the same row as a game link, but not a link, so a dashed border and no fill.
   &__soon {
     display: flex;
-    flex-direction: column;
-    gap: var(--sr-space-2);
-    padding: var(--sr-space-2);
-    background: var(--sr-bg);
+    align-items: center;
+    min-height: 44px;
+    padding: var(--sr-space-2) var(--sr-space-3);
     color: var(--sr-ink);
     border: var(--sr-border) dashed var(--sr-line-strong);
     font-family: var(--sr-font-tag);
     overflow-wrap: anywhere;
   }
 
-  &__soon-name {
-    display: flex;
-    align-items: center;
-  }
-
   &__soon-mark {
     font-size: .85rem;
-  }
-
-  &__soon-art {
-    order: -1;
-    margin: 0;
-
-    img {
-      display: block;
-      width: 100%;
-      height: auto;
-      aspect-ratio: 4 / 3;
-      object-fit: cover;
-    }
-
-    figcaption {
-      margin-top: var(--sr-space-1);
-      font-size: .8rem;
-    }
   }
 
   a.sr-tile__game:focus-visible {

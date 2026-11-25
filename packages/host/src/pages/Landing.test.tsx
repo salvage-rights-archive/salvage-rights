@@ -81,7 +81,7 @@ describe("landing page", () => {
     expect(screen.getByRole("link", { name: /^Family alpha / })).toBe(tile);
   });
 
-  it("puts each ready game's icon beside its name and lists a game that is not ready, marked coming soon, with its picture and label", async () => {
+  it("puts each ready game's icon beside its name and lists a game that is not ready as a row marked coming soon, with its icon and without its picture", async () => {
     const alpha = fixtureFamily("alpha", {
       games: [
         fixtureGame("one", "Alpha One", { icon: "one.jpg" }),
@@ -98,8 +98,8 @@ describe("landing page", () => {
     const late = within(tile).getByText("Alpha Late").closest("li") as HTMLElement;
     expect(late.textContent).toContain("(coming soon)");
     expect(within(late).queryByRole("link")).toBeNull();
-    expect(within(late).getByRole("img", { name: "A fixture picture" })).toBeTruthy();
-    expect(within(late).getByText("Fixture Artist")).toBeTruthy();
+    expect(late.querySelector("img")?.getAttribute("alt")).toBe("");
+    expect(within(tile).queryByRole("img", { name: "A fixture picture" })).toBeNull();
     expect(within(tile).queryByText("Alpha Bare")).toBeNull();
   });
 

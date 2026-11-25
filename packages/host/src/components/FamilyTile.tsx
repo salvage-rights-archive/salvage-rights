@@ -26,34 +26,18 @@ function GameIcon({ src }: { src: string | undefined }) {
   );
 }
 
-/** A game that is not ready yet: its icon, its name with a coming-soon mark, and its picture with the AI label. */
+/**
+ * A game that is not ready yet: a row the same size as a game link, with its icon and its name marked coming soon. Its picture
+ * waits for its own home page, so the games you can play stay the biggest things on the tile.
+ */
 function SoonGame({ game }: { game: GameManifest }) {
-  const [failed, setFailed] = useState(false);
-  const art = game.artwork;
   return (
     <li className="sr-tile__soon">
-      <span className="sr-tile__soon-name">
-        <GameIcon src={game.icon} />
-        <span>
-          {game.shortName}
-          <span className="sr-tile__soon-mark"> (coming soon)</span>
-        </span>
+      <GameIcon src={game.icon} />
+      <span>
+        {game.shortName}
+        <span className="sr-tile__soon-mark"> (coming soon)</span>
       </span>
-      {art && !failed && (
-        <figure className="sr-tile__soon-art">
-          <img
-            src={art.src}
-            alt={art.alt}
-            width={800}
-            height={600}
-            loading="lazy"
-            onError={() => {
-              setFailed(true);
-            }}
-          />
-          <figcaption>{art.credit}</figcaption>
-        </figure>
-      )}
     </li>
   );
 }
