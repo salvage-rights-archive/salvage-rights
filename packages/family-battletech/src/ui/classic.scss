@@ -1217,3 +1217,37 @@ a.bt-button {
     margin: var(--sr-space-3) 0 0;
   }
 }
+
+// OFFICIAL / NOT OFFICIAL: always the words, with a border to set it apart.
+.bt-official {
+  display: inline-block;
+  padding: 0 var(--sr-space-2);
+  background: var(--sr-surface-sunk);
+  color: var(--sr-ink);
+  border: calc(var(--sr-border) * 2) solid var(--sr-line-strong);
+  border-radius: var(--sr-radius-tag);
+  font-size: 0.875rem;
+
+  &[data-official="true"] {
+    border-color: var(--sr-patina);
+  }
+
+  &[data-official="false"] {
+    border-color: var(--sr-hazard);
+  }
+
+  &__badge {
+    letter-spacing: 0.04em;
+  }
+}
+
+.bt-compliance {
+  &[data-verified="true"] {
+    border-color: var(--sr-patina);
+  }
+
+  &__verdict {
+    margin: 0 0 var(--sr-space-2);
+    font-size: 1.125rem;
+  }
+}

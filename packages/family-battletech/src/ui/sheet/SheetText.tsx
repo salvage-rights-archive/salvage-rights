@@ -4,7 +4,7 @@ import { EMPTY_SLOT } from "../../data/sheet";
 import type { SheetFacts } from "./facts";
 import { armorText, structureText } from "./Diagrams";
 
-export default function SheetText({ facts, record }: { facts: SheetFacts; record: { id: string } }) {
+export default function SheetText({ facts, record, marks = [] }: { facts: SheetFacts; record: { id: string }; marks?: [string, string][] }) {
   const id = `sheet-text-${record.id}`;
   const terms: [string, string][] = [
     ["Type", facts.title],
@@ -19,6 +19,7 @@ export default function SheetText({ facts, record }: { facts: SheetFacts; record
     ...(facts.year === undefined ? [] : [["Year", facts.year] as [string, string]]),
     ["Heat sinks", facts.heatSinks.summary],
     ["Battle Value", `${facts.battleValue} (${facts.battleValueFrom})`],
+    ...marks,
   ];
   const slots = facts.layout.supported ? facts.layout.locations : [];
   return (

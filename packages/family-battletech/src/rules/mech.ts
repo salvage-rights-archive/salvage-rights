@@ -98,6 +98,8 @@ export interface MechRecord {
   unitType?: MechType;
   /** Present only on a configuration resolved from an OmniMech chassis (rules/omni.ts); absent on every other record. */
   omni?: OmniLink;
+  /** Whether the player marked this design as published by the game's publisher (rules/official.ts). Absent reads as not official. */
+  official?: OfficialMark;
   tons: number;
   configuration: string; // "biped" | "quad" | "tripod" | the source's own word
   chassis: {
@@ -131,6 +133,17 @@ export interface MechRecord {
     /** What the importer produced, kept so that "changed since import" compares with it and not with a newer importer. */
     baseline?: Pick<MechRecord, "name" | "notes" | "tons" | "year" | "techBase" | "configuration" | "chassis" | "armor" | "arms" | "mounts">;
   };
+}
+
+/** What the player states about whether the publisher put this design out (rules/official.ts reads it; the app never sets it on its own,
+ * except for a Mordel unit that Mordel itself marks canon). */
+export interface OfficialMark {
+  status: "official" | "not-official";
+  /** The book it was published in (a title from BOOKS in data/editions.ts, or the player's own words). An official mark needs one. */
+  book?: string;
+  page?: number;
+  /** The design as it was when marked (`designKey`); the mark holds only while the design still matches. */
+  design?: string;
 }
 
 /** What one equipment item needs from the catalog for layout and weight. Task 2's catalog supplies it. */

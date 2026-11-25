@@ -151,6 +151,13 @@ function isSource(v: unknown): boolean {
   );
 }
 
+function isOfficial(v: unknown): boolean {
+  return (
+    v === undefined ||
+    (isObject(v) && (v.status === "official" || v.status === "not-official") && (v.book === undefined || isString(v.book)) && (v.page === undefined || isNumber(v.page)) && (v.design === undefined || isString(v.design)))
+  );
+}
+
 /** The longest picture address a record may carry, in characters (about 1.1 MB of image). */
 export const MAX_PICTURE_CHARS = 1_500_000;
 const PICTURE_PREFIXES = ["data:image/png;base64,", "data:image/jpeg;base64,"];
@@ -169,6 +176,7 @@ export function isMechRecord(value: unknown): value is MechRecord {
     isString(value.editionId) &&
     isBody(value) &&
     isOmniLink(value.omni) &&
+    isOfficial(value.official) &&
     (value.imageUrl === undefined || isString(value.imageUrl)) &&
     isPicture(value.picture) &&
     (value.source === undefined || isSource(value.source))
@@ -189,6 +197,7 @@ function isConfiguration(v: unknown): boolean {
     (v.notes === undefined || (isObject(v.notes) && Object.values(v.notes).every((n) => n === undefined || isString(n)))) &&
     (v.imageUrl === undefined || isString(v.imageUrl)) &&
     isPicture(v.picture) &&
+    isOfficial(v.official) &&
     (v.source === undefined || isSource(v.source))
   );
 }
@@ -222,6 +231,7 @@ export function isOmniChassis(value: unknown): value is OmniChassis {
     Object.values(notes).every((n) => n === undefined || isString(n)) &&
     (value.imageUrl === undefined || isString(value.imageUrl)) &&
     isPicture(value.picture) &&
+    isOfficial(value.official) &&
     (value.source === undefined || isSource(value.source))
   );
 }

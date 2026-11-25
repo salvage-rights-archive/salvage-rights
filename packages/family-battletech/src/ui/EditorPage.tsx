@@ -37,6 +37,8 @@ import ArmorPanel from "./editor/ArmorPanel";
 import LeaveConfirm from "./editor/LeaveConfirm";
 import CalculatorPanel from "./editor/CalculatorPanel";
 import FindingsPanel from "./editor/FindingsPanel";
+import { CompliancePanel, OfficialBadge, OfficialPanel } from "./editor/Marks";
+import { standardCompliance } from "../rules/official";
 import SlotsPanel from "./editor/SlotsPanel";
 import { mordelPicture, readPicture } from "./picture";
 import RecordBoundary from "./RecordBoundary";
@@ -631,6 +633,7 @@ function Editor({ initial, startAt, catalog, storage }: { initial: Doc; startAt?
 
   const layout = useMemo(() => safeLayout(record, catalog), [record, catalog]);
   const findings = useMemo(() => [...runChecks(record, catalog), ...(chassis ? omniChassisFindings(chassis, catalog) : [])], [record, chassis, catalog]);
+  const compliance = useMemo(() => standardCompliance(record, catalog, findings), [record, catalog, findings]);
   const armorErrors = useMemo(
     () => new Set(findings.flatMap((f) => (f.check === "armor" && f.level === "error" && f.where?.location ? [f.where.location] : []))),
     [findings],
@@ -716,6 +719,9 @@ function Editor({ initial, startAt, catalog, storage }: { initial: Doc; startAt?
           </Link>
           <h1 tabIndex={-1}>{title || "Unnamed 'Mech"}</h1>
           <p className="bt-hint">Built under: {editionName(record.editionId)}</p>
+          <p>
+            <OfficialBadge record={record} />
+          </p>
         </div>
         <div className="bt-actions">
           <button type="button" className="bt-button" disabled={!dirty} onClick={() => void save()}>
@@ -809,6 +815,7 @@ function Editor({ initial, startAt, catalog, storage }: { initial: Doc; startAt?
 
       <div className="bt-editor__side">
         <FindingsPanel findings={findings} targetOf={targetOf} onChoose={focusTarget} />
+        <CompliancePanel compliance={compliance} targetOf={targetOf} onChoose={focusTarget} />
         <CalculatorPanel record={record} catalog={catalog} />
       </div>
 
@@ -976,6 +983,8 @@ function Editor({ initial, startAt, catalog, storage }: { initial: Doc; startAt?
                 );
               })}
           </section>
+
+          <OfficialPanel key={record.id} record={record} onEdit={edit} />
 
           <section className="bt-panel">
             <details className="bt-notes">

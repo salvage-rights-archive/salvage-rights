@@ -8,12 +8,13 @@ import { configurationAvailable, configurationChoices, typeAvailable } from "../
 import { techBaseChoices, withLevel } from "../rules/levels";
 import { loadCatalog } from "../rules/catalog";
 import { mechTypeOf, newRecord } from "../rules/mech";
-import { configurationTitle, newOmniChassis, resolveAll } from "../rules/omni";
+import { configurationTitle, newOmniChassis, resolveAll, resolveBase } from "../rules/omni";
 import { battleValue } from "../rules/bv";
 import { unitCost } from "../rules/cost";
 import type { Catalog } from "../rules/catalog";
 import type { OmniChassis } from "../rules/omni";
 import LevelSelect from "./editor/LevelSelect";
+import { OfficialBadge } from "./editor/Marks";
 import TypeSelect from "./editor/TypeSelect";
 import type { MechRecord, NewMechOptions } from "../rules/mech";
 import { STORAGE_READ_FAILED, STORAGE_WRITE_FAILED, downloadMech, downloadOmni, fromMechFile, fromOmniFile, openFamilyStorage } from "./storage";
@@ -45,6 +46,9 @@ function Configurations({ chassis, catalog }: { chassis: OmniChassis; catalog: C
             <span className="bt-row__text">
               <strong>{`${chassis.name.chassis} ${title}`}</strong>
               {id === chassis.primaryId && " (Primary)"}
+              <span className="bt-row__credit">
+                <OfficialBadge record={record} />
+              </span>
               <span className="bt-row__credit">{figures}</span>
             </span>
             <span className="bt-row__actions">
@@ -304,6 +308,9 @@ export default function HomePage() {
                   <li key={`omni-${entry.id}`} className="bt-row">
                     <span className="bt-row__text">
                       <strong>{name}</strong> OmniMech, {chassis.tons} tons, {plural(chassis.configurations.length, "configuration")}
+                      <span className="bt-row__credit">
+                        Base chassis: <OfficialBadge record={resolveBase(chassis)} />
+                      </span>
                       <span className="bt-row__credit">Built under {EDITIONS.find((e) => e.id === chassis.editionId)?.name ?? chassis.editionId}</span>
                     </span>
                     <span className="bt-row__actions">
@@ -376,6 +383,9 @@ export default function HomePage() {
                 <li key={entry.id} className="bt-row">
                   <span className="bt-row__text">
                     <strong>{name}</strong> {record.tons} tons
+                    <span className="bt-row__credit">
+                      <OfficialBadge record={record} />
+                    </span>
                     <span className="bt-row__credit">
                       Built under {editionName(record.editionId)}
                     </span>
