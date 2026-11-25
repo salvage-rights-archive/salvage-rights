@@ -17,7 +17,9 @@ export default defineConfig({
   reporter: "list",
   projects: [
     { name: "chromium", use: { ...devices["Desktop Chrome"] } },
-    { name: "firefox", use: { ...devices["Desktop Firefox"] } },
+    // One retry: Firefox now and then crashes its page ("Page crashed") during an axe scan of the editor when all
+    // three browsers run at once. A real violation fails both attempts.
+    { name: "firefox", retries: 1, use: { ...devices["Desktop Firefox"] } },
     { name: "webkit", use: { ...devices["Desktop Safari"] } },
   ],
   webServer: [
