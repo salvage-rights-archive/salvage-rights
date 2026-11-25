@@ -411,13 +411,42 @@ a.bt-button {
     grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
     align-items: start;
 
+    // Without a picture the control is a row of its own across the top.
+    .bt-picturebox {
+      grid-column: 1 / -1;
+    }
+
     &[data-picture="true"] {
       grid-template-columns: minmax(0, 2fr) minmax(0, 3fr) 160px;
 
-      .bt-picture {
+      .bt-picturebox {
         grid-column: 3;
         grid-row: 1;
       }
+    }
+  }
+}
+
+// The picture and its controls: upload, and remove when there is one of the player's own.
+.bt-picturebox {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--sr-space-2);
+  min-width: 0;
+  margin-bottom: var(--sr-space-2);
+
+  .bt-picture {
+    margin: 0;
+  }
+
+  .bt-field {
+    width: 100%;
+    margin: 0;
+
+    input[type="file"] {
+      flex-basis: 100%;
+      font-size: 0.875rem;
     }
   }
 }

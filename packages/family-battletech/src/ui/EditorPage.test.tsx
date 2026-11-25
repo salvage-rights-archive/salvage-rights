@@ -3,7 +3,7 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-li
 import userEvent from "@testing-library/user-event";
 import { IDBFactory } from "fake-indexeddb";
 import { RouterProvider, createMemoryRouter } from "react-router";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { loadCatalog } from "../rules/catalog";
 import { mordelBiped, mordelOdd, mordelQuad, mordelWith } from "../rules/fixtures";
 import { fromMordel } from "../rules/mordel";
@@ -11,8 +11,15 @@ import type { MechRecord } from "../rules/mech";
 import EditorPage from "./EditorPage";
 import { openFamilyStorage } from "./storage";
 
+// Decoding a picture needs a real canvas; the editor is tested with the reading mocked.
+const PICTURE = "data:image/png;base64,iVBORw0KGgo=";
+const { readPicture } = vi.hoisted(() => ({ readPicture: vi.fn() }));
+vi.mock("./picture", () => ({ readPicture }));
+
 beforeEach(() => {
   globalThis.indexedDB = new IDBFactory();
+  readPicture.mockReset();
+  readPicture.mockResolvedValue({ ok: true, dataUrl: PICTURE });
 });
 afterEach(cleanup);
 
@@ -171,6 +178,33 @@ describe("The 'Mech editor", () => {
     expect(picture.getAttribute("referrerpolicy")).toBe("no-referrer");
     fireEvent.error(picture);
     expect(screen.queryByRole("img", { name: /picture from mordel.net/ })).toBeNull();
+  });
+
+  it("uploads a picture in place of Mordel's, undoes and removes it, and reports a file it cannot use", async () => {
+    await saved(mordelWith(mordelBiped(), { image_url: "https://mordel.net/pictures/test.png" }));
+    const user = userEvent.setup();
+    await open("imported-1");
+    await screen.findByRole("img", { name: "Test Walker TW-1, picture from mordel.net" });
+    const upload = screen.getByLabelText("Upload a picture");
+    const file = new File(["x"], "mine.png", { type: "image/png" });
+    readPicture.mockResolvedValueOnce({ ok: false, message: "That picture could not be read." });
+    await user.upload(upload, file);
+    expect((await screen.findByRole("alert")).textContent).toBe("That picture could not be read.");
+    expect(screen.queryByText("You have changes that are not saved.")).toBeNull();
+
+    await user.upload(upload, file);
+    expect(await screen.findByRole("img", { name: "Test Walker TW-1, your picture" })).toBeTruthy();
+    expect(screen.queryByRole("img", { name: /picture from mordel.net/ })).toBeNull();
+    expect(screen.getByText("You have changes that are not saved.")).toBeTruthy();
+    expect(screen.getByRole("alert").textContent).toBe("");
+
+    await user.click(screen.getByRole("button", { name: "Remove picture" }));
+    expect(screen.queryByRole("img", { name: /your picture/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Remove picture" })).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Undo" }));
+    expect(screen.getByRole("img", { name: "Test Walker TW-1, your picture" })).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    expect((await stored("imported-1"))?.picture).toEqual({ dataUrl: PICTURE });
   });
 
   it("marks what was changed since the import and nothing that was not", async () => {

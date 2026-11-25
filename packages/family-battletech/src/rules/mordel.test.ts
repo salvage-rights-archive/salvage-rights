@@ -265,6 +265,7 @@ describe("changedSinceImport", () => {
     ["a replaced mount", (d) => void (d.mounts.find((m) => m.id === ac?.id)!.equipmentId = "ac-20-is"), [ac?.id]],
     ["an added mount", (d) => void d.mounts.push({ id: "mine", equipmentId: null, name: "Mine", techBase: "inner-sphere", location: null, slot: null }), ["mine"]],
     ["a removed mount", (d) => void d.mounts.pop(), ["mounts.removed"]],
+    ["a picture of its own, which is not a change to the design", (d) => void (d.picture = { dataUrl: "data:image/png;base64,AAAA" }), []],
   ])("names %s", (_name, edit, want) => {
     expect(changedSinceImport(editRecord(base, edit))).toEqual(new Set(want));
   });

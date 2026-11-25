@@ -2,7 +2,7 @@
 // (for Undo and Redo), derives everything else from the current record, and hands each panel what it shows and an
 // `onEdit(change)` callback. Every edit goes through `editRecord`.
 import { useEffect, useId, useMemo, useRef, useState } from "react";
-import type { CSSProperties, ReactNode } from "react";
+import type { ChangeEvent, CSSProperties, ReactNode } from "react";
 import { Link, useBlocker, useLocation, useSearchParams } from "react-router";
 import { ARMOR, COCKPITS, ENGINE_TYPES, GYROS, HEAT_SINKS, MYOMER, STRUCTURE_TYPES } from "../data/chassis";
 import { loadCatalog } from "../rules/catalog";
@@ -16,6 +16,7 @@ import ArmorPanel from "./editor/ArmorPanel";
 import { dialogKeyDown } from "./editor/dialog";
 import FindingsPanel from "./editor/FindingsPanel";
 import SlotsPanel from "./editor/SlotsPanel";
+import { readPicture } from "./picture";
 import { STORAGE_READ_FAILED, STORAGE_WRITE_FAILED, downloadMech, openFamilyStorage } from "./storage";
 import type { FamilyStorage } from "./storage";
 import "./classic.scss";
@@ -421,8 +422,8 @@ export function mordelPicture(url: string | undefined): url is string {
   }
 }
 
-/** Mordel's picture of the 'Mech; `onFail` is called when it cannot be loaded, so the page can take its place away. */
-function Picture({ url, alt, onFail }: { url: string; alt: string; onFail: () => void }) {
+/** A picture of the 'Mech: Mordel's, or the player's own; `onFail` is called when it cannot be loaded, so the page can take its place away. */
+function Picture({ url, alt, onFail }: { url: string; alt: string; onFail?: () => void }) {
   const [loaded, setLoaded] = useState(false);
   return (
     <img
@@ -591,7 +592,21 @@ function Editor({ initial, catalog, storage }: { initial: MechRecord; catalog: C
   const mark = (path: string) => changed.has(path);
   const notes = importNotes(useLocation().state);
   const notesId = useId();
-  const showPicture = !pictureFailed && mordelPicture(record.imageUrl);
+  const showMordel = !pictureFailed && mordelPicture(record.imageUrl);
+  const showPicture = record.picture !== undefined || showMordel;
+  const choosePicture = async (event: ChangeEvent<HTMLInputElement>) => {
+    const input = event.target;
+    const chosen = input.files?.[0];
+    if (!chosen) return;
+    const result = await readPicture(chosen);
+    input.value = "";
+    if (!result.ok) {
+      setProblem(result.message);
+      return;
+    }
+    setProblem("");
+    edit((d) => void (d.picture = { dataUrl: result.dataUrl }));
+  };
   const chassisGroups = CHASSIS_FIELDS.reduce<ChassisField[][]>((groups, field) => {
     if (field.kind === "number") groups[groups.length - 1]?.push(field);
     else groups.push([field]);
@@ -684,16 +699,45 @@ function Editor({ initial, catalog, storage }: { initial: MechRecord; catalog: C
 
       <div className="bt-editor__body">
         <div className="bt-editor__fields" data-picture={showPicture}>
-          {record.imageUrl && showPicture && (
-            <Picture
-              key={record.imageUrl}
-              url={record.imageUrl}
-              alt={`${title}, picture from mordel.net`}
-              onFail={() => {
-                setPictureFailed(true);
-              }}
-            />
-          )}
+          <div className="bt-picturebox" role="group" aria-label="Picture">
+            {record.picture ? (
+              <Picture key={record.picture.dataUrl.length} url={record.picture.dataUrl} alt={`${title}, your picture`} />
+            ) : (
+              record.imageUrl &&
+              showMordel && (
+                <Picture
+                  key={record.imageUrl}
+                  url={record.imageUrl}
+                  alt={`${title}, picture from mordel.net`}
+                  onFail={() => {
+                    setPictureFailed(true);
+                  }}
+                />
+              )
+            )}
+            <div className="bt-field">
+              <label htmlFor="field-picture">Upload a picture</label>
+              <input
+                id="field-picture"
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                onChange={(event) => {
+                  void choosePicture(event);
+                }}
+              />
+            </div>
+            {record.picture && (
+              <button
+                type="button"
+                className="bt-button bt-button--secondary"
+                onClick={() => {
+                  edit((d) => void delete d.picture);
+                }}
+              >
+                Remove picture
+              </button>
+            )}
+          </div>
           <section className="bt-panel" aria-labelledby="bt-identity">
             <h2 id="bt-identity">Identity</h2>
             <div className="bt-grid">

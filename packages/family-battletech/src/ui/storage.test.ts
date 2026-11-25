@@ -89,7 +89,8 @@ describe("mech files", () => {
   it("checks shape, not legality, and save refuses what fails the check", async () => {
     const source = { kind: "mordel", unitType: "bm", id: 1, designer: "d", fetchedAt: "t", original: null, values: {} } as const;
     const baseline = { ...bipedRecord(), id: undefined, editionId: undefined, schema: undefined };
-    const accepted = [bipedRecord({ tons: 9999 }), bipedRecord({ source }), bipedRecord({ source: { ...source, baseline } as never, arms: { RA: { lowerArm: true, hand: false } } }), bipedRecord({ imageUrl: "x", notes: { overview: "o" } })];
+    const png = "data:image/png;base64,iVBORw0KGgo=";
+    const accepted = [bipedRecord({ picture: { dataUrl: png } }), bipedRecord({ picture: { dataUrl: "data:image/jpeg;base64,/9j/4AAQ" } }), bipedRecord({ tons: 9999 }), bipedRecord({ source }), bipedRecord({ source: { ...source, baseline } as never, arms: { RA: { lowerArm: true, hand: false } } }), bipedRecord({ imageUrl: "x", notes: { overview: "o" } })];
     const refused = [
       bipedRecord({ source: { ...source, kind: "other" } as never }),
       bipedRecord({ source: { ...source, id: "1" } as never }),
@@ -100,6 +101,10 @@ describe("mech files", () => {
       bipedRecord({ source: { ...source, baseline: { tons: 50 } } as never }),
       bipedRecord({ notes: { overview: 5 } as never }),
       bipedRecord({ imageUrl: 5 as never }),
+      bipedRecord({ picture: { dataUrl: "data:image/svg+xml;base64,PHN2Zz4=" } }),
+      bipedRecord({ picture: { dataUrl: "https://mordel.net/a.png" } }),
+      bipedRecord({ picture: { dataUrl: png + "A".repeat(1_500_000) } }),
+      bipedRecord({ picture: {} as never }),
     ];
     for (const record of accepted) expect(isMechRecord(record)).toBe(true);
     const storage = await openFamilyStorage();

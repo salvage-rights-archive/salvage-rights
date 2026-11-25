@@ -88,7 +88,11 @@ export function expand(groups: EquipmentGroup[]): EquipmentRow[] {
         const r = row.range;
         const numbers = Array.isArray(r) && r.length === 4 && r.every((n) => Number.isFinite(n) && n >= 0);
         if (!numbers) bad("range is not four numbers of zero or more");
-        else if (!(r[1] <= r[2] && r[2] <= r[3])) bad("range is not short <= medium <= long");
+        else {
+          // A 0 is a band the book prints as a dash; the bands that are printed must not decrease.
+          const printed = r.slice(1).filter((n) => n > 0);
+          if (printed.some((n, i) => i > 0 && n < (printed[i - 1] ?? 0))) bad("range is not short <= medium <= long");
+        }
       }
       if (row.shotsPerTon !== undefined && !(Number.isInteger(row.shotsPerTon) && row.shotsPerTon > 0)) bad("shotsPerTon is not a whole number above zero");
       rows.push(row);
@@ -261,8 +265,8 @@ function locationRank(record: MechRecord, location: LocationCode | null): number
 
 /** One line per distinct weapon per location (`qty` the number mounted there), by location in record-sheet order and then
  * by name; unplaced mounts come last with location "—". Mounts of other kinds appear only when their row has a range
- * or a damage. A figure the row lacks, and every figure of an unmatched mount, prints as an em dash; a minimum range of 0
- * also prints as one. */
+ * or a damage. A figure the row lacks, and every figure of an unmatched mount, prints as an em dash; a range band of 0
+ * (the book's dash) also prints as one. */
 export function inventoryLines(record: MechRecord, catalog: Catalog): InventoryLine[] {
   const groups = new Map<string, { qty: number; name: string; location: LocationCode | null; row: EquipmentRow | undefined }>();
   for (const mount of record.mounts) {
@@ -286,9 +290,9 @@ export function inventoryLines(record: MechRecord, catalog: Catalog): InventoryL
         heat: row?.heat === undefined ? DASH : String(row.heat),
         damage: row?.damage ?? DASH,
         min: range === undefined || range[0] === 0 ? DASH : String(range[0]),
-        short: range === undefined ? DASH : String(range[1]),
-        medium: range === undefined ? DASH : String(range[2]),
-        long: range === undefined ? DASH : String(range[3]),
+        short: range === undefined || range[1] === 0 ? DASH : String(range[1]),
+        medium: range === undefined || range[2] === 0 ? DASH : String(range[2]),
+        long: range === undefined || range[3] === 0 ? DASH : String(range[3]),
       };
     });
 }

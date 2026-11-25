@@ -122,6 +122,14 @@ function isSource(v: unknown): boolean {
   );
 }
 
+/** The longest picture address a record may carry, in characters (about 1.1 MB of image). */
+export const MAX_PICTURE_CHARS = 1_500_000;
+const PICTURE_PREFIXES = ["data:image/png;base64,", "data:image/jpeg;base64,"];
+
+function isPicture(v: unknown): boolean {
+  return v === undefined || (isObject(v) && isString(v.dataUrl) && v.dataUrl.length <= MAX_PICTURE_CHARS && PICTURE_PREFIXES.some((p) => (v.dataUrl as string).startsWith(p)));
+}
+
 /** Checks the shape of a 'Mech record, not whether it is legal: an illegal 'Mech is still a record. Every part of the
  * record the editor reads is checked, the source's figures and baseline included. */
 export function isMechRecord(value: unknown): value is MechRecord {
@@ -132,6 +140,7 @@ export function isMechRecord(value: unknown): value is MechRecord {
     isString(value.editionId) &&
     isBody(value) &&
     (value.imageUrl === undefined || isString(value.imageUrl)) &&
+    isPicture(value.picture) &&
     (value.source === undefined || isSource(value.source))
   );
 }

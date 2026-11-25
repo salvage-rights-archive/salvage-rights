@@ -77,7 +77,10 @@ export interface MechRecord {
   arms?: Partial<Record<"LA" | "RA", { lowerArm: boolean; hand: boolean }>>;
   mounts: Mount[];
   notes: { overview?: string; capabilities?: string; deployment?: string; variants?: string; notables?: string };
+  /** Mordel's picture of the unit, as imported. */
   imageUrl?: string;
+  /** The player's own picture of the unit, scaled and encoded by `readPicture`; shown in place of Mordel's. */
+  picture?: { dataUrl: string };
   source?: {
     kind: "mordel";
     unitType: string;

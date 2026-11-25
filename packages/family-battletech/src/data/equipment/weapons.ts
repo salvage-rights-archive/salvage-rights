@@ -7,8 +7,8 @@
 // Heat is the figure per firing (per shot for the rotary and ultra autocannons, whose damage reads "2/Shot"); damage is
 // the book's text, with "Special" for the items whose damage the table leaves to the item rules (**). `range` is minimum,
 // short, medium and long: the table's Min/Sht/Med/Lng, so a minimum of 0 is the book's dash. The Heavy Machine Gun's
-// long range prints a dash, written as its medium range. A multi-mode launcher (MML) has heat and damage text but no range,
-// since the book gives one range per mode. Items with no printed figures (the retractable blade) carry none. The Type
+// long range prints a dash too: a band the book prints as a dash is stored as 0. A multi-mode launcher (MML) has heat
+// and damage text but no range, since the book gives one range per mode. Items with no printed figures (the retractable blade) carry none. The Type
 // column is not in TechManual: it comes from the Core Rulebook's Weapons and Equipment Tables (printed pp. 248-252, read
 // against the page images), as printed; a row the Core table lists without a Type (the Inner Sphere anti-missile system)
 // or does not list (the vehicle flamer, hatchet, sword) has none.
@@ -90,7 +90,7 @@ export const WEAPONS: EquipmentGroup[] = [
       // Machine guns and flamers (Inner Sphere)
       { id: "light-machine-gun-is", name: "Light Machine Gun", tons: 0.5, slots: 1, type: "AI, DB", heat: 0, damage: "1", range: [0, 2, 4, 6], availability: [{ from: 3068 }] },
       { id: "machine-gun-is", name: "Machine Gun", aliases: ["MG"], tons: 0.5, slots: 1, type: "AI, DB", heat: 0, damage: "2", range: [0, 1, 2, 3], availability: [{ from: 1950 }] },
-      { id: "heavy-machine-gun-is", name: "Heavy Machine Gun", tons: 1, slots: 1, type: "AI, DB", heat: 0, damage: "3", range: [0, 1, 2, 2], availability: [{ from: 3068 }] },
+      { id: "heavy-machine-gun-is", name: "Heavy Machine Gun", tons: 1, slots: 1, type: "AI, DB", heat: 0, damage: "3", range: [0, 1, 2, 0], availability: [{ from: 3068 }] },
       { id: "flamer-is", name: "Flamer", tons: 1, slots: 1, type: "AI, DE, H", heat: 3, damage: "2", range: [0, 1, 2, 3], availability: [{ from: 2025 }] },
       { id: "vehicle-flamer-is", name: "Flamer (Vehicle)", aliases: ["Vehicle Flamer"], tons: 0.5, slots: 1, heat: 3, damage: "2", range: [0, 1, 2, 3], availability: [{ from: 1950 }] },
       // Missile launchers (Inner Sphere)
@@ -170,7 +170,7 @@ export const WEAPONS: EquipmentGroup[] = [
       // Machine guns and flamers (Clan)
       { id: "light-machine-gun-clan", name: "Light Machine Gun", tons: 0.25, slots: 1, type: "AI, DB", heat: 0, damage: "1", range: [0, 2, 4, 6], availability: [{ from: 3060 }] },
       { id: "machine-gun-clan", name: "Machine Gun", aliases: ["MG"], tons: 0.25, slots: 1, type: "AI, DB", heat: 0, damage: "2", range: [0, 1, 2, 3], availability: [{ from: 2825 }] },
-      { id: "heavy-machine-gun-clan", name: "Heavy Machine Gun", tons: 0.5, slots: 1, type: "AI, DB", heat: 0, damage: "3", range: [0, 1, 2, 2], availability: [{ from: 3059 }] },
+      { id: "heavy-machine-gun-clan", name: "Heavy Machine Gun", tons: 0.5, slots: 1, type: "AI, DB", heat: 0, damage: "3", range: [0, 1, 2, 0], availability: [{ from: 3059 }] },
       { id: "flamer-clan", name: "Flamer", tons: 0.5, slots: 1, type: "AI, DE, H", heat: 3, damage: "2", range: [0, 1, 2, 3], availability: [{ from: 2827 }] },
       // Missile launchers (Clan)
       { id: "atm-3-clan", name: "ATM 3", tons: 1.5, slots: 2, type: "C, M, S", heat: 2, damage: "2/Msl", range: [4, 5, 10, 15], availability: [{ from: 3054 }] },

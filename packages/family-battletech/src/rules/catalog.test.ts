@@ -60,8 +60,7 @@ describe("expand", () => {
   });
 
   it.each([
-    ["a range that runs backwards", { id: "range-is", range: [0, 6, 4, 9] }, "range-is"],
-    ["a negative heat", { id: "heat-is", heat: -1 }, "heat-is"],
+    ["a range that runs backwards", { id: "range-is", range: [0, 6, 4, 9] }, "range-is"],    ["a negative heat", { id: "heat-is", heat: -1 }, "heat-is"],
   ])("throws naming the id for %s", (_label, change, id) => {
     const groups = [{ defaults: {}, items: [{ ...OK, name: "Item", ...change }] }];
     expect(() => expand(groups as unknown as EquipmentGroup[])).toThrow(id);
@@ -199,6 +198,8 @@ describe("play statistics", () => {
     ["srm-6-is", 4, "2/Msl", [0, 3, 6, 9]],
     ["er-large-laser-clan", 12, "10", [0, 8, 15, 25]],
     ["gauss-rifle-is", 1, "15", [2, 7, 15, 22]],
+    ["heavy-machine-gun-is", 0, "3", [0, 1, 2, 0]],
+    ["heavy-machine-gun-clan", 0, "3", [0, 1, 2, 0]],
   ])("%s prints the book's heat, damage and range", async (id, heat, damage, range) => {
     expect((await loadCatalog()).byId(id)).toMatchObject({ heat, damage, range });
   });
@@ -211,6 +212,7 @@ describe("play statistics", () => {
           { id: "ml", name: "Medium Laser", heat: 3, damage: "5", range: [0, 3, 6, 9] },
           { id: "ppc", name: "PPC", heat: 10, damage: "10", range: [3, 6, 12, 18] },
           { id: "mg", name: "Machine Gun" },
+          { id: "hmg", name: "Heavy Machine Gun", heat: 0, damage: "3", range: [0, 1, 2, 0] },
         ],
       },
       {
@@ -232,12 +234,14 @@ describe("play statistics", () => {
         mount("m2", "ml", "LA", 1),
         mount("x", null, "CT", 0),
         mount("g", "mg", "HD", 0),
+        mount("h", "hmg", "CT", 1),
         mount("a", "ammo-ac", "LT", 0),
         mount("u", "ml", null, null),
       ],
     });
     expect(inventoryLines(record, STATS)).toEqual([
       { qty: 1, name: "Machine Gun", location: "HD", heat: "—", damage: "—", min: "—", short: "—", medium: "—", long: "—" },
+      { qty: 1, name: "Heavy Machine Gun", location: "CT", heat: "0", damage: "3", min: "—", short: "1", medium: "2", long: "—" },
       { qty: 1, name: "x", location: "CT", heat: "—", damage: "—", min: "—", short: "—", medium: "—", long: "—" },
       { qty: 2, name: "Medium Laser", location: "LA", heat: "3", damage: "5", min: "—", short: "3", medium: "6", long: "9" },
       { qty: 1, name: "PPC", location: "RA", heat: "10", damage: "10", min: "3", short: "6", medium: "12", long: "18" },
