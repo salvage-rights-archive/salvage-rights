@@ -1,6 +1,17 @@
 // The player's own picture of a 'Mech: checked, scaled down and encoded so that it is small enough to keep in the record.
 import { MAX_PICTURE_CHARS } from "./storage";
 
+/** Only a picture on mordel.net is shown; any other address in a file is ignored rather than requested. */
+export function mordelPicture(url: string | undefined): url is string {
+  if (url === undefined) return false;
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === "https:" && (parsed.hostname === "mordel.net" || parsed.hostname === "www.mordel.net");
+  } catch {
+    return false;
+  }
+}
+
 export type PictureResult = { ok: true; dataUrl: string } | { ok: false; message: string };
 
 export const PICTURE_TYPES = ["image/png", "image/jpeg", "image/webp"];

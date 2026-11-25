@@ -859,3 +859,69 @@ a.bt-button {
     color: var(--sr-ink-muted);
   }
 }
+
+// ---------------------------------------------------------------------------------------------------------------
+// The record sheet
+// ---------------------------------------------------------------------------------------------------------------
+
+.bt-sheetpage {
+  max-width: 80rem;
+
+  &__bar {
+    margin-bottom: var(--sr-space-3);
+
+    h1 {
+      margin: 0 0 var(--sr-space-2);
+    }
+
+    p {
+      margin: var(--sr-space-2) 0 0;
+    }
+
+    h1:focus-visible {
+      outline: 3px solid var(--sr-focus);
+      outline-offset: 2px;
+    }
+  }
+}
+
+// The sheet is paper: white, with black ink, whatever the theme. Its type is the site's own.
+.bt-sheet {
+  display: block;
+  width: 100%;
+  height: auto;
+  background: #fff;
+  color: #000;
+  border: var(--sr-border) solid var(--sr-line-strong);
+
+  text {
+    font-family: var(--sr-font-body);
+  }
+
+  .bt-sheet__head {
+    font-family: var(--sr-font-stencil);
+    font-weight: 700;
+  }
+}
+
+// Printed, only the sheet: the bar, the page heading and the text copy go, and the sheet fills the width of the page without
+// being taller than the page (Letter proportions, so it fits Letter and A4 alike). The shell's own print rule (the host's
+// shell.scss) takes away its header, navigation, footer and page padding.
+@page {
+  margin: 0.35in;
+}
+
+@media print {
+  .bt-sheetpage__bar,
+  .bt-sheet-text {
+    display: none;
+  }
+
+  .bt-sheet {
+    max-height: 10.2in;
+    border: 0;
+    break-inside: avoid;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+}

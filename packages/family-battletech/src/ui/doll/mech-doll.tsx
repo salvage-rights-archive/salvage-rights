@@ -2,7 +2,7 @@
 import React, { type JSX } from "react";
 import Bubble from "./bubble";
 import { frameTransform, placePoint, placeShape, svgTransform, toSheet, type IDollFrame } from "./geometry";
-import { ARMOR_PITCH, DOLL_LAYOUTS, dollLocationName, STRUCTURE_PITCH, type DollUse, type IDollLocation, type IDollUnit } from "./layouts";
+import { ARMOR_PITCH, DOLL_LAYOUTS, dollLocationName, labelLines, labelPoint, STRUCTURE_PITCH, type DollUse, type IDollLocation, type IDollUnit } from "./layouts";
 import { PARTS } from "./parts";
 import { DEFAULT_PEN, DEFAULT_TRANSFER_PEN, DollDefs, INK, PEN_PRESETS, penIds, type IPenStyle, type PenPreset } from "./pen";
 import { cornerAt, drawnBubble, edgeDistance, gridIn, insideShape, packBubbles, shapePoints, type BubblePoint, type Shape } from "./shape-bubbles";
@@ -33,6 +33,10 @@ export interface IMechDollProps {
     inError?: string[];
     /** The labels' color; black unless the sheet marks the current phase. */
     ink?: string;
+    /** The labels' type size in sheet units, where the use's own is too small for the page. */
+    labelSize?: number;
+    /** Label each location by its code (CT, LTR) rather than its name. */
+    shortLabels?: boolean;
 }
 
 const DIAGRAM_NAMES: Record<DollUse, string> = { armor: "Armor diagram", structure: "Structure diagram", transfer: "Damage transfer diagram" };
@@ -178,10 +182,11 @@ export default function MechDoll(props: IMechDollProps): JSX.Element {
     const interactive = onSelect !== undefined && use !== "transfer";
     const pointsOf = (loc: string): number => (use === "armor" ? unit.armor(loc) : unit.structure(loc));
 
-    const fontSize = use === "structure" ? LABEL_FONT.structure : LABEL_FONT.armor;
+    const fontSize = props.labelSize ?? (use === "structure" ? LABEL_FONT.structure : LABEL_FONT.armor);
     const labels = counted.flatMap(({ location, count }) => {
-        const [x, y] = toSheet(location.labelAt, frame);
-        return location.label.map((line, i) => (
+        const [x, y] = toSheet(labelPoint(location, props.shortLabels), frame);
+        const lines = labelLines(location, props.shortLabels);
+        return lines.map((line, i) => (
             <text
                 key={`${location.loc}-label-${i}`}
                 data-label={location.loc}
@@ -194,7 +199,7 @@ export default function MechDoll(props: IMechDollProps): JSX.Element {
                 fill={ink}
                 aria-hidden="true"
             >
-                {i === location.label.length - 1 ? `${line} [${count}]`.trim() : line}
+                {i === lines.length - 1 ? `${line} [${count}]`.trim() : line}
             </text>
         ));
     });

@@ -3,9 +3,10 @@
 import { ARMOR } from "../../data/chassis";
 import { locationName, maxArmor } from "../../rules/mech";
 import type { Layout, LocationCode, MechRecord } from "../../rules/mech";
-import MechDoll, { placedPlates } from "../doll/mech-doll";
+import { dollBox } from "../doll/box";
+import MechDoll from "../doll/mech-doll";
 import { PAPER } from "../doll/pen";
-import { DOLL_LAYOUTS, STRUCTURE_SCALE, dollUnitFromRecord } from "../doll/layouts";
+import { STRUCTURE_SCALE, dollUnitFromRecord } from "../doll/layouts";
 import type { DollUse } from "../doll/layouts";
 import { NumberField, fieldId } from "../EditorPage";
 import type { OnEdit } from "../EditorPage";
@@ -17,37 +18,6 @@ const BODY_CELLS: Record<string, Record<string, Cell>> = {
   biped: { HD: [1, 3], LA: [2, 1], LT: [2, 2], CT: [2, 3], RT: [2, 4], RA: [2, 5], "LT-rear": [3, 2], "CT-rear": [3, 3], "RT-rear": [3, 4], LL: [4, 2], RL: [4, 4] },
   quad: { HD: [1, 3], FLL: [2, 1], LT: [2, 2], CT: [2, 3], RT: [2, 4], FRL: [2, 5], "LT-rear": [3, 2], "CT-rear": [3, 3], "RT-rear": [3, 4], RLL: [4, 2], RRL: [4, 4] },
 };
-/** Label type size and an average glyph width as a share of it, per use, to leave room for the labels. */
-const LABEL = { armor: { size: 20, glyph: 0.62 }, structure: { size: 15, glyph: 0.62 } } as const;
-const MARGIN = 12;
-
-/** The box a doll needs, in sheet units: every plate and label of the layout at that scale, so nothing is clipped. */
-function dollBox(layoutId: keyof typeof DOLL_LAYOUTS, use: "armor" | "structure", scale: number) {
-  const layout = DOLL_LAYOUTS[layoutId];
-  const locations = layout ? (use === "armor" ? [...layout.front, ...layout.rear] : layout.front) : [];
-  const unit = { centerX: 0, top: 0, scale };
-  const xs: number[] = [];
-  const ys: number[] = [];
-  for (const location of locations) {
-    for (const plate of placedPlates(location, unit)) {
-      for (const [x, y] of plate) {
-        xs.push(x);
-        ys.push(y);
-      }
-    }
-    const { size, glyph } = LABEL[use];
-    const width = Math.max(...location.label.map((line) => line.length + 5)) * size * glyph;
-    const x = location.labelAt[0] * scale;
-    const y = location.labelAt[1] * scale;
-    const [from, to] = location.labelAnchor === "start" ? [x, x + width] : location.labelAnchor === "end" ? [x - width, x] : [x - width / 2, x + width / 2];
-    xs.push(from, to);
-    ys.push(y - size, y + location.label.length * (size + 2));
-  }
-  const left = Math.min(...xs) - MARGIN;
-  const top = Math.min(...ys) - MARGIN;
-  return { left, top, width: Math.max(...xs) + MARGIN - left, height: Math.max(...ys) + MARGIN - top };
-}
-
 /** The record location a doll location stands for: the rear torsos (ctr, ltr, rtr) are their front torso's. */
 const recordLocation = (doll: string): string => (doll.length === 3 ? doll.slice(0, 2) : doll).toUpperCase();
 

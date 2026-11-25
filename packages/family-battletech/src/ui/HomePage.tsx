@@ -256,6 +256,13 @@ export default function HomePage() {
                     >
                       Open
                     </Link>
+                    <Link
+                      className="bt-button bt-button--secondary"
+                      aria-label={`Record sheet for ${name}`}
+                      to={`/battletech/classic/sheet?id=${encodeURIComponent(record.id)}`}
+                    >
+                      Record sheet
+                    </Link>
                     <button
                       type="button"
                       className="bt-button bt-button--secondary"

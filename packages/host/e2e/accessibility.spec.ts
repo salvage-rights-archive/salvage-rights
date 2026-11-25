@@ -40,9 +40,10 @@ async function importForScan(page: Page): Promise<string> {
 
 test("dev edition has no axe violations in either theme", async ({ page }) => {
   // Twelve axe scans, about three seconds each on the editor in Firefox: the default 30 seconds is too short.
-  test.setTimeout(120_000);
+  test.setTimeout(150_000);
   const editorPath = await importForScan(page);
-  await expectNoViolations(page, DEV, ["/", "/about", "/settings", `${CLASSIC}/home`, `${CLASSIC}/import`, editorPath]);
+  const sheetPath = editorPath.replace("/editor", "/sheet");
+  await expectNoViolations(page, DEV, ["/", "/about", "/settings", `${CLASSIC}/home`, `${CLASSIC}/import`, editorPath, sheetPath]);
 });
 
 test("the editor's picker and Actions row have no axe violations in either theme", async ({ page }) => {

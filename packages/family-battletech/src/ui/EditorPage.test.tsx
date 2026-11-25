@@ -14,7 +14,7 @@ import { openFamilyStorage } from "./storage";
 // Decoding a picture needs a real canvas; the editor is tested with the reading mocked.
 const PICTURE = "data:image/png;base64,iVBORw0KGgo=";
 const { readPicture } = vi.hoisted(() => ({ readPicture: vi.fn() }));
-vi.mock("./picture", () => ({ readPicture }));
+vi.mock("./picture", async (original) => ({ ...(await original<typeof import("./picture")>()), readPicture }));
 
 beforeEach(() => {
   globalThis.indexedDB = new IDBFactory();

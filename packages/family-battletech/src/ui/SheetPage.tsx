@@ -1,0 +1,97 @@
+// The record sheet page: one saved 'Mech as the sheet to print at the table, with a short bar above it (not printed).
+import { useEffect, useMemo, useState } from "react";
+import { Link, useSearchParams } from "react-router";
+import { loadCatalog } from "../rules/catalog";
+import type { Catalog } from "../rules/catalog";
+import { runChecks } from "../rules/checks";
+import type { MechRecord } from "../rules/mech";
+import RecordSheet from "./sheet/RecordSheet";
+import { sheetTitle } from "./sheet/facts";
+import { STORAGE_READ_FAILED, openFamilyStorage } from "./storage";
+import "./classic.scss";
+
+const HOME = "/battletech/classic/home";
+
+type Loaded =
+  | { state: "loading" }
+  | { state: "missing" }
+  | { state: "unreadable"; message: string }
+  | { state: "failed" }
+  | { state: "ready"; catalog: Catalog; record: MechRecord };
+
+export default function SheetPage() {
+  const [params] = useSearchParams();
+  const id = params.get("id") ?? "";
+  const [loaded, setLoaded] = useState<Loaded>({ state: "loading" });
+
+  useEffect(() => {
+    let live = true;
+    void (async () => {
+      try {
+        const [storage, catalog] = await Promise.all([openFamilyStorage(), loadCatalog()]);
+        const entry = await storage.get(id);
+        if (!live) return;
+        if (!entry) setLoaded({ state: "missing" });
+        else if (!entry.record) setLoaded({ state: "unreadable", message: entry.unreadable ?? "" });
+        else setLoaded({ state: "ready", catalog, record: entry.record });
+      } catch {
+        if (live) setLoaded({ state: "failed" });
+      }
+    })();
+    return () => {
+      live = false;
+    };
+  }, [id]);
+
+  if (loaded.state === "ready") return <Sheet record={loaded.record} catalog={loaded.catalog} />;
+  // No heading while loading: the frame names the page after the first heading it finds, which should be the 'Mech's.
+  if (loaded.state === "loading") return <div className="sr-page" role="status">Loading.</div>;
+  return (
+    <div className="sr-page">
+      <h1>Record sheet</h1>
+      {loaded.state === "failed" ? (
+        <p role="alert" className="bt-problem">
+          {STORAGE_READ_FAILED}
+        </p>
+      ) : (
+        <p>{loaded.state === "missing" ? "That 'Mech is not saved on this device." : `This saved 'Mech cannot be read. ${loaded.message}`}</p>
+      )}
+      <p>
+        <Link className="sr-action" to={HOME}>
+          Back to Classic BattleTech
+        </Link>
+      </p>
+    </div>
+  );
+}
+
+function Sheet({ record, catalog }: { record: MechRecord; catalog: Catalog }) {
+  const errors = useMemo(() => runChecks(record, catalog).filter((f) => f.level === "error").length, [record, catalog]);
+  return (
+    <div className="sr-page bt-sheetpage">
+      <div className="bt-sheetpage__bar">
+        <h1 tabIndex={-1}>{`${sheetTitle(record)} record sheet`}</h1>
+        <div className="bt-actions">
+          <Link className="bt-back" to={HOME}>
+            <span aria-hidden="true">&larr; </span>Your 'Mechs
+          </Link>
+          <Link className="bt-button bt-button--secondary" to={`/battletech/classic/editor?id=${encodeURIComponent(record.id)}`}>
+            Edit
+          </Link>
+          <button
+            type="button"
+            className="bt-button"
+            onClick={() => {
+              window.print();
+            }}
+          >
+            Print
+          </button>
+        </div>
+        <p className="bt-hint">Prints on one page, Letter or A4. In the print dialog, turn off headers and footers.</p>
+        {errors > 0 && <p role="status">{`This 'Mech has ${String(errors)} rules ${errors === 1 ? "error" : "errors"}. The sheet shows it as saved.`}</p>}
+      </div>
+      <RecordSheet record={record} catalog={catalog} />
+    </div>
+  );
+}

@@ -53,6 +53,14 @@ export interface IDollUnit {
     structureDamaged(loc: string, index: number): boolean;
 }
 
+/** A location label lines: its full name, or only its code (CT, LTR) where the figure is drawn too small for names. */
+export const labelLines = (location: IDollLocation, short = false): string[] =>
+    short ? (location.loc === "hd" ? ["HD"] : [location.loc.toUpperCase(), ""]) : location.label;
+
+/** Where a location label starts: the head's short label rises clear of the head, which a small figure would cover. */
+export const labelPoint = (location: IDollLocation, short = false): BubblePoint =>
+    short && location.loc === "hd" ? [location.labelAt[0], location.labelAt[1] - 55] : location.labelAt;
+
 export const STRUCTURE_SCALE = 0.6;
 export const TRANSFER_SCALE = 0.2;
 /** The widest bubble spacing, in sheet units. */

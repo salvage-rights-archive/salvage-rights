@@ -5,6 +5,7 @@ const classicRoutes: FamilyRoute[] = [
   { path: "home", label: "Classic BattleTech", section: "workshop", load: () => import("./ui/HomePage") },
   { path: "import", label: "Import from Mordel", section: "workshop", load: () => import("./ui/ImportPage") },
   { path: "editor", label: "'Mech editor", section: "workshop", load: () => import("./ui/EditorPage") },
+  { path: "sheet", label: "Record sheet", section: "workshop", load: () => import("./ui/SheetPage") },
 ];
 
 function comingSoon(id: string, shortName: string, fullName: string): GameManifest {

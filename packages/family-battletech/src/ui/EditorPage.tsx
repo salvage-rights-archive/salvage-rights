@@ -16,7 +16,7 @@ import ArmorPanel from "./editor/ArmorPanel";
 import { dialogKeyDown } from "./editor/dialog";
 import FindingsPanel from "./editor/FindingsPanel";
 import SlotsPanel from "./editor/SlotsPanel";
-import { readPicture } from "./picture";
+import { mordelPicture, readPicture } from "./picture";
 import { STORAGE_READ_FAILED, STORAGE_WRITE_FAILED, downloadMech, openFamilyStorage } from "./storage";
 import type { FamilyStorage } from "./storage";
 import "./classic.scss";
@@ -411,17 +411,6 @@ export function weightSummary(weights: { lines: { tons: number | null }[]; total
   return `${known} of ${tons} tons, not counting ${unknown} ${unknown === 1 ? "item" : "items"} of unknown weight`;
 }
 
-/** Only a picture on mordel.net is shown; any other address in a file is ignored rather than requested. */
-export function mordelPicture(url: string | undefined): url is string {
-  if (url === undefined) return false;
-  try {
-    const parsed = new URL(url);
-    return parsed.protocol === "https:" && (parsed.hostname === "mordel.net" || parsed.hostname === "www.mordel.net");
-  } catch {
-    return false;
-  }
-}
-
 /** A picture of the 'Mech: Mordel's, or the player's own; `onFail` is called when it cannot be loaded, so the page can take its place away. */
 function Picture({ url, alt, onFail }: { url: string; alt: string; onFail?: () => void }) {
   const [loaded, setLoaded] = useState(false);
@@ -649,6 +638,10 @@ function Editor({ initial, catalog, storage }: { initial: MechRecord; catalog: C
           >
             Export
           </button>
+          {/* A navigation: leaving with unsaved changes asks first, and the sheet shows what is saved. */}
+          <Link className="bt-button bt-button--secondary" to={`/battletech/classic/sheet?id=${encodeURIComponent(record.id)}`}>
+            Record sheet
+          </Link>
           <button
             type="button"
             className="bt-weight__toggle"

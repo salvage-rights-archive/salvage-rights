@@ -44,6 +44,39 @@ test("import a 'Mech by number, move an item by keyboard, save, and find it agai
   await expect(page.getByRole("list", { name: "Left Arm slots" }).getByRole("button", { name: "Actions for AC/10 Ammo", exact: true })).toBeVisible();
 });
 
+// A 1 by 1 PNG, the smallest picture a player could upload.
+const PIXEL_PNG = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==", "base64");
+
+test("open a 'Mech's record sheet, give it a picture, and print only the sheet", async ({ page }) => {
+  await importMech(page, DEV);
+  await page.getByLabel("Upload a picture").setInputFiles({ name: "unit.png", mimeType: "image/png", buffer: PIXEL_PNG });
+  await expect(page.getByRole("img", { name: `${MECH_NAME}, your picture` })).toBeVisible();
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(page.getByText("Saved.")).toBeVisible();
+
+  await page.getByRole("link", { name: "Record sheet" }).click();
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(`${MECH_NAME} record sheet`);
+  const sheet = page.getByRole("img", { name: `${MECH_NAME} record sheet` });
+  await expect(sheet).toBeVisible();
+  await expect(sheet.locator("text", { hasText: /^Autocannon\/10$/ })).toBeVisible();
+  await expect(sheet.locator("[data-diagram='armor']")).toBeVisible();
+  await expect(sheet.locator("[data-picture='image'] image")).toHaveAttribute("href", /^data:image\/png;base64,/);
+
+  await page.emulateMedia({ media: "print" });
+  await expect(page.locator(".sr-header")).toBeHidden();
+  await expect(page.getByRole("button", { name: "Print" })).toBeHidden();
+  await expect(page.getByRole("heading", { level: 1 })).toBeHidden();
+  await expect(sheet).toBeVisible();
+  await page.emulateMedia({ media: "screen" });
+
+  // The home page's list has its own way in, and the sheet's own way back to the list.
+  await page.goto(HOME);
+  await page.getByRole("link", { name: `Record sheet for ${MECH_NAME}` }).click();
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(`${MECH_NAME} record sheet`);
+  await page.getByRole("link", { name: /Your 'Mechs/ }).click();
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Classic BattleTech");
+});
+
 test("export a 'Mech to a file, delete it and import the file back", async ({ page }, testInfo) => {
   await importMech(page, DEV);
   await page.goto(HOME);
