@@ -16,14 +16,17 @@ import {
 
 export type TopPartId =
     | "hull-head" | "hull-center-2" | "hull-center-3" | "hull-center-4" | "hull-flank-2" | "hull-flank-3" | "hull-flank-4"
-    | "hull-aft-center" | "hull-aft-side" | "top-leg" | "star-turret" | "star-ring" | "star-face";
+    | "hull-aft-center" | "hull-aft-side" | "top-leg" | "star-turret" | "star-ring" | "star-face" | "top-arm";
 
 /** Each is drawn around its own origin, which a layout moves to where it goes. */
 export const TOP_PIVOTS: Record<TopPartId, BubblePoint> = {
     "hull-head": [0, 0], "hull-center-2": [0, 0], "hull-center-3": [0, 0], "hull-center-4": [0, 0],
     "hull-flank-2": [0, 0], "hull-flank-3": [0, 0], "hull-flank-4": [0, 0],
-    "hull-aft-center": [0, 0], "hull-aft-side": [0, 0], "top-leg": [0, 0], "star-turret": [0, 0], "star-ring": [0, 0], "star-face": [0, 0],
+    "hull-aft-center": [0, 0], "hull-aft-side": [0, 0], "top-leg": [0, 0], "star-turret": [0, 0], "star-ring": [0, 0], "star-face": [0, 0], "top-arm": [0, 0],
 };
+
+/** The top of the hull's first row of plates, down the sheet. */
+export const HULL_TOP = 230;
 
 /** Row pitch down the hull (one leg pair to a row), the gap between the rows' plates, and the width of the outline margin. */
 export const ROW = 150;
@@ -161,6 +164,8 @@ const topLeg: IPart = aroundPivot([0, 0], {
 // (the side facing straight up); a layout turns each copy to its own face. Apothems, from the middle, in layout units.
 
 const TAN36 = Math.tan(36 * Math.PI / 180);
+/** The middle of the star, in layout units. */
+export const STAR_AT: BubblePoint = [0, 440];
 export const STAR_RING = [48, 110] as const;
 export const STAR_FACE = [118, 206] as const;
 
@@ -213,6 +218,30 @@ const starFace: IPart = {
     draw: (pen) => slabbed(FACE_PLATE, pen),
 };
 
+
+// ---- Arm seen from above, pointing forward: a shoulder ball, an upper arm, an elbow ball, a forearm and a hand. Drawn pointing
+// straight up from the shoulder; a layout turns, scales and mirrors it.
+
+const UPPER_ARM: Shape = bar([0, -10], [-4, -118], 40, 38, 10);
+const FOREARM: Shape = bar([-6, -140], [-12, -248], 38, 36, 10);
+const HAND: Shape = bar([-12, -254], [-14, -284], 32, 46, 8);
+
+const topArm: IPart = {
+    plates: [UPPER_ARM, FOREARM],
+    label: [-4, -90],
+    tip: [-14, -284],
+    draw: (pen, ids) => (
+        <>
+            {joint(polygonPath(octagon(0, 0, 32)), [], pen, ids)}
+            {slabbed(UPPER_ARM, pen)}
+            {slabbed(FOREARM, pen)}
+            {joint(polygonPath(octagon(-5, -129, 26)), [], pen, ids)}
+            {outline(polygonPath(HAND), pen)}
+            {seams(["M -26,-262 L -26,-284", "M -14,-262 L -14,-284", "M -2,-262 L -2,-284"], pen)}
+        </>
+    ),
+};
+
 export const TOP_PARTS: Record<TopPartId, IPart> = {
     "hull-head": hullHead,
     "hull-center-2": spine(2), "hull-center-3": spine(3), "hull-center-4": spine(4),
@@ -223,6 +252,7 @@ export const TOP_PARTS: Record<TopPartId, IPart> = {
     "star-turret": starTurret,
     "star-ring": starRing,
     "star-face": starFace,
+    "top-arm": topArm,
 };
 
 /** A track unit under a foot seen from above, centered on the foot point and lying along the way the leg runs out of it. */

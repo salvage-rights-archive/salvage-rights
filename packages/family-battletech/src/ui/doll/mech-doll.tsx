@@ -249,7 +249,7 @@ export default function MechDoll(props: IMechDollProps): JSX.Element {
                     role: "button",
                     tabIndex: 0,
                     "aria-pressed": chosen,
-                    "aria-label": `${dollLocationName(location.loc)}, ${pointsOf(location.loc)} ${use}${wrong(location.loc) ? ", in error" : ""}`,
+                    "aria-label": `${dollLocationName(location.loc, unit.variant.arms)}, ${pointsOf(location.loc)} ${use}${wrong(location.loc) ? ", in error" : ""}`,
                     onClick: choose,
                     onFocus: () => setFocused(location.loc),
                     onBlur: () => setFocused((now) => (now === location.loc ? undefined : now)),

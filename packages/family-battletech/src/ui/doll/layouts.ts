@@ -3,8 +3,8 @@ import { locationName, maxArmor, structurePoints, type LocationCode, type MechRe
 import { placePoint, type IPlacement } from "./geometry";
 import { PART_PIVOTS, PARTS, type PartId } from "./parts";
 import { mapPath, type IDecor } from "./parts-kit";
-import { applyVariant, FRONT_GUIDE, scaleLocation } from "./variants";
-import { HEAD_CENTER, HIP_X, ROW } from "./parts-top";
+import { applyVariant, FRONT_GUIDE, mirrored, scaleLocation } from "./variants";
+import { HEAD_CENTER, HIP_X, HULL_TOP, ROW, STAR_AT } from "./parts-top";
 import type { BubblePoint } from "./shape-bubbles";
 
 /*
@@ -76,6 +76,9 @@ export interface IDollVariant {
     armless: boolean;
     /** The superheavy head and shells, on the biped and the tripod. */
     superheavy: boolean;
+    /** Two or four arms, on any layout: the bodies with arms keep their pair for two; the others gain them. A five-legged
+     * body takes two at most. */
+    arms?: 2 | 4;
     /** The Land-Air 'Mech family, on the biped: canopy head and folded wings (LAM, bimodal), a rotor (VTOL), fixed wings. */
     lam?: "lam" | "bimodal" | "vtol" | "partial-wing";
 }
@@ -117,22 +120,6 @@ export const TRANSFER_SCALE = 0.2;
 /** The widest bubble spacing, in sheet units. */
 export const ARMOR_PITCH = 30;
 export const STRUCTURE_PITCH = 20;
-
-const flipAnchor = (anchor: IDollLocation["labelAnchor"]): IDollLocation["labelAnchor"] =>
-    anchor === "start" ? "end" : anchor === "end" ? "start" : "middle";
-
-/** The right-side twin of a left-side location: the same part turned over, its label on the other side. */
-const mirrored = (left: IDollLocation, loc: string, label: string[], transfersTo?: string): IDollLocation => ({
-    loc,
-    part: left.part,
-    at: { ...left.at, x: -left.at.x, mirror: !left.at.mirror, rotate: left.at.rotate ? -left.at.rotate : undefined },
-    label,
-    labelAt: [-left.labelAt[0], left.labelAt[1]],
-    labelAnchor: flipAnchor(left.labelAnchor),
-    shortHangsFrom: left.shortHangsFrom && [-left.shortHangsFrom[0], left.shortHangsFrom[1]],
-    leader: left.leader && [[-left.leader[0][0], left.leader[0][1]], [-left.leader[1][0], left.leader[1][1]]],
-    transfersTo,
-});
 
 /** A part where its own drawing put it. */
 const home = (part: PartId): IPlacement => ({ x: PART_PIVOTS[part][0], y: PART_PIVOTS[part][1] });
@@ -274,7 +261,6 @@ const LEGLESS: IDollLayout = {
 // The rules for these bodies are not in the app yet, so their arrows are provisional until the rules are read: each leg
 // sends its damage to the nearest side torso, a center leg to the center torso, a side torso to the center torso.
 
-const HULL_TOP = 230;
 const LEG_ANGLES: Record<number, number[]> = { 2: [26, -26], 3: [28, 0, -28], 4: [34, 12, -12, -34] };
 const legCenterY = (row: number): number => HULL_TOP + row * ROW + (ROW - 20) / 2;
 
@@ -295,7 +281,7 @@ const hullLayout = (id: DollLayoutId, rows: 2 | 3 | 4, legs: IDollLocation[]): I
     const aftTop = Math.max(hullBottom + 170, lowestFoot + 130);
     const head: IDollLocation = { loc: "hd", part: "hull-head", at: { x: 0, y: HULL_TOP + HEAD_CENTER }, label: ["HEAD"], labelAt: [0, HULL_TOP + HEAD_CENTER - 54], labelAnchor: "middle" };
     const center: IDollLocation = { loc: "ct", part: `hull-center-${rows}`, at: { x: 0, y: HULL_TOP }, label: ["CENTER", "TORSO", ""], labelAt: [0, hullBottom + 42], labelAnchor: "middle", shortHangsFrom: [0, hullBottom + 22] };
-    const flankLeft: IDollLocation = { loc: "lt", part: `hull-flank-${rows}`, at: { x: 0, y: HULL_TOP }, label: ["LEFT", "TORSO", ""], labelAt: [-121, hullBottom + 42], labelAnchor: "middle", shortHangsFrom: [-150, hullBottom + 22], transfersTo: "ct" };
+    const flankLeft: IDollLocation = { loc: "lt", part: `hull-flank-${rows}`, at: { x: 0, y: HULL_TOP }, label: ["LEFT", "TORSO", ""], labelAt: [-121, hullBottom + 42], labelAnchor: "middle", shortHangsFrom: [-178, hullBottom + 22], transfersTo: "ct" };
     const aftSide: IDollLocation = { loc: "ltr", part: "hull-aft-side", at: { x: -158, y: aftTop }, label: ["LEFT TORSO", "(REAR)"], labelAt: [-262, aftTop + 46], labelAnchor: "end" };
     return {
         id,
@@ -330,7 +316,6 @@ const numbered = (rows: 3 | 4): [string, string[], string, string[]][] =>
 // the center torso keeps its 12, filled as on any 'Mech, and holds the cockpit as on a tripod; the turret head has 12 spaces;
 // to be worked out further with the owner when its rules are written (owner's design, 2026-11-25).
 
-const STAR_AT: BubblePoint = [0, 440];
 const STAR_LEG_AT = 216;
 /** Each face: its torso and leg codes, the direction it faces (degrees clockwise from the sheet's +x), which way its torso label
  * leans along the face (away from the leader lines that go to the head and the center torso), and its names. */
@@ -434,10 +419,11 @@ const RECORD_OF: Record<string, { code: LocationCode; rear: boolean }> = {
 const STAR_NAMES: Record<string, string> = { flt: "Front Left Torso", frt: "Front Right Torso", at: "Aft Torso", al: "Aft Leg" };
 
 /** A doll location's display name, from the record's own names; the rear torsos add "(Rear)". */
-export const dollLocationName = (loc: string): string => {
+export const dollLocationName = (loc: string, arms?: 2 | 4): string => {
     const at = Object.hasOwn(RECORD_OF, loc) ? RECORD_OF[loc] : undefined;
-    if (at) return `${locationName(at.code)}${at.rear ? " (Rear)" : ""}`;
+    if (at) return `${arms === 4 && (loc === "la" || loc === "ra") ? "Upper " : ""}${locationName(at.code)}${at.rear ? " (Rear)" : ""}`;
     // The legs of a hexapod or octopod are numbered from the front; these are doll codes only, with no record location yet.
+    if (loc === "la2" || loc === "ra2") return `Lower ${loc === "la2" ? "Left" : "Right"} Arm`;
     const numbered = /^([lr])([1-4])$/.exec(loc);
     if (numbered) return `${numbered[1] === "l" ? "Left" : "Right"} Leg ${numbered[2]}`;
     // The five-legged body's face torsos and aft leg are doll codes only too.

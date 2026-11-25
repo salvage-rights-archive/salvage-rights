@@ -20,6 +20,8 @@ export interface IPart {
     footDir?: BubblePoint;
     /** How wide the foot is across footDir, where a pod under it must be at least as wide. */
     footWidth?: number;
+    /** The end of an arm seen from above, where its label stands. */
+    tip?: BubblePoint;
 }
 
 /** A drawing that is not a location: a wing, a rotor, a pod. It has no plates and no bubbles; `bounds` is the shape it

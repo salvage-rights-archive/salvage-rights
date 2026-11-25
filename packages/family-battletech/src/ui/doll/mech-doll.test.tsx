@@ -43,7 +43,7 @@ const fullOf = (superheavy: boolean) => {
   const row = superheavy ? { CT: 60, LT: 42, LA: 33, LL: 42 } : structurePoints(bipedRecord({ tons: 100 }));
   const head = superheavy ? { armor: 12, structure: 4 } : { armor: 9, structure: 3 };
   const structure = (loc: string): number =>
-    loc === "hd" ? head.structure : loc === "ct" ? row.CT ?? 0 : loc === "lt" || loc === "rt" || loc === "flt" || loc === "frt" || loc === "at" ? row.LT ?? 0 : loc === "la" || loc === "ra" ? row.LA ?? 0 : row.LL ?? 0;
+    loc === "hd" ? head.structure : loc === "ct" ? row.CT ?? 0 : loc === "lt" || loc === "rt" || loc === "flt" || loc === "frt" || loc === "at" ? row.LT ?? 0 : loc === "la" || loc === "ra" || loc === "la2" || loc === "ra2" ? row.LA ?? 0 : row.LL ?? 0;
   const rearOf = (loc: string): number => Math.floor((structure(loc) * 2) / 6);
   const isRear = (loc: string): boolean => loc === "ctr" || loc === "ltr" || loc === "rtr";
   return {
@@ -257,6 +257,12 @@ describe("the paper doll", () => {
     ...BODY_TYPES.map((id): [string, DollLayoutId, Partial<IDollVariant>] => [`100-ton ${id}`, id, {}]),
     ["200-ton superheavy biped", "biped", { superheavy: true }],
     ["200-ton superheavy tripod", "tripod", { superheavy: true }],
+    ["100-ton four-armed biped", "biped", { arms: 4 }],
+    ["100-ton two-armed quad", "quad", { arms: 2 }],
+    ["100-ton four-armed quad", "quad", { arms: 4 }],
+    ["100-ton two-armed octopod", "octopod", { arms: 2 }],
+    ["100-ton four-armed octopod", "octopod", { arms: 4 }],
+    ["100-ton two-armed pentapod", "pentapod", { arms: 2 }],
   ])("draws every point of a %s at full armor and structure, at a size a bubble can be read", (_name, layoutId, variant) => {
     const unit = fullUnit(layoutId, variant);
     const layout = layoutOf(unit);
@@ -285,6 +291,9 @@ describe("the paper doll", () => {
     ["QuadVee on wheels", "quad", { pods: "wheels" }, { rrl: "quad-leg-rear" }, ["pod-fll", "pod-frl", "pod-rll", "pod-rrl"]],
     ["tracked octopod", "octopod", { pods: "tracks" }, { l4: "top-leg" }, ["l1", "r1", "l2", "r2", "l3", "r3", "l4", "r4"].map((loc) => `pod-${loc}`)],
     ["armless biped", "biped", { armless: true }, { la: "arm-cap", ra: "arm-cap" }, []],
+    ["four-armed biped", "biped", { arms: 4 }, { la: "arm", la2: "arm", ra2: "arm" }, []],
+    ["two-armed quad", "quad", { arms: 2 }, { la: "arm", ra: "arm" }, []],
+    ["four-armed hexapod", "hexapod", { arms: 4 }, { la: "top-arm", ra2: "top-arm" }, []],
   ])("swaps the parts of a %s and leaves its locations as they were", (_name, layoutId, variant, parts, decor) => {
     const frame = { centerX: 0, top: 0, scale: 1 };
     const host = document.createElement("div");
@@ -292,7 +301,8 @@ describe("the paper doll", () => {
     const base = DOLL_LAYOUTS[layoutId];
     const wanted = [...(base?.front ?? []), ...(base?.rear ?? [])].map((location) => location.loc);
     const drawn = [...host.querySelectorAll("g[data-loc]")];
-    expect(drawn.map((group) => group.getAttribute("data-loc"))).toEqual(wanted);
+    const added = variant.arms ? ["la", "ra", "la2", "ra2"] : [];
+    expect(drawn.map((group) => group.getAttribute("data-loc")).filter((loc) => !added.includes(loc ?? ""))).toEqual(wanted.filter((loc) => !added.includes(loc)));
     for (const [loc, part] of Object.entries(parts)) expect(host.querySelector(`g[data-loc=${loc}]`)?.getAttribute("data-part"), loc).toBe(part);
     expect([...host.querySelectorAll("[data-decor]")].map((each) => each.getAttribute("data-decor")).sort()).toEqual([...decor].sort());
   });
