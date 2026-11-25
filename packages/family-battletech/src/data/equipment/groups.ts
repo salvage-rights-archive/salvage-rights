@@ -17,11 +17,14 @@ const words = (list: string): RegExp => new RegExp(`(^|-)(${list})(-|$)`);
 export const EQUIPMENT_GROUPS: GroupRule[] = [
   { id: "artillery", label: "Artillery", match: words("arrow-iv|thumper|sniper|long-tom") },
   { id: "industrial", label: "Industrial equipment", match: words("backhoe|chainsaw|combine|dual-saw|pile-driver|mining-drill|rock-cutter|spot-welder|nail-rivet|wrecking-ball|salvage-arm|sprayer|fluid-suction|lift-hoist|bridgelayer|remote-sensor-dispenser") },
-  { id: "defensive", label: "Defensive equipment", match: words("ams|case|shield|laser-anti-missile|pds") },
-  { id: "heat", label: "Heat and movement equipment", match: words("heat-sink|jump-jet|masc|tsm|triple-strength|coolant|laser-insulator|lam") },
+  { id: "actuators", label: "Actuator enhancement", match: words("aes-arm|aes-leg") },
+  { id: "stealth", label: "Stealth and signature systems", match: words("chameleon-lps|null-signature-system|void-signature-system") },
+  { id: "command", label: "Command consoles and modules", match: words("cockpit-command-console|collapsible-command-module") },
+  { id: "defensive", label: "Defensive equipment", match: words("ams|case|shield|laser-anti-missile|pds|harjel|full-head-ejection-system|aquatic-survival-system") },
+  { id: "heat", label: "Heat and movement equipment", match: words("heat-sink|jump-jet|jump-pack|mechanical-jump-booster|partial-wing|umu|supercharger|masc|tsm|triple-strength|coolant|laser-insulator|lam") },
   { id: "electronics", label: "Electronics and targeting", match: words("c3|ecm|probe|tag|cews|electronic-warfare|recon-camera|remote-sensor|remote-sensors|apollo|targeting-computer|artemis|viral-jammer|chaff") },
-  { id: "special", label: "Anti-personnel and special weapons", match: words("machine-gun|machine-gun-array|a-pods|b-pods|grenade|mine-dispenser|taser|fluid-gun|m-pod") },
-  { id: "physical", label: "Physical weapons", match: words("hatchet|sword|retractable-blade|chain-whip|flail|spikes|vibroblade") },
+  { id: "special", label: "Anti-personnel and special weapons", match: words("booby-trap|machine-gun|machine-gun-array|a-pods|b-pods|grenade|mine-dispenser|taser|fluid-gun|m-pod") },
+  { id: "physical", label: "Physical weapons", match: words("claws|mace|lance|talons|hatchet|sword|retractable-blade|chain-whip|flail|spikes|vibroblade") },
   { id: "missile", label: "Missile weapons", match: words("lrm|srm|mrm|mml|atm|rocket-launcher|narc|thunderbolt|mortar") },
   { id: "energy", label: "Energy weapons", match: words("laser|ppc|plasma|flamer|tsemp|binary|bombast|centurion|capacitor|chemical") },
   { id: "ballistic", label: "Ballistic weapons", match: words("ac|lb|gauss|rifle|rotary|ultra|magshot") },
@@ -38,4 +41,4 @@ export const AMMO_GROUPS: GroupRule[] = [
 export const AMMO_OTHER_GROUP = { id: "ammo-other", label: "Ammunition: machine guns, flamers and other" };
 
 /** The order the picker lists the groups in. */
-export const GROUP_ORDER: string[] = ["energy", "ballistic", "missile", "artillery", "physical", "special", "electronics", "defensive", "heat", "industrial", "ammo-ballistic", "ammo-missile", "ammo-artillery", "ammo-other", "other"];
+export const GROUP_ORDER: string[] = ["energy", "ballistic", "missile", "artillery", "physical", "special", "electronics", "stealth", "command", "defensive", "actuators", "heat", "industrial", "ammo-ballistic", "ammo-missile", "ammo-artillery", "ammo-other", "other"];

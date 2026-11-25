@@ -366,4 +366,95 @@ export const OTHER: EquipmentGroup[] = [
       { id: "recon-camera-clan", name: "Recon Camera", tons: 0.5, slots: 1, type: "E", availability: [{ from: 1950 }], rulesLevel: "advanced" },
     ],
   },
+  // -------------------------------------------------------------------------------------------------------------
+  // Tactical Operations: Advanced Units and Equipment, the items whose weight or slots the table leaves to a rule (an asterisk
+  // or a formula), added with the formulas of rules/formulas.ts. Dates, cost and tech rating are the Heavy Weapons and Equipment
+  // Construction Data table (printed pp. 217-223, read against the page images); the rules level and the weight, slot and
+  // placement rules are the item entries (pp. 87-162), which `cite` names. "IS/Clan" in the table is a row for each tech base. A
+  // table date marked P (prototype) or X (extinct) is written as the year, and the span stays open (as the rows above).
+  // Fixed-count items (`perMech`) are the book's "one in each of" placements: the weight is the whole item's, shared between the
+  // mounts (`splitWeight`). Not added: turrets (weight is a tenth of what sits in the turret; no link from an item to its turret
+  // exists yet), handheld weapons (a composite carried, no slots or weight of their own), vehicle-only and other-unit equipment
+  // (next stage).
+  // -------------------------------------------------------------------------------------------------------------
+  {
+    defaults: { kind: "other", techBase: "inner-sphere", cite: { book: TO, page: 217 }, checked: "page", rulesLevel: "experimental" },
+    items: [
+      // Actuator Enhancement System (rules p. 90): weight and slots by the 'Mech, an arm or all legs
+      { id: "aes-arm-is", name: "Actuator Enhancement System (Arm)", aliases: ["AES", "Actuator Enhancement System", "AES (Arm)"], tons: "aes-tons", slots: "aes-slots", availability: [{ from: 3070 }], locations: ["LA", "RA"], locationsQuad: [], cite: { book: TO, page: 217 } },
+      { id: "aes-leg-is", name: "Actuator Enhancement System (Leg)", aliases: ["AES (Leg)"], tons: "aes-tons", slots: "aes-slots", availability: [{ from: 3070 }], locations: ["LL", "RL"], locationsQuad: ["FLL", "FRL", "RLL", "RRL"], perMech: 2, perMechQuad: 4 },
+      // Blue Shield (p. 108): 3 tons in all, one slot in every location but the head
+      { id: "blue-shield-is", name: "Blue Shield Particle Field Damper", aliases: ["Blue Shield", "Blue Shield PFD"], tons: 3, slots: 1, availability: [{ from: 3053 }], perMech: 7, splitWeight: true, locations: ["CT", "LT", "RT", "LA", "RA", "LL", "RL"], locationsQuad: ["CT", "LT", "RT", "FLL", "FRL", "RLL", "RRL"], units: ["mech", "industrialmech", "vehicle", "aero"] },
+      // Booby Trap (p. 109): a tenth of the unit, in the engine's location
+      { id: "booby-trap-is", name: "Booby Trap", tons: "booby-trap", slots: 1, availability: [{ from: 1950 }], locations: ["CT"], units: ["mech", "industrialmech", "vehicle", "aero", "smallcraft", "dropship", "ship", "building"] },
+      // Claws, lance, mace (pp. 99-102): a ton and a slot for every 15, 20 or 10 tons of the 'Mech
+      { id: "claws-is", name: "Claws", aliases: ["Claw"], tons: "ceil-tons-15", slots: "ceil-tons-15", availability: [{ from: 3060 }], locations: ["LA", "RA"], locationsQuad: [], rulesLevel: "advanced" },
+      { id: "lance-is", name: "Lance", tons: "ceil-tons-20", slots: "ceil-tons-20", availability: [{ from: 3064 }], locations: ["LA", "RA"], locationsQuad: [] },
+      { id: "mace-is", name: "Mace", tons: "ceil-tons-10", slots: "ceil-tons-10", availability: [{ from: 3061 }], locations: ["LA", "RA"], locationsQuad: [], rulesLevel: "advanced" },
+      // Mechanical jump boosters (p. 104): 5 percent of the 'Mech for each Jumping MP chosen, two slots in each leg
+      { id: "mechanical-jump-booster-is", name: "Mechanical Jump Booster", aliases: ["Mechanical Jump Boosters", "Jump Booster"], tons: "jump-booster", slots: 2, availability: [{ from: 3060 }], locations: ["LL", "RL"], locationsQuad: ["FLL", "FRL", "RLL", "RRL"], perMech: 2, perMechQuad: 4, splitWeight: true, amount: { unit: "Jumping MP", min: 1, step: 1 } },
+      // Partial wing (p. 104): 7 percent of the 'Mech, four slots in each side torso
+      { id: "partial-wing-is", name: "Partial Wing", aliases: ["Partial Wing (IS)", "Partial Wing ('Mech)"], tons: "partial-wing-is", slots: 4, availability: [{ from: 3074 }], locations: ["LT", "RT"], perMech: 2, splitWeight: true },
+      // UMU (p. 107): placed and weighed as jump jets
+      { id: "umu-is", name: "UMU", aliases: ["UMUs", "Underwater Maneuvering Unit"], tons: "jump-jet", slots: 1, availability: [{ from: 3066 }], locations: ["CT", "LT", "RT", "LL", "RL", "FLL", "FRL", "RLL", "RRL"], checked: "page" },
+    ],
+  },
+  {
+    defaults: { kind: "other", techBase: "clan", cite: { book: TO, page: 217 }, checked: "page", rulesLevel: "experimental" },
+    items: [
+      { id: "aes-arm-clan", name: "Actuator Enhancement System (Arm)", aliases: ["AES", "Actuator Enhancement System", "AES (Arm)"], tons: "aes-tons", slots: "aes-slots", availability: [{ from: 3070 }], locations: ["LA", "RA"], locationsQuad: [] },
+      { id: "aes-leg-clan", name: "Actuator Enhancement System (Leg)", aliases: ["AES (Leg)"], tons: "aes-tons", slots: "aes-slots", availability: [{ from: 3070 }], locations: ["LL", "RL"], locationsQuad: ["FLL", "FRL", "RLL", "RRL"], perMech: 2, perMechQuad: 4 },
+      // Talons (p. 102): a ton for every 15 tons of the 'Mech in all, two slots in each leg
+      { id: "talons-clan", name: "Talons", aliases: ["Talons [Clan]"], tons: "ceil-tons-15", slots: 2, availability: [{ from: 3072 }], locations: ["LL", "RL"], locationsQuad: ["FLL", "FRL", "RLL", "RRL"], perMech: 2, perMechQuad: 4, splitWeight: true },
+      { id: "partial-wing-clan", name: "Partial Wing", aliases: ["Partial Wing (C)", "Partial Wing [Clan]", "Partial Wing (Clan)"], tons: "partial-wing-clan", slots: 3, availability: [{ from: 3067 }], locations: ["LT", "RT"], perMech: 2, splitWeight: true },
+      { id: "umu-clan", name: "UMU", aliases: ["UMUs", "Underwater Maneuvering Unit"], tons: "jump-jet", slots: 1, availability: [{ from: 3061 }], locations: ["CT", "LT", "RT", "LL", "RL", "FLL", "FRL", "RLL", "RRL"] },
+    ],
+  },
+  {
+    defaults: { kind: "other", techBase: "inner-sphere", cite: { book: TO, page: 219 }, checked: "page", rulesLevel: "experimental" },
+    items: [
+      // Chameleon Light Polarization Shield (p. 112): six slots, one in each limb and each side torso, no weight
+      { id: "chameleon-lps-is", name: "Chameleon Light Polarization Shield", aliases: ["Chameleon LPS", "Chameleon Light Polarization", "Chameleon Light Polarization Shield (LPS)"], tons: 0, slots: 1, availability: [{ from: 2630 }], perMech: 6, splitWeight: true, locations: ["LA", "RA", "LL", "RL", "LT", "RT"], locationsQuad: ["FLL", "FRL", "RLL", "RRL", "LT", "RT"] },
+      // Null-Signature System (p. 148): seven slots, one in each location but the head
+      { id: "null-signature-system-is", name: "Null-Signature System", aliases: ["Null Signature System"], tons: 0, slots: 1, availability: [{ from: 2630 }], perMech: 7, splitWeight: true, locations: ["CT", "LT", "RT", "LA", "RA", "LL", "RL"], locationsQuad: ["CT", "LT", "RT", "FLL", "FRL", "RLL", "RRL"], cite: { book: TO, page: 221 } },
+      // Void-Signature System (p. 161)
+      { id: "void-signature-system-is", name: "Void-Signature System", aliases: ["Void Signature System", "Void Signature"], tons: 0, slots: 1, availability: [{ from: 3070 }], perMech: 7, splitWeight: true, locations: ["CT", "LT", "RT", "LA", "RA", "LL", "RL"], locationsQuad: ["CT", "LT", "RT", "FLL", "FRL", "RLL", "RRL"], cite: { book: TO, page: 223 } },
+    ],
+  },
+  {
+    defaults: { kind: "other", techBase: "inner-sphere", cite: { book: TO, page: 217 }, checked: "page" },
+    items: [
+      // BattleMech HarJel (p. 100): a ton and a slot in any location but the cockpit's; the table's 1* for both is read as per mount
+      { id: "harjel-is", name: "BattleMech HarJel", aliases: ["HarJel", "HarJel Repair", "HarJel Repair System", "HarJel Repair Systems", "BattleMech HarJel System"], tons: 1, slots: 1, availability: [{ from: 3067 }], rulesLevel: "experimental", checked: "text", locations: ["CT", "LT", "RT", "LA", "RA", "LL", "RL"], locationsQuad: ["CT", "LT", "RT", "FLL", "FRL", "RLL", "RRL"] },
+      // Cockpit Command Console (p. 112), Collapsible Command Module (p. 114), Full-Head Ejection System (p. 122), Aquatic Survival System (p. 137)
+      { id: "cockpit-command-console-is", name: "Cockpit Command Console", aliases: ["Command Console"], tons: 3, slots: 1, availability: [{ from: 3030 }], rulesLevel: "advanced", locations: ["HD"], cite: { book: TO, page: 219 } },
+      { id: "collapsible-command-module-is", name: "Collapsible Command Module", aliases: ["Collapsible Command Module (CCM)", "CCM"], tons: 16, slots: 12, availability: [{ from: 2710 }], rulesLevel: "experimental", cite: { book: TO, page: 219 } },
+      { id: "full-head-ejection-system-is", name: "Full-Head Ejection System", aliases: ["Full Head Ejection System", "Full-Head Ejection"], tons: 0, slots: 0, availability: [{ from: 3023 }], rulesLevel: "advanced", locations: ["HD"], perMech: 1, cite: { book: TO, page: 219 } },
+      { id: "aquatic-survival-system-is", name: "MechWarrior Aquatic Survival System", aliases: ["MASS", "Aquatic Survival System"], tons: 1.5, slots: 1, availability: [{ from: 3048 }], rulesLevel: "experimental", locations: ["HD"], cite: { book: TO, page: 221 } },
+      // Supercharger (p. 156): a tenth of the engine's weight, in a location with engine slots
+      { id: "supercharger-is", name: "Supercharger", tons: "supercharger", slots: 1, availability: [{ from: 2200 }], rulesLevel: "experimental", locations: ["CT", "LT", "RT"], cite: { book: TO, page: 223 } },
+      // Jump pack (p. 104): carried as cargo, of any weight to 20 tons
+      { id: "jump-pack-is", name: "Jump Pack", aliases: ["Drop Pack", "Jump Pack / Drop Pack", "Jump/Drop Pack"], tons: "chosen-tons", slots: 0, availability: [{ from: 2457 }], rulesLevel: "advanced", amount: { unit: "tons", min: 0.5, max: 20, step: 0.5 } },
+    ],
+  },
+  {
+    defaults: { kind: "other", techBase: "clan", cite: { book: TO, page: 217 }, checked: "page" },
+    items: [
+      { id: "harjel-clan", name: "BattleMech HarJel", aliases: ["HarJel", "HarJel Repair", "HarJel Repair System", "HarJel Repair Systems", "BattleMech HarJel System"], tons: 1, slots: 1, availability: [{ from: 3059 }], rulesLevel: "experimental", checked: "text", locations: ["CT", "LT", "RT", "LA", "RA", "LL", "RL"], locationsQuad: ["CT", "LT", "RT", "FLL", "FRL", "RLL", "RRL"] },
+      { id: "cockpit-command-console-clan", name: "Cockpit Command Console", aliases: ["Command Console"], tons: 3, slots: 1, availability: [{ from: 2631 }], rulesLevel: "advanced", locations: ["HD"], cite: { book: TO, page: 219 } },
+      { id: "collapsible-command-module-clan", name: "Collapsible Command Module", aliases: ["Collapsible Command Module (CCM)", "CCM"], tons: 16, slots: 12, availability: [{ from: 2710 }], rulesLevel: "experimental", cite: { book: TO, page: 219 } },
+      { id: "full-head-ejection-system-clan", name: "Full-Head Ejection System", aliases: ["Full Head Ejection System", "Full-Head Ejection"], tons: 0, slots: 0, availability: [{ from: 3052 }], rulesLevel: "advanced", locations: ["HD"], perMech: 1, cite: { book: TO, page: 219 } },
+      { id: "aquatic-survival-system-clan", name: "MechWarrior Aquatic Survival System", aliases: ["MASS", "Aquatic Survival System"], tons: 1.5, slots: 1, availability: [{ from: 3062 }], rulesLevel: "experimental", locations: ["HD"], cite: { book: TO, page: 221 } },
+      { id: "supercharger-clan", name: "Supercharger", tons: "supercharger", slots: 1, availability: [{ from: 2200 }], rulesLevel: "experimental", locations: ["CT", "LT", "RT"], cite: { book: TO, page: 223 } },
+      { id: "jump-pack-clan", name: "Jump Pack", aliases: ["Drop Pack", "Jump Pack / Drop Pack", "Jump/Drop Pack"], tons: "chosen-tons", slots: 0, availability: [{ from: 2457 }], rulesLevel: "advanced", amount: { unit: "tons", min: 0.5, max: 20, step: 0.5 } },
+    ],
+  },
+  {
+    // Heat sinks of the advanced types (TO:AUE pp.128-129, table p.217). Weight is counted with the chassis heat sinks, as for the rows above.
+    defaults: { kind: "heat-sink", cite: { book: TO, page: 217 }, checked: "page", tons: 0 },
+    items: [
+      { id: "compact-heat-sink-is", name: "Compact Heat Sink", aliases: ["Compact Heat Sinks", "2 Compact Heat Sinks"], techBase: "inner-sphere", slots: 1, availability: [{ from: 3058 }], rulesLevel: "experimental" },
+      { id: "laser-heat-sink-clan", name: "Laser Heat Sink", aliases: ["Laser Heat Sinks"], techBase: "clan", slots: 2, availability: [{ from: 3051 }], rulesLevel: "advanced" },
+    ],
+  },
 ];

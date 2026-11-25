@@ -4,7 +4,11 @@
 // table, which holds the few items the book scales with the 'Mech.
 import type { RulesLevel, Span } from "../data/chassis";
 import { AMMO_GROUPS, AMMO_OTHER_GROUP, EQUIPMENT_GROUPS, GROUP_ORDER, OTHER_GROUP } from "../data/equipment/groups";
-import type { FactsOf, LocationCode, MechRecord, MountFacts, TechBase } from "./mech";
+import type { UnitId } from "../data/units";
+import { DEFAULT_UNITS } from "../data/units";
+import { SHEET_ALIASES, sheetNameVariants } from "../data/equipment/names";
+import { FORMULAS, resolveFormula } from "./formulas";
+import type { FactsOf, LocationCode, MechRecord, Mount, MountFacts, TechBase } from "./mech";
 
 export type EquipmentKind = "weapon" | "ammunition" | "heat-sink" | "jump-jet" | "other";
 export type { Span };
@@ -24,8 +28,22 @@ export interface EquipmentRow {
   /** True when `availability` is not a year the book prints for this tech base (a dash in the book's table, or one date
    * printed for both tech bases). The availability check reports such rows as notes, not errors. */
   yearsInferred?: true;
-  /** The 'Mech carries exactly this many of the item, each one a separate one-slot mount, placed anywhere. */
+  /** The 'Mech carries exactly this many of the item, each one a separate mount of `slots` slots, placed anywhere or, where
+   * `locations` names exactly that many, one in each. `perMechQuad` is the count on a quad where it differs (talons: a slot pair on each of four legs). */
   perMech?: number;
+  perMechQuad?: number;
+  /** The fixed-count mounts are parts of one item: its weight (a number or a formula) is the whole item's, shared equally between the
+   * mounts, and it is priced once. Absent: each mount is a whole item (an actuator enhancement on each leg). */
+  splitWeight?: true;
+  /** The unit types that may mount the item (data/units.ts); absent means a BattleMech and an IndustrialMech. */
+  units?: UnitId[];
+  /** What differs for another unit type where the book prints a separate column (weight, slots, heat, damage, range). */
+  by?: Partial<Record<UnitId, Partial<Pick<EquipmentRow, "tons" | "slots" | "heat" | "damage" | "range">> & { note?: string }>>;
+  /** Items sold by the size the player chooses (a jump pack's tons, a booster's Jumping MP): the unit, range and step; the choice is `Mount.amount`. */
+  amount?: { unit: string; min: number; max?: number; step: number };
+  /** Years from which the item is Advanced and from which Standard, where the table prints era-dependent dates. Not filtered on yet. */
+  advancedFrom?: number;
+  standardFrom?: number;
   /** Ammunition only, for the families that come in two bin sizes: the shots one bin carries (what Mordel prints). */
   shots?: number;
   /** Play statistics, as the book prints them for one weapon. `heat` is per firing (per shot for the rotary and ultra
@@ -50,6 +68,13 @@ export interface EquipmentRow {
   cite: { book: string; page: number };
   checked: "page" | "text";
 }
+/** How many separate mounts the book requires of the row on a configuration, or undefined when it is not a fixed-count item. */
+export function mountsRequired(row: EquipmentRow, configuration: string): number | undefined {
+  return configuration === "quad" ? (row.perMechQuad ?? row.perMech) : row.perMech;
+}
+/** True when a row may be mounted on the unit type; a row with no `units` is for a BattleMech or IndustrialMech. */
+export const mountableOn = (row: EquipmentRow, unit: UnitId): boolean => (row.units ?? DEFAULT_UNITS).includes(unit);
+
 /** Where the book lets a row go on a configuration; undefined means anywhere. A quad has its own rule where it differs. A tripod
  * mounts equipment as a 'Mech of equal weight does (IO:AE printed p.159), so its center leg is allowed wherever the side legs both are. */
 export function locationsFor(row: EquipmentRow, configuration: string): LocationCode[] | undefined {
@@ -111,42 +136,6 @@ export function expand(groups: EquipmentGroup[]): EquipmentRow[] {
   return rows;
 }
 
-// ---------------------------------------------------------------------------------------------------------------
-// Formulas: the items whose weight or slots the book scales with the 'Mech. A formula takes the row and the record and
-// returns a number. Add one only when a row needs it.
-// ---------------------------------------------------------------------------------------------------------------
-type Formula = (row: EquipmentRow, record: MechRecord, catalog: Catalog) => number;
-function directFireTons(record: MechRecord, catalog: Catalog): number {
-  let total = 0;
-  for (const mount of record.mounts) {
-    const row = mount.equipmentId === null ? undefined : catalog.byId(mount.equipmentId);
-    if (row?.directFire) total += catalog.factsOf(mount, record)?.tons ?? 0;
-  }
-  return total;
-}
-const ceilHalf = (x: number) => Math.ceil(x * 2) / 2;
-const FORMULAS: Record<string, Formula> = {
-  // Jump Jets table (TechManual p. 51): per jet, by 'Mech tonnage band 10-55, 60-85, 90-100.
-  "jump-jet": (_row, record) => (record.tons <= 55 ? 0.5 : record.tons <= 85 ? 1 : 2),
-  // Improved jump jets (p. 51): twice the standard weight per jet (two slots, in the data).
-  "improved-jump-jet": (row, record, catalog) => 2 * (FORMULAS["jump-jet"]?.(row, record, catalog) ?? 0),
-  // Targeting computer (p. 238): the weight of the record's direct-fire weapons over 4 (Inner Sphere) or 5 (Clan),
-  // rounded up to a whole ton; one slot per ton.
-  "targeting-computer-is": (_row, record, catalog) => Math.ceil(directFireTons(record, catalog) / 4),
-  "targeting-computer-clan": (_row, record, catalog) => Math.ceil(directFireTons(record, catalog) / 5),
-  // MASC (p. 52): 5 percent of the 'Mech's tonnage (Inner Sphere) or 4 percent (Clan), rounded normally; slots are the same number.
-  "masc-is": (_row, record) => Math.round(record.tons / 20),
-  "masc-clan": (_row, record) => Math.round((record.tons * 4) / 100),
-  // Hatchet (p. 220), and the slots of a sword (p. 237): the 'Mech's tonnage over 15, rounded up.
-  "ceil-tons-15": (_row, record) => Math.ceil(record.tons / 15),
-  // Sword weight (p. 237): tonnage over 20, rounded up to a half ton.
-  "sword-tons": (_row, record) => ceilHalf(record.tons / 20),
-  // Retractable blade (p. 237): tonnage over 20 rounded up to a half ton, plus half a ton for the mechanism; slots are
-  // tonnage over 20 rounded up, plus one.
-  "blade-tons": (_row, record) => ceilHalf(record.tons / 20) + 0.5,
-  "blade-slots": (_row, record) => Math.ceil(record.tons / 20) + 1,
-};
-
 export interface Catalog {
   all(): EquipmentRow[];
   byId(id: string): EquipmentRow | undefined;
@@ -181,7 +170,7 @@ export function createCatalog(rows: EquipmentRow[]): Catalog {
     names.set(key, r);
   }
   for (const r of rows) {
-    for (const a of r.aliases) {
+    for (const a of [...r.aliases, ...(Object.hasOwn(SHEET_ALIASES, r.id) ? (SHEET_ALIASES[r.id] ?? []) : [])]) {
       const key = `${r.techBase}|${normalize(a)}`;
       const claimed = names.get(key) ?? aliases.get(key);
       if (claimed && claimed.id !== r.id) throw new Error(`equipment ${claimed.id} and ${r.id} have the same name within a tech base`);
@@ -193,18 +182,19 @@ export function createCatalog(rows: EquipmentRow[]): Catalog {
     inEdition(row, editionId).availability.some((s) => s.from <= to && (s.to === undefined || s.to >= from));
   const available: Catalog["available"] = (row, editionId, year) => year === null || availableBetween(row, editionId, year, year);
 
-  const resolve = (value: number | string, row: EquipmentRow, record: MechRecord): number | undefined => {
+  const resolve = (value: number | string, row: EquipmentRow, record: MechRecord, mount: Mount): number | undefined => {
     if (typeof value === "number") return value;
-    const formula = Object.hasOwn(FORMULAS, value) ? FORMULAS[value] : undefined;
-    return formula ? formula(row, record, catalog) : undefined;
+    return resolveFormula(value, row, record, catalog, mount);
   };
 
   const factsOf: FactsOf = (mount, record) => {
     const base = mount.equipmentId === null ? undefined : byId.get(mount.equipmentId);
     if (!base) return undefined;
     const row = inEdition(base, record.editionId);
-    const tons = resolve(row.tons, row, record);
-    const slots = resolve(row.slots, row, record);
+    const whole = resolve(row.tons, row, record, mount);
+    const count = mountsRequired(row, record.configuration);
+    const tons = whole !== undefined && row.splitWeight && count !== undefined && count > 1 ? whole / count : whole;
+    const slots = resolve(row.slots, row, record, mount);
     return tons === undefined || slots === undefined ? undefined : ({ tons, slots } satisfies MountFacts);
   };
 
@@ -216,12 +206,16 @@ export function createCatalog(rows: EquipmentRow[]): Catalog {
       return row && inEdition(row, editionId);
     },
     match: (name, techBase) => {
-      const key = `${techBase}|${normalize(name)}`;
-      return names.get(key) ?? aliases.get(key);
+      for (const spelling of [name, ...sheetNameVariants(name)]) {
+        const key = `${techBase}|${normalize(spelling)}`;
+        const found = names.get(key) ?? aliases.get(key);
+        if (found) return found;
+      }
+      return undefined;
     },
     offered: (editionId, { techBase, year }) =>
       rows
-        .filter((r) => (techBase === "mixed" || r.techBase === techBase) && available(r, editionId, year))
+        .filter((r) => mountableOn(r, "mech") && (techBase === "mixed" || r.techBase === techBase) && available(r, editionId, year))
         .map((r) => inEdition(r, editionId)),
     available,
     availableBetween,

@@ -22,13 +22,13 @@ import {
 } from "../data/chassis";
 import type { Cite, PartFacts, Span } from "../data/chassis";
 import { configurationInTime, eraOfRecord, eraOfYear, partSpans, spansFit, windowOf } from "./availability";
-import { locationsFor } from "./catalog";
+import { locationsFor, mountsRequired } from "./catalog";
 import { levelAtLeast, levelItems, levelRow } from "./levels";
 import type { Catalog, EquipmentRow } from "./catalog";
 import { armorSpread, configurationOf, engineTons, layout as buildLayout, maxArmor, walkMP, weights } from "./mech";
 import { locationName, type Layout, type LocationCode, type MechRecord, type Mount } from "./mech";
 import { mountedShields, missingActuators, shieldStats } from "./shields";
-import { movementPenalty, rowOf } from "./walk";
+import { movementPenalty, rowOf, TSM_ROWS } from "./walk";
 
 export interface Finding {
   check: string;
@@ -83,6 +83,8 @@ const finding = (check: string, level: Finding["level"], message: string, extra:
 
 /** The heat sink type key a row stands for. */
 function heatSinkTypeOf(row: EquipmentRow): string {
+  if (row.id.startsWith("compact")) return "compact";
+  if (row.id.startsWith("laser")) return "laser";
   return row.id.startsWith("double") ? (row.techBase === "clan" ? "double-clan" : "double") : "single";
 }
 
@@ -286,9 +288,13 @@ function heatSinkCheck({ record, catalog }: CheckInput): Finding[] {
   const rating = record.chassis.engine.rating;
   if (isPositive(rating)) {
     const held = Math.min(count, Math.floor(rating / HEAT_SINK_RULES.ratingPerHeldSink));
-    if (sinks.length + held !== count) {
+    const placed = sinks.reduce((n, m) => {
+      const row = rowOf(catalog, record, m);
+      return n + (row ? (HEAT_SINKS.types[heatSinkTypeOf(row)]?.perMount ?? 1) : 1);
+    }, 0);
+    if (placed + held !== count) {
       out.push(
-        finding("heat-sinks", "error", `${sinks.length} heat sinks are placed and the engine can hold ${held}, which makes ${sinks.length + held}; the chassis lists ${count}.`, { where, cite }),
+        finding("heat-sinks", "error", `${placed} heat sinks are placed and the engine can hold ${held}, which makes ${placed + held}; the chassis lists ${count}.`, { where, cite }),
       );
     }
   }
@@ -398,18 +404,24 @@ function placementCheck({ record, layout, catalog }: CheckInput): Finding[] {
   for (const m of record.mounts) if (rowOf(catalog, record, m)?.perMech !== undefined && m.equipmentId) ids.add(m.equipmentId);
   for (const id of ids) {
     const row = catalog.rowFor(id, record.editionId);
-    if (row?.perMech === undefined) continue;
+    const required = row ? mountsRequired(row, record.configuration) : undefined;
+    if (row === undefined || required === undefined) continue;
     const found = record.mounts.filter((m) => m.equipmentId === id);
     const part = partName(MYOMER, record.chassis.myomer);
-    if (found.length !== row.perMech) {
+    const isMyomer = TSM_ROWS.includes(id) || Object.values(MYOMER.types).some((t) => t.catalogId === id);
+    const spread = locationsFor(row, record.configuration);
+    if (spread && spread.length === required && found.length === required && found.every((m) => m.location !== null) && !spread.every((place) => found.some((m) => m.location === place))) {
+      out.push(finding("placement", "error", `${row.name} must be mounted once in each of ${spread.map(locationName).join(", ")}.`, { where: { mountId: found[0]?.id }, cite: row.cite }));
+    }
+    if (found.length !== required) {
       out.push(
-        finding("placement", "error", `${row.name} must be mounted ${row.perMech} times; this 'Mech has ${found.length}.`, {
+        finding("placement", "error", `${row.name} must be mounted ${required} times; this 'Mech has ${found.length}.`, {
           where: found[0] ? { mountId: found[0].id } : { field: "chassis.myomer" },
-          cite: MYOMER.cite,
+          cite: isMyomer ? MYOMER.cite : row.cite,
         }),
       );
     }
-    if (found.length > 0 && named !== id) {
+    if (isMyomer && found.length > 0 && named !== id) {
       out.push(finding("placement", "error", `${row.name} is mounted, but the chassis myomer is ${part}.`, { where: { mountId: found[0]?.id, field: "chassis.myomer" }, cite: MYOMER.cite }));
     }
   }

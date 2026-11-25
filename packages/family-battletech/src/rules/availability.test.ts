@@ -109,6 +109,12 @@ describe("the rules check", () => {
 });
 
 describe("equipment groups", () => {
+  it("never offers a BattleMech an item whose `units` leaves out the BattleMech, with or without Show everything", () => {
+    const row = { ...catalog.byId("medium-laser-is")!, units: ["vehicle" as const] };
+    const unit = record({ year: 3060 });
+    expect([equipmentAvailable(row, unit, catalog), equipmentAvailable(row, unit, catalog, true), equipmentAvailable({ ...row, units: ["mech" as const] }, unit, catalog)]).toEqual([false, false, true]);
+  });
+
   it("sorts rows into groups by their ids, ammunition by the weapon family it feeds", () => {
     const ids: [string, string][] = [
       ["medium-laser-is", "energy"],

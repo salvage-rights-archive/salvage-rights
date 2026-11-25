@@ -206,10 +206,21 @@ export function unitCost(record: MechRecord, catalog: Catalog, options: CostOpti
   const masc = mascOf(record, items);
   if (masc.named && masc.mounts.length === 0) skip(`Myomer "${chassis.myomer}"`, "MASC is named but not mounted, so its weight and price are not known");
   const jets = new Map<string, Mount[]>();
-  for (const { mount, row, tons: itemTons } of items) {
+  const pricedOnce = new Set<string>();
+  for (const { mount, row, tons: mountTons } of items) {
+    // A fixed-count item (partial wing, talons, blue shield) is bought once, at the weight of all its mounts together.
+    if (row.splitWeight && !TSM_ROWS.includes(row.id)) {
+      if (pricedOnce.has(row.id)) continue;
+      pricedOnce.add(row.id);
+    }
+    const itemTons = row.splitWeight && mountTons !== undefined ? items.filter((i) => i.row.id === row.id).reduce((sum, i) => sum + (i.tons ?? 0), 0) : mountTons;
     if (row.kind === "heat-sink") continue; // paid for by count, above
     if (TSM_ROWS.includes(row.id)) continue; // the TSM slots are the musculature priced above
     if (row.kind === "ammunition") continue; // ammunition is not bought for a unit's cost (p.282)
+    if (stemOf(row.id) === "umu") {
+      jets.set("umu", [...(jets.get("umu") ?? []), mount]);
+      continue;
+    }
     if (row.kind === "jump-jet") {
       const kind = row.id.startsWith("improved-") ? "improved" : stemOf(row.id) === "jump-jet" ? "standard" : undefined;
       if (kind === undefined) skip(mount.name, "no jump jet price for this kind in the cost tables", row.id);
@@ -235,6 +246,7 @@ export function unitCost(record: MechRecord, catalog: Catalog, options: CostOpti
       continue;
     }
     if (typeof found.price === "number") add(equipment, mount.name, found.price, money(found.price), found);
+    else if ("perRating" in found.price) add(equipment, mount.name, found.price.perRating * (Number.isFinite(chassis.engine.rating) ? chassis.engine.rating : 0), `${money(found.price.perRating)} x ${chassis.engine.rating}`, found);
     else if ("perUnitTon" in found.price) add(equipment, mount.name, found.price.perUnitTon * (tonsKnown ? tons : 0), `${money(found.price.perUnitTon)} x ${tons}`, found);
     else {
       if (itemTons === undefined) skip(mount.name, "its weight could not be worked out", row.id);

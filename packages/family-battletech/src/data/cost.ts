@@ -137,7 +137,8 @@ export const GYRO_COST: Sourced & { rows: Record<string, { perGyroTon: number }>
 export const JUMP_JET_COST: Sourced & { rows: Record<string, { perJetSquared: number }> } = {
   cite: { book: TM, page: 278 },
   checked: "page",
-  rows: { standard: { perJetSquared: 200 }, improved: { perJetSquared: 500 } },
+  // UMUs cost as jump jets do, 200 x tonnage x (number of UMUs)^2 (TO:AUE p.223, footnote to the Construction Data table).
+  rows: { standard: { perJetSquared: 200 }, improved: { perJetSquared: 500 }, umu: { perJetSquared: 200 } },
 };
 /** MASC: 1,000 x engine rating x MASC tons (printed p.278; errata v8.0 corrects the printed "Engine Tonnage" to "Engine Rating"). */
 export const MASC_COST: Sourced & { perRatingTon: number } = { cite: { book: TM, page: 278 }, checked: "page", perRatingTon: 1_000 };
@@ -149,6 +150,9 @@ export const HEAT_SINK_COST: Sourced & { rows: Record<string, { each: number; fr
     single: { each: 2_000, free: 10 },
     double: { each: 6_000, free: 0 },
     "double-clan": { each: 6_000, free: 0, assumed: true },
+    // TO:AUE p.217: 3,000 each for compact sinks and 6,000 for laser sinks; the free sinks of the engine are priced as for singles
+    compact: { each: 3_000, free: 10 },
+    laser: { each: 6_000, free: 0 },
   },
 };
 /** Armor: cost per ton of armor (printed p.278). */
@@ -205,7 +209,7 @@ export const CONFIGURATION_COST: Record<string, { structureFactor?: number; conv
 // (printed p.282). A catalog row with no key here is reported as unpriced, never guessed.
 // ---------------------------------------------------------------------------------------------------------------
 /** C-bills each; or per whole ton of the item's weight; or per ton of the 'Mech (the book's "xTT" formulas: spikes are 50 x tonnage). */
-export type Price = number | { perTon: number } | { perUnitTon: number };
+export type Price = number | { perTon: number } | { perUnitTon: number } | { perRating: number };
 interface PriceGroup extends Sourced {
   prices: Record<string, Price>;
 }
@@ -392,6 +396,26 @@ export const EQUIPMENT_COST: PriceGroup[] = [
       "ppc-capacitor": 150_000, "recon-camera": 10_000,
       "light-rifle": 37_750, "medium-rifle": 75_500, "heavy-rifle": 90_000,
       "taser": 200_000, "thunderbolt-5": 50_000, "thunderbolt-10": 175_000, "thunderbolt-15": 325_000, "thunderbolt-20": 450_000,
+    },
+  },
+  {
+    // TO:AUE p.217 (the melee items, motive systems, and the rest of the items whose weight a rule sets). `perUnitTon` is the table's
+    // "xTT" (the unit's tonnage); `perTon` the "xIT" (the item's own weight, all its mounts together).
+    cite: { book: TO, page: 217 },
+    checked: "page",
+    prices: {
+      "aes-arm": { perUnitTon: 500 }, "aes-leg": { perUnitTon: 700 }, "blue-shield": 1_000_000, "booby-trap": 100_000, "harjel": 120_000,
+      "claws": { perUnitTon: 200 }, "lance": { perUnitTon: 150 }, "mace": 130_000, "talons": { perUnitTon: 300 },
+      "partial-wing": { perTon: 50_000 }, "jump-pack": { perTon: 20_000 },
+    },
+  },
+  {
+    // TO:AUE pp.219, 221 and 223 (the rest)
+    cite: { book: TO, page: 219 },
+    checked: "page",
+    prices: {
+      "cockpit-command-console": 500_000, "collapsible-command-module": 500_000, "full-head-ejection-system": 1_725_000, "chameleon-lps": 600_000,
+      "null-signature-system": 1_400_000, "aquatic-survival-system": 4_000, "supercharger": { perRating: 10_000 }, "void-signature-system": 2_000_000,
     },
   },
 ];

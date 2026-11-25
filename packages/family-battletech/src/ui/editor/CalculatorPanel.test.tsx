@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { battleValue } from "../../rules/bv";
 import { loadCatalog } from "../../rules/catalog";
 import { unitCost } from "../../rules/cost";
-import { mordelBiped } from "../../rules/fixtures";
+import { mordelBiped, mount } from "../../rules/fixtures";
 import type { MechRecord } from "../../rules/mech";
 import { fromMordel } from "../../rules/mordel";
 import CalculatorPanel from "./CalculatorPanel";
@@ -32,6 +32,22 @@ describe("The Battle Value and cost panel", () => {
     expect(within(region).getByTestId("cost-total").textContent).toBe(`${grouped(unitCost(record, catalog).total)} C-bills`);
     expect(region.textContent).toContain("TechManual (Catalyst Game Labs), p. 285, errata v8.0");
     expect(region.textContent).not.toContain("Incomplete");
+  });
+
+  it("works out a record with a shared-weight item, a per-mech item and an item sold by size, and adds up what they weigh", async () => {
+    const base = await bipedRecord();
+    const catalog = await loadCatalog();
+    const items = [
+      { ...mount("talons", "talons-clan", "LL", null), techBase: "clan" as const },
+      { ...mount("pack", "jump-pack-is", "CT", null), amount: 4.5 },
+      { ...mount("shield", "blue-shield-is", "RT", null) },
+    ];
+    const record = { ...base, year: 3070, mounts: [...base.mounts, ...items] };
+    const { region } = await panel(record);
+    // Items whose book gives no Battle Value or cost leave a total that says "at least"; what is figured still shows.
+    expect(within(region).getByTestId("bv-total").textContent).toContain(grouped(battleValue(record, catalog).total));
+    expect(within(region).getByTestId("cost-total").textContent).toContain(grouped(unitCost(record, catalog).total));
+    expect(unitCost(record, catalog).total).toBeGreaterThan(unitCost(base, catalog).total);
   });
 
   it("changes the Battle Value with the pilot's skills and the cost with the OmniMech box", async () => {

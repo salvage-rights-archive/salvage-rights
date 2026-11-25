@@ -11,6 +11,7 @@ import {
   HEAD_MAX_ARMOR,
   HEAD_STRUCTURE,
   HEAT_SINK_RULES,
+  HEAT_SINKS,
   INTERNAL_STRUCTURE,
   LAM,
   SHEET,
@@ -54,6 +55,8 @@ export interface Mount {
   /** Slots the item takes when the catalog has no row for it: what the source said. Layout reads it only then. */
   slots?: number;
   linkedTo?: string;
+  /** The size the player chose for an item sold by size (a jump pack's tons, a mechanical jump booster's Jumping MP): see `EquipmentRow.amount`. */
+  amount?: number;
   /** The item fires to the rear (torso, leg and head mounts only matter); read by the Battle Value rules. The importer does not set it. */
   rear?: true;
 }
@@ -178,6 +181,7 @@ const tidy = (x: number) => Math.round(x * 1000) / 1000;
 /** Engine weight: the printed column for the type times its stated factor, rounded up to a half ton. null if unknown. */
 export function engineTons(type: string, rating: number): number | null {
   const engine = own(ENGINE_TYPES.types, type);
+  if (engine?.weightTable) return own(engine.weightTable, rating) ?? null;
   const standard = own(ENGINE_WEIGHTS.rows, rating);
   return engine && standard !== undefined ? ceilHalf(standard * engine.weightFactor) : null;
 }
@@ -355,7 +359,7 @@ export function weights(record: MechRecord, factsOf: FactsOf): { lines: WeightLi
   lines.push({ label: "Cockpit", tons: own(COCKPITS.types, chassis.cockpit)?.tons ?? null });
 
   const extraSinks = Math.max(0, chassis.heatSinks.count - HEAT_SINK_RULES.freeWithEngine);
-  lines.push({ label: "Heat sinks", tons: Number.isFinite(extraSinks) ? extraSinks * HEAT_SINK_RULES.tonsEach : null });
+  lines.push({ label: "Heat sinks", tons: Number.isFinite(extraSinks) ? extraSinks * (own(HEAT_SINKS.types, chassis.heatSinks.type)?.tonsEach ?? HEAT_SINK_RULES.tonsEach) : null });
 
   const armorType = own(ARMOR.types, chassis.armorType);
   const points = Object.values(record.armor).reduce((sum, a) => sum + (a ? a.front + (a.rear ?? 0) : 0), 0);

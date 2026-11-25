@@ -40,6 +40,8 @@ export const SHEET_HEAT_SINKS: Record<string, { label: string; perSink: number }
   single: { label: "Single", perSink: 1 },
   double: { label: "Double", perSink: 2 },
   "double-clan": { label: "Double", perSink: 2 },
+  compact: { label: "Compact", perSink: 1 },
+  laser: { label: "Laser", perSink: 2 },
 };
 
 /** The Hits Taken track: the Consciousness number needed after each hit, the last being death. */

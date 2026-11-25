@@ -11,6 +11,7 @@ import { ARMOR, COCKPITS, ENGINE_TYPES, GYROS, HEAT_SINKS, MYOMER, SHEET, STRUCT
 import type { ConfigurationRow, PartFacts, RulesLevel, Span } from "../data/chassis";
 import { ERAS } from "../data/editions";
 import type { EraRow } from "../data/editions";
+import { mountableOn } from "./catalog";
 import type { Catalog, EquipmentRow } from "./catalog";
 import { DEFAULT_LEVEL, equipmentLevel, levelAtLeast, partLevel } from "./levels";
 import type { MechRecord } from "./mech";
@@ -84,6 +85,7 @@ export function spansFit(spans: Span[] | undefined, window: Window | null): bool
 
 /** An equipment row: at or below the level, the record's tech base, and in the record's time (read through the record's edition). */
 export function equipmentAvailable(row: EquipmentRow, record: Subject & Pick<MechRecord, "editionId">, catalog: Catalog, everything = false): boolean {
+  if (!mountableOn(row, "mech")) return false; // a row whose `units` leaves out the BattleMech is never offered to a mech, not even with Show everything
   if (!levelAtLeast(recordLevel(record), equipmentLevel(row))) return false;
   if (everything) return true;
   if (!baseFits(row.techBase, record.techBase)) return false;
