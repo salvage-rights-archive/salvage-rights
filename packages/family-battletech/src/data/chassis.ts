@@ -1045,7 +1045,7 @@ export type MechType = "mech" | "industrialmech" | "omnimech";
 export interface IndustrialRules {
   /** The page each rule is read from: TechManual's IndustrialMech Construction chapter (printed pp.64-75). */
   cites: Record<"techBase" | "configuration" | "structure" | "engine" | "heatSinks" | "jump" | "cockpit" | "gyro" | "myomer" | "armor" | "powerAmplifier" | "fireControl", Cite>;
-  /** Inner Sphere or Clan (TechManual p.64: "one of two available technology bases"), and mixed: Tactical Operations: AUE p.189 lets any unit be built with a mix, an Advanced option (MIXED_TECHNOLOGY). */
+  /** Inner Sphere or Clan under the standard rules (TechManual p.64), and mixed as the Advanced option of Tactical Operations: AUE p.189 (MIXED_TECHNOLOGY). */
   techBases: ("inner-sphere" | "clan" | "mixed")[];
   /** Only biped and quad bodies: "design type (biped or four-legged)". */
   configurations: string[];
@@ -1098,10 +1098,9 @@ export interface OmniRules {
   checked: Checked;
 }
 /**
- * Mixed technology: Clan and Inner Sphere parts, and tournament-legal with experimental ones, on one chassis of any unit type, an
- * Advanced construction option (Tactical Operations: AUE printed pp.189-190: "Any unit may be constructed using a mix of Clan and
- * Inner Sphere technologies"). The dates are the Construction Options row of Interstellar Operations: Alternate Eras (printed p.45,
- * read against the page image): prototype ~3050 (DC/FS/LC), production ~3082, common ~3115, and "Clan Prototype: ~2820 (Clan)".
+ * Mixed technology: Clan and Inner Sphere parts on one chassis of any unit type, an Advanced construction option (Tactical
+ * Operations: AUE printed p.189). The dates are the Construction Options row of Interstellar Operations: Alternate Eras (printed p.45,
+ * read against the page image): prototype ~3050 (DC/FS/LC), production ~3082, common ~3115, and a Clan prototype year of ~2820.
  * Every one of those years carries a "~" in the book, so they are approximate and `approximate` says so: the app uses them as
  * printed. From the prototype year to the year before production the option is Experimental (IO:AE printed p.27); from production
  * it is Advanced. A record on this option draws on both tech bases, so it takes the earlier (Clan) prototype year.
