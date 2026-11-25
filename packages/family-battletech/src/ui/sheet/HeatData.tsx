@@ -8,11 +8,14 @@ import { INK, squeeze } from "./text";
 const ROW = 24;
 /** Most circles in a column of heat sinks. */
 const COLUMN = 10;
+/** Most heat sink circles drawn, however many the record says (a slip of the keys must not hang the page); the printed line keeps the true count. */
+export const MAX_SINKS_DRAWN = 100;
 
 export function HeatData({ rect, facts }: { rect: Rect; facts: SheetFacts }) {
   const { x, y } = rect;
   const sinks = facts.heatSinks;
-  const columns = Math.max(1, Math.ceil(sinks.count / COLUMN));
+  const drawn = Math.min(sinks.count, MAX_SINKS_DRAWN);
+  const columns = Math.max(1, Math.ceil(drawn / COLUMN));
   const pitch = Math.min(28, (rect.w - 340 - 24) / columns);
   const tableTop = y + 130;
   return (
@@ -36,7 +39,7 @@ export function HeatData({ rect, facts }: { rect: Rect; facts: SheetFacts }) {
           </text>
         </g>
       ))}
-      {Array.from({ length: sinks.count }, (_, index) => (
+      {Array.from({ length: drawn }, (_, index) => (
         <circle
           key={index}
           cx={x + rect.w - 24 - pitch / 2 - Math.floor(index / COLUMN) * pitch}
