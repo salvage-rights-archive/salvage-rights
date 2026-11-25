@@ -178,6 +178,7 @@ describe("fromMordel", () => {
     ["Machine Gun (Ammo 200)", "ammo-machine-gun-is", null],
     ["Machine Gun (Ammo 100)", "ammo-machine-gun-half-is", null],
     ["Machine Gun (Ammo 50)", null, "bin of a size this tool does not recognise"],
+    ["Heavy Machine Gun Array Module", "machine-gun-array-is", null],
     ["Frobnicator 9000", null, "is not in our equipment table"],
   ])("matches %j to %j", (name, id, why) => {
     const { record, notes } = imported(withEquipment([entry(1, name, "LT")]));

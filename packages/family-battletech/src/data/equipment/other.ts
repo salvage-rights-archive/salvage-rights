@@ -76,7 +76,7 @@ export const OTHER: EquipmentGroup[] = [
       { id: "c3-computer-slave-is", name: "C3 Computer (Slave)", tons: 1, slots: 1, availability: [{ from: 3050 }] },
       { id: "improved-c3-computer-is", name: "Improved C3 Computer", aliases: ["C3i"], tons: 2.5, slots: 2, availability: [{ from: 3062 }] },
       { id: "guardian-ecm-suite-is", name: "Guardian ECM Suite", aliases: ["ECM Suite (Guardian)"], tons: 1.5, slots: 2, availability: [{ from: 2597, to: 2845 }, { from: 3045 }] },
-      { id: "machine-gun-array-is", name: "Machine Gun Array", tons: 0.5, slots: 1, availability: [{ from: 3068 }], needs: "machine-gun" },
+      { id: "machine-gun-array-is", name: "Machine Gun Array", aliases: ["Machine Gun Array Module", "Light Machine Gun Array Module", "Heavy Machine Gun Array Module"], tons: 0.5, slots: 1, availability: [{ from: 3068 }], needs: "machine-gun" },
       { id: "tag-is", name: "TAG", tons: 1, slots: 1, availability: [{ from: 2600, to: 2835 }, { from: 3044 }] },
       // Artemis IV (Inner Sphere); weight and slots are derived, see the file header
       { id: "artemis-iv-is", name: "Artemis IV", aliases: ["Artemis IV FCS", "Artemis IV Fire-Control System"], tons: 1, slots: 1, availability: [{ from: 2598, to: 2855 }, { from: 3035 }], needs: "launcher", checked: "text" },
@@ -163,7 +163,7 @@ export const OTHER: EquipmentGroup[] = [
       { id: "active-probe-clan", name: "Active Probe", tons: 1, slots: 1, availability: [{ from: 2832 }] },
       { id: "light-active-probe-clan", name: "Light Active Probe", tons: 0.5, slots: 1, availability: [{ from: 2900 }] },
       { id: "ecm-suite-clan", name: "ECM Suite", tons: 1, slots: 1, availability: [{ from: 2832 }] },
-      { id: "machine-gun-array-clan", name: "Machine Gun Array", tons: 0.25, slots: 1, availability: [{ from: 3069 }], needs: "machine-gun" },
+      { id: "machine-gun-array-clan", name: "Machine Gun Array", aliases: ["Machine Gun Array Module", "Light Machine Gun Array Module", "Heavy Machine Gun Array Module"], tons: 0.25, slots: 1, availability: [{ from: 3069 }], needs: "machine-gun" },
       { id: "light-tag-clan", name: "Light TAG", tons: 0.5, slots: 1, availability: [{ from: 3054 }] },
     ],
   },
