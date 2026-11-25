@@ -11,6 +11,9 @@ export const CACHE_PREFIX = "sr-shell-";
 
 /** Files that are never precached: the worker itself, source maps, and the Pages fallback (the worker replaces it). */
 const NOT_PRECACHED = [SERVICE_WORKER_FILE, "404.html", ".nojekyll"];
+/** The card reader's files (several megabytes) are kept only when a player asks, in a cache of their own (vite/ocr-plugin.ts). */
+const OCR_FOLDER = "ocr/";
+const OCR_CACHE_PREFIX = "sr-ocr-";
 
 export interface PwaOptions {
   /** Name shown under the icon. The free edition is "Salvage Rights"; others add their edition id. */
@@ -25,7 +28,7 @@ export interface PwaOptions {
 export function precacheFiles(files: string[]): string[] {
   return files
     .map((file) => file.replaceAll("\\", "/"))
-    .filter((file) => !file.endsWith(".map") && !NOT_PRECACHED.includes(file))
+    .filter((file) => !file.endsWith(".map") && !NOT_PRECACHED.includes(file) && !file.startsWith(OCR_FOLDER))
     .sort();
 }
 
@@ -83,6 +86,18 @@ const PREFIX = ${JSON.stringify(CACHE_PREFIX)};
 const BASE = ${JSON.stringify(base)};
 const SHELL = BASE + "index.html";
 const URLS = ${JSON.stringify(urls)};
+const OCR_PREFIX = ${JSON.stringify(OCR_CACHE_PREFIX)};
+const OCR_FOLDER = BASE + ${JSON.stringify(OCR_FOLDER)};
+
+// The card reader's files: from the reader's own cache when the player has kept it, else from the network (never stored here).
+async function fromReaderCache(request) {
+  for (const name of await caches.keys()) {
+    if (!name.startsWith(OCR_PREFIX)) continue;
+    const hit = await (await caches.open(name)).match(request);
+    if (hit) return hit;
+  }
+  return fetch(request);
+}
 
 self.addEventListener("install", (event) => {
   // "reload" skips the browser's own HTTP cache, so a half-finished deploy cannot fill the cache with old files.
@@ -109,6 +124,10 @@ self.addEventListener("fetch", (event) => {
   if (request.method !== "GET") return;
   const url = new URL(request.url);
   if (url.origin !== self.location.origin || !url.pathname.startsWith(BASE)) return;
+  if (url.pathname.startsWith(OCR_FOLDER)) {
+    event.respondWith(fromReaderCache(request));
+    return;
+  }
   event.respondWith(
     caches.open(CACHE).then(async (cache) => {
       const exact = await cache.match(url.pathname === BASE ? SHELL : url.pathname);

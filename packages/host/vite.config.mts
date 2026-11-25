@@ -4,6 +4,7 @@ import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 import type { Plugin } from "vite";
 import { familiesPlugin, readEdition } from "./vite/families-plugin.ts";
+import { ocrNotice, ocrPlugin } from "./vite/ocr-plugin.ts";
 import { pwaPlugin } from "./vite/pwa-plugin.ts";
 
 const repoRoot = resolve(import.meta.dirname, "../..");
@@ -28,6 +29,9 @@ function notFoundPlugin(base: string): Plugin {
 export default defineConfig(({ mode }) => {
   const editionPath = join(repoRoot, "editions", `edition.${mode}.json`);
   const edition = readEdition(editionPath);
+  // The card reader's files ship only in the dev edition for now (its scan test page); the Alpha Strike scan page widens this.
+  const ocr = edition.id === "dev";
+  const nodeModules = join(repoRoot, "node_modules");
   const site = JSON.parse(readFileSync(join(repoRoot, "site.config.json"), "utf8")) as { basePath: string };
   return {
     base: site.basePath,
@@ -35,11 +39,16 @@ export default defineConfig(({ mode }) => {
       react(),
       // The host's own credits (fonts and pictures) and the two font licenses go into the build's notices file:
       // the Open Font License for Stardos Stencil, the Apache License for Special Elite.
-      familiesPlugin(editionPath, [
-        join(import.meta.dirname, "CREDITS.md"),
-        join(import.meta.dirname, "src/fonts/OFL.txt"),
-        join(import.meta.dirname, "LICENSE"),
-      ]),
+      familiesPlugin(
+        editionPath,
+        [
+          join(import.meta.dirname, "CREDITS.md"),
+          join(import.meta.dirname, "src/fonts/OFL.txt"),
+          join(import.meta.dirname, "LICENSE"),
+        ],
+        ocr ? [ocrNotice(nodeModules)] : [],
+      ),
+      ...(ocr ? [ocrPlugin(nodeModules, site.basePath)] : []),
       notFoundPlugin(site.basePath),
       // The free edition is the published one and has the plain name; the others say which edition they are. Colours
       // come from the site look: the header's dark steel and the dark theme's page colour (tokens.scss).

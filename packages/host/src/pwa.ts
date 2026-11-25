@@ -2,6 +2,8 @@ import { useSyncExternalStore } from "react";
 
 /** Same value as CACHE_PREFIX in vite/pwa-plugin.ts, which names the caches. */
 const CACHE_PREFIX = "sr-shell-";
+/** The card reader's own cache (vite/ocr-plugin.ts); a reset clears it too. */
+const OCR_CACHE_PREFIX = "sr-ocr-";
 const ANNOUNCED_KEY = "sr-offline-ready-announced";
 const CHECK_EVERY_MS = 60 * 60 * 1000;
 
@@ -173,7 +175,7 @@ export async function resetAppCache(
 ): Promise<void> {
   try {
     await Promise.all((await deps.registrations()).map((registration) => registration.unregister()));
-    await Promise.all((await deps.cacheNames()).filter((name) => name.startsWith(CACHE_PREFIX)).map(deps.deleteCache));
+    await Promise.all((await deps.cacheNames()).filter((name) => name.startsWith(CACHE_PREFIX) || name.startsWith(OCR_CACHE_PREFIX)).map(deps.deleteCache));
     try {
       localStorage.removeItem(ANNOUNCED_KEY);
     } catch {
