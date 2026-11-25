@@ -4,7 +4,7 @@ import { DEV, FREE, expect, tabTo, test } from "./fixtures";
 test.describe("dev edition", () => {
   test("the landing page shows two tiles and the first link of the one with several games opens that game's page", async ({ page }) => {
     await page.goto(`${DEV}/`);
-    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Archaeology for mecha tabletop games.");
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Battlefield recovery and salvage for mecha tabletop games.");
     await expect(page.getByRole("heading", { name: "Choose your games" })).toBeVisible();
     const tiles = page.getByTestId("family-tile");
     await expect(tiles).toHaveCount(2);

@@ -1,6 +1,6 @@
 # Salvage Rights
 
-Archaeology for mecha tabletop games. We dig up the units, equipment and rules of mecha games, edition by edition, so they are not lost. Then we give you the tools to build with them and play them, on whatever you have in your hand.
+Battlefield recovery and salvage for mecha tabletop games. We recover and salvage the units, equipment and rules of mecha games, edition by edition, so they are not lost. Then we give you the tools to build with them and play them, on whatever you have in your hand.
 
 ## Running it
 
