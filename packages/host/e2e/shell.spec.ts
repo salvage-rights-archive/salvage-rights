@@ -9,11 +9,12 @@ test.describe("dev edition", () => {
     const tiles = page.getByTestId("family-tile");
     await expect(tiles).toHaveCount(2);
     for (const tile of await tiles.all()) await expect(tile).toHaveAttribute("data-size", "grid");
-    // A tile with several games is a box holding one link per game; a tile with one game is itself the link.
+    // A tile with several games is a box holding one link per game; a tile with one game is itself the link. Both families have
+    // several ready games now (BattleTech has Classic and Alpha Strike).
     const several = page.locator("div[data-testid='family-tile']");
-    await expect(several).toHaveCount(1);
-    expect(await several.getByRole("link").count()).toBeGreaterThan(1);
-    await several.getByRole("link").first().click();
+    await expect(several).toHaveCount(2);
+    for (const tile of await several.all()) expect(await tile.getByRole("link").count()).toBeGreaterThan(1);
+    await several.first().getByRole("link").first().click();
     await expect(page).toHaveURL(/\/salvage-rights\/[a-z0-9-]+\/[a-z0-9-]+\/[a-z0-9-/]+$/);
     const heading = page.getByRole("heading", { level: 1 });
     await expect(heading).toBeVisible();
@@ -124,34 +125,6 @@ test.describe("dev edition", () => {
       expect(ring.visible, `focus ring on ${name}`).toBe(true);
       expect(ring.color, `focus ring colour on ${name}`).toBe(ring.expectedColor);
     }
-  });
-
-  test("a tile that is one link shows the project's focus ring only while focused", async ({ page, browserName }) => {
-    await page.goto(`${DEV}/`);
-    // The tile whose family has one ready game is itself the one link.
-    const tile = page.locator("a[data-testid='family-tile']");
-    await expect(tile).toHaveCount(1);
-    await expect(tile).toBeVisible();
-    const ringOf = () =>
-      tile.evaluate((element) => {
-        const probe = document.createElement("span");
-        probe.style.color = "var(--sr-focus)";
-        document.body.append(probe);
-        const expected = getComputedStyle(probe).color;
-        probe.remove();
-        const after = getComputedStyle(element, "::after");
-        return { expected, content: after.content, color: after.borderTopColor };
-      });
-
-    expect((await ringOf()).content).toBe("none");
-    // Three header links come first, then the tile.
-    await tabTo(page, browserName, tile, 4);
-    await expect(tile).toBeFocused();
-    const focused = await ringOf();
-    expect(focused.content).not.toBe("none");
-    expect(focused.color).toBe(focused.expected);
-    await tile.blur();
-    expect((await ringOf()).content).toBe("none");
   });
 });
 

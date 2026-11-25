@@ -155,7 +155,7 @@ function isSource(v: unknown): boolean {
 export const MAX_PICTURE_CHARS = 1_500_000;
 const PICTURE_PREFIXES = ["data:image/png;base64,", "data:image/jpeg;base64,"];
 
-function isPicture(v: unknown): boolean {
+export function isPicture(v: unknown): boolean {
   return v === undefined || (isObject(v) && isString(v.dataUrl) && v.dataUrl.length <= MAX_PICTURE_CHARS && PICTURE_PREFIXES.some((p) => (v.dataUrl as string).startsWith(p)));
 }
 
