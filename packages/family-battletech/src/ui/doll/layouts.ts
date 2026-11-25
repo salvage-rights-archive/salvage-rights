@@ -1,7 +1,9 @@
 // Salvage Rights paper doll engine. GPL-3.0-or-later.
 import { locationName, maxArmor, structurePoints, type LocationCode, type MechRecord } from "../../rules/mech";
-import type { IPlacement } from "./geometry";
-import { PART_PIVOTS, type PartId } from "./parts";
+import { placePoint, type IPlacement } from "./geometry";
+import { PART_PIVOTS, PARTS, type PartId } from "./parts";
+import { mapPath } from "./parts-kit";
+import { BAY, HEAD_CENTER, HIP_X, ROW } from "./parts-top";
 import type { BubblePoint } from "./shape-bubbles";
 
 /*
@@ -36,8 +38,20 @@ export interface IDollLayout {
     /** Drawn in this order, back to front. */
     front: IDollLocation[];
     rear: IDollLocation[];
-    /** Sheet units in the Internal Structure box: x from its center line, y from its top. */
+    /** The blueprint pen's center line and cross lines, where the figure's own are not the biped's. */
+    guide?: IDollGuide;
+    /** The labels' type size as a share of the use's own: a figure drawn small has its labels drawn small with it. */
+    labelScale?: number;
 }
+
+/** Path data of the blueprint pen's lines: the center line with the rear torsos, without them, and the cross lines. */
+export interface IDollGuide {
+    armor: string;
+    other: string;
+    cross: string;
+}
+
+export const FRONT_GUIDE: IDollGuide = { armor: "M 0,40 L 0,950 M 0,962 L 0,1170", other: "M 0,40 L 0,950", cross: "M -360,230 L 360,230 M -360,520 L 360,520" };
 
 export interface IDollVariant {
     tracks: boolean;
@@ -217,12 +231,95 @@ const LEGLESS: IDollLayout = {
     rear: rearTorsosMoved(-150),
 };
 
+// ---- Five, six and eight legs, seen from above: a hull of a head plate, a center spine and two flanks, the legs set along
+// its sides in pairs, front pair angled forward and rear pair back, and the rear armor as plates on the aft hull below.
+// The rules for these bodies are not in the app yet, so their arrows are provisional until the rules are read: each leg
+// sends its damage to the nearest side torso, a center leg to the center torso, a side torso to the center torso.
+
+const HULL_TOP = 230;
+const LEG_ANGLES: Record<number, number[]> = { 2: [26, -26], 3: [28, 0, -28], 4: [34, 12, -12, -34] };
+const legCenterY = (row: number): number => HULL_TOP + row * ROW + (ROW - 20) / 2;
+
+/** A left leg in a row of a hull with `rows` leg pairs, its label beyond the foot. */
+const topLeg = (loc: string, row: number, rows: number, label: string[], transfersTo: string): IDollLocation => {
+    const at: IPlacement = { x: HIP_X, y: legCenterY(row), rotate: LEG_ANGLES[rows]?.[row] ?? 0 };
+    const [fx, fy] = placePoint(PARTS["top-leg"].foot ?? [0, 0], at);
+    const up = label.length * 11;
+    return { loc, part: "top-leg", at, label, labelAt: [fx - 60, fy - up + 8], labelAnchor: "end", shortHangsFrom: [fx - 56, fy - 18], transfersTo };
+};
+
+/** A hull of `rows` leg pairs, whose legs are `legs` (left, right), and the aft plates `aftTop` down the sheet. */
+const hullLayout = (id: DollLayoutId, rows: 2 | 3 | 4, legs: IDollLocation[], tail: IDollLocation[], aftTop: number): IDollLayout => {
+    const head: IDollLocation = { loc: "hd", part: "hull-head", at: { x: 0, y: HULL_TOP + HEAD_CENTER }, label: ["HEAD"], labelAt: [0, HULL_TOP + HEAD_CENTER - 54], labelAnchor: "middle" };
+    const center: IDollLocation = { loc: "ct", part: `hull-center-${rows}`, at: { x: 0, y: HULL_TOP }, label: ["CENTER", "TORSO"], labelAt: [0, HULL_TOP - 62], labelAnchor: "middle", shortHangsFrom: [0, HULL_TOP - BAY + 8] };
+    const flankLeft: IDollLocation = { loc: "lt", part: `hull-flank-${rows}`, at: { x: 0, y: HULL_TOP }, label: ["LEFT", "TORSO"], labelAt: [-76, HULL_TOP - 165], labelAnchor: "end", shortHangsFrom: [-104, HULL_TOP - 190], transfersTo: "ct" };
+    const aftSide: IDollLocation = { loc: "ltr", part: "hull-aft-side", at: { x: -158, y: aftTop }, label: ["LEFT TORSO", "(REAR)"], labelAt: [-262, aftTop + 46], labelAnchor: "end" };
+    return {
+        id,
+        view: "top",
+        front: [
+            ...tail, ...legs, flankLeft, mirrored(flankLeft, "rt", ["RIGHT", "TORSO"], "ct"), center, head,
+        ],
+        rear: [
+            aftSide, mirrored(aftSide, "rtr", ["RIGHT TORSO", "(REAR)"]),
+            { loc: "ctr", part: "hull-aft-center", at: { x: 0, y: aftTop }, label: ["CENTER TORSO (REAR)"], labelAt: [0, aftTop + 176], labelAnchor: "middle" },
+        ],
+        guide: { armor: `M 0,40 L 0,${aftTop + 150}`, other: `M 0,40 L 0,${HULL_TOP + rows * ROW}`, cross: "" },
+    };
+};
+
+/** The pairs of left and right legs, one pair to a row, named by the codes and labels the layout uses. */
+const legPairs = (rows: 2 | 3 | 4, names: [string, string[], string, string[]][]): IDollLocation[] =>
+    names.flatMap(([left, leftLabel, right, rightLabel], row) => {
+        const l = topLeg(left, row, rows, leftLabel, "lt");
+        return [l, mirrored(l, right, rightLabel, "rt")];
+    });
+
+const numbered = (rows: 3 | 4): [string, string[], string, string[]][] =>
+    Array.from({ length: rows }, (_, i): [string, string[], string, string[]] => [`l${i + 1}`, ["LEFT", `LEG ${i + 1}`], `r${i + 1}`, ["RIGHT", `LEG ${i + 1}`]]);
+
+/** A pentapod: the quad's four legs and a fifth, the tail leg, pointing back from the rear center. */
+const PENTAPOD_TAIL: IDollLocation = (() => {
+    const at: IPlacement = { x: 0, y: HULL_TOP + 2 * ROW - 30, rotate: -90, scale: 0.9 };
+    const [fx, fy] = placePoint(PARTS["top-leg"].foot ?? [0, 0], at);
+    return { loc: "cl", part: "top-leg", at, label: ["CENTER", "LEG"], labelAt: [fx + 64, fy - 12], labelAnchor: "start", shortHangsFrom: [fx + 56, fy - 22], transfersTo: "ct" };
+})();
+
+const PENTAPOD = hullLayout("pentapod", 2, legPairs(2, [
+    ["fll", ["FRONT", "LEFT", "LEG"], "frl", ["FRONT", "RIGHT", "LEG"]],
+    ["rll", ["REAR", "LEFT", "LEG"], "rrl", ["REAR", "RIGHT", "LEG"]],
+]), [PENTAPOD_TAIL], 830);
+const HEXAPOD = hullLayout("hexapod", 3, legPairs(3, numbered(3)), [], HULL_TOP + 3 * ROW + 140);
+const OCTOPOD = hullLayout("octopod", 4, legPairs(4, numbered(4)), [], HULL_TOP + 4 * ROW + 140);
+
+/** The same figure at a smaller scale, for the very small 'Mechs: every part, position and label moved in by `k`, the
+ * labels' type with them, so that a given bubble is larger against the figure. */
+const scaledLayout = (base: IDollLayout, id: DollLayoutId, k: number): IDollLayout => {
+    const scale = (location: IDollLocation): IDollLocation => ({
+        ...location,
+        at: { ...location.at, x: location.at.x * k, y: location.at.y * k, scale: (location.at.scale ?? 1) * k },
+        labelAt: [location.labelAt[0] * k, location.labelAt[1] * k],
+        shortHangsFrom: location.shortHangsFrom && [location.shortHangsFrom[0] * k, location.shortHangsFrom[1] * k],
+    });
+    const guide = base.guide ?? FRONT_GUIDE;
+    const guideScaled = (d: string): string => mapPath(d, ([x, y]) => [x * k, y * k]);
+    return {
+        ...base, id, front: base.front.map(scale), rear: base.rear.map(scale), labelScale: k,
+        guide: { armor: guideScaled(guide.armor), other: guideScaled(guide.other), cross: guideScaled(guide.cross) },
+    };
+};
+
 export const DOLL_LAYOUTS: Partial<Record<DollLayoutId, IDollLayout>> = {
     biped: BIPED,
     quad: QUAD,
     tripod: TRIPOD,
     monoped: MONOPED,
     legless: LEGLESS,
+    pentapod: PENTAPOD,
+    hexapod: HEXAPOD,
+    octopod: OCTOPOD,
+    "micro-biped": scaledLayout(BIPED, "micro-biped", 0.6),
+    "micro-quad": scaledLayout(QUAD, "micro-quad", 0.6),
 };
 
 /** The record location a doll location reads, and whether it reads the rear armor. */
@@ -237,7 +334,10 @@ const RECORD_OF: Record<string, { code: LocationCode; rear: boolean }> = {
 /** A doll location's display name, from the record's own names; the rear torsos add "(Rear)". */
 export const dollLocationName = (loc: string): string => {
     const at = Object.hasOwn(RECORD_OF, loc) ? RECORD_OF[loc] : undefined;
-    return at ? `${locationName(at.code)}${at.rear ? " (Rear)" : ""}` : loc;
+    if (at) return `${locationName(at.code)}${at.rear ? " (Rear)" : ""}`;
+    // The legs of a hexapod or octopod are numbered from the front; these are doll codes only, with no record location yet.
+    const numbered = /^([lr])([1-4])$/.exec(loc);
+    return numbered ? `${numbered[1] === "l" ? "Left" : "Right"} Leg ${numbered[2]}` : loc;
 };
 
 /** The layout each configuration draws with; none is drawn for the rest yet. */

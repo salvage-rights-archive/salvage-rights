@@ -30,7 +30,7 @@ export function dollBox(unit: Pick<IDollUnit, "layoutId" | "variant">, use: Doll
       continue;
     }
     const { size: own, glyph } = LABEL[use];
-    const size = labelSize ?? own;
+    const size = (labelSize ?? own) * (layout?.labelScale ?? 1);
     const width = Math.max(...labelLines(location, short).map((line) => line.length + 5)) * size * glyph;
     const x = labelPoint(location, short)[0] * scale;
     const y = labelPoint(location, short)[1] * scale;

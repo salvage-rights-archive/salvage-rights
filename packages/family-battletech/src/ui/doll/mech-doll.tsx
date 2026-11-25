@@ -2,7 +2,7 @@
 import React, { type JSX } from "react";
 import Bubble from "./bubble";
 import { frameTransform, placePoint, placeShape, svgTransform, toSheet, type IDollFrame } from "./geometry";
-import { ARMOR_PITCH, dollLocationName, labelLines, labelPoint, layoutOf, STRUCTURE_PITCH, type DollUse, type IDollLocation, type IDollUnit } from "./layouts";
+import { ARMOR_PITCH, dollLocationName, FRONT_GUIDE, labelLines, labelPoint, layoutOf, STRUCTURE_PITCH, type DollUse, type IDollLocation, type IDollUnit } from "./layouts";
 import { PARTS } from "./parts";
 import { DEFAULT_PEN, DEFAULT_TRANSFER_PEN, DollDefs, INK, PEN_PRESETS, penIds, type IPenStyle, type PenPreset } from "./pen";
 import { cornerAt, drawnBubble, edgeDistance, gridIn, insideShape, packBubbles, shapePoints, type BubblePoint, type Shape } from "./shape-bubbles";
@@ -126,17 +126,17 @@ const penFor = (use: DollUse, pen: IPenStyle): IPenStyle => {
 const round = (n: number): number => Math.round(n * 10) / 10;
 
 /** The arrow from a location toward the one its damage moves to, stopping short of both middles. */
-const transferArrow = (from: BubblePoint, to: BubblePoint, key: string, arrowId: string): JSX.Element => {
+const transferArrow = (from: BubblePoint, to: BubblePoint, key: string, arrowId: string, k: number): JSX.Element => {
     const length = Math.hypot(to[0] - from[0], to[1] - from[1]);
     const ux = (to[0] - from[0]) / length, uy = (to[1] - from[1]) / length;
-    const start = Math.min(28, length * 0.2), stop = Math.min(48, length * 0.3);
+    const start = Math.min(28 * k, length * 0.2), stop = Math.min(48 * k, length * 0.3);
     return (
         <line
             key={key}
             data-transfer={key}
             x1={round(from[0] + ux * start)} y1={round(from[1] + uy * start)}
             x2={round(to[0] - ux * stop)} y2={round(to[1] - uy * stop)}
-            stroke={INK} strokeWidth={9} strokeLinecap="round" markerEnd={`url(#${arrowId})`}
+            stroke={INK} strokeWidth={9 * k} strokeLinecap="round" markerEnd={`url(#${arrowId})`}
         />
     );
 };
@@ -151,6 +151,7 @@ export default function MechDoll(props: IMechDollProps): JSX.Element {
     const pen = penFor(use, PEN_PRESETS[props.pen ?? (use === "transfer" ? DEFAULT_TRANSFER_PEN : DEFAULT_PEN)]);
     const ids = penIds(suffix);
     const ink = props.ink ?? INK;
+    const guide = layout.guide ?? FRONT_GUIDE;
     const locations = use === "armor" ? [...layout.front, ...layout.rear] : layout.front;
     const anchorOf = (loc: string): BubblePoint | undefined => {
         const location = locations.find((each) => each.loc === loc);
@@ -182,7 +183,7 @@ export default function MechDoll(props: IMechDollProps): JSX.Element {
     const interactive = onSelect !== undefined && use !== "transfer";
     const pointsOf = (loc: string): number => (use === "armor" ? unit.armor(loc) : unit.structure(loc));
 
-    const fontSize = props.labelSize ?? (use === "structure" ? LABEL_FONT.structure : LABEL_FONT.armor);
+    const fontSize = (props.labelSize ?? (use === "structure" ? LABEL_FONT.structure : LABEL_FONT.armor)) * (layout.labelScale ?? 1);
     const labels = counted.flatMap(({ location, count }) => {
         const [x, top] = toSheet(labelPoint(location, props.shortLabels), frame);
         // A short label that hangs from a point has its first line's top there, so its baseline is a cap height lower.
@@ -208,7 +209,7 @@ export default function MechDoll(props: IMechDollProps): JSX.Element {
 
     const arrows = use !== "transfer" ? [] : locations.flatMap((location) => {
         const from = anchorOf(location.loc), to = location.transfersTo ? anchorOf(location.transfersTo) : undefined;
-        return from && to ? [transferArrow(from, to, `${location.loc}>${location.transfersTo}`, ids.arrow)] : [];
+        return from && to ? [transferArrow(from, to, `${location.loc}>${location.transfersTo}`, ids.arrow, layout.labelScale ?? 1)] : [];
     });
 
     return (
@@ -220,8 +221,8 @@ export default function MechDoll(props: IMechDollProps): JSX.Element {
             <g transform={frameTransform(frame)}>
                 {pen.constructionLines ? (
                     <g aria-hidden="true">
-                        <path d={use === "armor" ? "M 0,40 L 0,950 M 0,962 L 0,1170" : "M 0,40 L 0,950"} fill="none" stroke={INK} strokeWidth={0.75} strokeDasharray="18 5 3 5" />
-                        <path d="M -360,230 L 360,230 M -360,520 L 360,520" fill="none" stroke={INK} strokeWidth={0.6} strokeDasharray="4 6" />
+                        <path d={use === "armor" ? guide.armor : guide.other} fill="none" stroke={INK} strokeWidth={0.75} strokeDasharray="18 5 3 5" />
+                        {guide.cross ? <path d={guide.cross} fill="none" stroke={INK} strokeWidth={0.6} strokeDasharray="4 6" /> : null}
                     </g>
                 ) : null}
             </g>
