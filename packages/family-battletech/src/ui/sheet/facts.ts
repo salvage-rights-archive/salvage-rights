@@ -6,7 +6,7 @@ import { inventoryLines, ammoLines } from "../../rules/catalog";
 import type { Catalog, InventoryLine } from "../../rules/catalog";
 import { levelOfRecord, levelRow } from "../../rules/levels";
 import { layout as buildLayout, locationName, structurePoints, walkMP } from "../../rules/mech";
-import { movementPenalty } from "../../rules/walk";
+import { movementPenalty, penalisedMovement } from "../../rules/walk";
 import type { Layout, LocationCode, MechRecord } from "../../rules/mech";
 
 export const DASH = "—";
@@ -65,6 +65,7 @@ export function sheetFacts(record: MechRecord, catalog: Catalog): SheetFacts {
   const walk = walkMP(record);
   const jumpJets = record.mounts.filter((m) => m.equipmentId !== null && catalog.byId(m.equipmentId)?.kind === "jump-jet").length;
   const penalty = movementPenalty(record, catalog);
+  const moved = walk === null ? null : penalisedMovement(walk, penalty);
   const taken = (mp: number, by: number) => String(Math.max(0, mp - by));
   const sinks = record.chassis.heatSinks;
   const kind = Object.hasOwn(SHEET_HEAT_SINKS, sinks.type) ? SHEET_HEAT_SINKS[sinks.type] : undefined;
@@ -81,8 +82,8 @@ export function sheetFacts(record: MechRecord, catalog: Catalog): SheetFacts {
   const battleValue = record.source?.values.battleValue;
   return {
     title: sheetTitle(record),
-    walk: walk === null ? DASH : taken(walk, penalty.walk),
-    run: walk === null ? DASH : taken(Math.ceil(walk * 1.5), penalty.run),
+    walk: moved === null ? DASH : String(moved.walk),
+    run: moved === null ? DASH : String(moved.run),
     jump: penalty.noJump ? "0" : taken(jumpJets, jumpJets > 0 ? penalty.jump : 0),
     movementNote: penalty.short.length > 0 ? penalty.short.join("; ") : undefined,
     tons: String(record.tons),

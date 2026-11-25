@@ -12,7 +12,7 @@ import { bipedRecord, mount, quadRecord } from "./fixtures";
 import { editRecord, engineTons, layout, weights } from "./mech";
 import type { Mount, MechRecord } from "./mech";
 import { shieldPoints } from "./shields";
-import { movementPenalty } from "./walk";
+import { movementPenalty, penalisedMovement } from "./walk";
 
 const catalog = createCatalog(expand([...WEAPONS, ...AMMUNITION, ...OTHER]));
 const shield = (size: "small" | "medium" | "large", location: Mount["location"], id = `shield-${size}-${String(location)}`): Mount => ({
@@ -150,11 +150,18 @@ describe("shields", () => {
 
   it("a medium shield takes 1 MP and a large one 1 MP and jumping; a small one nothing", () => {
     expect(movementPenalty(walker([shield("small", "LA")]), catalog)).toMatchObject({ walk: 0, run: 0, noJump: false });
-    expect(movementPenalty(walker([shield("medium", "LA")]), catalog)).toMatchObject({ walk: 1, run: 1, jump: 1, noJump: false });
+    expect(movementPenalty(walker([shield("medium", "LA")]), catalog)).toMatchObject({ walk: 1, run: 0, jump: 1, noJump: false });
     const large = walker([shield("large", "RA"), { ...mount("jj", "jump-jet-is", "CT", null), name: "Jump Jet" }]);
-    expect(movementPenalty(large, catalog)).toMatchObject({ walk: 1, run: 1, noJump: true });
+    expect(movementPenalty(large, catalog)).toMatchObject({ walk: 1, run: 0, noJump: true });
     // the Battle Value counts the ground penalty and still uses the jump rating as normal
     expect(battleValue(large, catalog).offensive).toMatchObject({ runMP: 5, jumpMP: 1 });
+  });
+
+  it("takes a shield MP off Walking and derives Running from it, and takes hardened armor off Running alone", () => {
+    const shielded = movementPenalty(walker([shield("medium", "LA")]), catalog);
+    expect(penalisedMovement(5, shielded)).toEqual({ walk: 4, run: 6 });
+    expect(penalisedMovement(4, shielded)).toEqual({ walk: 3, run: 5 });
+    expect(penalisedMovement(5, movementPenalty(walker([], { armorType: "hardened" }), catalog))).toEqual({ walk: 5, run: 7 });
   });
 
   it("shieldPoints gives each arm's Damage Capacity, less 1 for each missing actuator", () => {

@@ -47,7 +47,9 @@ export function equipmentItems(record: MechRecord, catalog: Catalog): { items: I
 /** The movement points the record's armor and shields take away (never negative), and the words that say why. A large shield also
  * forbids jumping in play; the Battle Value rules still use the jump rating as normal (TO:AUE p.193), so `noJump` is separate. */
 export interface MovementPenalty {
+  /** Walking MP taken away (a shield's); Running MP is then worked out from the reduced Walking MP, never reduced for the same cause. */
   walk: number;
+  /** Running MP taken away on top of that, for what the book prints as a Running reduction alone (hardened armor, TO:AUE p.93). */
   run: number;
   jump: number;
   noJump: boolean;
@@ -66,14 +68,20 @@ export function movementPenalty(record: MechRecord, catalog: Catalog): MovementP
     short.push(`${armor.name}: Run -${String(armorRun)}`);
   }
   if (shield.mp > 0) {
-    because.push(`${shield.names.join(", ")}: -${String(shield.mp)} Walking, Running and Jumping MP`);
+    because.push(`${shield.names.join(", ")}: -${String(shield.mp)} Walking MP (Running MP follows from it) and Jumping MP`);
     short.push(`Shield: MP -${String(shield.mp)}`);
   }
   if (shield.noJump) {
     because.push("Large shield: no jumping");
     short.push("No jump");
   }
-  return { walk: shield.mp, run: shield.mp + armorRun, jump: shield.mp, noJump: shield.noJump, because, short };
+  return { walk: shield.mp, run: armorRun, jump: shield.mp, noJump: shield.noJump, because, short };
+}
+
+/** Walking MP after the penalty, and Running MP derived from that (Walking x 1.5 rounded up) less any Running-only reduction. */
+export function penalisedMovement(walk: number, penalty: MovementPenalty): { walk: number; run: number } {
+  const reduced = Math.max(0, walk - penalty.walk);
+  return { walk: reduced, run: Math.max(0, Math.ceil(reduced * 1.5) - penalty.run) };
 }
 
 /** Jumping MP: one for each jump jet mounted. */

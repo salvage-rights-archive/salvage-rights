@@ -178,13 +178,13 @@ export function battleValue(record: MechRecord, catalog: Catalog, pilot: PilotSk
   const masc = mascFound.named || mascFound.mounts.length > 0;
 
   // ---- Movement -------------------------------------------------------------------------------------------------
-  const walk = walkMP(record) ?? Math.max(0, Math.floor(chassis.engine.rating / Math.max(1, record.tons)));
+  const penalty = movementPenalty(record, catalog);
+  const walk = Math.max(0, (walkMP(record) ?? Math.max(0, Math.floor(chassis.engine.rating / Math.max(1, record.tons)))) - penalty.walk);
   // TSM adds 2 Walking MP from 9 heat (Total Warfare p. 143), where the heat scale has already taken 1 (p. 159): the most it
   // can legally generate is 1 more than its Walking MP.
   const walkMax = tsm ? walk + BV_METHOD.tsmWalkBonus : walk;
-  // Hardened armor and medium and large shields take Running MP away, and the Defensive and Speed Factors count it (TO:AUE p. 192); a
-  // large shield's "no jumping" is not counted, the jump rating is used as normal (p. 193).
-  const penalty = movementPenalty(record, catalog);
+  // Shields take Walking MP away (Running follows from it, above) and hardened armor takes Running MP alone; the Defensive and Speed
+  // Factors count the result (TO:AUE p. 192); a large shield's "no jumping" is not counted, the jump rating is used as normal (p. 193).
   const runMP = Math.max(0, (masc ? walk * 2 : Math.ceil(walkMax * 1.5)) - penalty.run); // MASC: double the Walking MP, Total Warfare p. 137; running: p. 53
   const jumpMP = jumpJets(items);
   const improvedJets = has(IMPROVED_JUMP_JET_IDS);
