@@ -85,7 +85,7 @@ describe("Import from Mordel", () => {
     await user.type(field, "sekrit-key-123");
     const cases: [MordelResult<true>, string, string][] = [
       [{ ok: true, value: true }, "status", "That key works."],
-      [failure("bad-key", "mordel.net did not accept that key."), "alert", "mordel.net did not accept that key."],
+      [failure("bad-key", "mordel.net did not accept that key. Remove it and enter a new key."), "alert", "mordel.net did not accept that key. Remove it and enter a new key."],
       [failure("slow-down", "mordel.net asked us to slow down. Try again in a minute."), "alert", "mordel.net asked us to slow down. Try again in a minute."],
       [failure("offline", "We could not reach mordel.net. You may be offline."), "alert", "We could not reach mordel.net. You may be offline."],
     ];

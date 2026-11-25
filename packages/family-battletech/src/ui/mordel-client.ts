@@ -23,7 +23,7 @@ export interface MordelClient {
 }
 
 const MESSAGES: Record<MordelFailure, string> = {
-  "bad-key": "mordel.net did not accept that key.",
+  "bad-key": "mordel.net did not accept that key. Remove it and enter a new key.",
   "not-found": "mordel.net has no unit with that number.",
   "slow-down": "mordel.net asked us to slow down. Try again in a minute.",
   offline: "We could not reach mordel.net. You may be offline.",
@@ -52,6 +52,8 @@ export function createMordelClient(options: {
   key: string;
   fetch?: typeof fetch;
   wait?: (ms: number) => Promise<void>;
+  /** Called when a request is held for a retry, so the page can say it is waiting. */
+  onWait?: () => void;
 }): MordelClient {
   const doFetch = options.fetch ?? ((...args: Parameters<typeof fetch>) => globalThis.fetch(...args));
   const wait = options.wait ?? ((ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)));
@@ -68,6 +70,7 @@ export function createMordelClient(options: {
     try {
       response = await send(path);
       if (response.status === 429) {
+        options.onWait?.();
         await wait(retrySeconds(response.headers.get("Retry-After")) * 1000);
         response = await send(path);
       }

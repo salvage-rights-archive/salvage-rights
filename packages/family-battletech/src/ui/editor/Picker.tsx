@@ -53,7 +53,9 @@ export default function Picker({
   const factsLine = (row: EquipmentRow) => {
     const trial: Mount = { id: "trial", equipmentId: row.id, name: row.name, techBase: row.techBase, location: null, slot: null };
     const facts = catalog.factsOf(trial, record);
-    const parts = [TECH_BASE_NAMES[row.techBase], facts ? `${plural(facts.tons, "ton")}, ${plural(facts.slots, "slot")}` : "weight and slots not known for this 'Mech"];
+    // A heat sink's weight is counted with the chassis heat sinks, so it is not listed as 0 tons.
+    const size = facts ? (row.kind === "heat-sink" ? `weight counted with the chassis heat sinks, ${plural(facts.slots, "slot")}` : `${plural(facts.tons, "ton")}, ${plural(facts.slots, "slot")}`) : "weight and slots not known for this 'Mech";
+    const parts = [TECH_BASE_NAMES[row.techBase], size];
     if (row.yearsInferred) parts.push("year not printed in the book");
     return parts.join(", ");
   };

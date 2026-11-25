@@ -11,10 +11,10 @@ import "./classic.scss";
 
 export interface ImportPageProps {
   /** How a client is made from a key. Tests pass their own; the page uses the real one. */
-  makeClient?: (key: string) => MordelClient;
+  makeClient?: (key: string, onWait?: () => void) => MordelClient;
 }
 
-const defaultMakeClient = (key: string) => createMordelClient({ key });
+const defaultMakeClient = (key: string, onWait?: () => void) => createMordelClient({ key, onWait });
 
 export default function ImportPage({ makeClient = defaultMakeClient }: ImportPageProps) {
   const navigate = useNavigate();
@@ -25,6 +25,9 @@ export default function ImportPage({ makeClient = defaultMakeClient }: ImportPag
   const [reference, setReference] = useState("");
   const [status, setStatus] = useState("");
   const [problem, setProblem] = useState("");
+  const waiting = () => {
+    setStatus("Waiting for mordel.net…");
+  };
   const [busy, setBusy] = useState(false);
   const [testing, setTesting] = useState(false);
   const [designs, setDesigns] = useState<{ rows: MordelListRow[]; truncated: boolean }>();
@@ -78,7 +81,7 @@ export default function ImportPage({ makeClient = defaultMakeClient }: ImportPag
     }
     setTesting(true);
     try {
-      const result = await makeClient(key).testKey();
+      const result = await makeClient(key, waiting).testKey();
       if (result.ok) setStatus("That key works.");
       else setProblem(result.message);
     } finally {
@@ -124,7 +127,7 @@ export default function ImportPage({ makeClient = defaultMakeClient }: ImportPag
         setStatus("Loading the equipment table…");
         const catalog = await loadCatalog();
         setStatus("");
-        const fetched = await makeClient(storedKey).unit(unitType, id);
+        const fetched = await makeClient(storedKey, waiting).unit(unitType, id);
         if (!fetched.ok) {
           setProblem(fetched.message);
           return;

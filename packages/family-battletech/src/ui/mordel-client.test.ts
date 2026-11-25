@@ -45,7 +45,9 @@ describe("mordel client", () => {
   it("retries once after a 429, and gives slow-down if the second answer is a 429 too", async () => {
     const wait = vi.fn(noWait);
     const failing = answering(status(429, { "Retry-After": "2" }), status(429));
-    expect(await createMordelClient({ key: KEY, fetch: failing, wait }).unit("bm", 1)).toMatchObject({ failure: "slow-down" });
+    const onWait = vi.fn();
+    expect(await createMordelClient({ key: KEY, fetch: failing, wait, onWait }).unit("bm", 1)).toMatchObject({ failure: "slow-down" });
+    expect(onWait).toHaveBeenCalledOnce();
     expect(wait).toHaveBeenCalledExactlyOnceWith(2000);
     expect(failing).toHaveBeenCalledTimes(2);
 
