@@ -6,6 +6,7 @@ import { unitTitle } from "../../rules/as-unit";
 import { STORAGE_READ_FAILED, STORAGE_WRITE_FAILED, downloadJson } from "../storage";
 import { downloadUnit, fromUnitFile, openAsStorage } from "./storage";
 import type { AsEntry, AsStorage } from "./storage";
+import AsMordelImport from "./AsMordelImport";
 import "../classic.scss";
 import "./alpha-strike.scss";
 
@@ -231,6 +232,8 @@ export default function AsHomePage() {
           <input id="as-file" type="file" accept="application/json,.json" onChange={(event) => void upload(event)} />
         </div>
       </section>
+
+      <AsMordelImport />
     </div>
   );
 }

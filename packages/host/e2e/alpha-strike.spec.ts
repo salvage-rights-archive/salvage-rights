@@ -1,5 +1,5 @@
 import { readFile } from "node:fs/promises";
-import { DEV, expect, test } from "./fixtures";
+import { AS_UNIT_ID, DEV, FAKE_KEY, expect, test } from "./fixtures";
 
 const ALPHA = "/battletech/alpha-strike";
 
@@ -58,4 +58,22 @@ test("the home and unit pages do not scroll sideways at 320 px, and their button
       if (box) expect(box.height, address).toBeGreaterThanOrEqual(44);
     }
   }
+});
+
+test("import a unit from Mordel, review it with its credit, save it, and find it in the roster", async ({ page }, testInfo) => {
+  await page.goto(`${DEV}${ALPHA}/home`);
+  await page.getByLabel("Mordel key").fill(FAKE_KEY);
+  await page.getByRole("button", { name: "Save key" }).click();
+  await page.getByLabel("Unit number or address").fill(String(AS_UNIT_ID));
+  await page.getByRole("button", { name: "Import from Mordel" }).click();
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Test Walker TW-1");
+  await expect(page.getByText("Designed by Test Designer on mordel.net; API by MordelBlacknight")).toBeVisible();
+  await expect(page.getByLabel("Point Value (PV)")).toHaveValue("30");
+  await expect(page.getByLabel("Special abilities")).toHaveValue("ECM, IF1");
+  expect(page.url()).not.toContain(FAKE_KEY);
+  await page.screenshot({ path: testInfo.outputPath("review.png") });
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(page.getByText("Saved.")).toBeVisible();
+  await page.goto(`${DEV}${ALPHA}/home`);
+  await expect(page.getByRole("list").getByText("Test Walker TW-1")).toBeVisible();
 });

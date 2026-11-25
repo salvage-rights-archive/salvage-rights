@@ -326,3 +326,38 @@ export function gladiator(): OmniChassis {
     notes: {},
   };
 }
+
+/** A made-up unit in the shape of Mordel's detail response, with its `alpha_strike` block. Not a real design. */
+export function mordelAsBody(patch: Json = {}, block: Json = {}): Json {
+  return {
+    status: "OK",
+    unit: {
+      unit_type_short: "bm",
+      id: 900002,
+      name: "Test Walker TW-1",
+      name_parts: { name: "Test Walker", alternate_name: null, model: "TW-1" },
+      designer: "Nobody In Particular",
+      tech_base: "Clan",
+      mixed_tech: false,
+      era: "Clan Invasion",
+      year: 3055,
+      rules_level: "Advanced",
+      role: "Brawler",
+      point_value: 30,
+      alpha_strike: {
+        type: "BM",
+        size: 2,
+        move: '8"/6"j',
+        tmm: 2,
+        armor: 5,
+        structure: 4,
+        damage: { short: "3", medium: "2", long: "0*" },
+        overheat: 1,
+        point_value: 30,
+        specials: ["ECM", "IF1", "TUR(2/2/1, LRM1/1/0)"],
+        ...block,
+      },
+      ...patch,
+    },
+  };
+}

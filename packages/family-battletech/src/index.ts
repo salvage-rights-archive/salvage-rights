@@ -52,7 +52,7 @@ const manifest: FamilyManifest = {
     license: "GPL-3.0-or-later",
     notes: [
       "The import from mordel.net uses the API built by MordelBlacknight.",
-      "Each imported design is credited to the mordel.net member who created it.",
+      "Each imported design is credited to the mordel.net member who created it. The Alpha Strike values we read from mordel.net are shown as Mordel gives them, with the same credit.",
       "The Classic BattleTech section (the import, the editor and the rules checks) was made by the Salvage Rights team.",
       "The Alpha Strike roster (unit entry, saving and unit files) was made by the Salvage Rights team.",
       "The picture on the BattleTech tile was generated with an AI image tool (Nano Banana 2). We would rather show work made by a person. If you are an artist, or hold the rights to a piece, and can let us use it legally, we will gladly replace any AI-generated art here and credit you. To offer a piece, start a thread in Discussions on our GitHub repository (https://github.com/salvage-rights-archive/salvage-rights/discussions), or open an issue there.",
