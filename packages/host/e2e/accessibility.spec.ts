@@ -1,6 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import type { Page } from "@playwright/test";
-import { CLASSIC, DEV, FAKE_KEY, FREE, expect, importMech, test } from "./fixtures";
+import { CLASSIC, DEV, FAKE_KEY, FREE, expect, importMech, saveAsUnit, test } from "./fixtures";
 
 async function chooseTheme(page: Page, base: string, theme: "Light" | "Dark") {
   await page.goto(`${base}/settings`);
@@ -119,4 +119,17 @@ test("the Alpha Strike home with a Mordel key saved has no axe violations in eit
     if (box) expect(box.height).toBeGreaterThanOrEqual(44);
   }
   await expectNoViolations(page, DEV, ["/battletech/alpha-strike/home"]);
+});
+
+test("the Alpha Strike force page and the home with forces have no axe violations in either theme", async ({ page }) => {
+  test.setTimeout(90_000);
+  await saveAsUnit(page, DEV, "Archer", 35);
+  await page.goto(`${DEV}/battletech/alpha-strike/home`);
+  await page.getByRole("button", { name: "Start a new force" }).click();
+  await page.getByLabel("PV limit").fill("20");
+  await page.getByLabel("Unit", { exact: true }).selectOption({ label: "Archer (PV 35)" });
+  await page.getByRole("button", { name: "Add to force" }).click();
+  await expect(page.getByRole("region", { name: "Totals" })).toContainText("over the limit");
+  const forcePage = new URL(page.url());
+  await expectNoViolations(page, DEV, ["/battletech/alpha-strike/home", `${forcePage.pathname.replace(/^\/salvage-rights/, "")}${forcePage.search}`]);
 });

@@ -214,4 +214,13 @@ export async function importMech(page: Page, base: string): Promise<void> {
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(MECH_NAME);
 }
 
+/** Saves an Alpha Strike unit by hand with just a name and a PV, and comes back to the Alpha Strike home. */
+export async function saveAsUnit(page: Page, base: string, name: string, pv: number): Promise<void> {
+  await page.goto(`${base}/battletech/alpha-strike/unit`);
+  await page.getByLabel("Name").fill(name);
+  await page.getByLabel("Point Value (PV)").fill(String(pv));
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(page.getByText("Saved.")).toBeVisible();
+}
+
 export { expect };

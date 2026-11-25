@@ -68,3 +68,24 @@ export const AS_SPECIAL_CODES = [
 
 /** An artillery special is `ARTX-#` with a type in place of the X (for example a letters-only suffix); it is written with a dash. */
 export const ARTX_FAMILY = /^ART[A-Z0-9]*$/;
+
+/** The Skill Rating Table (p. 29): the name the book gives each Skill Rating, 0 to 7. Labels only. */
+export const AS_SKILL_NAMES = ["Legendary", "Heroic", "Elite", "Veteran", "Regular", "Green", "Really Green", "Wet Behind the Ears"];
+
+/**
+ * The two stepped tables of p. 29, as the top base PV of each row: up to `rows[0]` is one point per Skill step, up to `rows[1]`
+ * two points, and so on. Past the last row the footnote adds one point per further `beyond` base PV; where the footnote's first
+ * band starts is read by the tables' own pattern (the band after the last row), not printed.
+ */
+export const AS_PV_STEPS = {
+  /** Low-Skill PV Decrease Table: 0-14, 15-24, 25-34 ... 95-104. */
+  decrease: { rows: [14, 24, 34, 44, 54, 64, 74, 84, 94, 104], beyond: 10 },
+  /** Improved-Skill PV Increase Table: 0-7, 8-12, 13-17 ... 48-52. */
+  increase: { rows: [7, 12, 17, 22, 27, 32, 37, 42, 47, 52], beyond: 5 },
+} as const;
+
+/** The Skill tables (the minimum PV of 1 is there too; errata v7.02 adds the Piloting and Gunnery average) and the force-building steps. */
+export const AS_FORCE_CITES = {
+  skill: { book: "Alpha Strike: Commander's Edition", page: 29, checked: "page" },
+  steps: { book: "Alpha Strike: Commander's Edition", pages: [110, 112], checked: "page" },
+} as const;
