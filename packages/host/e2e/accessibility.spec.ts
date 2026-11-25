@@ -29,15 +29,25 @@ async function expectNoViolations(page: Page, base: string, paths: string[]) {
   }
 }
 
-test("dev edition has no axe violations in either theme", async ({ page }) => {
-  // Twenty axe scans, three seconds each on the editor in Firefox: the default 30 seconds is too short for the one test.
-  test.setTimeout(150_000);
+// Firefox has crashed its page part way through one long run of scans, so the dev edition is scanned in two tests,
+// each with its own browser context: the pages first, then the editor's open states.
+async function importForScan(page: Page): Promise<string> {
   // One imported 'Mech, kept for the rest of the test (the browser context's storage lasts as long as the test).
   await importMech(page, DEV);
   const editor = new URL(page.url());
-  const editorPath = `${editor.pathname.replace(/^\/salvage-rights/, "")}${editor.search}`;
-  const paths = ["/", "/about", "/settings", `${CLASSIC}/home`, `${CLASSIC}/import`, editorPath];
-  await expectNoViolations(page, DEV, paths);
+  return `${editor.pathname.replace(/^\/salvage-rights/, "")}${editor.search}`;
+}
+
+test("dev edition has no axe violations in either theme", async ({ page }) => {
+  // Twelve axe scans, about three seconds each on the editor in Firefox: the default 30 seconds is too short.
+  test.setTimeout(120_000);
+  const editorPath = await importForScan(page);
+  await expectNoViolations(page, DEV, ["/", "/about", "/settings", `${CLASSIC}/home`, `${CLASSIC}/import`, editorPath]);
+});
+
+test("the editor's picker and Actions row have no axe violations in either theme", async ({ page }) => {
+  test.setTimeout(90_000);
+  const editorPath = await importForScan(page);
 
   for (const theme of ["Light", "Dark"] as const) {
     await chooseTheme(page, DEV, theme);
