@@ -107,9 +107,11 @@ test("build a Land-Air 'Mech through the form and see its rules level, conversio
   await page.goto(HOME);
   const form = page.getByRole("form", { name: "Build a new one" });
   await form.getByLabel("Name").fill("Hawk");
-  await form.getByLabel("Configuration").selectOption({ label: "Land-Air 'Mech (needs Experimental)" });
+  await form.getByLabel("Rules level").selectOption("experimental");
+  await form.getByLabel("Configuration").selectOption({ label: "Land-Air 'Mech" });
   await form.getByRole("button", { name: "Start building" }).click();
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Hawk");
+  await page.getByLabel("Rules level").selectOption("standard");
   const rules = page.getByRole("region", { name: "Rules check" });
   await expect(rules.getByText("Land-Air 'Mech (configuration) is Experimental level; this unit is built at Standard level. It needs Experimental or higher.")).toBeVisible();
   await expect(rules.getByText("Interstellar Operations: Alternate Eras (Catalyst Game Labs), p. 100")).toBeVisible();
@@ -141,10 +143,13 @@ test("build a tripod through the form and reach its record sheet", async ({ page
   const form = page.getByRole("form", { name: "Build a new one" });
   await form.getByLabel("Name").fill("Strider");
   await form.getByLabel("Tonnage").selectOption("55");
-  await form.getByLabel("Configuration").selectOption({ label: "Tripod (needs Advanced)" });
+  await form.getByLabel("Rules level").selectOption("advanced");
+  await form.getByLabel("Configuration").selectOption({ label: "Tripod" });
   await form.getByRole("button", { name: "Start building" }).click();
   await expect(page.getByRole("list", { name: "Center Leg slots" })).toBeVisible();
+  await page.getByLabel("Rules level").selectOption("standard");
   await expect(page.getByRole("region", { name: "Rules check" }).getByText("Interstellar Operations: Alternate Eras (Catalyst Game Labs), p. 158")).toBeVisible();
+  await page.getByLabel("Rules level").selectOption("advanced");
   await page.getByRole("link", { name: "Record sheet" }).click();
   const sheet = page.getByRole("img", { name: /record sheet$/ });
   await expect(sheet.locator("[data-location='CL']")).toBeVisible();
@@ -156,10 +161,13 @@ test("change the rules level in the editor and see the picker and the rules chec
   const form = page.getByRole("form", { name: "Build a new one" });
   await form.getByLabel("Name").fill("Strider");
   await form.getByLabel("Tonnage").selectOption("55");
-  await form.getByLabel("Rules level").selectOption("introductory");
-  await form.getByLabel("Configuration").selectOption({ label: "Tripod (needs Advanced)" });
+  // The build form offers only the body types the level allows: no tripod at Standard.
+  await expect(form.getByLabel("Configuration").getByRole("option", { name: "Tripod" })).toHaveCount(0);
+  await form.getByLabel("Rules level").selectOption("advanced");
+  await form.getByLabel("Configuration").selectOption({ label: "Tripod" });
   await form.getByRole("button", { name: "Start building" }).click();
   const level = page.getByLabel("Rules level");
+  await level.selectOption("introductory");
   await expect(level).toHaveValue("introductory");
   await expect(page.getByText("3025 technology only", { exact: false })).toBeVisible();
   const rules = page.getByRole("region", { name: "Rules check" });
@@ -217,4 +225,59 @@ test("build a 50-ton biped, place a medium laser and see Battle Value and cost u
   await expect(bv()).not.toHaveText(armed);
   await calc.getByRole("button", { name: "Show Battle Value breakdown" }).click();
   await expect(calc.getByText("Defensive battle rating")).toBeVisible();
+});
+
+test("pick an era and a tech base in the editor and see the picker's groups and counts change and an item disappear", async ({ page }) => {
+  // The findings panel beside the page grows with the errors a Clan unit of Inner Sphere parts has; a tall window keeps it clear of the buttons.
+  await page.setViewportSize({ width: 1400, height: 1400 });
+  await page.goto(HOME);
+  const form = page.getByRole("form", { name: "Build a new one" });
+  await form.getByLabel("Name").fill("Sorter");
+  await form.getByLabel("Rules level").selectOption("experimental");
+  await form.getByRole("button", { name: "Start building" }).click();
+  await page.getByLabel("Year").fill("3067");
+  await expect(page.getByLabel("Era")).toHaveValue("civil-war");
+
+  const dialog = page.getByRole("dialog");
+  const open = async (search = "") => {
+    await page.getByRole("button", { name: "Add equipment" }).click();
+    if (search !== "") await dialog.getByLabel("Search by name").fill(search);
+  };
+  const groups = async () => (await dialog.getByRole("heading", { level: 3 }).allTextContents()).map((t) => t.trim());
+  const total = async () => Number(((await dialog.getByRole("status").textContent()) ?? "").split(" ")[0]);
+
+  // Inner Sphere, Civil War: a Clan ER large laser is not offered, an Inner Sphere one is.
+  await open("ER Large Laser");
+  await expect(dialog.getByRole("button", { name: /^ER Large Laser Inner Sphere/ })).toBeVisible();
+  await expect(dialog.getByRole("button", { name: /^ER Large Laser Clan/ })).toHaveCount(0);
+  await dialog.getByLabel("Search by name").fill("");
+  const isGroups = await groups();
+  const isTotal = await total();
+  expect(isGroups.some((g) => g.includes("Energy weapons"))).toBe(true);
+  await dialog.getByRole("button", { name: "Cancel" }).click();
+  await expect(dialog).toHaveCount(0);
+
+  // Clan, same era: the Inner Sphere laser goes and the Clan one comes; the counts differ.
+  await page.getByLabel("Tech base").selectOption("clan");
+  await open("ER Large Laser");
+  await expect(dialog.getByRole("button", { name: /^ER Large Laser Clan/ })).toBeVisible();
+  await expect(dialog.getByRole("button", { name: /^ER Large Laser Inner Sphere/ })).toHaveCount(0);
+  await dialog.getByLabel("Search by name").fill("");
+  expect(await total()).not.toBe(isTotal);
+  await dialog.getByRole("button", { name: "Cancel" }).click();
+  await expect(dialog).toHaveCount(0);
+
+  // An early era leaves out the groups that did not exist yet, and a closed group opens and closes by keyboard.
+  await page.getByLabel("Tech base").selectOption("inner-sphere");
+  await page.getByLabel("Era").selectOption("age-of-war");
+  await expect(page.getByLabel("Year")).toHaveValue("");
+  await open();
+  const early = await total();
+  expect(early).toBeLessThan(isTotal);
+  const toggle = dialog.getByRole("button", { name: /^Energy weapons/ });
+  await toggle.focus();
+  await page.keyboard.press("Enter");
+  await expect(toggle).toHaveAttribute("aria-expanded", "false");
+  await page.keyboard.press("Enter");
+  await expect(toggle).toHaveAttribute("aria-expanded", "true");
 });

@@ -14,6 +14,12 @@ export interface Cite {
   page: number;
 }
 export type Checked = "page" | "text";
+/** Years, inclusive, as the book prints them; no `to` means still available. A list of spans carries an extinction and a reintroduction. */
+export interface Span {
+  from: number;
+  to?: number;
+}
+const UTA = (page: number): Cite => ({ book: "Interstellar Operations: Alternate Eras", page });
 interface Sourced {
   cite: Cite;
   checked: Checked;
@@ -31,6 +37,11 @@ export interface PartFacts {
   techBase?: "inner-sphere" | "clan" | "both";
   rulesLevel?: "standard" | "advanced" | "experimental";
   introduced?: { is?: number; clan?: number; prototype?: true };
+  /** The years the part can be had (production dates, with an extinction and a reintroduction where the table prints them), for the
+   * tech base the row is for. It takes the place of `introduced` in the availability rule; absent means no printed date, so no limit.
+   * `availabilityCite` is the page of the Universal Technology Advancement Table (IO:AE printed pp.29-44), read against the page image. */
+  availability?: Span[];
+  availabilityCite?: Cite;
   rules?: string;
   rulesCite?: Cite;
   industrial?: true;
@@ -108,9 +119,9 @@ export const STRUCTURE_TYPES: Sourced & { types: Record<string, StructureType> }
   cite: { book: "TechManual", page: 47 },
   checked: "page",
   types: {
-    standard: { name: "Standard", weightFactor: 1, slots: 0 },
-    "endo-steel": { name: "Endo Steel", weightFactor: 0.5, slots: 14 },
-    "endo-steel-clan": { name: "Endo Steel (Clan)", weightFactor: 0.5, slots: 7 },
+    standard: { name: "Standard", weightFactor: 1, slots: 0, availability: [{ from: 2439 }], availabilityCite: UTA(42) },
+    "endo-steel": { name: "Endo Steel", weightFactor: 0.5, slots: 14, techBase: "inner-sphere", availability: [{ from: 2487, to: 2850 }, { from: 3035 }], availabilityCite: UTA(42) },
+    "endo-steel-clan": { name: "Endo Steel (Clan)", weightFactor: 0.5, slots: 7, techBase: "clan", availability: [{ from: 2827 }], availabilityCite: UTA(42) },
     composite: {
       name: "Composite",
       weightFactor: 0.5,
@@ -298,9 +309,9 @@ export const ENGINE_TYPES: Sourced & { types: Record<string, EngineType> } = {
   checked: "page",
   types: {
     standard: { name: "Standard Fusion", label: "Fusion Engine", weightFactor: 1, ct: 6, side: 0 },
-    xl: { name: "XL Fusion", label: "XL Fusion Engine", weightFactor: 0.5, factorCite: P214, factorChecked: "text", ct: 6, side: 3 },
-    "xl-clan": { name: "XL Fusion (Clan)", label: "XL Fusion Engine", weightFactor: 0.5, factorCite: P214, factorChecked: "text", ct: 6, side: 2 },
-    light: { name: "Light Fusion", label: "Light Fusion Engine", weightFactor: 0.75, factorCite: P214, factorChecked: "text", ct: 6, side: 2 },
+    xl: { name: "XL Fusion", label: "XL Fusion Engine", weightFactor: 0.5, factorCite: P214, factorChecked: "text", ct: 6, side: 3, techBase: "inner-sphere", availability: [{ from: 2579, to: 2865 }, { from: 3035 }], availabilityCite: UTA(38) },
+    "xl-clan": { name: "XL Fusion (Clan)", label: "XL Fusion Engine", weightFactor: 0.5, factorCite: P214, factorChecked: "text", ct: 6, side: 2, techBase: "clan", availability: [{ from: 2827 }], availabilityCite: UTA(38) },
+    light: { name: "Light Fusion", label: "Light Fusion Engine", weightFactor: 0.75, factorCite: P214, factorChecked: "text", ct: 6, side: 2, techBase: "inner-sphere", availability: [{ from: 3062 }], availabilityCite: UTA(38) },
     compact: {
       name: "Compact Fusion",
       label: "Compact Fusion Engine",
@@ -309,6 +320,9 @@ export const ENGINE_TYPES: Sourced & { types: Record<string, EngineType> } = {
       factorChecked: "text",
       ct: 3,
       side: 0,
+      techBase: "inner-sphere",
+      availability: [{ from: 3068 }],
+      availabilityCite: UTA(38),
     },
     // XXL fusion (Tactical Operations: Advanced Units and Equipment, Advanced Engine Master Table printed p.120, read against the
     // page image): one third of the standard weight (the table's "x0.333") and twice an XL's slots in each side torso (6 for
@@ -365,7 +379,7 @@ export const ENGINE_TYPES: Sourced & { types: Record<string, EngineType> } = {
 // Gyro (printed p.50). Weight is the engine rating over 100, rounded up to a whole ton, times the multiplier, rounded
 // up to a half ton. All gyro slots are in the center torso. Clan BattleMechs have only the standard gyro.
 // ---------------------------------------------------------------------------------------------------------------
-export interface GyroType {
+export interface GyroType extends PartFacts {
   name: string; // as shown to the player; label is what the record sheets print
   label: string; // as the record sheets print it
   multiplier: number;
@@ -375,10 +389,10 @@ export const GYROS: Sourced & { types: Record<string, GyroType> } = {
   cite: { book: "TechManual", page: 50 },
   checked: "page",
   types: {
-    standard: { name: "Standard", label: "Gyro", multiplier: 1.0, slots: 4 },
-    compact: { name: "Compact", label: "Compact Gyro", multiplier: 1.5, slots: 2 },
-    "heavy-duty": { name: "Heavy-Duty", label: "Heavy Duty Gyro", multiplier: 2.0, slots: 4 },
-    xl: { name: "XL", label: "XL Gyro", multiplier: 0.5, slots: 6 },
+    standard: { name: "Standard", label: "Gyro", multiplier: 1.0, slots: 4, availability: [{ from: 2350 }], availabilityCite: UTA(42) },
+    compact: { name: "Compact", label: "Compact Gyro", multiplier: 1.5, slots: 2, techBase: "inner-sphere", availability: [{ from: 3068 }], availabilityCite: UTA(42) },
+    "heavy-duty": { name: "Heavy-Duty", label: "Heavy Duty Gyro", multiplier: 2.0, slots: 4, techBase: "inner-sphere", availability: [{ from: 3067 }], availabilityCite: UTA(42) },
+    xl: { name: "XL", label: "XL Gyro", multiplier: 0.5, slots: 6, techBase: "inner-sphere", availability: [{ from: 3067 }], availabilityCite: UTA(42) },
   },
 };
 
@@ -405,8 +419,9 @@ export const COCKPITS: Sourced & { types: Record<string, CockpitType> } = {
   cite: { book: "TechManual", page: 52 },
   checked: "page",
   types: {
-    standard: { name: "Standard", tons: 3, cockpit: [3], sensors: [2, 5], lifeSupport: [1, 6] },
-    small: { name: "Small", tons: 2, cockpit: [3], sensors: [2, 4], lifeSupport: [1] },
+    standard: { name: "Standard", tons: 3, cockpit: [3], sensors: [2, 5], lifeSupport: [1, 6], availability: [{ from: 2470 }], availabilityCite: UTA(33) },
+    // The Small Cockpit row prints 3067 (Federated Suns) for the Inner Sphere and "Clan Intro: 3080".
+    small: { name: "Small", tons: 2, cockpit: [3], sensors: [2, 4], lifeSupport: [1], techBase: "both", introduced: { is: 3067, clan: 3080 }, availabilityCite: UTA(33) },
     // The tripod's special cockpit weighs 4 tons up to 100 tons and takes the same slots as the standard one (Interstellar
     // Operations: Alternate Eras, Tripod 'Mech Construction Rules, printed p.159). Its 5-ton superheavy version is out of scope.
     tripod: { name: "Tripod", tons: 4, only: "tripod", cite: IO_TRIPOD_CONSTRUCTION, cockpit: [3], sensors: [2, 5], lifeSupport: [1, 6] },
@@ -452,7 +467,7 @@ export const COCKPITS: Sourced & { types: Record<string, CockpitType> } = {
 // sinks that cost no tonnage; every sink beyond them costs `tonsEach`, whatever its type. An engine also holds one
 // sink per `ratingPerHeldSink` of rating (rounded down) without critical slots.
 // ---------------------------------------------------------------------------------------------------------------
-export interface HeatSinkType {
+export interface HeatSinkType extends PartFacts {
   name: string;
   slots: number;
 }
@@ -472,8 +487,8 @@ export const HEAT_SINKS: Sourced & { types: Record<string, HeatSinkType> } = {
   checked: "page",
   types: {
     single: { name: "Single", slots: 1 },
-    double: { name: "Double", slots: 3 },
-    "double-clan": { name: "Double (Clan)", slots: 2 },
+    double: { name: "Double", slots: 3, techBase: "inner-sphere", availability: [{ from: 2567, to: 2865 }, { from: 3040 }], availabilityCite: UTA(36) },
+    "double-clan": { name: "Double (Clan)", slots: 2, techBase: "clan", availability: [{ from: 2827 }], availabilityCite: UTA(36) },
   },
 };
 
@@ -502,7 +517,7 @@ export const ARMOR: Sourced & { basePointsPerTon: number; types: Record<string, 
   checked: "page",
   basePointsPerTon: 16,
   types: {
-    standard: { name: "Standard", multiplier: 1.0, slots: 0 },
+    standard: { name: "Standard", multiplier: 1.0, slots: 0, availability: [{ from: 2470 }], availabilityCite: UTA(29) },
     stealth: {
       name: "Stealth",
       multiplier: 1.0,
@@ -514,10 +529,10 @@ export const ARMOR: Sourced & { basePointsPerTon: number; types: Record<string, 
         tripod: { LA: 2, RA: 2, LL: 2, RL: 2, CL: 2, LT: 2, RT: 2 },
       },
     },
-    "light-ferro-fibrous": { name: "Light Ferro-Fibrous", multiplier: 1.06, slots: 7 },
-    "ferro-fibrous": { name: "Ferro-Fibrous", multiplier: 1.12, slots: 14 },
-    "ferro-fibrous-clan": { name: "Ferro-Fibrous (Clan)", multiplier: 1.2, slots: 7 },
-    "heavy-ferro-fibrous": { name: "Heavy Ferro-Fibrous", multiplier: 1.24, slots: 21 },
+    "light-ferro-fibrous": { name: "Light Ferro-Fibrous", multiplier: 1.06, slots: 7, techBase: "inner-sphere", availability: [{ from: 3067 }], availabilityCite: UTA(29) },
+    "ferro-fibrous": { name: "Ferro-Fibrous", multiplier: 1.12, slots: 14, techBase: "inner-sphere", availability: [{ from: 2571, to: 2810 }, { from: 3040 }], availabilityCite: UTA(29) },
+    "ferro-fibrous-clan": { name: "Ferro-Fibrous (Clan)", multiplier: 1.2, slots: 7, techBase: "clan", availability: [{ from: 2825 }], availabilityCite: UTA(29) },
+    "heavy-ferro-fibrous": { name: "Heavy Ferro-Fibrous", multiplier: 1.24, slots: 21, techBase: "inner-sphere", availability: [{ from: 3069 }], availabilityCite: UTA(29) },
     // The newer types. A row's multiplier is its printed points per ton over the base 16. Tactical Operations: Advanced Units and
     // Equipment, Advanced Armor Table (printed p.92) for the first six, Interstellar Operations: Alternate Eras, Advanced Armor
     // Table (printed p.82) for the next four; each was read against the page image. The dates are the books' (cost table p.217, p.84).
@@ -701,7 +716,7 @@ export const ARMOR: Sourced & { basePointsPerTon: number; types: Record<string, 
 // and takes the same number of slots (rounded normally); Triple-Strength Myomer weighs nothing and takes 6 slots,
 // Inner Sphere only. "standard" is plain myomer. The two enhancements may not be combined.
 // ---------------------------------------------------------------------------------------------------------------
-export interface MyomerType {
+export interface MyomerType extends PartFacts {
   name: string;
   catalogId?: string; // the equipment row whose mounts stand for this myomer (a perMech item), read by the checks
   percentOfTons: number;
@@ -713,9 +728,9 @@ export const MYOMER: Sourced & { types: Record<string, MyomerType> } = {
   checked: "page",
   types: {
     standard: { name: "Standard", percentOfTons: 0, slots: 0 },
-    masc: { name: "MASC", percentOfTons: 5, slots: "percent" },
-    "masc-clan": { name: "MASC (Clan)", percentOfTons: 4, slots: "percent" },
-    tsm: { name: "Triple-Strength Myomer", catalogId: "tsm-is", percentOfTons: 0, slots: 6 },
+    masc: { name: "MASC", percentOfTons: 5, slots: "percent", techBase: "inner-sphere", availability: [{ from: 2740, to: 2795 }, { from: 3035 }], availabilityCite: UTA(29) },
+    "masc-clan": { name: "MASC (Clan)", percentOfTons: 4, slots: "percent", techBase: "clan", availability: [{ from: 2827 }], availabilityCite: UTA(29) },
+    tsm: { name: "Triple-Strength Myomer", catalogId: "tsm-is", percentOfTons: 0, slots: 6, techBase: "inner-sphere", availability: [{ from: 3050 }], availabilityCite: UTA(42) },
   },
 };
 
@@ -844,7 +859,7 @@ export const RULES_LEVELS: RulesLevelRow[] = [
  * other part of TechManual is Standard (that book is the standard construction rules, Tactical Operations p.87); a part
  * not named here is therefore Standard, not Introductory.
  */
-export const INTRODUCTORY_PARTS: Record<"configuration" | "engine" | "gyro" | "cockpit" | "structure" | "armor" | "heatSink", string[]> = {
+export const INTRODUCTORY_PARTS: Record<"configuration" | "engine" | "gyro" | "cockpit" | "structure" | "armor" | "heatSink" | "myomer", string[]> = {
   configuration: ["biped", "quad"],
   engine: ["standard"],
   gyro: ["standard"],
@@ -852,11 +867,18 @@ export const INTRODUCTORY_PARTS: Record<"configuration" | "engine" | "gyro" | "c
   structure: ["standard"],
   armor: ["standard"],
   heatSink: ["single"],
+  myomer: ["standard"],
 };
 export interface ConfigurationRow {
   name: string; // as shown to the player
   body?: string; // the layout whose slots, structure and armor grid this shares (a Land-Air 'Mech has a biped's); its own name if absent
   rulesLevel: RulesLevel;
+  /** The years the body type can be had, from the Construction Options table (IO:AE printed p.44, read against the page image):
+   * the production date, then any extinction. `clanAvailability` is for a Clan 'Mech where the table prints another extinction. */
+  availability: Span[];
+  clanAvailability?: Span[];
+  /** Set when the table gives the body type to the Inner Sphere only. */
+  techBase?: "inner-sphere";
   levelCite?: Cite; // the page that states a rules level other than standard
   construction?: Sourced; // the page that states this body type's construction changes
   structureExtra?: number;
@@ -884,18 +906,22 @@ export const SHEET = {
     biped: {
       name: "Biped",
       rulesLevel: "standard",
+      availability: [{ from: 2470 }],
       size: BIPED_SIZE,
       fixed: { LA: ARM, RA: ARM, LL: LEG, RL: LEG },
     },
     quad: {
       name: "Quad",
       rulesLevel: "standard",
+      availability: [{ from: 2470 }],
       size: { HD: 6, CT: 12, LT: 12, RT: 12, FLL: 6, FRL: 6, RLL: 6, RRL: 6 },
       fixed: { FLL: LEG, FRL: LEG, RLL: LEG, RRL: LEG },
     },
     tripod: {
       name: "Tripod",
       rulesLevel: "advanced",
+      techBase: "inner-sphere",
+      availability: [{ from: 2602 }],
       levelCite: IO_TRIPOD_RULES,
       construction: { cite: IO_TRIPOD_CONSTRUCTION, checked: "text" },
       structureExtra: 0.1,
@@ -903,7 +929,7 @@ export const SHEET = {
       size: { ...BIPED_SIZE, CL: 6 },
       fixed: { LA: ARM, RA: ARM, LL: LEG, RL: LEG, CL: LEG },
     },
-    lam: { ...LAM_ROW, name: "Land-Air 'Mech" },
-    "bimodal-lam": { ...LAM_ROW, name: "Bimodal Land-Air 'Mech" },
+    lam: { ...LAM_ROW, name: "Land-Air 'Mech", availability: [{ from: 2688, to: 3085 }], clanAvailability: [{ from: 2688, to: 2825 }] },
+    "bimodal-lam": { ...LAM_ROW, name: "Bimodal Land-Air 'Mech", availability: [{ from: 2684, to: 2781 }], clanAvailability: [{ from: 2684, to: 2801 }] },
   } satisfies Record<string, ConfigurationRow>,
 };

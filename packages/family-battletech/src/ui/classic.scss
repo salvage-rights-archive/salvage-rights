@@ -245,9 +245,12 @@ a.bt-button {
       z-index: 10;
     }
 
+    // The header, status, notes and the record all keep a margin the width of the side column, so none of them can sit under it
+    // (a block that merely shares a line with a float was left to the browser, and Firefox let wide content run under the column).
     &__header,
     &__status,
-    &__info {
+    &__info,
+    &__body {
       margin-right: calc(var(--bt-side) + var(--sr-space-3));
     }
 
@@ -260,7 +263,7 @@ a.bt-button {
       // The rules check and the calculator share the column; each scrolls on its own, and together they fit the screen.
     }
 
-    // The record sits beside the floated rules check, whatever its length.
+
     &__body {
       display: flow-root;
 
@@ -470,6 +473,10 @@ a.bt-button {
 
 // Fields in a grid: one below 560 px; two from 560 px, in a panel wide enough for two; three from 900 px, in a panel wide
 // enough for three (the width of the panel, not only the screen, decides, since panels sit side by side).
+.bt-grid__wide {
+  grid-column: 1 / -1;
+}
+
 .bt-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -551,6 +558,7 @@ a.bt-button {
 .bt-picker input:focus-visible,
 .bt-picker select:focus-visible,
 .bt-picker__result:focus-visible,
+.bt-picker__toggle:focus-visible,
 .bt-findings:focus-visible,
 .bt-weight__toggle:focus-visible,
 .bt-editor h1:focus-visible,
@@ -862,10 +870,44 @@ a.bt-button {
     margin-top: var(--sr-space-1);
   }
 
-  // The whole table can be offered, so the list scrolls in its own box (its buttons are focusable, so the box is reachable).
+  // The items come in groups, each a disclosure button over its list; the dialog itself scrolls.
+  &__group {
+    margin-bottom: var(--sr-space-2);
+  }
+
+  &__heading {
+    margin: 0;
+    font-size: 1rem;
+  }
+
+  &__toggle {
+    display: flex;
+    align-items: center;
+    gap: var(--sr-space-1);
+    width: 100%;
+    min-height: 44px;
+    padding: var(--sr-space-1) var(--sr-space-2);
+    background: var(--sr-surface-sunk);
+    color: var(--sr-ink);
+    border: var(--sr-border) solid var(--sr-line-strong);
+    border-radius: var(--sr-radius);
+    font: inherit;
+    font-weight: 600;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  &__chevron {
+    width: 1em;
+  }
+
+  &__count {
+    color: var(--sr-ink-muted);
+    font-weight: 400;
+  }
+
   &__list {
-    max-height: 50vh;
-    overflow-y: auto;
+    margin-top: var(--sr-space-1);
   }
 
   &__result {

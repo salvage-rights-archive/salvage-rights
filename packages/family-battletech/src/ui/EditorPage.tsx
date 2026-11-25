@@ -5,7 +5,7 @@ import { EDITIONS } from "../data/editions";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import type { ChangeEvent, CSSProperties, ReactNode } from "react";
 import { Link, useBlocker, useLocation, useSearchParams } from "react-router";
-import { ARMOR, COCKPITS, ENGINE_TYPES, GYROS, HEAT_SINKS, MYOMER, SHEET, STRUCTURE_TYPES } from "../data/chassis";
+import { ARMOR, STRUCTURE_TYPES } from "../data/chassis";
 import { loadCatalog } from "../rules/catalog";
 import type { Catalog } from "../rules/catalog";
 import { runChecks } from "../rules/checks";
@@ -13,8 +13,10 @@ import type { Finding } from "../rules/checks";
 import { changedSinceImport } from "../rules/mordel";
 import { ARM_FULL, bodyOf, editRecord, layout as buildLayout, locationName, weights as buildWeights } from "../rules/mech";
 import type { Layout, LocationCode, MechRecord } from "../rules/mech";
-import { DEFAULT_LEVEL, configurationOption, partOptions, withLevel } from "../rules/levels";
-import type { RulesLevel } from "../data/chassis";
+import { configurationChoices, eraOfRecord, partChoices, setEra, setYear } from "../rules/availability";
+import type { PartKind } from "../rules/availability";
+import { withLevel } from "../rules/levels";
+import { ERAS } from "../data/editions";
 import LevelSelect from "./editor/LevelSelect";
 import ArmorPanel from "./editor/ArmorPanel";
 import { dialogKeyDown } from "./editor/dialog";
@@ -286,28 +288,27 @@ const NOTE_FIELDS = [
 // ---------------------------------------------------------------------------------------------------------------
 
 type ChassisField =
-  | { kind: "select"; path: string; label: string; options: (level: RulesLevel) => [string, string][]; read: (r: MechRecord) => string; write: (d: MechRecord, v: string) => void }
+  | { kind: "select"; path: string; label: string; part: PartKind; read: (r: MechRecord) => string; write: (d: MechRecord, v: string) => void }
   | { kind: "number"; path: string; label: string; read: (r: MechRecord) => number; write: (d: MechRecord, v: number) => void };
 
 const CHASSIS_FIELDS: ChassisField[] = [
-  { kind: "select", path: "chassis.engine", label: "Engine type", options: (level) => partOptions(ENGINE_TYPES, level), read: (r) => r.chassis.engine.type, write: (d, v) => void (d.chassis.engine.type = v) },
+  { kind: "select", path: "chassis.engine", label: "Engine type", part: "engine", read: (r) => r.chassis.engine.type, write: (d, v) => void (d.chassis.engine.type = v) },
   { kind: "number", path: "chassis.engine-rating", label: "Engine rating", read: (r) => r.chassis.engine.rating, write: (d, v) => void (d.chassis.engine.rating = v) },
-  { kind: "select", path: "chassis.gyro", label: "Gyro", options: (level) => partOptions(GYROS, level), read: (r) => r.chassis.gyro, write: (d, v) => void (d.chassis.gyro = v) },
-  { kind: "select", path: "chassis.cockpit", label: "Cockpit", options: (level) => partOptions(COCKPITS, level), read: (r) => r.chassis.cockpit, write: (d, v) => void (d.chassis.cockpit = v) },
-  { kind: "select", path: "chassis.structure", label: "Structure type", options: (level) => partOptions(STRUCTURE_TYPES, level), read: (r) => r.chassis.structure, write: (d, v) => { setPartType(d, "structure", v); } },
-  { kind: "select", path: "chassis.armorType", label: "Armor type", options: (level) => partOptions(ARMOR, level), read: (r) => r.chassis.armorType, write: (d, v) => { setPartType(d, "armor", v); } },
-  { kind: "select", path: "chassis.myomer", label: "Myomer", options: (level) => partOptions(MYOMER, level), read: (r) => r.chassis.myomer, write: (d, v) => void (d.chassis.myomer = v) },
-  { kind: "select", path: "chassis.heatSinks", label: "Heat sink type", options: (level) => partOptions(HEAT_SINKS, level), read: (r) => r.chassis.heatSinks.type, write: (d, v) => void (d.chassis.heatSinks.type = v) },
+  { kind: "select", path: "chassis.gyro", label: "Gyro", part: "gyro", read: (r) => r.chassis.gyro, write: (d, v) => void (d.chassis.gyro = v) },
+  { kind: "select", path: "chassis.cockpit", label: "Cockpit", part: "cockpit", read: (r) => r.chassis.cockpit, write: (d, v) => void (d.chassis.cockpit = v) },
+  { kind: "select", path: "chassis.structure", label: "Structure type", part: "structure", read: (r) => r.chassis.structure, write: (d, v) => { setPartType(d, "structure", v); } },
+  { kind: "select", path: "chassis.armorType", label: "Armor type", part: "armor", read: (r) => r.chassis.armorType, write: (d, v) => { setPartType(d, "armor", v); } },
+  { kind: "select", path: "chassis.myomer", label: "Myomer", part: "myomer", read: (r) => r.chassis.myomer, write: (d, v) => void (d.chassis.myomer = v) },
+  { kind: "select", path: "chassis.heatSinks", label: "Heat sink type", part: "heatSink", read: (r) => r.chassis.heatSinks.type, write: (d, v) => void (d.chassis.heatSinks.type = v) },
   { kind: "number", path: "chassis.heatSinks-count", label: "Heat sinks", read: (r) => r.chassis.heatSinks.count, write: (d, v) => void (d.chassis.heatSinks.count = v) },
 ];
 
+const ERA_CHOICES: [string, string][] = [["", "Any era"], ...ERAS.map((era): [string, string] => [era.id, `${era.name} (${String(era.startYear)}${era.endYear === undefined ? " on" : `-${String(era.endYear)}`})`])];
 const TECH_BASES: [string, string][] = [
   ["inner-sphere", "Inner Sphere"],
   ["clan", "Clan"],
   ["mixed", "Mixed"],
 ];
-/** The body types, those above the unit's rules level marked with the level they need (they stay choosable; the check says so). */
-const configurationsAt = (level: RulesLevel): [string, string][] => Object.keys(SHEET.configurations).map((key) => [key, configurationOption(key, level)]);
 
 // ---------------------------------------------------------------------------------------------------------------
 // What a finding or a changed marker can point at
@@ -324,7 +325,7 @@ const safeLayout = (record: MechRecord, catalog: Catalog): Layout => {
 
 /** The ids a finding may name a field by: the identity and chassis fields, and the armor fields drawn. */
 function fieldTargets(armorLocations: string[]): Set<string> {
-  const paths = ["name", "rulesLevel", "tons", "year", "techBase", "configuration", ...CHASSIS_FIELDS.filter((f) => f.kind === "select").map((f) => f.path), ...armorLocations.map((l) => `armor.${l}`)];
+  const paths = ["name", "rulesLevel", "tons", "year", "era", "techBase", "configuration", ...CHASSIS_FIELDS.filter((f) => f.kind === "select").map((f) => f.path), ...armorLocations.map((l) => `armor.${l}`)];
   return new Set(paths);
 }
 
@@ -748,13 +749,23 @@ function Editor({ initial, catalog, storage }: { initial: MechRecord; catalog: C
                 changed={mark("techBase")}
                 onChange={(v) => { edit((d) => void (d.techBase = v as MechRecord["techBase"])); }}
               />
-              <NumberField id="field-year" label="Year" value={record.year} allowEmpty changed={mark("year")} onValid={(v) => { edit((d) => void (d.year = v), "year"); }} />
+              <NumberField id="field-year" label="Year" value={record.year} allowEmpty changed={mark("year")} onValid={(v) => { edit((d) => { setYear(d, v); }, "year"); }} />
+              <div className="bt-grid__wide">
+              <SelectField
+                id="field-era"
+                label="Era"
+                value={eraOfRecord(record)?.id ?? ""}
+                options={ERA_CHOICES}
+                changed={mark("era")}
+                onChange={(v) => { edit((d) => { setEra(d, v); }, "era"); }}
+              />
+              </div>
               <NumberField id="field-tons" label="Tons" value={record.tons} changed={mark("tons")} onValid={(v) => { edit((d) => void (d.tons = v ?? d.tons), "tons"); }} />
               <SelectField
                 id="field-configuration"
                 label="Configuration"
                 value={record.configuration}
-                options={configurationsAt(record.rulesLevel ?? DEFAULT_LEVEL)}
+                options={configurationChoices(record, record.configuration)}
                 changed={mark("configuration")}
                 onChange={(v) => { edit((d) => void (d.configuration = v)); }}
               />
@@ -773,7 +784,7 @@ function Editor({ initial, catalog, storage }: { initial: MechRecord; catalog: C
                         id={fieldId(field.path)}
                         label={field.label}
                         value={field.read(record)}
-                        options={field.options(record.rulesLevel ?? DEFAULT_LEVEL)}
+                        options={partChoices(field.part, record, field.read(record))}
                         changed={mark(field.path)}
                         onChange={(v) => { edit((d) => { field.write(d, v); }); }}
                       />
