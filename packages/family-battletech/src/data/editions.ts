@@ -51,7 +51,8 @@ export function editionLine(id: string): string {
   return `${built.title}, ${built.printing}`;
 }
 // Who published each book we cite. These games have had several publishers, so a citation names the one whose
-// printing we read. A new book gets a row here.
+// printing we read. A new book gets a row here. Tactical Operations: Advanced Units and Equipment is cited from its
+// corrected seventh printing (2024); every page the app cites has the same printed number as in the sixth printing.
 const PUBLISHERS: Record<string, string> = {
   "Total Warfare": "Catalyst Game Labs",
   "BattleTech Core Rulebook": "Catalyst Game Labs",

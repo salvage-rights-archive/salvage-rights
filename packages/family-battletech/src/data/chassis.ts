@@ -169,7 +169,7 @@ export const STRUCTURE_TYPES: Sourced & { types: Record<string, StructureType> }
       introduced: { is: 3057, clan: 3065, prototype: true },
       cite: TO_STRUCTURE,
       checked: "page",
-      rules: "Each structure point takes two points of damage before it is lost; critical hit rolls against the 'Mech take -1. It does not let more armor be mounted.",
+      rules: "Each structure point takes two points of damage before it is lost, but only full structure circles removed count toward the 20-damage Piloting Skill Roll; critical hit rolls against the 'Mech take -1. It does not let more armor be mounted.",
       rulesCite: { book: TO, page: 155 },
     },
     // Age of War: the first endo steel took 2 more slots than the production kind (Interstellar Operations: Alternate Eras printed p.66).
@@ -622,7 +622,7 @@ export const ARMOR: Sourced & { basePointsPerTon: number; types: Record<string, 
       cite: TO_ARMOR,
       checked: "page",
       rules:
-        "Each point takes up to two points from flamers, lasers, PPCs and plasma rifles, and those heat effects are halved; damage from falls, physical attacks, building walls and artillery is doubled.",
+        "Each point takes up to two points from flamers, lasers, PPCs and plasma rifles, and those heat effects are halved; only full armor circles removed count toward the 20-damage Piloting Skill Roll; damage from falls, physical attacks, building walls, crashes and area effect weapons such as artillery is doubled.",
       rulesCite: { book: TO, page: 93 },
     },
     "laser-reflective-clan": {
@@ -635,7 +635,7 @@ export const ARMOR: Sourced & { basePointsPerTon: number; types: Record<string, 
       cite: TO_ARMOR,
       checked: "page",
       rules:
-        "Each point takes up to two points from flamers, lasers, PPCs and plasma rifles, and those heat effects are halved; damage from falls, physical attacks, building walls and artillery is doubled.",
+        "Each point takes up to two points from flamers, lasers, PPCs and plasma rifles, and those heat effects are halved; only full armor circles removed count toward the 20-damage Piloting Skill Roll; damage from falls, physical attacks, building walls, crashes and area effect weapons such as artillery is doubled.",
       rulesCite: { book: TO, page: 93 },
     },
     reactive: {

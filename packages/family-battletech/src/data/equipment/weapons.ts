@@ -57,7 +57,7 @@
 // prototype jump jets), armor types, the Heat Sink Override Kit (0 tons, 0 slots), implants, interface and drone systems,
 // thermobaric ordnance, weapons of mass destruction and nuclear weapons.
 //
-// Tactical Operations: Advanced Units and Equipment (the 2021-2022 printing in the library): the Heavy Weapons and
+// Tactical Operations: Advanced Units and Equipment (the corrected seventh printing, 2024): the Heavy Weapons and
 // Equipment Combat Data and Construction Data tables, printed pp. 216-223, read against the page images. Same layout as the
 // Alternate Eras table: the Combat Data page (pp. 216, 218, 220, 222) is `playCite`, the Construction Data page facing it
 // (pp. 217, 219, 221, 223) is `cite`; each row has its table's rules level (Exp, Adv). The conventions above apply, with
