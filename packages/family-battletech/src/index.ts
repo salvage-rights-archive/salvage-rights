@@ -9,6 +9,11 @@ const classicRoutes: FamilyRoute[] = [
   { path: "sheet", label: "Record sheet", section: "workshop", load: () => import("./ui/SheetPage") },
 ];
 
+const alphaStrikeRoutes: FamilyRoute[] = [
+  { path: "home", label: "Alpha Strike", section: "workshop", load: () => import("./ui/as/AsHomePage") },
+  { path: "unit", label: "Alpha Strike unit", section: "workshop", load: () => import("./ui/as/AsUnitPage") },
+];
+
 function comingSoon(id: string, shortName: string, fullName: string): GameManifest {
   return { id, shortName, fullName, ready: false, routes: [] };
 }
@@ -27,7 +32,7 @@ const manifest: FamilyManifest = {
   },
   games: [
     { id: "classic", shortName: "Classic", fullName: "Classic BattleTech", ready: true, routes: classicRoutes },
-    comingSoon("alpha-strike", "Alpha Strike", "BattleTech: Alpha Strike"),
+    { id: "alpha-strike", shortName: "Alpha Strike", fullName: "BattleTech: Alpha Strike", ready: true, routes: alphaStrikeRoutes },
     comingSoon("aces", "Aces", "BattleTech: Aces"),
     comingSoon("gothic", "Gothic", "BattleTech: Gothic"),
   ],
@@ -49,6 +54,7 @@ const manifest: FamilyManifest = {
       "The import from mordel.net uses the API built by MordelBlacknight.",
       "Each imported design is credited to the mordel.net member who created it.",
       "The Classic BattleTech section (the import, the editor and the rules checks) was made by the Salvage Rights team.",
+      "The Alpha Strike roster (unit entry, saving and unit files) was made by the Salvage Rights team.",
       "The picture on the BattleTech tile was generated with an AI image tool (Nano Banana 2). We would rather show work made by a person. If you are an artist, or hold the rights to a piece, and can let us use it legally, we will gladly replace any AI-generated art here and credit you. To offer a piece, start a thread in Discussions on our GitHub repository (https://github.com/salvage-rights-archive/salvage-rights/discussions), or open an issue there.",
     ],
   },

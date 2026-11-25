@@ -92,3 +92,15 @@ test("an OmniMech editor, base and comparison have no axe violations in either t
 test("free edition has no axe violations in either theme", async ({ page }) => {
   await expectNoViolations(page, FREE, ["/", "/about", "/settings"]);
 });
+
+test("the Alpha Strike home and unit pages have no axe violations in either theme", async ({ page }) => {
+  test.setTimeout(90_000);
+  // One saved unit with a finding, so the list, the preview and the findings are all on the page.
+  await page.goto(`${DEV}/battletech/alpha-strike/unit`);
+  await page.getByLabel("Name").fill("Scan Walker");
+  await page.getByLabel("Special abilities").fill("QQ1");
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(page.getByText("Saved.")).toBeVisible();
+  const saved = new URL(page.url());
+  await expectNoViolations(page, DEV, ["/battletech/alpha-strike/home", "/battletech/alpha-strike/unit", `${saved.pathname.replace(/^\/salvage-rights/, "")}${saved.search}`]);
+});

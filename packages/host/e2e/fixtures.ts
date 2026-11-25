@@ -167,7 +167,7 @@ export async function routeMordel(page: Page): Promise<string[]> {
 /** From the landing page: opens Classic BattleTech, saves the key, imports the made-up unit and waits for the editor. */
 export async function importMech(page: Page, base: string): Promise<void> {
   await page.goto(`${base}/`);
-  await page.getByRole("link", { name: /^BattleTech/ }).click();
+  await page.getByRole("link", { name: "Classic, BattleTech" }).click();
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Classic BattleTech");
   await page.getByRole("link", { name: "Import from Mordel" }).click();
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Import from Mordel");
