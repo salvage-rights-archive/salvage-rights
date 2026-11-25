@@ -85,6 +85,11 @@ describe("host frame", () => {
   it("shows the edition id on the About page", () => {
     renderAt("/about");
     expect(screen.getByText("Edition: testbed-edition")).toBeTruthy();
+    const source = screen.getByRole("region", { name: "Source code and licenses" });
+    expect(within(source).getByRole("link", { name: /github\.com\/salvage-rights-archive\/salvage-rights/ })).toBeTruthy();
+    expect(within(source).getByRole("link", { name: "Third-party notices" }).getAttribute("href")).toMatch(
+      /third-party-notices\.txt$/,
+    );
   });
 
   it("shows the not-found page with a link to the landing page for an unknown path", () => {

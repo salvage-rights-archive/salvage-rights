@@ -2,7 +2,14 @@ import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { bundleProblems, familiesModuleSource, familiesPlugin, readEdition } from "./families-plugin";
+import {
+  bundleProblems,
+  familiesModuleSource,
+  familiesPlugin,
+  noticesText,
+  readEdition,
+  thirdPartyPackages,
+} from "./families-plugin";
 import type { Edition } from "./families-plugin";
 
 function editionFile(content: string): string {
@@ -103,6 +110,28 @@ describe("bundleProblems", () => {
     const problems = bundleProblems([bad, none], edition, read);
     expect(problems.some((p) => p.includes(bad) && p.includes("GPL-2.0"))).toBe(true);
     expect(problems.some((p) => p.includes(none) && p.includes("no license"))).toBe(true);
+  });
+});
+
+describe("the notices file", () => {
+  it("lists each third-party package once with its license text, then the extra notices", () => {
+    const info: Record<string, object> = {
+      "/repo/node_modules/lib/package.json": { name: "lib", version: "1.2.3", license: "MIT" },
+      "/repo/node_modules/bare/package.json": { name: "bare", license: "ISC" },
+      "/repo/packages/host/package.json": { name: "host", license: "Apache-2.0" },
+    };
+    const packages = thirdPartyPackages(
+      ["/repo/node_modules/lib/a.js", "/repo/node_modules/lib/deep/b.js", "/repo/node_modules/bare/i.js", "/repo/packages/host/src/x.ts"],
+      (file) => info[file],
+      (file) => (file === "/repo/node_modules/lib/LICENSE" ? "Permission is hereby granted" : undefined),
+    );
+    expect(packages.map((p) => p.name)).toEqual(["bare", "lib"]);
+    const text = noticesText(packages, ["Font credits"]);
+    expect(text).toContain("lib 1.2.3\nLicense: MIT");
+    expect(text).toContain("Permission is hereby granted");
+    expect(text).toContain("bare unknown version\nLicense: ISC");
+    expect(text).toContain("ships no license file");
+    expect(text.indexOf("Font credits")).toBeGreaterThan(text.indexOf("Permission is hereby granted"));
   });
 });
 

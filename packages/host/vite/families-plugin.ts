@@ -133,7 +133,73 @@ export function bundleProblems(moduleIds: Iterable<string>, edition: Edition, re
   return problems;
 }
 
-export function familiesPlugin(editionPath: string): Plugin {
+export interface NoticePackage {
+  name: string;
+  version: string;
+  license: string;
+  /** The package's own license file, when it ships one. */
+  text?: string;
+}
+
+/** The name of the notices file in every build. The About page links to it. */
+export const NOTICES_FILE = "third-party-notices.txt";
+
+const LICENSE_FILE_NAMES = ["LICENSE", "LICENSE.md", "LICENSE.txt", "LICENCE", "license", "license.md"];
+
+/** The third-party packages (from node_modules) that own any of the modules, once each, in name order. */
+export function thirdPartyPackages(
+  moduleIds: Iterable<string>,
+  read: ReadPackageJson,
+  readText: (file: string) => string | undefined,
+): NoticePackage[] {
+  const found = new Map<string, NoticePackage>();
+  for (const rawId of moduleIds) {
+    const id = rawId.replace(/[?#].*$/, "").replaceAll("\\", "/");
+    if (rawId.startsWith("\0") || !id.includes("/node_modules/")) continue;
+    const owner = owningPackage(id, read);
+    if (owner === undefined || found.has(owner.dir)) continue;
+    const info = owner.info as PackageInfo & { version?: unknown };
+    let text: string | undefined;
+    for (const file of LICENSE_FILE_NAMES) {
+      text = readText(`${owner.dir}/${file}`);
+      if (text !== undefined) break;
+    }
+    found.set(owner.dir, {
+      name: String(info.name),
+      version: typeof info.version === "string" ? info.version : "unknown version",
+      license: typeof info.license === "string" ? info.license : "unknown license",
+      ...(text === undefined ? {} : { text }),
+    });
+  }
+  return [...found.values()].sort((a, b) => a.name.localeCompare(b.name));
+}
+
+/** The notices file: every third-party package in the build with its license text, then any extra notices. */
+export function noticesText(packages: NoticePackage[], extras: string[]): string {
+  const rule = "=".repeat(78);
+  const parts = [
+    "Third-party notices for Salvage Rights",
+    "",
+    "This build contains the following software and fonts made by others, each under its own license.",
+  ];
+  for (const item of packages) {
+    parts.push("", rule, `${item.name} ${item.version}`, `License: ${item.license}`, rule, "");
+    parts.push(item.text?.trim() ?? "This package ships no license file. See its page on npmjs.com.");
+  }
+  for (const extra of extras) parts.push("", rule, "", extra.trim());
+  return `${parts.join("\n")}\n`;
+}
+
+function readTextFile(file: string): string | undefined {
+  try {
+    return readFileSync(file, "utf8");
+  } catch {
+    return undefined;
+  }
+}
+
+/** `noticeFiles` are text files added to the end of the notices file as they are (fonts and pictures). */
+export function familiesPlugin(editionPath: string, noticeFiles: string[] = []): Plugin {
   const edition = readEdition(editionPath);
   const cache = new Map<string, PackageInfo | undefined>();
   const read: ReadPackageJson = (file) => {
@@ -165,6 +231,12 @@ export function familiesPlugin(editionPath: string): Plugin {
       if (problems.length > 0) {
         this.error(`Edition "${edition.id}" bundle check failed:\n${problems.map((p) => `  - ${p}`).join("\n")}`);
       }
+      const extras = noticeFiles.flatMap((file) => readTextFile(file) ?? []);
+      this.emitFile({
+        type: "asset",
+        fileName: NOTICES_FILE,
+        source: noticesText(thirdPartyPackages(ids, read, readTextFile), extras),
+      });
     },
   };
 }

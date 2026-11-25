@@ -30,7 +30,17 @@ export default defineConfig(({ mode }) => {
   const site = JSON.parse(readFileSync(join(repoRoot, "site.config.json"), "utf8")) as { basePath: string };
   return {
     base: site.basePath,
-    plugins: [react(), familiesPlugin(editionPath), notFoundPlugin(site.basePath)],
+    plugins: [
+      react(),
+      // The host's own credits (fonts and pictures) and the two font licenses go into the build's notices file:
+      // the Open Font License for Stardos Stencil, the Apache License for Special Elite.
+      familiesPlugin(editionPath, [
+        join(import.meta.dirname, "CREDITS.md"),
+        join(import.meta.dirname, "src/fonts/OFL.txt"),
+        join(import.meta.dirname, "LICENSE"),
+      ]),
+      notFoundPlugin(site.basePath),
+    ],
     build: { outDir: join(repoRoot, "dist", edition.id), emptyOutDir: true },
   };
 });
