@@ -161,14 +161,28 @@ describe("unitCost", () => {
     expect(cost.unpriced).toEqual([]);
   });
 
-  it("reports an item with no printed price and a part it does not know, and still prices the rest without throwing", () => {
-    const record = withChassis({ engine: { type: "xxl", rating: 200 }, armorType: "reactive" }, { mounts: [mount("x", null, "CT", null), mount("nova", "nova-cews-clan", "HD", null), mount("ml", "medium-laser-is", "RA", null)] });
+  it("reports a part or item it has no price for, and still prices the rest without throwing", () => {
+    const record = withChassis({ engine: { type: "warp", rating: 200 }, armorType: "unobtanium" }, { mounts: [mount("x", null, "CT", null), mount("y", "no-such-row", "HD", null), mount("ml", "medium-laser-is", "RA", null)] });
     const cost = unitCost(record, catalog);
-    expect(cost.unpriced.map((u) => u.name)).toEqual(expect.arrayContaining(['Engine "xxl" 200', 'Armor "reactive"', "x", "nova"]));
+    expect(cost.unpriced.map((u) => u.name)).toEqual(expect.arrayContaining(['Engine "warp" 200', 'Armor "unobtanium"', "x", "y"]));
     expect(cost.equipment).toBe(40_000);
     expect(cost.total).toBeGreaterThan(0);
   });
 
+  it("prices every catalog item that is not ammunition or a counted heat sink, so nothing in the table is left unpriced", () => {
+    const rows = catalog.all().filter((r) => r.kind !== "ammunition" && r.kind !== "heat-sink" && r.id !== "tsm-is" && r.id !== "prototype-triple-strength-myomer-is");
+    const record = mongoose({ mounts: rows.map((r) => mount(r.id, r.id, "CT", null)) });
+    expect(unitCost(record, catalog).unpriced).toEqual([]);
+  });
+
+  it("prices items the later books print: an XXL engine, spikes at 50 x tonnage, a retractable blade, an Enhanced LRM (TO:AUE pp.217-221, TM p.293)", () => {
+    const record = withChassis({ engine: { type: "xxl", rating: 200 } }, { mounts: [mount("sp", "spikes-is", "LA", null), mount("rb", "retractable-blade-is", "RA", null), mount("lrm", "enhanced-lrm-5-is", "LT", null)] });
+    const cost = unitCost(record, catalog);
+    expect(line(record, "Engine")).toBeCloseTo((100_000 * 200 * 25) / 75, 3);
+    // 25 tons: spikes 50 x 25; blade 25 / 20 is 1.5 tons, 2 whole tons, so 10,000 + 2 x 10,000
+    expect(cost.equipment).toBe(1_250 + 30_000 + 37_500);
+    expect(cost.unpriced).toEqual([]);
+  });
   it("applies the OmniMech factor only when asked, and rounds the final figure up to the next .01 (TM p.274, errata v8.0)", () => {
     const base = unitCost(mongoose(), catalog, { omni: false });
     const omni = unitCost(mongoose(), catalog, { omni: true });

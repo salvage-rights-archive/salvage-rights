@@ -17,6 +17,7 @@ import {
   LIFE_SUPPORT_COST,
   MASC_COST,
   MUSCULATURE_COST,
+  RETRACTABLE_BLADE_COST,
   ROUNDING,
   SENSORS_COST,
   STRUCTURE_COST,
@@ -111,6 +112,9 @@ export const mascCost = (rating: number, mascTons: number) => MASC_COST.perRatin
 export const heatSinkCost = (each: number, free: number, count: number) => each * Math.max(0, count - free);
 /** An item priced by the ton (targeting computer, hatchet, sword): the whole tons of its weight, rounded up (p.292 notes). */
 export const perTonCost = (perTon: number, tons: number) => perTon * Math.ceil(tons);
+const ceilHalf = (x: number) => Math.ceil(Math.round(x * 2 * 1e6) / 1e6) / 2;
+/** Retractable blade (p.293): the mechanism plus a price per ton for the blade, whose weight is the 'Mech's tonnage over 20 rounded up to a half ton, then to a whole ton. */
+export const retractableBladeCost = (tons: number) => RETRACTABLE_BLADE_COST.mechanism + RETRACTABLE_BLADE_COST.perTon * Math.ceil(ceilHalf(tons / 20));
 /** The Land-Air 'Mech conversion equipment (IO:AE p.181): a share of the structural, weapon and equipment cost, added before the final multiplier. */
 export const conversionCost = (share: number, structuralAndEquipment: number) => share * structuralAndEquipment;
 /** The final multiplier (p.285): the Omni factor times (1 + tons / 100). */
@@ -141,8 +145,10 @@ export function unitCost(record: MechRecord, catalog: Catalog, options: CostOpti
   if (tonsKnown) {
     add(structural, "Sensors", SENSORS_COST.perTon * tons, `${money(SENSORS_COST.perTon)} x ${tons}`, SENSORS_COST);
     const tsm = chassis.myomer === "tsm" || record.mounts.some((m) => m.equipmentId === "tsm-is");
-    const musculature = MUSCULATURE_COST.rows[tsm ? "tsm" : "standard"];
-    if (musculature) add(structural, tsm ? "Musculature (triple-strength)" : "Musculature", musculature.perTon * tons, `${money(musculature.perTon)} x ${tons}`, MUSCULATURE_COST);
+    const prototypeTsm = record.mounts.some((m) => m.equipmentId === "prototype-triple-strength-myomer-is");
+    const key = prototypeTsm ? "prototype-tsm" : tsm ? "tsm" : own(MUSCULATURE_COST.rows, chassis.myomer) ? chassis.myomer : "standard";
+    const musculature = MUSCULATURE_COST.rows[key];
+    if (musculature) add(structural, key === "standard" ? "Musculature" : `Musculature (${key})`, musculature.perTon * tons, `${money(musculature.perTon)} x ${tons}`, { cite: musculature.cite ?? MUSCULATURE_COST.cite, checked: MUSCULATURE_COST.checked });
   } else skip("Sensors and musculature", "the tonnage is not a positive number");
 
   // Internal structure (a tripod's costs more)
@@ -150,7 +156,8 @@ export function unitCost(record: MechRecord, catalog: Catalog, options: CostOpti
   if (structure && tonsKnown) {
     const factor = special?.structureFactor ?? 1;
     if (structure.assumed) assume(`Internal structure "${chassis.structure}"`);
-    add(structural, `Internal structure (${chassis.structure})`, structure.perTon * tons * factor, `${money(structure.perTon)} x ${tons}${factor === 1 ? "" : ` x ${factor}`}`, factor === 1 ? STRUCTURE_COST : { cite: special?.cite ?? STRUCTURE_COST.cite, checked: special?.checked ?? STRUCTURE_COST.checked });
+    const source = factor === 1 ? { cite: structure.cite ?? STRUCTURE_COST.cite, checked: STRUCTURE_COST.checked } : { cite: special?.cite ?? STRUCTURE_COST.cite, checked: special?.checked ?? STRUCTURE_COST.checked };
+    add(structural, `Internal structure (${chassis.structure})`, structure.perTon * tons * factor, `${money(structure.perTon)} x ${tons}${factor === 1 ? "" : ` x ${factor}`}`, source);
   } else if (tonsKnown) skip(`Internal structure "${chassis.structure}"`, "the cost table has no such structure");
 
   // Actuators: the arms and legs the configuration has (a quad's legs carry a full set each, as the book's quad example prices them)
@@ -179,7 +186,7 @@ export function unitCost(record: MechRecord, catalog: Catalog, options: CostOpti
   const engine = own(ENGINE_COST.rows, chassis.engine.type);
   if (engine && tonsKnown && Number.isFinite(chassis.engine.rating)) {
     if (engine.assumed) assume(`Engine "${chassis.engine.type}"`);
-    add(structural, `Engine (${chassis.engine.type} ${chassis.engine.rating})`, engineCost(engine.perRating, chassis.engine.rating, tons), `${money(engine.perRating)} x ${chassis.engine.rating} x ${tons} / ${ENGINE_COST.divisor}`, ENGINE_COST);
+    add(structural, `Engine (${chassis.engine.type} ${chassis.engine.rating})`, engineCost(engine.perRating, chassis.engine.rating, tons), `${money(engine.perRating)} x ${chassis.engine.rating} x ${tons} / ${ENGINE_COST.divisor}`, { cite: engine.cite ?? ENGINE_COST.cite, checked: ENGINE_COST.checked });
   } else skip(`Engine "${chassis.engine.type}" ${chassis.engine.rating}`, engine ? "the tonnage or rating is not a number" : "the cost table has no such engine");
 
   // Gyro: its cost is per ton of gyro, and the weight rules already work that out
@@ -212,7 +219,7 @@ export function unitCost(record: MechRecord, catalog: Catalog, options: CostOpti
       continue;
     }
     if (row.kind === "heat-sink") continue; // paid for by count, above
-    if (row.id === "tsm-is") continue; // the six TSM slots are the musculature priced above
+    if (row.id === "tsm-is" || row.id === "prototype-triple-strength-myomer-is") continue; // the TSM slots are the musculature priced above
     if (row.kind === "ammunition") continue; // ammunition is not bought for a unit's cost (p.282)
     if (row.kind === "jump-jet") {
       const kind = row.id.startsWith("improved-") ? "improved" : stemOf(row.id) === "jump-jet" ? "standard" : undefined;
@@ -226,12 +233,21 @@ export function unitCost(record: MechRecord, catalog: Catalog, options: CostOpti
       else add(equipment, mount.name, mascCost(chassis.engine.rating, mascTons), `${money(MASC_COST.perRatingTon)} x ${chassis.engine.rating} x ${mascTons}`, MASC_COST);
       continue;
     }
+    if (stemOf(row.id) === "retractable-blade") {
+      if (!tonsKnown) skip(mount.name, "the tonnage is not a positive number", row.id);
+      else {
+        const bladeTons = Math.ceil(ceilHalf(tons / 20));
+        add(equipment, mount.name, retractableBladeCost(tons), `${money(RETRACTABLE_BLADE_COST.mechanism)} + ${money(RETRACTABLE_BLADE_COST.perTon)} x ${bladeTons} tons`, RETRACTABLE_BLADE_COST);
+      }
+      continue;
+    }
     const found = priceOf(row);
     if (!found) {
       skip(mount.name, "the cost tables print no price for it", row.id);
       continue;
     }
     if (typeof found.price === "number") add(equipment, mount.name, found.price, money(found.price), found);
+    else if ("perUnitTon" in found.price) add(equipment, mount.name, found.price.perUnitTon * (tonsKnown ? tons : 0), `${money(found.price.perUnitTon)} x ${tons}`, found);
     else {
       const itemTons = catalog.factsOf(mount, record)?.tons;
       if (itemTons === undefined) skip(mount.name, "its weight could not be worked out", row.id);

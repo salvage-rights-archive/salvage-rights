@@ -10,7 +10,7 @@
 import type { LocationCode } from "../rules/mech";
 
 export interface Cite {
-  book: "TechManual" | "Interstellar Operations: Alternate Eras";
+  book: "TechManual" | "Interstellar Operations: Alternate Eras" | "Tactical Operations: Advanced Units and Equipment";
   page: number;
 }
 export type Checked = "page" | "text";
