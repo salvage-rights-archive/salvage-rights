@@ -1,0 +1,269 @@
+// The C-Bill cost of a BattleMech (TechManual, Basic Cost Calculations, printed pp.274-285). A pure function over the record
+// and the catalog: nothing here throws on a record it does not understand. A part or item the cost tables do not print a
+// price for is left out of the total and listed in `unpriced`; a price the book does not print for a tech base but which we
+// took from the Inner Sphere entry is listed in `notes`. The figures are in data/cost.ts.
+import type { Cite, Checked } from "../data/chassis";
+import {
+  ACTUATOR_COST,
+  ARMOR_COST,
+  COCKPIT_COST,
+  CONFIGURATION_COST,
+  ENGINE_COST,
+  EQUIPMENT_COST,
+  FINAL_COST,
+  GYRO_COST,
+  HEAT_SINK_COST,
+  JUMP_JET_COST,
+  LIFE_SUPPORT_COST,
+  MASC_COST,
+  MUSCULATURE_COST,
+  ROUNDING,
+  SENSORS_COST,
+  STRUCTURE_COST,
+} from "../data/cost";
+import type { Price } from "../data/cost";
+import type { Catalog, EquipmentRow } from "./catalog";
+import { configurationOf, weights } from "./mech";
+import type { LocationCode, MechRecord, Mount } from "./mech";
+
+export interface CostLine {
+  label: string;
+  /** C-bills, not rounded. */
+  cost: number;
+  /** How it was worked out, in numbers: "5,000 x 200 x 25 / 75". */
+  how: string;
+  cite: Cite;
+  checked: Checked;
+}
+export interface Unpriced {
+  /** The catalog row id, or null for a part of the chassis or an item the catalog does not know. */
+  id: string | null;
+  name: string;
+  why: string;
+}
+export interface UnitCost {
+  /** Final cost rounded up to the nearest .01 C-bill, as the book (errata v8.0, p.274) says; of the priced parts only when `unpriced` is not empty. */
+  total: number;
+  /** Structural lines, equipment lines, then the conversion cost of a Land-Air 'Mech, in the order they are added. */
+  lines: CostLine[];
+  structural: number;
+  equipment: number;
+  /** The Land-Air 'Mech conversion cost added before the final multiplier; 0 for any other body. */
+  conversion: number;
+  /** The Omni conversion factor times (1 + tons / 100), applied to the sum of the lines. */
+  multiplier: number;
+  unpriced: Unpriced[];
+  notes: string[];
+}
+export interface CostOptions {
+  /** The record does not say whether a 'Mech is an OmniMech; true multiplies the cost by 1.25 (printed p.285). */
+  omni?: boolean;
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// Helpers. // SHARED? marks what the Battle Value code will also want.
+// ---------------------------------------------------------------------------------------------------------------
+// SHARED? A lookup that only sees a table's own keys, so a key like "constructor" is unknown.
+function own<T>(table: Record<string, T>, key: string): T | undefined {
+  return Object.hasOwn(table, key) ? table[key] : undefined;
+}
+/** Round up to a whole 1/100, ignoring float noise (a value like 2229479.1666 becomes 2229479.17). */
+export function roundUpCents(x: number): number {
+  const per = 1 / ROUNDING.cents;
+  return Math.ceil(Math.round(x * per * 1e6) / 1e6) / per;
+}
+// SHARED? `weights(record, factsOf).lines` find: the tons of one of the chassis lines ("Gyro", "Armor", "Engine"), null when unknown.
+function weightLine(record: MechRecord, catalog: Catalog, label: string): number | null {
+  return weights(record, catalog.factsOf).lines.find((l) => l.label === label)?.tons ?? null;
+}
+// SHARED? The catalog row of a mount as the record's edition sees it; undefined for a structure or armor slot or an unknown item.
+const rowOf = (catalog: Catalog, record: MechRecord, mount: Mount): EquipmentRow | undefined =>
+  mount.part || mount.equipmentId === null ? undefined : catalog.rowFor(mount.equipmentId, record.editionId);
+// SHARED? A catalog row id without its tech base ending: "medium-pulse-laser-clan" is "medium-pulse-laser".
+const stemOf = (id: string) => id.replace(/-(is|clan)$/, "");
+const money = (x: number) => String(Math.round(x * 1000) / 1000).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+const LIMBS: { arms: string[]; legs: string[] } = {
+  arms: ["LA", "RA"],
+  legs: ["LL", "RL", "CL", "FLL", "FRL", "RLL", "RRL"],
+};
+
+/** The price of a catalog row: its own id first, then its id without the tech base ending. */
+function priceOf(row: EquipmentRow): { price: Price; cite: Cite; checked: Checked } | undefined {
+  for (const key of [row.id, stemOf(row.id)]) {
+    for (const group of EQUIPMENT_COST) {
+      const price = own(group.prices, key);
+      if (price !== undefined) return { price, cite: group.cite, checked: group.checked };
+    }
+  }
+  return undefined;
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// Formulas for the variable-cost items, one per rule the book states as a formula. Each takes only numbers.
+// ---------------------------------------------------------------------------------------------------------------
+/** Engine (p.278): the type's figure times the rating times the 'Mech's tonnage, over 75. */
+export const engineCost = (perRating: number, rating: number, tons: number) => (perRating * rating * tons) / ENGINE_COST.divisor;
+/** Jump jets (p.278): the type's figure times the square of the number of jets times the 'Mech's tonnage. */
+export const jumpJetCost = (perJetSquared: number, jets: number, tons: number) => perJetSquared * jets * jets * tons;
+/** MASC (p.278): 1,000 times the engine rating times the MASC's tons. */
+export const mascCost = (rating: number, mascTons: number) => MASC_COST.perRatingTon * rating * mascTons;
+/** Heat sinks (p.278): singles cost for those beyond the engine's free ten; doubles for every one. */
+export const heatSinkCost = (each: number, free: number, count: number) => each * Math.max(0, count - free);
+/** An item priced by the ton (targeting computer, hatchet, sword): the whole tons of its weight, rounded up (p.292 notes). */
+export const perTonCost = (perTon: number, tons: number) => perTon * Math.ceil(tons);
+/** The Land-Air 'Mech conversion equipment (IO:AE p.181): a share of the structural, weapon and equipment cost, added before the final multiplier. */
+export const conversionCost = (share: number, structuralAndEquipment: number) => share * structuralAndEquipment;
+/** The final multiplier (p.285): the Omni factor times (1 + tons / 100). */
+export const finalMultiplier = (tons: number, omni: boolean) => (omni ? FINAL_COST.omniFactor : 1) * (1 + tons / FINAL_COST.tonsDivisor);
+
+// ---------------------------------------------------------------------------------------------------------------
+// The cost of a 'Mech
+// ---------------------------------------------------------------------------------------------------------------
+export function unitCost(record: MechRecord, catalog: Catalog, options: CostOptions = {}): UnitCost {
+  const { chassis, tons } = record;
+  const structural: CostLine[] = [];
+  const equipment: CostLine[] = [];
+  const unpriced: Unpriced[] = [];
+  const notes: string[] = [];
+  const add = (into: CostLine[], label: string, cost: number, how: string, source: { cite: Cite; checked: Checked }) =>
+    into.push({ label, cost, how, cite: source.cite, checked: source.checked });
+  const skip = (name: string, why: string, id: string | null = null) => unpriced.push({ id, name, why });
+  const assume = (label: string) => notes.push(`${label}: the book prints one price for both tech bases and none for this Clan part, so the Inner Sphere price is used.`);
+  const tonsKnown = Number.isFinite(tons) && tons > 0;
+  const config = configurationOf(record.configuration);
+  const special = own(CONFIGURATION_COST, record.configuration);
+
+  // Cockpit, life support, sensors, musculature
+  const cockpit = own(COCKPIT_COST.rows, chassis.cockpit);
+  if (cockpit) add(structural, `Cockpit (${chassis.cockpit})`, cockpit.cost, money(cockpit.cost), { cite: cockpit.cite ?? COCKPIT_COST.cite, checked: COCKPIT_COST.checked });
+  else skip(`Cockpit "${chassis.cockpit}"`, "the cost table has no such cockpit");
+  add(structural, "Life support", LIFE_SUPPORT_COST.cost, money(LIFE_SUPPORT_COST.cost), LIFE_SUPPORT_COST);
+  if (tonsKnown) {
+    add(structural, "Sensors", SENSORS_COST.perTon * tons, `${money(SENSORS_COST.perTon)} x ${tons}`, SENSORS_COST);
+    const tsm = chassis.myomer === "tsm" || record.mounts.some((m) => m.equipmentId === "tsm-is");
+    const musculature = MUSCULATURE_COST.rows[tsm ? "tsm" : "standard"];
+    if (musculature) add(structural, tsm ? "Musculature (triple-strength)" : "Musculature", musculature.perTon * tons, `${money(musculature.perTon)} x ${tons}`, MUSCULATURE_COST);
+  } else skip("Sensors and musculature", "the tonnage is not a positive number");
+
+  // Internal structure (a tripod's costs more)
+  const structure = own(STRUCTURE_COST.rows, chassis.structure);
+  if (structure && tonsKnown) {
+    const factor = special?.structureFactor ?? 1;
+    if (structure.assumed) assume(`Internal structure "${chassis.structure}"`);
+    add(structural, `Internal structure (${chassis.structure})`, structure.perTon * tons * factor, `${money(structure.perTon)} x ${tons}${factor === 1 ? "" : ` x ${factor}`}`, factor === 1 ? STRUCTURE_COST : { cite: special?.cite ?? STRUCTURE_COST.cite, checked: special?.checked ?? STRUCTURE_COST.checked });
+  } else if (tonsKnown) skip(`Internal structure "${chassis.structure}"`, "the cost table has no such structure");
+
+  // Actuators: the arms and legs the configuration has (a quad's legs carry a full set each, as the book's quad example prices them)
+  if (config && tonsKnown) {
+    const limbs = Object.keys(config.size) as LocationCode[];
+    const A = ACTUATOR_COST.perTon;
+    let actuators = 0;
+    const parts: string[] = [];
+    for (const loc of limbs) {
+      if (LIMBS.arms.includes(loc)) {
+        const arm = record.arms?.[loc as "LA" | "RA"] ?? { lowerArm: true, hand: true };
+        const each = A.upperArm + (arm.lowerArm ? A.lowerArm : 0) + (arm.hand ? A.hand : 0);
+        actuators += each * tons;
+        parts.push(`${loc} ${each}`);
+      } else if (LIMBS.legs.includes(loc)) {
+        const each = A.upperLeg + A.lowerLeg + A.foot;
+        actuators += each * tons;
+        parts.push(`${loc} ${each}`);
+      }
+    }
+    add(structural, "Actuators", actuators, `(${parts.join(" + ")}) x ${tons}`, ACTUATOR_COST);
+    if (record.configuration === "tripod") notes.push("Tripod actuators: the book prints no list for the center leg; it is priced with the same upper leg, lower leg and foot actuators as the other two.");
+  } else if (tonsKnown) skip("Actuators", `no limb layout for the "${record.configuration}" configuration`);
+
+  // Engine
+  const engine = own(ENGINE_COST.rows, chassis.engine.type);
+  if (engine && tonsKnown && Number.isFinite(chassis.engine.rating)) {
+    if (engine.assumed) assume(`Engine "${chassis.engine.type}"`);
+    add(structural, `Engine (${chassis.engine.type} ${chassis.engine.rating})`, engineCost(engine.perRating, chassis.engine.rating, tons), `${money(engine.perRating)} x ${chassis.engine.rating} x ${tons} / ${ENGINE_COST.divisor}`, ENGINE_COST);
+  } else skip(`Engine "${chassis.engine.type}" ${chassis.engine.rating}`, engine ? "the tonnage or rating is not a number" : "the cost table has no such engine");
+
+  // Gyro: its cost is per ton of gyro, and the weight rules already work that out
+  const gyro = own(GYRO_COST.rows, chassis.gyro);
+  const gyroTons = weightLine(record, catalog, "Gyro");
+  if (gyro && gyroTons !== null) add(structural, `Gyro (${chassis.gyro})`, gyro.perGyroTon * gyroTons, `${money(gyro.perGyroTon)} x ${gyroTons}`, GYRO_COST);
+  else skip(`Gyro "${chassis.gyro}"`, gyro ? "its weight could not be worked out" : "the cost table has no such gyro");
+
+  // Heat sinks: the count is the chassis's; the placed heat sink mounts only say where they go
+  const sinks = own(HEAT_SINK_COST.rows, chassis.heatSinks.type);
+  if (sinks && Number.isFinite(chassis.heatSinks.count)) {
+    if (sinks.assumed) assume(`Heat sinks "${chassis.heatSinks.type}"`);
+    const paid = Math.max(0, chassis.heatSinks.count - sinks.free);
+    add(structural, `Heat sinks (${chassis.heatSinks.type}, ${paid} paid for)`, heatSinkCost(sinks.each, sinks.free, chassis.heatSinks.count), `${money(sinks.each)} x ${paid}`, HEAT_SINK_COST);
+  } else skip(`Heat sinks "${chassis.heatSinks.type}"`, "the cost table has no such heat sink");
+
+  // Armor
+  const armor = own(ARMOR_COST.rows, chassis.armorType);
+  const armorTons = weightLine(record, catalog, "Armor");
+  if (armor && armorTons !== null) add(structural, `Armor (${chassis.armorType}, ${armorTons} tons)`, armor.perTon * armorTons, `${money(armor.perTon)} x ${armorTons}`, { cite: armor.cite ?? ARMOR_COST.cite, checked: ARMOR_COST.checked });
+  else skip(`Armor "${chassis.armorType}"`, armor ? "its weight could not be worked out" : "the cost table has no such armor");
+
+  // Equipment: jump jets are priced together (the count is squared); everything else one mount at a time
+  const jets = new Map<string, Mount[]>();
+  for (const mount of record.mounts) {
+    if (mount.part) continue; // the structure or armor type's slots: priced with the structure or armor
+    const row = rowOf(catalog, record, mount);
+    if (!row) {
+      skip(mount.name, mount.equipmentId === null ? "not in our equipment table" : `the equipment table has no row "${mount.equipmentId}"`, mount.equipmentId);
+      continue;
+    }
+    if (row.kind === "heat-sink") continue; // paid for by count, above
+    if (row.id === "tsm-is") continue; // the six TSM slots are the musculature priced above
+    if (row.kind === "ammunition") continue; // ammunition is not bought for a unit's cost (p.282)
+    if (row.kind === "jump-jet") {
+      const kind = row.id.startsWith("improved-") ? "improved" : stemOf(row.id) === "jump-jet" ? "standard" : undefined;
+      if (kind === undefined) skip(mount.name, "no jump jet price for this kind in the cost tables", row.id);
+      else jets.set(kind, [...(jets.get(kind) ?? []), mount]);
+      continue;
+    }
+    if (stemOf(row.id) === "masc") {
+      const mascTons = catalog.factsOf(mount, record)?.tons;
+      if (mascTons === undefined || !Number.isFinite(chassis.engine.rating)) skip(mount.name, "its weight or the engine rating is not known", row.id);
+      else add(equipment, mount.name, mascCost(chassis.engine.rating, mascTons), `${money(MASC_COST.perRatingTon)} x ${chassis.engine.rating} x ${mascTons}`, MASC_COST);
+      continue;
+    }
+    const found = priceOf(row);
+    if (!found) {
+      skip(mount.name, "the cost tables print no price for it", row.id);
+      continue;
+    }
+    if (typeof found.price === "number") add(equipment, mount.name, found.price, money(found.price), found);
+    else {
+      const itemTons = catalog.factsOf(mount, record)?.tons;
+      if (itemTons === undefined) skip(mount.name, "its weight could not be worked out", row.id);
+      else add(equipment, mount.name, perTonCost(found.price.perTon, itemTons), `${money(found.price.perTon)} x ${Math.ceil(itemTons)} tons`, found);
+    }
+  }
+  for (const [kind, group] of jets) {
+    const row = own(JUMP_JET_COST.rows, kind);
+    if (row && tonsKnown) add(equipment, `Jump jets (${kind}, ${group.length})`, jumpJetCost(row.perJetSquared, group.length, tons), `${row.perJetSquared} x ${group.length}^2 x ${tons}`, JUMP_JET_COST);
+  }
+
+  // Land-Air 'Mech conversion equipment, added before the final multiplier
+  const sum = (lines: CostLine[]) => lines.reduce((total, l) => total + l.cost, 0);
+  const structuralTotal = sum(structural);
+  const equipmentTotal = sum(equipment);
+  const conversion = special?.conversion === undefined ? 0 : conversionCost(special.conversion, structuralTotal + equipmentTotal);
+  const conversionLines: CostLine[] =
+    special?.conversion === undefined
+      ? []
+      : [{ label: "Conversion equipment", cost: conversion, how: `${special.conversion} x ${money(structuralTotal + equipmentTotal)}`, cite: special.cite, checked: special.checked }];
+
+  const multiplier = tonsKnown ? finalMultiplier(tons, options.omni === true) : 1;
+  if (!tonsKnown) skip("Final multiplier", "the tonnage is not a positive number");
+  const total = roundUpCents((structuralTotal + equipmentTotal + conversion) * multiplier);
+  return {
+    total,
+    lines: [...structural, ...equipment, ...conversionLines],
+    structural: structuralTotal,
+    equipment: equipmentTotal,
+    conversion,
+    multiplier,
+    unpriced,
+    notes,
+  };
+}
