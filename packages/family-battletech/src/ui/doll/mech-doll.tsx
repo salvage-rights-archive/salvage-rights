@@ -184,7 +184,9 @@ export default function MechDoll(props: IMechDollProps): JSX.Element {
 
     const fontSize = props.labelSize ?? (use === "structure" ? LABEL_FONT.structure : LABEL_FONT.armor);
     const labels = counted.flatMap(({ location, count }) => {
-        const [x, y] = toSheet(labelPoint(location, props.shortLabels), frame);
+        const [x, top] = toSheet(labelPoint(location, props.shortLabels), frame);
+        // A short label that hangs from a point has its first line's top there, so its baseline is a cap height lower.
+        const y = props.shortLabels && location.shortHangsFrom ? top + fontSize * 0.85 : top;
         const lines = labelLines(location, props.shortLabels);
         return lines.map((line, i) => (
             <text

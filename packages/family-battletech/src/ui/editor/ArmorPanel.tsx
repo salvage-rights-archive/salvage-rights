@@ -6,20 +6,19 @@ import type { Layout, LocationCode, MechRecord } from "../../rules/mech";
 import { dollBox } from "../doll/box";
 import MechDoll from "../doll/mech-doll";
 import { PAPER } from "../doll/pen";
-import { STRUCTURE_SCALE, dollUnitFromRecord } from "../doll/layouts";
+import { STRUCTURE_SCALE, dollUnitFromRecord, recordCodeOf } from "../doll/layouts";
 import type { DollUse } from "../doll/layouts";
 import { NumberField, fieldId } from "../EditorPage";
 import type { OnEdit } from "../EditorPage";
 
 const WITH_REAR: string[] = ["CT", "LT", "RT"];
-/** Where each location's field sits in the body-shaped grid: [row, column]. A quad's legs take the arms' and legs' places. */
+/** Where each location's field sits in the body-shaped grid: [row, column]. A quad's legs take the arms' and legs' places:
+ * the front legs where the arms are (outside), the rear legs where the legs are (inside), left and right as on the doll. */
 type Cell = [row: number, column: number];
 const BODY_CELLS: Record<string, Record<string, Cell>> = {
   biped: { HD: [1, 3], LA: [2, 1], LT: [2, 2], CT: [2, 3], RT: [2, 4], RA: [2, 5], "LT-rear": [3, 2], "CT-rear": [3, 3], "RT-rear": [3, 4], LL: [4, 2], RL: [4, 4] },
   quad: { HD: [1, 3], FLL: [2, 1], LT: [2, 2], CT: [2, 3], RT: [2, 4], FRL: [2, 5], "LT-rear": [3, 2], "CT-rear": [3, 3], "RT-rear": [3, 4], RLL: [4, 2], RRL: [4, 4] },
 };
-/** The record location a doll location stands for: the rear torsos (ctr, ltr, rtr) are their front torso's. */
-const recordLocation = (doll: string): string => (doll.length === 3 ? doll.slice(0, 2) : doll).toUpperCase();
 
 export default function ArmorPanel({
   record,
@@ -59,7 +58,8 @@ export default function ArmorPanel({
     .map(({ item }) => item);
 
   const chooseOnDoll = (doll: string) => {
-    const location = recordLocation(doll) as LocationCode;
+    const location = recordCodeOf(doll);
+    if (!location) return;
     onSelect(location);
     document.getElementById(fieldId(`armor.${location}`))?.focus();
   };

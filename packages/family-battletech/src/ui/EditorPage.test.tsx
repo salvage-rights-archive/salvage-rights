@@ -378,10 +378,13 @@ describe("The armor panel", () => {
     expect(screen.getByRole("button", { name: "Left Arm", pressed: true })).toBeTruthy();
   });
 
-  it("shows the armor fields of a quad and says no doll is drawn for it", async () => {
+  it("draws a quad doll, and choosing a leg on it focuses that leg armor field", async () => {
     await saved(mordelQuad());
+    const user = userEvent.setup();
     await open("imported-1");
     expect(await field("FLL, Front Left Leg armor")).toBeTruthy();
-    expect(screen.getByText("No doll is drawn for this body type yet.")).toBeTruthy();
+    expect(screen.queryByText("No doll is drawn for this body type yet.")).toBeNull();
+    await user.click(await screen.findByRole("button", { name: "Rear Right Leg, 16 armor" }));
+    expect(document.activeElement).toBe(screen.getByLabelText("RRL, Rear Right Leg armor"));
   });
 });

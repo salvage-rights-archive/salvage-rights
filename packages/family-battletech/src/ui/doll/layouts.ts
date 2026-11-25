@@ -1,7 +1,7 @@
 // Salvage Rights paper doll engine. GPL-3.0-or-later.
 import { locationName, maxArmor, structurePoints, type LocationCode, type MechRecord } from "../../rules/mech";
 import type { IPlacement } from "./geometry";
-import { BIPED_PIVOTS, type PartId } from "./parts";
+import { PART_PIVOTS, type PartId } from "./parts";
 import type { BubblePoint } from "./shape-bubbles";
 
 /*
@@ -24,6 +24,8 @@ export interface IDollLocation {
     label: string[];
     labelAt: BubblePoint;
     labelAnchor: "start" | "middle" | "end";
+    /** Where a short label (the code, on a figure drawn small) hangs from: its top edge, so it clears the part above. */
+    shortHangsFrom?: BubblePoint;
     /** Where damage goes once this location is destroyed (the damage transfer diagram's arrow). */
     transfersTo?: string;
 }
@@ -59,7 +61,8 @@ export const labelLines = (location: IDollLocation, short = false): string[] =>
 
 /** Where a location label starts: the head's short label rises clear of the head, which a small figure would cover. */
 export const labelPoint = (location: IDollLocation, short = false): BubblePoint =>
-    short && location.loc === "hd" ? [location.labelAt[0], location.labelAt[1] - 55] : location.labelAt;
+    short && location.shortHangsFrom ? location.shortHangsFrom
+        : short && location.loc === "hd" ? [location.labelAt[0], location.labelAt[1] - 55] : location.labelAt;
 
 export const STRUCTURE_SCALE = 0.6;
 export const TRANSFER_SCALE = 0.2;
@@ -78,16 +81,28 @@ const mirrored = (left: IDollLocation, loc: string, label: string[], transfersTo
     label,
     labelAt: [-left.labelAt[0], left.labelAt[1]],
     labelAnchor: flipAnchor(left.labelAnchor),
+    shortHangsFrom: left.shortHangsFrom && [-left.shortHangsFrom[0], left.shortHangsFrom[1]],
     transfersTo,
 });
 
-/** A part where the biped drawing put it. */
-const home = (part: PartId): IPlacement => ({ x: BIPED_PIVOTS[part][0], y: BIPED_PIVOTS[part][1] });
+/** A part where its own drawing put it. */
+const home = (part: PartId): IPlacement => ({ x: PART_PIVOTS[part][0], y: PART_PIVOTS[part][1] });
 
 const LEFT_LEG: IDollLocation = { loc: "ll", part: "leg", at: home("leg"), label: ["LEFT", "LEG"], labelAt: [-368, 902], labelAnchor: "start", transfersTo: "lt" };
 const LEFT_TORSO: IDollLocation = { loc: "lt", part: "torso-side", at: home("torso-side"), label: ["LEFT", "TORSO"], labelAt: [-84, 104], labelAnchor: "end", transfersTo: "ct" };
 const LEFT_ARM: IDollLocation = { loc: "la", part: "arm", at: home("arm"), label: ["LEFT", "ARM"], labelAt: [-368, 104], labelAnchor: "start", transfersTo: "lt" };
 const LEFT_TORSO_REAR: IDollLocation = { loc: "ltr", part: "torso-side-rear", at: home("torso-side-rear"), label: ["LEFT TORSO", "(REAR)"], labelAt: [-226, 1054], labelAnchor: "end" };
+
+const CENTER_TORSO: IDollLocation = { loc: "ct", part: "torso-center", at: home("torso-center"), label: ["CENTER", "TORSO", ""], labelAt: [0, 646], labelAnchor: "middle" };
+const HEAD: IDollLocation = { loc: "hd", part: "head", at: home("head"), label: ["HEAD"], labelAt: [0, 74], labelAnchor: "middle" };
+const CENTER_TORSO_REAR: IDollLocation = { loc: "ctr", part: "torso-center-rear", at: home("torso-center-rear"), label: ["CENTER TORSO (REAR)"], labelAt: [0, 1190], labelAnchor: "middle" };
+
+/** The rear torsos below the front view, the same on every layout that has them. */
+const REAR_TORSOS: IDollLocation[] = [
+    LEFT_TORSO_REAR,
+    mirrored(LEFT_TORSO_REAR, "rtr", ["RIGHT TORSO", "(REAR)"]),
+    CENTER_TORSO_REAR,
+];
 
 const BIPED: IDollLayout = {
     id: "biped",
@@ -99,18 +114,39 @@ const BIPED: IDollLayout = {
         mirrored(LEFT_TORSO, "rt", ["RIGHT", "TORSO"], "ct"),
         LEFT_ARM,
         mirrored(LEFT_ARM, "ra", ["RIGHT", "ARM"], "rt"),
-        { loc: "ct", part: "torso-center", at: home("torso-center"), label: ["CENTER", "TORSO", ""], labelAt: [0, 646], labelAnchor: "middle" },
-        { loc: "hd", part: "head", at: home("head"), label: ["HEAD"], labelAt: [0, 74], labelAnchor: "middle" },
+        CENTER_TORSO,
+        HEAD,
     ],
-    rear: [
-        LEFT_TORSO_REAR,
-        mirrored(LEFT_TORSO_REAR, "rtr", ["RIGHT TORSO", "(REAR)"]),
-        { loc: "ctr", part: "torso-center-rear", at: home("torso-center-rear"), label: ["CENTER TORSO (REAR)"], labelAt: [0, 1190], labelAnchor: "middle" },
+    rear: REAR_TORSOS,
+};
+
+// A four-legged 'Mech seen from the front and above, as its record sheet shows it: the front legs outside, the rear legs
+// (the far pair) in the gap between them and the center torso, drawn first. Each leg's label sits under its foot.
+// Damage transfer: a destroyed leg's damage moves to the torso on its side, a side torso's to the center torso, and the
+// head's and center torso's nowhere (Total Warfare, Transferring Damage, p.123; a destroyed side torso blows off the
+// front leg on its side, Torso Destruction, p.121).
+const FRONT_LEFT_LEG: IDollLocation = { loc: "fll", part: "quad-leg-front", at: home("quad-leg-front"), label: ["FRONT", "LEFT", "LEG"], labelAt: [-282, 912], labelAnchor: "middle", shortHangsFrom: [-282, 892], transfersTo: "lt" };
+const REAR_LEFT_LEG: IDollLocation = { loc: "rll", part: "quad-leg-rear", at: home("quad-leg-rear"), label: ["REAR", "LEFT", "LEG"], labelAt: [-136, 898], labelAnchor: "middle", shortHangsFrom: [-136, 872], transfersTo: "lt" };
+
+const QUAD: IDollLayout = {
+    id: "quad",
+    view: "front",
+    front: [
+        REAR_LEFT_LEG,
+        mirrored(REAR_LEFT_LEG, "rrl", ["REAR", "RIGHT", "LEG"], "rt"),
+        FRONT_LEFT_LEG,
+        mirrored(FRONT_LEFT_LEG, "frl", ["FRONT", "RIGHT", "LEG"], "rt"),
+        LEFT_TORSO,
+        mirrored(LEFT_TORSO, "rt", ["RIGHT", "TORSO"], "ct"),
+        CENTER_TORSO,
+        HEAD,
     ],
+    rear: REAR_TORSOS,
 };
 
 export const DOLL_LAYOUTS: Partial<Record<DollLayoutId, IDollLayout>> = {
     biped: BIPED,
+    quad: QUAD,
 };
 
 /** The record location a doll location reads, and whether it reads the rear armor. */
@@ -118,6 +154,7 @@ const RECORD_OF: Record<string, { code: LocationCode; rear: boolean }> = {
     hd: { code: "HD", rear: false }, ct: { code: "CT", rear: false }, lt: { code: "LT", rear: false },
     rt: { code: "RT", rear: false }, la: { code: "LA", rear: false }, ra: { code: "RA", rear: false },
     ll: { code: "LL", rear: false }, rl: { code: "RL", rear: false },
+    fll: { code: "FLL", rear: false }, frl: { code: "FRL", rear: false }, rll: { code: "RLL", rear: false }, rrl: { code: "RRL", rear: false },
     ctr: { code: "CT", rear: true }, ltr: { code: "LT", rear: true }, rtr: { code: "RT", rear: true },
 };
 
@@ -128,9 +165,12 @@ export const dollLocationName = (loc: string): string => {
 };
 
 /** The layout each configuration draws with; none is drawn for the rest yet. */
-const LAYOUT_OF_CONFIGURATION: Record<string, DollLayoutId> = { biped: "biped" };
+const LAYOUT_OF_CONFIGURATION: Record<string, DollLayoutId> = { biped: "biped", quad: "quad" };
 
 const recordLocation = (loc: string) => (Object.hasOwn(RECORD_OF, loc) ? RECORD_OF[loc] : undefined);
+
+/** The record location (HD, LT, FLL) a doll location (lower case; the rear torsos end in "r") stands for. */
+export const recordCodeOf = (loc: string): LocationCode | undefined => recordLocation(loc)?.code;
 
 export const dollUnitFromRecord = (record: MechRecord): IDollUnit | undefined => {
     const layoutId = Object.hasOwn(LAYOUT_OF_CONFIGURATION, record.configuration) ? LAYOUT_OF_CONFIGURATION[record.configuration] : undefined;

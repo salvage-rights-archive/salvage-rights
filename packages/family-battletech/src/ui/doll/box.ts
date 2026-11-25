@@ -1,5 +1,7 @@
 // How much room a doll needs on its sheet.
+import { placePoint } from "./geometry";
 import { placedPlates } from "./mech-doll";
+import { PARTS } from "./parts";
 import { DOLL_LAYOUTS, labelLines, labelPoint, type DollLayoutId, type DollUse } from "./layouts";
 
 /** Label type size and an average glyph width as a share of it, per use, to leave room for the labels. */
@@ -21,7 +23,12 @@ export function dollBox(layoutId: DollLayoutId, use: DollUse, scale: number, lab
         ys.push(y);
       }
     }
-    if (use === "transfer") continue;
+    if (use === "transfer") {
+      // The figure has no labels, but its feet reach below the shin plates.
+      const foot = PARTS[location.part].foot;
+      if (foot) ys.push((placePoint(foot, location.at)[1] + 12) * scale);
+      continue;
+    }
     const { size: own, glyph } = LABEL[use];
     const size = labelSize ?? own;
     const width = Math.max(...labelLines(location, short).map((line) => line.length + 5)) * size * glyph;

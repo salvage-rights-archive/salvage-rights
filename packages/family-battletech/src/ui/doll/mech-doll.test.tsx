@@ -55,8 +55,8 @@ const ringsByLocation = (markup: string): Record<string, Ring[]> => {
 const countsOf = (markup: string) => Object.fromEntries(Object.entries(ringsByLocation(markup)).map(([loc, rings]) => [loc, rings.length]));
 
 describe("the paper doll", () => {
-  it.each([50, 100])("keeps every armor bubble inside its plate and clear of the others at %i tons", (tons) => {
-    const base = bipedRecord({ tons });
+  it.each([["biped", 50], ["biped", 100], ["quad", 55], ["quad", 100]] as const)("keeps every armor bubble inside its plate and clear of the others on a %s of %i tons", (configuration, tons) => {
+    const base = configuration === "quad" ? quadRecord({ tons }) : bipedRecord({ tons });
     const record = editRecord(base, (draft) => {
       // Full armor everywhere, a third of each torso behind.
       for (const [loc, max] of Object.entries(maxArmor(draft))) {
@@ -66,7 +66,7 @@ describe("the paper doll", () => {
       }
     });
     const rings = ringsByLocation(markupOf(record, "armor"));
-    const layout = DOLL_LAYOUTS.biped;
+    const layout = DOLL_LAYOUTS[configuration];
     const locations = [...(layout?.front ?? []), ...(layout?.rear ?? [])];
     const problems: string[] = [];
     const all: (Ring & { loc: string })[] = [];
@@ -168,7 +168,42 @@ describe("the paper doll", () => {
     expect(transfer.container.querySelector("[role=button]")).toBeNull();
   });
 
-  it("draws no doll for a quad", () => {
-    expect(dollUnitFromRecord(quadRecord())).toBeUndefined();
+  it("draws a bubble for every point of a 100-ton quad at full armor and full structure, in every location", () => {
+    const record = editRecord(quadRecord({ tons: 100 }), (draft) => {
+      for (const [loc, max] of Object.entries(maxArmor(draft))) {
+        const torso = loc === "CT" || loc === "LT" || loc === "RT";
+        const rear = torso ? Math.floor(max / 6) : 0;
+        draft.armor[loc as keyof typeof draft.armor] = torso ? { front: max - rear, rear } : { front: max };
+      }
+    });
+    const max = maxArmor(record), points = structurePoints(record);
+    const rear = (code: "CT" | "LT" | "RT") => Math.floor((max[code] ?? 0) / 6);
+    expect(countsOf(markupOf(record, "armor"))).toEqual({
+      hd: 9, ct: 62 - rear("CT"), lt: 42 - rear("LT"), rt: 42 - rear("RT"), fll: 42, frl: 42, rll: 42, rrl: 42,
+      ctr: rear("CT"), ltr: rear("LT"), rtr: rear("RT"),
+    });
+    expect(countsOf(markupOf(record, "structure"))).toEqual({
+      hd: 3, ct: points.CT, lt: points.LT, rt: points.RT, fll: 21, frl: 21, rll: 21, rrl: 21,
+    });
+  });
+
+  it("reads a quad's front and rear armor from the right record locations and sends each leg's damage to its side torso", () => {
+    const record = editRecord(quadRecord(), (draft) => {
+      draft.armor.FLL = { front: 11 };
+      draft.armor.FRL = { front: 12 };
+      draft.armor.RLL = { front: 13 };
+      draft.armor.RRL = { front: 14 };
+      draft.armor.LT = { front: 10, rear: 3 };
+    });
+    const unit = unitOf(record);
+    expect(unit.layoutId).toBe("quad");
+    expect([unit.armor("fll"), unit.armor("frl"), unit.armor("rll"), unit.armor("rrl")]).toEqual([11, 12, 13, 14]);
+    expect([unit.armor("lt"), unit.armor("ltr")]).toEqual([10, 3]);
+    const transfers = Object.fromEntries((DOLL_LAYOUTS.quad?.front ?? []).map((location) => [location.loc, location.transfersTo]));
+    expect(transfers).toEqual({ fll: "lt", rll: "lt", frl: "rt", rrl: "rt", lt: "ct", rt: "ct", ct: undefined, hd: undefined });
+  });
+
+  it("draws no doll for a configuration with no layout", () => {
+    expect(dollUnitFromRecord(quadRecord({ configuration: "tripod" }))).toBeUndefined();
   });
 });

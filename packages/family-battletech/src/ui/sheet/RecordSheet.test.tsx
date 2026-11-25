@@ -54,13 +54,21 @@ describe("The record sheet", () => {
     expect(lines.some((line) => line.includes("mordel.net"))).toBe(false);
   });
 
-  it("lists each location's points as text in place of the diagrams for a body type with no doll", async () => {
+  it("draws the three diagrams for a quad", async () => {
     const { svg, lines } = await drawn(await recordOf(mordelQuad()));
+    expect(svg.querySelectorAll("[data-diagram]")).toHaveLength(3);
+    expect(svg.querySelectorAll("[data-testid='mech-doll'][data-layout='quad']")).toHaveLength(3);
+    expect(svg.querySelectorAll("[data-diagram='text']")).toHaveLength(0);
+    expect(lines).toContain("FLL");
+  });
+
+  it("lists each location's points as text in place of the diagrams for a body type with no doll", async () => {
+    const record = await recordOf(mordelQuad());
+    record.configuration = "tripod";
+    const { svg, lines } = await drawn(record);
     expect(svg.querySelectorAll("[data-testid='mech-doll']")).toHaveLength(0);
     expect(svg.querySelectorAll("[data-diagram='text']")).toHaveLength(2);
-    expect(svg.querySelectorAll("[data-diagram='transfer-text']")).toHaveLength(1);
     expect(lines).toContain("Center Torso: 20 front, 8 rear");
-    expect(lines).toContain("Front Left Leg: 20");
     expect(lines).toContain("Front Left Leg: 20");
   });
 

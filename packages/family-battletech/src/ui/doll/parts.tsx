@@ -11,7 +11,7 @@ import { INK, PAPER, type IPenIds, type IPenStyle } from "./pen";
  * hip), so a layout can place, mirror, scale and turn it. Our own drawing, nothing traced.
  */
 
-export type PartId = "head" | "torso-center" | "torso-side" | "torso-center-rear" | "torso-side-rear" | "arm" | "leg";
+export type PartId = "head" | "torso-center" | "torso-side" | "torso-center-rear" | "torso-side-rear" | "arm" | "leg" | "quad-leg-front" | "quad-leg-rear";
 
 export interface IPart {
     draw(pen: IPenStyle, ids: IPenIds): JSX.Element;
@@ -124,8 +124,21 @@ const aroundPivot = (pivot: BubblePoint, part: IPart): IPart => ({
     foot: part.foot ? cornerAt(shift([part.foot], pivot), 0) : undefined,
 });
 
-/** Where each part was drawn: the biped places every part at its own pivot. */
-export const BIPED_PIVOTS = {
+/** A quad's legs: one stocky leg drawn once in its own units (see `quadLeg`), set at each corner of the body, the rear
+ * ones smaller and further in because they are the far pair. Left side, the hip is where the leg hangs from. */
+interface IQuadLegSet {
+    hip: BubblePoint;
+    /** Sideways and lengthwise stretch of the leg drawing. */
+    kx: number;
+    ky: number;
+}
+const QUAD_LEGS: Record<"front" | "rear", IQuadLegSet> = {
+    front: { hip: [-282, 456], kx: 1, ky: 1 },
+    rear: { hip: [-136, 470], kx: 0.8, ky: 0.92 },
+};
+
+/** Where each part was drawn: a layout places every part it uses at its own pivot, as the biped does. */
+export const PART_PIVOTS = {
     "head": [0, 214],
     "torso-center": [0, 206],
     "torso-side": [-84, 204],
@@ -133,13 +146,15 @@ export const BIPED_PIVOTS = {
     "torso-side-rear": [-82, 978],
     "arm": [-266, 230],
     "leg": [-118, 520],
+    "quad-leg-front": QUAD_LEGS.front.hip,
+    "quad-leg-rear": QUAD_LEGS.rear.hip,
 } satisfies Record<PartId, BubblePoint>;
 
 // ---- Head: a hexagonal helm with a crest, a V-notched visor, a chin guard and a whip antenna at the left temple.
 
 const HEAD_PLATE: Shape = [[-42, 142], [42, 142], [50, 160], [42, 188], [24, 204], [-24, 204], [-42, 188], [-50, 160]];
 
-const head = aroundPivot(BIPED_PIVOTS.head, {
+const head = aroundPivot(PART_PIVOTS.head, {
     plates: [HEAD_PLATE],
     label: [0, 172],
     draw: (pen, ids) => (
@@ -160,7 +175,7 @@ const head = aroundPivot(BIPED_PIVOTS.head, {
 const CHEST_PLATE: Shape = [[-78, 228], [78, 228], [86, 242], [80, 320], [60, 404], [36, 436], [-36, 436], [-60, 404], [-80, 320], [-86, 242]];
 const PELVIS_PLATE: Shape = [[-60, 500], [60, 500], [66, 512], [66, 536], [34, 580], [-34, 580], [-66, 536], [-66, 512]];
 
-const torsoCenter = aroundPivot(BIPED_PIVOTS["torso-center"], {
+const torsoCenter = aroundPivot(PART_PIVOTS["torso-center"], {
     plates: [CHEST_PLATE, PELVIS_PLATE],
     label: [0, 330],
     draw: (pen, ids) => (
@@ -183,7 +198,7 @@ const torsoCenter = aroundPivot(BIPED_PIVOTS["torso-center"], {
 
 const SIDE_PLATE: Shape = [[-104, 212], [-150, 196], [-196, 196], [-202, 250], [-202, 380], [-190, 428], [-162, 452], [-104, 456], [-96, 420]];
 
-const torsoSide = aroundPivot(BIPED_PIVOTS["torso-side"], {
+const torsoSide = aroundPivot(PART_PIVOTS["torso-side"], {
     plates: [SIDE_PLATE],
     label: [-150, 330],
     draw: (pen) => (
@@ -202,7 +217,7 @@ const torsoSide = aroundPivot(BIPED_PIVOTS["torso-side"], {
 const PAULDRON_PLATE: Shape = [[-228, 204], [-258, 190], [-296, 190], [-322, 204], [-330, 230], [-328, 288], [-298, 300], [-232, 296]];
 const FOREARM_PLATE: Shape = [[-242, 452], [-306, 452], [-316, 500], [-314, 592], [-300, 624], [-256, 626], [-244, 596], [-238, 500]];
 
-const arm = aroundPivot(BIPED_PIVOTS.arm, {
+const arm = aroundPivot(PART_PIVOTS.arm, {
     plates: [PAULDRON_PLATE, FOREARM_PLATE],
     label: [-268, 350],
     draw: (pen, ids) => (
@@ -232,7 +247,7 @@ const THIGH_PLATE: Shape = [[-78, 512], [-170, 508], [-180, 550], [-176, 640], [
 const KNEE_PLATE: Shape = [[-112, 698], [-160, 698], [-170, 712], [-168, 734], [-148, 752], [-122, 752], [-102, 734], [-102, 712]];
 const SHIN_PLATE: Shape = [[-100, 782], [-170, 780], [-184, 806], [-190, 866], [-94, 868], [-90, 822]];
 
-const leg = aroundPivot(BIPED_PIVOTS.leg, {
+const leg = aroundPivot(PART_PIVOTS.leg, {
     plates: [THIGH_PLATE, KNEE_PLATE, SHIN_PLATE],
     label: [-124, 600],
     foot: [-145, 930],
@@ -259,12 +274,79 @@ const leg = aroundPivot(BIPED_PIVOTS.leg, {
     ),
 });
 
+// ---- Quad leg (left): a short, heavy walking leg seen from the front. A ribbed hip, a broad thigh, a knee guard, a
+// flared shin and a wide foot, drawn once around its own center line with the hip at the origin, then stretched and
+// moved to a corner of the body by `quadLeg`. Distances below are in those local units.
+
+const QUAD_LEG = {
+    /** The hip joint is broader on the inside, where it tucks under the torso. */
+    hip: "M -60,-18 L 70,-18 C 78,-8 78,8 70,22 L -64,22 C -72,8 -70,-8 -60,-18 Z",
+    hipRibs: ["M -62,-5 L 72,-5", "M -64,8 L 72,8"],
+    thigh: "M -62,18 C -68,76 -66,146 -58,190 L 58,190 C 66,146 68,76 62,18 Z",
+    thighPlate: [[-52, 34], [52, 34], [60, 70], [58, 130], [50, 162], [-50, 162], [-58, 130], [-60, 70]] as Shape,
+    kneeJoint: "M -58,184 L 58,184 L 64,254 L -64,254 Z",
+    kneeRibs: ["M -60,208 L 60,208", "M -62,232 L 62,232"],
+    knee: "M -60,180 C -40,174 40,174 60,180 L 68,226 C 56,252 30,262 0,264 C -30,262 -56,252 -68,226 Z",
+    kneePlate: [[-42, 192], [42, 192], [57, 206], [57, 224], [40, 244], [-40, 244], [-57, 224], [-57, 206]] as Shape,
+    shin: "M -56,244 L 56,244 C 66,282 72,330 70,370 L -70,370 C -72,330 -66,282 -56,244 Z",
+    shinPlate: [[-50, 274], [50, 274], [62, 302], [62, 348], [56, 358], [-56, 358], [-62, 348], [-62, 302]] as Shape,
+    ankle: "M -62,368 L 62,368 L 66,390 L -66,390 Z",
+    ankleRibs: ["M -63,379 L 63,379"],
+    foot: "M -58,384 L 58,384 L 72,408 L 76,434 L -76,434 L -72,408 Z",
+    footSeams: ["M -73,422 L 73,422", "M -28,385 L -24,422", "M 28,385 L 24,422"],
+    pistons: [[[-70, 60], [-76, 186]], [[-70, 270], [-78, 360]]] as [BubblePoint, BubblePoint][],
+    label: [0, 100] as BubblePoint,
+    footPoint: [0, 430] as BubblePoint,
+};
+
+/** The same path with every point moved by `map` (absolute M, L and C commands only, which is all these legs use). */
+const mapPath = (d: string, map: (point: BubblePoint) => BubblePoint): string => {
+    const numbers = (d.match(/-?\d+(?:\.\d+)?/g) ?? []).map(Number);
+    let next = 0;
+    return d.replace(/-?\d+(?:\.\d+)?\s*,\s*-?\d+(?:\.\d+)?/g, () => {
+        const [x, y] = map([numbers[next++] ?? 0, numbers[next++] ?? 0]);
+        return `${round(x)},${round(y)}`;
+    });
+};
+
+const quadLeg = ({ hip, kx, ky }: IQuadLegSet): IPart => {
+    const at = ([x, y]: BubblePoint): BubblePoint => [hip[0] + x * kx, hip[1] + y * ky];
+    const path = (d: string): string => mapPath(d, at);
+    const plate = (shape: Shape): Shape => shape.map(at);
+    const thighPlate = plate(QUAD_LEG.thighPlate), kneePlate = plate(QUAD_LEG.kneePlate), shinPlate = plate(QUAD_LEG.shinPlate);
+    return aroundPivot(hip, {
+        plates: [thighPlate, kneePlate, shinPlate],
+        label: at(QUAD_LEG.label),
+        foot: at(QUAD_LEG.footPoint),
+        draw: (pen, ids) => (
+            <>
+                {joint(path(QUAD_LEG.hip), QUAD_LEG.hipRibs.map(path), pen, ids)}
+                {outline(path(QUAD_LEG.thigh), pen)}
+                {plateFace(thighPlate, pen)}
+                {rivets(thighPlate, pen)}
+                {joint(path(QUAD_LEG.ankle), QUAD_LEG.ankleRibs.map(path), pen, ids)}
+                {outline(path(QUAD_LEG.shin), pen)}
+                {plateFace(shinPlate, pen)}
+                {rivets(shinPlate, pen)}
+                {joint(path(QUAD_LEG.kneeJoint), QUAD_LEG.kneeRibs.map(path), pen, ids)}
+                {outline(path(QUAD_LEG.knee), pen)}
+                {plateFace(kneePlate, pen)}
+                {outline(path(QUAD_LEG.foot), pen)}
+                {seams(QUAD_LEG.footSeams.map(path), pen)}
+                {QUAD_LEG.pistons.map(([a, b], i) => <React.Fragment key={i}>{piston(at(a), at(b), pen)}</React.Fragment>)}
+                {pivotMark(hip, pen)}
+                {pivotMark(at([0, 392]), pen)}
+            </>
+        ),
+    });
+};
+
 // ---- Rear torsos: the back of the chest above a finned heat exchanger, and the back of each side torso.
 
 const REAR_CENTER_PLATE: Shape = [[-70, 990], [70, 990], [80, 1004], [76, 1090], [60, 1120], [34, 1134], [-34, 1134], [-60, 1120], [-76, 1090], [-80, 1004]];
 const REAR_SIDE_PLATE: Shape = [[-100, 990], [-146, 984], [-180, 994], [-190, 1020], [-190, 1090], [-176, 1124], [-140, 1134], [-102, 1134], [-96, 1060]];
 
-const torsoCenterRear = aroundPivot(BIPED_PIVOTS["torso-center-rear"], {
+const torsoCenterRear = aroundPivot(PART_PIVOTS["torso-center-rear"], {
     plates: [REAR_CENTER_PLATE],
     label: [0, 1060],
     draw: (pen) => (
@@ -278,7 +360,7 @@ const torsoCenterRear = aroundPivot(BIPED_PIVOTS["torso-center-rear"], {
     ),
 });
 
-const torsoSideRear = aroundPivot(BIPED_PIVOTS["torso-side-rear"], {
+const torsoSideRear = aroundPivot(PART_PIVOTS["torso-side-rear"], {
     plates: [REAR_SIDE_PLATE],
     label: [-150, 1060],
     draw: (pen) => (
@@ -299,4 +381,6 @@ export const PARTS: Record<PartId, IPart> = {
     "torso-side-rear": torsoSideRear,
     "arm": arm,
     "leg": leg,
+    "quad-leg-front": quadLeg(QUAD_LEGS.front),
+    "quad-leg-rear": quadLeg(QUAD_LEGS.rear),
 };
