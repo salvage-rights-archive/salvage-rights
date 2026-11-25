@@ -9,6 +9,7 @@ import {
   COCKPITS,
   ENGINE_TYPES,
   ENGINE_WEIGHTS,
+  FRANKENMECH,
   GYROS,
   HEAD_MAX_ARMOR,
   HEAT_SINK_RULES,
@@ -27,10 +28,10 @@ import { locationsFor, mountableOn, mountsRequired, podMountable } from "./catal
 import { heatSinkMixAllowed, levelAtLeast, levelIn, levelItems, levelRow, mixedPhase } from "./levels";
 import { datesText, partIsPrototypeOnly, partPrototype } from "./time";
 import type { Catalog, EquipmentRow } from "./catalog";
-import { ARM_FULL, armorSpread, armsOf, configurationOf, engineTons, freeHeatSinks, industrialRulesOf, layout as buildLayout, maxArmor, mechTypeOf, walkMP, weights } from "./mech";
+import { ARM_FULL, armorSpread, armsOf, configurationOf, donorTons, engineTons, freeHeatSinks, industrialRulesOf, layout as buildLayout, maxArmor, mechTypeOf, structurePoints, walkMP, weights } from "./mech";
 import { locationName, type Layout, type LocationCode, type MechRecord, type Mount } from "./mech";
 import { mountedShields, missingActuators, shieldStats } from "./shields";
-import { movementPenalty, rowOf, stemOf, TSM_ROWS } from "./walk";
+import { equipmentItems, mascOf, movementPenalty, rowOf, stemOf, TSM_ROWS } from "./walk";
 
 export interface Finding {
   check: string;
@@ -287,7 +288,9 @@ function engineCheck({ record }: CheckInput): Finding[] {
     out.push(finding("engine", "error", `Engine type ${quoted(type)} is not one we know.`, { where, cite: ENGINE_TYPES.cite }));
   }
   if (engineTons(type, rating) === null) out.push(finding("engine", "note", "The engine weight could not be checked.", { where }));
-  if (isPositive(record.tons) && isPositive(rating) && walkMP(record) === null) {
+  if (isPositive(record.tons) && isPositive(rating) && walkMP(record) === null && record.frankenmech) {
+    out.push(finding("engine", "error", `Engine rating ${rating} over ${record.tons} tons gives under 1 walking MP; a FrankenMech's engine must give at least 1.`, { where, cite: FRANKENMECH.cite }));
+  } else if (isPositive(record.tons) && isPositive(rating) && walkMP(record) === null) {
     out.push(
       finding("engine", "error", `Engine rating ${rating} over ${record.tons} tons gives a walking speed of ${tidy(rating / record.tons)}; it must be a whole number.`, {
         where,
@@ -926,6 +929,42 @@ function omniCheck({ record, catalog }: CheckInput): Finding[] {
   return out;
 }
 
+/** The FrankenMech option (Campaign Operations p.213): what the page asks of a 'Mech built from donor parts, beyond the construction checks
+ * every 'Mech gets. The engine, gyro, cockpit and armor limits are the ordinary checks reading the FrankenMech's own figures (walkMP, structurePoints,
+ * weights). Where the page asks for one heat sink type, the owner ruled otherwise (2026-11-25): the kinds may mix, so the heat sink check says yes. */
+function frankenCheck({ record, catalog }: CheckInput): Finding[] {
+  const franken = record.frankenmech;
+  if (!franken) return [];
+  const cite = FRANKENMECH.cite;
+  const out: Finding[] = [];
+  const say = (level: Finding["level"], message: string, where: Finding["where"] = { field: "frankenmech" }) => out.push(finding("frankenmech", level, message, { where, cite }));
+  if (record.omni || record.unitType === "omnimech") say("error", "An OmniMech cannot be a FrankenMech: its Omni parts lose their benefits and cannot be reconfigured. Build it as a BattleMech or IndustrialMech instead.", { field: "unitType" });
+  const points = structurePoints(record);
+  const locations = Object.keys(points) as LocationCode[];
+  if (isPositive(record.tons) && locations.length !== FRANKENMECH.locationCount) {
+    say("error", `The FrankenMech rules are written for ${FRANKENMECH.locationCount} body locations; a ${record.configuration} has ${locations.length || "none we know"}.`, { field: "configuration" });
+  }
+  for (const [loc, donor] of Object.entries(franken.donors ?? {}) as [LocationCode, number][]) {
+    if (loc !== "CT" && !Object.hasOwn(INTERNAL_STRUCTURE.rows, donor)) say("error", `The ${locationName(loc)} donor weighs ${num(donor)} tons, which is not a 'Mech tonnage in the structure table.`, { location: loc, field: "frankenmech" });
+  }
+  // Legs come from a 'Mech of the same tonnage or heavier; mismatched legs cost piloting (a lower arm or foreleg is not a leg, so only LL, RL and the rest of the leg locations count).
+  const legs = locations.filter((loc) => !["HD", "CT", "LT", "RT", "LA", "RA"].includes(loc));
+  for (const loc of legs) {
+    const donor = donorTons(record, loc);
+    if (donor < record.tons) say("error", `The ${locationName(loc)} comes from a ${donor}-ton donor; a FrankenMech of ${record.tons} tons needs legs from a 'Mech of ${record.tons} tons or more.`, { location: loc, field: "frankenmech" });
+  }
+  if (legs.length > 0) {
+    const mixedTons = new Set(legs.map((loc) => donorTons(record, loc))).size > 1;
+    const { notOneMech, differentTonnage } = FRANKENMECH.legPiloting;
+    say("note", mixedTons ? `The legs come from different tonnages: +${differentTonnage} on Piloting Skill Rolls.` : `Legs not all from one 'Mech: +${notOneMech} on Piloting Skill Rolls; legs of different tonnages: +${differentTonnage}.`);
+  }
+  // Myomers cannot be mixed, and a MASC means standard myomer.
+  if (mascOf(record, equipmentItems(record, catalog).items).mounts.length > 0 && record.chassis.myomer !== "standard") {
+    say("error", "A FrankenMech with MASC installed may use only standard myomer.", { field: "chassis.myomer" });
+  }
+  return out;
+}
+
 export const CHECKS: Check[] = [
   { id: "weight", editions: "all", run: weightCheck },
   { id: "slots", editions: "all", run: slotsCheck },
@@ -945,6 +984,7 @@ export const CHECKS: Check[] = [
   { id: "lam", editions: "all", run: lamCheck },
   { id: "unsupported", editions: "all", run: unsupportedCheck },
   { id: "omni", editions: "all", run: omniCheck },
+  { id: "frankenmech", editions: "all", run: frankenCheck },
 ];
 
 const NO_LAYOUT: Layout = { supported: false, locations: [], slots: {}, unplaced: [], conflicts: [], overflow: [], partSlots: [] };

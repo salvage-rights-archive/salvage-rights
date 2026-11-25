@@ -95,6 +95,12 @@ describe("mech files", () => {
     expect(isMechRecord({ ...mixed, chassis: { ...mixed.chassis, heatSinks: { type: "double", count: 10, extra: { type: "double-clan", count: 4 } } } })).toBe(false);
   });
 
+  it("round-trips a FrankenMech's donors and refuses a malformed flag", () => {
+    const franken = bipedRecord({ frankenmech: { donors: { RA: 70, HD: 45 } } });
+    expect(fromMechFile(JSON.parse(JSON.stringify(toMechFile(franken))))).toEqual({ ok: true, record: franken });
+    expect(isMechRecord({ ...franken, frankenmech: { donors: { RA: "heavy" } } })).toBe(false);
+  });
+
   it.each([
     ["wrong app", { app: "other", kind: "mech", version: 1 }],
     ["wrong kind", { app: "salvage-rights", kind: "list", version: 1 }],

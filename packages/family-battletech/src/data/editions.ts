@@ -97,6 +97,7 @@ export const BOOKS: Record<string, BookDates> = {
   "Tactical Operations: Advanced Units and Equipment": { printing: "corrected seventh printing", printed: "2024-06", approx: true, errata: "v7.0", errataDated: "2023-09-23" },
   "Interstellar Operations: Alternate Eras": { printing: "third corrected printing", printed: "2023-01", approx: true, errata: "v3.01", errataDated: "2023-01-17" },
   "BattleTech Core Rulebook": { printing: "first printing", printed: "2026-05", approx: true, errata: "v0.1", errataDated: "2026-08-10" },
+  "Campaign Operations": { printing: "corrected fourth printing", printed: "2023-01", approx: true, errata: "v5.0", errataDated: "2024-08-22" },
   "Quick-Strike: Introductory 'Mech Cards": { printing: "2012 cards", printed: "2012-01", approx: true },
   "BattleTech Quick-Start Rules": { printing: "2021 rules", printed: "2021-01", approx: true },
 };
@@ -124,6 +125,7 @@ const PUBLISHERS: Record<string, string> = {
   TechManual: "Catalyst Game Labs",
   "Interstellar Operations: Alternate Eras": "Catalyst Game Labs",
   "Tactical Operations: Advanced Units and Equipment": "Catalyst Game Labs",
+  "Campaign Operations": "Catalyst Game Labs",
   "Quick-Strike: Introductory 'Mech Cards": "Catalyst Game Labs",
   "BattleTech Quick-Start Rules": "Catalyst Game Labs",
 };

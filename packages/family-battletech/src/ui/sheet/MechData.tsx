@@ -122,7 +122,12 @@ export default function MechData({ rect, facts }: { rect: Rect; facts: SheetFact
       {pair("Tech Base:", facts.techBase, x + 330, y + 188, 25, 160)}
       {facts.year !== undefined && pair("Year:", facts.year, x + 330, y + 220, 25, 160)}
       {pair("Rules edition:", facts.edition, x + 24, y + 254, 24, 400)}
-      {pair("Rules level:", facts.level, x + 24, y + 280, 24, 400)}
+      {pair("Rules level:", facts.level, x + 24, y + 280, 24, facts.frankenmech ? 290 : 400)}
+      {facts.frankenmech && (
+        <text x={x + rect.w - 24} y={y + 280} fontSize={24} fontWeight={700} fontStyle="italic" textAnchor="end" fill={INK} {...squeeze("FrankenMech: donor parts", 24, 200)}>
+          FrankenMech: donor parts
+        </text>
+      )}
       <line x1={x + 12} x2={x + rect.w - 12} y1={y + 292} y2={y + 292} stroke={INK} strokeWidth={2} />
       <text x={x + 24} y={y + 322} fontSize={26} fontWeight={700} fill={INK}>
         Weapons &amp; Equipment Inventory

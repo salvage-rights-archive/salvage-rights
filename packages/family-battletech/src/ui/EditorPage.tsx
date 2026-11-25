@@ -11,11 +11,11 @@ import type { Catalog } from "../rules/catalog";
 import { runChecks } from "../rules/checks";
 import type { Finding } from "../rules/checks";
 import { changedSinceImport } from "../rules/mordel";
-import { ARM_FULL, bodyOf, configurationOf, editRecord, layout as buildLayout, locationName, mechTypeOf, partMountBase, setConfiguration, weights as buildWeights } from "../rules/mech";
+import { ARM_FULL, bodyOf, configurationOf, donorTons, editRecord, layout as buildLayout, locationName, mechTypeOf, partMountBase, setConfiguration, structurePoints, weights as buildWeights } from "../rules/mech";
 import type { Layout, LocationCode, MechRecord } from "../rules/mech";
 import { configurationChoices, eraOfRecord, partChoices, setEra, setYear } from "../rules/availability";
 import type { PartKind } from "../rules/availability";
-import { heatSinkMixAllowed, heatSinkMixPossible, techBaseChoices, withLevel } from "../rules/levels";
+import { frankenMechOffered, heatSinkMixAllowed, heatSinkMixPossible, techBaseChoices, withLevel } from "../rules/levels";
 import {
   BASE,
   applyBaseEdit,
@@ -391,7 +391,7 @@ const safeLayout = (record: MechRecord, catalog: Catalog): Layout => {
 
 /** The ids a finding may name a field by: the identity and chassis fields, and the armor fields drawn. */
 function fieldTargets(armorLocations: string[]): Set<string> {
-  const paths = ["name", "unitType", "rulesLevel", "tons", "year", "era", "techBase", "configuration", ...CHASSIS_FIELDS.filter((f) => f.kind === "select").map((f) => f.path), ...armorLocations.map((l) => `armor.${l}`)];
+  const paths = ["name", "unitType", "frankenmech", "rulesLevel", "tons", "year", "era", "techBase", "configuration", ...CHASSIS_FIELDS.filter((f) => f.kind === "select").map((f) => f.path), ...armorLocations.map((l) => `armor.${l}`)];
   return new Set(paths);
 }
 
@@ -876,6 +876,20 @@ function Editor({ initial, startAt, catalog, storage }: { initial: Doc; startAt?
                   }}
                 />
               )}
+              {frankenMechOffered(record) && (
+                <label className="bt-check bt-grid__wide" htmlFor="field-frankenmech">
+                  <input
+                    id="field-frankenmech"
+                    type="checkbox"
+                    checked={record.frankenmech !== undefined}
+                    disabled={fixedHere}
+                    onChange={(event) => {
+                      edit((d) => { if (event.target.checked) d.frankenmech = {}; else delete d.frankenmech; });
+                    }}
+                  />
+                  FrankenMech (built from donor parts)
+                </label>
+              )}
               <SelectField
                 id="field-configuration"
                 label="Configuration"
@@ -907,8 +921,27 @@ function Editor({ initial, startAt, catalog, storage }: { initial: Doc; startAt?
                 onChange={(v) => { edit((d) => { setEra(d, v); }, "era"); }}
               />
               </div>
-              <NumberField id="field-tons" label="Tons" value={record.tons} changed={mark("tons")} disabled={fixedHere} onValid={(v) => { edit((d) => void (d.tons = v ?? d.tons), "tons"); }} />
+              <NumberField id="field-tons" label={record.frankenmech ? "Tons (center torso donor)" : "Tons"} value={record.tons} changed={mark("tons")} disabled={fixedHere} onValid={(v) => { edit((d) => void (d.tons = v ?? d.tons), "tons"); }} />
             </div>
+            {record.frankenmech && (
+              <fieldset className="bt-arm">
+                <legend>Donor 'Mech tonnage for each location</legend>
+                <div className="bt-grid">
+                  {(Object.keys(structurePoints(record)) as LocationCode[])
+                    .filter((loc) => loc !== "CT")
+                    .map((loc) => (
+                      <NumberField
+                        key={loc}
+                        id={`field-donor-${loc}`}
+                        label={locationName(loc)}
+                        name={`${locationName(loc)} donor tons`}
+                        value={donorTons(record, loc)}
+                        onValid={(v) => { edit((d) => { if (v !== null) d.frankenmech = { ...d.frankenmech, donors: { ...d.frankenmech?.donors, [loc]: v } }; }); }}
+                      />
+                    ))}
+                </div>
+              </fieldset>
+            )}
           </section>
 
           <section className="bt-panel" aria-labelledby="bt-chassis">
