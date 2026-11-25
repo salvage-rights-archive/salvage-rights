@@ -93,9 +93,10 @@ h1:focus {
   flex: 1;
 }
 
+// The page grows with the window up to a wide desktop, so text fields and choices use the room there is.
 .sr-page {
   display: block;
-  max-width: 60rem;
+  max-width: min(100%, 84rem);
   margin: 0 auto;
   padding: var(--sr-space-4) var(--sr-space-3);
 }

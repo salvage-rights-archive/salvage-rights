@@ -93,8 +93,11 @@ a.bt-button {
   }
 }
 
+// Centred under its heading, picture and words together.
 .bt-empty {
-  max-width: 36rem;
+  max-width: 44rem;
+  margin-inline: auto;
+  text-align: center;
 
   img {
     display: block;
@@ -1252,10 +1255,11 @@ a.bt-button {
   }
 }
 
-// A game picture at the top of its home page.
+// A game picture at the top of its home page, centred with its label.
 .bt-game-art {
-  max-width: 28rem;
-  margin: 0 0 var(--sr-space-3);
+  max-width: 40rem;
+  margin: 0 auto var(--sr-space-3);
+  text-align: center;
 
   img {
     display: block;
