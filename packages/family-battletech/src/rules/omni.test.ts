@@ -213,10 +213,9 @@ describe("the Omni checks (TechManual pp.19-20, 44-58)", () => {
     expect(configurationLevel(raised, catalog)).toBe("experimental");
     expect(found(raised, "level").some((f) => f.message.includes("Experimental"))).toBe(true);
     const early = (year: number, rulesLevel: "standard" | "experimental") => editRecord(prime(), (d) => void Object.assign(d, { year, rulesLevel }));
-    const gate = (record: MechRecord) => found(record, "availability").filter((f) => f.where?.field === "unitType");
-    expect(gate(early(2855, "standard")).map((f) => f.level)).toEqual(["error"]);
-    expect(gate(early(2855, "experimental")).map((f) => f.level)).toEqual(["note"]);
-    expect(gate(early(2856, "standard"))).toEqual([]);
+    // The shared dates logic (rules/time.ts): the Clan prototype year 2854 is in time but is Experimental level; production 2856 is Standard.
+    const problems = (record: MechRecord) => runChecks(record, catalog).filter((f) => f.level === "error" && (f.where?.field === "unitType" || f.check === "level")).length;
+    expect([problems(early(2853, "experimental")), problems(early(2855, "standard")), problems(early(2855, "experimental")), problems(early(2856, "standard"))]).toEqual([1, 1, 0, 0]);
   });
 
   it("names what a base edit breaks in each configuration and changes nothing itself", () => {

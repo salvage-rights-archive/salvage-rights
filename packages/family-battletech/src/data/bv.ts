@@ -317,6 +317,8 @@ export const BV_RULE_ITEMS: {
   superCooledMyomer: Sourced & { ids: string[]; myomer: string; umuIds: string[] };
   harjel: Sourced & { multipliers: Record<string, number>; perSlot: number };
   aes: Sourced & { armIds: string[]; legIds: string[]; weaponFactor: number; tonnageFactor: number };
+  /** A unit with a drone operating system multiplies the BV of all its weapons (not ammunition) by 0.8, and its final BV by 0.95. */
+  drone: Sourced & { ids: string[]; weaponFactor: number; finalFactor: number };
 } = {
   signature: {
     cite: { book: TO, page: 193 },
@@ -331,6 +333,7 @@ export const BV_RULE_ITEMS: {
   superCooledMyomer: { cite: { book: IO, page: 185 }, checked: "page", ids: ["super-cooled-myomer-is"], myomer: "super-cooled", umuIds: ["umu-is", "umu-clan"] },
   harjel: { cite: { book: IO, page: 185 }, checked: "page", multipliers: { "harjel-ii-clan": 1.1, "harjel-iii-clan": 1.2 }, perSlot: 1 },
   aes: { cite: { book: TO, page: 192 }, checked: "page", armIds: ["aes-arm-is", "aes-arm-clan"], legIds: ["aes-leg-is", "aes-leg-clan"], weaponFactor: 1.25, tonnageFactor: 0.1 },
+  drone: { cite: { book: TO, page: 193 }, checked: "page", ids: ["drone-operating-system-is", "drone-operating-system-clan"], weaponFactor: 0.8, finalFactor: 0.95 },
 };
 /** Rows that add to Heat Efficiency (RISC emergency coolant system: +4, IO:AE p. 190). */
 export const HEAT_EFFICIENCY_BONUS: Record<string, number> = { "risc-emergency-coolant-system-is": 4 };
@@ -407,7 +410,7 @@ export const WEAPON_BV: BvGroup[] = [
       ["mml-3-is", 29, 4, { ammo: ["ammo-mml-3-lrm-is", "ammo-mml-3-srm-is"] }], ["mml-5-is", 45, 6, { ammo: ["ammo-mml-5-lrm-is", "ammo-mml-5-srm-is"] }],
       ["mml-7-is", 67, 8, { ammo: ["ammo-mml-7-lrm-is", "ammo-mml-7-srm-is"] }], ["mml-9-is", 86, 11, { ammo: ["ammo-mml-9-lrm-is", "ammo-mml-9-srm-is"] }],
       ["mrm-10-is", 56, 7], ["mrm-20-is", 112, 14], ["mrm-30-is", 168, 21], ["mrm-40-is", 224, 28],
-      ["rocket-launcher-10-is", 18], ["rocket-launcher-15-is", 23], ["rocket-launcher-20-is", 24],
+      ["rocket-launcher-10-is", 18, undefined, { heat: "oneShot" }], ["rocket-launcher-15-is", 23, undefined, { heat: "oneShot" }], ["rocket-launcher-20-is", 24, undefined, { heat: "oneShot" }],
       ["srm-2-is", 21, 3], ["srm-4-is", 39, 5], ["srm-6-is", 59, 7],
       ["streak-srm-2-is", 30, 4, { heat: "streak" }], ["streak-srm-4-is", 59, 7, { heat: "streak" }], ["streak-srm-6-is", 89, 11, { heat: "streak" }],
       // Clan energy
@@ -450,8 +453,8 @@ export const WEAPON_BV: BvGroup[] = [
       ["prototype-narc-missile-beacon-is", 15, 0],
       ["prototype-small-pulse-laser-is", 11, undefined, { heat: 4 }], ["prototype-medium-pulse-laser-is", 43, undefined, { heat: 7 }], ["prototype-medium-pulse-laser-lsw-is", 43, undefined, { heat: 7 }],
       ["prototype-large-pulse-laser-is", 108, undefined, { heat: 13 }],
-      ["prototype-rocket-launcher-10-is", 15], ["prototype-rocket-launcher-15-is", 18], ["prototype-rocket-launcher-20-is", 19],
-      ["prototype-rocket-launcher-10-clan", 15], ["prototype-rocket-launcher-15-clan", 18], ["prototype-rocket-launcher-20-clan", 19],
+      ["prototype-rocket-launcher-10-is", 15, undefined, { heat: "oneShot" }], ["prototype-rocket-launcher-15-is", 18, undefined, { heat: "oneShot" }], ["prototype-rocket-launcher-20-is", 19, undefined, { heat: "oneShot" }],
+      ["prototype-rocket-launcher-10-clan", 15, undefined, { heat: "oneShot" }], ["prototype-rocket-launcher-15-clan", 18, undefined, { heat: "oneShot" }], ["prototype-rocket-launcher-20-clan", 19, undefined, { heat: "oneShot" }],
       ["centurion-weapon-system-is", 190],
       ["improved-ac-2-clan", 37, 5], ["improved-ac-5-clan", 70, 9], ["improved-ac-10-clan", 123, 15], ["improved-ac-20-clan", 178, 22],
       ["improved-gauss-rifle-clan", 320, 40, { inert: true, gauss: true }],
@@ -482,7 +485,8 @@ export const WEAPON_BV: BvGroup[] = [
       ["variable-speed-laser-large-is", 123], ["variable-speed-laser-medium-is", 56], ["variable-speed-laser-small-is", 22],
       ["x-pulse-laser-small-is", 21], ["x-pulse-laser-medium-is", 71], ["x-pulse-laser-large-is", 178],
       ["hyper-velocity-ac-2-is", 53, 7, { gaussSlots: 1 }], ["hyper-velocity-ac-5-is", 109, 14, { gaussSlots: 1 }], ["hyper-velocity-ac-10-is", 158, 20, { gaussSlots: 1 }],
-      ["fluid-gun-is", 6, 1], ["heavy-flamer-is", 15, 2], ["improved-heavy-gauss-is", 385, 48, { gauss: true }], ["magshot-is", 15, 2, { gauss: true }],
+      // The fluid gun carries Water ammunition unless the design says otherwise, and water does not explode (TO:AUE, Fluid Gun and Flamer/Fluid Gun/Sprayer Ammunition), so its bins are inert.
+      ["fluid-gun-is", 6, 1, { inert: true }], ["heavy-flamer-is", 15, 2], ["improved-heavy-gauss-is", 385, 48, { gauss: true }], ["magshot-is", 15, 2, { gauss: true }],
       ["silver-bullet-gauss-is", 198, 25, { gauss: true }],
       ["mech-mortar-1-is", 10, 1], ["mech-mortar-2-is", 14, 2], ["mech-mortar-4-is", 26, 3], ["mech-mortar-8-is", 50, 6],
       ["light-rifle-is", 21, 3], ["medium-rifle-is", 51, 6], ["heavy-rifle-is", 91, 11],
@@ -505,7 +509,7 @@ export const WEAPON_BV: BvGroup[] = [
       ["improved-heavy-laser-large-clan", 296, undefined, { gauss: true }],
       ["protomech-ac-2-clan", 34, 4], ["protomech-ac-4-clan", 49, 6], ["protomech-ac-8-clan", 66, 8],
       ["rotary-ac-2-clan", 161, 20, { heat: "rotary" }], ["rotary-ac-5-clan", 345, 43, { heat: "rotary" }],
-      ["fluid-gun-clan", 6, 1], ["heavy-flamer-clan", 15, 2],
+      ["fluid-gun-clan", 6, 1, { inert: true }], ["heavy-flamer-clan", 15, 2],
       ["mech-mortar-1-clan", 10, 1], ["mech-mortar-2-clan", 14, 2], ["mech-mortar-4-clan", 26, 3], ["mech-mortar-8-clan", 50, 6],
       ["vehicular-grenade-launcher-clan", 15],
       ["long-tom-cannon-clan", 329, 41], ["sniper-cannon-clan", 77, 10], ["thumper-cannon-clan", 41, 5],

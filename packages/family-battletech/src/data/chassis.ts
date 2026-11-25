@@ -29,7 +29,8 @@ interface Sourced {
 /**
  * What a part row says about itself beyond its construction numbers; every field is absent on a row the book treats as plain
  * standard technology. `techBase` is who may build it ("both" when the book prints one row for both); `introduced` is the first
- * year the book prints for each tech base, with `prototype` where the date is the prototype's only (the book's "P"); `rules`
+ * (production) year the book prints for each tech base, with `prototype` naming the bases whose date is a prototype's only (the
+ * book's "P", no production year printed); `rules`
  * is what the part does in play, in our words, shown as a note and never simulated; `industrial` marks a part that is printed
  * for IndustrialMechs and not BattleMechs; `primitive` marks one printed for the Age of War's Primitive 'Mechs.
  * A row whose figures come from another page than its table's keeps that page in `cite` (with `checked`).
@@ -39,7 +40,13 @@ export interface PartFacts {
   rulesLevel?: "standard" | "advanced" | "experimental";
   /** The unit tonnages the part is for, where the book limits it (a superheavy 'Mech's parts: 101 to 200 tons). */
   tonnage?: { min: number; max: number };
-  introduced?: { is?: number; clan?: number; prototype?: true };
+  introduced?: { is?: number; clan?: number; prototype?: ("is" | "clan")[] };
+  /** The year the part's prototype appears, before its production year (`introduced`, or the first span of `availability`), from the
+   * Universal Technology Advancement Table's Prototype column or the P-marked date of the table the row cites. A number holds for the
+   * row's own tech base; an object gives each base where a "both" row has two. Between the two years the part needs Experimental rules
+   * (IO:AE printed p.27) unless `prototypeLevel` says the books keep it at a lower one. Absent: no prototype date is printed. */
+  prototypeYear?: number | { is?: number; clan?: number };
+  prototypeLevel?: RulesLevel;
   /** The years the part can be had (production dates, with an extinction and a reintroduction where the table prints them), for the
    * tech base the row is for. It takes the place of `introduced` in the availability rule; absent means no printed date, so no limit.
    * `availabilityCite` is the page of the Universal Technology Advancement Table (IO:AE printed pp.29-44), read against the page image. */
@@ -126,16 +133,17 @@ export const STRUCTURE_TYPES: Sourced & { types: Record<string, StructureType> }
   cite: { book: "TechManual", page: 47 },
   checked: "page",
   types: {
-    standard: { name: "Standard", weightFactor: 1, slots: 0, availability: [{ from: 2439 }], availabilityCite: UTA(42) },
-    "endo-steel": { name: "Endo Steel", weightFactor: 0.5, slots: 14, techBase: "inner-sphere", availability: [{ from: 2487, to: 2850 }, { from: 3035 }], availabilityCite: UTA(42) },
-    "endo-steel-clan": { name: "Endo Steel (Clan)", weightFactor: 0.5, slots: 7, techBase: "clan", availability: [{ from: 2827 }], availabilityCite: UTA(42) },
+    standard: { name: "Standard", weightFactor: 1, slots: 0, availability: [{ from: 2439 }], prototypeYear: 2430, availabilityCite: UTA(42) },
+    "endo-steel": { name: "Endo Steel", weightFactor: 0.5, slots: 14, techBase: "inner-sphere", availability: [{ from: 2487, to: 2850 }, { from: 3035 }], prototypeYear: 2480, availabilityCite: UTA(42) },
+    "endo-steel-clan": { name: "Endo Steel (Clan)", weightFactor: 0.5, slots: 7, techBase: "clan", availability: [{ from: 2827 }], prototypeYear: 2825, availabilityCite: UTA(42) },
     composite: {
       name: "Composite",
       weightFactor: 0.5,
       slots: 0,
       techBase: "inner-sphere",
       rulesLevel: "experimental",
-      introduced: { is: 3061, prototype: true },
+      introduced: { is: 3082 },
+      prototypeYear: 3061,
       cite: TO_STRUCTURE,
       checked: "page",
       rules: "All damage to this structure is doubled; excess damage that goes on to armored locations follows the armor's rules.",
@@ -147,7 +155,8 @@ export const STRUCTURE_TYPES: Sourced & { types: Record<string, StructureType> }
       slots: 7,
       techBase: "inner-sphere",
       rulesLevel: "experimental",
-      introduced: { is: 3067, prototype: true },
+      introduced: { is: 3085 },
+      prototypeYear: 3067,
       cite: TO_STRUCTURE,
       checked: "page",
       rules: "Plays as endo steel: a critical hit on one of its slots is rolled again.",
@@ -159,7 +168,7 @@ export const STRUCTURE_TYPES: Sourced & { types: Record<string, StructureType> }
       slots: 4,
       techBase: "clan",
       rulesLevel: "experimental",
-      introduced: { clan: 3073, prototype: true },
+      introduced: { clan: 3073, prototype: ["clan"] },
       cite: TO_STRUCTURE,
       checked: "page",
       rules: "Plays as endo steel: a critical hit on one of its slots is rolled again.",
@@ -171,7 +180,8 @@ export const STRUCTURE_TYPES: Sourced & { types: Record<string, StructureType> }
       slots: 0,
       techBase: "both",
       rulesLevel: "experimental",
-      introduced: { is: 3057, clan: 3065, prototype: true },
+      introduced: { is: 3057, clan: 3084, prototype: ["is"] },
+      prototypeYear: { clan: 3065 },
       cite: TO_STRUCTURE,
       checked: "page",
       rules: "Each structure point takes two points of damage before it is lost, but only full structure circles removed count toward the 20-damage Piloting Skill Roll; critical hit rolls against the 'Mech take -1. It does not let more armor be mounted.",
@@ -196,6 +206,7 @@ export const STRUCTURE_TYPES: Sourced & { types: Record<string, StructureType> }
       techBase: "both",
       industrial: true,
       introduced: { is: 2350 },
+      prototypeYear: 2300,
       cite: { book: "TechManual", page: 67 },
       checked: "page",
       rules: "Weighs 20 percent of the 'Mech, twice a standard BattleMech's structure, and takes no critical slots; only an IndustrialMech uses it.",
@@ -328,9 +339,9 @@ export const ENGINE_TYPES: Sourced & { types: Record<string, EngineType> } = {
   checked: "page",
   types: {
     standard: { name: "Standard Fusion", label: "Fusion Engine", weightFactor: 1, ct: 6, side: 0 },
-    xl: { name: "XL Fusion", label: "XL Fusion Engine", weightFactor: 0.5, factorCite: P214, factorChecked: "text", ct: 6, side: 3, techBase: "inner-sphere", availability: [{ from: 2579, to: 2865 }, { from: 3035 }], availabilityCite: UTA(38) },
-    "xl-clan": { name: "XL Fusion (Clan)", label: "XL Fusion Engine", weightFactor: 0.5, factorCite: P214, factorChecked: "text", ct: 6, side: 2, techBase: "clan", availability: [{ from: 2827 }], availabilityCite: UTA(38) },
-    light: { name: "Light Fusion", label: "Light Fusion Engine", weightFactor: 0.75, factorCite: P214, factorChecked: "text", ct: 6, side: 2, techBase: "inner-sphere", availability: [{ from: 3062 }], availabilityCite: UTA(38) },
+    xl: { name: "XL Fusion", label: "XL Fusion Engine", weightFactor: 0.5, factorCite: P214, factorChecked: "text", ct: 6, side: 3, techBase: "inner-sphere", availability: [{ from: 2579, to: 2865 }, { from: 3035 }], prototypeYear: 2556, availabilityCite: UTA(38) },
+    "xl-clan": { name: "XL Fusion (Clan)", label: "XL Fusion Engine", weightFactor: 0.5, factorCite: P214, factorChecked: "text", ct: 6, side: 2, techBase: "clan", availability: [{ from: 2827 }], prototypeYear: 2824, availabilityCite: UTA(38) },
+    light: { name: "Light Fusion", label: "Light Fusion Engine", weightFactor: 0.75, factorCite: P214, factorChecked: "text", ct: 6, side: 2, techBase: "inner-sphere", availability: [{ from: 3062 }], prototypeYear: 3055, availabilityCite: UTA(38) },
     compact: {
       name: "Compact Fusion",
       label: "Compact Fusion Engine",
@@ -341,6 +352,7 @@ export const ENGINE_TYPES: Sourced & { types: Record<string, EngineType> } = {
       side: 0,
       techBase: "inner-sphere",
       availability: [{ from: 3068 }],
+      prototypeYear: 3065,
       availabilityCite: UTA(38),
     },
     // XXL fusion (Tactical Operations: Advanced Units and Equipment, Advanced Engine Master Table printed p.120, read against the
@@ -356,7 +368,8 @@ export const ENGINE_TYPES: Sourced & { types: Record<string, EngineType> } = {
       side: 6,
       techBase: "inner-sphere",
       rulesLevel: "experimental",
-      introduced: { is: 3055, prototype: true },
+      introduced: { is: 3110 },
+      prototypeYear: 3055,
       cite: { book: TO, page: 120 },
       checked: "page",
       rules: "Runs hotter: 2 heat standing, 4 walking, 6 running, and jumping heat is doubled (at least 6).",
@@ -370,7 +383,8 @@ export const ENGINE_TYPES: Sourced & { types: Record<string, EngineType> } = {
       side: 4,
       techBase: "clan",
       rulesLevel: "experimental",
-      introduced: { clan: 3030, prototype: true },
+      introduced: { clan: 3084 },
+      prototypeYear: 3030,
       cite: { book: TO, page: 120 },
       checked: "page",
       rules: "Runs hotter: 2 heat standing, 4 walking, 6 running, and jumping heat is doubled (at least 6).",
@@ -415,14 +429,14 @@ export const GYROS: Sourced & { types: Record<string, GyroType> } = {
   cite: { book: "TechManual", page: 50 },
   checked: "page",
   types: {
-    standard: { name: "Standard", label: "Gyro", multiplier: 1.0, slots: 4, availability: [{ from: 2350 }], availabilityCite: UTA(42) },
-    compact: { name: "Compact", label: "Compact Gyro", multiplier: 1.5, slots: 2, techBase: "inner-sphere", availability: [{ from: 3068 }], availabilityCite: UTA(42) },
-    "heavy-duty": { name: "Heavy-Duty", label: "Heavy Duty Gyro", multiplier: 2.0, slots: 4, techBase: "inner-sphere", availability: [{ from: 3067 }], availabilityCite: UTA(42) },
-    xl: { name: "XL", label: "XL Gyro", multiplier: 0.5, slots: 6, techBase: "inner-sphere", availability: [{ from: 3067 }], availabilityCite: UTA(42) },
+    standard: { name: "Standard", label: "Gyro", multiplier: 1.0, slots: 4, availability: [{ from: 2350 }], prototypeYear: 2300, availabilityCite: UTA(42) },
+    compact: { name: "Compact", label: "Compact Gyro", multiplier: 1.5, slots: 2, techBase: "inner-sphere", availability: [{ from: 3068 }], prototypeYear: 3055, availabilityCite: UTA(42) },
+    "heavy-duty": { name: "Heavy-Duty", label: "Heavy Duty Gyro", multiplier: 2.0, slots: 4, techBase: "inner-sphere", availability: [{ from: 3067 }], prototypeYear: 3055, availabilityCite: UTA(42) },
+    xl: { name: "XL", label: "XL Gyro", multiplier: 0.5, slots: 6, techBase: "inner-sphere", availability: [{ from: 3067 }], prototypeYear: 3055, availabilityCite: UTA(42) },
     // The superheavy gyro (Interstellar Operations: Alternate Eras, rules printed p.156 Add Gyroscope; table p.217, date and Advanced level): the
     // only gyro a superheavy 'Mech may use, weighing as much as a heavy-duty gyro (the engine rating over 100, rounded up, times 2) in two
     // center torso slots. Data only: `only` names the body the editor does not offer yet.
-    superheavy: { name: "Superheavy", label: "Superheavy Gyro", multiplier: 2.0, slots: 2, only: "superheavy", tonnage: { min: 101, max: 200 }, techBase: "inner-sphere", rulesLevel: "advanced", availability: [{ from: 2940 }], cite: { book: IO, page: 217 }, checked: "page" },
+    superheavy: { name: "Superheavy", label: "Superheavy Gyro", multiplier: 2.0, slots: 2, only: "superheavy", tonnage: { min: 101, max: 200 }, techBase: "inner-sphere", rulesLevel: "advanced", availability: [{ from: 2940 }], prototypeYear: 2905, cite: { book: IO, page: 217 }, checked: "page" },
   },
 };
 
@@ -449,9 +463,9 @@ export const COCKPITS: Sourced & { types: Record<string, CockpitType> } = {
   cite: { book: "TechManual", page: 52 },
   checked: "page",
   types: {
-    standard: { name: "Standard", tons: 3, cockpit: [3], sensors: [2, 5], lifeSupport: [1, 6], availability: [{ from: 2470 }], availabilityCite: UTA(33) },
+    standard: { name: "Standard", tons: 3, cockpit: [3], sensors: [2, 5], lifeSupport: [1, 6], availability: [{ from: 2470 }], prototypeYear: 2468, availabilityCite: UTA(33) },
     // The Small Cockpit row prints 3067 (Federated Suns) for the Inner Sphere and "Clan Intro: 3080".
-    small: { name: "Small", tons: 2, cockpit: [3], sensors: [2, 4], lifeSupport: [1], techBase: "both", introduced: { is: 3067, clan: 3080 }, availabilityCite: UTA(33) },
+    small: { name: "Small", tons: 2, cockpit: [3], sensors: [2, 4], lifeSupport: [1], techBase: "both", introduced: { is: 3067, clan: 3080 }, prototypeYear: { is: 3060 }, availabilityCite: UTA(33) },
     // The tripod's special cockpit weighs 4 tons up to 100 tons and takes the same slots as the standard one (Interstellar
     // Operations: Alternate Eras, Tripod 'Mech Construction Rules, printed p.159). Its 5-ton superheavy version is out of scope.
     tripod: { name: "Tripod", tons: 4, only: "tripod", cite: IO_TRIPOD_CONSTRUCTION, cockpit: [3], sensors: [2, 5], lifeSupport: [1, 6] },
@@ -463,7 +477,8 @@ export const COCKPITS: Sourced & { types: Record<string, CockpitType> } = {
       tons: 4,
       techBase: "both",
       rulesLevel: "experimental",
-      introduced: { is: 3053, clan: 3055, prototype: true },
+      introduced: { is: 3080, clan: 3055, prototype: ["clan"] },
+      prototypeYear: { is: 3053 },
       cite: { book: TO, page: 112 },
       checked: "page",
       cockpit: [],
@@ -477,12 +492,12 @@ export const COCKPITS: Sourced & { types: Record<string, CockpitType> } = {
     // IndustrialMech cockpits (TechManual printed pp.68-69; production 2470 in the Universal table, IO:AE printed p.33, read against the
     // page image: the 2350 cockpit there is the Primitive IndustrialMech's): 3 tons, the default slots of a standard cockpit. Advanced Fire Control
     // only doubles the cost (the cost table, p.277); it takes no tonnage or space. Neither has the ejection a BattleMech's has.
-    industrial: { name: "Industrial", tons: 3, cockpit: [3], sensors: [2, 5], lifeSupport: [1, 6], techBase: "both", industrial: true, availability: [{ from: 2470 }], availabilityCite: UTA(33), cite: { book: "TechManual", page: 69 }, checked: "page", rules: "No pilot ejection, and every attack takes +1 to hit; Artemis IV, Beagle Active Probe, C3 and targeting computers may not be mounted without Advanced Fire Control." },
-    "industrial-afc": { name: "Industrial (Advanced Fire Control)", tons: 3, cockpit: [3], sensors: [2, 5], lifeSupport: [1, 6], techBase: "both", industrial: true, availability: [{ from: 2470 }], availabilityCite: UTA(33), cite: { book: "TechManual", page: 69 }, checked: "page", rules: "An industrial cockpit with Advanced Fire Control: no +1 to hit, and Artemis IV, Beagle Active Probe, C3 and targeting computers may be mounted. It adds no weight or space." },
+    industrial: { name: "Industrial", tons: 3, cockpit: [3], sensors: [2, 5], lifeSupport: [1, 6], techBase: "both", industrial: true, availability: [{ from: 2470 }], prototypeYear: 2469, availabilityCite: UTA(33), cite: { book: "TechManual", page: 69 }, checked: "page", rules: "No pilot ejection, and every attack takes +1 to hit; Artemis IV, Beagle Active Probe, C3 and targeting computers may not be mounted without Advanced Fire Control." },
+    "industrial-afc": { name: "Industrial (Advanced Fire Control)", tons: 3, cockpit: [3], sensors: [2, 5], lifeSupport: [1, 6], techBase: "both", industrial: true, availability: [{ from: 2470 }], prototypeYear: 2469, availabilityCite: UTA(33), cite: { book: "TechManual", page: 69 }, checked: "page", rules: "An industrial cockpit with Advanced Fire Control: no +1 to hit, and Artemis IV, Beagle Active Probe, C3 and targeting computers may be mounted. It adds no weight or space." },
     // BattleMech interface cockpit (Interstellar Operations: Alternate Eras, rules printed p.110, table p.213): replaces the standard cockpit,
     // weighs 4 tons and takes one extra cockpit slot (the book does not say which slot; the free fourth is used).
-    interface: { name: "Interface", tons: 4, cockpit: [3, 4], sensors: [2, 5], lifeSupport: [1, 6], techBase: "inner-sphere", rulesLevel: "experimental", introduced: { is: 3078, prototype: true }, cite: { book: IO, page: 213 }, checked: "text", rules: "Lets a MechWarrior in an interface suit control the 'Mech through a neural link." },
-    "interface-clan": { name: "Interface (Clan)", tons: 4, cockpit: [3, 4], sensors: [2, 5], lifeSupport: [1, 6], techBase: "clan", rulesLevel: "experimental", introduced: { clan: 3083, prototype: true }, cite: { book: IO, page: 213 }, checked: "text", rules: "Lets a MechWarrior in an interface suit control the 'Mech through a neural link." },
+    interface: { name: "Interface", tons: 4, cockpit: [3, 4], sensors: [2, 5], lifeSupport: [1, 6], techBase: "inner-sphere", rulesLevel: "experimental", introduced: { is: 3078, prototype: ["is"] }, cite: { book: IO, page: 213 }, checked: "text", rules: "Lets a MechWarrior in an interface suit control the 'Mech through a neural link." },
+    "interface-clan": { name: "Interface (Clan)", tons: 4, cockpit: [3, 4], sensors: [2, 5], lifeSupport: [1, 6], techBase: "clan", rulesLevel: "experimental", introduced: { clan: 3083, prototype: ["clan"] }, cite: { book: IO, page: 213 }, checked: "text", rules: "Lets a MechWarrior in an interface suit control the 'Mech through a neural link." },
     // Primitive BattleMechs mount only the primitive cockpit, 5 tons (Interstellar Operations: Alternate Eras printed p.117).
     primitive: {
       name: "Primitive",
@@ -490,6 +505,7 @@ export const COCKPITS: Sourced & { types: Record<string, CockpitType> } = {
       techBase: "inner-sphere",
       primitive: true,
       introduced: { is: 2439 },
+      prototypeYear: 2430,
       cite: { book: IO, page: 117 },
       checked: "page",
       cockpit: [3],
@@ -502,8 +518,8 @@ export const COCKPITS: Sourced & { types: Record<string, CockpitType> } = {
     // 'Mech is 101 to 200 tons and its cockpit weighs 4 tons (5 for the tripod's) and keeps the standard head slots. The app builds no superheavy
     // 'Mech yet: `only` names a body the editor does not offer, so no picker shows these and the rows are data only. The dates are the table's Latest
     // Intro Date; the Universal Technology Advancement Table prints 3135 (not 2940) for the tripod cockpit, a conflict the book leaves.
-    superheavy: { name: "Superheavy", tons: 4, only: "superheavy", tonnage: { min: 101, max: 200 }, techBase: "inner-sphere", rulesLevel: "advanced", availability: [{ from: 3076 }], cite: { book: IO, page: 215 }, checked: "page", cockpit: [3], sensors: [2, 5], lifeSupport: [1, 6], rules: "The reinforced cockpit gives the head 4 points of structure and room for 12 armor points. A biped or quad superheavy may add a Command Console; no other cockpit type fits." },
-    "superheavy-industrial": { name: "Superheavy Industrial", tons: 4, only: "superheavy", tonnage: { min: 101, max: 200 }, techBase: "inner-sphere", rulesLevel: "advanced", industrial: true, availability: [{ from: 2940 }], cite: { book: IO, page: 215 }, checked: "page", cockpit: [3], sensors: [2, 5], lifeSupport: [1, 6], rules: "For superheavy IndustrialMechs." },
+    superheavy: { name: "Superheavy", tons: 4, only: "superheavy", tonnage: { min: 101, max: 200 }, techBase: "inner-sphere", rulesLevel: "advanced", availability: [{ from: 3076 }], prototypeYear: 3060, cite: { book: IO, page: 215 }, checked: "page", cockpit: [3], sensors: [2, 5], lifeSupport: [1, 6], rules: "The reinforced cockpit gives the head 4 points of structure and room for 12 armor points. A biped or quad superheavy may add a Command Console; no other cockpit type fits." },
+    "superheavy-industrial": { name: "Superheavy Industrial", tons: 4, only: "superheavy", tonnage: { min: 101, max: 200 }, techBase: "inner-sphere", rulesLevel: "advanced", industrial: true, availability: [{ from: 2940 }], prototypeYear: 2905, cite: { book: IO, page: 215 }, checked: "page", cockpit: [3], sensors: [2, 5], lifeSupport: [1, 6], rules: "For superheavy IndustrialMechs." },
     "superheavy-tripod": { name: "Superheavy Tripod", tons: 5, only: "superheavy-tripod", tonnage: { min: 101, max: 200 }, techBase: "inner-sphere", rulesLevel: "advanced", availability: [{ from: 2940 }], cite: { book: IO, page: 217 }, checked: "page", cockpit: [3], sensors: [2, 5], lifeSupport: [1, 6], rules: "Takes the place of the superheavy cockpit and duplicates a Command Console, so a superheavy tripod mounts no separate one." },
   },
 };
@@ -538,12 +554,12 @@ export const HEAT_SINKS: Sourced & { types: Record<string, HeatSinkType> } = {
   checked: "page",
   types: {
     single: { name: "Single", slots: 1 },
-    double: { name: "Double", slots: 3, techBase: "inner-sphere", availability: [{ from: 2567, to: 2865 }, { from: 3040 }], availabilityCite: UTA(36) },
-    "double-clan": { name: "Double (Clan)", slots: 2, techBase: "clan", availability: [{ from: 2827 }], availabilityCite: UTA(36) },
+    double: { name: "Double", slots: 3, techBase: "inner-sphere", availability: [{ from: 2567, to: 2865 }, { from: 3040 }], prototypeYear: 2559, availabilityCite: UTA(36) },
+    "double-clan": { name: "Double (Clan)", slots: 2, techBase: "clan", availability: [{ from: 2827 }], prototypeYear: 2825, availabilityCite: UTA(36) },
     // Tactical Operations: Advanced Units and Equipment: compact sinks (rules p.128, table p.217) weigh 1.5 tons and go two to a slot; laser
     // sinks (p.129) are Clan doubles in every way (weight, capacity and space) but may not be mixed with standard doubles.
-    compact: { name: "Compact", slots: 1, tonsEach: 1.5, perMount: 2, techBase: "inner-sphere", rulesLevel: "experimental", introduced: { is: 3058, prototype: true }, cite: { book: TO, page: 217 }, checked: "page", rules: "Two sinks fit in each critical slot. May not be mixed with another heat sink type." },
-    laser: { name: "Laser (Clan)", slots: 2, techBase: "clan", rulesLevel: "advanced", introduced: { clan: 3051 }, cite: { book: TO, page: 217 }, checked: "page", rules: "Works as a Clan double heat sink. May not be mixed with standard double heat sinks." },
+    compact: { name: "Compact", slots: 1, tonsEach: 1.5, perMount: 2, techBase: "inner-sphere", rulesLevel: "experimental", introduced: { is: 3079 }, prototypeYear: 3058, cite: { book: TO, page: 217 }, checked: "page", rules: "Two sinks fit in each critical slot. May not be mixed with another heat sink type." },
+    laser: { name: "Laser (Clan)", slots: 2, techBase: "clan", rulesLevel: "advanced", introduced: { clan: 3051 }, prototypeYear: 3040, cite: { book: TO, page: 217 }, checked: "page", rules: "Works as a Clan double heat sink. May not be mixed with standard double heat sinks." },
   },
 };
 
@@ -572,7 +588,7 @@ export const ARMOR: Sourced & { basePointsPerTon: number; types: Record<string, 
   checked: "page",
   basePointsPerTon: 16,
   types: {
-    standard: { name: "Standard", multiplier: 1.0, slots: 0, availability: [{ from: 2470 }], availabilityCite: UTA(29) },
+    standard: { name: "Standard", multiplier: 1.0, slots: 0, availability: [{ from: 2470 }], prototypeYear: 2460, availabilityCite: UTA(29) },
     stealth: {
       name: "Stealth",
       multiplier: 1.0,
@@ -584,10 +600,10 @@ export const ARMOR: Sourced & { basePointsPerTon: number; types: Record<string, 
         tripod: { LA: 2, RA: 2, LL: 2, RL: 2, CL: 2, LT: 2, RT: 2 },
       },
     },
-    "light-ferro-fibrous": { name: "Light Ferro-Fibrous", multiplier: 1.06, slots: 7, techBase: "inner-sphere", availability: [{ from: 3067 }], availabilityCite: UTA(29) },
-    "ferro-fibrous": { name: "Ferro-Fibrous", multiplier: 1.12, slots: 14, techBase: "inner-sphere", availability: [{ from: 2571, to: 2810 }, { from: 3040 }], availabilityCite: UTA(29) },
-    "ferro-fibrous-clan": { name: "Ferro-Fibrous (Clan)", multiplier: 1.2, slots: 7, techBase: "clan", availability: [{ from: 2825 }], availabilityCite: UTA(29) },
-    "heavy-ferro-fibrous": { name: "Heavy Ferro-Fibrous", multiplier: 1.24, slots: 21, techBase: "inner-sphere", availability: [{ from: 3069 }], availabilityCite: UTA(29) },
+    "light-ferro-fibrous": { name: "Light Ferro-Fibrous", multiplier: 1.06, slots: 7, techBase: "inner-sphere", availability: [{ from: 3067 }], prototypeYear: 3055, availabilityCite: UTA(29) },
+    "ferro-fibrous": { name: "Ferro-Fibrous", multiplier: 1.12, slots: 14, techBase: "inner-sphere", availability: [{ from: 2571, to: 2810 }, { from: 3040 }], prototypeYear: 2557, availabilityCite: UTA(29) },
+    "ferro-fibrous-clan": { name: "Ferro-Fibrous (Clan)", multiplier: 1.2, slots: 7, techBase: "clan", availability: [{ from: 2825 }], prototypeYear: 2820, availabilityCite: UTA(29) },
+    "heavy-ferro-fibrous": { name: "Heavy Ferro-Fibrous", multiplier: 1.24, slots: 21, techBase: "inner-sphere", availability: [{ from: 3069 }], prototypeYear: 3056, availabilityCite: UTA(29) },
     // The newer types. A row's multiplier is its printed points per ton over the base 16. Tactical Operations: Advanced Units and
     // Equipment, Advanced Armor Table (printed p.92) for the first six, Interstellar Operations: Alternate Eras, Advanced Armor
     // Table (printed p.82) for the next four; each was read against the page image. The dates are the books' (cost table p.217, p.84).
@@ -599,7 +615,8 @@ export const ARMOR: Sourced & { basePointsPerTon: number; types: Record<string, 
       movement: { run: -1 },
       techBase: "both",
       rulesLevel: "experimental",
-      introduced: { is: 3047, clan: 3061, prototype: true },
+      introduced: { is: 3081, clan: 3061, prototype: ["clan"] },
+      prototypeYear: { is: 3047 },
       cite: TO_ARMOR,
       checked: "page",
       rules:
@@ -612,7 +629,8 @@ export const ARMOR: Sourced & { basePointsPerTon: number; types: Record<string, 
       slots: 12,
       techBase: "clan",
       rulesLevel: "experimental",
-      introduced: { clan: 3070, prototype: true },
+      introduced: { clan: 3109 },
+      prototypeYear: 3070,
       cite: TO_ARMOR,
       checked: "page",
       rules: "Each hit is reduced by 1 for every 5 points (or part) it delivers, to a minimum of 0; armor-piercing bonuses do nothing.",
@@ -624,7 +642,8 @@ export const ARMOR: Sourced & { basePointsPerTon: number; types: Record<string, 
       slots: 10,
       techBase: "inner-sphere",
       rulesLevel: "experimental",
-      introduced: { is: 3058, prototype: true },
+      introduced: { is: 3080 },
+      prototypeYear: 3058,
       cite: TO_ARMOR,
       checked: "page",
       rules:
@@ -637,7 +656,8 @@ export const ARMOR: Sourced & { basePointsPerTon: number; types: Record<string, 
       slots: 5,
       techBase: "clan",
       rulesLevel: "experimental",
-      introduced: { clan: 3061, prototype: true },
+      introduced: { clan: 3080 },
+      prototypeYear: 3061,
       cite: TO_ARMOR,
       checked: "page",
       rules:
@@ -650,7 +670,8 @@ export const ARMOR: Sourced & { basePointsPerTon: number; types: Record<string, 
       slots: 14,
       techBase: "inner-sphere",
       rulesLevel: "experimental",
-      introduced: { is: 3063, prototype: true },
+      introduced: { is: 3081 },
+      prototypeYear: 3063,
       cite: TO_ARMOR,
       checked: "page",
       rules: "Halves damage (rounded down, at least 1) from missiles, mortars and artillery; a critical hit on one of its slots can destroy all the armor in the location.",
@@ -662,7 +683,8 @@ export const ARMOR: Sourced & { basePointsPerTon: number; types: Record<string, 
       slots: 7,
       techBase: "clan",
       rulesLevel: "experimental",
-      introduced: { clan: 3065, prototype: true },
+      introduced: { clan: 3081 },
+      prototypeYear: 3065,
       cite: TO_ARMOR,
       checked: "page",
       rules: "Halves damage (rounded down, at least 1) from missiles, mortars and artillery; a critical hit on one of its slots can destroy all the armor in the location.",
@@ -675,6 +697,7 @@ export const ARMOR: Sourced & { basePointsPerTon: number; types: Record<string, 
       techBase: "inner-sphere",
       rulesLevel: "advanced",
       introduced: { is: 3114 },
+      prototypeYear: 3105,
       cite: IO_ARMOR,
       checked: "page",
       rules: "While the location keeps 1 point of armor, critical hit checks from armor-piercing weapons take -2.",
@@ -687,6 +710,7 @@ export const ARMOR: Sourced & { basePointsPerTon: number; types: Record<string, 
       techBase: "inner-sphere",
       rulesLevel: "advanced",
       introduced: { is: 3131 },
+      prototypeYear: 3120,
       cite: IO_ARMOR,
       checked: "page",
       rules: "Each point takes up to two points from direct-fire ballistic and missile attacks.",
@@ -699,6 +723,7 @@ export const ARMOR: Sourced & { basePointsPerTon: number; types: Record<string, 
       techBase: "both",
       rulesLevel: "advanced",
       introduced: { is: 3123, clan: 3125 },
+      prototypeYear: { is: 3111 },
       cite: IO_ARMOR,
       checked: "page",
       rules: "While the location keeps 1 point of armor, heat from flamers, plasma weapons, infernos and fire is halved.",
@@ -711,6 +736,7 @@ export const ARMOR: Sourced & { basePointsPerTon: number; types: Record<string, 
       techBase: "inner-sphere",
       rulesLevel: "advanced",
       introduced: { is: 3103 },
+      prototypeYear: 3092,
       cite: IO_ARMOR,
       checked: "page",
       rules: "While the location keeps 1 point of armor, collision, fall and physical attack damage is reduced by 1 for every 3 points (or part); armor-piercing critical rolls take +1.",
@@ -735,6 +761,7 @@ export const ARMOR: Sourced & { basePointsPerTon: number; types: Record<string, 
       techBase: "inner-sphere",
       primitive: true,
       introduced: { is: 2439 },
+      prototypeYear: 2430,
       cite: { book: IO, page: 118 },
       checked: "page",
       rules: "Barrier Armor Rating 10. Printed for Primitive BattleMechs, which have their own construction rules.",
@@ -748,6 +775,7 @@ export const ARMOR: Sourced & { basePointsPerTon: number; types: Record<string, 
       techBase: "both",
       industrial: true,
       introduced: { is: 2439 },
+      prototypeYear: 2430,
       cite: { book: "TechManual", page: 72 },
       checked: "page",
       rules: "Barrier Armor Rating 10. Printed for IndustrialMechs.",
@@ -759,6 +787,7 @@ export const ARMOR: Sourced & { basePointsPerTon: number; types: Record<string, 
       techBase: "both",
       industrial: true,
       introduced: { is: 2300 },
+      prototypeYear: 2290,
       cite: { book: "TechManual", page: 72 },
       checked: "page",
       rules: "Barrier Armor Rating 5: a hit of 6 or more points at a time may cause a critical hit. Printed for IndustrialMechs.",
@@ -783,13 +812,13 @@ export const MYOMER: Sourced & { types: Record<string, MyomerType> } = {
   checked: "page",
   types: {
     standard: { name: "Standard", percentOfTons: 0, slots: 0 },
-    masc: { name: "MASC", percentOfTons: 5, slots: "percent", techBase: "inner-sphere", availability: [{ from: 2740, to: 2795 }, { from: 3035 }], availabilityCite: UTA(29) },
+    masc: { name: "MASC", percentOfTons: 5, slots: "percent", techBase: "inner-sphere", availability: [{ from: 2740, to: 2795 }, { from: 3035 }], prototypeYear: 2730, availabilityCite: UTA(29) },
     // RISC super-cooled myomer (Interstellar Operations: Alternate Eras printed p.88): six slots, one in each arm, leg and side torso; BattleMechs only.
-    "super-cooled": { name: "Super-Cooled Myomer", catalogId: "super-cooled-myomer-is", percentOfTons: 0, slots: 6, techBase: "inner-sphere", rulesLevel: "experimental", introduced: { is: 3132, prototype: true }, cite: { book: IO, page: 88 }, checked: "page" },
-    "masc-clan": { name: "MASC (Clan)", percentOfTons: 4, slots: "percent", techBase: "clan", availability: [{ from: 2827 }], availabilityCite: UTA(29) },
-    tsm: { name: "Triple-Strength Myomer", catalogId: "tsm-is", percentOfTons: 0, slots: 6, techBase: "inner-sphere", availability: [{ from: 3050 }], availabilityCite: UTA(42) },
+    "super-cooled": { name: "Super-Cooled Myomer", catalogId: "super-cooled-myomer-is", percentOfTons: 0, slots: 6, techBase: "inner-sphere", rulesLevel: "experimental", introduced: { is: 3132, prototype: ["is"] }, cite: { book: IO, page: 88 }, checked: "page" },
+    "masc-clan": { name: "MASC (Clan)", percentOfTons: 4, slots: "percent", techBase: "clan", availability: [{ from: 2827 }], prototypeYear: 2820, availabilityCite: UTA(29) },
+    tsm: { name: "Triple-Strength Myomer", catalogId: "tsm-is", percentOfTons: 0, slots: 6, techBase: "inner-sphere", availability: [{ from: 3050 }], prototypeYear: 3028, availabilityCite: UTA(42) },
     // IndustrialMech Triple-Strength Myomer (TechManual printed p.70; production 3045, IO:AE printed p.42): weightless, twelve slots anywhere.
-    "industrial-tsm": { name: "Industrial Triple-Strength Myomer", catalogId: "industrial-tsm-is", percentOfTons: 0, slots: 12, techBase: "inner-sphere", industrial: true, availability: [{ from: 3045 }], availabilityCite: UTA(42), cite: { book: "TechManual", page: 70 }, checked: "page", rules: "Twice as bulky as battlefield TSM and difficult to use in combat. The Battle Value counts it as tonnage times 1.15, not as extra movement." },
+    "industrial-tsm": { name: "Industrial Triple-Strength Myomer", catalogId: "industrial-tsm-is", percentOfTons: 0, slots: 12, techBase: "inner-sphere", industrial: true, availability: [{ from: 3045 }], prototypeYear: 3035, availabilityCite: UTA(42), cite: { book: "TechManual", page: 70 }, checked: "page", rules: "Twice as bulky as battlefield TSM and difficult to use in combat. The Battle Value counts it as tonnage times 1.15, not as extra movement." },
   },
 };
 
@@ -936,6 +965,9 @@ export interface ConfigurationRow {
    * the production date, then any extinction. `clanAvailability` is for a Clan 'Mech where the table prints another extinction. */
   availability: Span[];
   clanAvailability?: Span[];
+  /** The year its prototype appears (the Construction Options table's Prototype column), before the production year; `clanPrototypeYear` for a Clan 'Mech. */
+  prototypeYear?: number;
+  clanPrototypeYear?: number;
   /** Set when the table gives the body type to the Inner Sphere only. */
   techBase?: "inner-sphere";
   levelCite?: Cite; // the page that states a rules level other than standard
@@ -966,6 +998,7 @@ export const SHEET = {
       name: "Biped",
       rulesLevel: "standard",
       availability: [{ from: 2470 }],
+      prototypeYear: 2460,
       size: BIPED_SIZE,
       fixed: { LA: ARM, RA: ARM, LL: LEG, RL: LEG },
     },
@@ -973,6 +1006,7 @@ export const SHEET = {
       name: "Quad",
       rulesLevel: "standard",
       availability: [{ from: 2470 }],
+      prototypeYear: 2460,
       size: { HD: 6, CT: 12, LT: 12, RT: 12, FLL: 6, FRL: 6, RLL: 6, RRL: 6 },
       fixed: { FLL: LEG, FRL: LEG, RLL: LEG, RRL: LEG },
     },
@@ -981,6 +1015,7 @@ export const SHEET = {
       rulesLevel: "advanced",
       techBase: "inner-sphere",
       availability: [{ from: 2602 }],
+      prototypeYear: 2585,
       levelCite: IO_TRIPOD_RULES,
       construction: { cite: IO_TRIPOD_CONSTRUCTION, checked: "text" },
       structureExtra: 0.1,
@@ -988,8 +1023,8 @@ export const SHEET = {
       size: { ...BIPED_SIZE, CL: 6 },
       fixed: { LA: ARM, RA: ARM, LL: LEG, RL: LEG, CL: LEG },
     },
-    lam: { ...LAM_ROW, name: "Land-Air 'Mech", availability: [{ from: 2688, to: 3085 }], clanAvailability: [{ from: 2688, to: 2825 }] },
-    "bimodal-lam": { ...LAM_ROW, name: "Bimodal Land-Air 'Mech", availability: [{ from: 2684, to: 2781 }], clanAvailability: [{ from: 2684, to: 2801 }] },
+    lam: { ...LAM_ROW, name: "Land-Air 'Mech", availability: [{ from: 2688, to: 3085 }], clanAvailability: [{ from: 2688, to: 2825 }], prototypeYear: 2683 },
+    "bimodal-lam": { ...LAM_ROW, name: "Bimodal Land-Air 'Mech", availability: [{ from: 2684, to: 2781 }], clanAvailability: [{ from: 2684, to: 2801 }], prototypeYear: 2680 },
   } satisfies Record<string, ConfigurationRow>,
 };
 
@@ -1040,11 +1075,10 @@ export interface MechTypeRow {
   checked: Checked;
   availability: Span[];
   clanAvailability?: Span[];
-  tonnage: { min: number; max: number; step: number; cite: Cite };
-  /** The year a first prototype exists, where the book prints one beside the production year (`availability`): the Inner Sphere's and the
-   * Clans'. Before production and after the prototype year the type is offered only at Experimental level, labelled prototype. */
+  /** Prototype years, as on ConfigurationRow: Omni technology's Clan prototype is 2854 and its production year 2856 (IO:AE printed p.45). */
   prototypeYear?: number;
   clanPrototypeYear?: number;
+  tonnage: { min: number; max: number; step: number; cite: Cite };
   industrial?: IndustrialRules;
   omni?: OmniRules;
 }
@@ -1072,6 +1106,7 @@ export const MECH_TYPES: MechTypeRow[] = [
     availabilityCite: { book: IO_AE, page: 44 },
     checked: "page",
     availability: [{ from: 2470 }],
+    prototypeYear: 2460,
     tonnage: { min: 20, max: 100, step: 5, cite: TM_P(46) },
   },
   {
@@ -1085,6 +1120,7 @@ export const MECH_TYPES: MechTypeRow[] = [
     availabilityCite: { book: IO_AE, page: 44 },
     checked: "page",
     availability: [{ from: 2470 }],
+    prototypeYear: 2460,
     tonnage: { min: 10, max: 100, step: 5, cite: TM_P(64) },
     industrial: {
       cites: {

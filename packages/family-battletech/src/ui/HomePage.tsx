@@ -5,7 +5,7 @@ import { ENGINE_WEIGHTS, INTERNAL_STRUCTURE, MECH_TYPES } from "../data/chassis"
 import type { MechType } from "../data/chassis";
 import { DEFAULT_EDITION, EDITIONS, PLAY_ONLY_BOOK, bookName } from "../data/editions";
 import { configurationAvailable, configurationChoices, typeAvailable } from "../rules/availability";
-import { withLevel } from "../rules/levels";
+import { techBaseChoices, withLevel } from "../rules/levels";
 import { loadCatalog } from "../rules/catalog";
 import { mechTypeOf, newRecord } from "../rules/mech";
 import { configurationTitle, newOmniChassis, resolveAll } from "../rules/omni";
@@ -498,12 +498,23 @@ export default function HomePage() {
                 ))}
               </select>
             </div>
-            <LevelSelect id="bt-new-level" record={draft} onChange={(rulesLevel) => { setDraft({ ...draft, rulesLevel }); }} />
+            <LevelSelect
+              id="bt-new-level"
+              record={draft}
+              onChange={(rulesLevel) => {
+                // At Introductory only Inner Sphere is offered (3025 technology): a Clan choice gives way to it.
+                const inner = techBaseChoices(rulesLevel, "inner-sphere").length === 1;
+                setDraft({ ...draft, rulesLevel, techBase: inner ? "inner-sphere" : draft.techBase });
+              }}
+            />
             <div className="bt-field">
               <label htmlFor="bt-new-tech">Tech base</label>
               <select id="bt-new-tech" value={draft.techBase} onChange={(e) => setDraft({ ...draft, techBase: e.target.value as TechBase })}>
-                <option value="inner-sphere">Inner Sphere</option>
-                <option value="clan">Clan</option>
+                {techBaseChoices(draft.rulesLevel, draft.techBase).filter(([value]) => value !== "mixed").map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
               </select>
             </div>
             <div className="bt-field">

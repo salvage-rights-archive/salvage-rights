@@ -6,7 +6,7 @@ import { createCatalog, expand, loadCatalog } from "./catalog";
 import type { EquipmentGroup, EquipmentRow } from "./catalog";
 import { runChecks } from "./checks";
 import { bipedRecord, mount, tripodRecord } from "./fixtures";
-import { equipmentLevel, levelAtLeast, levelOf, lowestLevelFor, withLevel } from "./levels";
+import { equipmentLevel, levelAtLeast, levelOf, lowestLevelFor, techBaseChoices, withLevel } from "./levels";
 import { editRecord } from "./mech";
 import type { MechRecord } from "./mech";
 
@@ -125,5 +125,14 @@ describe("the Introductory level against the Quick-Start record sheets", () => {
     const found = printed.map((name) => real.match(name, "inner-sphere"));
     expect(printed.filter((_, i) => !found[i])).toEqual([]);
     expect(found.map((r) => r && equipmentLevel(r))).toEqual(printed.map(() => "introductory"));
+  });
+});
+
+describe("tech base choices", () => {
+  it("offers only Inner Sphere at Introductory, and keeps a current choice so the selector never blanks", () => {
+    expect(techBaseChoices("introductory", "inner-sphere").map(([v]) => v)).toEqual(["inner-sphere"]);
+    expect(techBaseChoices("introductory", "clan").map(([v]) => v)).toEqual(["inner-sphere", "clan"]);
+    expect(techBaseChoices("standard", "inner-sphere").map(([v]) => v)).toEqual(["inner-sphere", "clan", "mixed"]);
+    expect(techBaseChoices(undefined, "inner-sphere").map(([v]) => v)).toEqual(["inner-sphere", "clan", "mixed"]);
   });
 });

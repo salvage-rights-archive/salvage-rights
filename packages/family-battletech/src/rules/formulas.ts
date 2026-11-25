@@ -73,6 +73,8 @@ const SCALED: Record<string, Scaled> = {
   "fuel-tank-tons": { of: "engine", divide: 10, round: "ceil-half" },
   // Booby trap (p. 108): a tenth of the 'Mech, up to the half ton.
   "booby-trap": { of: "tons", divide: 10, round: "ceil-half" },
+  // Drone operating system (TO:AUE p. 118): a tenth of the unit, up to the half ton, plus the half-ton sensor system the rules require with it, counted as part of the item.
+  "drone-os-tons": { of: "tons", divide: 10, round: "ceil-half", add: 0.5 },
   // Supercharger (p. 156): a tenth of the engine's weight, up to the half ton.
   supercharger: { of: "engine", divide: 10, round: "ceil-half" },
 };
@@ -104,6 +106,11 @@ export const FORMULAS: Record<string, Formula> = {
       held += catalog.factsOf(other, record)?.tons ?? 0;
     }
     return ceilHalf(held / 10) || 0; // an empty turret is 0, not -0
+  },
+  // Dumper (TechManual p. 243): 5 percent of the cargo it is assigned to, up to the half ton. The cargo is the mount it is linked to.
+  "dumper-tons": (_row, record, catalog, mount) => {
+    const cargo = record.mounts.find((m) => m.id === mount?.linkedTo);
+    return ceilHalf((cargo ? (catalog.factsOf(cargo, record)?.tons ?? 0) : 0) * 0.05) || 0;
   },
   // AES slots (TO:AUE p. 90): one per weight class of the 'Mech.
   "aes-slots": (_row, record) => weightClass(record.tons),

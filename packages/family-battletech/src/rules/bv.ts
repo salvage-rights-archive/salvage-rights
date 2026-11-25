@@ -146,6 +146,8 @@ export function skillMultiplier(pilot: PilotSkills): number {
   return SKILL_MULTIPLIER.rows[clamp(pilot.gunnery)]?.[clamp(pilot.piloting)] ?? 1;
 }
 
+/** An extended fuel tank "is treated as an ammo bin in combat" (TechManual printed p.244), so each slot counts as explosive for the Defensive Battle Rating. */
+const FUEL_TANK_IDS = ["extended-fuel-tank-is", "extended-fuel-tank-clan"];
 const ARMS: LocationCode[] = ["LA", "RA"];
 const INWARD: Partial<Record<LocationCode, LocationCode>> = { LA: "LT", RA: "RT" }; // Damage Transfer Diagram, Total Warfare p. 123
 
@@ -283,7 +285,7 @@ export function battleValue(record: MechRecord, catalog: Catalog, pilot: PilotSk
   for (const item of items) {
     const { mount, row, slots } = item;
     const ammoEntry = row.kind === "ammunition" ? AMMO.get(row.id) : undefined;
-    const fuel = isLam && LAM_BV.fuelSlotIds.includes(row.id);
+    const fuel = (isLam && LAM_BV.fuelSlotIds.includes(row.id)) || FUEL_TANK_IDS.includes(row.id);
     if ((row.kind === "ammunition" && !ammoEntry?.options.inert) || fuel) {
       explosive += slots * BV_METHOD.explosiveAmmoPerSlot * exposure(mount.location);
     }
@@ -404,12 +406,17 @@ export function battleValue(record: MechRecord, catalog: Catalog, pilot: PilotSk
   const tc = has(TARGETING_COMPUTER_IDS);
   // The Actuator Enhancement System: x1.25 on the weapons in its arm, physical weapons included, ammunition not (TO:AUE p. 192).
   const aes = BV_RULE_ITEMS.aes;
+  const drone = has(BV_RULE_ITEMS.drone.ids);
   const aesArms = new Set(items.filter((i) => aes.armIds.includes(i.row.id)).map((i) => i.mount.location));
   const aesLimbs = new Set(items.filter((i) => aes.armIds.includes(i.row.id) || aes.legIds.includes(i.row.id)).map((i) => i.mount.location));
   for (const w of weapons) {
     if (aesArms.has(w.item.mount.location)) {
       w.mod *= aes.weaponFactor;
       w.notes.push(`actuator enhancement system: x${aes.weaponFactor}`);
+    }
+    if (drone) {
+      w.mod *= BV_RULE_ITEMS.drone.weaponFactor;
+      w.notes.push(`drone operating system: x${BV_RULE_ITEMS.drone.weaponFactor}`);
     }
     if (tc && w.item.row.directFire) {
       w.mod *= BV_METHOD.targetingComputer;
@@ -491,7 +498,8 @@ export function battleValue(record: MechRecord, catalog: Catalog, pilot: PilotSk
   // ---- Final ----------------------------------------------------------------------------------------------------
   const smallCockpit = chassis.cockpit === "small";
   const kits = items.reduce((product, i) => product * (own(BV_RULE_ITEMS.finalMultiplier.multipliers, i.row.id) ?? 1), 1);
-  const sum = (defensiveRating + offensiveRating) * (smallCockpit ? BV_METHOD.smallCockpit : 1) * (torsoCockpit ? TORSO_COCKPIT_BV.finalFactor : 1) * kits;
+  // A drone operating system: the final BV is multiplied by 0.95 and no cockpit modifier applies (TO:AUE p. 193).
+  const sum = (defensiveRating + offensiveRating) * (drone ? BV_RULE_ITEMS.drone.finalFactor : (smallCockpit ? BV_METHOD.smallCockpit : 1) * (torsoCockpit ? TORSO_COCKPIT_BV.finalFactor : 1)) * kits;
   const baseBv = roundHalfUp(sum);
   const multiplier = skillMultiplier(pilot);
   return {

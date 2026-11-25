@@ -63,56 +63,56 @@ export const OTHER: EquipmentGroup[] = [
     items: [
       // Heat sinks (Inner Sphere)
       { id: "heat-sink-is", name: "Heat Sink", aliases: ["Single Heat Sink", "Standard Heat Sink"], slots: 1, availability: [{ from: 2022 }] },
-      { id: "double-heat-sink-is", name: "Double Heat Sink", aliases: ["Double Heat Sinks"], slots: 3, availability: [{ from: 2567, to: 2865 }, { from: 3040 }] },
+      { id: "double-heat-sink-is", name: "Double Heat Sink", aliases: ["Double Heat Sinks"], slots: 3, availability: [{ from: 2567, to: 2865 }, { from: 3040 }], prototypeYear: 2559 },
     ],
   },
   {
     defaults: { kind: "jump-jet", techBase: "inner-sphere", cite: { book: "TechManual", page: 51 }, checked: "page" },
     items: [
       // Jump jets (Inner Sphere)
-      { id: "jump-jet-is", name: "Jump Jet", aliases: ["Jump Jets"], tons: "jump-jet", slots: 1, availability: [{ from: 2471 }], locations: ["CT", "LT", "RT", "LL", "RL", "FLL", "FRL", "RLL", "RRL"] },
+      { id: "jump-jet-is", name: "Jump Jet", aliases: ["Jump Jets"], tons: "jump-jet", slots: 1, availability: [{ from: 2471 }], prototypeYear: 2464, locations: ["CT", "LT", "RT", "LL", "RL", "FLL", "FRL", "RLL", "RRL"] },
     ],
   },
   {
     defaults: { kind: "jump-jet", techBase: "inner-sphere", cite: { book: "TechManual", page: 51 }, checked: "page", yearsInferred: true },
     items: [
       // Jump jets (Inner Sphere)
-      { id: "improved-jump-jet-is", name: "Improved Jump Jet", aliases: ["Improved Jump Jets"], tons: "improved-jump-jet", slots: 2, availability: [{ from: 3069 }], locations: ["CT", "LT", "RT", "LL", "RL", "FLL", "FRL", "RLL", "RRL"] },
+      { id: "improved-jump-jet-is", name: "Improved Jump Jet", aliases: ["Improved Jump Jets"], tons: "improved-jump-jet", slots: 2, availability: [{ from: 3070 }], yearsInferred: false, locations: ["CT", "LT", "RT", "LL", "RL", "FLL", "FRL", "RLL", "RRL"] },
     ],
   },
   {
     defaults: { kind: "other", techBase: "inner-sphere", cite: { book: "TechManual", page: 342 }, checked: "page" },
     items: [
       // Electronics, CASE and fire control (Inner Sphere)
-      { id: "beagle-active-probe-is", name: "Beagle Active Probe", aliases: ["Active Probe (Beagle)"], tons: 1.5, slots: 2, type: "E", heat: 0, range: [0, 0, 0, 4], availability: [{ from: 2576, to: 2835 }, { from: 3045 }], units: ["mech", "industrialmech", "vehicle", "aero", "smallcraft"], by: { vehicle: { slots: 1, note: "Support vehicle: 2 slots" }, aero: { slots: 1 }, smallcraft: { slots: 1 } } },
-      { id: "case-is", name: "CASE", tons: 0.5, slots: 1, heat: 0, availability: [{ from: 2476, to: 2840 }, { from: 3036 }], locations: ["CT", "LT", "RT"], units: ["mech", "industrialmech", "vehicle", "aero"], by: { aero: { slots: 0 } } },
-      { id: "c3-computer-master-is", name: "C3 Computer (Master)", tons: 5, slots: 5, heat: 0, availability: [{ from: 3050 }], units: ["mech", "industrialmech", "vehicle"], by: { vehicle: { slots: 1, note: "Support vehicle: 1* slots" } } },
-      { id: "c3-computer-slave-is", name: "C3 Computer (Slave)", tons: 1, slots: 1, heat: 0, availability: [{ from: 3050 }], units: ["mech", "industrialmech", "vehicle"], by: { vehicle: { note: "Support vehicle: 1* slots" } } },
-      { id: "improved-c3-computer-is", name: "Improved C3 Computer", aliases: ["C3i"], tons: 2.5, slots: 2, heat: 0, availability: [{ from: 3062 }], units: ["mech", "industrialmech", "vehicle"], by: { vehicle: { slots: 1, note: "Support vehicle: 1* slots" } } },
-      { id: "guardian-ecm-suite-is", name: "Guardian ECM Suite", aliases: ["ECM Suite (Guardian)"], tons: 1.5, slots: 2, type: "E", heat: 0, range: [0, 0, 0, 6], availability: [{ from: 2597, to: 2845 }, { from: 3045 }], units: ["mech", "industrialmech", "vehicle", "aero", "smallcraft"], by: { vehicle: { slots: 1, note: "Support vehicle: 2 slots" }, aero: { slots: 1 }, smallcraft: { slots: 1 } } },
-      { id: "machine-gun-array-is", name: "Machine Gun Array", aliases: ["Machine Gun Array Module", "Light Machine Gun Array Module", "Heavy Machine Gun Array Module"], tons: 0.5, slots: 1, availability: [{ from: 3068 }], needs: "machine-gun" },
-      { id: "tag-is", name: "TAG", tons: 1, slots: 1, type: "E", heat: 0, range: [0, 5, 9, 15], availability: [{ from: 2600, to: 2835 }, { from: 3044 }], units: ["mech", "industrialmech", "vehicle", "aero", "smallcraft", "dropship"] },
+      { id: "beagle-active-probe-is", name: "Beagle Active Probe", aliases: ["Active Probe (Beagle)"], tons: 1.5, slots: 2, type: "E", heat: 0, range: [0, 0, 0, 4], availability: [{ from: 2576, to: 2835 }, { from: 3045 }], prototypeYear: 2560, units: ["mech", "industrialmech", "vehicle", "aero", "smallcraft"], by: { vehicle: { slots: 1, note: "Support vehicle: 2 slots" }, aero: { slots: 1 }, smallcraft: { slots: 1 } } },
+      { id: "case-is", name: "CASE", tons: 0.5, slots: 1, heat: 0, availability: [{ from: 2476, to: 2840 }, { from: 3036 }], prototypeYear: 2452, locations: ["CT", "LT", "RT"], units: ["mech", "industrialmech", "vehicle", "aero"], by: { aero: { slots: 0 } } },
+      { id: "c3-computer-master-is", name: "C3 Computer (Master)", tons: 5, slots: 5, heat: 0, availability: [{ from: 3050 }], prototypeYear: 3039, units: ["mech", "industrialmech", "vehicle"], by: { vehicle: { slots: 1, note: "Support vehicle: 1* slots" } } },
+      { id: "c3-computer-slave-is", name: "C3 Computer (Slave)", tons: 1, slots: 1, heat: 0, availability: [{ from: 3050 }], prototypeYear: 3039, units: ["mech", "industrialmech", "vehicle"], by: { vehicle: { note: "Support vehicle: 1* slots" } } },
+      { id: "improved-c3-computer-is", name: "Improved C3 Computer", aliases: ["C3i"], tons: 2.5, slots: 2, heat: 0, availability: [{ from: 3062 }], prototypeYear: 3052, units: ["mech", "industrialmech", "vehicle"], by: { vehicle: { slots: 1, note: "Support vehicle: 1* slots" } } },
+      { id: "guardian-ecm-suite-is", name: "Guardian ECM Suite", aliases: ["ECM Suite (Guardian)"], tons: 1.5, slots: 2, type: "E", heat: 0, range: [0, 0, 0, 6], availability: [{ from: 2597, to: 2845 }, { from: 3045 }], prototypeYear: 2595, units: ["mech", "industrialmech", "vehicle", "aero", "smallcraft"], by: { vehicle: { slots: 1, note: "Support vehicle: 2 slots" }, aero: { slots: 1 }, smallcraft: { slots: 1 } } },
+      { id: "machine-gun-array-is", name: "Machine Gun Array", aliases: ["Machine Gun Array Module", "Light Machine Gun Array Module", "Heavy Machine Gun Array Module"], tons: 0.5, slots: 1, availability: [{ from: 3068 }], prototypeYear: 3066, needs: "machine-gun" },
+      { id: "tag-is", name: "TAG", tons: 1, slots: 1, type: "E", heat: 0, range: [0, 5, 9, 15], availability: [{ from: 2600, to: 2835 }, { from: 3044 }], prototypeYear: 2593, units: ["mech", "industrialmech", "vehicle", "aero", "smallcraft", "dropship"] },
       // Artemis IV (Inner Sphere); weight and slots are derived, see the file header
-      { id: "artemis-iv-is", name: "Artemis IV", aliases: ["Artemis IV FCS", "Artemis IV Fire-Control System"], tons: 1, slots: 1, availability: [{ from: 2598, to: 2855 }, { from: 3035 }], needs: "launcher", checked: "text" },
+      { id: "artemis-iv-is", name: "Artemis IV", aliases: ["Artemis IV FCS", "Artemis IV Fire-Control System"], tons: 1, slots: 1, availability: [{ from: 2598, to: 2855 }, { from: 3035 }], prototypeYear: 2592, needs: "launcher", checked: "text" },
     ],
   },
   {
     defaults: { kind: "other", techBase: "inner-sphere", cite: { book: "TechManual", page: 52 }, checked: "page" },
     items: [
       // MASC (Inner Sphere); weight and slots are a share of the 'Mech's tonnage
-      { id: "masc-is", pod: false, podCite: { book: "TechManual", page: 53 }, name: "MASC", aliases: ["Myomer Accelerator Signal Circuitry"], tons: "masc-is", slots: "masc-is", availability: [{ from: 2740, to: 2795 }, { from: 3035 }] },
+      { id: "masc-is", pod: false, podCite: { book: "TechManual", page: 53 }, name: "MASC", aliases: ["Myomer Accelerator Signal Circuitry"], tons: "masc-is", slots: "masc-is", availability: [{ from: 2740, to: 2795 }, { from: 3035 }], prototypeYear: 2730 },
       // Triple-Strength Myomer: six one-slot items, 0 tons, placed anywhere
-      { id: "tsm-is", pod: false, podCite: { book: "TechManual", page: 53 }, name: "Triple-Strength Myomer", aliases: ["TSM"], tons: 0, slots: 1, availability: [{ from: 3050 }], perMech: 6, checked: "text" },
+      { id: "tsm-is", pod: false, podCite: { book: "TechManual", page: 53 }, name: "Triple-Strength Myomer", aliases: ["TSM"], tons: 0, slots: 1, availability: [{ from: 3050 }], prototypeYear: 3028, perMech: 6, checked: "text" },
       // Industrial Triple-Strength Myomer (IndustrialMech construction, printed p.70, table and text read against the page image):
       // twelve one-slot items, 0 tons, placed anywhere and not contiguous; Inner Sphere IndustrialMechs only. Production 3045 (IO:AE printed p.42).
-      { id: "industrial-tsm-is", name: "Industrial Triple-Strength Myomer", aliases: ["Industrial TSM"], tons: 0, slots: 1, availability: [{ from: 3045 }], perMech: 12, units: ["industrialmech"], cite: { book: "TechManual", page: 70 } },
+      { id: "industrial-tsm-is", name: "Industrial Triple-Strength Myomer", aliases: ["Industrial TSM"], tons: 0, slots: 1, availability: [{ from: 3045 }], prototypeYear: 3035, perMech: 12, units: ["industrialmech"], cite: { book: "TechManual", page: 70 } },
     ],
   },
   {
     defaults: { kind: "other", techBase: "inner-sphere", cite: { book: "TechManual", page: 238 }, checked: "page" },
     items: [
       // Targeting Computer (Inner Sphere): weight and slots from the direct-fire weapons mounted
-      { id: "targeting-computer-is", name: "Targeting Computer", tons: "targeting-computer-is", slots: "targeting-computer-is", heat: 0, availability: [{ from: 3062 }] },
+      { id: "targeting-computer-is", name: "Targeting Computer", tons: "targeting-computer-is", slots: "targeting-computer-is", heat: 0, availability: [{ from: 3062 }], prototypeYear: 3052 },
     ],
   },
   {
@@ -127,29 +127,29 @@ export const OTHER: EquipmentGroup[] = [
     defaults: { kind: "weapon", techBase: "inner-sphere", cite: { book: "TechManual", page: 344 }, checked: "page" },
     items: [
       // Industrial equipment a BattleMech may mount (Inner Sphere)
-      { id: "backhoe-is", name: "Backhoe", tons: 5, slots: 6, heat: 0, damage: "6", availability: [{ from: 1950 }], locations: ["LA", "RA"], locationsQuad: ["LT", "RT"], units: ["mech", "industrialmech", "vehicle"], by: { vehicle: { slots: 1 } } },
-      { id: "chainsaw-is", name: "Chainsaw", tons: 5, slots: 5, heat: 0, damage: "5", availability: [{ from: 1950 }], locations: ["LA", "RA"], locationsQuad: ["LT", "RT"], units: ["mech", "industrialmech", "vehicle"], by: { vehicle: { slots: 1 } } },
-      { id: "combine-is", name: "Combine", tons: 2.5, slots: 4, heat: 0, damage: "3", availability: [{ from: 1950 }], locations: ["LA", "RA"], locationsQuad: ["LT", "RT"], units: ["mech", "industrialmech", "vehicle"], by: { vehicle: { slots: 1 } } },
-      { id: "dual-saw-is", name: "Dual Saw", tons: 7, slots: 7, heat: 0, damage: "7", availability: [{ from: 1950 }], locations: ["LA", "RA"], locationsQuad: ["LT", "RT"], units: ["mech", "industrialmech", "vehicle"], by: { vehicle: { slots: 1 } } },
-      { id: "heavy-duty-pile-driver-is", name: "Heavy Duty Pile-Driver", aliases: ["Pile Driver"], tons: 10, slots: 8, heat: 0, damage: "9", availability: [{ from: 1950 }], locations: ["LA", "RA"], locationsQuad: ["LT", "RT"], units: ["mech", "industrialmech", "vehicle"], by: { vehicle: { slots: 1, note: "Support vehicle: 1* slots" } } },
-      { id: "mining-drill-is", name: "Mining Drill", tons: 3, slots: 4, heat: 0, damage: "4", availability: [{ from: 1950 }], locations: ["LA", "RA"], locationsQuad: ["LT", "RT"], units: ["mech", "industrialmech", "vehicle"], by: { vehicle: { slots: 1 } } },
-      { id: "rock-cutter-is", name: "Rock-Cutter", aliases: ["Rock Cutter"], tons: 5, slots: 5, heat: 0, damage: "5", availability: [{ from: 1950 }], locations: ["LA", "RA"], locationsQuad: ["LT", "RT"], units: ["mech", "industrialmech", "vehicle"], by: { vehicle: { slots: 1 } } },
-      { id: "spot-welder-is", name: "Spot Welder", tons: 2, slots: 1, heat: 2, damage: "5", availability: [{ from: 2320 }], locations: ["LA", "RA"], locationsQuad: ["LT", "RT"], units: ["mech", "industrialmech", "vehicle"] },
-      { id: "nail-rivet-gun-is", name: "Nail/Rivet Gun", aliases: ["Nail Gun", "Rivet Gun"], tons: 0.5, slots: 1, heat: 0, damage: "0", range: [0, 1, 0, 0], availability: [{ from: 2310 }], units: ["mech", "industrialmech", "vehicle"], by: { vehicle: { note: "Support vehicle: 1** slots" } } },
+      { id: "backhoe-is", name: "Backhoe", tons: 5, slots: 6, heat: 0, damage: "6", availability: [{ from: 1950 }], locations: ["LA", "RA"], armRemoves: "hand", locationsQuad: ["LT", "RT"], units: ["mech", "industrialmech", "vehicle"], by: { vehicle: { slots: 1 } } },
+      { id: "chainsaw-is", name: "Chainsaw", tons: 5, slots: 5, heat: 0, damage: "5", availability: [{ from: 1950 }], locations: ["LA", "RA"], armRemoves: "hand", locationsQuad: ["LT", "RT"], units: ["mech", "industrialmech", "vehicle"], by: { vehicle: { slots: 1 } } },
+      { id: "combine-is", name: "Combine", tons: 2.5, slots: 4, heat: 0, damage: "3", availability: [{ from: 1950 }], locations: ["LA", "RA"], armRemoves: "hand", locationsQuad: ["LT", "RT"], units: ["mech", "industrialmech", "vehicle"], by: { vehicle: { slots: 1 } } },
+      { id: "dual-saw-is", name: "Dual Saw", tons: 7, slots: 7, heat: 0, damage: "7", availability: [{ from: 1950 }], locations: ["LA", "RA"], armRemoves: "hand", locationsQuad: ["LT", "RT"], units: ["mech", "industrialmech", "vehicle"], by: { vehicle: { slots: 1 } } },
+      { id: "heavy-duty-pile-driver-is", name: "Heavy Duty Pile-Driver", aliases: ["Pile Driver"], tons: 10, slots: 8, heat: 0, damage: "9", availability: [{ from: 1950 }], locations: ["LA", "RA"], armRemoves: "lower-arm", locationsQuad: ["LT", "RT"], units: ["mech", "industrialmech", "vehicle"], by: { vehicle: { slots: 1, note: "Support vehicle: 1* slots" } } },
+      { id: "mining-drill-is", name: "Mining Drill", tons: 3, slots: 4, heat: 0, damage: "4", availability: [{ from: 1950 }], locations: ["LA", "RA"], armRemoves: "hand", locationsQuad: ["LT", "RT"], units: ["mech", "industrialmech", "vehicle"], by: { vehicle: { slots: 1 } } },
+      { id: "rock-cutter-is", name: "Rock-Cutter", aliases: ["Rock Cutter"], tons: 5, slots: 5, heat: 0, damage: "5", availability: [{ from: 1950 }], locations: ["LA", "RA"], armRemoves: "hand", locationsQuad: ["LT", "RT"], units: ["mech", "industrialmech", "vehicle"], by: { vehicle: { slots: 1 } } },
+      { id: "spot-welder-is", name: "Spot Welder", tons: 2, slots: 1, heat: 2, damage: "5", availability: [{ from: 2320 }], prototypeYear: 2312, locations: ["LA", "RA"], armRemoves: "hand", heavyEnergy: true, locationsQuad: ["LT", "RT"], units: ["mech", "industrialmech", "vehicle"] },
+      { id: "nail-rivet-gun-is", name: "Nail/Rivet Gun", aliases: ["Nail Gun", "Rivet Gun"], tons: 0.5, slots: 1, heat: 0, damage: "0", range: [0, 1, 0, 0], availability: [{ from: 2310 }], prototypeYear: 2309, units: ["mech", "industrialmech", "vehicle"], by: { vehicle: { note: "Support vehicle: 1** slots" } } },
     ],
   },
   {
     defaults: { kind: "weapon", techBase: "inner-sphere", cite: { book: "TechManual", page: 345 }, checked: "page" },
     items: [
       // Industrial equipment a BattleMech may mount (Inner Sphere)
-      { id: "wrecking-ball-is", name: "Wrecking Ball", tons: 4, slots: 5, heat: 0, damage: "8", availability: [{ from: 1950 }], locations: ["LA", "RA"], locationsQuad: [], units: ["mech", "industrialmech", "vehicle"], by: { vehicle: { slots: 1 } } },
+      { id: "wrecking-ball-is", name: "Wrecking Ball", tons: 4, slots: 5, heat: 0, damage: "8", availability: [{ from: 1950 }], locations: ["LA", "RA"], armRemoves: "hand", locationsQuad: [], units: ["mech", "industrialmech", "vehicle"], by: { vehicle: { slots: 1 } } },
     ],
   },
   {
     defaults: { kind: "other", techBase: "inner-sphere", cite: { book: "TechManual", page: 344 }, checked: "page" },
     items: [
       // Industrial equipment a BattleMech may mount (Inner Sphere)
-      { id: "salvage-arm-is", name: "Salvage Arm", tons: 3, slots: 2, heat: 0, availability: [{ from: 2415 }], locations: ["LA", "RA"], locationsQuad: [] },
+      { id: "salvage-arm-is", name: "Salvage Arm", tons: 3, slots: 2, heat: 0, availability: [{ from: 2415 }], prototypeYear: 2400, locations: ["LA", "RA"], armRemoves: "hand", locationsQuad: [] },
       { id: "sprayer-is", name: "Sprayer", tons: 0.5, slots: 1, heat: 0, range: [0, 0, 0, 1], availability: [{ from: 2300 }], needs: "liquid-cargo" },
       { id: "light-fluid-suction-system-is", name: "Light Fluid Suction System", tons: 0.5, slots: 1, heat: 0, availability: [{ from: 1950 }], needs: "liquid-cargo" },
       { id: "remote-sensor-dispenser-is", name: "Remote Sensor Dispenser", tons: 0.5, slots: 1, heat: 0, range: [0, 0, 0, 0], availability: [{ from: 2200 }], units: ["mech", "industrialmech", "vehicle", "aero", "smallcraft", "dropship"], by: { dropship: { slots: 0 } } },
@@ -164,7 +164,7 @@ export const OTHER: EquipmentGroup[] = [
     items: [
       // Heat sinks (Clan)
       { id: "heat-sink-clan", name: "Heat Sink", aliases: ["Single Heat Sink", "Standard Heat Sink"], slots: 1, availability: [{ from: 2022 }] },
-      { id: "double-heat-sink-clan", name: "Double Heat Sink", aliases: ["Double Heat Sinks"], slots: 2, availability: [{ from: 2567 }] },
+      { id: "double-heat-sink-clan", name: "Double Heat Sink", aliases: ["Double Heat Sinks"], slots: 2, availability: [{ from: 2827 }], prototypeYear: 2825, yearsInferred: false },
     ],
   },
   {
@@ -178,62 +178,62 @@ export const OTHER: EquipmentGroup[] = [
     defaults: { kind: "jump-jet", techBase: "clan", cite: { book: "TechManual", page: 51 }, checked: "page" },
     items: [
       // Jump jets (Clan)
-      { id: "improved-jump-jet-clan", name: "Improved Jump Jet", aliases: ["Improved Jump Jets"], tons: "improved-jump-jet", slots: 2, availability: [{ from: 3069 }], locations: ["CT", "LT", "RT", "LL", "RL", "FLL", "FRL", "RLL", "RRL"] },
+      { id: "improved-jump-jet-clan", name: "Improved Jump Jet", aliases: ["Improved Jump Jets"], tons: "improved-jump-jet", slots: 2, availability: [{ from: 3069 }], prototypeYear: 3060, locations: ["CT", "LT", "RT", "LL", "RL", "FLL", "FRL", "RLL", "RRL"] },
     ],
   },
   {
     defaults: { kind: "other", techBase: "clan", cite: { book: "TechManual", page: 343 }, checked: "page" },
     items: [
       // Electronics, CASE and fire control (Clan)
-      { id: "active-probe-clan", name: "Active Probe", tons: 1, slots: 1, type: "E", heat: 0, range: [0, 0, 0, 5], availability: [{ from: 2832 }], units: ["mech", "industrialmech", "vehicle", "protomech", "aero", "smallcraft"] },
-      { id: "light-active-probe-clan", name: "Light Active Probe", tons: 0.5, slots: 1, type: "E", heat: 0, range: [0, 0, 0, 3], availability: [{ from: 2900 }], units: ["mech", "industrialmech", "vehicle", "protomech", "aero", "smallcraft", "dropship"], by: { dropship: { slots: 0 } } },
-      { id: "ecm-suite-clan", name: "ECM Suite", tons: 1, slots: 1, type: "E", heat: 0, range: [0, 0, 0, 6], availability: [{ from: 2832 }], units: ["mech", "industrialmech", "vehicle", "protomech", "aero", "smallcraft"] },
+      { id: "active-probe-clan", name: "Active Probe", tons: 1, slots: 1, type: "E", heat: 0, range: [0, 0, 0, 5], availability: [{ from: 2832 }], prototypeYear: 2830, units: ["mech", "industrialmech", "vehicle", "protomech", "aero", "smallcraft"] },
+      { id: "light-active-probe-clan", name: "Light Active Probe", tons: 0.5, slots: 1, type: "E", heat: 0, range: [0, 0, 0, 3], availability: [{ from: 2900 }], prototypeYear: 2890, units: ["mech", "industrialmech", "vehicle", "protomech", "aero", "smallcraft", "dropship"], by: { dropship: { slots: 0 } } },
+      { id: "ecm-suite-clan", name: "ECM Suite", tons: 1, slots: 1, type: "E", heat: 0, range: [0, 0, 0, 6], availability: [{ from: 2832 }], prototypeYear: 2830, units: ["mech", "industrialmech", "vehicle", "protomech", "aero", "smallcraft"] },
       { id: "machine-gun-array-clan", name: "Machine Gun Array", aliases: ["Machine Gun Array Module", "Light Machine Gun Array Module", "Heavy Machine Gun Array Module"], tons: 0.25, slots: 1, availability: [{ from: 3069 }], needs: "machine-gun" },
-      { id: "light-tag-clan", name: "Light TAG", tons: 0.5, slots: 1, type: "E", heat: 0, range: [0, 3, 6, 9], availability: [{ from: 3054 }], units: ["mech", "industrialmech", "vehicle", "protomech", "aero", "smallcraft", "dropship"] },
+      { id: "light-tag-clan", name: "Light TAG", tons: 0.5, slots: 1, type: "E", heat: 0, range: [0, 3, 6, 9], availability: [{ from: 3054 }], prototypeYear: 3051, units: ["mech", "industrialmech", "vehicle", "protomech", "aero", "smallcraft", "dropship"] },
     ],
   },
   {
     defaults: { kind: "other", techBase: "clan", cite: { book: "TechManual", page: 343 }, checked: "page", yearsInferred: true },
     items: [
       // Electronics, CASE and fire control (Clan)
-      { id: "tag-clan", name: "TAG", tons: 1, slots: 1, type: "E", heat: 0, range: [0, 5, 9, 15], availability: [{ from: 2600 }], units: ["mech", "industrialmech", "vehicle", "protomech", "aero", "smallcraft", "dropship"] },
+      { id: "tag-clan", name: "TAG", tons: 1, slots: 1, type: "E", heat: 0, range: [0, 5, 9, 15], availability: [{ from: 2830 }], prototypeYear: 2828, yearsInferred: false, units: ["mech", "industrialmech", "vehicle", "protomech", "aero", "smallcraft", "dropship"] },
       // Artemis IV (Clan); weight and slots are derived, see the file header
-      { id: "artemis-iv-clan", name: "Artemis IV", aliases: ["Artemis IV FCS", "Artemis IV Fire-Control System"], tons: 1, slots: 1, availability: [{ from: 2598 }], needs: "launcher", checked: "text" },
+      { id: "artemis-iv-clan", name: "Artemis IV", aliases: ["Artemis IV FCS", "Artemis IV Fire-Control System"], tons: 1, slots: 1, availability: [{ from: 2818 }], prototypeYear: 2816, yearsInferred: false, needs: "launcher", checked: "text" },
     ],
   },
   {
     defaults: { kind: "other", techBase: "clan", cite: { book: "TechManual", page: 58 }, checked: "page" },
     items: [
       // Clan CASE: comes free in tonnage and critical space (p. 58, the Gladiator Prime example; p. 210 says weightless); the Clan table lists none
-      { id: "case-clan", name: "CASE", tons: 0, slots: 0, availability: [{ from: 2825 }] },
+      { id: "case-clan", name: "CASE", tons: 0, slots: 0, availability: [{ from: 2825 }], prototypeYear: 2824 },
     ],
   },
   {
     defaults: { kind: "other", techBase: "clan", cite: { book: "TechManual", page: 52 }, checked: "page", yearsInferred: true },
     items: [
       // MASC (Clan); weight and slots are a share of the 'Mech's tonnage
-      { id: "masc-clan", pod: false, podCite: { book: "TechManual", page: 53 }, name: "MASC", aliases: ["Myomer Accelerator Signal Circuitry"], tons: "masc-clan", slots: "masc-clan", availability: [{ from: 2740 }] },
+      { id: "masc-clan", pod: false, podCite: { book: "TechManual", page: 53 }, name: "MASC", aliases: ["Myomer Accelerator Signal Circuitry"], tons: "masc-clan", slots: "masc-clan", availability: [{ from: 2827 }], prototypeYear: 2820, yearsInferred: false },
     ],
   },
   {
     defaults: { kind: "other", techBase: "clan", cite: { book: "TechManual", page: 238 }, checked: "page" },
     items: [
       // Targeting Computer (Clan): weight and slots from the direct-fire weapons mounted
-      { id: "targeting-computer-clan", name: "Targeting Computer", tons: "targeting-computer-clan", slots: "targeting-computer-clan", heat: 0, availability: [{ from: 2860 }] },
+      { id: "targeting-computer-clan", name: "Targeting Computer", tons: "targeting-computer-clan", slots: "targeting-computer-clan", heat: 0, availability: [{ from: 2860 }], prototypeYear: 2850 },
     ],
   },
   {
     defaults: { kind: "weapon", techBase: "clan", cite: { book: "TechManual", page: 344 }, checked: "page", yearsInferred: true },
     items: [
       // Industrial equipment a BattleMech may mount (Clan)
-      { id: "backhoe-clan", name: "Backhoe", tons: 5, slots: 6, heat: 0, damage: "6", availability: [{ from: 1950 }], locations: ["LA", "RA"], locationsQuad: ["LT", "RT"], units: ["mech", "industrialmech", "vehicle"], by: { vehicle: { slots: 1 } } },
-      { id: "chainsaw-clan", name: "Chainsaw", tons: 5, slots: 5, heat: 0, damage: "5", availability: [{ from: 1950 }], locations: ["LA", "RA"], locationsQuad: ["LT", "RT"], units: ["mech", "industrialmech", "vehicle"], by: { vehicle: { slots: 1 } } },
-      { id: "combine-clan", name: "Combine", tons: 2.5, slots: 4, heat: 0, damage: "3", availability: [{ from: 1950 }], locations: ["LA", "RA"], locationsQuad: ["LT", "RT"], units: ["mech", "industrialmech", "vehicle"], by: { vehicle: { slots: 1 } } },
-      { id: "dual-saw-clan", name: "Dual Saw", tons: 7, slots: 7, heat: 0, damage: "7", availability: [{ from: 1950 }], locations: ["LA", "RA"], locationsQuad: ["LT", "RT"], units: ["mech", "industrialmech", "vehicle"], by: { vehicle: { slots: 1 } } },
-      { id: "heavy-duty-pile-driver-clan", name: "Heavy Duty Pile-Driver", aliases: ["Pile Driver"], tons: 10, slots: 8, heat: 0, damage: "9", availability: [{ from: 1950 }], locations: ["LA", "RA"], locationsQuad: ["LT", "RT"], units: ["mech", "industrialmech", "vehicle"], by: { vehicle: { slots: 1, note: "Support vehicle: 1* slots" } } },
-      { id: "mining-drill-clan", name: "Mining Drill", tons: 3, slots: 4, heat: 0, damage: "4", availability: [{ from: 1950 }], locations: ["LA", "RA"], locationsQuad: ["LT", "RT"], units: ["mech", "industrialmech", "vehicle"], by: { vehicle: { slots: 1 } } },
-      { id: "rock-cutter-clan", name: "Rock-Cutter", aliases: ["Rock Cutter"], tons: 5, slots: 5, heat: 0, damage: "5", availability: [{ from: 1950 }], locations: ["LA", "RA"], locationsQuad: ["LT", "RT"], units: ["mech", "industrialmech", "vehicle"], by: { vehicle: { slots: 1 } } },
-      { id: "spot-welder-clan", name: "Spot Welder", tons: 2, slots: 1, heat: 2, damage: "5", availability: [{ from: 2320 }], locations: ["LA", "RA"], locationsQuad: ["LT", "RT"], units: ["mech", "industrialmech", "vehicle"] },
+      { id: "backhoe-clan", name: "Backhoe", tons: 5, slots: 6, heat: 0, damage: "6", availability: [{ from: 1950 }], locations: ["LA", "RA"], armRemoves: "hand", locationsQuad: ["LT", "RT"], units: ["mech", "industrialmech", "vehicle"], by: { vehicle: { slots: 1 } } },
+      { id: "chainsaw-clan", name: "Chainsaw", tons: 5, slots: 5, heat: 0, damage: "5", availability: [{ from: 1950 }], locations: ["LA", "RA"], armRemoves: "hand", locationsQuad: ["LT", "RT"], units: ["mech", "industrialmech", "vehicle"], by: { vehicle: { slots: 1 } } },
+      { id: "combine-clan", name: "Combine", tons: 2.5, slots: 4, heat: 0, damage: "3", availability: [{ from: 1950 }], locations: ["LA", "RA"], armRemoves: "hand", locationsQuad: ["LT", "RT"], units: ["mech", "industrialmech", "vehicle"], by: { vehicle: { slots: 1 } } },
+      { id: "dual-saw-clan", name: "Dual Saw", tons: 7, slots: 7, heat: 0, damage: "7", availability: [{ from: 1950 }], locations: ["LA", "RA"], armRemoves: "hand", locationsQuad: ["LT", "RT"], units: ["mech", "industrialmech", "vehicle"], by: { vehicle: { slots: 1 } } },
+      { id: "heavy-duty-pile-driver-clan", name: "Heavy Duty Pile-Driver", aliases: ["Pile Driver"], tons: 10, slots: 8, heat: 0, damage: "9", availability: [{ from: 1950 }], locations: ["LA", "RA"], armRemoves: "lower-arm", locationsQuad: ["LT", "RT"], units: ["mech", "industrialmech", "vehicle"], by: { vehicle: { slots: 1, note: "Support vehicle: 1* slots" } } },
+      { id: "mining-drill-clan", name: "Mining Drill", tons: 3, slots: 4, heat: 0, damage: "4", availability: [{ from: 1950 }], locations: ["LA", "RA"], armRemoves: "hand", locationsQuad: ["LT", "RT"], units: ["mech", "industrialmech", "vehicle"], by: { vehicle: { slots: 1 } } },
+      { id: "rock-cutter-clan", name: "Rock-Cutter", aliases: ["Rock Cutter"], tons: 5, slots: 5, heat: 0, damage: "5", availability: [{ from: 1950 }], locations: ["LA", "RA"], armRemoves: "hand", locationsQuad: ["LT", "RT"], units: ["mech", "industrialmech", "vehicle"], by: { vehicle: { slots: 1 } } },
+      { id: "spot-welder-clan", name: "Spot Welder", tons: 2, slots: 1, heat: 2, damage: "5", availability: [{ from: 2320 }], locations: ["LA", "RA"], armRemoves: "hand", heavyEnergy: true, locationsQuad: ["LT", "RT"], units: ["mech", "industrialmech", "vehicle"] },
       { id: "nail-rivet-gun-clan", name: "Nail/Rivet Gun", aliases: ["Nail Gun", "Rivet Gun"], tons: 0.5, slots: 1, heat: 0, damage: "0", range: [0, 1, 0, 0], availability: [{ from: 2310 }], units: ["mech", "industrialmech", "vehicle"], by: { vehicle: { note: "Support vehicle: 1** slots" } } },
     ],
   },
@@ -241,14 +241,14 @@ export const OTHER: EquipmentGroup[] = [
     defaults: { kind: "weapon", techBase: "clan", cite: { book: "TechManual", page: 345 }, checked: "page", yearsInferred: true },
     items: [
       // Industrial equipment a BattleMech may mount (Clan)
-      { id: "wrecking-ball-clan", name: "Wrecking Ball", tons: 4, slots: 5, heat: 0, damage: "8", availability: [{ from: 1950 }], locations: ["LA", "RA"], locationsQuad: [], units: ["mech", "industrialmech", "vehicle"], by: { vehicle: { slots: 1 } } },
+      { id: "wrecking-ball-clan", name: "Wrecking Ball", tons: 4, slots: 5, heat: 0, damage: "8", availability: [{ from: 1950 }], locations: ["LA", "RA"], armRemoves: "hand", locationsQuad: [], units: ["mech", "industrialmech", "vehicle"], by: { vehicle: { slots: 1 } } },
     ],
   },
   {
     defaults: { kind: "other", techBase: "clan", cite: { book: "TechManual", page: 344 }, checked: "page", yearsInferred: true },
     items: [
       // Industrial equipment a BattleMech may mount (Clan)
-      { id: "salvage-arm-clan", name: "Salvage Arm", tons: 3, slots: 2, heat: 0, availability: [{ from: 2415 }], locations: ["LA", "RA"], locationsQuad: [] },
+      { id: "salvage-arm-clan", name: "Salvage Arm", tons: 3, slots: 2, heat: 0, availability: [{ from: 2415 }], locations: ["LA", "RA"], armRemoves: "hand", locationsQuad: [] },
       { id: "sprayer-clan", name: "Sprayer", tons: 0.5, slots: 1, heat: 0, range: [0, 0, 0, 1], availability: [{ from: 2300 }], needs: "liquid-cargo" },
       { id: "light-fluid-suction-system-clan", name: "Light Fluid Suction System", tons: 0.5, slots: 1, heat: 0, availability: [{ from: 1950 }], needs: "liquid-cargo" },
       { id: "remote-sensor-dispenser-clan", name: "Remote Sensor Dispenser", tons: 0.5, slots: 1, heat: 0, range: [0, 0, 0, 0], availability: [{ from: 2200 }], units: ["mech", "industrialmech", "vehicle", "aero", "smallcraft", "dropship"], by: { dropship: { slots: 0 } } },
@@ -305,38 +305,42 @@ export const OTHER: EquipmentGroup[] = [
     defaults: { kind: "other", techBase: "inner-sphere", cite: { book: TO, page: 217 }, playCite: { book: TO, page: 216 }, checked: "page" },
     items: [
       // Electronics and other equipment, pp. 216-217
-      { id: "bloodhound-active-probe-is", name: "Bloodhound Active Probe", aliases: ["Bloodhound AP"], tons: 2, slots: 3, type: "E", heat: 0, damage: "0", range: [0, 0, 0, 8], availability: [{ from: 3058 }], rulesLevel: "experimental" },
-      { id: "angel-ecm-is", name: "Angel ECM", tons: 2, slots: 2, type: "E", heat: 0, damage: "0", range: [0, 0, 0, 6], availability: [{ from: 3057 }], rulesLevel: "experimental" },
-      { id: "c3-boosted-master-is", name: "C3 Boosted Master", aliases: ["C3BS Master"], tons: 6, slots: 6, type: "E, CE, T", heat: 0, availability: [{ from: 3073 }], rulesLevel: "experimental" },
-      { id: "c3-boosted-slave-is", name: "C3 Boosted Slave", aliases: ["C3BS Slave"], tons: 3, slots: 2, type: "E, CE, T", heat: 0, availability: [{ from: 3073 }], rulesLevel: "experimental" },
-      { id: "c3-emergency-master-is", name: "C3 Emergency Master", tons: 2, slots: 2, type: "E, T", heat: 0, availability: [{ from: 3071 }], rulesLevel: "experimental" },
-      { id: "case-ii-is", name: "CASE II", tons: 1, slots: 1, type: "PE", availability: [{ from: 3064 }], rulesLevel: "experimental" },
+      { id: "bloodhound-active-probe-is", name: "Bloodhound Active Probe", aliases: ["Bloodhound AP"], tons: 2, slots: 3, type: "E", heat: 0, damage: "0", range: [0, 0, 0, 8], availability: [{ from: 3082 }], prototypeYear: 3058, rulesLevel: "experimental" },
+      { id: "angel-ecm-is", name: "Angel ECM", tons: 2, slots: 2, type: "E", heat: 0, damage: "0", range: [0, 0, 0, 6], availability: [{ from: 3080 }], prototypeYear: 3057, rulesLevel: "experimental" },
+      { id: "c3-boosted-master-is", name: "C3 Boosted Master", aliases: ["C3BS Master"], tons: 6, slots: 6, type: "E, CE, T", heat: 0, availability: [{ from: 3100 }], prototypeYear: 3073, rulesLevel: "experimental" },
+      { id: "c3-boosted-slave-is", name: "C3 Boosted Slave", aliases: ["C3BS Slave"], tons: 3, slots: 2, type: "E, CE, T", heat: 0, availability: [{ from: 3100 }], prototypeYear: 3073, rulesLevel: "experimental" },
+      { id: "c3-emergency-master-is", name: "C3 Emergency Master", tons: 2, slots: 2, type: "E, T", heat: 0, availability: [{ from: 3099 }], prototypeYear: 3071, rulesLevel: "experimental" },
+      { id: "case-ii-is", name: "CASE II", tons: 1, slots: 1, type: "PE", availability: [{ from: 3082 }], prototypeYear: 3064, rulesLevel: "experimental" },
     ],
   },
   {
     defaults: { kind: "other", techBase: "clan", cite: { book: TO, page: 217 }, playCite: { book: TO, page: 216 }, checked: "page" },
     items: [
       // Electronics and other equipment, pp. 216-217
-      { id: "watchdog-cews-clan", name: "Watchdog CEWS", tons: 1.5, slots: 2, type: "E", heat: 0, damage: "0", range: [0, 0, 0, 3], availability: [{ from: 3059 }], rulesLevel: "experimental" },
+      { id: "watchdog-cews-clan", name: "Watchdog CEWS", tons: 1.5, slots: 2, type: "E", heat: 0, damage: "0", range: [0, 0, 0, 3], availability: [{ from: 3080 }], prototypeYear: 3059, rulesLevel: "experimental" },
       { id: "angel-ecm-clan", name: "Angel ECM", tons: 2, slots: 2, type: "E", heat: 0, damage: "0", range: [0, 0, 0, 6], availability: [{ from: 3058 }], rulesLevel: "experimental" },
-      { id: "artemis-v-clan", name: "Artemis V FCS", aliases: ["Artemis V"], tons: 1.5, slots: 2, type: "T", heat: 0, damage: "0", availability: [{ from: 3061 }], rulesLevel: "experimental", needs: "launcher" },
-      { id: "case-ii-clan", name: "CASE II", tons: 0.5, slots: 1, type: "PE", availability: [{ from: 3062 }], rulesLevel: "experimental" },
+      { id: "artemis-v-clan", name: "Artemis V FCS", aliases: ["Artemis V"], tons: 1.5, slots: 2, type: "T", heat: 0, damage: "0", availability: [{ from: 3085 }], prototypeYear: 3061, rulesLevel: "experimental", needs: "launcher" },
+      { id: "case-ii-clan", name: "CASE II", tons: 0.5, slots: 1, type: "PE", availability: [{ from: 3082 }], prototypeYear: 3062, rulesLevel: "experimental" },
     ],
   },
   {
     defaults: { kind: "other", techBase: "inner-sphere", cite: { book: TO, page: 219 }, playCite: { book: TO, page: 218 }, checked: "page" },
     items: [
       // Electronics and other equipment, pp. 218-219
-      { id: "chaff-pod-is", name: "Chaff Pod", tons: 1, slots: 1, type: "PB, E, OS, X", heat: 0, availability: [{ from: 3069 }], rulesLevel: "experimental" },
-      { id: "coolant-pod-is", name: "Coolant Pod", tons: 1, slots: 1, type: "PE, OS, X", availability: [{ from: 3049 }], rulesLevel: "experimental" },
-      { id: "electronic-warfare-equipment-is", name: "Electronic Warfare Equipment", aliases: ["EW Equipment"], tons: 7.5, slots: 4, type: "E", range: [0, 0, 0, 3], availability: [{ from: 3025 }], rulesLevel: "experimental" },
+      { id: "chaff-pod-is", name: "Chaff Pod", tons: 1, slots: 1, type: "PB, E, OS, X", heat: 0, availability: [{ from: 3079 }], prototypeYear: 3069, rulesLevel: "experimental" },
+      { id: "coolant-pod-is", name: "Coolant Pod", tons: 1, slots: 1, type: "PE, OS, X", availability: [{ from: 3079 }], prototypeYear: 3049, rulesLevel: "experimental" },
+      // Drone Operating System (table p. 219, rules p. 118): a tenth of the drone unit's weight plus the half-ton sensor system the rules require with it (one item here), one slot, "ES" in both columns (written as 2200). Price: 5,000 plus 10,000 for each ton of the item.
+      { id: "drone-operating-system-is", name: "Drone Operating System", aliases: ["Drone OS"], tons: "drone-os-tons", slots: 1, type: "E", availability: [{ from: 2200 }], rulesLevel: "advanced", units: ["mech", "industrialmech", "vehicle", "aero"] },
+      { id: "electronic-warfare-equipment-is", name: "Electronic Warfare Equipment", aliases: ["EW Equipment"], tons: 7.5, slots: 4, type: "E", range: [0, 0, 0, 3], availability: [{ from: 3025 }], prototypeYear: 3020, rulesLevel: "experimental" },
     ],
   },
   {
     defaults: { kind: "other", techBase: "clan", cite: { book: TO, page: 219 }, playCite: { book: TO, page: 218 }, checked: "page" },
     items: [
       // Electronics and other equipment, pp. 218-219
-      { id: "coolant-pod-clan", name: "Coolant Pod", tons: 1, slots: 1, type: "PE, OS, X", availability: [{ from: 3056 }], rulesLevel: "experimental" },
+      // Drone Operating System (table p. 219, rules p. 118): a tenth of the drone unit's weight plus the half-ton sensor system the rules require with it (one item here), one slot, "ES" in both columns (written as 2200). Price: 5,000 plus 10,000 for each ton of the item.
+      { id: "drone-operating-system-clan", name: "Drone Operating System", aliases: ["Drone OS"], tons: "drone-os-tons", slots: 1, type: "E", availability: [{ from: 2200 }], rulesLevel: "advanced", units: ["mech", "industrialmech", "vehicle", "aero"] },
+      { id: "coolant-pod-clan", name: "Coolant Pod", tons: 1, slots: 1, type: "PE, OS, X", availability: [{ from: 3079 }], prototypeYear: 3056, rulesLevel: "experimental" },
     ],
   },
   {
@@ -344,7 +348,7 @@ export const OTHER: EquipmentGroup[] = [
     items: [
       // Electronics and other equipment, pp. 220-221
       { id: "laser-insulator-is", name: "Laser Insulator", tons: 0.5, slots: 1, type: "PE", availability: [{ from: 2575 }], rulesLevel: "experimental", needs: "laser" },
-      { id: "mrm-apollo-fcs-is", name: "MRM Apollo FCS", aliases: ["Apollo FCS","MRM \"Apollo\" FCS"], tons: 1, slots: 1, type: "E", heat: 0, availability: [{ from: 3071 }], rulesLevel: "advanced", needs: "mrm" },
+      { id: "mrm-apollo-fcs-is", name: "MRM Apollo FCS", aliases: ["Apollo FCS","MRM \"Apollo\" FCS"], tons: 1, slots: 1, type: "E", heat: 0, availability: [{ from: 3071 }], prototypeYear: 3065, rulesLevel: "advanced", needs: "mrm" },
     ],
   },
   {
@@ -358,7 +362,7 @@ export const OTHER: EquipmentGroup[] = [
     defaults: { kind: "other", techBase: "inner-sphere", cite: { book: TO, page: 223 }, playCite: { book: TO, page: 222 }, checked: "page" },
     items: [
       // Electronics and other equipment, pp. 222-223
-      { id: "ppc-capacitor-is", name: "PPC Capacitor", tons: 1, slots: 1, type: "X", availability: [{ from: 3060 }], rulesLevel: "experimental", needs: "ppc" },
+      { id: "ppc-capacitor-is", name: "PPC Capacitor", tons: 1, slots: 1, type: "X", availability: [{ from: 3081 }], prototypeYear: 3060, rulesLevel: "experimental", needs: "ppc" },
       { id: "recon-camera-is", name: "Recon Camera", tons: 0.5, slots: 1, type: "E", availability: [{ from: 1950 }], rulesLevel: "advanced" },
     ],
   },
@@ -384,18 +388,18 @@ export const OTHER: EquipmentGroup[] = [
     defaults: { kind: "other", techBase: "inner-sphere", cite: { book: TO, page: 217 }, checked: "page", rulesLevel: "experimental" },
     items: [
       // Actuator Enhancement System (rules p. 90): weight and slots by the 'Mech, an arm or all legs
-      { id: "aes-arm-is", pod: false, podCite: { book: TO, page: 90 }, name: "Actuator Enhancement System (Arm)", aliases: ["AES", "Actuator Enhancement System", "AES (Arm)"], tons: "aes-tons", slots: "aes-slots", availability: [{ from: 3070 }], locations: ["LA", "RA"], locationsQuad: [], cite: { book: TO, page: 217 } },
-      { id: "aes-leg-is", pod: false, podCite: { book: TO, page: 90 }, name: "Actuator Enhancement System (Leg)", aliases: ["AES (Leg)"], tons: "aes-tons", slots: "aes-slots", availability: [{ from: 3070 }], locations: ["LL", "RL"], locationsQuad: ["FLL", "FRL", "RLL", "RRL"], perMech: 2, perMechQuad: 4 },
+      { id: "aes-arm-is", pod: false, podCite: { book: TO, page: 90 }, name: "Actuator Enhancement System (Arm)", aliases: ["AES", "Actuator Enhancement System", "AES (Arm)"], tons: "aes-tons", slots: "aes-slots", availability: [{ from: 3108 }], prototypeYear: 3070, locations: ["LA", "RA"], locationsQuad: [], cite: { book: TO, page: 217 } },
+      { id: "aes-leg-is", pod: false, podCite: { book: TO, page: 90 }, name: "Actuator Enhancement System (Leg)", aliases: ["AES (Leg)"], tons: "aes-tons", slots: "aes-slots", availability: [{ from: 3108 }], prototypeYear: 3070, locations: ["LL", "RL"], locationsQuad: ["FLL", "FRL", "RLL", "RRL"], perMech: 2, perMechQuad: 4 },
       // Blue Shield (p. 108): 3 tons in all, one slot in every location but the head
       { id: "blue-shield-is", pod: false, podCite: { book: TO, page: 108 }, name: "Blue Shield Particle Field Damper", aliases: ["Blue Shield", "Blue Shield PFD"], tons: 3, slots: 1, availability: [{ from: 3053 }], perMech: 7, splitWeight: true, locations: ["CT", "LT", "RT", "LA", "RA", "LL", "RL"], locationsQuad: ["CT", "LT", "RT", "FLL", "FRL", "RLL", "RRL"], units: ["mech", "industrialmech", "vehicle", "aero"] },
       // Booby Trap (p. 109): a tenth of the unit, in the engine's location
       { id: "booby-trap-is", name: "Booby Trap", tons: "booby-trap", slots: 1, availability: [{ from: 1950 }], locations: ["CT"], units: ["mech", "industrialmech", "vehicle", "aero", "smallcraft", "dropship", "ship", "building"] },
       // Claws, lance, mace (pp. 99-102): a ton and a slot for every 15, 20 or 10 tons of the 'Mech
-      { id: "claws-is", name: "Claws", aliases: ["Claw"], tons: "ceil-tons-15", slots: "ceil-tons-15", availability: [{ from: 3060 }], locations: ["LA", "RA"], locationsQuad: [], rulesLevel: "advanced" },
-      { id: "lance-is", name: "Lance", tons: "ceil-tons-20", slots: "ceil-tons-20", availability: [{ from: 3064 }], locations: ["LA", "RA"], locationsQuad: [] },
-      { id: "mace-is", name: "Mace", tons: "ceil-tons-10", slots: "ceil-tons-10", availability: [{ from: 3061 }], locations: ["LA", "RA"], locationsQuad: [], rulesLevel: "advanced" },
+      { id: "claws-is", name: "Claws", aliases: ["Claw"], tons: "ceil-tons-15", slots: "ceil-tons-15", availability: [{ from: 3060 }], prototypeYear: 3050, locations: ["LA", "RA"], locationsQuad: [], rulesLevel: "advanced" },
+      { id: "lance-is", name: "Lance", tons: "ceil-tons-20", slots: "ceil-tons-20", availability: [{ from: 3083 }], prototypeYear: 3064, locations: ["LA", "RA"], locationsQuad: [] },
+      { id: "mace-is", name: "Mace", tons: "ceil-tons-10", slots: "ceil-tons-10", availability: [{ from: 3079 }], prototypeYear: 3061, prototypeLevel: "advanced", locations: ["LA", "RA"], locationsQuad: [], rulesLevel: "advanced" },
       // Mechanical jump boosters (p. 104): 5 percent of the 'Mech for each Jumping MP chosen, two slots in each leg
-      { id: "mechanical-jump-booster-is", name: "Mechanical Jump Booster", aliases: ["Mechanical Jump Boosters", "Jump Booster"], tons: "jump-booster", slots: 2, availability: [{ from: 3060 }], locations: ["LL", "RL"], locationsQuad: ["FLL", "FRL", "RLL", "RRL"], perMech: 2, perMechQuad: 4, splitWeight: true, amount: { unit: "Jumping MP", min: 1, step: 1 } },
+      { id: "mechanical-jump-booster-is", name: "Mechanical Jump Booster", aliases: ["Mechanical Jump Boosters", "Jump Booster"], tons: "jump-booster", slots: 2, availability: [{ from: 3083 }], prototypeYear: 3060, locations: ["LL", "RL"], locationsQuad: ["FLL", "FRL", "RLL", "RRL"], perMech: 2, perMechQuad: 4, splitWeight: true, amount: { unit: "Jumping MP", min: 1, step: 1 } },
       // Partial wing (p. 104): 7 percent of the 'Mech, four slots in each side torso
       { id: "partial-wing-is", pod: false, podCite: { book: TO, page: 104 }, name: "Partial Wing", aliases: ["Partial Wing (IS)", "Partial Wing ('Mech)"], tons: "partial-wing-is", slots: 4, availability: [{ from: 3074 }], locations: ["LT", "RT"], perMech: 2, splitWeight: true },
       // UMU (p. 107): placed and weighed as jump jets
@@ -405,12 +409,12 @@ export const OTHER: EquipmentGroup[] = [
   {
     defaults: { kind: "other", techBase: "clan", cite: { book: TO, page: 217 }, checked: "page", rulesLevel: "experimental" },
     items: [
-      { id: "aes-arm-clan", pod: false, podCite: { book: TO, page: 90 }, name: "Actuator Enhancement System (Arm)", aliases: ["AES", "Actuator Enhancement System", "AES (Arm)"], tons: "aes-tons", slots: "aes-slots", availability: [{ from: 3070 }], locations: ["LA", "RA"], locationsQuad: [] },
-      { id: "aes-leg-clan", pod: false, podCite: { book: TO, page: 90 }, name: "Actuator Enhancement System (Leg)", aliases: ["AES (Leg)"], tons: "aes-tons", slots: "aes-slots", availability: [{ from: 3070 }], locations: ["LL", "RL"], locationsQuad: ["FLL", "FRL", "RLL", "RRL"], perMech: 2, perMechQuad: 4 },
+      { id: "aes-arm-clan", pod: false, podCite: { book: TO, page: 90 }, name: "Actuator Enhancement System (Arm)", aliases: ["AES", "Actuator Enhancement System", "AES (Arm)"], tons: "aes-tons", slots: "aes-slots", availability: [{ from: 3108 }], prototypeYear: 3070, locations: ["LA", "RA"], locationsQuad: [] },
+      { id: "aes-leg-clan", pod: false, podCite: { book: TO, page: 90 }, name: "Actuator Enhancement System (Leg)", aliases: ["AES (Leg)"], tons: "aes-tons", slots: "aes-slots", availability: [{ from: 3108 }], prototypeYear: 3070, locations: ["LL", "RL"], locationsQuad: ["FLL", "FRL", "RLL", "RRL"], perMech: 2, perMechQuad: 4 },
       // Talons (p. 102): a ton for every 15 tons of the 'Mech in all, two slots in each leg
-      { id: "talons-clan", name: "Talons", aliases: ["Talons [Clan]"], tons: "ceil-tons-15", slots: 2, availability: [{ from: 3072 }], locations: ["LL", "RL"], locationsQuad: ["FLL", "FRL", "RLL", "RRL"], perMech: 2, perMechQuad: 4, splitWeight: true },
-      { id: "partial-wing-clan", pod: false, podCite: { book: TO, page: 104 }, name: "Partial Wing", aliases: ["Partial Wing (C)", "Partial Wing [Clan]", "Partial Wing (Clan)"], tons: "partial-wing-clan", slots: 3, availability: [{ from: 3067 }], locations: ["LT", "RT"], perMech: 2, splitWeight: true },
-      { id: "umu-clan", name: "UMU", aliases: ["UMUs", "Underwater Maneuvering Unit"], tons: "jump-jet", slots: 1, availability: [{ from: 3061 }], locations: ["CT", "LT", "RT", "LL", "RL", "FLL", "FRL", "RLL", "RRL"] },
+      { id: "talons-clan", name: "Talons", aliases: ["Talons [Clan]"], tons: "ceil-tons-15", slots: 2, availability: [{ from: 3087 }], prototypeYear: 3072, locations: ["LL", "RL"], locationsQuad: ["FLL", "FRL", "RLL", "RRL"], perMech: 2, perMechQuad: 4, splitWeight: true },
+      { id: "partial-wing-clan", pod: false, podCite: { book: TO, page: 104 }, name: "Partial Wing", aliases: ["Partial Wing (C)", "Partial Wing [Clan]", "Partial Wing (Clan)"], tons: "partial-wing-clan", slots: 3, availability: [{ from: 3085 }], prototypeYear: 3067, locations: ["LT", "RT"], perMech: 2, splitWeight: true },
+      { id: "umu-clan", name: "UMU", aliases: ["UMUs", "Underwater Maneuvering Unit"], tons: "jump-jet", slots: 1, availability: [{ from: 3072 }], prototypeYear: 3061, locations: ["CT", "LT", "RT", "LL", "RL", "FLL", "FRL", "RLL", "RRL"] },
     ],
   },
   {
@@ -419,31 +423,31 @@ export const OTHER: EquipmentGroup[] = [
       // Chameleon Light Polarization Shield (p. 112): six slots, one in each limb and each side torso, no weight
       { id: "chameleon-lps-is", pod: false, podCite: { book: TO, page: 112 }, name: "Chameleon Light Polarization Shield", aliases: ["Chameleon LPS", "Chameleon Light Polarization", "Chameleon Light Polarization Shield (LPS)"], tons: 0, slots: 1, availability: [{ from: 2630 }], perMech: 6, splitWeight: true, locations: ["LA", "RA", "LL", "RL", "LT", "RT"], locationsQuad: ["FLL", "FRL", "RLL", "RRL", "LT", "RT"] },
       // Null-Signature System (p. 148): seven slots, one in each location but the head
-      { id: "null-signature-system-is", pod: false, podCite: { book: TO, page: 148 }, name: "Null-Signature System", aliases: ["Null Signature System"], tons: 0, slots: 1, availability: [{ from: 2630 }], perMech: 7, splitWeight: true, locations: ["CT", "LT", "RT", "LA", "RA", "LL", "RL"], locationsQuad: ["CT", "LT", "RT", "FLL", "FRL", "RLL", "RRL"], cite: { book: TO, page: 221 } },
+      { id: "null-signature-system-is", pod: false, podCite: { book: TO, page: 148 }, name: "Null-Signature System", aliases: ["Null Signature System"], tons: 0, slots: 1, availability: [{ from: 2630 }], prototypeYear: 2615, perMech: 7, splitWeight: true, locations: ["CT", "LT", "RT", "LA", "RA", "LL", "RL"], locationsQuad: ["CT", "LT", "RT", "FLL", "FRL", "RLL", "RRL"], cite: { book: TO, page: 221 } },
       // Void-Signature System (p. 161)
-      { id: "void-signature-system-is", pod: false, podCite: { book: TO, page: 160 }, name: "Void-Signature System", aliases: ["Void Signature System", "Void Signature"], tons: 0, slots: 1, availability: [{ from: 3070 }], perMech: 7, splitWeight: true, locations: ["CT", "LT", "RT", "LA", "RA", "LL", "RL"], locationsQuad: ["CT", "LT", "RT", "FLL", "FRL", "RLL", "RRL"], cite: { book: TO, page: 223 } },
+      { id: "void-signature-system-is", pod: false, podCite: { book: TO, page: 160 }, name: "Void-Signature System", aliases: ["Void Signature System", "Void Signature"], tons: 0, slots: 1, availability: [{ from: 3085 }], prototypeYear: 3070, perMech: 7, splitWeight: true, locations: ["CT", "LT", "RT", "LA", "RA", "LL", "RL"], locationsQuad: ["CT", "LT", "RT", "FLL", "FRL", "RLL", "RRL"], cite: { book: TO, page: 223 } },
     ],
   },
   {
     defaults: { kind: "other", techBase: "inner-sphere", cite: { book: TO, page: 217 }, checked: "page" },
     items: [
       // BattleMech HarJel (p. 100): a ton and a slot in any location but the cockpit's; the table's 1* for both is read as per mount
-      { id: "harjel-is", name: "BattleMech HarJel", aliases: ["HarJel", "HarJel Repair", "HarJel Repair System", "HarJel Repair Systems", "BattleMech HarJel System"], tons: 1, slots: 1, availability: [{ from: 3067 }], rulesLevel: "experimental", checked: "text", locations: ["CT", "LT", "RT", "LA", "RA", "LL", "RL"], locationsQuad: ["CT", "LT", "RT", "FLL", "FRL", "RLL", "RRL"] },
+      { id: "harjel-is", name: "BattleMech HarJel", aliases: ["HarJel", "HarJel Repair", "HarJel Repair System", "HarJel Repair Systems", "BattleMech HarJel System"], tons: 1, slots: 1, availability: [{ from: 3115 }], prototypeYear: 3067, rulesLevel: "experimental", checked: "text", locations: ["CT", "LT", "RT", "LA", "RA", "LL", "RL"], locationsQuad: ["CT", "LT", "RT", "FLL", "FRL", "RLL", "RRL"] },
       // Cockpit Command Console (p. 112), Collapsible Command Module (p. 114), Full-Head Ejection System (p. 122), Aquatic Survival System (p. 137)
       { id: "cockpit-command-console-is", name: "Cockpit Command Console", aliases: ["Command Console"], tons: 3, slots: 1, availability: [{ from: 3030 }], rulesLevel: "advanced", locations: ["HD"], cite: { book: TO, page: 219 } },
-      { id: "collapsible-command-module-is", name: "Collapsible Command Module", aliases: ["Collapsible Command Module (CCM)", "CCM"], tons: 16, slots: 12, availability: [{ from: 2710 }], rulesLevel: "experimental", cite: { book: TO, page: 219 } },
-      { id: "full-head-ejection-system-is", name: "Full-Head Ejection System", aliases: ["Full Head Ejection System", "Full-Head Ejection"], tons: 0, slots: 0, availability: [{ from: 3023 }], rulesLevel: "advanced", locations: ["HD"], perMech: 1, cite: { book: TO, page: 219 } },
-      { id: "aquatic-survival-system-is", name: "MechWarrior Aquatic Survival System", aliases: ["MASS", "Aquatic Survival System"], tons: 1.5, slots: 1, availability: [{ from: 3048 }], rulesLevel: "experimental", locations: ["HD"], cite: { book: TO, page: 221 } },
+      { id: "collapsible-command-module-is", name: "Collapsible Command Module", aliases: ["Collapsible Command Module (CCM)", "CCM"], tons: 16, slots: 12, availability: [{ from: 2710 }], prototypeYear: 2700, rulesLevel: "experimental", cite: { book: TO, page: 219 } },
+      { id: "full-head-ejection-system-is", name: "Full-Head Ejection System", aliases: ["Full Head Ejection System", "Full-Head Ejection"], tons: 0, slots: 0, availability: [{ from: 3023 }], prototypeYear: 3020, rulesLevel: "advanced", locations: ["HD"], perMech: 1, cite: { book: TO, page: 219 } },
+      { id: "aquatic-survival-system-is", name: "MechWarrior Aquatic Survival System", aliases: ["MASS", "Aquatic Survival System"], tons: 1.5, slots: 1, availability: [{ from: 3083 }], prototypeYear: 3048, rulesLevel: "experimental", locations: ["HD"], cite: { book: TO, page: 221 } },
       // Supercharger (p. 156): a tenth of the engine's weight, in a location with engine slots
       { id: "supercharger-is", name: "Supercharger", tons: "supercharger", slots: 1, availability: [{ from: 2200 }], rulesLevel: "experimental", locations: ["CT", "LT", "RT"], cite: { book: TO, page: 223 } },
       // Jump pack (p. 104): carried as cargo, of any weight to 20 tons
-      { id: "jump-pack-is", name: "Jump Pack", aliases: ["Drop Pack", "Jump Pack / Drop Pack", "Jump/Drop Pack"], tons: "chosen-tons", slots: 0, availability: [{ from: 2457 }], rulesLevel: "advanced", amount: { unit: "tons", min: 0.5, max: 20, step: 0.5 } },
+      { id: "jump-pack-is", name: "Jump Pack", aliases: ["Drop Pack", "Jump Pack / Drop Pack", "Jump/Drop Pack"], tons: "chosen-tons", slots: 0, availability: [{ from: 2457 }], prototypeYear: 2430, rulesLevel: "advanced", amount: { unit: "tons", min: 0.5, max: 20, step: 0.5 } },
     ],
   },
   {
     defaults: { kind: "other", techBase: "clan", cite: { book: TO, page: 217 }, checked: "page" },
     items: [
-      { id: "harjel-clan", name: "BattleMech HarJel", aliases: ["HarJel", "HarJel Repair", "HarJel Repair System", "HarJel Repair Systems", "BattleMech HarJel System"], tons: 1, slots: 1, availability: [{ from: 3059 }], rulesLevel: "experimental", checked: "text", locations: ["CT", "LT", "RT", "LA", "RA", "LL", "RL"], locationsQuad: ["CT", "LT", "RT", "FLL", "FRL", "RLL", "RRL"] },
+      { id: "harjel-clan", name: "BattleMech HarJel", aliases: ["HarJel", "HarJel Repair", "HarJel Repair System", "HarJel Repair Systems", "BattleMech HarJel System"], tons: 1, slots: 1, availability: [{ from: 3115 }], prototypeYear: 3059, rulesLevel: "experimental", checked: "text", locations: ["CT", "LT", "RT", "LA", "RA", "LL", "RL"], locationsQuad: ["CT", "LT", "RT", "FLL", "FRL", "RLL", "RRL"] },
       { id: "cockpit-command-console-clan", name: "Cockpit Command Console", aliases: ["Command Console"], tons: 3, slots: 1, availability: [{ from: 2631 }], rulesLevel: "advanced", locations: ["HD"], cite: { book: TO, page: 219 } },
       { id: "collapsible-command-module-clan", name: "Collapsible Command Module", aliases: ["Collapsible Command Module (CCM)", "CCM"], tons: 16, slots: 12, availability: [{ from: 2710 }], rulesLevel: "experimental", cite: { book: TO, page: 219 } },
       { id: "full-head-ejection-system-clan", name: "Full-Head Ejection System", aliases: ["Full Head Ejection System", "Full-Head Ejection"], tons: 0, slots: 0, availability: [{ from: 3052 }], rulesLevel: "advanced", locations: ["HD"], perMech: 1, cite: { book: TO, page: 219 } },
@@ -456,8 +460,8 @@ export const OTHER: EquipmentGroup[] = [
     // Heat sinks of the advanced types (TO:AUE pp.128-129, table p.217). Weight is counted with the chassis heat sinks, as for the rows above.
     defaults: { kind: "heat-sink", cite: { book: TO, page: 217 }, checked: "page", tons: 0 },
     items: [
-      { id: "compact-heat-sink-is", name: "Compact Heat Sink", aliases: ["Compact Heat Sinks", "2 Compact Heat Sinks"], techBase: "inner-sphere", slots: 1, availability: [{ from: 3058 }], rulesLevel: "experimental" },
-      { id: "laser-heat-sink-clan", name: "Laser Heat Sink", aliases: ["Laser Heat Sinks"], techBase: "clan", slots: 2, availability: [{ from: 3051 }], rulesLevel: "advanced" },
+      { id: "compact-heat-sink-is", name: "Compact Heat Sink", aliases: ["Compact Heat Sinks", "2 Compact Heat Sinks"], techBase: "inner-sphere", slots: 1, availability: [{ from: 3079 }], prototypeYear: 3058, rulesLevel: "experimental" },
+      { id: "laser-heat-sink-clan", name: "Laser Heat Sink", aliases: ["Laser Heat Sinks"], techBase: "clan", slots: 2, availability: [{ from: 3051 }], prototypeYear: 3040, rulesLevel: "advanced" },
     ],
   },
   // -------------------------------------------------------------------------------------------------------------
@@ -474,25 +478,33 @@ export const OTHER: EquipmentGroup[] = [
   {
     defaults: { kind: "other", techBase: "inner-sphere", cite: { book: "TechManual", page: 344 }, checked: "page" },
     items: [
-      { id: "searchlight-is", name: "Searchlight", aliases: ["Searchlight (Mounted)", "Mounted Searchlight"], tons: 0.5, slots: 1, heat: 0, range: [0, 0, 0, 170], availability: [{ from: 1950 }], units: ["mech", "industrialmech", "vehicle", "aero", "smallcraft", "dropship"], by: { aero: { slots: 0 }, smallcraft: { slots: 0 }, dropship: { slots: 0 } } },
-      { id: "ejection-seat-is", name: "Ejection Seat", tons: 0.5, slots: 1, availability: [{ from: 2445 }], locations: ["HD"], units: ["industrialmech", "vehicle"], by: { vehicle: { tons: 0.1, slots: 0, note: "Support vehicle" } } },
+      { id: "searchlight-is", name: "Searchlight", aliases: ["Searchlight (Mounted)", "Searchlight, Mounted", "Mounted Searchlight"], tons: 0.5, slots: 1, heat: 0, range: [0, 0, 0, 170], availability: [{ from: 1950 }], units: ["mech", "industrialmech", "vehicle", "aero", "smallcraft", "dropship"], by: { aero: { slots: 0 }, smallcraft: { slots: 0 }, dropship: { slots: 0 } } },
+      { id: "ejection-seat-is", name: "Ejection Seat", tons: 0.5, slots: 1, availability: [{ from: 2445 }], prototypeYear: 2430, locations: ["HD"], units: ["industrialmech", "vehicle"], by: { vehicle: { tons: 0.1, slots: 0, note: "Support vehicle" } } },
       { id: "extended-fuel-tank-is", name: "Extended Fuel Tank", aliases: ["Fuel Tank", "Extended Fuel Tanks"], tons: "fuel-tank-tons", slots: "fuel-tank-slots", availability: [{ from: 2300 }], locations: ["CT", "LT", "RT"], units: ["industrialmech", "vehicle"], by: { vehicle: { slots: 1 } } },
       { id: "communications-equipment-is", name: "Communications Equipment", aliases: ["CommsGear", "Comm. Equipment"], tons: "chosen-tons", slots: "ceil-amount", availability: [{ from: 1950 }], amount: { unit: "tons", min: 1, max: 15, step: 1 }, units: ["mech", "industrialmech", "vehicle", "aero", "smallcraft", "dropship"], by: { vehicle: { slots: 1 }, aero: { slots: 0 }, smallcraft: { slots: 0 }, dropship: { slots: 0 } } },
       { id: "cargo-standard-is", name: "Cargo, Standard", aliases: ["Cargo", "Cargo Bay"], tons: "chosen-tons", slots: "ceil-amount", availability: [{ from: 1950 }], amount: { unit: "tons", min: 0.5, step: 0.5 }, units: ["mech", "industrialmech", "vehicle"], by: { vehicle: { slots: 1 } } },
       { id: "cargo-liquid-is", name: "Cargo, Liquid", aliases: ["Liquid Storage", "Liquid Cargo"], tons: "chosen-tons", slots: "ceil-amount", availability: [{ from: 1950 }], amount: { unit: "tons", min: 0.5, step: 0.5 }, units: ["mech", "industrialmech", "vehicle"], by: { vehicle: { slots: 1 } } },
       { id: "cargo-insulated-is", name: "Cargo, Insulated", aliases: ["Insulated Cargo"], tons: "chosen-tons", slots: "ceil-amount", availability: [{ from: 1950 }], amount: { unit: "tons", min: 0.5, step: 0.5 }, units: ["mech", "industrialmech", "vehicle"], by: { vehicle: { slots: 1 } } },
+      // Dumper (p. 243): 5 percent of the cargo it empties, so a formula that reads the cargo mount it is linked to; paramedic equipment (p. 233): a quarter ton; container bay (p. 239): one 10-ton container to a slot, IndustrialMechs only.
+      { id: "dumper-is", name: "Dumper", tons: "dumper-tons", slots: 1, availability: [{ from: 1950 }], units: ["industrialmech", "vehicle"] },
+      { id: "paramedic-equipment-is", name: "Paramedic Equipment", tons: 0.25, slots: 1, availability: [{ from: 1950 }], units: ["industrialmech", "vehicle"] },
+      { id: "cargo-container-is", name: "Cargo Container", aliases: ["Cargo, Container"], tons: 10, slots: 1, availability: [{ from: 1950 }], units: ["industrialmech", "vehicle"] },
     ],
   },
   {
     defaults: { kind: "other", techBase: "clan", cite: { book: "TechManual", page: 344 }, checked: "page", yearsInferred: true },
     items: [
-      { id: "searchlight-clan", name: "Searchlight", aliases: ["Searchlight (Mounted)", "Mounted Searchlight"], tons: 0.5, slots: 1, heat: 0, range: [0, 0, 0, 170], availability: [{ from: 1950 }], units: ["mech", "industrialmech", "vehicle", "aero", "smallcraft", "dropship"], by: { aero: { slots: 0 }, smallcraft: { slots: 0 }, dropship: { slots: 0 } } },
+      { id: "searchlight-clan", name: "Searchlight", aliases: ["Searchlight (Mounted)", "Searchlight, Mounted", "Mounted Searchlight"], tons: 0.5, slots: 1, heat: 0, range: [0, 0, 0, 170], availability: [{ from: 1950 }], units: ["mech", "industrialmech", "vehicle", "aero", "smallcraft", "dropship"], by: { aero: { slots: 0 }, smallcraft: { slots: 0 }, dropship: { slots: 0 } } },
       { id: "ejection-seat-clan", name: "Ejection Seat", tons: 0.5, slots: 1, availability: [{ from: 2445 }], locations: ["HD"], units: ["industrialmech", "vehicle"], by: { vehicle: { tons: 0.1, slots: 0, note: "Support vehicle" } } },
       { id: "extended-fuel-tank-clan", name: "Extended Fuel Tank", aliases: ["Fuel Tank", "Extended Fuel Tanks"], tons: "fuel-tank-tons", slots: "fuel-tank-slots", availability: [{ from: 2300 }], locations: ["CT", "LT", "RT"], units: ["industrialmech", "vehicle"], by: { vehicle: { slots: 1 } } },
       { id: "communications-equipment-clan", name: "Communications Equipment", aliases: ["CommsGear", "Comm. Equipment"], tons: "chosen-tons", slots: "ceil-amount", availability: [{ from: 1950 }], amount: { unit: "tons", min: 1, max: 15, step: 1 }, units: ["mech", "industrialmech", "vehicle", "aero", "smallcraft", "dropship"], by: { vehicle: { slots: 1 }, aero: { slots: 0 }, smallcraft: { slots: 0 }, dropship: { slots: 0 } } },
       { id: "cargo-standard-clan", name: "Cargo, Standard", aliases: ["Cargo", "Cargo Bay"], tons: "chosen-tons", slots: "ceil-amount", availability: [{ from: 1950 }], amount: { unit: "tons", min: 0.5, step: 0.5 }, units: ["mech", "industrialmech", "vehicle"], by: { vehicle: { slots: 1 } } },
       { id: "cargo-liquid-clan", name: "Cargo, Liquid", aliases: ["Liquid Storage", "Liquid Cargo"], tons: "chosen-tons", slots: "ceil-amount", availability: [{ from: 1950 }], amount: { unit: "tons", min: 0.5, step: 0.5 }, units: ["mech", "industrialmech", "vehicle"], by: { vehicle: { slots: 1 } } },
       { id: "cargo-insulated-clan", name: "Cargo, Insulated", aliases: ["Insulated Cargo"], tons: "chosen-tons", slots: "ceil-amount", availability: [{ from: 1950 }], amount: { unit: "tons", min: 0.5, step: 0.5 }, units: ["mech", "industrialmech", "vehicle"], by: { vehicle: { slots: 1 } } },
+      // Dumper (p. 243): 5 percent of the cargo it empties, so a formula that reads the cargo mount it is linked to; paramedic equipment (p. 233): a quarter ton; container bay (p. 239): one 10-ton container to a slot, IndustrialMechs only.
+      { id: "dumper-clan", name: "Dumper", tons: "dumper-tons", slots: 1, availability: [{ from: 1950 }], units: ["industrialmech", "vehicle"] },
+      { id: "paramedic-equipment-clan", name: "Paramedic Equipment", tons: 0.25, slots: 1, availability: [{ from: 1950 }], units: ["industrialmech", "vehicle"] },
+      { id: "cargo-container-clan", name: "Cargo Container", aliases: ["Cargo, Container"], tons: 10, slots: 1, availability: [{ from: 1950 }], units: ["industrialmech", "vehicle"] },
     ],
   },
   {
@@ -504,11 +516,11 @@ export const OTHER: EquipmentGroup[] = [
     // the table's 2 tons and one slot.
     defaults: { kind: "other", techBase: "inner-sphere", cite: { book: IO, page: 215 }, checked: "page" },
     items: [
-      { id: "radical-heat-sink-is", name: "Radical Heat Sink System", aliases: ["Radical Heat Sink"], tons: 4, slots: 3, availability: [{ from: 3122 }], rulesLevel: "advanced", locations: ["CT", "LT", "RT"], units: ["mech", "industrialmech", "aero"] },
+      { id: "radical-heat-sink-is", name: "Radical Heat Sink System", aliases: ["Radical Heat Sink"], tons: 4, slots: 3, availability: [{ from: 3122 }], prototypeYear: 3115, rulesLevel: "advanced", locations: ["CT", "LT", "RT"], units: ["mech", "industrialmech", "aero"] },
       { id: "super-cooled-myomer-is", pod: false, podCite: { book: IO, page: 88 }, name: "Super-Cooled Myomer", aliases: ["RISC Super-Cooled Myomer"], tons: 0, slots: 1, availability: [{ from: 3132 }], rulesLevel: "experimental", perMech: 6, splitWeight: true, locations: ["LA", "RA", "LL", "RL", "LT", "RT"], locationsQuad: ["FLL", "FRL", "RLL", "RRL", "LT", "RT"] },
       { id: "risc-heat-sink-override-kit-is", name: "RISC Heat Sink Override Kit", aliases: ["Heat Sink Override Kit"], tons: 0, slots: 0, availability: [{ from: 3134 }], rulesLevel: "experimental" },
       { id: "risc-laser-pulse-module-is", name: "RISC Laser Pulse Module", aliases: ["RISC Laser Module", "Laser Pulse Module"], tons: 1, slots: 1, availability: [{ from: 3137 }], rulesLevel: "experimental", needs: "laser", units: ["mech", "industrialmech", "vehicle", "protomech", "aero", "smallcraft", "dropship", "ship", "building"], by: { vehicle: { slots: 0, note: "Support vehicle: +1* slots" }, protomech: { slots: 0 }, aero: { slots: 0 }, smallcraft: { slots: 0 }, dropship: { slots: 0 }, ship: { slots: 0 }, building: { slots: 0 } } },
-      { id: "remote-drone-command-console-is", name: "Remote Drone Command Console", aliases: ["Remote Drone"], tons: 2, slots: 1, availability: [{ from: 3140 }], rulesLevel: "experimental", units: ["mech", "industrialmech", "aero"] },
+      { id: "remote-drone-command-console-is", name: "Remote Drone Command Console", aliases: ["Remote Drone"], tons: 2, slots: 1, availability: [{ from: 3140 }], prototypeYear: 3125, rulesLevel: "experimental", units: ["mech", "industrialmech", "aero"] },
     ],
   },
   {
@@ -556,7 +568,7 @@ export const OTHER: EquipmentGroup[] = [
     // each leg; environmental sealing is a tenth of the IndustrialMech, one slot in each body location. The cost tables print no price for either.
     defaults: { kind: "other", techBase: "inner-sphere", cite: { book: "TechManual", page: 344 }, checked: "page" },
     items: [
-      { id: "tracks-is", name: "Tracks", aliases: ["Track"], tons: "tenth-tons", slots: 1, availability: [{ from: 2440 }], locations: ["LL", "RL"], locationsQuad: ["FLL", "FRL", "RLL", "RRL"], perMech: 2, perMechQuad: 4, splitWeight: true, units: ["mech", "industrialmech"] },
+      { id: "tracks-is", name: "Tracks", aliases: ["Track"], tons: "tenth-tons", slots: 1, availability: [{ from: 2440 }], prototypeYear: 2430, locations: ["LL", "RL"], locationsQuad: ["FLL", "FRL", "RLL", "RRL"], perMech: 2, perMechQuad: 4, splitWeight: true, units: ["mech", "industrialmech"] },
       { id: "environmental-sealing-is", name: "Environmental Sealing", aliases: ["Environmental Sealing (IndustrialMech)"], tons: "ceil-tenth-tons", slots: 1, availability: [{ from: 1950 }], perMech: 8, splitWeight: true, units: ["industrialmech"] },
     ],
   },
@@ -575,8 +587,8 @@ export const OTHER: EquipmentGroup[] = [
     // The table's weights (2 and 3 tons) carry an asterisk; each mount is read as that weight and the slots the table prints.
     defaults: { kind: "other", techBase: "clan", cite: { book: IO, page: 215 }, checked: "page", rulesLevel: "advanced", locations: ["CT", "LT", "RT", "LA", "RA", "LL", "RL"], locationsQuad: ["CT", "LT", "RT", "FLL", "FRL", "RLL", "RRL"] },
     items: [
-      { id: "harjel-ii-clan", pod: false, podCite: { book: IO, page: 83 }, name: "HarJel II Self-Repair System", aliases: ["HarJel II"], tons: 2, slots: 1, availability: [{ from: 3136 }] },
-      { id: "harjel-iii-clan", pod: false, podCite: { book: IO, page: 83 }, name: "HarJel III Self-Repair System", aliases: ["HarJel III", "HarJel Repair Systems (HarJel III)"], tons: 3, slots: 2, availability: [{ from: 3139 }] },
+      { id: "harjel-ii-clan", pod: false, podCite: { book: IO, page: 83 }, name: "HarJel II Self-Repair System", aliases: ["HarJel II"], tons: 2, slots: 1, availability: [{ from: 3136 }], prototypeYear: 3120 },
+      { id: "harjel-iii-clan", pod: false, podCite: { book: IO, page: 83 }, name: "HarJel III Self-Repair System", aliases: ["HarJel III", "HarJel Repair Systems (HarJel III)"], tons: 3, slots: 2, availability: [{ from: 3139 }], prototypeYear: 3137 },
     ],
   },
   {
@@ -589,60 +601,60 @@ export const OTHER: EquipmentGroup[] = [
     // operations adaptation, squad support weapon mount and light TAG (variable or on pp. 298), and the detachable missile pack (a modifier).
     defaults: { techBase: "inner-sphere", checked: "page", units: ["battlearmor"] },
     items: [
-      { id: "ba-david-light-gauss-rifle-is", name: "David Light Gauss Rifle (Battle Armor)", tons: 0.1, slots: 1, availability: [{ from: 3063 }], kind: "weapon", damage: "1", range: [0, 3, 5, 8], cite: { book: "TechManual", page: 346 } },
-      { id: "ba-king-david-light-gauss-rifle-is", name: "King David Light Gauss Rifle (Battle Armor)", tons: 0.275, slots: 2, availability: [{ from: 3063 }], kind: "weapon", damage: "1", range: [0, 3, 6, 9], cite: { book: "TechManual", page: 346 } },
-      { id: "ba-magshot-gauss-rifle-is", name: "Magshot Gauss Rifle (Battle Armor)", tons: 0.175, slots: 3, availability: [{ from: 3059 }], kind: "weapon", damage: "2", range: [0, 3, 6, 9], cite: { book: "TechManual", page: 346 } },
-      { id: "ba-grand-mauler-gauss-rifle-is", name: "Grand Mauler Gauss Rifle (Battle Armor)", tons: 0.125, slots: 2, availability: [{ from: 3059 }], kind: "weapon", damage: "Special", range: [0, 2, 4, 5], cite: { book: "TechManual", page: 346 } },
-      { id: "ba-tsunami-gauss-rifle-is", name: "Tsunami Gauss Rifle (Battle Armor)", tons: 0.125, slots: 2, availability: [{ from: 3056 }], kind: "weapon", damage: "1", range: [0, 2, 4, 5], cite: { book: "TechManual", page: 346 } },
+      { id: "ba-david-light-gauss-rifle-is", name: "David Light Gauss Rifle (Battle Armor)", tons: 0.1, slots: 1, availability: [{ from: 3063 }], prototypeYear: 3058, kind: "weapon", damage: "1", range: [0, 3, 5, 8], cite: { book: "TechManual", page: 346 } },
+      { id: "ba-king-david-light-gauss-rifle-is", name: "King David Light Gauss Rifle (Battle Armor)", tons: 0.275, slots: 2, availability: [{ from: 3063 }], prototypeYear: 3058, kind: "weapon", damage: "1", range: [0, 3, 6, 9], cite: { book: "TechManual", page: 346 } },
+      { id: "ba-magshot-gauss-rifle-is", name: "Magshot Gauss Rifle (Battle Armor)", tons: 0.175, slots: 3, availability: [{ from: 3059 }], prototypeYear: 3057, kind: "weapon", damage: "2", range: [0, 3, 6, 9], cite: { book: "TechManual", page: 346 } },
+      { id: "ba-grand-mauler-gauss-rifle-is", name: "Grand Mauler Gauss Rifle (Battle Armor)", tons: 0.125, slots: 2, availability: [{ from: 3059 }], prototypeYear: 3055, kind: "weapon", damage: "Special", range: [0, 2, 4, 5], cite: { book: "TechManual", page: 346 } },
+      { id: "ba-tsunami-gauss-rifle-is", name: "Tsunami Gauss Rifle (Battle Armor)", tons: 0.125, slots: 2, availability: [{ from: 3056 }], prototypeYear: 3054, kind: "weapon", damage: "1", range: [0, 2, 4, 5], cite: { book: "TechManual", page: 346 } },
       { id: "ba-micro-grenade-launcher-is", name: "Micro Grenade Launcher (Battle Armor)", tons: 0.075, slots: 1, availability: [{ from: 2200 }], kind: "weapon", damage: "1", range: [0, 1, 2, 0], cite: { book: "TechManual", page: 346 } },
       { id: "ba-heavy-grenade-launcher-is", name: "Heavy Grenade Launcher (Battle Armor)", tons: 0.1, slots: 1, availability: [{ from: 3050 }], kind: "weapon", damage: "1", range: [0, 1, 2, 3], cite: { book: "TechManual", page: 346 } },
       { id: "ba-light-machine-gun-is", name: "Light Machine Gun (Battle Armor)", tons: 0.075, slots: 1, availability: [{ from: 3068 }], kind: "weapon", damage: "1", range: [0, 2, 4, 6], cite: { book: "TechManual", page: 346 } },
       { id: "ba-machine-gun-is", name: "Machine Gun (Battle Armor)", tons: 0.1, slots: 1, availability: [{ from: 1950 }], kind: "weapon", damage: "2", range: [0, 1, 2, 3], cite: { book: "TechManual", page: 346 } },
       { id: "ba-heavy-machine-gun-is", name: "Heavy Machine Gun (Battle Armor)", tons: 0.15, slots: 1, availability: [{ from: 3068 }], kind: "weapon", damage: "3", range: [0, 1, 2, 0], cite: { book: "TechManual", page: 346 } },
-      { id: "ba-light-mortar-is", name: "Light Mortar (Battle Armor)", tons: 0.3, slots: 2, availability: [{ from: 3057 }], kind: "weapon", damage: "3", range: [1, 1, 2, 3], cite: { book: "TechManual", page: 346 } },
-      { id: "ba-heavy-mortar-is", name: "Heavy Mortar (Battle Armor)", tons: 0.4, slots: 2, availability: [{ from: 3057 }], kind: "weapon", damage: "3", range: [2, 2, 4, 6], cite: { book: "TechManual", page: 346 } },
+      { id: "ba-light-mortar-is", name: "Light Mortar (Battle Armor)", tons: 0.3, slots: 2, availability: [{ from: 3057 }], prototypeYear: 3054, kind: "weapon", damage: "3", range: [1, 1, 2, 3], cite: { book: "TechManual", page: 346 } },
+      { id: "ba-heavy-mortar-is", name: "Heavy Mortar (Battle Armor)", tons: 0.4, slots: 2, availability: [{ from: 3057 }], prototypeYear: 3054, kind: "weapon", damage: "3", range: [2, 2, 4, 6], cite: { book: "TechManual", page: 346 } },
       { id: "ba-light-recoilless-rifle-is", name: "Light Recoilless Rifle (Battle Armor)", tons: 0.175, slots: 2, availability: [{ from: 1950 }], kind: "weapon", damage: "2", range: [0, 2, 4, 6], cite: { book: "TechManual", page: 346 } },
       { id: "ba-medium-recoilless-rifle-is", name: "Medium Recoilless Rifle (Battle Armor)", tons: 0.25, slots: 2, availability: [{ from: 1950 }], kind: "weapon", damage: "3", range: [0, 2, 4, 6], cite: { book: "TechManual", page: 346 } },
       { id: "ba-heavy-recoilless-rifle-is", name: "Heavy Recoilless Rifle (Battle Armor)", tons: 0.325, slots: 3, availability: [{ from: 1950 }], kind: "weapon", damage: "3", range: [0, 3, 5, 7], cite: { book: "TechManual", page: 346 } },
       { id: "ba-flamer-is", name: "Flamer (Battle Armor)", tons: 0.15, slots: 1, availability: [{ from: 3050 }], kind: "weapon", damage: "2", range: [0, 1, 2, 3], cite: { book: "TechManual", page: 346 } },
-      { id: "ba-er-small-laser-is", name: "ER Small Laser (Battle Armor)", tons: 0.35, slots: 2, availability: [{ from: 3058 }], kind: "weapon", damage: "3", range: [0, 2, 4, 5], cite: { book: "TechManual", page: 346 } },
-      { id: "ba-er-medium-laser-is", name: "ER Medium Laser (Battle Armor)", tons: 0.8, slots: 3, availability: [{ from: 3058 }], kind: "weapon", damage: "5", range: [0, 4, 8, 12], cite: { book: "TechManual", page: 346 } },
+      { id: "ba-er-small-laser-is", name: "ER Small Laser (Battle Armor)", tons: 0.35, slots: 2, availability: [{ from: 3058 }], prototypeYear: 3055, kind: "weapon", damage: "3", range: [0, 2, 4, 5], cite: { book: "TechManual", page: 346 } },
+      { id: "ba-er-medium-laser-is", name: "ER Medium Laser (Battle Armor)", tons: 0.8, slots: 3, availability: [{ from: 3058 }], prototypeYear: 3055, kind: "weapon", damage: "5", range: [0, 4, 8, 12], cite: { book: "TechManual", page: 346 } },
       { id: "ba-small-laser-is", name: "Small Laser (Battle Armor)", tons: 0.2, slots: 1, availability: [{ from: 2300 }], kind: "weapon", damage: "3", range: [0, 1, 2, 3], cite: { book: "TechManual", page: 346 } },
       { id: "ba-medium-laser-is", name: "Medium Laser (Battle Armor)", tons: 0.5, slots: 3, availability: [{ from: 2300 }], kind: "weapon", damage: "5", range: [0, 3, 6, 9], cite: { book: "TechManual", page: 346 } },
       { id: "ba-small-pulse-laser-is", name: "Small Pulse Laser (Battle Armor)", tons: 0.4, slots: 1, availability: [{ from: 2609, to: 2950 }, { from: 3037 }], kind: "weapon", damage: "3", range: [0, 1, 2, 3], cite: { book: "TechManual", page: 346 } },
       { id: "ba-medium-pulse-laser-is", name: "Medium Pulse Laser (Battle Armor)", tons: 0.8, slots: 3, availability: [{ from: 2609, to: 2950 }, { from: 3037 }], kind: "weapon", damage: "6", range: [0, 2, 4, 6], cite: { book: "TechManual", page: 347 } },
       { id: "ba-support-ppc-is", name: "Support PPC (Battle Armor)", tons: 0.25, slots: 2, availability: [{ from: 2436 }], kind: "weapon", damage: "2", range: [0, 2, 5, 7], cite: { book: "TechManual", page: 347 } },
-      { id: "ba-man-portable-plasma-rifle-is", name: "Man-Portable Plasma Rifle (Battle Armor)", tons: 0.3, slots: 2, availability: [{ from: 3065 }], kind: "weapon", damage: "2", range: [0, 2, 4, 6], cite: { book: "TechManual", page: 347 } },
-      { id: "ba-firedrake-support-needler-is", name: "Firedrake Support Needler (Battle Armor)", tons: 0.05, slots: 1, availability: [{ from: 3061 }], kind: "weapon", damage: "1", range: [0, 1, 2, 3], cite: { book: "TechManual", page: 347 } },
+      { id: "ba-man-portable-plasma-rifle-is", name: "Man-Portable Plasma Rifle (Battle Armor)", tons: 0.3, slots: 2, availability: [{ from: 3065 }], prototypeYear: 3063, kind: "weapon", damage: "2", range: [0, 2, 4, 6], cite: { book: "TechManual", page: 347 } },
+      { id: "ba-firedrake-support-needler-is", name: "Firedrake Support Needler (Battle Armor)", tons: 0.05, slots: 1, availability: [{ from: 3061 }], prototypeYear: 3058, kind: "weapon", damage: "1", range: [0, 1, 2, 3], cite: { book: "TechManual", page: 347 } },
       { id: "ba-compact-narc-is", name: "Compact Narc (Battle Armor)", tons: 0.15, slots: 1, availability: [{ from: 3060 }], kind: "weapon", damage: "0", range: [0, 2, 4, 5], cite: { book: "TechManual", page: 347 } },
       { id: "ba-pop-up-mine-is", name: "Pop-Up Mine (Battle Armor)", tons: 0.2, slots: 1, availability: [{ from: 3050 }], kind: "weapon", damage: "4", range: [0, 0, 0, 0], cite: { book: "TechManual", page: 347 } },
       { id: "ba-active-probe-is", name: "Active Probe (Battle Armor)", tons: 0.25, slots: 2, availability: [{ from: 3050 }], kind: "other", range: [0, 0, 0, 4], cite: { book: "TechManual", page: 347 } },
-      { id: "ba-camo-system-is", name: "Camo System (Battle Armor)", tons: 0.2, slots: 2, availability: [{ from: 2800 }], kind: "other", cite: { book: "TechManual", page: 347 } },
+      { id: "ba-camo-system-is", name: "Camo System (Battle Armor)", tons: 0.2, slots: 2, availability: [{ from: 2800 }], prototypeYear: 2790, kind: "other", cite: { book: "TechManual", page: 347 } },
       { id: "ba-cutting-torch-is", name: "Cutting Torch (Battle Armor)", tons: 0.005, slots: 1, availability: [{ from: 1950 }], kind: "other", cite: { book: "TechManual", page: 347 } },
-      { id: "ba-ecm-suite-is", name: "ECM Suite (Battle Armor)", tons: 0.1, slots: 1, availability: [{ from: 2720, to: 2788 }, { from: 3057 }], kind: "other", range: [0, 0, 0, 0], cite: { book: "TechManual", page: 347 } },
-      { id: "ba-extended-life-support-is", name: "Extended Life Support (Battle Armor)", tons: 0.025, slots: 1, availability: [{ from: 2715 }], kind: "other", cite: { book: "TechManual", page: 347 } },
-      { id: "ba-fuel-tank-is", name: "Fuel Tank (Battle Armor)", tons: 0.05, slots: 1, availability: [{ from: 2744, to: 2781 }, { from: 3051 }], kind: "other", cite: { book: "TechManual", page: 347 } },
+      { id: "ba-ecm-suite-is", name: "ECM Suite (Battle Armor)", tons: 0.1, slots: 1, availability: [{ from: 2720, to: 2788 }, { from: 3057 }], prototypeYear: 2718, kind: "other", range: [0, 0, 0, 0], cite: { book: "TechManual", page: 347 } },
+      { id: "ba-extended-life-support-is", name: "Extended Life Support (Battle Armor)", tons: 0.025, slots: 1, availability: [{ from: 2715 }], prototypeYear: 2712, kind: "other", cite: { book: "TechManual", page: 347 } },
+      { id: "ba-fuel-tank-is", name: "Fuel Tank (Battle Armor)", tons: 0.05, slots: 1, availability: [{ from: 2744, to: 2781 }, { from: 3051 }], prototypeYear: 2740, kind: "other", cite: { book: "TechManual", page: 347 } },
       { id: "ba-heat-sensor-is", name: "Heat Sensor (Battle Armor)", tons: 0.02, slots: 1, availability: [{ from: 3050 }], kind: "other", range: [0, 9, 18, 27], cite: { book: "TechManual", page: 347 } },
       { id: "ba-improved-sensors-is", name: "Improved Sensors (Battle Armor)", tons: 0.065, slots: 1, availability: [{ from: 3051 }], kind: "other", range: [0, 0, 0, 2], cite: { book: "TechManual", page: 347 } },
-      { id: "ba-jump-booster-is", name: "Jump Booster (Battle Armor)", tons: 0.125, slots: 2, availability: [{ from: 3051 }], kind: "other", cite: { book: "TechManual", page: 347 } },
+      { id: "ba-jump-booster-is", name: "Jump Booster (Battle Armor)", tons: 0.125, slots: 2, availability: [{ from: 3051 }], prototypeYear: 3050, kind: "other", cite: { book: "TechManual", page: 347 } },
       { id: "ba-laser-microphone-is", name: "Laser Microphone (Battle Armor)", tons: 0.005, slots: 1, availability: [{ from: 2200 }], kind: "other", range: [0, 0, 0, 34], cite: { book: "TechManual", page: 347 } },
-      { id: "ba-magnetic-clamps-is", name: "Magnetic Clamps (Battle Armor)", tons: 0.03, slots: 2, availability: [{ from: 3062 }], kind: "other", cite: { book: "TechManual", page: 347 } },
-      { id: "ba-lrm-1-is", name: "LRM 1 (Battle Armor)", tons: 0.06, slots: 2, availability: [{ from: 3057 }], kind: "weapon", damage: "1/Msl", range: [6, 7, 14, 21], cite: { book: "TechManual", page: 347 } },
-      { id: "ba-lrm-2-is", name: "LRM 2 (Battle Armor)", tons: 0.12, slots: 2, availability: [{ from: 3057 }], kind: "weapon", damage: "1/Msl", range: [6, 7, 14, 21], cite: { book: "TechManual", page: 347 } },
-      { id: "ba-lrm-3-is", name: "LRM 3 (Battle Armor)", tons: 0.18, slots: 3, availability: [{ from: 3057 }], kind: "weapon", damage: "1/Msl", range: [6, 7, 14, 21], cite: { book: "TechManual", page: 347 } },
-      { id: "ba-lrm-4-is", name: "LRM 4 (Battle Armor)", tons: 0.24, slots: 3, availability: [{ from: 3057 }], kind: "weapon", damage: "1/Msl", range: [6, 7, 14, 21], cite: { book: "TechManual", page: 347 } },
-      { id: "ba-lrm-5-is", name: "LRM 5 (Battle Armor)", tons: 0.3, slots: 4, availability: [{ from: 3057 }], kind: "weapon", damage: "1/Msl", range: [6, 7, 14, 21], cite: { book: "TechManual", page: 347 } },
+      { id: "ba-magnetic-clamps-is", name: "Magnetic Clamps (Battle Armor)", tons: 0.03, slots: 2, availability: [{ from: 3062 }], prototypeYear: 3057, kind: "other", cite: { book: "TechManual", page: 347 } },
+      { id: "ba-lrm-1-is", name: "LRM 1 (Battle Armor)", tons: 0.06, slots: 2, availability: [{ from: 3057 }], prototypeYear: 3055, kind: "weapon", damage: "1/Msl", range: [6, 7, 14, 21], cite: { book: "TechManual", page: 347 } },
+      { id: "ba-lrm-2-is", name: "LRM 2 (Battle Armor)", tons: 0.12, slots: 2, availability: [{ from: 3057 }], prototypeYear: 3055, kind: "weapon", damage: "1/Msl", range: [6, 7, 14, 21], cite: { book: "TechManual", page: 347 } },
+      { id: "ba-lrm-3-is", name: "LRM 3 (Battle Armor)", tons: 0.18, slots: 3, availability: [{ from: 3057 }], prototypeYear: 3055, kind: "weapon", damage: "1/Msl", range: [6, 7, 14, 21], cite: { book: "TechManual", page: 347 } },
+      { id: "ba-lrm-4-is", name: "LRM 4 (Battle Armor)", tons: 0.24, slots: 3, availability: [{ from: 3057 }], prototypeYear: 3055, kind: "weapon", damage: "1/Msl", range: [6, 7, 14, 21], cite: { book: "TechManual", page: 347 } },
+      { id: "ba-lrm-5-is", name: "LRM 5 (Battle Armor)", tons: 0.3, slots: 4, availability: [{ from: 3057 }], prototypeYear: 3055, kind: "weapon", damage: "1/Msl", range: [6, 7, 14, 21], cite: { book: "TechManual", page: 347 } },
       { id: "ba-srm-1-is", name: "SRM 1 (Battle Armor)", tons: 0.06, slots: 1, availability: [{ from: 3050 }], kind: "weapon", damage: "2/Msl", range: [0, 3, 6, 9], cite: { book: "TechManual", page: 347 } },
       { id: "ba-srm-2-is", name: "SRM 2 (Battle Armor)", tons: 0.12, slots: 2, availability: [{ from: 3050 }], kind: "weapon", damage: "2/Msl", range: [0, 3, 6, 9], cite: { book: "TechManual", page: 347 } },
       { id: "ba-srm-3-is", name: "SRM 3 (Battle Armor)", tons: 0.18, slots: 2, availability: [{ from: 3050 }], kind: "weapon", damage: "2/Msl", range: [0, 3, 6, 9], cite: { book: "TechManual", page: 347 } },
       { id: "ba-srm-4-is", name: "SRM 4 (Battle Armor)", tons: 0.24, slots: 2, availability: [{ from: 3050 }], kind: "weapon", damage: "2/Msl", range: [0, 3, 6, 9], cite: { book: "TechManual", page: 347 } },
       { id: "ba-srm-5-is", name: "SRM 5 (Battle Armor)", tons: 0.3, slots: 3, availability: [{ from: 3050 }], kind: "weapon", damage: "2/Msl", range: [0, 3, 6, 9], cite: { book: "TechManual", page: 347 } },
       { id: "ba-srm-6-is", name: "SRM 6 (Battle Armor)", tons: 0.36, slots: 3, availability: [{ from: 3050 }], kind: "weapon", damage: "2/Msl", range: [0, 3, 6, 9], cite: { book: "TechManual", page: 347 } },
-      { id: "ba-mrm-1-is", name: "MRM 1 (Battle Armor)", tons: 0.06, slots: 1, availability: [{ from: 3060 }], kind: "weapon", damage: "1/Msl", range: [0, 3, 8, 15], cite: { book: "TechManual", page: 347 } },
-      { id: "ba-mrm-2-is", name: "MRM 2 (Battle Armor)", tons: 0.12, slots: 2, availability: [{ from: 3060 }], kind: "weapon", damage: "1/Msl", range: [0, 3, 8, 15], cite: { book: "TechManual", page: 347 } },
-      { id: "ba-mrm-3-is", name: "MRM 3 (Battle Armor)", tons: 0.18, slots: 2, availability: [{ from: 3060 }], kind: "weapon", damage: "1/Msl", range: [0, 3, 8, 15], cite: { book: "TechManual", page: 347 } },
-      { id: "ba-mrm-4-is", name: "MRM 4 (Battle Armor)", tons: 0.24, slots: 3, availability: [{ from: 3060 }], kind: "weapon", damage: "1/Msl", range: [0, 3, 8, 15], cite: { book: "TechManual", page: 347 } },
-      { id: "ba-mrm-5-is", name: "MRM 5 (Battle Armor)", tons: 0.3, slots: 3, availability: [{ from: 3060 }], kind: "weapon", damage: "1/Msl", range: [0, 3, 8, 15], cite: { book: "TechManual", page: 347 } },
+      { id: "ba-mrm-1-is", name: "MRM 1 (Battle Armor)", tons: 0.06, slots: 1, availability: [{ from: 3060 }], prototypeYear: 3058, kind: "weapon", damage: "1/Msl", range: [0, 3, 8, 15], cite: { book: "TechManual", page: 347 } },
+      { id: "ba-mrm-2-is", name: "MRM 2 (Battle Armor)", tons: 0.12, slots: 2, availability: [{ from: 3060 }], prototypeYear: 3058, kind: "weapon", damage: "1/Msl", range: [0, 3, 8, 15], cite: { book: "TechManual", page: 347 } },
+      { id: "ba-mrm-3-is", name: "MRM 3 (Battle Armor)", tons: 0.18, slots: 2, availability: [{ from: 3060 }], prototypeYear: 3058, kind: "weapon", damage: "1/Msl", range: [0, 3, 8, 15], cite: { book: "TechManual", page: 347 } },
+      { id: "ba-mrm-4-is", name: "MRM 4 (Battle Armor)", tons: 0.24, slots: 3, availability: [{ from: 3060 }], prototypeYear: 3058, kind: "weapon", damage: "1/Msl", range: [0, 3, 8, 15], cite: { book: "TechManual", page: 347 } },
+      { id: "ba-mrm-5-is", name: "MRM 5 (Battle Armor)", tons: 0.3, slots: 3, availability: [{ from: 3060 }], prototypeYear: 3058, kind: "weapon", damage: "1/Msl", range: [0, 3, 8, 15], cite: { book: "TechManual", page: 347 } },
       { id: "ba-rocket-launcher-1-is", name: "Rocket Launcher 1 (Battle Armor)", tons: 0.025, slots: 2, availability: [{ from: 3050 }], kind: "weapon", damage: "1/Msl", range: [0, 3, 7, 12], cite: { book: "TechManual", page: 347 } },
       { id: "ba-rocket-launcher-2-is", name: "Rocket Launcher 2 (Battle Armor)", tons: 0.05, slots: 2, availability: [{ from: 3050 }], kind: "weapon", damage: "1/Msl", range: [0, 3, 7, 12], cite: { book: "TechManual", page: 347 } },
       { id: "ba-rocket-launcher-3-is", name: "Rocket Launcher 3 (Battle Armor)", tons: 0.075, slots: 3, availability: [{ from: 3050 }], kind: "weapon", damage: "1/Msl", range: [0, 3, 7, 12], cite: { book: "TechManual", page: 347 } },
@@ -658,54 +670,54 @@ export const OTHER: EquipmentGroup[] = [
     // tables), modular mounts, mission equipment and the items on p. 298 (as for the Inner Sphere rows), and the detachable missile pack.
     defaults: { techBase: "clan", cite: { book: "TechManual", page: 348 }, checked: "page", units: ["battlearmor"] },
     items: [
-      { id: "ba-ap-gauss-rifle-clan", name: "AP Gauss Rifle (Battle Armor)", tons: 0.2, slots: 2, availability: [{ from: 3069 }], kind: "weapon", damage: "3", range: [0, 3, 6, 9] },
-      { id: "ba-heavy-grenade-launcher-clan", name: "Heavy Grenade Launcher (Battle Armor)", tons: 0.1, slots: 1, availability: [{ from: 2900 }], kind: "weapon", damage: "1", range: [0, 1, 2, 3] },
-      { id: "ba-light-machine-gun-clan", name: "Light Machine Gun (Battle Armor)", tons: 0.075, slots: 1, availability: [{ from: 3060 }], kind: "weapon", damage: "1", range: [0, 2, 4, 6] },
-      { id: "ba-machine-gun-clan", name: "Machine Gun (Battle Armor)", tons: 0.1, slots: 1, availability: [{ from: 1950 }], kind: "weapon", damage: "2", range: [0, 1, 2, 3], yearsInferred: true },
-      { id: "ba-heavy-machine-gun-clan", name: "Heavy Machine Gun (Battle Armor)", tons: 0.15, slots: 1, availability: [{ from: 3059 }], kind: "weapon", damage: "3", range: [0, 1, 2, 0] },
-      { id: "ba-bearhunter-superheavy-ac-clan", name: "Bearhunter Superheavy AC (Battle Armor)", tons: 0.15, slots: 2, availability: [{ from: 3062 }], kind: "weapon", damage: "3", range: [0, 0, 1, 2] },
-      { id: "ba-light-recoilless-rifle-clan", name: "Light Recoilless Rifle (Battle Armor)", tons: 0.175, slots: 2, availability: [{ from: 1950 }], kind: "weapon", damage: "2", range: [0, 2, 4, 6], yearsInferred: true },
-      { id: "ba-medium-recoilless-rifle-clan", name: "Medium Recoilless Rifle (Battle Armor)", tons: 0.25, slots: 2, availability: [{ from: 1950 }], kind: "weapon", damage: "3", range: [0, 2, 4, 6], yearsInferred: true },
-      { id: "ba-heavy-recoilless-rifle-clan", name: "Heavy Recoilless Rifle (Battle Armor)", tons: 0.325, slots: 3, availability: [{ from: 1950 }], kind: "weapon", damage: "3", range: [0, 3, 5, 7], yearsInferred: true },
-      { id: "ba-flamer-clan", name: "Flamer (Battle Armor)", tons: 0.15, slots: 1, availability: [{ from: 2868 }], kind: "weapon", damage: "2", range: [0, 1, 2, 3] },
-      { id: "ba-er-micro-laser-clan", name: "ER Micro Laser (Battle Armor)", tons: 0.15, slots: 1, availability: [{ from: 3059 }], kind: "weapon", damage: "2", range: [0, 1, 2, 4] },
+      { id: "ba-ap-gauss-rifle-clan", name: "AP Gauss Rifle (Battle Armor)", tons: 0.2, slots: 2, availability: [{ from: 3069 }], prototypeYear: 3066, kind: "weapon", damage: "3", range: [0, 3, 6, 9] },
+      { id: "ba-heavy-grenade-launcher-clan", name: "Heavy Grenade Launcher (Battle Armor)", tons: 0.1, slots: 1, availability: [{ from: 2900 }], prototypeYear: 2880, kind: "weapon", damage: "1", range: [0, 1, 2, 3] },
+      { id: "ba-light-machine-gun-clan", name: "Light Machine Gun (Battle Armor)", tons: 0.075, slots: 1, availability: [{ from: 3060 }], prototypeYear: 3055, kind: "weapon", damage: "1", range: [0, 2, 4, 6] },
+      { id: "ba-machine-gun-clan", name: "Machine Gun (Battle Armor)", tons: 0.1, slots: 1, availability: [{ from: 2868 }], kind: "weapon", damage: "2", range: [0, 1, 2, 3], yearsInferred: false },
+      { id: "ba-heavy-machine-gun-clan", name: "Heavy Machine Gun (Battle Armor)", tons: 0.15, slots: 1, availability: [{ from: 3059 }], prototypeYear: 3055, kind: "weapon", damage: "3", range: [0, 1, 2, 0] },
+      { id: "ba-bearhunter-superheavy-ac-clan", name: "Bearhunter Superheavy AC (Battle Armor)", tons: 0.15, slots: 2, availability: [{ from: 3062 }], prototypeYear: 3060, kind: "weapon", damage: "3", range: [0, 0, 1, 2] },
+      { id: "ba-light-recoilless-rifle-clan", name: "Light Recoilless Rifle (Battle Armor)", tons: 0.175, slots: 2, availability: [{ from: 3062 }], kind: "weapon", damage: "2", range: [0, 2, 4, 6], yearsInferred: false },
+      { id: "ba-medium-recoilless-rifle-clan", name: "Medium Recoilless Rifle (Battle Armor)", tons: 0.25, slots: 2, availability: [{ from: 3062 }], kind: "weapon", damage: "3", range: [0, 2, 4, 6], yearsInferred: false },
+      { id: "ba-heavy-recoilless-rifle-clan", name: "Heavy Recoilless Rifle (Battle Armor)", tons: 0.325, slots: 3, availability: [{ from: 3062 }], kind: "weapon", damage: "3", range: [0, 3, 5, 7], yearsInferred: false },
+      { id: "ba-flamer-clan", name: "Flamer (Battle Armor)", tons: 0.15, slots: 1, availability: [{ from: 2868 }], prototypeYear: 2865, kind: "weapon", damage: "2", range: [0, 1, 2, 3] },
+      { id: "ba-er-micro-laser-clan", name: "ER Micro Laser (Battle Armor)", tons: 0.15, slots: 1, availability: [{ from: 3059 }], prototypeYear: 3055, kind: "weapon", damage: "2", range: [0, 1, 2, 4] },
       { id: "ba-er-small-laser-clan", name: "ER Small Laser (Battle Armor)", tons: 0.35, slots: 2, availability: [{ from: 2825 }], kind: "weapon", damage: "5", range: [0, 2, 4, 6] },
       { id: "ba-er-medium-laser-clan", name: "ER Medium Laser (Battle Armor)", tons: 0.8, slots: 3, availability: [{ from: 2824 }], kind: "weapon", damage: "7", range: [0, 5, 10, 15] },
-      { id: "ba-small-laser-clan", name: "Small Laser (Battle Armor)", tons: 0.2, slots: 1, availability: [{ from: 2300 }], kind: "weapon", damage: "3", range: [0, 1, 2, 3], yearsInferred: true },
-      { id: "ba-micro-pulse-laser-clan", name: "Micro Pulse Laser (Battle Armor)", tons: 0.16, slots: 1, availability: [{ from: 3060 }], kind: "weapon", damage: "3", range: [0, 1, 2, 3] },
-      { id: "ba-small-pulse-laser-clan", name: "Small Pulse Laser (Battle Armor)", tons: 0.4, slots: 1, availability: [{ from: 2609, to: 2950 }, { from: 3037 }], kind: "weapon", damage: "3", range: [0, 2, 4, 6], yearsInferred: true },
-      { id: "ba-medium-pulse-laser-clan", name: "Medium Pulse Laser (Battle Armor)", tons: 0.8, slots: 3, availability: [{ from: 2609, to: 2950 }, { from: 3037 }], kind: "weapon", damage: "7", range: [0, 4, 8, 12], yearsInferred: true },
-      { id: "ba-heavy-small-laser-clan", name: "Heavy Small Laser (Battle Armor)", tons: 0.5, slots: 3, availability: [{ from: 3059 }], kind: "weapon", damage: "6", range: [0, 1, 2, 3] },
-      { id: "ba-heavy-medium-laser-clan", name: "Heavy Medium Laser (Battle Armor)", tons: 1.0, slots: 4, availability: [{ from: 3059 }], kind: "weapon", damage: "10", range: [0, 3, 6, 9] },
-      { id: "ba-support-ppc-clan", name: "Support PPC (Battle Armor)", tons: 0.24, slots: 2, availability: [{ from: 2436 }], kind: "weapon", damage: "2", range: [0, 2, 5, 7], yearsInferred: true },
-      { id: "ba-compact-narc-clan", name: "Compact Narc (Battle Armor)", tons: 0.15, slots: 1, availability: [{ from: 2875 }], kind: "weapon", damage: "0", range: [0, 2, 4, 5] },
-      { id: "ba-bomb-rack-clan", name: "Bomb Rack (Battle Armor)", tons: 0.1, slots: 2, availability: [{ from: 3060 }], kind: "weapon", damage: "2", range: [0, 0, 0, 0] },
-      { id: "ba-active-probe-clan", name: "Active Probe (Battle Armor)", tons: 0.15, slots: 2, availability: [{ from: 2900 }], kind: "other", range: [0, 0, 0, 5] },
+      { id: "ba-small-laser-clan", name: "Small Laser (Battle Armor)", tons: 0.2, slots: 1, availability: [{ from: 2868 }], prototypeYear: 2865, kind: "weapon", damage: "3", range: [0, 1, 2, 3], yearsInferred: false },
+      { id: "ba-micro-pulse-laser-clan", name: "Micro Pulse Laser (Battle Armor)", tons: 0.16, slots: 1, availability: [{ from: 3060 }], prototypeYear: 3055, kind: "weapon", damage: "3", range: [0, 1, 2, 3] },
+      { id: "ba-small-pulse-laser-clan", name: "Small Pulse Laser (Battle Armor)", tons: 0.4, slots: 1, availability: [{ from: 2872, to: 2950 }, { from: 3037 }], prototypeYear: 2870, kind: "weapon", damage: "3", range: [0, 2, 4, 6], yearsInferred: false },
+      { id: "ba-medium-pulse-laser-clan", name: "Medium Pulse Laser (Battle Armor)", tons: 0.8, slots: 3, availability: [{ from: 2872, to: 2950 }, { from: 3037 }], prototypeYear: 2870, kind: "weapon", damage: "7", range: [0, 4, 8, 12], yearsInferred: false },
+      { id: "ba-heavy-small-laser-clan", name: "Heavy Small Laser (Battle Armor)", tons: 0.5, slots: 3, availability: [{ from: 3059 }], prototypeYear: 3057, kind: "weapon", damage: "6", range: [0, 1, 2, 3] },
+      { id: "ba-heavy-medium-laser-clan", name: "Heavy Medium Laser (Battle Armor)", tons: 1.0, slots: 4, availability: [{ from: 3059 }], prototypeYear: 3057, kind: "weapon", damage: "10", range: [0, 3, 6, 9] },
+      { id: "ba-support-ppc-clan", name: "Support PPC (Battle Armor)", tons: 0.24, slots: 2, availability: [{ from: 2950 }], kind: "weapon", damage: "2", range: [0, 2, 5, 7], yearsInferred: false },
+      { id: "ba-compact-narc-clan", name: "Compact Narc (Battle Armor)", tons: 0.15, slots: 1, availability: [{ from: 2875 }], prototypeYear: 2870, kind: "weapon", damage: "0", range: [0, 2, 4, 5] },
+      { id: "ba-bomb-rack-clan", name: "Bomb Rack (Battle Armor)", tons: 0.1, slots: 2, availability: [{ from: 3060 }], prototypeYear: 3055, kind: "weapon", damage: "2", range: [0, 0, 0, 0] },
+      { id: "ba-active-probe-clan", name: "Active Probe (Battle Armor)", tons: 0.15, slots: 2, availability: [{ from: 2900 }], prototypeYear: 2898, kind: "other", range: [0, 0, 0, 5] },
       { id: "ba-cutting-torch-clan", name: "Cutting Torch (Battle Armor)", tons: 0.005, slots: 1, availability: [{ from: 1950 }], kind: "other", yearsInferred: true },
       { id: "ba-ecm-suite-clan", name: "ECM Suite (Battle Armor)", tons: 0.075, slots: 1, availability: [{ from: 2720, to: 2788 }, { from: 3057 }], kind: "other", range: [0, 0, 0, 0], yearsInferred: true },
       { id: "ba-extended-life-support-clan", name: "Extended Life Support (Battle Armor)", tons: 0.025, slots: 1, availability: [{ from: 2715 }], kind: "other", yearsInferred: true },
       { id: "ba-fuel-tank-clan", name: "Fuel Tank (Battle Armor)", tons: 0.05, slots: 1, availability: [{ from: 2744, to: 2781 }, { from: 3051 }], kind: "other", yearsInferred: true },
-      { id: "ba-heat-sensor-clan", name: "Heat Sensor (Battle Armor)", tons: 0.02, slots: 1, availability: [{ from: 2880 }], kind: "other", range: [0, 11, 23, 34] },
-      { id: "ba-improved-sensors-clan", name: "Improved Sensors (Battle Armor)", tons: 0.045, slots: 1, availability: [{ from: 2890 }], kind: "other", range: [0, 0, 0, 3] },
+      { id: "ba-heat-sensor-clan", name: "Heat Sensor (Battle Armor)", tons: 0.02, slots: 1, availability: [{ from: 2880 }], prototypeYear: 2879, kind: "other", range: [0, 11, 23, 34] },
+      { id: "ba-improved-sensors-clan", name: "Improved Sensors (Battle Armor)", tons: 0.045, slots: 1, availability: [{ from: 2890 }], prototypeYear: 2887, kind: "other", range: [0, 0, 0, 3] },
       { id: "ba-jump-booster-clan", name: "Jump Booster (Battle Armor)", tons: 0.125, slots: 2, availability: [{ from: 3062 }], kind: "other" },
       { id: "ba-laser-microphone-clan", name: "Laser Microphone (Battle Armor)", tons: 0.005, slots: 1, availability: [{ from: 2200 }], kind: "other", range: [0, 0, 0, 34], yearsInferred: true },
-      { id: "ba-lrm-1-clan", name: "LRM 1 (Battle Armor)", tons: 0.035, slots: 2, availability: [{ from: 3060 }], kind: "weapon", damage: "1/Msl", range: [0, 7, 14, 21] },
-      { id: "ba-lrm-2-clan", name: "LRM 2 (Battle Armor)", tons: 0.07, slots: 2, availability: [{ from: 3060 }], kind: "weapon", damage: "1/Msl", range: [0, 7, 14, 21] },
-      { id: "ba-lrm-3-clan", name: "LRM 3 (Battle Armor)", tons: 0.105, slots: 3, availability: [{ from: 3060 }], kind: "weapon", damage: "1/Msl", range: [0, 7, 14, 21] },
-      { id: "ba-lrm-4-clan", name: "LRM 4 (Battle Armor)", tons: 0.14, slots: 3, availability: [{ from: 3060 }], kind: "weapon", damage: "1/Msl", range: [0, 7, 14, 21] },
-      { id: "ba-lrm-5-clan", name: "LRM 5 (Battle Armor)", tons: 0.175, slots: 3, availability: [{ from: 3060 }], kind: "weapon", damage: "1/Msl", range: [0, 7, 14, 21] },
-      { id: "ba-srm-1-clan", name: "SRM 1 (Battle Armor)", tons: 0.035, slots: 1, availability: [{ from: 2868 }], kind: "weapon", damage: "2/Msl", range: [0, 3, 6, 9] },
-      { id: "ba-srm-2-clan", name: "SRM 2 (Battle Armor)", tons: 0.07, slots: 2, availability: [{ from: 2868 }], kind: "weapon", damage: "2/Msl", range: [0, 3, 6, 9] },
-      { id: "ba-srm-3-clan", name: "SRM 3 (Battle Armor)", tons: 0.105, slots: 2, availability: [{ from: 2868 }], kind: "weapon", damage: "2/Msl", range: [0, 3, 6, 9] },
-      { id: "ba-srm-4-clan", name: "SRM 4 (Battle Armor)", tons: 0.14, slots: 2, availability: [{ from: 2868 }], kind: "weapon", damage: "2/Msl", range: [0, 3, 6, 9] },
-      { id: "ba-srm-5-clan", name: "SRM 5 (Battle Armor)", tons: 0.175, slots: 3, availability: [{ from: 2868 }], kind: "weapon", damage: "2/Msl", range: [0, 3, 6, 9] },
-      { id: "ba-srm-6-clan", name: "SRM 6 (Battle Armor)", tons: 0.21, slots: 3, availability: [{ from: 2868 }], kind: "weapon", damage: "2/Msl", range: [0, 3, 6, 9] },
-      { id: "ba-advanced-srm-1-clan", name: "Advanced SRM 1 (Battle Armor)", tons: 0.06, slots: 2, availability: [{ from: 3056 }], kind: "weapon", damage: "2/Msl", range: [0, 4, 8, 12] },
-      { id: "ba-advanced-srm-2-clan", name: "Advanced SRM 2 (Battle Armor)", tons: 0.09, slots: 2, availability: [{ from: 3056 }], kind: "weapon", damage: "2/Msl", range: [0, 4, 8, 12] },
-      { id: "ba-advanced-srm-3-clan", name: "Advanced SRM 3 (Battle Armor)", tons: 0.12, slots: 3, availability: [{ from: 3056 }], kind: "weapon", damage: "2/Msl", range: [0, 4, 8, 12] },
-      { id: "ba-advanced-srm-4-clan", name: "Advanced SRM 4 (Battle Armor)", tons: 0.15, slots: 3, availability: [{ from: 3056 }], kind: "weapon", damage: "2/Msl", range: [0, 4, 8, 12] },
-      { id: "ba-advanced-srm-5-clan", name: "Advanced SRM 5 (Battle Armor)", tons: 0.18, slots: 4, availability: [{ from: 3056 }], kind: "weapon", damage: "2/Msl", range: [0, 4, 8, 12] },
-      { id: "ba-advanced-srm-6-clan", name: "Advanced SRM 6 (Battle Armor)", tons: 0.21, slots: 4, availability: [{ from: 3056 }], kind: "weapon", damage: "2/Msl", range: [0, 4, 8, 12] },
+      { id: "ba-lrm-1-clan", name: "LRM 1 (Battle Armor)", tons: 0.035, slots: 2, availability: [{ from: 3060 }], prototypeYear: 3058, kind: "weapon", damage: "1/Msl", range: [0, 7, 14, 21] },
+      { id: "ba-lrm-2-clan", name: "LRM 2 (Battle Armor)", tons: 0.07, slots: 2, availability: [{ from: 3060 }], prototypeYear: 3058, kind: "weapon", damage: "1/Msl", range: [0, 7, 14, 21] },
+      { id: "ba-lrm-3-clan", name: "LRM 3 (Battle Armor)", tons: 0.105, slots: 3, availability: [{ from: 3060 }], prototypeYear: 3058, kind: "weapon", damage: "1/Msl", range: [0, 7, 14, 21] },
+      { id: "ba-lrm-4-clan", name: "LRM 4 (Battle Armor)", tons: 0.14, slots: 3, availability: [{ from: 3060 }], prototypeYear: 3058, kind: "weapon", damage: "1/Msl", range: [0, 7, 14, 21] },
+      { id: "ba-lrm-5-clan", name: "LRM 5 (Battle Armor)", tons: 0.175, slots: 3, availability: [{ from: 3060 }], prototypeYear: 3058, kind: "weapon", damage: "1/Msl", range: [0, 7, 14, 21] },
+      { id: "ba-srm-1-clan", name: "SRM 1 (Battle Armor)", tons: 0.035, slots: 1, availability: [{ from: 2868 }], prototypeYear: 2865, kind: "weapon", damage: "2/Msl", range: [0, 3, 6, 9] },
+      { id: "ba-srm-2-clan", name: "SRM 2 (Battle Armor)", tons: 0.07, slots: 2, availability: [{ from: 2868 }], prototypeYear: 2865, kind: "weapon", damage: "2/Msl", range: [0, 3, 6, 9] },
+      { id: "ba-srm-3-clan", name: "SRM 3 (Battle Armor)", tons: 0.105, slots: 2, availability: [{ from: 2868 }], prototypeYear: 2865, kind: "weapon", damage: "2/Msl", range: [0, 3, 6, 9] },
+      { id: "ba-srm-4-clan", name: "SRM 4 (Battle Armor)", tons: 0.14, slots: 2, availability: [{ from: 2868 }], prototypeYear: 2865, kind: "weapon", damage: "2/Msl", range: [0, 3, 6, 9] },
+      { id: "ba-srm-5-clan", name: "SRM 5 (Battle Armor)", tons: 0.175, slots: 3, availability: [{ from: 2868 }], prototypeYear: 2865, kind: "weapon", damage: "2/Msl", range: [0, 3, 6, 9] },
+      { id: "ba-srm-6-clan", name: "SRM 6 (Battle Armor)", tons: 0.21, slots: 3, availability: [{ from: 2868 }], prototypeYear: 2865, kind: "weapon", damage: "2/Msl", range: [0, 3, 6, 9] },
+      { id: "ba-advanced-srm-1-clan", name: "Advanced SRM 1 (Battle Armor)", tons: 0.06, slots: 2, availability: [{ from: 3056 }], prototypeYear: 3052, kind: "weapon", damage: "2/Msl", range: [0, 4, 8, 12] },
+      { id: "ba-advanced-srm-2-clan", name: "Advanced SRM 2 (Battle Armor)", tons: 0.09, slots: 2, availability: [{ from: 3056 }], prototypeYear: 3052, kind: "weapon", damage: "2/Msl", range: [0, 4, 8, 12] },
+      { id: "ba-advanced-srm-3-clan", name: "Advanced SRM 3 (Battle Armor)", tons: 0.12, slots: 3, availability: [{ from: 3056 }], prototypeYear: 3052, kind: "weapon", damage: "2/Msl", range: [0, 4, 8, 12] },
+      { id: "ba-advanced-srm-4-clan", name: "Advanced SRM 4 (Battle Armor)", tons: 0.15, slots: 3, availability: [{ from: 3056 }], prototypeYear: 3052, kind: "weapon", damage: "2/Msl", range: [0, 4, 8, 12] },
+      { id: "ba-advanced-srm-5-clan", name: "Advanced SRM 5 (Battle Armor)", tons: 0.18, slots: 4, availability: [{ from: 3056 }], prototypeYear: 3052, kind: "weapon", damage: "2/Msl", range: [0, 4, 8, 12] },
+      { id: "ba-advanced-srm-6-clan", name: "Advanced SRM 6 (Battle Armor)", tons: 0.21, slots: 4, availability: [{ from: 3056 }], prototypeYear: 3052, kind: "weapon", damage: "2/Msl", range: [0, 4, 8, 12] },
     ],
   },
   // Conventional infantry weapons (TechManual, Conventional Infantry Weapons Table printed pp. 349-352, read against the page images;

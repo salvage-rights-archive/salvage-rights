@@ -39,13 +39,23 @@ export interface EquipmentRow {
   tons: number | string; // a string names a formula
   slots: number | string;
   availability: Span[];
+  /** The year the item's prototype appears, before its production year (`availability[0].from`): the Universal Technology Advancement Table's
+   * Prototype column (IO:AE printed pp.29-44), or the P-marked date of the table the row cites. Between the two the item needs Experimental
+   * rules (IO:AE printed p.27), or `prototypeLevel` where the books print it at a lower level. Absent: only one date is printed. */
+  prototypeYear?: number;
+  prototypeLevel?: RulesLevel;
   locations?: LocationCode[]; // where the book says the item may be placed (the biped rule); absent means anywhere
   locationsQuad?: LocationCode[]; // the quad rule, where the book's rule differs from the biped one; [] means not allowed
   splittable?: boolean; // true only where the book lets the item span adjacent locations
   needs?: string; // what the item must be paired with, in the same location: "launcher", "machine-gun"
+  /** What a humanoid arm that carries the item gives up (TechManual printed pp.241-248): the hand actuator, or the lower arm and hand actuators. */
+  armRemoves?: "hand" | "lower-arm";
+  /** True for an item the books count as a heavy energy weapon though it is not in the Energy group: the spot welder, for the power amplifiers of an internal combustion or fuel cell engine (TechManual printed pp.247-248). */
+  heavyEnergy?: true;
   /** True when `availability` is not a year the book prints for this tech base (a dash in the book's table, or one date
-   * printed for both tech bases). The availability check reports such rows as notes, not errors. */
-  yearsInferred?: true;
+   * printed for both tech bases). The availability check reports such rows as notes, not errors. `false` on a row whose group says
+   * `true` where another book does print its year (the Universal Technology Advancement Table prints the Clan TAG's). */
+  yearsInferred?: boolean;
   /** The 'Mech carries exactly this many of the item, each one a separate mount of `slots` slots, placed anywhere or, where
    * `locations` names exactly that many, one in each. `perMechQuad` is the count on a quad where it differs (talons: a slot pair on each of four legs). */
   perMech?: number;
@@ -145,6 +155,7 @@ export function expand(groups: EquipmentGroup[]): EquipmentRow[] {
       if (row.pod === false && row.podCite === undefined) bad("pod is false but no page says so");
       if (!Array.isArray(row.availability) || row.availability.length === 0) bad("availability is empty");
       if (row.availability.some((s) => s.to !== undefined && s.to < s.from)) bad("a span ends before it starts");
+      if (row.prototypeYear !== undefined && !(row.prototypeYear < Math.min(...row.availability.map((s) => s.from)))) bad("the prototype year is not before the production year");
       if (row.heat !== undefined && !(Number.isFinite(row.heat) && row.heat >= 0)) bad("heat is not a number of zero or more");
       if (row.range !== undefined) {
         const r = row.range;
@@ -225,7 +236,7 @@ export function createCatalog(rows: EquipmentRow[]): Catalog {
     const slots = resolve(row.slots, row, record, mount);
     if (tons === undefined || slots === undefined) return undefined;
     // An energy weapon is what an IndustrialMech's power amplifiers are a share of (the picker's Energy weapons group).
-    return row.kind === "weapon" && groupOf(row).id === "energy" ? ({ tons, slots, energy: true } satisfies MountFacts) : ({ tons, slots } satisfies MountFacts);
+    return row.heavyEnergy || (row.kind === "weapon" && groupOf(row).id === "energy") ? ({ tons, slots, energy: true } satisfies MountFacts) : ({ tons, slots } satisfies MountFacts);
   };
 
   const catalog: Catalog = {

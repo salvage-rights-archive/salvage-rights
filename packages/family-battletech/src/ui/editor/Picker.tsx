@@ -2,11 +2,12 @@
 // is what rules/availability.ts says the record may use (rules level, tech base, era or year); the items are sorted into groups
 // (data/equipment/groups.ts), each a disclosure button over its list, so no one list runs on.
 import { useEffect, useId, useMemo, useRef, useState } from "react";
-import { equipmentAvailable } from "../../rules/availability";
+import { equipmentAvailable, equipmentPhase } from "../../rules/availability";
 import { groupOf, groupRank, podMountable } from "../../rules/catalog";
 import type { Catalog, EquipmentRow, GroupKey } from "../../rules/catalog";
 import { DEFAULT_LEVEL, equipmentLevel, levelRow } from "../../rules/levels";
 import type { MechRecord, Mount } from "../../rules/mech";
+import { datesText } from "../../rules/time";
 import { dialogKeyDown } from "./dialog";
 
 const TECH_BASE_NAMES = { "inner-sphere": "Inner Sphere", clan: "Clan" };
@@ -76,6 +77,8 @@ export default function Picker({
     const parts = [TECH_BASE_NAMES[row.techBase], size];
     const level = equipmentLevel(row);
     if (level !== "introductory" && level !== DEFAULT_LEVEL) parts.push(`${levelRow(level).label} level`);
+    // Both dates where the books print both; "prototype" says the unit's time falls between them, so the item needs Experimental rules.
+    if (row.prototypeYear !== undefined) parts.push(datesText(row.prototypeYear, row.availability[0]?.from).toLowerCase() + (equipmentPhase(row, record, catalog) === "prototype" ? ", a prototype in this unit's time" : ""));
     if (row.yearsInferred) parts.push("year not printed in the book");
     if (!equipmentAvailable(row, record, catalog)) parts.push("not available to this unit");
     return parts.join(", ");

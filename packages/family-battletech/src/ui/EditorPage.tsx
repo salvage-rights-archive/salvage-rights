@@ -15,7 +15,7 @@ import { ARM_FULL, bodyOf, configurationOf, editRecord, layout as buildLayout, l
 import type { Layout, LocationCode, MechRecord } from "../rules/mech";
 import { configurationChoices, eraOfRecord, partChoices, setEra, setYear } from "../rules/availability";
 import type { PartKind } from "../rules/availability";
-import { withLevel } from "../rules/levels";
+import { techBaseChoices, withLevel } from "../rules/levels";
 import {
   BASE,
   applyBaseEdit,
@@ -328,11 +328,6 @@ const CHASSIS_FIELDS: ChassisField[] = [
 ];
 
 const ERA_CHOICES: [string, string][] = [["", "Any era"], ...ERAS.map((era): [string, string] => [era.id, `${era.name} (${String(era.startYear)}${era.endYear === undefined ? " on" : `-${String(era.endYear)}`})`])];
-const TECH_BASES: [string, string][] = [
-  ["inner-sphere", "Inner Sphere"],
-  ["clan", "Clan"],
-  ["mixed", "Mixed"],
-];
 
 // ---------------------------------------------------------------------------------------------------------------
 // What a finding or a changed marker can point at
@@ -891,7 +886,7 @@ function Editor({ initial, startAt, catalog, storage }: { initial: Doc; startAt?
                 id="field-techBase"
                 label="Tech base"
                 value={record.techBase}
-                options={TECH_BASES}
+                options={techBaseChoices(record.rulesLevel, record.techBase)}
                 changed={mark("techBase")}
                 disabled={fixedHere}
                 onChange={(v) => { edit((d) => void (d.techBase = v as MechRecord["techBase"])); }}
