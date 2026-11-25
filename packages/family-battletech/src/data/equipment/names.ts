@@ -88,6 +88,12 @@ export function sheetNameVariants(name: string): string[] {
       thumper: "Thumper Cannon",
       sniper: "Sniper Cannon",
       "arrow iv homing": "Arrow IV",
+      iheavy: "Improved Heavy Gauss",
+      "iheavy gauss": "Improved Heavy Gauss",
+      "risc apds": "RISC Advanced PDS",
+      "small chemical laser": "Chemical Laser, Small",
+      "medium chemical laser": "Chemical Laser, Medium",
+      "large chemical laser": "Chemical Laser, Large",
     };
     if (/artemis/i.test(what)) out.push("Artemis-Capable Missile Ammo");
     else if (/narc/i.test(what)) out.push("Narc-Capable Missile Ammo");

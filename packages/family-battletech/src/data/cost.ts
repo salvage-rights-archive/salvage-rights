@@ -63,6 +63,7 @@ export const COCKPIT_COST: Sourced & { rows: Record<string, { cost: number; cite
     // Tactical Operations: Advanced Units and Equipment p.219 (torso-mounted); IO:AE pp.213, 215, 217 (the rest)
     "torso-mounted": { cost: 750_000, cite: { book: TO, page: 219 } },
     interface: { cost: 1_500_000, cite: { book: IO, page: 213 } },
+    "interface-clan": { cost: 1_500_000, cite: { book: IO, page: 213 } },
     primitive: { cost: 100_000, cite: { book: IO, page: 215 } },
     "superheavy-tripod": { cost: 500_000, cite: { book: IO, page: 217 } },
     superheavy: { cost: 300_000, cite: { book: IO, page: 215 } },
@@ -220,7 +221,7 @@ export const EQUIPMENT_COST: PriceGroup[] = [
     // IO:AE p.215 (Dark Age Equipment)
     cite: { book: IO, page: 215 },
     checked: "page",
-    prices: { "radical-heat-sink": 250_000, "risc-heat-sink-override-kit": 500, "risc-laser-pulse-module": 200_000, "remote-drone-command-console": 50_000 },
+    prices: { "harjel-ii": 240_000, "harjel-iii": 360_000, "radical-heat-sink": 250_000, "risc-heat-sink-override-kit": 500, "risc-laser-pulse-module": 200_000, "remote-drone-command-console": 50_000 },
   },
   {
     // p.290: autocannons, Gauss rifles, machine guns, flamers, the first lasers

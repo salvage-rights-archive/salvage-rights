@@ -566,4 +566,14 @@ export const OTHER: EquipmentGroup[] = [
       { id: "environmental-sealing-clan", name: "Environmental Sealing", aliases: ["Environmental Sealing (IndustrialMech)"], tons: "tenth-tons", slots: 1, availability: [{ from: 1950 }], perMech: 8, splitWeight: true, units: ["industrialmech"] },
     ],
   },
+  {
+    // HarJel II and III (Interstellar Operations: Alternate Eras, Dark Age Equipment table printed p. 215, tech base and date read on the
+    // page image at higher resolution; rules pp. 82-83, Advanced): one in a location, the same type throughout the unit, BattleMechs only.
+    // The table's weights (2 and 3 tons) carry an asterisk; each mount is read as that weight and the slots the table prints.
+    defaults: { kind: "other", techBase: "clan", cite: { book: IO, page: 215 }, checked: "page", rulesLevel: "advanced", locations: ["CT", "LT", "RT", "LA", "RA", "LL", "RL"], locationsQuad: ["CT", "LT", "RT", "FLL", "FRL", "RLL", "RRL"] },
+    items: [
+      { id: "harjel-ii-clan", name: "HarJel II Self-Repair System", aliases: ["HarJel II"], tons: 2, slots: 1, availability: [{ from: 3136 }] },
+      { id: "harjel-iii-clan", name: "HarJel III Self-Repair System", aliases: ["HarJel III", "HarJel Repair Systems (HarJel III)"], tons: 3, slots: 2, availability: [{ from: 3139 }] },
+    ],
+  },
 ];

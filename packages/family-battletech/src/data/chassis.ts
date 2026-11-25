@@ -465,6 +465,10 @@ export const COCKPITS: Sourced & { types: Record<string, CockpitType> } = {
     // only doubles the cost (the cost table, p.277); it takes no tonnage or space. Neither has the ejection a BattleMech's has.
     industrial: { name: "Industrial", tons: 3, cockpit: [3], sensors: [2, 5], lifeSupport: [1, 6], techBase: "both", industrial: true, introduced: { is: 2350 }, cite: { book: "TechManual", page: 69 }, checked: "page", rules: "No pilot ejection and no targeting aids; printed for IndustrialMechs." },
     "industrial-afc": { name: "Industrial (Advanced Fire Control)", tons: 3, cockpit: [3], sensors: [2, 5], lifeSupport: [1, 6], techBase: "both", industrial: true, introduced: { is: 2350 }, cite: { book: "TechManual", page: 69 }, checked: "page", rules: "An industrial cockpit with Advanced Fire Control, which adds no weight or space." },
+    // BattleMech interface cockpit (Interstellar Operations: Alternate Eras, rules printed p.110, table p.213): replaces the standard cockpit,
+    // weighs 4 tons and takes one extra cockpit slot (the book does not say which slot; the free fourth is used).
+    interface: { name: "Interface", tons: 4, cockpit: [3, 4], sensors: [2, 5], lifeSupport: [1, 6], techBase: "inner-sphere", rulesLevel: "experimental", introduced: { is: 3078, prototype: true }, cite: { book: IO, page: 213 }, checked: "text", rules: "Lets a MechWarrior in an interface suit control the 'Mech through a neural link." },
+    "interface-clan": { name: "Interface (Clan)", tons: 4, cockpit: [3, 4], sensors: [2, 5], lifeSupport: [1, 6], techBase: "clan", rulesLevel: "experimental", introduced: { clan: 3083, prototype: true }, cite: { book: IO, page: 213 }, checked: "text", rules: "Lets a MechWarrior in an interface suit control the 'Mech through a neural link." },
     // Primitive BattleMechs mount only the primitive cockpit, 5 tons (Interstellar Operations: Alternate Eras printed p.117).
     primitive: {
       name: "Primitive",
