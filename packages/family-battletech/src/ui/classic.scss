@@ -111,6 +111,14 @@ a.bt-button {
   padding: 0;
 }
 
+// The configurations of a saved OmniMech, opened under its row.
+.bt-row__configs {
+  flex: 1 1 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
 .bt-row {
   display: flex;
   flex-wrap: wrap;

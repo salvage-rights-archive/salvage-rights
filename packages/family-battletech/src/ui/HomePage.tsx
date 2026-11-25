@@ -8,7 +8,10 @@ import { configurationAvailable, configurationChoices, typeAvailable } from "../
 import { withLevel } from "../rules/levels";
 import { loadCatalog } from "../rules/catalog";
 import { mechTypeOf, newRecord } from "../rules/mech";
-import { newOmniChassis } from "../rules/omni";
+import { configurationTitle, newOmniChassis, resolveAll } from "../rules/omni";
+import { battleValue } from "../rules/bv";
+import { unitCost } from "../rules/cost";
+import type { Catalog } from "../rules/catalog";
 import type { OmniChassis } from "../rules/omni";
 import LevelSelect from "./editor/LevelSelect";
 import TypeSelect from "./editor/TypeSelect";
@@ -26,11 +29,45 @@ const MAX_RATING = Math.max(...Object.keys(ENGINE_WEIGHTS.rows).map(Number));
 const nameOf = (record: MechRecord) => `${record.name.chassis} ${record.name.model}`.trim();
 const plural = (n: number, word: string) => `${String(n)} ${word}${n === 1 ? "" : "s"}`;
 
+/** The configurations of one saved chassis, each with its Battle Value and cost, Primary first. */
+function Configurations({ chassis, catalog }: { chassis: OmniChassis; catalog: Catalog | undefined }) {
+  return (
+    <ul className="bt-list bt-row__configs" aria-label={`Configurations of ${chassis.name.chassis}`}>
+      {resolveAll(chassis).map((record) => {
+        const id = record.omni?.configurationId ?? "";
+        const config = chassis.configurations.find((c) => c.id === id);
+        const title = config ? configurationTitle(config) : id;
+        const figures = catalog ? `Battle Value ${battleValue(record, catalog).total.toLocaleString("en-US")}, ${unitCost(record, catalog).total.toLocaleString("en-US")} C-bills` : "Working out the figures.";
+        return (
+          <li key={id} className="bt-row">
+            <span className="bt-row__text">
+              <strong>{`${chassis.name.chassis} ${title}`}</strong>
+              {id === chassis.primaryId && " (Primary)"}
+              <span className="bt-row__credit">{figures}</span>
+            </span>
+            <span className="bt-row__actions">
+              <Link className="bt-button" aria-label={`Open ${chassis.name.chassis} ${title}`} to={`/battletech/classic/editor?id=${encodeURIComponent(chassis.id)}&c=${encodeURIComponent(id)}`}>
+                Open
+              </Link>
+              <Link className="bt-button bt-button--secondary" aria-label={`Record sheet for ${chassis.name.chassis} ${title}`} to={`/battletech/classic/sheet?id=${encodeURIComponent(chassis.id)}&c=${encodeURIComponent(id)}`}>
+                Record sheet
+              </Link>
+            </span>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
 export default function HomePage() {
   const [storage, setStorage] = useState<FamilyStorage>();
   const [entries, setEntries] = useState<SavedEntry[]>([]);
   const [edition, setEdition] = useState(DEFAULT_EDITION);
   const [confirming, setConfirming] = useState<{ id: string; name: string }>();
+  /** The chassis rows opened to show their configurations; the catalog they are valued with loads when the first one opens. */
+  const [open, setOpen] = useState<Set<string>>(new Set());
+  const [catalog, setCatalog] = useState<Catalog>();
   const [status, setStatus] = useState("");
   const [problem, setProblem] = useState("");
   const keepRef = useRef<HTMLButtonElement>(null);
@@ -268,6 +305,22 @@ export default function HomePage() {
                       <span className="bt-row__credit">Built under {EDITIONS.find((e) => e.id === chassis.editionId)?.name ?? chassis.editionId}</span>
                     </span>
                     <span className="bt-row__actions">
+                      <button
+                        type="button"
+                        className="bt-button bt-button--secondary"
+                        aria-expanded={open.has(entry.id)}
+                        aria-controls={`omni-configs-${entry.id}`}
+                        aria-label={`Configurations of ${name}`}
+                        onClick={() => {
+                          const next = new Set(open);
+                          if (next.has(entry.id)) next.delete(entry.id);
+                          else next.add(entry.id);
+                          setOpen(next);
+                          if (!catalog) void loadCatalog().then(setCatalog);
+                        }}
+                      >
+                        Configurations
+                      </button>
                       <Link className="bt-button" aria-label={`Open ${name}`} to={`/battletech/classic/editor?id=${encodeURIComponent(chassis.id)}`}>
                         Open
                       </Link>
@@ -292,6 +345,9 @@ export default function HomePage() {
                         Delete
                       </button>
                     </span>
+                    <div id={`omni-configs-${entry.id}`} className="bt-row__configs" hidden={!open.has(entry.id)}>
+                      {open.has(entry.id) && <Configurations chassis={chassis} catalog={catalog} />}
+                    </div>
                   </li>
                 );
               }
