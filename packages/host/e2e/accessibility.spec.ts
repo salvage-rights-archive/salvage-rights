@@ -1,6 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import type { Page } from "@playwright/test";
-import { CLASSIC, DEV, FREE, expect, importMech, test } from "./fixtures";
+import { CLASSIC, DEV, FAKE_KEY, FREE, expect, importMech, test } from "./fixtures";
 
 async function chooseTheme(page: Page, base: string, theme: "Light" | "Dark") {
   await page.goto(`${base}/settings`);
@@ -103,4 +103,20 @@ test("the Alpha Strike home and unit pages have no axe violations in either them
   await expect(page.getByText("Saved.")).toBeVisible();
   const saved = new URL(page.url());
   await expectNoViolations(page, DEV, ["/battletech/alpha-strike/home", "/battletech/alpha-strike/unit", `${saved.pathname.replace(/^\/salvage-rights/, "")}${saved.search}`]);
+});
+
+test("the Alpha Strike home with a Mordel key saved has no axe violations in either theme, and fits 320 px", async ({ page }) => {
+  test.setTimeout(90_000);
+  await page.goto(`${DEV}/battletech/alpha-strike/home`);
+  await page.getByLabel("Mordel key").fill(FAKE_KEY);
+  await page.getByRole("button", { name: "Save key" }).click();
+  await expect(page.getByLabel("Unit number or address")).toBeVisible();
+  await page.setViewportSize({ width: 320, height: 700 });
+  const widths = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, client: document.documentElement.clientWidth }));
+  expect(widths.scroll).toBe(widths.client);
+  for (const control of await page.locator("button, input:not([type=file])").all()) {
+    const box = await control.boundingBox();
+    if (box) expect(box.height).toBeGreaterThanOrEqual(44);
+  }
+  await expectNoViolations(page, DEV, ["/battletech/alpha-strike/home"]);
 });

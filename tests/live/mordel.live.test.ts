@@ -8,6 +8,8 @@ import { loadCatalog } from "@salvage-rights/family-battletech/src/rules/catalog
 import { battleValue } from "@salvage-rights/family-battletech/src/rules/bv";
 import { runChecks } from "@salvage-rights/family-battletech/src/rules/checks";
 import { layout } from "@salvage-rights/family-battletech/src/rules/mech";
+import { fromMordelAs } from "@salvage-rights/family-battletech/src/rules/as-mordel";
+import { unitFindings } from "@salvage-rights/family-battletech/src/rules/as-unit";
 import { fromMordel } from "@salvage-rights/family-battletech/src/rules/mordel";
 
 const ALLOWED = [474, 123, 2303, 5280, 75003, 98087];
@@ -97,5 +99,25 @@ describe.skipIf(!key)("mordel.net live import", () => {
     expect(record.unitType).toBe("industrialmech");
     expect(unmatched).toEqual([]);
     expect(errors).toEqual([]);
+  });
+
+  it("reads the Alpha Strike block of one BattleMech (bm 2303) into an Alpha Strike unit", async () => {
+    const reply = await fetch("https://mordel.net/api/v1/units/bm/2303", { headers: { "X-API-Key": key ?? "" }, redirect: "error" }).catch(() => {
+      throw new Error("The request to mordel.net failed.");
+    });
+    if (!reply.ok) {
+      console.log(`bm 2303: mordel.net answered ${reply.status}; stopping.`);
+      expect(reply.ok).toBe(true);
+      return;
+    }
+    const body: unknown = await reply.json().catch(() => {
+      throw new Error("The reply from mordel.net could not be read as JSON.");
+    });
+    const result = fromMordelAs(body, new Date().toISOString(), () => "live-as-2303", "bm");
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const { card } = result.unit;
+    console.log(`bm 2303 as Alpha Strike: ${card.type} size ${card.size}, PV ${card.pv}, ${card.specials.length} specials, ${unitFindings(result.unit).length} findings`);
+    expect(card.pv).toBeGreaterThan(0);
   });
 });

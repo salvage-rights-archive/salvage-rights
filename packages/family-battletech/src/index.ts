@@ -52,7 +52,7 @@ const manifest: FamilyManifest = {
     license: "GPL-3.0-or-later",
     notes: [
       "The import from mordel.net uses the API built by MordelBlacknight.",
-      "Each imported design is credited to the mordel.net member who created it.",
+      "Each imported design is credited to the mordel.net member who created it. The Alpha Strike values we read from mordel.net are shown as Mordel gives them, with the same credit.",
       "The Classic BattleTech section (the import, the editor and the rules checks) was made by the Salvage Rights team.",
       "The Alpha Strike roster (unit entry, saving and unit files) was made by the Salvage Rights team.",
       "\"Verified Standard Rules Compliant\" means only that our own rules check, against the rulebooks we cite, found nothing wrong with a Standard-level 'Mech; tournament organisers have the final word. \"OFFICIAL\" is what the player states about a design, and it turns off when the design is changed.",

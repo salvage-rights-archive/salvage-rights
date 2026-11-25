@@ -348,7 +348,7 @@ function UnitForm({ initial, isNew, review, storage }: { initial: AsUnit; isNew:
         <h1 tabIndex={-1}>{title || "New unit"}</h1>
         <p className="bt-hint">{`Played under: ${AS_EDITION.name}`}</p>
         {base.source.kind !== "manual" && (
-          <p className="bt-credit">{`Source: ${base.source.kind}${base.source.credit ? `, ${base.source.credit}` : ""}${base.source.ref ? ` (${base.source.ref})` : ""}`}</p>
+          <p className="bt-credit">{`Source: ${base.source.kind === "mordel" ? "mordel.net" : base.source.kind}${base.source.credit ? `. ${base.source.credit}` : ""}${base.source.ref ? ` (${base.source.ref})` : ""}`}</p>
         )}
         <div className="bt-actions">
           <button type="button" className="bt-button" disabled={!dirty || invalid} onClick={() => void save()}>

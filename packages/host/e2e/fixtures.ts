@@ -137,6 +137,37 @@ const UNIT_BODY = {
   },
 };
 
+/** A made-up unit with an Alpha Strike block, for the Alpha Strike import. Not a real design. */
+export const AS_UNIT_ID = 424243;
+const AS_UNIT_BODY = {
+  status: "OK",
+  unit: {
+    unit_type_short: "bm",
+    id: AS_UNIT_ID,
+    name_parts: { name: "Test Walker", alternate_name: null, model: "TW-1" },
+    designer: "Test Designer",
+    tech_base: "Inner Sphere",
+    mixed_tech: false,
+    era: "Clan Invasion",
+    year: 3055,
+    rules_level: "Standard",
+    role: "Brawler",
+    point_value: 30,
+    alpha_strike: {
+      type: "BM",
+      size: 2,
+      move: '8"/6"j',
+      tmm: 2,
+      armor: 5,
+      structure: 4,
+      damage: { short: "3", medium: "2", long: "0*" },
+      overheat: 1,
+      point_value: 30,
+      specials: ["ECM", "IF1"],
+    },
+  },
+};
+
 /** Sets up the mordel.net routes on a page. */
 export async function routeMordel(page: Page): Promise<string[]> {
   const unexpected: string[] = [];
@@ -152,6 +183,7 @@ export async function routeMordel(page: Page): Promise<string[]> {
     const keyed = request.headers()["x-api-key"] === FAKE_KEY;
     if (request.method() === "GET" && keyed && path === "/key") return json({ status: "OK" });
     if (request.method() === "GET" && keyed && path === `/units/bm/${String(UNIT_ID)}`) return json(UNIT_BODY);
+    if (request.method() === "GET" && keyed && path === `/units/bm/${String(AS_UNIT_ID)}`) return json(AS_UNIT_BODY);
     if (request.method() === "GET" && keyed && path === "/units") {
       return json({ status: "OK", count: 0, next_cursor: null, server_time: 0, units: [] });
     }
