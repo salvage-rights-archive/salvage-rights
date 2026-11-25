@@ -18,22 +18,22 @@ import {
   LAM_BV,
   LASER_INSULATOR_IDS,
   MACHINE_GUN_ARRAY_IDS,
-  MASC_IDS,
   PHYSICAL_BV,
   SKILL_MULTIPLIER,
   SPEED_FACTOR,
   STRUCTURE_BV_MODIFIER,
   TARGET_MODIFIER,
   TARGETING_COMPUTER_IDS,
-  TSM_IDS,
   UNFIXED,
   UNLISTED_IS_ZERO,
   WEAPON_BV,
 } from "../data/bv";
 import type { BvGroup, BvOptions } from "../data/bv";
-import { structurePoints, walkMP } from "./mech";
+import { walkMP } from "./mech";
 import type { LocationCode, MechRecord, Mount } from "./mech";
 import type { Catalog, EquipmentRow } from "./catalog";
+import { armorPoints, equipmentItems, heatSinkCapacity, jumpMP as jumpJets, mascOf, own, roundHalfUp, structureTotal, tidy, tsmOf } from "./walk";
+import type { Item } from "./walk";
 
 export interface PilotSkills {
   gunnery: number;
@@ -98,15 +98,6 @@ export interface BvResult {
 // ---------------------------------------------------------------------------------------------------------------
 // Lookups
 // ---------------------------------------------------------------------------------------------------------------
-// SHARED? own(table, key): a lookup that only sees a table's own keys (mech.ts has a private copy).
-function own<T>(table: Record<string, T>, key: string): T | undefined {
-  return Object.hasOwn(table, key) ? table[key] : undefined;
-}
-// SHARED? tidy(x): float-noise rounding to 6 places (mech.ts has a private copy to 3).
-const tidy = (x: number) => Math.round(x * 1e6) / 1e6;
-// SHARED? roundHalfUp(x): the book's "nearest whole number, .5 rounds up".
-const roundHalfUp = (x: number) => Math.floor(tidy(x) + 0.5);
-
 interface Entry {
   id: string;
   bv: number;
@@ -169,45 +160,28 @@ export function battleValue(record: MechRecord, catalog: Catalog, pilot: PilotSk
   const note = (mount: Mount | undefined, name: string, why: string) => unvalued.push({ mountId: mount?.id, name, why });
   const { chassis } = record;
 
-  // SHARED? items: every non-part mount with its catalog row, slots and tons, unmatched ones reported (cost walks the same record).
-  // Classify every mount once.
-  interface Item {
-    mount: Mount;
-    row: EquipmentRow;
-    slots: number;
-    tons: number;
-  }
-  const items: Item[] = [];
-  for (const mount of record.mounts) {
-    if (mount.part) continue;
-    const row = mount.equipmentId === null ? undefined : catalog.byId(mount.equipmentId);
-    if (!row) {
-      note(mount, mount.name, "not in our equipment table");
-      continue;
-    }
-    const facts = catalog.factsOf(mount, record);
-    items.push({ mount, row, slots: facts?.slots ?? mount.slots ?? 1, tons: facts?.tons ?? 0 });
-  }
+  // Every mount once, with its catalog row; one the catalog does not know is reported.
+  const { items, unknown } = equipmentItems(record, catalog);
+  for (const mount of unknown) note(mount, mount.name, "not in our equipment table");
   const has = (ids: string[]) => items.some((i) => ids.includes(i.row.id));
+  /** Tons of ammunition in a bin, for BV per ton; a bin whose weight is not known counts as a ton. */
+  const binTons = (tons: number | undefined) => (tons !== undefined && tons > 0 ? tons : 1);
   const isLam = record.configuration === "lam" || record.configuration === "bimodal-lam";
   const standardLam = record.configuration === "lam";
   const stealth = chassis.armorType === "stealth";
-  const tsm = has(TSM_IDS);
-  const masc = has(MASC_IDS);
+  const tsm = tsmOf(record, items) !== undefined;
+  const masc = mascOf(record, items).mounts.length > 0;
 
   // ---- Movement -------------------------------------------------------------------------------------------------
   const walk = walkMP(record) ?? Math.max(0, Math.floor(chassis.engine.rating / Math.max(1, record.tons)));
   const walkMax = tsm ? walk + 2 : walk; // Total Warfare p. 143
   const runMP = masc ? walk * 2 : Math.ceil(walkMax * 1.5); // MASC: double the Walking MP, Total Warfare p. 137; running: p. 53
-  // SHARED? jumpMP: the count of jump-jet mounts.
-  const jumpMP = items.filter((i) => i.row.kind === "jump-jet").length;
+  const jumpMP = jumpJets(items);
   const improvedJets = has(IMPROVED_JUMP_JET_IDS);
   const cruise = jumpMP * LAM_BV.cruisePerJumpMP;
   const flank = Math.ceil(cruise * LAM_BV.flankFactor);
 
   // ---- Defensive Battle Rating ----------------------------------------------------------------------------------
-  // SHARED? armorPoints (front plus rear over every location) and structure (the sum of structurePoints(record)); cost needs both.
-  const armorPoints = Object.values(record.armor).reduce((sum, a) => sum + (a ? a.front + (a.rear ?? 0) : 0), 0);
   const armorMod = own(ARMOR_BV_MODIFIER.values, chassis.armorType);
   const structureMod = own(STRUCTURE_BV_MODIFIER.values, chassis.structure);
   const engineMod = own(ENGINE_BV_MODIFIER.values, chassis.engine.type);
@@ -220,8 +194,8 @@ export function battleValue(record: MechRecord, catalog: Catalog, pilot: PilotSk
   ] as const) {
     if (value === undefined) note(undefined, `${what} "${key}"`, "no printed Battle Value modifier; counted as 1.0");
   }
-  const structure = Object.values(structurePoints(record)).reduce((sum, n) => sum + n, 0);
-  const armor = armorPoints * BV_METHOD.armorFactor * (armorMod ?? 1);
+  const structure = structureTotal(record);
+  const armor = armorPoints(record) * BV_METHOD.armorFactor * (armorMod ?? 1);
   const structureBv = structure * BV_METHOD.structureFactor * (structureMod ?? 1) * (engineMod ?? 1);
   const gyro = record.tons * (gyroMod ?? 1);
 
@@ -237,7 +211,7 @@ export function battleValue(record: MechRecord, catalog: Catalog, pilot: PilotSk
     const ammoEntry = row.kind === "ammunition" ? AMMO.get(row.id) : undefined;
     if (ammoEntry?.options.defensiveAmmo) {
       const seen = defensiveAmmo.get(ammoEntry.id) ?? { systems: 0, ammo: 0 };
-      defensiveAmmo.set(ammoEntry.id, { ...seen, ammo: seen.ammo + (ammoEntry.ammoBv ?? 0) * (tons > 0 ? tons : 1) });
+      defensiveAmmo.set(ammoEntry.id, { ...seen, ammo: seen.ammo + (ammoEntry.ammoBv ?? 0) * binTons(tons) });
     }
   }
   for (const { systems, ammo } of defensiveAmmo.values()) defensiveEquipment += Math.min(systems, ammo);
@@ -286,12 +260,11 @@ export function battleValue(record: MechRecord, catalog: Catalog, pilot: PilotSk
   const defensiveRating = defensiveSubtotal * factor;
 
   // ---- Offensive Battle Rating ----------------------------------------------------------------------------------
-  // SHARED? heat sink capacity: chassis.heatSinks.count times 1 (single) or 2 (double); cost needs the type and count.
-  const heatSinkFactor = chassis.heatSinks.type.startsWith("double") ? 2 : 1;
+  const sinks = heatSinkCapacity(record) ?? chassis.heatSinks.count;
   const pods = items.filter((i) => COOLANT_POD_IDS.includes(i.row.id)).length;
   // Coolant pods: heat sinks x (pods / 5), rounded up, at most twice the heat sinks (TO:AUE p. 193).
   const coolant = pods === 0 ? 0 : Math.min(2 * chassis.heatSinks.count, Math.ceil((chassis.heatSinks.count * pods) / 5));
-  const capacity = chassis.heatSinks.count * heatSinkFactor + coolant + items.reduce((sum, i) => sum + (own(HEAT_EFFICIENCY_BONUS, i.row.id) ?? 0), 0);
+  const capacity = sinks + coolant + items.reduce((sum, i) => sum + (own(HEAT_EFFICIENCY_BONUS, i.row.id) ?? 0), 0);
   const jumpHeat = jumpMP === 0 ? 0 : Math.max(BV_METHOD.jumpHeatMinimum, improvedJets ? Math.ceil(jumpMP / 2) : jumpMP);
   const airMechHeat = standardLam ? Math.round(flank / 3) : 0; // one heat per 3 MP, IO:AE p. 102
   const movementHeat = Math.max(BV_METHOD.runningHeat, jumpHeat, airMechHeat) + (stealth ? BV_METHOD.stealthHeat : 0);
@@ -411,8 +384,7 @@ export function battleValue(record: MechRecord, catalog: Catalog, pilot: PilotSk
     }
     if (entry.options.defensiveAmmo) continue;
     // BV per ton, taken in proportion for a bin of other than a ton (the book prints the full-ton rule for 'Mechs only).
-    const bin = tons > 0 ? tons : 1;
-    ammoBv.set(entry.id, (ammoBv.get(entry.id) ?? 0) + (entry.ammoBv ?? 0) * bin);
+    ammoBv.set(entry.id, (ammoBv.get(entry.id) ?? 0) + (entry.ammoBv ?? 0) * binTons(tons));
   }
   let ammunition = 0;
   for (const [id, bv] of ammoBv) ammunition += WEAPONS.has(id) ? Math.min(bv, modelBv.get(id) ?? 0) : bv;

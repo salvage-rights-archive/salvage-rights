@@ -23,6 +23,7 @@ import { locationsFor } from "./catalog";
 import type { Catalog, EquipmentRow } from "./catalog";
 import { armorSpread, configurationOf, engineTons, layout as buildLayout, maxArmor, walkMP, weights } from "./mech";
 import { locationName, type Layout, type LocationCode, type MechRecord, type Mount } from "./mech";
+import { rowOf } from "./walk";
 
 export interface Finding {
   check: string;
@@ -67,8 +68,6 @@ const slotLabel = (slot: number) => num(slot + 1);
 const tidy = (x: number) => Math.round(x * 1000) / 1000;
 const isCount = (x: number) => Number.isInteger(x) && x >= 0;
 const isPositive = (x: number) => Number.isFinite(x) && x > 0;
-const rowOf = (catalog: Catalog, record: MechRecord, mount: Mount): EquipmentRow | undefined =>
-  mount.part || mount.equipmentId === null ? undefined : catalog.rowFor(mount.equipmentId, record.editionId);
 const mountName = (record: MechRecord, id: string) => record.mounts.find((m) => m.id === id)?.name ?? "an unnamed mount";
 const finding = (check: string, level: Finding["level"], message: string, extra: Omit<Finding, "check" | "level" | "message"> = {}): Finding => ({
   check,

@@ -24,8 +24,9 @@ import {
 } from "../data/cost";
 import type { Price } from "../data/cost";
 import type { Catalog, EquipmentRow } from "./catalog";
-import { configurationOf, weights } from "./mech";
+import { configurationOf } from "./mech";
 import type { LocationCode, MechRecord, Mount } from "./mech";
+import { equipmentItems, own, stemOf, tsmOf, TSM_ROWS, weightLine } from "./walk";
 
 export interface CostLine {
   label: string;
@@ -62,26 +63,13 @@ export interface CostOptions {
 }
 
 // ---------------------------------------------------------------------------------------------------------------
-// Helpers. // SHARED? marks what the Battle Value code will also want.
+// Helpers
 // ---------------------------------------------------------------------------------------------------------------
-// SHARED? A lookup that only sees a table's own keys, so a key like "constructor" is unknown.
-function own<T>(table: Record<string, T>, key: string): T | undefined {
-  return Object.hasOwn(table, key) ? table[key] : undefined;
-}
 /** Round up to a whole 1/100, ignoring float noise (a value like 2229479.1666 becomes 2229479.17). */
 export function roundUpCents(x: number): number {
   const per = 1 / ROUNDING.cents;
   return Math.ceil(Math.round(x * per * 1e6) / 1e6) / per;
 }
-// SHARED? `weights(record, factsOf).lines` find: the tons of one of the chassis lines ("Gyro", "Armor", "Engine"), null when unknown.
-function weightLine(record: MechRecord, catalog: Catalog, label: string): number | null {
-  return weights(record, catalog.factsOf).lines.find((l) => l.label === label)?.tons ?? null;
-}
-// SHARED? The catalog row of a mount as the record's edition sees it; undefined for a structure or armor slot or an unknown item.
-const rowOf = (catalog: Catalog, record: MechRecord, mount: Mount): EquipmentRow | undefined =>
-  mount.part || mount.equipmentId === null ? undefined : catalog.rowFor(mount.equipmentId, record.editionId);
-// SHARED? A catalog row id without its tech base ending: "medium-pulse-laser-clan" is "medium-pulse-laser".
-const stemOf = (id: string) => id.replace(/-(is|clan)$/, "");
 const money = (x: number) => String(Math.round(x * 1000) / 1000).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 const LIMBS: { arms: string[]; legs: string[] } = {
   arms: ["LA", "RA"],
@@ -136,6 +124,7 @@ export function unitCost(record: MechRecord, catalog: Catalog, options: CostOpti
   const tonsKnown = Number.isFinite(tons) && tons > 0;
   const config = configurationOf(record.configuration);
   const special = own(CONFIGURATION_COST, record.configuration);
+  const { items, unknown } = equipmentItems(record, catalog);
 
   // Cockpit, life support, sensors, musculature
   const cockpit = own(COCKPIT_COST.rows, chassis.cockpit);
@@ -144,9 +133,8 @@ export function unitCost(record: MechRecord, catalog: Catalog, options: CostOpti
   add(structural, "Life support", LIFE_SUPPORT_COST.cost, money(LIFE_SUPPORT_COST.cost), LIFE_SUPPORT_COST);
   if (tonsKnown) {
     add(structural, "Sensors", SENSORS_COST.perTon * tons, `${money(SENSORS_COST.perTon)} x ${tons}`, SENSORS_COST);
-    const tsm = chassis.myomer === "tsm" || record.mounts.some((m) => m.equipmentId === "tsm-is");
-    const prototypeTsm = record.mounts.some((m) => m.equipmentId === "prototype-triple-strength-myomer-is");
-    const key = prototypeTsm ? "prototype-tsm" : tsm ? "tsm" : own(MUSCULATURE_COST.rows, chassis.myomer) ? chassis.myomer : "standard";
+    const tsm = tsmOf(record, items);
+    const key = tsm === "prototype" ? "prototype-tsm" : tsm ? "tsm" : own(MUSCULATURE_COST.rows, chassis.myomer) ? chassis.myomer : "standard";
     const musculature = MUSCULATURE_COST.rows[key];
     if (musculature) add(structural, key === "standard" ? "Musculature" : `Musculature (${key})`, musculature.perTon * tons, `${money(musculature.perTon)} x ${tons}`, { cite: musculature.cite ?? MUSCULATURE_COST.cite, checked: MUSCULATURE_COST.checked });
   } else skip("Sensors and musculature", "the tonnage is not a positive number");
@@ -210,16 +198,14 @@ export function unitCost(record: MechRecord, catalog: Catalog, options: CostOpti
   else skip(`Armor "${chassis.armorType}"`, armor ? "its weight could not be worked out" : "the cost table has no such armor");
 
   // Equipment: jump jets are priced together (the count is squared); everything else one mount at a time
+  // (Structure and armor slots are priced with the structure or armor, so the walk leaves them out.)
+  for (const mount of unknown) {
+    skip(mount.name, mount.equipmentId === null ? "not in our equipment table" : `the equipment table has no row "${mount.equipmentId}"`, mount.equipmentId);
+  }
   const jets = new Map<string, Mount[]>();
-  for (const mount of record.mounts) {
-    if (mount.part) continue; // the structure or armor type's slots: priced with the structure or armor
-    const row = rowOf(catalog, record, mount);
-    if (!row) {
-      skip(mount.name, mount.equipmentId === null ? "not in our equipment table" : `the equipment table has no row "${mount.equipmentId}"`, mount.equipmentId);
-      continue;
-    }
+  for (const { mount, row, tons: itemTons } of items) {
     if (row.kind === "heat-sink") continue; // paid for by count, above
-    if (row.id === "tsm-is" || row.id === "prototype-triple-strength-myomer-is") continue; // the TSM slots are the musculature priced above
+    if (TSM_ROWS.includes(row.id)) continue; // the TSM slots are the musculature priced above
     if (row.kind === "ammunition") continue; // ammunition is not bought for a unit's cost (p.282)
     if (row.kind === "jump-jet") {
       const kind = row.id.startsWith("improved-") ? "improved" : stemOf(row.id) === "jump-jet" ? "standard" : undefined;
@@ -228,7 +214,7 @@ export function unitCost(record: MechRecord, catalog: Catalog, options: CostOpti
       continue;
     }
     if (stemOf(row.id) === "masc") {
-      const mascTons = catalog.factsOf(mount, record)?.tons;
+      const mascTons = itemTons;
       if (mascTons === undefined || !Number.isFinite(chassis.engine.rating)) skip(mount.name, "its weight or the engine rating is not known", row.id);
       else add(equipment, mount.name, mascCost(chassis.engine.rating, mascTons), `${money(MASC_COST.perRatingTon)} x ${chassis.engine.rating} x ${mascTons}`, MASC_COST);
       continue;
@@ -249,7 +235,6 @@ export function unitCost(record: MechRecord, catalog: Catalog, options: CostOpti
     if (typeof found.price === "number") add(equipment, mount.name, found.price, money(found.price), found);
     else if ("perUnitTon" in found.price) add(equipment, mount.name, found.price.perUnitTon * (tonsKnown ? tons : 0), `${money(found.price.perUnitTon)} x ${tons}`, found);
     else {
-      const itemTons = catalog.factsOf(mount, record)?.tons;
       if (itemTons === undefined) skip(mount.name, "its weight could not be worked out", row.id);
       else add(equipment, mount.name, perTonCost(found.price.perTon, itemTons), `${money(found.price.perTon)} x ${Math.ceil(itemTons)} tons`, found);
     }
