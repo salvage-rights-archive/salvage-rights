@@ -228,8 +228,8 @@ export default function MechDoll(props: IMechDollProps): JSX.Element {
                             choose();
                         }
                     },
-                    // The focus ring is drawn in the overlay below, not by the browser.
-                    style: { cursor: "pointer", outline: "none" },
+                    // The stylesheet draws the browser's focus outline; the overlay below adds the dashed ring.
+                    style: { cursor: "pointer" },
                 } : {};
                 return (
                     <g key={location.loc} data-loc={location.loc} {...buttonProps}>

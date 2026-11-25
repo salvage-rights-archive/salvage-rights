@@ -237,7 +237,8 @@ describe("unsupported", () => {
     const findings = runChecks(tripod, catalog);
     expect(findings.filter((f) => f.check === "unsupported")).toMatchObject([{ level: "note", message: expect.stringContaining("tripod") }]);
     expect(findings.filter((f) => ["slots", "placement"].includes(f.check))).toEqual([]);
-    expect(errors(findings.filter((f) => f.check === "weight"))).toEqual([]);
+    expect(findings.filter((f) => f.check === "weight")).toMatchObject([{ level: "note", message: expect.stringMatching(/not checked for the tripod.*for information only/) }]);
+    expect(findings.find((f) => f.check === "unsupported")?.message).toContain("weight");
   });
 });
 

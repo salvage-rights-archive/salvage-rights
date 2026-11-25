@@ -92,7 +92,7 @@ const gunSize = (id: string | null) => /^(light|heavy)-/.exec(id ?? "")?.[1] ?? 
 // ---------------------------------------------------------------------------------------------------------------
 // The checks
 // ---------------------------------------------------------------------------------------------------------------
-function weightCheck({ record, catalog }: CheckInput): Finding[] {
+function weightCheck({ record, layout, catalog }: CheckInput): Finding[] {
   const out: Finding[] = [];
   const where = { field: "tons" };
   if (isPositive(record.tons) && !(record.tons >= TONNAGE.min && record.tons <= TONNAGE.max && record.tons % TONNAGE.step === 0)) {
@@ -104,6 +104,12 @@ function weightCheck({ record, catalog }: CheckInput): Finding[] {
     );
   }
   const { lines, total } = weights(record, catalog.factsOf);
+  if (!layout.supported) {
+    // The weights are worked out for a biped or a quad; any other body has parts this tool does not know, so no over or under figure.
+    const known = total !== null && Number.isFinite(total) ? ` The parts it knows add up to ${tons(total)}, for information only.` : "";
+    out.push(finding("weight", "note", `The weight is not checked for the ${record.configuration} configuration.${known}`, { where }));
+    return out;
+  }
   if (total === null || !Number.isFinite(total)) {
     const unknown = lines.filter((l) => l.tons === null || !Number.isFinite(l.tons)).map((l) => l.label);
     out.push(finding("weight", "note", `The total weight could not be worked out; not known: ${unknown.join(", ")}.`, { where }));
@@ -475,7 +481,7 @@ function unsupportedCheck({ record, layout }: CheckInput): Finding[] {
     finding(
       "unsupported",
       "note",
-      `The ${record.configuration} configuration has no fixed slot layout here, so the slots and placement checks are skipped and armor is checked on the head and torsos only.`,
+      `The ${record.configuration} configuration has no fixed slot layout here, so the weight, slots and placement checks are skipped and armor is checked on the head and torsos only.`,
       { where: { field: "configuration" } },
     ),
   ];

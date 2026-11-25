@@ -88,11 +88,16 @@ describe("mech files", () => {
 
   it("checks shape, not legality, and save refuses what fails the check", async () => {
     const source = { kind: "mordel", unitType: "bm", id: 1, designer: "d", fetchedAt: "t", original: null, values: {} } as const;
-    const accepted = [bipedRecord({ tons: 9999 }), bipedRecord({ source }), bipedRecord({ imageUrl: "x", notes: { overview: "o" } })];
+    const baseline = { ...bipedRecord(), id: undefined, editionId: undefined, schema: undefined };
+    const accepted = [bipedRecord({ tons: 9999 }), bipedRecord({ source }), bipedRecord({ source: { ...source, baseline } as never, arms: { RA: { lowerArm: true, hand: false } } }), bipedRecord({ imageUrl: "x", notes: { overview: "o" } })];
     const refused = [
       bipedRecord({ source: { ...source, kind: "other" } as never }),
       bipedRecord({ source: { ...source, id: "1" } as never }),
       bipedRecord({ source: { ...source, designer: 3 } as never }),
+      bipedRecord({ source: { ...source, values: undefined } as never }),
+      bipedRecord({ source: { ...source, values: { battleValue: "high" } } as never }),
+      bipedRecord({ arms: { LA: { lowerArm: true } } as never }),
+      bipedRecord({ source: { ...source, baseline: { tons: 50 } } as never }),
       bipedRecord({ notes: { overview: 5 } as never }),
       bipedRecord({ imageUrl: 5 as never }),
     ];

@@ -78,36 +78,61 @@ function isChassis(v: unknown): boolean {
   );
 }
 
-/** Checks the shape of a 'Mech record, not whether it is legal: an illegal 'Mech is still a record. */
-export function isMechRecord(value: unknown): value is MechRecord {
-  if (!isObject(value)) return false;
-  const { name, armor, mounts, notes, source } = value;
+function isArms(v: unknown): boolean {
+  return v === undefined || (isObject(v) && Object.values(v).every((a) => isObject(a) && typeof a.lowerArm === "boolean" && typeof a.hand === "boolean"));
+}
+
+/** The parts of a record the editor reads and the import baseline copies: everything but the identity and the source. */
+function isBody(v: Record<string, unknown>): boolean {
+  const { name, armor, mounts, notes } = v;
   return (
-    value.schema === 1 &&
-    isString(value.id) &&
-    isString(value.editionId) &&
     isObject(name) &&
     isString(name.chassis) &&
     isString(name.model) &&
-    (value.techBase === "mixed" || isTechBase(value.techBase)) &&
-    (value.year === null || isNumber(value.year)) &&
-    isNumber(value.tons) &&
-    isString(value.configuration) &&
-    isChassis(value.chassis) &&
+    (v.techBase === "mixed" || isTechBase(v.techBase)) &&
+    (v.year === null || isNumber(v.year)) &&
+    isNumber(v.tons) &&
+    isString(v.configuration) &&
+    isChassis(v.chassis) &&
     isObject(armor) &&
     Object.values(armor).every((a) => isObject(a) && isNumber(a.front) && (a.rear === undefined || isNumber(a.rear))) &&
     Array.isArray(mounts) &&
     mounts.every(isMount) &&
     isObject(notes) &&
     Object.values(notes).every((n) => n === undefined || isString(n)) &&
+    isArms(v.arms)
+  );
+}
+
+function isSource(v: unknown): boolean {
+  if (!isObject(v)) return false;
+  const { values, baseline } = v;
+  return (
+    v.kind === "mordel" &&
+    isString(v.unitType) &&
+    isNumber(v.id) &&
+    isString(v.designer) &&
+    isString(v.fetchedAt) &&
+    isObject(values) &&
+    (values.battleValue === undefined || isNumber(values.battleValue)) &&
+    (values.cost === undefined || isNumber(values.cost)) &&
+    (values.rulesLevel === undefined || isString(values.rulesLevel)) &&
+    (values.era === undefined || isString(values.era)) &&
+    (baseline === undefined || (isObject(baseline) && isBody(baseline)))
+  );
+}
+
+/** Checks the shape of a 'Mech record, not whether it is legal: an illegal 'Mech is still a record. Every part of the
+ * record the editor reads is checked, the source's figures and baseline included. */
+export function isMechRecord(value: unknown): value is MechRecord {
+  if (!isObject(value)) return false;
+  return (
+    value.schema === 1 &&
+    isString(value.id) &&
+    isString(value.editionId) &&
+    isBody(value) &&
     (value.imageUrl === undefined || isString(value.imageUrl)) &&
-    (source === undefined ||
-      (isObject(source) &&
-        source.kind === "mordel" &&
-        isString(source.unitType) &&
-        isNumber(source.id) &&
-        isString(source.designer) &&
-        isString(source.fetchedAt)))
+    (value.source === undefined || isSource(value.source))
   );
 }
 

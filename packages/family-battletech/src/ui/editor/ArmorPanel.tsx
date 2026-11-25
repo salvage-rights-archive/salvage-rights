@@ -4,6 +4,7 @@ import { ARMOR } from "../../data/chassis";
 import { locationName, maxArmor } from "../../rules/mech";
 import type { Layout, LocationCode, MechRecord } from "../../rules/mech";
 import MechDoll, { placedPlates } from "../doll/mech-doll";
+import { PAPER } from "../doll/pen";
 import { DOLL_LAYOUTS, STRUCTURE_SCALE, dollUnitFromRecord } from "../doll/layouts";
 import type { DollUse } from "../doll/layouts";
 import { NumberField, fieldId } from "../EditorPage";
@@ -100,6 +101,8 @@ export default function ArmorPanel({
         role="group"
         aria-label={use === "armor" ? "Armor, front and rear" : "Internal structure"}
       >
+        {/* A white sheet, so the doll's black labels and focus ring are seen on the dark theme too. */}
+        <rect width="100%" height="100%" fill={PAPER} aria-hidden="true" />
         <MechDoll
           unit={unit}
           use={use}
