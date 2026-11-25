@@ -107,11 +107,11 @@ test("build a Land-Air 'Mech through the form and see its rules level, conversio
   await page.goto(HOME);
   const form = page.getByRole("form", { name: "Build a new one" });
   await form.getByLabel("Name").fill("Hawk");
-  await form.getByLabel("Configuration").selectOption({ label: "Land-Air 'Mech (experimental rules)" });
+  await form.getByLabel("Configuration").selectOption({ label: "Land-Air 'Mech (needs Experimental)" });
   await form.getByRole("button", { name: "Start building" }).click();
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Hawk");
   const rules = page.getByRole("region", { name: "Rules check" });
-  await expect(rules.getByText("Land-Air 'Mech is built under experimental rules, not the standard ones; check that your game allows it.")).toBeVisible();
+  await expect(rules.getByText("Land-Air 'Mech (configuration) is Experimental level; this unit is built at Standard level. It needs Experimental or higher.")).toBeVisible();
   await expect(rules.getByText("Interstellar Operations: Alternate Eras (Catalyst Game Labs), p. 100")).toBeVisible();
   await expect(page.getByRole("list", { name: "Center Torso slots" }).getByText("Landing Gear")).toBeVisible();
   await expect(page.getByRole("list", { name: "Head slots" }).getByText("Avionics")).toBeVisible();
@@ -141,7 +141,7 @@ test("build a tripod through the form and reach its record sheet", async ({ page
   const form = page.getByRole("form", { name: "Build a new one" });
   await form.getByLabel("Name").fill("Strider");
   await form.getByLabel("Tonnage").selectOption("55");
-  await form.getByLabel("Configuration").selectOption({ label: "Tripod (advanced rules)" });
+  await form.getByLabel("Configuration").selectOption({ label: "Tripod (needs Advanced)" });
   await form.getByRole("button", { name: "Start building" }).click();
   await expect(page.getByRole("list", { name: "Center Leg slots" })).toBeVisible();
   await expect(page.getByRole("region", { name: "Rules check" }).getByText("Interstellar Operations: Alternate Eras (Catalyst Game Labs), p. 158")).toBeVisible();
@@ -149,4 +149,37 @@ test("build a tripod through the form and reach its record sheet", async ({ page
   const sheet = page.getByRole("img", { name: /record sheet$/ });
   await expect(sheet.locator("[data-location='CL']")).toBeVisible();
   await expect(sheet.locator("[data-diagram]")).toHaveCount(3);
+});
+
+test("change the rules level in the editor and see the picker and the rules check change", async ({ page }) => {
+  await page.goto(HOME);
+  const form = page.getByRole("form", { name: "Build a new one" });
+  await form.getByLabel("Name").fill("Strider");
+  await form.getByLabel("Tonnage").selectOption("55");
+  await form.getByLabel("Rules level").selectOption("introductory");
+  await form.getByLabel("Configuration").selectOption({ label: "Tripod (needs Advanced)" });
+  await form.getByRole("button", { name: "Start building" }).click();
+  const level = page.getByLabel("Rules level");
+  await expect(level).toHaveValue("introductory");
+  await expect(page.getByText("3025 technology only", { exact: false })).toBeVisible();
+  const rules = page.getByRole("region", { name: "Rules check" });
+  await expect(rules.getByText("Tripod (configuration) is Advanced level; this unit is built at Introductory level.", { exact: false })).toBeVisible();
+
+  const items = async () => {
+    await page.getByRole("button", { name: "Add equipment" }).click();
+    const dialog = page.getByRole("dialog");
+    const text = (await dialog.getByRole("status").textContent()) ?? "";
+    await dialog.getByRole("button", { name: "Cancel" }).click();
+    return Number(text.split(" ")[0]);
+  };
+  const introductory = await items();
+  await level.selectOption("unlimited");
+  await expect(page.getByText("Anything goes", { exact: false })).toBeVisible();
+  expect(await items()).toBeGreaterThan(introductory);
+  await expect(rules.getByText("Tripod (configuration) is Advanced level", { exact: false })).toHaveCount(0);
+
+  // The selector is reachable and changes by keyboard.
+  await level.focus();
+  await page.keyboard.press("ArrowUp");
+  await expect(level).toHaveValue("fan-made");
 });

@@ -17,7 +17,7 @@ import {
   STRUCTURE_TYPES,
   STRUCTURE_WEIGHT,
 } from "../data/chassis";
-import type { ArmorType, ConfigurationRow } from "../data/chassis";
+import type { ArmorType, ConfigurationRow, RulesLevel } from "../data/chassis";
 
 export type LocationCode = "HD" | "CT" | "LT" | "RT" | "LA" | "RA" | "LL" | "RL" | "CL" | "FLL" | "FRL" | "RLL" | "RRL";
 export const LOCATION_NAMES: Record<LocationCode, string> = {
@@ -65,6 +65,9 @@ export interface MechRecord {
   name: { chassis: string; model: string };
   techBase: TechBase | "mixed";
   year: number | null;
+  /** The rules level the unit is built under (rules/levels.ts). Absent on records saved before levels existed: they read as the
+   * lowest level that accepts everything they use. */
+  rulesLevel?: RulesLevel;
   tons: number;
   configuration: string; // "biped" | "quad" | "tripod" | the source's own word
   chassis: {
@@ -397,6 +400,8 @@ export interface NewMechOptions {
   techBase: TechBase;
   configuration: keyof typeof SHEET.configurations;
   year: number | null;
+  /** The rules level to build under; standard when absent. */
+  rulesLevel?: RulesLevel;
 }
 
 /**
@@ -411,6 +416,7 @@ export function newRecord(options: NewMechOptions, editionId: string, id: string
     name: { chassis: options.chassis, model: options.model },
     techBase: options.techBase,
     year: options.year,
+    rulesLevel: options.rulesLevel ?? "standard",
     tons: options.tons,
     configuration: options.configuration,
     chassis: {

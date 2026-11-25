@@ -14,6 +14,7 @@ export default function SheetText({ facts, record }: { facts: SheetFacts; record
     ["Tonnage", facts.tons],
     ["Tech base", facts.techBase],
     ["Rules edition", facts.edition],
+    ["Rules level", facts.level],
     ...(facts.year === undefined ? [] : [["Year", facts.year] as [string, string]]),
     ["Heat sinks", facts.heatSinks.summary],
     ["Battle Value", facts.battleValue ?? "not given"],

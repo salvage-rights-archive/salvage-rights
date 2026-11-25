@@ -57,14 +57,14 @@ describe("the shared fixtures", () => {
     ["tripod", tripodRecord()],
   ])("the %s is legal: no error findings, and the checks run in order", (_name, record) => {
     expect(errors(runChecks(record, catalog))).toEqual([]);
-    expect(CHECKS.map((c) => c.id)).toEqual(["weight", "slots", "armor", "engine", "heat-sinks", "jump", "placement", "availability", "configuration", "unmatched", "lam", "unsupported"]);
+    expect(CHECKS.map((c) => c.id)).toEqual(["weight", "slots", "armor", "engine", "heat-sinks", "jump", "placement", "availability", "level", "configuration", "unmatched", "lam", "unsupported"]);
   });
 
-  it("starts a new tripod with no error findings, and the page that makes it an advanced-rules design", () => {
-    const record = newRecord({ chassis: "Digger", model: "", tons: 55, walk: 5, techBase: "inner-sphere", configuration: "tripod", year: null }, "total-warfare", "t-1");
-    const findings = runChecks(record, catalog);
-    expect(errors(findings)).toEqual([]);
-    expectFinding(findings.filter((f) => f.check === "configuration"), { level: "note", text: "advanced rules", where: { field: "configuration" }, page: 158 });
+  it("starts a new tripod with a level error at Standard, citing the page that makes it Advanced, and none at Advanced", () => {
+    const options = { chassis: "Digger", model: "", tons: 55, walk: 5, techBase: "inner-sphere", configuration: "tripod", year: null } as const;
+    const standard = runChecks(newRecord(options, "total-warfare", "t-1"), catalog);
+    expectFinding(standard.filter((f) => f.check === "level"), { level: "error", text: "Tripod (configuration) is Advanced level; this unit is built at Standard level", where: { field: "configuration" }, page: 158 });
+    expect(runChecks(newRecord({ ...options, rulesLevel: "advanced" }, "total-warfare", "t-2"), catalog).filter((f) => f.check === "level")).toEqual([]);
   });
 });
 
@@ -252,8 +252,8 @@ describe("Land-Air 'Mech", () => {
   const forLam = (edit: Edit) => forCheck(editRecord(lamRecord(), edit), "lam");
   it("is legal as a fixture and says once that it is built under experimental rules, citing the level's page", () => {
     expect(errors(runChecks(lamRecord(), catalog))).toEqual([]);
-    expectFinding(forCheck(lamRecord(), "configuration"), { level: "note", text: "Land-Air 'Mech is built under experimental rules", page: 100 });
-    expect(forCheck(bipedRecord(), "configuration")).toEqual([]);
+    expectFinding(forCheck(editRecord(lamRecord(), (d) => void (d.rulesLevel = "standard")), "level"), { level: "error", text: "Land-Air 'Mech (configuration) is Experimental level", page: 100 });
+    expect(forCheck(bipedRecord(), "level")).toEqual([]);
   });
 
   it.each<Row>([
@@ -272,7 +272,7 @@ describe("Land-Air 'Mech", () => {
   it("starts from newRecord with the three jump jets it needs, waiting unplaced, and breaks no Land-Air rule", () => {
     const fresh = newRecord({ chassis: "Hawk", model: "", tons: 50, walk: 4, techBase: "inner-sphere", configuration: "lam", year: null }, "total-warfare", "new-lam");
     expect(fresh.mounts.filter((m) => m.equipmentId === "jump-jet-is").map((m) => [m.location, m.slot])).toEqual([[null, null], [null, null], [null, null]]);
-    expect(runChecks(fresh, catalog).filter((f) => f.check === "lam" || f.where?.field === "configuration")).toMatchObject([{ check: "configuration", level: "note" }]);
+    expect(runChecks(fresh, catalog).filter((f) => f.check === "lam" || f.where?.field === "configuration")).toMatchObject([{ check: "level", level: "error" }]);
   });
 
   it("needs three jump jets and says how many it has", () => {

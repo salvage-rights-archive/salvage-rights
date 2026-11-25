@@ -2,6 +2,7 @@
 // itself is plain data in data/equipment/*, written in groups whose `defaults` carry what the items share; `expand`
 // turns the groups into rows and `createCatalog` indexes them. Nothing here is specific to a book except the formula
 // table, which holds the few items the book scales with the 'Mech.
+import type { RulesLevel } from "../data/chassis";
 import type { FactsOf, LocationCode, MechRecord, MountFacts, TechBase } from "./mech";
 
 export type EquipmentKind = "weapon" | "ammunition" | "heat-sink" | "jump-jet" | "other";
@@ -45,8 +46,10 @@ export interface EquipmentRow {
   /** A non-missile direct-fire or pulse weapon: its weight counts toward a targeting computer (TechManual p. 238). */
   directFire?: true;
   editions?: Record<string, Partial<Pick<EquipmentRow, "tons" | "slots" | "availability" | "locations" | "locationsQuad">>>;
-  /** The rules level of the book's table the item comes from; absent means standard. Nothing filters on it yet. */
-  rulesLevel?: "standard" | "advanced" | "experimental";
+  /** The rules level of the book's table the item comes from; absent means standard (or Introductory, see rules/levels.ts). */
+  rulesLevel?: RulesLevel;
+  /** Fan-made rows only: who made the item and under what licence, for the credit the screens must show. */
+  credit?: string;
   cite: { book: string; page: number };
   checked: "page" | "text";
 }

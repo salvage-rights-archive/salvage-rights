@@ -488,6 +488,24 @@ a.bt-button {
   }
 }
 
+// The rules level selector takes a whole row of the grid: the select, then its description and page beside it.
+.bt-level {
+  grid-column: 1 / -1;
+
+  select {
+    flex: 0 1 16rem;
+  }
+
+  // In the grid, a field's select is narrow; this one must show its longest choice whole.
+  .bt-grid & select {
+    flex-basis: 16rem;
+  }
+
+  &__note {
+    flex: 1 1 14rem;
+  }
+}
+
 // A select is as wide as its longest choice where there is room for that, and never wider than its column.
 .bt-field select {
   max-width: 100%;
@@ -833,6 +851,12 @@ a.bt-button {
 
   .bt-list li + li {
     margin-top: var(--sr-space-1);
+  }
+
+  // The whole table can be offered, so the list scrolls in its own box (its buttons are focusable, so the box is reachable).
+  &__list {
+    max-height: 50vh;
+    overflow-y: auto;
   }
 
   &__result {

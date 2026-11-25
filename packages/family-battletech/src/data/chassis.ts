@@ -416,7 +416,39 @@ export const LAM: Sourced & {
 // book gives no slot table for the third leg; "the same construction rules as a biped" makes it a leg of 6 slots with the other
 // legs' four actuators, which is our reading and so `checked` is "text" on that row.
 // ---------------------------------------------------------------------------------------------------------------
-export type RulesLevel = "standard" | "advanced" | "experimental";
+export type RulesLevel = "introductory" | "standard" | "advanced" | "experimental" | "licensed-noncanon" | "fan-made" | "unlimited";
+
+/** The rules levels in order; each includes every level before it. The four published ones carry the page that names them
+ * (Total Warfare printed p.10 and p.257, p.275; Tactical Operations: Advanced Units and Equipment p.87); Apocryphal and
+ * Fan-made are the owner's additions and have none. Labels and descriptions are the words the screens show. */
+export interface RulesLevelRow {
+  id: RulesLevel;
+  label: string;
+  description: string;
+  cite?: { book: string; page: number };
+  checked?: Checked;
+}
+export const RULES_LEVELS: RulesLevelRow[] = [
+  { id: "introductory", label: "Introductory", description: "3025 technology only: Inner Sphere, the Succession Wars era's standard equipment.", cite: { book: "Total Warfare", page: 275 }, checked: "page" },
+  { id: "standard", label: "Standard", description: "The tournament-legal rules of Total Warfare and TechManual.", cite: { book: "Total Warfare", page: 10 }, checked: "page" },
+  { id: "advanced", label: "Advanced", description: "Mainstream technology beyond the tournament rules, such as Tactical Operations equipment.", cite: { book: "Tactical Operations: Advanced Units and Equipment", page: 87 }, checked: "page" },
+  { id: "experimental", label: "Experimental", description: "Technology that has not reached mass production: prototypes, lost technology and rarities.", cite: { book: "Tactical Operations: Advanced Units and Equipment", page: 87 }, checked: "page" },
+  { id: "licensed-noncanon", label: "Licensed non-canon", description: "Published under license but not canon, or canon since retconned." },
+  { id: "fan-made", label: "Fan-made", description: "Made by fans, not published by the rules publisher. Meant to be balanced." },
+  { id: "unlimited", label: "Unlimited", description: "Anything goes: joke equipment, superpowered gear. The check still tells you what breaks the rules." },
+];
+/** The chassis parts that are 3025 technology, by table: the plain ones the Succession Wars 'Mechs were built from. Every
+ * other part of TechManual is Standard (that book is the standard construction rules, Tactical Operations p.87); a part
+ * not named here is therefore Standard, not Introductory. Our reading, not a printed list. */
+export const INTRODUCTORY_PARTS: Record<"configuration" | "engine" | "gyro" | "cockpit" | "structure" | "armor" | "heatSink", string[]> = {
+  configuration: ["biped", "quad"],
+  engine: ["standard"],
+  gyro: ["standard"],
+  cockpit: ["standard"],
+  structure: ["standard"],
+  armor: ["standard"],
+  heatSink: ["single"],
+};
 export interface ConfigurationRow {
   name: string; // as shown to the player
   body?: string; // the layout whose slots, structure and armor grid this shares (a Land-Air 'Mech has a biped's); its own name if absent

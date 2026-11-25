@@ -20,6 +20,7 @@ import {
   STRUCTURE_TYPES,
 } from "../data/chassis";
 import { locationsFor } from "./catalog";
+import { levelAtLeast, levelItems, levelRow } from "./levels";
 import type { Catalog, EquipmentRow } from "./catalog";
 import { armorSpread, configurationOf, engineTons, layout as buildLayout, maxArmor, walkMP, weights } from "./mech";
 import { locationName, type Layout, type LocationCode, type MechRecord, type Mount } from "./mech";
@@ -476,18 +477,30 @@ function unmatchedCheck({ record, catalog }: CheckInput): Finding[] {
   return out;
 }
 
-/** Body types built under advanced or experimental rules say so, with the page that gives the level; a tripod also needs its own cockpit and no other body may use it. */
+/** One finding for each thing the record uses that belongs to a higher rules level than the record's own: its name, its level,
+ * the page that gives it and the level it needs. A record with no level reads as the lowest that fits, so nothing is reported. */
+function levelCheck({ record, catalog }: CheckInput): Finding[] {
+  const level = record.rulesLevel;
+  if (level === undefined) return [];
+  return levelItems(record, catalog)
+    .filter((item) => !levelAtLeast(level, item.level))
+    .map((item) => {
+      const needs = levelRow(item.level).label;
+      return finding("level", "error", `${item.name} (${item.what}) is ${needs} level; this unit is built at ${levelRow(level).label} level. It needs ${needs} or higher.`, {
+        where: item.where,
+        cite: item.cite ?? tm(PAGE.techBase),
+      });
+    });
+}
+
+/** A tripod also needs its own cockpit and no other body may use it. */
 function configurationCheck({ record }: CheckInput): Finding[] {
   const row = configurationOf(record.configuration);
   if (!row) return [];
   const out: Finding[] = [];
-  if (row.rulesLevel !== "standard" && row.levelCite) {
-    const clan = record.configuration === "tripod" && record.techBase === "clan" ? " The book gives the tripod's technology as Inner Sphere, and this record is Clan." : "";
+  if (record.configuration === "tripod" && record.techBase === "clan") {
     out.push(
-      finding("configuration", "note", `${row.name} is built under ${row.rulesLevel} rules, not the standard ones; check that your game allows it.${clan}`, {
-        where: { field: "configuration" },
-        cite: row.levelCite,
-      }),
+      finding("configuration", "note", "The book gives the tripod's technology as Inner Sphere, and this record is Clan.", { where: { field: "configuration" }, cite: row.levelCite }),
     );
   }
   const cockpit = own(COCKPITS.types, record.chassis.cockpit) ? COCKPITS.types[record.chassis.cockpit] : undefined;
@@ -571,6 +584,7 @@ export const CHECKS: Check[] = [
   { id: "jump", editions: "all", run: jumpCheck },
   { id: "placement", editions: "all", run: placementCheck },
   { id: "availability", editions: "all", run: availabilityCheck },
+  { id: "level", editions: "all", run: levelCheck },
   { id: "configuration", editions: "all", run: configurationCheck },
   { id: "unmatched", editions: "all", run: unmatchedCheck },
   { id: "lam", editions: "all", run: lamCheck },
@@ -603,5 +617,7 @@ export function runChecks(record: MechRecord, catalog: Catalog): Finding[] {
       out.push(finding(check.id, "note", `The ${check.id} check could not be completed for this record.`));
     }
   }
+  // Unlimited: the check still says everything, but nothing it finds blocks the sheet.
+  if (record.rulesLevel === "unlimited") return out.map((f) => (f.level === "error" ? { ...f, level: "warning" as const } : f));
   return out;
 }

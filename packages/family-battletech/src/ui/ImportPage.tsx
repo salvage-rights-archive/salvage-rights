@@ -3,6 +3,7 @@ import type { FormEvent } from "react";
 import { Link, useNavigate } from "react-router";
 import { EDITIONS } from "../data/editions";
 import { loadCatalog } from "../rules/catalog";
+import { DEFAULT_LEVEL, levelRow } from "../rules/levels";
 import { fromMordel, parseMordelRef } from "../rules/mordel";
 import { createMordelClient } from "./mordel-client";
 import type { MordelClient, MordelListRow } from "./mordel-client";
@@ -146,7 +147,7 @@ export default function ImportPage({ makeClient = defaultMakeClient }: ImportPag
         const record = result.record;
         if (!(await attempt(STORAGE_WRITE_FAILED, () => storage.save(record)))) return;
         void navigate(`/battletech/classic/editor?id=${encodeURIComponent(result.record.id)}`, {
-          state: result.notes.length > 0 ? { notes: result.notes } : undefined,
+          state: { notes: [`Rules level set to ${levelRow(record.rulesLevel ?? DEFAULT_LEVEL).label}, the lowest level that accepts everything this design uses.`, ...result.notes] },
         });
       } catch {
         setStatus("");

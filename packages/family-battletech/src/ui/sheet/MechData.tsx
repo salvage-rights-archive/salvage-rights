@@ -113,12 +113,13 @@ export default function MechData({ rect, facts }: { rect: Rect; facts: SheetFact
       {pair("Tonnage:", facts.tons, x + 330, y + 156, 25, 160)}
       {pair("Tech Base:", facts.techBase, x + 330, y + 188, 25, 160)}
       {facts.year !== undefined && pair("Year:", facts.year, x + 330, y + 220, 25, 160)}
-      {pair("Rules edition:", facts.edition, x + 24, y + 262, 24, 400)}
-      <line x1={x + 12} x2={x + rect.w - 12} y1={y + 282} y2={y + 282} stroke={INK} strokeWidth={2} />
-      <text x={x + 24} y={y + 312} fontSize={26} fontWeight={700} fill={INK}>
+      {pair("Rules edition:", facts.edition, x + 24, y + 254, 24, 400)}
+      {pair("Rules level:", facts.level, x + 24, y + 280, 24, 400)}
+      <line x1={x + 12} x2={x + rect.w - 12} y1={y + 292} y2={y + 292} stroke={INK} strokeWidth={2} />
+      <text x={x + 24} y={y + 322} fontSize={26} fontWeight={700} fill={INK}>
         Weapons &amp; Equipment Inventory
       </text>
-      <text x={x + rect.w - 24} y={y + 312} fontSize={MIN_SIZE} textAnchor="end" fill={INK}>
+      <text x={x + rect.w - 24} y={y + 322} fontSize={MIN_SIZE} textAnchor="end" fill={INK}>
         (hexes)
       </text>
       <Inventory x={x} top={y + 372} bottom={ammoTop - 22} lines={facts.inventory} />

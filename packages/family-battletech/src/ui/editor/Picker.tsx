@@ -1,10 +1,10 @@
 // The equipment picker: an in-page dialog over the catalog, for replacing a mount's equipment or adding a new item.
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import type { Catalog, EquipmentKind, EquipmentRow } from "../../rules/catalog";
+import { DEFAULT_LEVEL, equipmentLevel, levelAtLeast, levelRow } from "../../rules/levels";
 import type { MechRecord, Mount } from "../../rules/mech";
 import { dialogKeyDown } from "./dialog";
 
-const CAP = 100;
 const KINDS: [EquipmentKind | "all", string][] = [
   ["all", "All"],
   ["weapon", "Weapons"],
@@ -45,10 +45,11 @@ export default function Picker({
       ? catalog.all().map((row) => catalog.rowFor(row.id, record.editionId) ?? row)
       : catalog.offered(record.editionId, { techBase: record.techBase, year: record.year });
     const needle = query.trim().toLowerCase();
+    const level = record.rulesLevel ?? DEFAULT_LEVEL;
     return rows.filter(
-      (row) => (kind === "all" || row.kind === kind) && (needle === "" || [row.name, ...row.aliases].some((name) => name.toLowerCase().includes(needle))),
+      (row) => levelAtLeast(level, equipmentLevel(row)) && (kind === "all" || row.kind === kind) && (needle === "" || [row.name, ...row.aliases].some((name) => name.toLowerCase().includes(needle))),
     );
-  }, [catalog, record.editionId, record.techBase, record.year, everything, kind, query]);
+  }, [catalog, record.editionId, record.techBase, record.year, record.rulesLevel, everything, kind, query]);
 
   const factsLine = (row: EquipmentRow) => {
     const trial: Mount = { id: "trial", equipmentId: row.id, name: row.name, techBase: row.techBase, location: null, slot: null };
@@ -56,11 +57,12 @@ export default function Picker({
     // A heat sink's weight is counted with the chassis heat sinks, so it is not listed as 0 tons.
     const size = facts ? (row.kind === "heat-sink" ? `weight counted with the chassis heat sinks, ${plural(facts.slots, "slot")}` : `${plural(facts.tons, "ton")}, ${plural(facts.slots, "slot")}`) : "weight and slots not known for this 'Mech";
     const parts = [TECH_BASE_NAMES[row.techBase], size];
+    const level = equipmentLevel(row);
+    if (level !== "introductory" && level !== DEFAULT_LEVEL) parts.push(`${levelRow(level).label} level`);
     if (row.yearsInferred) parts.push("year not printed in the book");
     return parts.join(", ");
   };
 
-  const shown = matches.slice(0, CAP);
   return (
     <div className="bt-picker-backdrop">
       <div ref={dialog} className="bt-picker" role="dialog" aria-modal="true" aria-labelledby={titleId} onKeyDown={(event) => {
@@ -107,16 +109,16 @@ export default function Picker({
             Show everything
           </label>
           <span className="bt-hint">
-            {everything ? "Showing every item, whatever its tech base or year." : "Showing what this edition offers for this tech base and year."}
+            {everything ? "Showing every item, whatever its tech base or year. Items above the unit's rules level stay hidden." : "Showing what this edition offers for this tech base and year."}
           </span>
         </div>
         {matches.length === 0 ? (
           <p>No equipment matches.</p>
         ) : (
           <>
-            {matches.length > CAP && <p role="status">{`Showing ${CAP} of ${matches.length}`}</p>}
-            <ul className="bt-list" aria-label="Equipment">
-              {shown.map((row) => (
+            <p role="status">{`${plural(matches.length, "item")} at ${levelRow(record.rulesLevel ?? DEFAULT_LEVEL).label} level or below`}</p>
+            <ul className="bt-list bt-picker__list" aria-label="Equipment">
+              {matches.map((row) => (
                 <li key={row.id}>
                   <button
                     type="button"

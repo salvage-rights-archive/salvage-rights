@@ -5,6 +5,9 @@ import { IDBFactory } from "fake-indexeddb";
 import { RouterProvider, createMemoryRouter } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { loadCatalog } from "../rules/catalog";
+import type { EquipmentRow } from "../rules/catalog";
+import { equipmentLevel, levelAtLeast } from "../rules/levels";
+import type { RulesLevel } from "../data/chassis";
 import { mordelBiped, mordelOdd, mordelQuad, mordelWith } from "../rules/fixtures";
 import { fromMordel } from "../rules/mordel";
 import type { MechRecord } from "../rules/mech";
@@ -321,29 +324,36 @@ describe("The critical slots", () => {
 });
 
 describe("The equipment picker", () => {
-  it("lists what the edition offers, caps the list, can lift the filters and replaces equipment in place", async () => {
+  it("lists what the edition and the rules level offer, has no cap, can lift the filters and replaces equipment in place", async () => {
     await saved(mordelBiped());
     const user = userEvent.setup();
     const catalog = await loadCatalog();
-    const offered = catalog.offered("total-warfare", { techBase: "inner-sphere", year: 3025 }).length;
-    const everything = catalog.all().length;
+    const atLevel = (rows: EquipmentRow[], level: RulesLevel) => rows.filter((row) => levelAtLeast(level, equipmentLevel(row))).length;
+    const offered = atLevel(catalog.offered("total-warfare", { techBase: "inner-sphere", year: 3025 }), "introductory");
+    const everythingIntro = atLevel(catalog.all(), "introductory");
+    const everything = atLevel(catalog.all(), "standard");
     expect(offered).toBeGreaterThan(0);
-    expect(everything).toBeGreaterThan(offered);
+    expect(everything).toBeGreaterThan(everythingIntro);
     await open("imported-1");
     await openActions(user, "Left Arm");
     await user.click(within(slotList("Left Arm")).getByRole("button", { name: "Replace Medium Laser" }));
     const dialog = screen.getByRole("dialog", { name: "Replace Medium Laser" });
     expect(document.activeElement).toBe(within(dialog).getByLabelText("Search by name"));
-    expect(within(dialog).getAllByRole("button", { name: /Inner Sphere/ })).toHaveLength(Math.min(offered, 100));
-    expect(within(dialog).queryByText(`Showing 100 of ${offered}`) !== null).toBe(offered > 100);
+    expect(within(dialog).getAllByRole("button", { name: /Inner Sphere/ })).toHaveLength(offered);
     await user.type(within(dialog).getByLabelText("Search by name"), "light machine gun");
     expect(within(dialog).getByText("No equipment matches.")).toBeTruthy();
     await user.clear(within(dialog).getByLabelText("Search by name"));
     await user.click(within(dialog).getByRole("checkbox", { name: "Show everything" }));
-    expect(within(dialog).getAllByRole("list", { name: "Equipment" })[0]?.children).toHaveLength(100);
-    expect(within(dialog).getByText(`Showing 100 of ${everything}`)).toBeTruthy();
-    await user.type(within(dialog).getByLabelText("Search by name"), "light machine gun");
-    await user.click(within(dialog).getByRole("button", { name: /^Light Machine Gun Inner Sphere, 0.5 tons, 1 slot/ }));
+    expect(within(dialog).getAllByRole("list", { name: "Equipment" })[0]?.children).toHaveLength(everythingIntro);
+    // Raising the unit's level brings in the rest of Standard.
+    await user.click(within(dialog).getByRole("button", { name: "Cancel" }));
+    await user.selectOptions(screen.getByLabelText("Rules level"), "standard");
+    await user.click(within(slotList("Left Arm")).getByRole("button", { name: "Replace Medium Laser" }));
+    const again = screen.getByRole("dialog", { name: "Replace Medium Laser" });
+    await user.click(within(again).getByRole("checkbox", { name: "Show everything" }));
+    expect(within(again).getAllByRole("list", { name: "Equipment" })[0]?.children).toHaveLength(everything);
+    await user.type(within(again).getByLabelText("Search by name"), "light machine gun");
+    await user.click(within(again).getByRole("button", { name: /^Light Machine Gun Inner Sphere, 0.5 tons, 1 slot/ }));
     expect(screen.queryByRole("dialog")).toBeNull();
     const cell = within(slotList("Left Arm")).getByText("Light Machine Gun").closest("li");
     expect(cell?.textContent).toMatch(/^5/);

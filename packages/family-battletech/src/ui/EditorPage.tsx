@@ -11,8 +11,11 @@ import type { Catalog } from "../rules/catalog";
 import { runChecks } from "../rules/checks";
 import type { Finding } from "../rules/checks";
 import { changedSinceImport } from "../rules/mordel";
-import { ARM_FULL, bodyOf, configurationLabel, editRecord, layout as buildLayout, locationName, weights as buildWeights } from "../rules/mech";
+import { ARM_FULL, bodyOf, editRecord, layout as buildLayout, locationName, weights as buildWeights } from "../rules/mech";
 import type { Layout, LocationCode, MechRecord } from "../rules/mech";
+import { DEFAULT_LEVEL, configurationOption, withLevel } from "../rules/levels";
+import type { RulesLevel } from "../data/chassis";
+import LevelSelect from "./editor/LevelSelect";
 import ArmorPanel from "./editor/ArmorPanel";
 import { dialogKeyDown } from "./editor/dialog";
 import FindingsPanel from "./editor/FindingsPanel";
@@ -304,7 +307,8 @@ const TECH_BASES: [string, string][] = [
   ["clan", "Clan"],
   ["mixed", "Mixed"],
 ];
-const CONFIGURATIONS: [string, string][] = Object.keys(SHEET.configurations).map((key) => [key, configurationLabel(key)]);
+/** The body types, those above the unit's rules level marked with the level they need (they stay choosable; the check says so). */
+const configurationsAt = (level: RulesLevel): [string, string][] => Object.keys(SHEET.configurations).map((key) => [key, configurationOption(key, level)]);
 
 // ---------------------------------------------------------------------------------------------------------------
 // What a finding or a changed marker can point at
@@ -321,7 +325,7 @@ const safeLayout = (record: MechRecord, catalog: Catalog): Layout => {
 
 /** The ids a finding may name a field by: the identity and chassis fields, and the armor fields drawn. */
 function fieldTargets(armorLocations: string[]): Set<string> {
-  const paths = ["name", "tons", "year", "techBase", "configuration", ...CHASSIS_FIELDS.filter((f) => f.kind === "select").map((f) => f.path), ...armorLocations.map((l) => `armor.${l}`)];
+  const paths = ["name", "rulesLevel", "tons", "year", "techBase", "configuration", ...CHASSIS_FIELDS.filter((f) => f.kind === "select").map((f) => f.path), ...armorLocations.map((l) => `armor.${l}`)];
   return new Set(paths);
 }
 
@@ -358,7 +362,7 @@ export default function EditorPage() {
         if (!live) return;
         if (!entry) setLoaded({ state: "missing" });
         else if (!entry.record) setLoaded({ state: "unreadable", message: entry.unreadable ?? "" });
-        else setLoaded({ state: "ready", storage, catalog, record: entry.record });
+        else setLoaded({ state: "ready", storage, catalog, record: withLevel(entry.record, catalog) });
       } catch {
         if (live) setLoaded({ state: "failed" });
       }
@@ -735,6 +739,7 @@ function Editor({ initial, catalog, storage }: { initial: MechRecord; catalog: C
             <div className="bt-grid">
               <TextField id="field-name" label="Chassis name" value={record.name.chassis} changed={mark("name")} onChange={(v) => { edit((d) => void (d.name.chassis = v), "name"); }} />
               <TextField id="field-name-model" label="Model" value={record.name.model} onChange={(v) => { edit((d) => void (d.name.model = v), "name-model"); }} />
+              <LevelSelect record={record} onChange={(level) => { edit((d) => void (d.rulesLevel = level)); }} />
               <SelectField
                 id="field-techBase"
                 label="Tech base"
@@ -749,7 +754,7 @@ function Editor({ initial, catalog, storage }: { initial: MechRecord; catalog: C
                 id="field-configuration"
                 label="Configuration"
                 value={record.configuration}
-                options={CONFIGURATIONS}
+                options={configurationsAt(record.rulesLevel ?? DEFAULT_LEVEL)}
                 changed={mark("configuration")}
                 onChange={(v) => { edit((d) => void (d.configuration = v)); }}
               />

@@ -3,7 +3,10 @@ import type { ChangeEvent } from "react";
 import { Link, useNavigate } from "react-router";
 import { ENGINE_WEIGHTS, INTERNAL_STRUCTURE, SHEET } from "../data/chassis";
 import { DEFAULT_EDITION, EDITIONS, PLAY_ONLY_BOOK, bookName } from "../data/editions";
-import { configurationLabel, newRecord } from "../rules/mech";
+import { DEFAULT_LEVEL, configurationOption, withLevel } from "../rules/levels";
+import { loadCatalog } from "../rules/catalog";
+import { newRecord } from "../rules/mech";
+import LevelSelect from "./editor/LevelSelect";
 import type { MechRecord, NewMechOptions, TechBase } from "../rules/mech";
 import { STORAGE_READ_FAILED, STORAGE_WRITE_FAILED, downloadMech, fromMechFile, openFamilyStorage } from "./storage";
 import type { FamilyStorage, SavedEntry } from "./storage";
@@ -37,6 +40,7 @@ export default function HomePage() {
     walk: 4,
     techBase: "inner-sphere",
     configuration: "biped",
+    rulesLevel: "standard",
   });
 
   /** Runs a storage action; when it rejects, shows the fixed message and returns false. */
@@ -155,7 +159,8 @@ export default function HomePage() {
         } else {
           const done = await attempt(STORAGE_WRITE_FAILED, async () => {
             const taken = (await storage.list()).some((e) => e.id === result.record.id);
-            await storage.save(taken ? { ...result.record, id: crypto.randomUUID() } : result.record);
+            const record = withLevel(result.record, await loadCatalog());
+            await storage.save(taken ? { ...record, id: crypto.randomUUID() } : record);
           });
           if (done && (await reload(storage))) say("'Mech imported.");
         }
@@ -355,6 +360,7 @@ export default function HomePage() {
               <label htmlFor="bt-new-model">Model</label>
               <input id="bt-new-model" value={draft.model} onChange={(e) => setDraft({ ...draft, model: e.target.value })} />
             </div>
+            <LevelSelect id="bt-new-level" record={draft} onChange={(rulesLevel) => { setDraft({ ...draft, rulesLevel }); }} />
             <div className="bt-field">
               <label htmlFor="bt-new-tons">Tonnage</label>
               <select id="bt-new-tons" value={draft.tons} onChange={(e) => setDraft({ ...draft, tons: Number(e.target.value) })}>
@@ -391,7 +397,7 @@ export default function HomePage() {
               >
                 {Object.keys(SHEET.configurations).map((key) => (
                   <option key={key} value={key}>
-                    {configurationLabel(key)}
+                    {configurationOption(key, draft.rulesLevel ?? DEFAULT_LEVEL)}
                   </option>
                 ))}
               </select>

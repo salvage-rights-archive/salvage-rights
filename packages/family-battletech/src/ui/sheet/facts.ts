@@ -4,6 +4,7 @@ import { editionLine } from "../../data/editions";
 import { SHEET_HEAT_SINKS, TECH_BASE_NAMES } from "../../data/sheet";
 import { inventoryLines, ammoLines } from "../../rules/catalog";
 import type { Catalog, InventoryLine } from "../../rules/catalog";
+import { levelOfRecord, levelRow } from "../../rules/levels";
 import { layout as buildLayout, locationName, structurePoints, walkMP } from "../../rules/mech";
 import type { Layout, LocationCode, MechRecord } from "../../rules/mech";
 
@@ -34,6 +35,7 @@ export interface SheetFacts {
   tons: string;
   techBase: string;
   edition: string;
+  level: string;
   year: string | undefined;
   inventory: InventoryLine[];
   /** `(LRM 5) 24, (AC/10) 10`, or "" when there is no ammunition. */
@@ -80,6 +82,7 @@ export function sheetFacts(record: MechRecord, catalog: Catalog): SheetFacts {
     tons: String(record.tons),
     techBase: Object.hasOwn(TECH_BASE_NAMES, record.techBase) ? (TECH_BASE_NAMES[record.techBase] ?? record.techBase) : record.techBase,
     edition: editionLine(record.editionId),
+    level: levelRow(levelOfRecord(record, catalog)).label,
     year: record.year === null ? undefined : String(record.year),
     inventory: inventoryLines(record, catalog),
     ammo,

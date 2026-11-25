@@ -5,6 +5,7 @@
 // Mordel wrote it, with a note, and the checks report it as unknown. Nothing is guessed.
 import { ARMOR, MYOMER, STRUCTURE_TYPES } from "../data/chassis";
 import type { Catalog, EquipmentRow } from "./catalog";
+import { lowestLevelFor } from "./levels";
 import { ARM_FULL, armorSpread, configurationOf, layout, locationName, slotsTaken } from "./mech";
 import type { LocationCode, MechRecord, Mount, TechBase } from "./mech";
 
@@ -393,6 +394,7 @@ function convert(response: unknown, catalog: Catalog, editionId: string, now: st
   }
 
   placeMounts(record, catalog, note);
+  record.rulesLevel = lowestLevelFor(record, catalog);
   if (record.source) {
     const { name, notes, tons, year, techBase, configuration, chassis, armor, arms, mounts } = structuredClone(record);
     record.source.baseline = { name, notes, tons, year, techBase, configuration, chassis, armor, arms, mounts };
