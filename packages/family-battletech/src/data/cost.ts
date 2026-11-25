@@ -447,6 +447,12 @@ export const EQUIPMENT_COST: PriceGroup[] = [
       "lifeboat-aerospace": 5_000, "lifeboat-atmospheric": 6_000, "lifeboat-maritime": 5_000, "escape-pod-aerospace": 5_000, "escape-pod-maritime": 5_000,
     },
   },
+  {
+    // TechManual pp.296-297 (Additional Battle Armor Weapons and Equipment): per item, per tube for the missile launchers
+    cite: { book: TM, page: 297 },
+    checked: "page",
+    prices: { "ba-david-light-gauss-rifle": 22500, "ba-king-david-light-gauss-rifle": 30000, "ba-magshot-gauss-rifle": 10500, "ba-grand-mauler-gauss-rifle": 8000, "ba-tsunami-gauss-rifle": 9500, "ba-micro-grenade-launcher": 1950, "ba-heavy-grenade-launcher": 4500, "ba-light-machine-gun": 5000, "ba-machine-gun": 5000, "ba-heavy-machine-gun": 7500, "ba-light-mortar": 2100, "ba-heavy-mortar": 7500, "ba-light-recoilless-rifle": 1000, "ba-medium-recoilless-rifle": 3000, "ba-heavy-recoilless-rifle": 5000, "ba-flamer": 7500, "ba-er-small-laser": 11250, "ba-er-medium-laser": 80000, "ba-small-laser": 11250, "ba-medium-laser": 40000, "ba-small-pulse-laser": 16000, "ba-medium-pulse-laser": 60000, "ba-support-ppc": 14000, "ba-man-portable-plasma-rifle": 28000, "ba-firedrake-support-needler": 1500, "ba-compact-narc": 50000, "ba-pop-up-mine": 2500, "ba-active-probe": 50000, "ba-camo-system": 200000, "ba-cutting-torch": 1000, "ba-ecm-suite": 50000, "ba-extended-life-support": 10000, "ba-fuel-tank": 500, "ba-heat-sensor": 15000, "ba-improved-sensors": 35000, "ba-jump-booster": 75000, "ba-laser-microphone": 750, "ba-magnetic-clamps": 2500, "ba-lrm-1": 6000, "ba-lrm-2": 12000, "ba-lrm-3": 18000, "ba-lrm-4": 24000, "ba-lrm-5": 30000, "ba-srm-1": 5000, "ba-srm-2": 10000, "ba-srm-3": 15000, "ba-srm-4": 20000, "ba-srm-5": 25000, "ba-srm-6": 30000, "ba-mrm-1": 5000, "ba-mrm-2": 10000, "ba-mrm-3": 15000, "ba-mrm-4": 20000, "ba-mrm-5": 25000, "ba-rocket-launcher-1": 1500, "ba-rocket-launcher-2": 3000, "ba-rocket-launcher-3": 4500, "ba-rocket-launcher-4": 6000, "ba-rocket-launcher-5": 7500 },
+  },
 ];
 
 /** Retractable blade (printed p.293, Industrial Equipment): the mechanism, plus the blade at a price per ton of its weight.
