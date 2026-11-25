@@ -282,6 +282,21 @@ describe("conventional infantry weapons", () => {
   });
 });
 
+describe("TechManual weapons table: the other unit types' columns (printed pp. 341-343)", () => {
+  // The Space columns (NA leaves a unit type out; another number is that unit type's slots) and the Aero values in parentheses, which
+  // agree with Total Warfare's Aero Attack Value and Aerospace Range columns (printed p. 303).
+  it.each([
+    ["medium-laser-is", ["mech", "industrialmech", "vehicle", "aero", "smallcraft", "dropship"], { aero: { rangeClass: "Short" } }],
+    ["lrm-5-is", ["mech", "industrialmech", "vehicle", "aero", "smallcraft", "dropship"], { aero: { damage: "3", rangeClass: "Long" } }],
+    ["ultra-ac-5-is", ["mech", "industrialmech", "vehicle", "aero", "smallcraft", "dropship"], { vehicle: { slots: 1 }, aero: { slots: 1, heat: 2, damage: "7", rangeClass: "Long" } }],
+    ["lb-2-x-ac-clan", ["mech", "industrialmech", "vehicle", "protomech", "aero", "smallcraft", "dropship"], { protomech: { slots: 1 } }],
+  ])("%s", async (id, units, by) => {
+    const row = (await loadCatalog()).byId(id);
+    expect(row?.units).toEqual(units);
+    expect(row?.by).toMatchObject(by);
+  });
+});
+
 describe("Interstellar Operations: Alternate Eras unit-type columns", () => {
   // The Space columns of the Additional Alternate Era table (printed pp. 211, 213, 215): NA leaves the unit type out; a number that differs
   // from the 'Mech's is the slots on that unit type.
