@@ -9,6 +9,7 @@ import {
   ENGINE_WEIGHTS,
   GYROS,
   HEAD_MAX_ARMOR,
+  FRANKENMECH,
   HEAD_STRUCTURE,
   HEAT_SINK_RULES,
   HEAT_SINKS,
@@ -96,6 +97,10 @@ export interface MechRecord {
   /** What kind of 'Mech this is (MECH_TYPES in data/chassis.ts). Absent on records saved before types were offered, and read as a
    * BattleMech; a value that is not one of the types is read the same way. */
   unitType?: MechType;
+  /** Present only on a FrankenMech (Campaign Operations p.213; FRANKENMECH in data/chassis.ts), a 'Mech built from donor parts. `tons` is the
+   * center torso donor's tonnage. `donors` gives the tonnage of the donor 'Mech each other location came from; a location not listed came from
+   * a 'Mech of the record's own tonnage. */
+  frankenmech?: { donors?: Partial<Record<LocationCode, number>> };
   /** Present only on a configuration resolved from an OmniMech chassis (rules/omni.ts); absent on every other record. */
   omni?: OmniLink;
   /** Whether the player marked this design as published by the game's publisher (rules/official.ts). Absent reads as not official. */
@@ -266,6 +271,22 @@ export function structureTons(type: string, tons: number, configuration = "biped
   return extra === undefined ? base : ceilHalf(base * (1 + extra));
 }
 
+/** The tonnage of the donor 'Mech a location came from: the record's own, unless a FrankenMech names another donor. */
+export const donorTons = (record: Pick<MechRecord, "tons" | "frankenmech">, loc: LocationCode): number => (loc === "CT" ? undefined : record.frankenmech?.donors?.[loc]) ?? record.tons;
+
+/** A FrankenMech's hybrid internal structure: each location carries its share of its donor's structure weight (Campaign Operations p.213),
+ * the eight added and rounded up to a half ton. null if a donor's tonnage or the structure type is not in the tables. */
+function frankenStructureTons(record: MechRecord): number | null {
+  const share = FRANKENMECH.structureShare;
+  let sum = 0;
+  for (const loc of Object.keys(structurePoints(record)) as LocationCode[]) {
+    const donor = structureTons(record.chassis.structure, donorTons(record, loc));
+    if (donor === null) return null;
+    sum += donor * (loc === "HD" || loc === "CT" || loc === "LT" || loc === "RT" ? share[loc] : share.limb);
+  }
+  return sum > 0 ? ceilHalf(tidy(sum)) : null;
+}
+
 // ---------------------------------------------------------------------------------------------------------------
 // Layout
 // ---------------------------------------------------------------------------------------------------------------
@@ -414,7 +435,7 @@ export function weights(record: MechRecord, factsOf: FactsOf): { lines: WeightLi
   const { chassis } = record;
   const lines: WeightLine[] = [];
 
-  lines.push({ label: "Structure", tons: structureTons(chassis.structure, record.tons, record.configuration) });
+  lines.push({ label: "Structure", tons: record.frankenmech ? frankenStructureTons(record) : structureTons(chassis.structure, record.tons, record.configuration) });
   const conversion = conversionTons(record);
   if (conversion !== null) lines.push({ label: "Conversion equipment", tons: conversion });
   lines.push({ label: "Engine", tons: engineTons(chassis.engine.type, chassis.engine.rating) });
@@ -472,6 +493,13 @@ export function structurePoints(record: MechRecord): Partial<Record<LocationCode
   for (const loc of Object.keys(configurationOf(record.configuration)?.size ?? {}) as LocationCode[]) {
     if (!(loc in points)) points[loc] = loc === "LA" || loc === "RA" ? row.arm : row.leg;
   }
+  // A FrankenMech keeps the structure of each location's donor, so its armor limit follows the donor (Campaign Operations p.213).
+  if (record.frankenmech?.donors) {
+    for (const loc of Object.keys(points) as LocationCode[]) {
+      const donor = own(INTERNAL_STRUCTURE.rows, donorTons(record, loc));
+      if (donor && loc !== "HD") points[loc] = loc === "CT" ? donor.ct : loc === "LT" || loc === "RT" ? donor.side : loc === "LA" || loc === "RA" ? donor.arm : donor.leg;
+    }
+  }
   return points;
 }
 
@@ -487,7 +515,8 @@ export function maxArmor(record: MechRecord): Partial<Record<LocationCode, numbe
 export function walkMP(record: MechRecord): number | null {
   const { rating } = record.chassis.engine;
   if (!(record.tons > 0) || !Number.isFinite(rating)) return null;
-  const mp = rating / record.tons;
+  // A FrankenMech divides the rating by its tonnage and rounds down (Campaign Operations p.213); any other 'Mech needs it to divide evenly.
+  const mp = record.frankenmech ? Math.floor(rating / record.tons) : rating / record.tons;
   return Number.isInteger(mp) && mp > 0 ? mp : null;
 }
 

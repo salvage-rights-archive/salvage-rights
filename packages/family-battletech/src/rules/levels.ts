@@ -1,7 +1,7 @@
 // Rules levels: the order they come in, which level an item belongs to, and the lowest level that accepts everything a
 // 'Mech uses. Pure functions over the tables in data/chassis.ts and the catalog; nothing here throws on what it does not
 // know (an unknown part or an unmatched mount simply asks nothing of the level).
-import { INTRODUCTORY_PARTS, ARMOR, COCKPITS, ENGINE_TYPES, GYROS, HEAT_SINK_RULES, HEAT_SINKS, MIXED_TECHNOLOGY, RULES_LEVELS, STRUCTURE_TYPES } from "../data/chassis";
+import { INTRODUCTORY_PARTS, ARMOR, FRANKENMECH, COCKPITS, ENGINE_TYPES, GYROS, HEAT_SINK_RULES, HEAT_SINKS, MIXED_TECHNOLOGY, RULES_LEVELS, STRUCTURE_TYPES } from "../data/chassis";
 import type { PartFacts, RulesLevel, RulesLevelRow, Span } from "../data/chassis";
 import type { Catalog, EquipmentRow } from "./catalog";
 import { configurationOf, mechTypeOf } from "./mech";
@@ -22,14 +22,18 @@ export function levelAtLeast(a: RulesLevel, b: RulesLevel): boolean {
 }
 
 /** Whether the record is a FrankenMech, the optional rule of Campaign Operations (printed p.213) that lets a 'Mech be pieced together from
- * parts of several kinds. We build no FrankenMech yet, so this says no; the piece that adds the rule changes only this answer. */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars -- the record is what the real answer will read
-export const isFrankenMech = (_record: Pick<MechRecord, "name">): boolean => false;
+ * donor parts: the record says so itself. */
+export const isFrankenMech = (record: Pick<MechRecord, "frankenmech">): boolean => record.frankenmech !== undefined;
+
+/** Whether the editor should offer the FrankenMech option: the record's level reaches the option's (Advanced), and it is not an OmniMech (which
+ * cannot be one, p.213). A record that already is one keeps the option shown. Hide, do not mark. */
+export const frankenMechOffered = (record: Pick<MechRecord, "frankenmech" | "rulesLevel" | "unitType" | "omni">): boolean =>
+  isFrankenMech(record) || (record.omni === undefined && record.unitType !== "omnimech" && record.rulesLevel !== undefined && levelAtLeast(record.rulesLevel, FRANKENMECH.rulesLevel));
 
 /** Whether two heat sink types may share a 'Mech. An Inner Sphere double with a Clan double: on a mixed technology record (that is itself an
  * Advanced option, so the level check asks for Advanced). Any other pairing: only on a FrankenMech, or at Fan-made level or higher (owner's
  * rulings of 2026-11-25). The same type twice is no mix. The standard rule is one type per 'Mech (TechManual p.53). */
-export function heatSinkMixAllowed(record: Pick<MechRecord, "name" | "techBase" | "rulesLevel">, mainType: string, extraType: string): boolean {
+export function heatSinkMixAllowed(record: Pick<MechRecord, "frankenmech" | "techBase" | "rulesLevel">, mainType: string, extraType: string): boolean {
   if (mainType === extraType) return false;
   const [first, second] = HEAT_SINK_RULES.mixable;
   const anyMix = isFrankenMech(record) || (record.rulesLevel !== undefined && levelAtLeast(record.rulesLevel, "fan-made"));
@@ -38,7 +42,7 @@ export function heatSinkMixAllowed(record: Pick<MechRecord, "name" | "techBase" 
 }
 
 /** Whether the editor should offer extra heat sink groups at all: some pairing could be allowed (mixed technology, Fan-made or higher, a FrankenMech). */
-export const heatSinkMixPossible = (record: Pick<MechRecord, "name" | "techBase" | "rulesLevel">): boolean =>
+export const heatSinkMixPossible = (record: Pick<MechRecord, "frankenmech" | "techBase" | "rulesLevel">): boolean =>
   record.techBase === "mixed" || isFrankenMech(record) || (record.rulesLevel !== undefined && levelAtLeast(record.rulesLevel, "fan-made"));
 
 /** Where a record's time falls against the mixed technology option's dates (data/chassis.ts MIXED_TECHNOLOGY): in production, in its
@@ -89,7 +93,7 @@ export function levelIn(level: RulesLevel, phase: Phase | null, prototypeLevel?:
 
 /** One thing a 'Mech uses that asks something of the rules level. */
 export interface LevelItem {
-  what: "equipment" | "configuration" | "structure" | "armor" | "engine" | "gyro" | "cockpit" | "heat sink" | "tech base" | "type";
+  what: "equipment" | "configuration" | "structure" | "armor" | "engine" | "gyro" | "cockpit" | "heat sink" | "tech base" | "type" | "option";
   name: string;
   level: RulesLevel;
   /** Set when the record's time falls in the item's prototype phase: its two dates in words ("Prototype 2854, production 2856"). `level` is then the prototype's. */
@@ -124,6 +128,7 @@ export function levelItems(record: MechRecord, catalog: Catalog): LevelItem[] {
     const prototype = record.techBase === "clan" ? (type.clanPrototypeYear ?? type.prototypeYear) : type.prototypeYear;
     items.push({ what: "type", name: type.label, ...inPhase(type.rulesLevel, typePhase, prototype, record.techBase === "clan" ? (type.clanAvailability ?? type.availability) : type.availability), cite: type.cite, where: { field: "unitType" } });
   }
+  if (isFrankenMech(record)) items.push({ what: "option", name: "FrankenMech", level: FRANKENMECH.rulesLevel, cite: FRANKENMECH.levelCite, where: { field: "frankenmech" } });
   const config = configurationOf(record.configuration);
   if (config) {
     const level = config.rulesLevel === DEFAULT_LEVEL ? partLevel("configuration", record.configuration) : config.rulesLevel;

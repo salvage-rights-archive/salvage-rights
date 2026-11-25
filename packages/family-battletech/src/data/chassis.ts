@@ -11,7 +11,7 @@ import type { LocationCode } from "../rules/mech";
 import type { UnitId } from "./units";
 
 export interface Cite {
-  book: "TechManual" | "Interstellar Operations: Alternate Eras" | "Tactical Operations: Advanced Units and Equipment";
+  book: "TechManual" | "Interstellar Operations: Alternate Eras" | "Tactical Operations: Advanced Units and Equipment" | "Campaign Operations";
   page: number;
 }
 export type Checked = "page" | "text";
@@ -1128,6 +1128,34 @@ export const MIXED_TECHNOLOGY: {
   cite: { book: "Tactical Operations: Advanced Units and Equipment", page: 189 },
   availabilityCite: { book: IO_AE, page: 45 },
   checked: "page",
+};
+/**
+ * The FrankenMech option (Campaign Operations, corrected fourth printing, printed p.213; the v5.0 errata of 22 August 2024 only adds the
+ * line barring heavier jump jets, which the fourth printing's text already holds). Campaign Operations calls all its rules optional and
+ * advanced (introduction, p.7), so the option is Advanced. The page builds a 'Mech from the eight body locations of donors: the center torso
+ * donor fixes the tonnage (the record's `tons`), and the hybrid internal structure weighs a share of each donor's structure weight.
+ * Not modelled: smaller jump jets kept from a lighter donor (every jet weighs its class's weight), the donors' own armor and equipment
+ * (the record holds the finished 'Mech), patchwork armor (its own piece), and the refit time and Quality Rating rules.
+ */
+export const FRANKENMECH: {
+  rulesLevel: RulesLevel;
+  cite: Cite;
+  levelCite: Cite;
+  checked: Checked;
+  /** The share of the hybrid structure weight each location carries; a limb is any location not listed. */
+  structureShare: { HD: number; CT: number; LT: number; RT: number; limb: number };
+  /** The locations the page's structure rule covers: head, three torso and four limbs. */
+  locationCount: number;
+  /** Piloting Skill Roll modifiers for legs not from one 'Mech, and for legs of different tonnages. */
+  legPiloting: { notOneMech: number; differentTonnage: number };
+} = {
+  rulesLevel: "advanced",
+  cite: { book: "Campaign Operations", page: 213 },
+  levelCite: { book: "Campaign Operations", page: 7 },
+  checked: "page",
+  structureShare: { HD: 0.05, CT: 0.25, LT: 0.15, RT: 0.15, limb: 0.1 },
+  locationCount: 8,
+  legPiloting: { notOneMech: 1, differentTonnage: 2 },
 };
 const TM_P = (page: number): Cite => ({ book: "TechManual", page });
 export const MECH_TYPES: MechTypeRow[] = [

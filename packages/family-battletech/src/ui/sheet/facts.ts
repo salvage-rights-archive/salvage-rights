@@ -38,6 +38,8 @@ export interface SheetFacts {
   /** What armor or a shield takes off the movement above, in a few words; absent when nothing does. */
   movementNote: string | undefined;
   tons: string;
+  /** True for a FrankenMech: the sheet says so beside the rules level. */
+  frankenmech: boolean;
   techBase: string;
   edition: string;
   level: string;
@@ -103,6 +105,7 @@ export function sheetFacts(record: MechRecord, catalog: Catalog): SheetFacts {
     jump: penalty.noJump ? "0" : taken(jumpJets, jumpJets > 0 ? penalty.jump : 0),
     movementNote: penalty.short.length > 0 ? penalty.short.join("; ") : undefined,
     tons: String(record.tons),
+    frankenmech: record.frankenmech !== undefined,
     techBase: Object.hasOwn(TECH_BASE_NAMES, record.techBase) ? (TECH_BASE_NAMES[record.techBase] ?? record.techBase) : record.techBase,
     edition: editionName(record.editionId),
     level: levelRow(record.omni ? configurationLevel(record, catalog) : levelOfRecord(record, catalog)).label,

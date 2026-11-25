@@ -166,6 +166,10 @@ export function isPicture(v: unknown): boolean {
   return v === undefined || (isObject(v) && isString(v.dataUrl) && v.dataUrl.length <= MAX_PICTURE_CHARS && PICTURE_PREFIXES.some((p) => (v.dataUrl as string).startsWith(p)));
 }
 
+function isFrankenMech(v: unknown): boolean {
+  return v === undefined || (isObject(v) && (v.donors === undefined || (isObject(v.donors) && Object.values(v.donors).every(isNumber))));
+}
+
 /** Checks the shape of a 'Mech record, not whether it is legal: an illegal 'Mech is still a record. Every part of the
  * record the editor reads is checked, the source's figures and baseline included. */
 export function isMechRecord(value: unknown): value is MechRecord {
@@ -177,6 +181,7 @@ export function isMechRecord(value: unknown): value is MechRecord {
     isBody(value) &&
     isOmniLink(value.omni) &&
     isOfficial(value.official) &&
+    isFrankenMech(value.frankenmech) &&
     (value.imageUrl === undefined || isString(value.imageUrl)) &&
     isPicture(value.picture) &&
     (value.source === undefined || isSource(value.source))
