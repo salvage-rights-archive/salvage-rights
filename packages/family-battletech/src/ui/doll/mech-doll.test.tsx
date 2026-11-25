@@ -291,8 +291,8 @@ describe("the paper doll", () => {
     ["QuadVee on wheels", "quad", { pods: "wheels" }, { rrl: "quad-leg-rear" }, ["pod-fll", "pod-frl", "pod-rll", "pod-rrl"]],
     ["tracked octopod", "octopod", { pods: "tracks" }, { l4: "top-leg" }, ["l1", "r1", "l2", "r2", "l3", "r3", "l4", "r4"].map((loc) => `pod-${loc}`)],
     ["armless biped", "biped", { armless: true }, { la: "arm-cap", ra: "arm-cap" }, []],
-    ["four-armed biped", "biped", { arms: 4 }, { la: "arm", la2: "arm", ra2: "arm" }, []],
-    ["two-armed quad", "quad", { arms: 2 }, { la: "arm", ra: "arm" }, []],
+    ["four-armed biped", "biped", { arms: 4 }, { la: "arm", la2: "arm", ra2: "arm" }, ["strut-lower-left", "strut-lower-right"]],
+    ["two-armed quad", "quad", { arms: 2 }, { la: "arm", ra: "arm" }, ["strut-upper-left", "strut-upper-right"]],
     ["four-armed hexapod", "hexapod", { arms: 4 }, { la: "top-arm", ra2: "top-arm" }, []],
   ])("swaps the parts of a %s and leaves its locations as they were", (_name, layoutId, variant, parts, decor) => {
     const frame = { centerX: 0, top: 0, scale: 1 };

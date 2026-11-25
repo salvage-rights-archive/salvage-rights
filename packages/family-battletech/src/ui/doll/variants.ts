@@ -1,5 +1,5 @@
 // Salvage Rights paper doll engine. GPL-3.0-or-later.
-import { mapPath, type IDecor } from "./parts-kit";
+import { mapPath, outline, polygonPath, slab, type IDecor } from "./parts-kit";
 import { frontPod, FIGHTER_INSET, FIXED_WING, FOLDED_WING, ROTOR } from "./parts-variants";
 import { HULL_TOP, STAR_AT, STAR_FACE, topPod } from "./parts-top";
 import { PARTS, type PartId } from "./parts";
@@ -141,46 +141,77 @@ const armPair = (left: IDollLocation, row: "upper" | "lower", count: ArmCount): 
     return [{ ...left, label: leftLabel, loc: `la${suffix}` }, mirrored({ ...left, label: leftLabel, loc: `la${suffix}` }, `ra${suffix}`, rightLabel, "rt")];
 };
 
-/** Where the arms of a figure seen from the front go: the shoulder (where the arm drawing's pivot lands) and its size. */
-const FRONT_ARMS = {
-    body: {
-        2: { upper: { x: -266, y: 230, scale: 1 } },
-        4: { upper: { x: -266, y: 230, scale: 0.8 }, lower: { x: -350, y: 380, scale: 0.62 }, lowerLabel: [-352, 706] as BubblePoint },
-    },
-    // A quad's arms are short, above its front legs, whose tops are under the torso's shelf.
+/** Where an arm seen from the front hangs: the shoulder (where the arm drawing's pivot lands) and its size. */
+interface IArmSpot {
+    x: number;
+    y: number;
+    s: number;
+}
+
+/** The arm positions per body: the biped-like bodies (which already have a pair for two arms) take a lower pair outside the
+ * upper one for four; a quad's arms stand outside its front legs, so for both counts a strut drawn behind the arm joins each
+ * shoulder to the torso. Each lower pair sits outside the upper pair's forearm, since the two cannot both hang beside the same
+ * flank. */
+const FRONT_ARMS: Record<"body" | "quad", Partial<Record<ArmCount, { upper: IArmSpot; lower?: IArmSpot }>>> = {
+    body: { 4: { upper: { x: -256, y: 230, s: 0.8 }, lower: { x: -342, y: 380, s: 0.68 } } },
     quad: {
-        2: { upper: { x: -330, y: 195, scale: 0.9 } },
-        4: { upper: { x: -352, y: 190, scale: 0.9 }, lower: { x: -476, y: 330, scale: 0.8 }, lowerLabel: [-500, 700] as BubblePoint },
+        2: { upper: { x: -336, y: 195, s: 0.9 } },
+        4: { upper: { x: -336, y: 195, s: 0.9 }, lower: { x: -422, y: 330, s: 0.8 } },
     },
+};
+
+/** A shoulder strut from under the torso flank out to an arm's pauldron, drawn behind both. */
+const strut = (arm: IArmSpot): IDecor => {
+    const reach = arm.x + 38 * arm.s + 4, mid = arm.y + 5;
+    const plate = slab(-200, mid - 12, reach, mid + 12, 5);
+    return { bounds: plate, draw: (pen) => outline(polygonPath(plate), pen) };
 };
 
 const frontArms = (layout: IDollLayout, count: ArmCount): IDollLayout => {
     const set = FRONT_ARMS[layout.id === "quad" ? "quad" : "body"][count];
-    const upper = leftArm("la", "arm", { x: set.upper.x, y: set.upper.y, scale: set.upper.scale === 1 ? undefined : set.upper.scale }, [], [-368, 104], "start");
+    if (!set) return layout;
+    // The upper label stands left of the pauldron (hanging above it at the sheet's size); the lower one under the hand.
+    const upperAt = set.upper;
+    const upperEdge = upperAt.x - 66 * upperAt.s - 16;
+    const upperLines = count === 4 ? 3 : 2;
+    const upper = leftArm("la", "arm", { x: upperAt.x, y: upperAt.y, scale: upperAt.s }, [], [upperEdge, upperAt.y - 8 - (upperLines - 1) * 0], "end", [upperEdge, upperAt.y - 40 * upperAt.s - 112]);
     const arms = [...armPair(upper, "upper", count)];
-    if (count === 4 && "lower" in set) {
-        const { lower, lowerLabel } = set as { lower: { x: number; y: number; scale: number }; lowerLabel: BubblePoint };
-        arms.push(...armPair(leftArm("la2", "arm", { x: lower.x, y: lower.y, scale: lower.scale }, [], lowerLabel, "middle"), "lower", count));
+    const extras: IDollExtra[] = layout.id === "quad" ? [...pair("strut-upper", strut(upperAt), true)] : [];
+    if (count === 4 && set.lower) {
+        const l = set.lower;
+        const underHand = l.y + 470 * l.s;
+        arms.push(...armPair(leftArm("la2", "arm", { x: l.x, y: l.y, scale: l.s }, [], [l.x - 20, underHand + 16], "middle", [l.x - 20, underHand + 8]), "lower", count));
+        extras.push(...pair("strut-lower", strut(l), true));
     }
     const rest = layout.front.filter((location) => location.loc !== "la" && location.loc !== "ra");
     const at = rest.findIndex((location) => location.loc === "ct");
-    return { ...layout, front: [...rest.slice(0, at < 0 ? rest.length : at), ...arms, ...rest.slice(at < 0 ? rest.length : at)] };
+    const cut = at < 0 ? rest.length : at;
+    return { ...layout, front: [...rest.slice(0, cut), ...arms, ...rest.slice(cut)], extras: [...(layout.extras ?? []), ...extras] };
 };
 
-/** Arms seen from above reach forward from the front corners of the hull, beside the head; a second pair stands outside
- * and behind them, shorter and angled out, drawn first. */
+/** Arms seen from above reach forward from the front of the hull, either side of the head: the upper pair from the inner front
+ * corners of the flanks, a lower pair from the outer corners, fanned out so that neither meets the other, the head or the
+ * first pair of legs. */
 const topArms = (layout: IDollLayout, count: ArmCount): IDollLayout => {
     const tip = (at: IPlacement): BubblePoint => placePoint(PARTS["top-arm"].tip ?? [0, 0], at);
-    const upperAt: IPlacement = { x: -122, y: HULL_TOP - 24, rotate: -8, scale: 0.7 };
+    const upperAt: IPlacement = { x: -110, y: HULL_TOP, rotate: -4, scale: 0.7 };
     const [ux, uy] = tip(upperAt);
-    const upper = leftArm("la", "top-arm", upperAt, [], [ux, uy - 30 - (count === 4 ? 2 : 1) * 22], "middle", [ux - 60, uy - 170]);
+    const lines = count === 4 ? 3 : 2;
+    const upper = leftArm("la", "top-arm", upperAt, [], [ux, uy - 12 - (lines - 1) * 22], "middle", [ux - 70, uy - 170]);
     const arms: IDollLocation[] = [...armPair(upper, "upper", count)];
     if (count === 4) {
-        const lowerAt: IPlacement = { x: -178, y: HULL_TOP - 12, rotate: -42, scale: 0.68 };
+        const lowerAt: IPlacement = { x: -165, y: HULL_TOP + 2, rotate: -38, scale: 0.72 };
         const [lx, ly] = tip(lowerAt);
-        arms.unshift(...armPair(leftArm("la2", "top-arm", lowerAt, [], [lx - 36, ly - 18], "end", [lx - 60, ly - 130]), "lower", count));
+        arms.unshift(...armPair(leftArm("la2", "top-arm", lowerAt, [], [lx - 34, ly - 30], "end", [lx - 34, ly - 110]), "lower", count));
     }
-    return { ...layout, front: [...arms, ...layout.front] };
+    // With four arms the first pair of legs steps back, so that the lower arms do not cross its thighs.
+    const back = (location: IDollLocation): IDollLocation => location.loc === "l1" || location.loc === "r1" ? {
+        ...location,
+        at: { ...location.at, y: location.at.y + 55 },
+        labelAt: [location.labelAt[0], location.labelAt[1] + 55],
+        shortHangsFrom: location.shortHangsFrom && [location.shortHangsFrom[0], location.shortHangsFrom[1] + 55],
+    } : location;
+    return { ...layout, front: [...arms, ...(count === 4 ? layout.front.map(back) : layout.front)] };
 };
 
 /** The five-legged body's two arms reach forward from the front-left and front-right face torsos, either side of the
@@ -194,7 +225,7 @@ const pentapodArms = (layout: IDollLayout): IDollLayout => {
     ];
     const at: IPlacement = { x: shoulder[0], y: shoulder[1], rotate: -4, scale: 0.7 };
     const [tx, ty] = placePoint(PARTS["top-arm"].tip ?? [0, 0], at);
-    const arm = leftArm("la", "top-arm", at, [], [tx - 14, ty - 52], "middle", [tx - 130, ty - 110]);
+    const arm = leftArm("la", "top-arm", at, [], [tx - 14, ty - 52], "middle", [tx - 150, ty - 175]);
     return { ...layout, front: [...armPair(arm, "upper", 2), ...layout.front] };
 };
 
