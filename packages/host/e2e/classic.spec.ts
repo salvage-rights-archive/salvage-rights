@@ -225,6 +225,7 @@ test("build a 50-ton biped, place a medium laser and see Battle Value and cost u
   await expect(bv()).not.toHaveText(armed);
   await calc.getByRole("button", { name: "Show Battle Value breakdown" }).click();
   await expect(calc.getByText("Defensive battle rating")).toBeVisible();
+});
 
 test("pick an era and a tech base in the editor and see the picker's groups and counts change and an item disappear", async ({ page }) => {
   // The findings panel beside the page grows with the errors a Clan unit of Inner Sphere parts has; a tall window keeps it clear of the buttons.
