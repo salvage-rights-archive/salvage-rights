@@ -262,6 +262,26 @@ describe("play statistics", () => {
   });
 });
 
+describe("conventional infantry weapons", () => {
+  // TechManual Conventional Infantry Weapons Table (printed pp. 349-352): damage is per trooper, range is a Base Range.
+  it.each([
+    ["inf-bow-compound-is", { mode: "Melee", baseRange: 0, damage: 0.01, shots: "1" }, 0.001],
+    ["inf-grenade-launcher-is", { mode: "Support", baseRange: 1, damage: 0.81, inferno: 0.34, shots: "10" }, 0.005],
+    ["inf-laser-pistol-er-clan", { size: "Small", baseRange: 1, damage: 0.21, clip: "cells" }, 0.001],
+    ["inf-particle-cannon-support-is", { size: "Medium", baseRange: 3, damage: 1.58, crew: "5" }, 1.8],
+  ])("%s carries the book's per-trooper figures", async (id, infantry, tons) => {
+    expect((await loadCatalog()).byId(id)).toMatchObject({ units: ["infantry"], kind: "weapon", slots: 0, tons, infantry });
+  });
+
+  it("is offered to infantry only: every infantry row names its unit type and no BattleMech picker lists one", async () => {
+    const real = await loadCatalog();
+    const rows = real.all().filter((r) => r.infantry !== undefined);
+    expect(rows.length).toBeGreaterThan(250);
+    expect(rows.every((r) => r.units?.length === 1 && r.units[0] === "infantry")).toBe(true);
+    expect(real.offered("total-warfare", { techBase: "mixed", year: null }).filter((r) => r.infantry)).toEqual([]);
+  });
+});
+
 describe("EDITIONS", () => {
   it("starts with total-warfare, a play book and a construction book", () => {
     expect(EDITIONS[0]?.id).toBe("total-warfare");
