@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { bipedRecord, factsOf, mount, quadRecord, tripodRecord } from "./fixtures";
+import { bipedRecord, factsOf, lamRecord, mount, quadRecord, tripodRecord } from "./fixtures";
 import {
   editRecord,
   newRecord,
@@ -259,6 +259,20 @@ describe("structure points, armor limits and speed", () => {
     expect(next.chassis.engine.rating).toBe(250);
     expect(next.mounts).toHaveLength(original.mounts.length + 1);
     expect(original).toEqual(snapshot);
+  });
+});
+
+describe("Land-Air 'Mech construction", () => {
+  it("shares the biped's body, puts landing gear and avionics in the first free cells and weighs conversion equipment as a rounded-up share of the tonnage", () => {
+    const l = layout(lamRecord(), factsOf);
+    expect(l.locations).toEqual(layout(bipedRecord(), factsOf).locations);
+    expect([labels(l, "HD")[3], labels(l, "CT")[10], labels(l, "LT").slice(0, 2), labels(l, "RT").slice(0, 2)]).toEqual([
+      "Avionics", "Landing Gear", ["Landing Gear", "Avionics"], ["Landing Gear", "Avionics"],
+    ]);
+    expect([l.unplaced, l.conflicts, l.overflow]).toEqual([[], [], []]);
+    expect(structurePoints(lamRecord())).toEqual(structurePoints(bipedRecord()));
+    // 10 percent of 50 tons is 5; 15 percent for a bimodal is 7.5, which rounds up to 8; a biped has none.
+    expect([lamRecord(), lamRecord({ configuration: "bimodal-lam" }), bipedRecord()].map((r) => line(r, "Conversion equipment"))).toEqual([5, 8, undefined]);
   });
 });
 

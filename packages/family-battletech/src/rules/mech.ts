@@ -12,6 +12,7 @@ import {
   HEAD_STRUCTURE,
   HEAT_SINK_RULES,
   INTERNAL_STRUCTURE,
+  LAM,
   SHEET,
   STRUCTURE_TYPES,
   STRUCTURE_WEIGHT,
@@ -147,6 +148,17 @@ export function armorSpread(armor: ArmorType | undefined, configuration: string)
   return armor?.slotsIn && (own(armor.slotsIn, configuration) ?? armor.slotsIn.biped);
 }
 
+/** The layout a configuration shares (a Land-Air 'Mech is a biped here); an unknown one is its own name. */
+export function bodyOf(name: string): string {
+  return configurationOf(name)?.body ?? name;
+}
+
+/** Conversion equipment of a Land-Air 'Mech, a percentage of its tonnage rounded up to a whole ton (IO:AE p.108); null for any other configuration. */
+export function conversionTons(record: MechRecord): number | null {
+  const percent = own(LAM.conversionPercent, record.configuration);
+  return percent === undefined || !(record.tons > 0) ? null : Math.ceil(Math.round(record.tons * percent * 1e4) / 1e6);
+}
+
 /** Rounds up to the next half ton, ignoring float noise. */
 function ceilHalf(x: number): number {
   return Math.ceil(Math.round(x * 2 * 1e6) / 1e6) / 2;
@@ -211,6 +223,16 @@ function fixedLabels(record: MechRecord, config: NonNullable<ReturnType<typeof c
     }
   }
   if (gyro) for (let i = 0; i < gyro.slots; i++) set("CT", above + i, gyro.label);
+
+  // A Land-Air 'Mech's landing gear and avionics: one cell in each listed location, the first free one (IO:AE p.108).
+  if (own(LAM.conversionPercent, record.configuration) !== undefined) {
+    for (const part of LAM.parts) {
+      for (const loc of part.locations) {
+        const free = labels[loc]?.indexOf("") ?? -1;
+        if (free >= 0) set(loc, free, part.label);
+      }
+    }
+  }
 
   // An arm without its lower arm actuator has no hand either; the freed cells are ordinary empty slots.
   for (const arm of ["LA", "RA"] as const) {
@@ -298,6 +320,8 @@ export function weights(record: MechRecord, factsOf: FactsOf): { lines: WeightLi
   const lines: WeightLine[] = [];
 
   lines.push({ label: "Structure", tons: structureTons(chassis.structure, record.tons, record.configuration) });
+  const conversion = conversionTons(record);
+  if (conversion !== null) lines.push({ label: "Conversion equipment", tons: conversion });
   lines.push({ label: "Engine", tons: engineTons(chassis.engine.type, chassis.engine.rating) });
 
   const gyro = own(GYROS.types, chassis.gyro);
@@ -369,7 +393,7 @@ export interface NewMechOptions {
   /** Walking MP; the engine rating is tons times this. */
   walk: number;
   techBase: TechBase;
-  configuration: "biped" | "quad" | "tripod";
+  configuration: keyof typeof SHEET.configurations;
   year: number | null;
 }
 
@@ -414,6 +438,12 @@ export function newRecord(options: NewMechOptions, editionId: string, id: string
       location: null,
       slot: null,
     });
+  }
+  // A Land-Air 'Mech needs at least LAM.minJumpMP jump jets (IO:AE p.108); they wait unplaced like the heat sinks.
+  if (own(LAM.conversionPercent, record.configuration) !== undefined) {
+    for (let n = 1; n <= LAM.minJumpMP; n += 1) {
+      record.mounts.push({ id: `jump-jet-${n}`, equipmentId: options.techBase === "clan" ? "jump-jet-clan" : "jump-jet-is", name: "Jump Jet", techBase: options.techBase, location: null, slot: null });
+    }
   }
   return record;
 }

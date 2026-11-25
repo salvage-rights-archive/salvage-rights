@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { OTHER } from "../data/equipment/other";
 import { createCatalog, expand, type EquipmentGroup } from "./catalog";
 import { CHECKS, runChecks, type Finding } from "./checks";
-import { bipedRecord, mount, quadRecord, tripodRecord } from "./fixtures";
+import { bipedRecord, lamRecord, mount, quadRecord, tripodRecord } from "./fixtures";
 import { editRecord, newRecord, type LocationCode, type MechRecord } from "./mech";
 
 // The stub items the fixtures name, a few launchers and guns, and an item that is only weight, beside the real "other" table.
@@ -55,9 +55,9 @@ describe("the shared fixtures", () => {
     ["biped", bipedRecord()],
     ["quad", quadRecord()],
     ["tripod", tripodRecord()],
-  ])("the %s is legal: no error findings, and the eleven checks run in order", (_name, record) => {
+  ])("the %s is legal: no error findings, and the checks run in order", (_name, record) => {
     expect(errors(runChecks(record, catalog))).toEqual([]);
-    expect(CHECKS.map((c) => c.id)).toEqual(["weight", "slots", "armor", "engine", "heat-sinks", "jump", "placement", "availability", "configuration", "unmatched", "unsupported"]);
+    expect(CHECKS.map((c) => c.id)).toEqual(["weight", "slots", "armor", "engine", "heat-sinks", "jump", "placement", "availability", "configuration", "unmatched", "lam", "unsupported"]);
   });
 
   it("starts a new tripod with no error findings, and the page that makes it an advanced-rules design", () => {
@@ -245,6 +245,47 @@ describe("configuration", () => {
     expectFinding(onTripod, { level: "error", text: "must mount the Tripod cockpit", where: { field: "chassis.cockpit" }, page: 159 });
     const onBiped = forCheck(editRecord(bipedRecord(), (d) => void (d.chassis.cockpit = "tripod")), "configuration");
     expectFinding(onBiped, { level: "error", text: "for a tripod only", page: 159 });
+  });
+});
+
+describe("Land-Air 'Mech", () => {
+  const forLam = (edit: Edit) => forCheck(editRecord(lamRecord(), edit), "lam");
+  it("is legal as a fixture and says once that it is built under experimental rules, citing the level's page", () => {
+    expect(errors(runChecks(lamRecord(), catalog))).toEqual([]);
+    expectFinding(forCheck(lamRecord(), "configuration"), { level: "note", text: "Land-Air 'Mech is built under experimental rules", page: 100 });
+    expect(forCheck(bipedRecord(), "configuration")).toEqual([]);
+  });
+
+  it.each<Row>([
+    ["Clan technology", (d) => void (d.techBase = "clan"), { level: "error", text: "Inner Sphere technology only; this one is Clan", where: { field: "techBase" }, page: 108 }],
+    ["over 55 tons", (d) => void (d.tons = 60), { level: "error", text: "at most 55 tons; this one is 60 tons", where: { field: "tons" } }],
+    ["an XL engine", (d) => void (d.chassis.engine.type = "xl"), { level: "error", text: "standard or compact fusion engine; XL Fusion is not allowed", where: { field: "chassis.engine" } }],
+    ["an XL gyro", (d) => void (d.chassis.gyro = "xl"), { level: "error", text: "standard, compact or heavy-duty gyro; XL is not allowed", where: { field: "chassis.gyro" } }],
+    ["endo steel structure", (d) => void (d.chassis.structure = "endo-steel"), { level: "error", text: "Endo Steel structure takes critical slots", where: { field: "chassis.structure" } }],
+    ["ferro-fibrous armor", (d) => void (d.chassis.armorType = "ferro-fibrous"), { level: "error", text: "Ferro-Fibrous armor takes critical slots", where: { field: "chassis.armorType" } }],
+    ["an arm without its lower arm actuator", (d) => void (d.arms = { RA: { lowerArm: false, hand: false } }), { level: "error", text: "both lower arm actuators; the Right Arm has none", where: { location: "RA" } }],
+    ["Triple-Strength Myomer in two locations", (d) => void d.mounts.push(mount("t1", "tsm-is", "LT", 3), mount("t2", "tsm-is", "RT", 3)), { level: "error", text: "Triple-Strength Myomer may not be split between locations" }],
+  ])("limits: %s", (_name, edit, want) => {
+    expectFinding(forLam(edit), want);
+  });
+
+  it("starts from newRecord with the three jump jets it needs, waiting unplaced, and breaks no Land-Air rule", () => {
+    const fresh = newRecord({ chassis: "Hawk", model: "", tons: 50, walk: 4, techBase: "inner-sphere", configuration: "lam", year: null }, "core-2026", "new-lam");
+    expect(fresh.mounts.filter((m) => m.equipmentId === "jump-jet-is").map((m) => [m.location, m.slot])).toEqual([[null, null], [null, null], [null, null]]);
+    expect(runChecks(fresh, catalog).filter((f) => f.check === "lam" || f.where?.field === "configuration")).toMatchObject([{ check: "configuration", level: "note" }]);
+  });
+
+  it("needs three jump jets and says how many it has", () => {
+    expect(forLam(() => undefined)).toEqual([]);
+    expectFinding(forLam((d) => void (d.mounts = d.mounts.filter((m) => m.id !== "jj-3"))), { level: "error", text: "at least 3 jump jets; this one has 2", page: 108 });
+  });
+
+  it("names each barred item on the mount and leaves a biped with the same items alone", () => {
+    const add: Edit = (d) => void d.mounts.push(mount("bh", "backhoe-is", "LA", 5), mount("hg", "heavy-gauss-rifle-is", "LT", 3));
+    const found = forLam(add);
+    expectFinding(found, { level: "error", text: "bh cannot be mounted on a Land-Air 'Mech: it interferes with conversion", where: { mountId: "bh" }, page: 108 });
+    expectFinding(found, { level: "error", text: "hg cannot be mounted on a Land-Air 'Mech: it needs a Piloting skill roll", where: { mountId: "hg" } });
+    expect(forCheck(editRecord(bipedRecord(), add), "lam")).toEqual([]);
   });
 });
 

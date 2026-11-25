@@ -112,6 +112,21 @@ export function tripodRecord(overrides: Partial<MechRecord> = {}): MechRecord {
   };
 }
 
+/** The 50-ton biped as a Land-Air 'Mech: its three jump jets stand, and its other equipment is moved past the landing gear
+ * and avionics cells (slots 1 and 2 of each side torso, slot 11 of the center torso). Legal under every check; the parts
+ * weigh 45 tons with 5 of conversion equipment. */
+export function lamRecord(overrides: Partial<MechRecord> = {}): MechRecord {
+  const base = bipedRecord();
+  return {
+    ...base,
+    id: "fixture-lam",
+    name: { chassis: "Test Lam", model: "TL-1" },
+    configuration: "lam",
+    mounts: base.mounts.map((m) => (m.id === "jj-1" ? { ...m, slot: 11 } : m.id === "ac" || m.id === "ammo" ? { ...m, slot: 2 } : m)),
+    ...overrides,
+  };
+}
+
 // ---------------------------------------------------------------------------------------------------------------
 // Made-up units in the shape of Mordel's detail response (see rules/mordel.ts). Not real designs.
 // ---------------------------------------------------------------------------------------------------------------

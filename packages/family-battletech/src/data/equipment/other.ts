@@ -99,6 +99,14 @@ export const OTHER: EquipmentGroup[] = [
     ],
   },
   {
+    defaults: { kind: "other", techBase: "inner-sphere", cite: { book: "Interstellar Operations: Alternate Eras", page: 108 }, checked: "page" },
+    items: [
+      // Fuel for a Land-Air 'Mech beyond the free ton in its engine: whole tons of one slot each, 80 fuel points a ton. The
+      // year is the Land-Air 'Mech's first (p.100, bimodal 2680), so it is inferred for this item.
+      { id: "lam-fuel-is", name: "LAM Fuel", tons: 1, slots: 1, availability: [{ from: 2680 }], yearsInferred: true },
+    ],
+  },
+  {
     defaults: { kind: "weapon", techBase: "inner-sphere", cite: { book: "TechManual", page: 344 }, checked: "page" },
     items: [
       // Industrial equipment a BattleMech may mount (Inner Sphere)

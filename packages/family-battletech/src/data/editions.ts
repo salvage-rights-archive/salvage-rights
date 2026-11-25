@@ -33,6 +33,7 @@ export const DEFAULT_EDITION = "core-2026";
 const PUBLISHERS: Record<string, string> = {
   "BattleTech Core Rulebook": "Catalyst Game Labs",
   TechManual: "Catalyst Game Labs",
+  "Interstellar Operations: Alternate Eras": "Catalyst Game Labs",
 };
 
 /** A book's title with its publisher, as citations show it: `TechManual (Catalyst Game Labs)`. */

@@ -14,6 +14,7 @@ import {
   HEAT_SINK_RULES,
   HEAT_SINKS,
   INTERNAL_STRUCTURE,
+  LAM,
   MYOMER,
   SHEET,
   STRUCTURE_TYPES,
@@ -476,15 +477,15 @@ function unmatchedCheck({ record, catalog }: CheckInput): Finding[] {
   return out;
 }
 
-/** Body types built under advanced rules say so, with the page; a tripod also needs its own cockpit and no other body may use it. */
+/** Body types built under advanced or experimental rules say so, with the page that gives the level; a tripod also needs its own cockpit and no other body may use it. */
 function configurationCheck({ record }: CheckInput): Finding[] {
   const row = configurationOf(record.configuration);
   if (!row) return [];
   const out: Finding[] = [];
   if (row.rulesLevel !== "standard" && row.levelCite) {
-    const clan = record.techBase === "clan" ? " The book gives the tripod's technology as Inner Sphere, and this record is Clan." : "";
+    const clan = record.configuration === "tripod" && record.techBase === "clan" ? " The book gives the tripod's technology as Inner Sphere, and this record is Clan." : "";
     out.push(
-      finding("configuration", "note", `${row.name} 'Mechs are built under ${row.rulesLevel} rules, not the standard ones; check that your game allows them.${clan}`, {
+      finding("configuration", "note", `${row.name} is built under ${row.rulesLevel} rules, not the standard ones; check that your game allows it.${clan}`, {
         where: { field: "configuration" },
         cite: row.levelCite,
       }),
@@ -506,6 +507,46 @@ function configurationCheck({ record }: CheckInput): Finding[] {
         cite: cockpit.cite ?? COCKPITS.cite,
       }),
     );
+  }
+  return out;
+}
+
+/** The Land-Air 'Mech construction changes (Interstellar Operations: Alternate Eras, p.108). Conversion equipment weight
+ * and the landing gear and avionics slots are in weights() and layout(), so a clash on those cells is a slots finding. */
+function lamCheck({ record, catalog }: CheckInput): Finding[] {
+  if (!own(LAM.conversionPercent, record.configuration)) return [];
+  const out: Finding[] = [];
+  const cite = LAM.cite;
+  const add = (message: string, where?: Finding["where"]) => out.push(finding("lam", "error", message, { where, cite }));
+  if (record.techBase !== "inner-sphere") add(`A Land-Air 'Mech uses Inner Sphere technology only; this one is ${techBaseName(record.techBase)}.`, { field: "techBase" });
+  if (isPositive(record.tons) && record.tons > LAM.maxTons) add(`A Land-Air 'Mech weighs at most ${tons(LAM.maxTons)}; this one is ${tons(record.tons)}.`, { field: "tons" });
+  const { engine, gyro, structure, armorType } = record.chassis;
+  if (own(ENGINE_TYPES.types, engine.type) && !LAM.engines.includes(engine.type)) {
+    add(`A Land-Air 'Mech has a standard or compact fusion engine; ${partName(ENGINE_TYPES, engine.type)} is not allowed.`, { field: "chassis.engine" });
+  }
+  if (own(GYROS.types, gyro) && !LAM.gyros.includes(gyro)) {
+    add(`A Land-Air 'Mech has a standard, compact or heavy-duty gyro; ${partName(GYROS, gyro)} is not allowed.`, { field: "chassis.gyro" });
+  }
+  if ((STRUCTURE_TYPES.types[structure]?.slots ?? 0) > 0 && own(STRUCTURE_TYPES.types, structure)) {
+    add(`${partName(STRUCTURE_TYPES, structure)} structure takes critical slots, which a Land-Air 'Mech may not use.`, { field: "chassis.structure" });
+  }
+  if ((ARMOR.types[armorType]?.slots ?? 0) > 0 && own(ARMOR.types, armorType)) {
+    add(`${partName(ARMOR, armorType)} armor takes critical slots, which a Land-Air 'Mech may not use.`, { field: "chassis.armorType" });
+  }
+  for (const arm of ["LA", "RA"] as const) {
+    if (record.arms?.[arm]?.lowerArm === false) add(`A Land-Air 'Mech must have both lower arm actuators; the ${locationName(arm)} has none.`, { location: arm });
+  }
+  const jets = record.mounts.filter((m) => rowOf(catalog, record, m)?.kind === "jump-jet").length;
+  if (jets < LAM.minJumpMP) add(`A Land-Air 'Mech needs at least ${LAM.minJumpMP} jump jets; this one has ${jets}.`);
+  const split = new Map<string, Set<string | null>>();
+  for (const m of record.mounts) {
+    const bar = LAM.barred.find((b) => b.ids.includes(m.equipmentId ?? ""));
+    if (bar) add(`${m.name} cannot be mounted on a Land-Air 'Mech: ${bar.why}.`, { mountId: m.id, location: m.location ?? undefined });
+    const row = rowOf(catalog, record, m);
+    if (row?.perMech !== undefined) split.set(row.name, (split.get(row.name) ?? new Set()).add(m.location));
+  }
+  for (const [name, places] of split) {
+    if (places.size > 1) add(`${name} may not be split between locations on a Land-Air 'Mech; all of it goes in one location.`);
   }
   return out;
 }
@@ -533,6 +574,7 @@ export const CHECKS: Check[] = [
   { id: "availability", editions: "all", run: availabilityCheck },
   { id: "configuration", editions: "all", run: configurationCheck },
   { id: "unmatched", editions: "all", run: unmatchedCheck },
+  { id: "lam", editions: "all", run: lamCheck },
   { id: "unsupported", editions: "all", run: unsupportedCheck },
 ];
 

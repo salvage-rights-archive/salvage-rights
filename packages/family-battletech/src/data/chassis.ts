@@ -362,6 +362,45 @@ export const MYOMER: Sourced & { types: Record<string, MyomerType> } = {
 };
 
 // ---------------------------------------------------------------------------------------------------------------
+// Land-Air 'Mechs (Interstellar Operations: Alternate Eras, LAM Construction, printed pp.108-109; rules level and years
+// p.100). Built by the TechManual rules with the changes here. Both kinds are experimental rules (p.100, "Rules Level:
+// Experimental"; the worked Phoenix Hawk on p.109 says "Advanced", and the heading wins). Conversion equipment weighs a
+// percentage of the 'Mech's tonnage rounded up to a whole ton, 15 for a bimodal LAM and 10 for a standard one; its landing
+// gear and avionics take the slots of the Conversion Equipment Table. The book does not say which slot of a location they
+// take, so layout() puts each in the first free one. The free ton of fuel is in the engine (no weight, no slot); more fuel
+// comes in whole tons of one slot each, 80 points a ton (the "LAM Fuel" row in equipment/other.ts).
+// ---------------------------------------------------------------------------------------------------------------
+const IO_AE = "Interstellar Operations: Alternate Eras" as const;
+export const LAM: Sourced & {
+  levelCite: Cite;
+  maxTons: number;
+  minJumpMP: number;
+  conversionPercent: Record<string, number>;
+  parts: { label: string; locations: LocationCode[] }[];
+  engines: string[];
+  gyros: string[];
+  /** Catalog ids the Prohibited Technologies list bars: construction equipment that interferes with conversion (backhoe,
+   * combine, bridge-laying) and a weapon that needs a Piloting skill roll (the heavy Gauss rifle, the book's example). */
+  barred: { ids: string[]; why: string }[];
+} = {
+  cite: { book: IO_AE, page: 108 },
+  checked: "page",
+  levelCite: { book: IO_AE, page: 100 },
+  maxTons: 55,
+  minJumpMP: 3,
+  conversionPercent: { lam: 10, "bimodal-lam": 15 },
+  parts: [
+    { label: "Landing Gear", locations: ["CT", "LT", "RT"] },
+    { label: "Avionics", locations: ["HD", "LT", "RT"] },
+  ],
+  engines: ["standard", "compact"],
+  gyros: ["standard", "compact", "heavy-duty"],
+  barred: [
+    { ids: ["backhoe-is", "combine-is"], why: "it interferes with conversion" },
+    { ids: ["heavy-gauss-rifle-is"], why: "it needs a Piloting skill roll to use" },
+  ],
+};
+// ---------------------------------------------------------------------------------------------------------------
 // Fixed slot layout (Standard 'Mech Critical Space Table, printed p.45; actuator and head labels from the record
 // sheet, printed p.24). Slots are counted from 0 here. `size` is the slots in a location; `fixed` lists the labels
 // that fill a location from slot 0 upward. The head, the center torso and the side torsos also take cells from the
@@ -377,9 +416,11 @@ export const MYOMER: Sourced & { types: Record<string, MyomerType> } = {
 // book gives no slot table for the third leg; "the same construction rules as a biped" makes it a leg of 6 slots with the other
 // legs' four actuators, which is our reading and so `checked` is "text" on that row.
 // ---------------------------------------------------------------------------------------------------------------
+export type RulesLevel = "standard" | "advanced" | "experimental";
 export interface ConfigurationRow {
-  name: string;
-  rulesLevel: "standard" | "advanced";
+  name: string; // as shown to the player
+  body?: string; // the layout whose slots, structure and armor grid this shares (a Land-Air 'Mech has a biped's); its own name if absent
+  rulesLevel: RulesLevel;
   levelCite?: Cite; // the page that states a rules level other than standard
   construction?: Sourced; // the page that states this body type's construction changes
   structureExtra?: number;
@@ -387,8 +428,17 @@ export interface ConfigurationRow {
   size: Spread;
   fixed: Partial<Record<LocationCode, readonly string[]>>;
 }
+const BIPED_SIZE = { HD: 6, CT: 12, LT: 12, RT: 12, LA: 12, RA: 12, LL: 6, RL: 6 } as const;
 const LEG = ["Hip", "Upper Leg Actuator", "Lower Leg Actuator", "Foot Actuator"];
 const ARM = ["Shoulder", "Upper Arm Actuator", "Lower Arm Actuator", "Hand Actuator"];
+// A Land-Air 'Mech is built on a biped's body; both kinds are experimental rules (IO:AE printed p.100).
+const LAM_ROW = {
+  body: "biped",
+  rulesLevel: "experimental",
+  levelCite: LAM.levelCite,
+  size: BIPED_SIZE,
+  fixed: { LA: ARM, RA: ARM, LL: LEG, RL: LEG },
+} as const;
 export const SHEET = {
   // Labels and their order rest on the record sheet (p.24); the slot counts on the Critical Space Table (p.45).
   cites: { labels: { book: "TechManual", page: 24 }, counts: { book: "TechManual", page: 45 } } satisfies Record<string, Cite>,
@@ -398,7 +448,7 @@ export const SHEET = {
     biped: {
       name: "Biped",
       rulesLevel: "standard",
-      size: { HD: 6, CT: 12, LT: 12, RT: 12, LA: 12, RA: 12, LL: 6, RL: 6 },
+      size: BIPED_SIZE,
       fixed: { LA: ARM, RA: ARM, LL: LEG, RL: LEG },
     },
     quad: {
@@ -414,8 +464,10 @@ export const SHEET = {
       construction: { cite: IO_TRIPOD_CONSTRUCTION, checked: "text" },
       structureExtra: 0.1,
       cockpit: "tripod",
-      size: { HD: 6, CT: 12, LT: 12, RT: 12, LA: 12, RA: 12, LL: 6, RL: 6, CL: 6 },
+      size: { ...BIPED_SIZE, CL: 6 },
       fixed: { LA: ARM, RA: ARM, LL: LEG, RL: LEG, CL: LEG },
     },
+    lam: { ...LAM_ROW, name: "Land-Air 'Mech" },
+    "bimodal-lam": { ...LAM_ROW, name: "Bimodal Land-Air 'Mech" },
   } satisfies Record<string, ConfigurationRow>,
 };
