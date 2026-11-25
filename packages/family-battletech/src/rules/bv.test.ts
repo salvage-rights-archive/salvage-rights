@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CASE_ROWS, EQUIPMENT_BV, LAM_BV, SPECIAL_MUNITIONS, UNFIXED, UNLISTED_IS_ZERO, WEAPON_BV } from "../data/bv";
+import { BATTLE_ARMOR_BV, CASE_ROWS, EQUIPMENT_BV, LAM_BV, SPECIAL_MUNITIONS, UNFIXED, UNLISTED_IS_ZERO, WEAPON_BV } from "../data/bv";
 import { AMMUNITION } from "../data/equipment/ammunition";
 import { OTHER } from "../data/equipment/other";
 import { WEAPONS } from "../data/equipment/weapons";
@@ -210,7 +210,7 @@ describe("what the book does not print", () => {
 describe("the tables", () => {
   it("name only catalog rows (weapons, equipment and their ammunition)", () => {
     const ids = new Set(catalog.all().map((r) => r.id));
-    const named = [...WEAPON_BV, ...EQUIPMENT_BV].flatMap((g) => g.rows.flatMap(([id, , , o]) => [id, ...(o?.ammo ?? [])]));
+    const named = [...WEAPON_BV, ...EQUIPMENT_BV, ...BATTLE_ARMOR_BV].flatMap((g) => g.rows.flatMap(([id, , , o]) => [id, ...(o?.ammo ?? [])]));
     expect(named.filter((id) => !ids.has(id))).toEqual([]);
   });
 });
@@ -237,10 +237,69 @@ describe("Tactical Operations equipment", () => {
 
   it("every catalog row is valued, counted 0 by the book's rule, or one the books leave open", () => {
     const known = new Set<string>();
-    for (const g of [...WEAPON_BV, ...EQUIPMENT_BV]) for (const [id, , a, o] of g.rows) { known.add(id); if (a !== undefined) for (const x of o?.ammo ?? [`ammo-${id}`]) known.add(x); }
+    for (const g of [...WEAPON_BV, ...EQUIPMENT_BV, ...BATTLE_ARMOR_BV]) for (const [id, , a, o] of g.rows) { known.add(id); if (a !== undefined) for (const x of o?.ammo ?? [`ammo-${id}`]) known.add(x); }
     const zero = (r: EquipmentRow) => r.kind !== "ammunition" && UNLISTED_IS_ZERO.books.includes(r.cite.book);
     const leftOpen = (r: EquipmentRow) => r.id in UNFIXED || SPECIAL_MUNITIONS.stems.includes(stemOf(r.id));
     const open = catalog.all().filter((r) => !known.has(r.id) && !zero(r) && !leftOpen(r) && !["heat-sink", "jump-jet"].includes(r.kind) && !LAM_BV.fuelSlotIds.includes(r.id) && !(r.id in CASE_ROWS));
     expect(open.map((r) => r.id)).toEqual([]);
+  });
+});
+
+describe("Dark Age, signature and enhancement rules (TO:AUE pp. 192-194, IO:AE pp. 185, 190)", () => {
+  const plain = battleValue(biped([]), catalog); // 50 tons, walks 4: target modifier +2, movement heat 2, BV 475
+  const faster = { chassis: { ...bipedRecord().chassis, engine: { type: "standard", rating: 250 } } }; // walks 5, runs 8: target modifier +3
+
+  it("the signature systems raise the defensive target modifier: +2 for the long-range ones, to at least +3 for the Void, +1 more on a tie", () => {
+    const stealth = { chassis: { ...bipedRecord().chassis, armorType: "stealth" } };
+    const cases: [string, string, Partial<MechRecord>, number][] = [
+      ["Chameleon LPS", "chameleon-lps-is", {}, 4],
+      ["Null-Signature", "null-signature-system-is", {}, 4],
+      ["Void-Signature below +3", "void-signature-system-is", {}, 3],
+      ["Void-Signature above +3", "void-signature-system-is", stealth, 4],
+      ["Void-Signature on a tie", "void-signature-system-is", faster, 4],
+    ];
+    for (const [label, id, patch, expected] of cases) expect(battleValue(biped([m(id, "CT")], patch), catalog).defensive.targetModifier, label).toBe(expected);
+  });
+
+  it("HarJel II and III multiply the armor BV of their location and cost a defensive point a slot", () => {
+    const rows: [string, number, number][] = [["harjel-ii-clan", 202, 1], ["harjel-iii-clan", 204, 2]]; // the left arm's 8 points x 2.5 x 0.1 or 0.2 on 200
+    for (const [id, armor, slots] of rows) {
+      const bv = battleValue(biped([m(id, "LA")]), catalog);
+      expect(bv.defensive.armor, id).toBe(armor);
+      expect(bv.defensive.explosiveAmmo, id).toBe(slots);
+    }
+  });
+
+  it("super-cooled myomer counts movement heat as 0 unless the unit has jump jets or a UMU", () => {
+    const cases: [string, Mount[], Partial<MechRecord>, number][] = [
+      ["mounted", [m("super-cooled-myomer-is", "LA")], {}, 0],
+      ["named in the chassis", [], { chassis: { ...bipedRecord().chassis, myomer: "super-cooled" } }, 0],
+      ["with jump jets", [m("super-cooled-myomer-is", "LA"), m("jump-jet-is", "LL")], {}, 3],
+      ["with a UMU", [m("super-cooled-myomer-is", "LA"), m("umu-is", "LL")], {}, 2],
+    ];
+    for (const [label, mounts, patch, heat] of cases) expect(battleValue(biped(mounts, patch), catalog).offensive.movementHeat, label).toBe(heat);
+  });
+
+  it("a RISC laser pulse module makes its laser worth 15 percent more, and the heat sink override kit the whole BV 1 percent", () => {
+    const laser = m("medium-laser-is", "RA");
+    const module = battleValue(biped([laser, m("risc-laser-pulse-module-is", "RA", { linkedTo: laser.id })]), catalog);
+    expect(module.offensive.weapons[0]).toMatchObject({ unmodifiedBv: 46, modifiedBv: 52.9 });
+    expect(plain.baseBv).toBe(475);
+    expect(battleValue(biped([m("risc-heat-sink-override-kit-is", "CT")]), catalog).baseBv).toBe(480);
+  });
+
+  it("an Actuator Enhancement System makes the weapons in its arm worth a quarter more and adds a tenth of the tonnage for each limb", () => {
+    const bv = battleValue(biped([m("er-ppc-is", "RA"), m("er-ppc-is", "LA"), m("aes-arm-is", "RA"), m("aes-leg-is", "LL")]), catalog);
+    expect(bv.offensive.weapons.map((w) => w.modifiedBv).sort((a, b) => a - b)).toEqual([229, 286.25]);
+    expect(bv.offensive.tonnage).toBe(60);
+  });
+
+  it("claws are 1 damage per 7 tons rounded up, doubled by Triple-Strength Myomer, times 1.275", () => {
+    expect(battleValue(biped([m("claws-is", "RA")]), catalog).offensive.equipment).toBe(10.2);
+    expect(battleValue(biped([m("claws-is", "RA"), m("tsm-is", "LT")]), catalog).offensive.equipment).toBe(20.4);
+  });
+
+  it("the bulldozer and the aquatic survival system are defensive equipment", () => {
+    for (const [id, bv] of [["bulldozer-is", 10], ["aquatic-survival-system-clan", 9]] as const) expect(battleValue(biped([m(id, "RA")]), catalog).defensive.equipment, id).toBe(bv);
   });
 });

@@ -7,6 +7,7 @@ import {
   ARMOR_BV_MODIFIER,
   ARTEMIS_IDS,
   BV_METHOD,
+  BV_RULE_ITEMS,
   CAPACITOR,
   CASE_ROWS,
   COOLANT_POD_IDS,
@@ -209,7 +210,18 @@ export function battleValue(record: MechRecord, catalog: Catalog, pilot: PilotSk
   const torsoCockpit = chassis.cockpit === TORSO_COCKPIT_BV.cockpit;
   const centerTorso = record.armor.CT ? record.armor.CT.front + (record.armor.CT.rear ?? 0) : 0;
   const armorTotal = armorPoints(record) + (torsoCockpit ? centerTorso * (TORSO_COCKPIT_BV.armorFactor - 1) : 0);
-  const armor = armorTotal * BV_METHOD.armorFactor * (armorMod ?? 1);
+  // HarJel II and III multiply the armor BV of the location they are in, on top of the armor type (IO:AE p.185).
+  const harjel = new Map<LocationCode, number>();
+  for (const { mount, row } of items) {
+    const multiplier = own(BV_RULE_ITEMS.harjel.multipliers, row.id);
+    if (multiplier !== undefined && mount.location !== null) harjel.set(mount.location, (harjel.get(mount.location) ?? 1) * multiplier);
+  }
+  let harjelArmor = 0;
+  for (const [loc, multiplier] of harjel) {
+    const a = record.armor[loc];
+    if (a) harjelArmor += (a.front + (a.rear ?? 0)) * (torsoCockpit && loc === "CT" ? TORSO_COCKPIT_BV.armorFactor : 1) * (multiplier - 1);
+  }
+  const armor = (armorTotal + harjelArmor) * BV_METHOD.armorFactor * (armorMod ?? 1);
   const structureBv = structure * BV_METHOD.structureFactor * (structureMod ?? 1) * (engineMod ?? 1);
   const gyro = record.tons * (gyroMod ?? 1);
 
@@ -277,6 +289,7 @@ export function battleValue(record: MechRecord, catalog: Catalog, pilot: PilotSk
     const entry = WEAPONS.get(row.id) ?? EQUIPMENT.get(row.id);
     if (entry?.options.gauss || entry?.options.gaussSlots) explosive += gaussPoints(item, entry.options.gaussSlots ?? slots);
     if (COOLANT_POD_IDS.includes(row.id)) explosive += slots; // 1 point a slot (TO:AUE p. 193)
+    if (own(BV_RULE_ITEMS.harjel.multipliers, row.id) !== undefined) explosive += slots * BV_RULE_ITEMS.harjel.perSlot; // 1 point a critical slot (IO:AE p. 185)
   }
   const defensiveSubtotal = Math.max(BV_METHOD.minimumDefensive, armor + structureBv + gyro + defensiveEquipment - explosive);
 
@@ -284,7 +297,10 @@ export function battleValue(record: MechRecord, catalog: Catalog, pilot: PilotSk
   const modifiers = [movementModifier(runMP, false)];
   if (jumpMP > 0) modifiers.push(movementModifier(jumpMP, true));
   if (standardLam && jumpMP > 0) modifiers.push(movementModifier(flank, false) + LAM_BV.airborneModifier);
-  const targetModifier = Math.max(...modifiers) + (stealth ? BV_METHOD.stealthTargetModifier : 0);
+  // The Chameleon LPS and the Null-Signature System add the long-range modifier; the Void-Signature System raises it to +3, or adds 1 on a tie (TO:AUE pp. 193-194).
+  const signature = BV_RULE_ITEMS.signature;
+  let targetModifier = Math.max(...modifiers) + (stealth ? BV_METHOD.stealthTargetModifier : 0) + (has(signature.longRangeIds) ? signature.longRangeModifier : 0);
+  if (has(signature.voidIds)) targetModifier = Math.max(targetModifier, signature.voidModifier) + (targetModifier === signature.voidModifier ? 1 : 0);
   const factor = 1 + targetModifier / 10;
   const defensiveRating = defensiveSubtotal * factor;
 
@@ -298,7 +314,10 @@ export function battleValue(record: MechRecord, catalog: Catalog, pilot: PilotSk
   const capacity = sinks + coolant + items.reduce((sum, i) => sum + (own(HEAT_EFFICIENCY_BONUS, i.row.id) ?? 0), 0);
   const jumpHeat = jumpMP === 0 ? 0 : Math.max(BV_METHOD.jumpHeatMinimum, improvedJets ? Math.ceil(jumpMP / 2) : jumpMP);
   const airMechHeat = standardLam ? Math.round(flank / 3) : 0; // one heat per 3 MP, IO:AE p. 102
-  const movementHeat = Math.max(BV_METHOD.runningHeat, jumpHeat, airMechHeat) + (stealth ? BV_METHOD.stealthHeat : 0);
+  // RISC super-cooled myomer: no movement heat for a unit with no jump jets or UMU (IO:AE p. 185).
+  const cool = BV_RULE_ITEMS.superCooledMyomer;
+  const noMovementHeat = (chassis.myomer === cool.myomer || has(cool.ids)) && jumpMP === 0 && !has(cool.umuIds);
+  const movementHeat = (noMovementHeat ? 0 : Math.max(BV_METHOD.runningHeat, jumpHeat, airMechHeat)) + (stealth ? BV_METHOD.stealthHeat : 0);
   const heatEfficiency = (isLam ? BV_METHOD.lamHeatEfficiency : BV_METHOD.baseHeatEfficiency) + capacity - movementHeat;
 
   // Each weapon's unmodified BV, heat and place.
@@ -350,12 +369,19 @@ export function battleValue(record: MechRecord, catalog: Catalog, pilot: PilotSk
     }
   }
 
-  // A laser insulator takes 1 off the heat of its laser.
+  // A laser insulator takes 1 off the heat of its laser; a RISC laser pulse module multiplies the BV of its laser by 1.15 (IO:AE p. 190).
+  const laserOf = (mount: Mount) => weapons.find((w) => w.item.mount.id === mount.linkedTo) ?? weapons.find((w) => w.item.mount.location === mount.location && /\b(DE|P)\b/.test(w.item.row.type ?? ""));
+  const pulseModule = BV_RULE_ITEMS.laserPulseModule;
   for (const { mount, row } of items) {
-    if (!LASER_INSULATOR_IDS.includes(row.id)) continue;
-    const host = weapons.find((w) => w.item.mount.id === mount.linkedTo) ?? weapons.find((w) => w.item.mount.location === mount.location && /\b(DE|P)\b/.test(w.item.row.type ?? ""));
-    if (host) host.heat = Math.max(0, host.heat - 1);
-    else note(mount, mount.name, "not paired with a laser, so its heat saving is not counted");
+    const insulator = LASER_INSULATOR_IDS.includes(row.id);
+    if (!insulator && !pulseModule.ids.includes(row.id)) continue;
+    const host = laserOf(mount);
+    if (!host) note(mount, mount.name, "not paired with a laser, so its effect is not counted");
+    else if (insulator) host.heat = Math.max(0, host.heat - 1);
+    else {
+      host.mod *= pulseModule.multiplier;
+      host.notes.push(`${row.name}: x${pulseModule.multiplier}`);
+    }
   }
 
   // Artemis IV on a launcher (not its ammunition) and the targeting computer on direct-fire weapons.
@@ -373,7 +399,15 @@ export function battleValue(record: MechRecord, catalog: Catalog, pilot: PilotSk
     } else note(mount, mount.name, "not linked to a launcher, so its bonus is not counted");
   }
   const tc = has(TARGETING_COMPUTER_IDS);
+  // The Actuator Enhancement System: x1.25 on the weapons in its arm, physical weapons included, ammunition not (TO:AUE p. 192).
+  const aes = BV_RULE_ITEMS.aes;
+  const aesArms = new Set(items.filter((i) => aes.armIds.includes(i.row.id)).map((i) => i.mount.location));
+  const aesLimbs = new Set(items.filter((i) => aes.armIds.includes(i.row.id) || aes.legIds.includes(i.row.id)).map((i) => i.mount.location));
   for (const w of weapons) {
+    if (aesArms.has(w.item.mount.location)) {
+      w.mod *= aes.weaponFactor;
+      w.notes.push(`actuator enhancement system: x${aes.weaponFactor}`);
+    }
     if (tc && w.item.row.directFire) {
       w.mod *= BV_METHOD.targetingComputer;
       w.notes.push("targeting computer: x1.25");
@@ -429,16 +463,17 @@ export function battleValue(record: MechRecord, catalog: Catalog, pilot: PilotSk
     if (physical) {
       const t = record.tons;
       const d = physical.damage;
-      const damage = typeof d === "number" ? d : d === "hatchet" ? Math.ceil(t / 5) : d === "sword" ? Math.ceil(t / 10) + 1 : Math.ceil(t / 10);
-      equipment += damage * (tsm && !physical.fixed ? 2 : 1) * physical.factor;
+      const damage = typeof d === "number" ? d : d === "hatchet" ? Math.ceil(t / 5) : d === "sword" ? Math.ceil(t / 10) + 1 : d === "claws" ? Math.ceil(t / 7) : Math.ceil(t / 10);
+      equipment += damage * (tsm && !physical.fixed ? 2 : 1) * physical.factor * (aesArms.has(mount.location) ? aes.weaponFactor : 1);
     } else if (MACHINE_GUN_ARRAY_IDS.includes(row.id)) {
       const guns = weapons.filter((w) => /machine-gun-(is|clan)$/.test(w.item.row.id) && w.item.mount.location === mount.location);
       equipment += BV_METHOD.machineGunArray * guns.reduce((s, w) => s + w.bv, 0);
-    } else if (entry && !entry.options.defensive) equipment += entry.bv;
+    } else if (entry && !entry.options.defensive) equipment += entry.bv * (row.kind === "weapon" && aesArms.has(mount.location) ? aes.weaponFactor : 1);
     else if (!entry && !LAM_BV.fuelSlotIds.includes(row.id) && own(CASE_ROWS, row.id) === undefined) unlisted({ mount, row }, "the books print no Battle Value for it");
   }
 
-  const tonnage = record.tons * (tsm ? BV_METHOD.tsmTonnage : 1);
+  // 10 percent of the tonnage for each limb with an Actuator Enhancement System (TO:AUE p. 192); with Triple-Strength Myomer the two are added.
+  const tonnage = record.tons * ((tsm ? BV_METHOD.tsmTonnage : 1) + aes.tonnageFactor * aesLimbs.size);
   weaponRating += ammunition + equipment + tonnage;
 
   const runForSpeed = runMP;
@@ -448,7 +483,8 @@ export function battleValue(record: MechRecord, catalog: Catalog, pilot: PilotSk
 
   // ---- Final ----------------------------------------------------------------------------------------------------
   const smallCockpit = chassis.cockpit === "small";
-  const sum = (defensiveRating + offensiveRating) * (smallCockpit ? BV_METHOD.smallCockpit : 1) * (torsoCockpit ? TORSO_COCKPIT_BV.finalFactor : 1);
+  const kits = items.reduce((product, i) => product * (own(BV_RULE_ITEMS.finalMultiplier.multipliers, i.row.id) ?? 1), 1);
+  const sum = (defensiveRating + offensiveRating) * (smallCockpit ? BV_METHOD.smallCockpit : 1) * (torsoCockpit ? TORSO_COCKPIT_BV.finalFactor : 1) * kits;
   const baseBv = roundHalfUp(sum);
   const multiplier = skillMultiplier(pilot);
   return {

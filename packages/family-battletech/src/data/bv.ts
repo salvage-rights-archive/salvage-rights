@@ -246,29 +246,14 @@ export const CAPACITOR: Sourced & { ids: string[]; heat: number; bv: Record<stri
 /** Items the TO:AUE addendum gives no BV, whose rules do something else (p. 194): a laser insulator takes 1 off its laser's heat; coolant pods add to heat sink capacity and cost 1 defensive point a slot. */
 export const LASER_INSULATOR_IDS = ["laser-insulator-is", "laser-insulator-clan"];
 export const COOLANT_POD_IDS = ["coolant-pod-is", "coolant-pod-clan"];
-/** Rows whose BV the books make depend on something the row does not say. */
+/** Rows whose BV the books make depend on something the row does not say, or whose rule is not implemented; each says why. */
 export const UNFIXED: Record<string, string> = {
-  // Interstellar Operations: Alternate Eras items whose BV-table entries (p.189-190) have not been read for them yet
-  "harjel-ii-clan": "its entry in the IO:AE BV table (p.190) was not read for this item yet",
-  "harjel-iii-clan": "its entry in the IO:AE BV table (p.190) was not read for this item yet",
-  "radical-heat-sink-is": "its entry in the IO:AE BV table (p.190) was not read for this item yet",
-  "super-cooled-myomer-is": "its entry in the IO:AE BV table (p.190) was not read for this item yet",
-  "risc-heat-sink-override-kit-is": "its entry in the IO:AE BV table (p.190) was not read for this item yet",
-  "risc-laser-pulse-module-is": "its entry in the IO:AE BV table (p.190) was not read for this item yet",
-  "remote-drone-command-console-is": "its entry in the IO:AE BV table (p.190) was not read for this item yet",
+  "radical-heat-sink-is": "the book prints two rules that disagree: its table adds the unit's heat sink count x 0.4 to Heat Efficiency, its text multiplies the capacity by 1.4, and the worked example gives both 42 and 36 (IO:AE pp.185, 190)",
   // Items whose BV is a modifier or a figure that depends on the unit, which the BV rules here do not compute (TO:AUE pp.192-197).
-  "aes-arm-is": "it multiplies the BV of the weapons linked to it by 1.25 (TO:AUE p.195, note G)",
-  "aes-arm-clan": "it multiplies the BV of the weapons linked to it by 1.25 (TO:AUE p.195, note G)",
-  "aes-leg-is": "it multiplies the BV of the weapons linked to it by 1.25 (TO:AUE p.195, note G)",
-  "aes-leg-clan": "it multiplies the BV of the weapons linked to it by 1.25 (TO:AUE p.195, note G)",
   "blue-shield-is": "it adds 0.2 to the armor type modifier and counts as a Gauss weapon for the defensive rating (TO:AUE pp.192, 194)",
-  "claws-is": "its BV is its damage, which depends on the 'Mech and its myomer, times 1.275 (TO:AUE p.195)",
-  "lance-is": "its BV is its damage, which depends on the 'Mech, times 1 (TO:AUE p.195)",
-  "mace-is": "its BV is its damage, which depends on the 'Mech, times 1 (TO:AUE p.195)",
-  "talons-clan": "its BV is the kick damage, which depends on the 'Mech and its myomer, times 1 (TO:AUE p.197)",
-  "chameleon-lps-is": "it adds the long-range to-hit modifier to the defensive factor (TO:AUE p.193)",
-  "null-signature-system-is": "it adds the long-range to-hit modifier to the defensive factor (TO:AUE p.194)",
-  "void-signature-system-is": "it sets the defensive target modifier to at least +3 (TO:AUE p.194)",
+  "lance-is": "its BV is its damage (the unit's tonnage divided by 5, rounded up) times 1 (TO:AUE pp.101, 195), but the book does not say what Triple-Strength Myomer does to a Lance's damage",
+  "mace-is": "its BV is its damage times 1 (TO:AUE p.195), and the pages read do not print the Mace's damage",
+  "talons-clan": "its BV is the kick damage after Triple-Strength Myomer times 1 (TO:AUE p.197), and the pair of Talons with their 1.5 on kicks (p.102) leaves the figure unclear",
   "partial-wing-is": "it adds Jumping MP by atmosphere and weight class, which the speed factor does not take yet (TO:AUE p.192)",
   "partial-wing-clan": "it adds Jumping MP by atmosphere and weight class, which the speed factor does not take yet (TO:AUE p.192)",
   "umu-is": "UMU movement is counted as Cruising MP when submerged, not computed here (TO:AUE p.192)",
@@ -282,7 +267,9 @@ export const UNFIXED: Record<string, string> = {
 /** Special munitions: one catalog row per munition and launcher family (the `-is`/`-clan` stem here), not per launcher size.
  * Their BV is the base ammunition BV of the launcher that fires them, with the Alternative Munitions Table's modifier for some
  * (TO:AUE printed p. 198), so they are not "equipment in none of the tables" (0); the row does not say which launcher, so they
- * are reported as unvalued. */
+ * are reported as unvalued. The Alternative Munitions Table prints a modifier for two of the catalog's munition types, Swarm-I (0.2) and
+ * Thunder (mine points per ton, by the minefield table), and says only that it is "applied to each ton of ammunition to find the
+ * additional base BV": whether that replaces the ammunition's BV or adds to it is not stated. The other munition rows are in neither table. */
 export const SPECIAL_MUNITIONS: Sourced & { stems: string[]; why: string } = {
   cite: { book: TO, page: 198 },
   checked: "page",
@@ -293,16 +280,47 @@ export const SPECIAL_MUNITIONS: Sourced & { stems: string[]; why: string } = {
     "ammo-improved-narc-ecm", "ammo-improved-narc-explosive", "ammo-improved-narc-haywire", "ammo-improved-narc-nemesis",
     "ammo-er-atm", "ammo-he-atm",
   ],
-  why: "a special munition: its BV is its launcher's ammunition BV (TO:AUE p. 198), and the row does not say which launcher",
+  why: "a special munition: its BV comes from its launcher's ammunition BV (TO:AUE p. 198), the row does not say which launcher, and the book does not say how its modifier is applied",
 };
 /** Equipment introduced in TechManual or in Tactical Operations: Advanced Units and Equipment that is in none of their BV tables counts as 0 (TO:AUE printed p. 192). */
 export const UNLISTED_IS_ZERO: Sourced & { books: string[] } = { cite: { book: TO, page: 192 }, checked: "page", books: [TM, TO] };
 export const MACHINE_GUN_ARRAY_IDS = ["machine-gun-array-is", "machine-gun-array-clan"];
 export const IMPROVED_JUMP_JET_IDS = ["improved-jump-jet-is", "improved-jump-jet-clan"];
+/**
+ * Rows whose Battle Value is a rule, not a number (TO:AUE pp. 192-194 and IO:AE pp. 185, 190):
+ * - signature systems: the Chameleon LPS and the Null-Signature System add the long-range to-hit modifier to the defensive target
+ *   modifier; the Void-Signature System uses +3 or the unit's own modifier, whichever is higher, and +1 on top of it on a tie;
+ * - the RISC laser pulse module multiplies the BV of the laser it is fitted to; the heat sink override kit multiplies the unit's final BV;
+ * - RISC super-cooled myomer counts movement heat as 0 for a unit with no jump jets or UMU (an engine-type "super-cooled" myomer counts too);
+ * - HarJel II and III multiply the armor BV of their own location (stacking with the armor type) and take 1 defensive point a slot;
+ * - the Actuator Enhancement System multiplies the BV of the weapons in its arm by 1.25 and adds 10 percent of the unit's tonnage, for each limb that has one.
+ */
+export const BV_RULE_ITEMS: {
+  signature: Sourced & { longRangeIds: string[]; longRangeModifier: number; voidIds: string[]; voidModifier: number };
+  laserPulseModule: Sourced & { ids: string[]; multiplier: number };
+  finalMultiplier: Sourced & { multipliers: Record<string, number> };
+  superCooledMyomer: Sourced & { ids: string[]; myomer: string; umuIds: string[] };
+  harjel: Sourced & { multipliers: Record<string, number>; perSlot: number };
+  aes: Sourced & { armIds: string[]; legIds: string[]; weaponFactor: number; tonnageFactor: number };
+} = {
+  signature: {
+    cite: { book: TO, page: 193 },
+    checked: "page",
+    longRangeIds: ["chameleon-lps-is", "null-signature-system-is"], // Chameleon p.193, Null-Signature p.194
+    longRangeModifier: 2, // the long-range to-hit modifier (Total Warfare p. 142)
+    voidIds: ["void-signature-system-is"], // p.194
+    voidModifier: 3,
+  },
+  laserPulseModule: { cite: { book: IO, page: 190 }, checked: "page", ids: ["risc-laser-pulse-module-is"], multiplier: 1.15 },
+  finalMultiplier: { cite: { book: IO, page: 190 }, checked: "page", multipliers: { "risc-heat-sink-override-kit-is": 1.01 } },
+  superCooledMyomer: { cite: { book: IO, page: 185 }, checked: "page", ids: ["super-cooled-myomer-is"], myomer: "super-cooled", umuIds: ["umu-is", "umu-clan"] },
+  harjel: { cite: { book: IO, page: 185 }, checked: "page", multipliers: { "harjel-ii-clan": 1.1, "harjel-iii-clan": 1.2 }, perSlot: 1 },
+  aes: { cite: { book: TO, page: 192 }, checked: "page", armIds: ["aes-arm-is", "aes-arm-clan"], legIds: ["aes-leg-is", "aes-leg-clan"], weaponFactor: 1.25, tonnageFactor: 0.1 },
+};
 /** Rows that add to Heat Efficiency (RISC emergency coolant system: +4, IO:AE p. 190). */
 export const HEAT_EFFICIENCY_BONUS: Record<string, number> = { "risc-emergency-coolant-system-is": 4 };
 /** Physical weapons: BV is the weapon's damage times the factor (the table's footnote ** says damage after TSM). Damage by 'Mech tonnage: Total Warfare p. 146, TechManual pp. 220, 236, 237. */
-export const PHYSICAL_BV: Sourced & { rows: Record<string, { factor: number; damage: "hatchet" | "sword" | "blade" | number; fixed?: true }> } = {
+export const PHYSICAL_BV: Sourced & { rows: Record<string, { factor: number; damage: "hatchet" | "sword" | "blade" | "claws" | number; fixed?: true }> } = {
   cite: { book: TM, page: 317 },
   checked: "page",
   rows: {
@@ -312,6 +330,8 @@ export const PHYSICAL_BV: Sourced & { rows: Record<string, { factor: number; dam
     "retractable-blade-clan": { factor: 1.725, damage: "blade" },
     // The chain whip's damage (3) is not changed by TSM or the wielder's weight (TO:AUE p. 101); BV factor TO:AUE p. 195.
     "chain-whip-is": { factor: 1.725, damage: 3, fixed: true },
+    // Claws: 1 damage per 7 tons, rounded up, doubled by Triple-Strength Myomer (TO:AUE p.100); BV factor 1.275 (p.195).
+    "claws-is": { factor: 1.275, damage: "claws" },
   },
 };
 
@@ -495,6 +515,7 @@ export const EQUIPMENT_BV: BvGroup[] = [
       ["bridgelayer-light-is", 5, undefined, { defensive: true }], ["bridgelayer-medium-is", 10, undefined, { defensive: true }], ["bridgelayer-heavy-is", 20, undefined, { defensive: true }],
       ["bridgelayer-light-clan", 5, undefined, { defensive: true }], ["bridgelayer-medium-clan", 10, undefined, { defensive: true }], ["bridgelayer-heavy-clan", 20, undefined, { defensive: true }],
       ["narc-missile-beacon-is", 30, 0], ["narc-missile-beacon-clan", 30, 0], ["improved-narc-launcher-is", 75, 0],
+      ["bulldozer-is", 10, undefined, { defensive: true }], ["bulldozer-clan", 10, undefined, { defensive: true }], // Clan table printed p. 318
       ["backhoe-is", 8], ["chainsaw-is", 7], ["combine-is", 5], ["dual-saw-is", 9], ["heavy-duty-pile-driver-is", 5], ["mining-drill-is", 6],
       ["rock-cutter-is", 6], ["spot-welder-is", 5], ["wrecking-ball-is", 8],
       ["backhoe-clan", 8], ["chainsaw-clan", 7], ["combine-clan", 5], ["dual-saw-clan", 9], ["heavy-duty-pile-driver-clan", 5], ["mining-drill-clan", 6],
@@ -521,6 +542,11 @@ export const EQUIPMENT_BV: BvGroup[] = [
       ["risc-viral-jammer-decoy-is", 284, undefined, { defensive: true }], ["risc-viral-jammer-homing-is", 284, undefined, { defensive: true }],
       // The table's double section mark: treat as a Gauss weapon critical space for the Defensive Battle Rating (p. 191).
       ["risc-emergency-coolant-system-is", 0, undefined, { none: true, gauss: true }],
+      // Dark Age Equipment, printed p. 190: no BV of their own, they work through the rules in BV_RULE_ITEMS (the laser pulse module's
+      // double section mark makes it a Gauss critical space); the remote drone command console prints 0.
+      ["risc-laser-pulse-module-is", 0, undefined, { none: true, gauss: true }], ["risc-heat-sink-override-kit-is", 0, undefined, { none: true }],
+      ["super-cooled-myomer-is", 0, undefined, { none: true }], ["harjel-ii-clan", 0, undefined, { none: true }], ["harjel-iii-clan", 0, undefined, { none: true }],
+      ["remote-drone-command-console-is", 0],
     ],
   },
   {
@@ -538,6 +564,7 @@ export const EQUIPMENT_BV: BvGroup[] = [
       ["chaff-pod-is", 19, undefined, { defensive: true, gauss: true }], ["m-pod-is", 5, undefined, { defensive: true, gauss: true }],
       ["electronic-warfare-equipment-is", 39, undefined, { defensive: true }],
       ["laser-anti-missile-system-is", 45, undefined, { defensive: true }], ["laser-anti-missile-system-clan", 45, undefined, { defensive: true }],
+      ["aquatic-survival-system-is", 9, undefined, { defensive: true }], ["aquatic-survival-system-clan", 9, undefined, { defensive: true }], // the table's MASS; Clan table printed p. 197
       ["watchdog-cews-clan", 68, undefined, { defensive: true }],
       // No BV of their own: CASE II is used in the Defensive Battle Rating (note H), the C3 variants count only in a network (note D),
       // Artemis V and Apollo change their launcher (notes J, L), and the capacitor, insulator and coolant pod act through the rules above.
@@ -546,8 +573,72 @@ export const EQUIPMENT_BV: BvGroup[] = [
       ["artemis-v-clan", 0, undefined, { none: true }], ["mrm-apollo-fcs-is", 0, undefined, { none: true }],
       ["ppc-capacitor-is", 0, undefined, { none: true }], ["laser-insulator-is", 0, undefined, { none: true }], ["laser-insulator-clan", 0, undefined, { none: true }],
       ["coolant-pod-is", 0, undefined, { none: true }], ["coolant-pod-clan", 0, undefined, { none: true }],
+      // The Actuator Enhancement System, the Chameleon LPS and the signature systems have a letter or no figure in the tables (note G, pp. 193-194).
+      ["aes-arm-is", 0, undefined, { none: true }], ["aes-arm-clan", 0, undefined, { none: true }], ["aes-leg-is", 0, undefined, { none: true }], ["aes-leg-clan", 0, undefined, { none: true }],
+      ["chameleon-lps-is", 0, undefined, { none: true }], ["null-signature-system-is", 0, undefined, { none: true }], ["void-signature-system-is", 0, undefined, { none: true }],
       // Supercharger: used in the unit ratings but with no BV of its own (note C, TO:AUE p.195)
       ["supercharger-is", 0, undefined, { none: true }], ["supercharger-clan", 0, undefined, { none: true }],
+    ],
+  },
+];
+
+/**
+ * Battle armor equipment: the BV of one item and, after it, the BV of a full ton of its ammunition (a suit carries kilograms, so the
+ * method takes it in proportion). Data only: the calculator does not work out a battle armor unit's BV yet (that is a different
+ * method, per trooper, TechManual v4.1 p. 310), so rules/bv.ts does not read this table. The items the BA sections of the tables do not list by
+ * name (lasers, pulse lasers, machine guns, the Heavy lasers) take the line of the same name in the 'Mech weapon list on the same
+ * page; the v4.1 worked examples do the same (a Small Laser at 9, an ER Small Laser at 17, an SRM 4 at 39 with 5 for its ammunition).
+ * The Clan Bomb Rack takes the only Bomb Rack line (11), which the Clan table prints under Other Equipment, not under Battle Armor.
+ * Rows with the `defensive` mark are the improved sensors, active probes and ECM: 1 point each in the suit's defensive rating.
+ */
+export const BATTLE_ARMOR_BV: BvGroup[] = [
+  {
+    cite: { book: TM, page: 317 },
+    checked: "page",
+    rows: [
+      ["ba-flamer-is", 5], ["ba-grand-mauler-gauss-rifle-is", 6, 0], ["ba-tsunami-gauss-rifle-is", 6, 0],
+      ["ba-heavy-grenade-launcher-is", 2, 0], ["ba-micro-grenade-launcher-is", 1, 0],
+      ["ba-light-recoilless-rifle-is", 12, 0], ["ba-medium-recoilless-rifle-is", 19, 0], ["ba-heavy-recoilless-rifle-is", 22, 0],
+      ["ba-david-light-gauss-rifle-is", 7, 0], ["ba-king-david-light-gauss-rifle-is", 7, 0], ["ba-magshot-gauss-rifle-is", 15, 0],
+      ["ba-firedrake-support-needler-is", 2, 0], ["ba-light-mortar-is", 9, 0], ["ba-heavy-mortar-is", 17, 0],
+      ["ba-light-machine-gun-is", 5, 1], ["ba-machine-gun-is", 5, 1], ["ba-heavy-machine-gun-is", 6, 1],
+      ["ba-small-laser-is", 9], ["ba-medium-laser-is", 46], ["ba-er-small-laser-is", 17], ["ba-er-medium-laser-is", 62],
+      ["ba-small-pulse-laser-is", 12], ["ba-medium-pulse-laser-is", 48],
+      ["ba-support-ppc-is", 14], ["ba-man-portable-plasma-rifle-is", 12, 0],
+      ["ba-compact-narc-is", 16, 0], ["ba-pop-up-mine-is", 6], ["ba-magnetic-clamps-is", 1],
+      ["ba-lrm-1-is", 14, 2], ["ba-lrm-2-is", 20, 3], ["ba-lrm-3-is", 29, 4], ["ba-lrm-4-is", 38, 5], ["ba-lrm-5-is", 45, 6],
+      ["ba-srm-1-is", 15, 2], ["ba-srm-2-is", 21, 3], ["ba-srm-3-is", 30, 4], ["ba-srm-4-is", 39, 5], ["ba-srm-5-is", 47, 6], ["ba-srm-6-is", 59, 7],
+      ["ba-mrm-1-is", 9, 1], ["ba-mrm-2-is", 13, 2], ["ba-mrm-3-is", 18, 2], ["ba-mrm-4-is", 23, 3], ["ba-mrm-5-is", 28, 4],
+      ["ba-rocket-launcher-1-is", 2], ["ba-rocket-launcher-2-is", 3], ["ba-rocket-launcher-3-is", 4], ["ba-rocket-launcher-4-is", 5], ["ba-rocket-launcher-5-is", 6],
+    ],
+  },
+  {
+    // Clan Weapons and Equipment BV Table, printed p. 318.
+    cite: { book: TM, page: 318 },
+    checked: "page",
+    rows: [
+      ["ba-flamer-clan", 5], ["ba-small-laser-clan", 9], ["ba-support-ppc-clan", 14], ["ba-bearhunter-superheavy-ac-clan", 4, 0],
+      ["ba-heavy-grenade-launcher-clan", 2, 0],
+      ["ba-light-recoilless-rifle-clan", 12, 0], ["ba-medium-recoilless-rifle-clan", 19, 0], ["ba-heavy-recoilless-rifle-clan", 22, 0],
+      ["ba-advanced-srm-1-clan", 15, 2], ["ba-advanced-srm-2-clan", 30, 4], ["ba-advanced-srm-3-clan", 45, 6],
+      ["ba-advanced-srm-4-clan", 60, 8], ["ba-advanced-srm-5-clan", 75, 10], ["ba-advanced-srm-6-clan", 90, 12],
+      ["ba-compact-narc-clan", 16, 0],
+      ["ba-er-micro-laser-clan", 7], ["ba-er-small-laser-clan", 31], ["ba-er-medium-laser-clan", 108],
+      ["ba-micro-pulse-laser-clan", 12], ["ba-small-pulse-laser-clan", 24], ["ba-medium-pulse-laser-clan", 111],
+      ["ba-heavy-small-laser-clan", 15], ["ba-heavy-medium-laser-clan", 76],
+      ["ba-light-machine-gun-clan", 5, 1], ["ba-machine-gun-clan", 5, 1], ["ba-heavy-machine-gun-clan", 6, 1],
+      ["ba-ap-gauss-rifle-clan", 21, 3, { inert: true }], ["ba-bomb-rack-clan", 11],
+      ["ba-lrm-1-clan", 17, 2], ["ba-lrm-2-clan", 24, 3], ["ba-lrm-3-clan", 34, 4], ["ba-lrm-4-clan", 46, 6], ["ba-lrm-5-clan", 55, 7],
+      ["ba-srm-1-clan", 15, 2], ["ba-srm-2-clan", 21, 3], ["ba-srm-3-clan", 30, 4], ["ba-srm-4-clan", 39, 5], ["ba-srm-5-clan", 47, 6], ["ba-srm-6-clan", 59, 7],
+    ],
+  },
+  {
+    // Battle armor Defensive Battle Rating, step 1 (replacement text for TechManual p. 310, v4.1): 1 for each of these systems.
+    cite: { book: TM_BV, page: 310 },
+    checked: "page",
+    rows: [
+      ["ba-improved-sensors-is", 1, undefined, { defensive: true }], ["ba-active-probe-is", 1, undefined, { defensive: true }], ["ba-ecm-suite-is", 1, undefined, { defensive: true }],
+      ["ba-improved-sensors-clan", 1, undefined, { defensive: true }], ["ba-active-probe-clan", 1, undefined, { defensive: true }], ["ba-ecm-suite-clan", 1, undefined, { defensive: true }],
     ],
   },
 ];
