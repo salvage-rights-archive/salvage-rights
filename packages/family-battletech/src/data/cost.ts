@@ -462,6 +462,12 @@ export const EQUIPMENT_COST: PriceGroup[] = [
     prices: { "ba-ap-gauss-rifle": 10000, "ba-bearhunter-superheavy-ac": 11250, "ba-er-micro-laser": 10000, "ba-micro-pulse-laser": 12500, "ba-heavy-small-laser": 20000, "ba-heavy-medium-laser": 100000, "ba-bomb-rack": 30000, "ba-advanced-srm-1": 15000, "ba-advanced-srm-2": 30000, "ba-advanced-srm-3": 45000, "ba-advanced-srm-4": 60000, "ba-advanced-srm-5": 75000, "ba-advanced-srm-6": 90000 },
   },
   {
+    // TechManual p.292 (Heavy Weapons and Equipment cost table: capital missile launchers and the screen launcher)
+    cite: { book: TM, page: 292 },
+    checked: "page",
+    prices: { "killer-whale": 150_000, "white-shark": 130_000, barracuda: 90_000, "ar-10-launcher": 250_000, "kraken-t": 500_000, "killer-whale-t": 165_000, "white-shark-t": 145_000, "barracuda-t": 100_000, "screen-launcher": 250_000 },
+  },
+  {
     // TechManual p.279 (Combat Vehicle structural costs: a turret is 5,000 x its own tonnage; p.280 prints the same for a support vehicle)
     cite: { book: TM, page: 279 },
     checked: "page",

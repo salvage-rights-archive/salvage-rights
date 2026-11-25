@@ -527,4 +527,30 @@ export const WEAPONS: EquipmentGroup[] = [
       { id: "thunderbolt-20-is", name: "Thunderbolt 20", aliases: ["Thunderbolt-20"], tons: 15, slots: 5, type: "M", heat: 8, damage: "20", range: [5, 6, 12, 18], availability: [{ from: 3072 }], rulesLevel: "advanced" },
     ],
   },
+  {
+    // Capital missile launchers (TechManual: Inner Sphere Heavy Weapons and Equipment Table printed pp. 342, weight and space; Clan printed p. 343;
+    // costs and dates the Heavy Weapons table, printed p. 292; read against the page image). Only a DropShip mounts them (the table's DS column is
+    // 1; the screen launcher also goes on a small craft, its SC column is 1), one slot each. The Clan table lists the Killer Whale, White Shark,
+    // Barracuda and AR-10 only; its dates print a dash, so the Clan rows take the Inner Sphere year and are marked inferred. The "-T" launchers and the
+    // screen launcher are Inner Sphere only. Heat, damage and range class are the table's Aero column (capital damage as printed: "40" is the
+    // standard-scale figure), under `by.dropship`; the AR-10 prints a dagger there (it takes the figures of the missile it fires) and has none. Dates:
+    // introduction, extinction and reintroduction as printed, so the Killer Whale is 2305 to 2855 and again from 3051 (the Clan rows are open from the Inner Sphere introduction: the table prints the Clan extinction and reintroduction as a dash and NA). Capital missile ammunition (the
+    // "t/Msl" column) is not added.
+    defaults: { kind: "weapon", cite: { book: "TechManual", page: 342 }, checked: "page", slots: 1, units: ["dropship"] },
+    items: [
+      { id: "killer-whale-is", name: "Killer Whale", techBase: "inner-sphere", tons: 150, availability: [{ from: 2305, to: 2855 }, { from: 3051 }], by: { dropship: { heat: 20, damage: "40", rangeClass: "Extreme" } } },
+      { id: "white-shark-is", name: "White Shark", techBase: "inner-sphere", tons: 120, availability: [{ from: 2305, to: 2854 }, { from: 3051 }], by: { dropship: { heat: 15, damage: "30", rangeClass: "Extreme" } } },
+      { id: "barracuda-is", name: "Barracuda", techBase: "inner-sphere", tons: 90, availability: [{ from: 2305, to: 2855 }, { from: 3051 }], by: { dropship: { heat: 10, damage: "20", rangeClass: "Extreme" } } },
+      { id: "ar-10-launcher-is", name: "AR-10 Launcher", techBase: "inner-sphere", tons: 250, availability: [{ from: 2550, to: 2850 }, { from: 3051 }] },
+      { id: "kraken-t-is", name: "Kraken-T", techBase: "inner-sphere", tons: 220, availability: [{ from: 3057 }], by: { dropship: { heat: 50, damage: "100", rangeClass: "Extreme" } } },
+      { id: "killer-whale-t-is", name: "Killer Whale-T", techBase: "inner-sphere", tons: 160, availability: [{ from: 3056 }], by: { dropship: { heat: 20, damage: "40", rangeClass: "Extreme" } } },
+      { id: "white-shark-t-is", name: "White Shark-T", techBase: "inner-sphere", tons: 140, availability: [{ from: 3056 }], by: { dropship: { heat: 15, damage: "30", rangeClass: "Extreme" } } },
+      { id: "barracuda-t-is", name: "Barracuda-T", techBase: "inner-sphere", tons: 100, availability: [{ from: 3056 }], by: { dropship: { heat: 10, damage: "20", rangeClass: "Extreme" } } },
+      { id: "screen-launcher-is", name: "Screen Launcher", techBase: "inner-sphere", tons: 40, availability: [{ from: 3055 }], units: ["smallcraft", "dropship"], by: { dropship: { heat: 10, rangeClass: "Short" } }, cite: { book: "TechManual", page: 342 } },
+      { id: "killer-whale-clan", name: "Killer Whale", techBase: "clan", tons: 150, availability: [{ from: 2305 }], yearsInferred: true, cite: { book: "TechManual", page: 343 }, by: { dropship: { heat: 20, damage: "40", rangeClass: "Extreme" } } },
+      { id: "white-shark-clan", name: "White Shark", techBase: "clan", tons: 120, availability: [{ from: 2305 }], yearsInferred: true, cite: { book: "TechManual", page: 343 }, by: { dropship: { heat: 15, damage: "30", rangeClass: "Extreme" } } },
+      { id: "barracuda-clan", name: "Barracuda", techBase: "clan", tons: 90, availability: [{ from: 2305 }], yearsInferred: true, cite: { book: "TechManual", page: 343 }, by: { dropship: { heat: 10, damage: "20", rangeClass: "Extreme" } } },
+      { id: "ar-10-launcher-clan", name: "AR-10 Launcher", techBase: "clan", tons: 250, availability: [{ from: 2550 }], yearsInferred: true, cite: { book: "TechManual", page: 343 } },
+    ],
+  },
 ];

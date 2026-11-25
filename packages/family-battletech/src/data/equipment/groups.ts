@@ -17,6 +17,7 @@ const words = (list: string): RegExp => new RegExp(`(^|-)(${list})(-|$)`);
 export const EQUIPMENT_GROUPS: GroupRule[] = [
   { id: "infantry", label: "Conventional infantry weapons", match: words("inf") },
   { id: "vehicle", label: "Vehicle equipment", match: words("turret") },
+  { id: "capital", label: "Capital weapons", match: words("killer-whale|killer-whale-t|white-shark|white-shark-t|barracuda|barracuda-t|ar-10-launcher|kraken-t|screen-launcher") },
   { id: "battlearmor", label: "Battle armor equipment", match: words("ba") },
   { id: "artillery", label: "Artillery", match: words("arrow-iv|thumper|sniper|long-tom") },
   { id: "industrial", label: "Industrial equipment", match: words("backhoe|chainsaw|combine|dual-saw|pile-driver|mining-drill|rock-cutter|spot-welder|nail-rivet|wrecking-ball|salvage-arm|sprayer|fluid-suction|lift-hoist|bridgelayer|remote-sensor-dispenser|searchlight|ejection-seat|tracks|environmental-sealing|bulldozer|field-kitchen|mash|quarters|seating|lifeboat|escape-pod|extended-fuel-tank|communications-equipment|cargo") },
@@ -44,4 +45,4 @@ export const AMMO_GROUPS: GroupRule[] = [
 export const AMMO_OTHER_GROUP = { id: "ammo-other", label: "Ammunition: machine guns, flamers and other" };
 
 /** The order the picker lists the groups in. */
-export const GROUP_ORDER: string[] = ["battlearmor", "infantry", "vehicle", "energy", "ballistic", "missile", "artillery", "physical", "special", "electronics", "stealth", "command", "defensive", "actuators", "heat", "industrial", "ammo-ballistic", "ammo-missile", "ammo-artillery", "ammo-other", "other"];
+export const GROUP_ORDER: string[] = ["battlearmor", "infantry", "vehicle", "capital", "energy", "ballistic", "missile", "artillery", "physical", "special", "electronics", "stealth", "command", "defensive", "actuators", "heat", "industrial", "ammo-ballistic", "ammo-missile", "ammo-artillery", "ammo-other", "other"];
