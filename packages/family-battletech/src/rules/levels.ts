@@ -32,8 +32,9 @@ export const isFrankenMech = (_record: Pick<MechRecord, "name">): boolean => fal
 export function heatSinkMixAllowed(record: Pick<MechRecord, "name" | "techBase" | "rulesLevel">, mainType: string, extraType: string): boolean {
   if (mainType === extraType) return false;
   const [first, second] = HEAT_SINK_RULES.mixable;
-  if ((mainType === first && extraType === second) || (mainType === second && extraType === first)) return record.techBase === "mixed";
-  return isFrankenMech(record) || (record.rulesLevel !== undefined && levelAtLeast(record.rulesLevel, "fan-made"));
+  const anyMix = isFrankenMech(record) || (record.rulesLevel !== undefined && levelAtLeast(record.rulesLevel, "fan-made"));
+  if ((mainType === first && extraType === second) || (mainType === second && extraType === first)) return record.techBase === "mixed" || anyMix;
+  return anyMix;
 }
 
 /** Whether the editor should offer extra heat sink groups at all: some pairing could be allowed (mixed technology, Fan-made or higher, a FrankenMech). */

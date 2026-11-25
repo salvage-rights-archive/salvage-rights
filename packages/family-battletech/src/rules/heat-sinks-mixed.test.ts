@@ -38,6 +38,7 @@ describe("an Inner Sphere and a Clan double heat sink together", () => {
   it.each<[string, [string, number], [string, number][], Partial<MechRecord>, RegExp | null, number?]>([
     ["a mixed record at Advanced", ["double", 10], [["double-clan", 4]], {}, null],
     ["an Inner Sphere record", ["double", 10], [["double-clan", 4]], { techBase: "inner-sphere" }, /mixed only on a mixed technology/, 53],
+    ["an Inner Sphere record at Fan-made", ["double", 10], [["double-clan", 4]], { techBase: "inner-sphere", rulesLevel: "fan-made" }, null],
     ["single with double at Advanced", ["single", 10], [["double-clan", 4]], {}, /FrankenMech or at Fan-made/, 53],
     ["single with double at Fan-made", ["single", 10], [["double-clan", 4]], { rulesLevel: "fan-made" }, null],
     ["compact with laser at Advanced", ["compact", 10], [["laser", 4]], {}, /FrankenMech or at Fan-made/, 217],
@@ -47,7 +48,7 @@ describe("an Inner Sphere and a Clan double heat sink together", () => {
     const found = runChecks(record, catalog).filter((f) => f.check === "heat-sinks" && f.level === "error");
     if (message === null) expect(found).toEqual([]);
     else expect(found).toEqual([expect.objectContaining({ message: expect.stringMatching(message) as string, cite: expect.objectContaining({ page }) as object })]);
-    expect(heatSinkMixAllowed(record, main[0], extra[0]?.[0] ?? "")).toBe(message === null || /^three/.test(_name));
+    expect(heatSinkMixAllowed(record, main[0], extra[0]?.[0] ?? "")).toBe(message === null);
     expect(heatSinkMixPossible(record)).toBe(record.techBase === "mixed" || record.rulesLevel === "fan-made");
   });
 
