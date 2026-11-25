@@ -405,14 +405,14 @@ describe("an OmniMech set (omni, omni_base_id, omni_variants; without a fixed fl
       expect(notes[0]).toContain("rebuilt the base from this variant");
     });
 
-    it("lets the fixed marks win over the subtraction and names the items that differ, once", () => {
+    it("keeps the subtraction when the base is in hand, so nothing is lost, and names the items the fixed marks place differently, once", () => {
       const baseUnit = unit(900010, "[BASE]", { omni: true, omni_base_id: 900010 }, flag(fixed, true));
       const agrees = flagged("Prime", [entry(1, "AC/10", "RT", { slots: 7 })], 900010);
       const differs = unit(900012, "A", { omni: true, omni_base_id: 900010 }, [...flag([entry(3, "Medium Laser", "LA")], true), ...flag(fixed, true)]);
       const [b, p, a] = [baseUnit, agrees, differs].map(imported);
       const { chassis, notes } = importOmniSet(b!.record, [p!.record, a!.record], ids(), [p!.fixedIds, a!.fixedIds]);
-      expect(chassis.configurations.map((c) => [c.code, c.mounts.map((m) => m.name)])).toEqual([["Prime", ["AC/10"]], ["A", []]]);
-      expect(notes.filter((t) => t.includes("fixed marks"))).toEqual(["A: the base's equipment list and Mordel's fixed marks disagree about Medium Laser; we used the fixed marks."]);
+      expect(chassis.configurations.map((c) => [c.code, c.mounts.map((m) => m.name)])).toEqual([["Prime", ["AC/10"]], ["A", ["Medium Laser"]]]);
+      expect(notes.filter((t) => t.includes("fixed marks"))).toEqual(["A: the base's equipment list and Mordel's fixed marks disagree about Medium Laser; we followed the base's list, so this configuration carries exactly the equipment Mordel lists for it."]);
     });
 
     it("reports a fixed flag that is not a boolean and then reads the unit by subtraction", () => {

@@ -631,9 +631,9 @@ export function changedSinceImport(record: MechRecord): Set<string> {
 // another member's private unit. A variant's pods are its equipment minus the base's. Checked against the live API on 2026-11-25 (bm 2303,
 // its PRIME bm 2304 and Baker bm 15494): `omni_variants` is a list of `{ id, name }` objects; every variant repeats the base's fixed items;
 // and each equipment entry carries a boolean `fixed` that the notes do not name, true on exactly the items the subtraction leaves on the
-// base. The subtraction and `fixed` agree on all three. The importer lets `fixed` decide where every entry carries it (and notes any item the
-// subtraction would have placed differently); it also splits a variant whose base is private, which the subtraction cannot. Where entries
-// lack it, the subtraction (or the guess) stays.
+// base. The subtraction and `fixed` agree on all three. With the base in hand the subtraction decides and `fixed` is a check (any item they
+// place differently is noted); without the base (private), `fixed` splits the variant, which the subtraction cannot. Where entries lack it,
+// the subtraction (or the guess) stays.
 
 export interface MordelOmniFacts {
   omni: boolean;
@@ -706,13 +706,13 @@ export function importOmniSet(base: MechRecord, variants: MechRecord[], newId: (
     }
     const code = variant.name.model.trim() || nextFreeCode(configurations.map((c) => c.code));
     if (flagged) {
-      // Where Mordel marks each item fixed or not, that decides; the subtraction is only a check on it.
+      // With the base in hand the subtraction decides: the base is shared by every configuration, so only "variant minus base" keeps each
+      // configuration's equipment exactly the variant's (following a fixed mark the base lacks would drop the item; a pod mark on an item the
+      // base has would count it twice). Mordel's fixed marks are a check on it.
       const isFixed = new Set(flagged);
-      const byFlag = variant.mounts.filter((m) => m.part === undefined && !isFixed.has(m.id));
       const bySubtraction = new Set(pods.map((m) => m.id));
-      const differ = [...new Set([...byFlag.filter((m) => !bySubtraction.has(m.id)), ...pods.filter((m) => isFixed.has(m.id))].map((m) => m.name))];
-      if (differ.length > 0) notes.push(`${code}: the base's equipment list and Mordel's fixed marks disagree about ${differ.join(", ")}; we used the fixed marks.`);
-      pods.splice(0, pods.length, ...byFlag.map((m) => structuredClone(m)));
+      const differ = [...new Set(variant.mounts.filter((m) => m.part === undefined && isFixed.has(m.id) === bySubtraction.has(m.id)).map((m) => m.name))];
+      if (differ.length > 0) notes.push(`${code}: the base's equipment list and Mordel's fixed marks disagree about ${differ.join(", ")}; we followed the base's list, so this configuration carries exactly the equipment Mordel lists for it.`);
     }
     for (const left of remaining.values()) for (const m of left) notes.push(`${code} does not list ${m.name} (${m.location ?? "unplaced"}), which the base has; it is kept as fixed equipment.`);
     for (const part of ["engine", "gyro", "cockpit", "structure", "armorType"] as const) {
