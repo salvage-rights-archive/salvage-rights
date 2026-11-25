@@ -2,7 +2,7 @@
 // (for Undo and Redo), derives everything else from the current record, and hands each panel what it shows and an
 // `onEdit(change)` callback. Every edit goes through `editRecord`.
 import { useEffect, useId, useMemo, useRef, useState } from "react";
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { Link, useBlocker, useLocation, useSearchParams } from "react-router";
 import { ARMOR, COCKPITS, ENGINE_TYPES, GYROS, HEAT_SINKS, MYOMER, STRUCTURE_TYPES } from "../data/chassis";
 import { loadCatalog } from "../rules/catalog";
@@ -186,7 +186,7 @@ function SelectField({
         <select
           id={id}
           value={value}
-          style={{ minWidth: `${longest + 4}ch` }}
+          style={{ "--bt-select-min": `${longest + 4}ch` } as CSSProperties}
           aria-describedby={describedBy}
           onChange={(event) => {
             onChange(event.target.value);
