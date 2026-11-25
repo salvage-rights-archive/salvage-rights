@@ -283,10 +283,22 @@ export const ENGINE_WEIGHTS: Sourced & { rows: Record<number, number> } = {
 // stated in words: Compact weighs 50 percent more (printed p.48 and p.214), Light about 25 percent less and XL roughly
 // half (both p.214, equipment descriptions; read from the text extract). The half-ton rounding is the book's rounding
 // everywhere else, and with it each factor reproduces the printed p.49 column for every rating.
+/**
+ * The non-fusion engines' weights, which the Master Engine Table (printed p.49, read against the page image) prints by rating
+ * and which are not a share of the standard column. One value per rating from 10 to 400 in steps of 5.
+ */
+const NON_FUSION_RATINGS = Array.from({ length: 79 }, (_, i) => 10 + i * 5);
+const byRating = (values: number[]): Record<number, number> => Object.fromEntries(NON_FUSION_RATINGS.map((r, i) => [r, values[i] ?? 0]));
+const ICE_WEIGHTS = byRating([1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 4, 4, 4, 5, 5, 6, 6, 6, 7, 7, 8, 8, 8, 9, 9, 10, 10, 11, 11, 12, 12, 12, 14, 14, 15, 15, 16, 17, 17, 18, 19, 20, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 31, 32, 33, 35, 36, 38, 39, 41, 43, 45, 47, 49, 51, 54, 57, 59, 63, 66, 69, 73, 77, 82, 87, 92, 98, 105]);
+const FUEL_CELL_WEIGHTS = byRating([1, 1, 1, 1, 1.5, 1.5, 1.5, 1.5, 2, 2, 2, 2.5, 2.5, 2.5, 3, 3, 4, 4, 4, 4.5, 4.5, 5, 5, 5, 5.5, 5.5, 6, 6, 7, 7, 7.5, 7.5, 7.5, 8.5, 8.5, 9, 9, 10, 10.5, 10.5, 11, 11.5, 12, 12, 13, 13.5, 14, 14.5, 15, 16, 16.5, 17, 17.5, 19, 19.5, 20, 21, 22, 23, 23.5, 25, 26, 27, 28.5, 29.5, 31, 32.5, 34.5, 35.5, 38, 40, 41.5, 44, 46.5, 49.5, 52.5, 55.5, 59, 63]);
+const FISSION_WEIGHTS = byRating([5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5.5, 5.5, 5.5, 6.5, 6.5, 7, 7, 7, 8, 8, 9, 9, 10, 10, 10.5, 10.5, 10.5, 12.5, 12.5, 13.5, 13.5, 14, 15, 15, 16, 17, 17.5, 17.5, 18.5, 19.5, 20.5, 21, 22, 23, 24, 24.5, 25.5, 27.5, 28, 29, 31, 31.5, 33.5, 34.5, 36, 38, 39.5, 41.5, 43, 45, 47.5, 50, 52, 55.5, 58, 60.5, 64, 67.5, 72, 76.5, 80.5, 86, 92]);
+
 export interface EngineType extends PartFacts {
   name: string; // as shown to the player; label is what the record sheets print
   label: string;
   weightFactor: number;
+  /** Weight by rating where the book prints it that way (the non-fusion engines): used in place of the standard column times `weightFactor`. */
+  weightTable?: Record<number, number>;
   factorCite?: Cite;
   factorChecked?: Checked;
   ct: number;
@@ -358,6 +370,11 @@ export const ENGINE_TYPES: Sourced & { types: Record<string, EngineType> } = {
       checked: "page",
       rules: "Plays as an Inner Sphere XL engine but adds 1 heat a turn, and each critical hit on it makes 5 plus half a die roll heat.",
     },
+    // Non-fusion engines (TechManual, Master Engine Table printed p.49; IndustrialMech construction printed p.68): weight by rating,
+    // the same six slots in the center torso as a standard engine, either tech base. Printed for IndustrialMechs, not BattleMechs.
+    ice: { name: "Internal Combustion", label: "I.C.E. Engine", weightFactor: 1, weightTable: ICE_WEIGHTS, ct: 6, side: 0, techBase: "both", industrial: true, introduced: { is: 1950, clan: 1950 }, cite: { book: "TechManual", page: 49 }, checked: "page", rules: "Burns fuel: an IndustrialMech's ICE has a base range of 600 kilometers (20,000 Walking MP)." },
+    "fuel-cell": { name: "Fuel Cell", label: "Fuel Cell Engine", weightFactor: 1, weightTable: FUEL_CELL_WEIGHTS, ct: 6, side: 0, techBase: "both", industrial: true, cite: { book: "TechManual", page: 49 }, checked: "page", rules: "An IndustrialMech's fuel cell has a base range of 450 kilometers (15,000 Walking MP)." },
+    fission: { name: "Fission", label: "Fission Engine", weightFactor: 1, weightTable: FISSION_WEIGHTS, ct: 6, side: 0, techBase: "both", industrial: true, cite: { book: "TechManual", page: 49 }, checked: "page" },
   },
 };
 
@@ -429,6 +446,10 @@ export const COCKPITS: Sourced & { types: Record<string, CockpitType> } = {
         "No pilot damage from hits to the center torso; the 'Mech is not destroyed when its head is. Piloting Skill rolls take +1, ejection is impossible, and it survives 2 sensor hits (+2, then +4 to hit).",
       rulesCite: { book: TO, page: 113 },
     },
+    // IndustrialMech cockpits (TechManual printed pp.68-69): 3 tons, the default slots of a standard cockpit. Advanced Fire Control
+    // only doubles the cost (the cost table, p.277); it takes no tonnage or space. Neither has the ejection a BattleMech's has.
+    industrial: { name: "Industrial", tons: 3, cockpit: [3], sensors: [2, 5], lifeSupport: [1, 6], industrial: true, cite: { book: "TechManual", page: 69 }, checked: "page", rules: "No pilot ejection and no targeting aids; printed for IndustrialMechs." },
+    "industrial-afc": { name: "Industrial (Advanced Fire Control)", tons: 3, cockpit: [3], sensors: [2, 5], lifeSupport: [1, 6], industrial: true, cite: { book: "TechManual", page: 69 }, checked: "page", rules: "An industrial cockpit with Advanced Fire Control, which adds no weight or space." },
     // Primitive BattleMechs mount only the primitive cockpit, 5 tons (Interstellar Operations: Alternate Eras printed p.117).
     primitive: {
       name: "Primitive",
@@ -452,9 +473,13 @@ export const COCKPITS: Sourced & { types: Record<string, CockpitType> } = {
 // sinks that cost no tonnage; every sink beyond them costs `tonsEach`, whatever its type. An engine also holds one
 // sink per `ratingPerHeldSink` of rating (rounded down) without critical slots.
 // ---------------------------------------------------------------------------------------------------------------
-export interface HeatSinkType {
+export interface HeatSinkType extends PartFacts {
   name: string;
   slots: number;
+  /** Tons of one sink where it is not the usual one ton (HEAT_SINK_RULES). */
+  tonsEach?: number;
+  /** Sinks one mounted item stands for where it is not one (compact sinks go two to a slot). */
+  perMount?: number;
 }
 export const HEAT_SINK_RULES: Sourced & {
   freeWithEngine: number;
@@ -474,6 +499,10 @@ export const HEAT_SINKS: Sourced & { types: Record<string, HeatSinkType> } = {
     single: { name: "Single", slots: 1 },
     double: { name: "Double", slots: 3 },
     "double-clan": { name: "Double (Clan)", slots: 2 },
+    // Tactical Operations: Advanced Units and Equipment: compact sinks (rules p.128, table p.217) weigh 1.5 tons and go two to a slot; laser
+    // sinks (p.129) are Clan doubles in every way (weight, capacity and space) but may not be mixed with standard doubles.
+    compact: { name: "Compact", slots: 1, tonsEach: 1.5, perMount: 2, techBase: "inner-sphere", rulesLevel: "experimental", introduced: { is: 3058, prototype: true }, cite: { book: TO, page: 217 }, checked: "page", rules: "Two sinks fit in each critical slot. May not be mixed with another heat sink type." },
+    laser: { name: "Laser (Clan)", slots: 2, techBase: "clan", rulesLevel: "advanced", introduced: { clan: 3051 }, cite: { book: TO, page: 217 }, checked: "page", rules: "Works as a Clan double heat sink. May not be mixed with standard double heat sinks." },
   },
 };
 

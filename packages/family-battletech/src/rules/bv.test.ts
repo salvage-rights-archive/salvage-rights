@@ -199,9 +199,9 @@ describe("the method's rules", () => {
 describe("what the book does not print", () => {
   it("is reported and left out, never thrown over or guessed; equipment in no table counts 0, a special munition does not", () => {
     const mounts = [m("medium-laser-is", "RA"), m("vehicular-mine-dispenser-is", "LT"), { ...m("x", null), equipmentId: null, name: "Frobnicator" }, m("ammo-inferno-is", "LT"), m("lift-hoist-is", "LA")];
-    const bv = battleValue(biped(mounts, { chassis: { ...bipedRecord().chassis, gyro: "mystery", heatSinks: { type: "laser", count: 10 } } }), catalog);
+    const bv = battleValue(biped(mounts, { chassis: { ...bipedRecord().chassis, gyro: "mystery", heatSinks: { type: "plasma", count: 10 } } }), catalog);
     expect(bv.complete).toBe(false);
-    expect(bv.unvalued.map((u) => u.name).sort()).toEqual(["Frobnicator", "ammo-inferno-is", "gyro type \"mystery\"", "heat sink type \"laser\"", "vehicular-mine-dispenser-is"]);
+    expect(bv.unvalued.map((u) => u.name).sort()).toEqual(["Frobnicator", "ammo-inferno-is", "gyro type \"mystery\"", "heat sink type \"plasma\"", "vehicular-mine-dispenser-is"]);
     expect(bv.zeroByRule.map((u) => u.name)).toEqual(["lift-hoist-is"]);
     expect(bv.offensive.weapons).toHaveLength(1);
   });

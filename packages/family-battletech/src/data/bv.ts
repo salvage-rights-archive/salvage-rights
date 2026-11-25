@@ -104,7 +104,8 @@ export const STRUCTURE_BV_MODIFIER: Sourced & { values: Record<string, number> }
 export const ENGINE_BV_MODIFIER: Sourced & { values: Record<string, number> } = {
   cite: { book: TM, page: 315 },
   checked: "page",
-  values: { standard: 1.0, light: 0.75, compact: 1.0, xl: 0.5, "xl-clan": 0.75 },
+  // The table's Standard row "includes ICE, Fuel Cell, and Fission" (a footnote on the same page), so they take 1.0.
+  values: { standard: 1.0, light: 0.75, compact: 1.0, xl: 0.5, "xl-clan": 0.75, ice: 1.0, "fuel-cell": 1.0, fission: 1.0 },
 };
 export const GYRO_BV_MODIFIER: Sourced & { values: Record<string, number> } = {
   cite: { book: TM, page: 315 },
@@ -247,6 +248,26 @@ export const LASER_INSULATOR_IDS = ["laser-insulator-is", "laser-insulator-clan"
 export const COOLANT_POD_IDS = ["coolant-pod-is", "coolant-pod-clan"];
 /** Rows whose BV the books make depend on something the row does not say. */
 export const UNFIXED: Record<string, string> = {
+  // Items whose BV is a modifier or a figure that depends on the unit, which the BV rules here do not compute (TO:AUE pp.192-197).
+  "aes-arm-is": "it multiplies the BV of the weapons linked to it by 1.25 (TO:AUE p.195, note G)",
+  "aes-arm-clan": "it multiplies the BV of the weapons linked to it by 1.25 (TO:AUE p.195, note G)",
+  "aes-leg-is": "it multiplies the BV of the weapons linked to it by 1.25 (TO:AUE p.195, note G)",
+  "aes-leg-clan": "it multiplies the BV of the weapons linked to it by 1.25 (TO:AUE p.195, note G)",
+  "blue-shield-is": "it adds 0.2 to the armor type modifier and counts as a Gauss weapon for the defensive rating (TO:AUE pp.192, 194)",
+  "claws-is": "its BV is its damage, which depends on the 'Mech and its myomer, times 1.275 (TO:AUE p.195)",
+  "lance-is": "its BV is its damage, which depends on the 'Mech, times 1 (TO:AUE p.195)",
+  "mace-is": "its BV is its damage, which depends on the 'Mech, times 1 (TO:AUE p.195)",
+  "talons-clan": "its BV is the kick damage, which depends on the 'Mech and its myomer, times 1 (TO:AUE p.197)",
+  "chameleon-lps-is": "it adds the long-range to-hit modifier to the defensive factor (TO:AUE p.193)",
+  "null-signature-system-is": "it adds the long-range to-hit modifier to the defensive factor (TO:AUE p.194)",
+  "void-signature-system-is": "it sets the defensive target modifier to at least +3 (TO:AUE p.194)",
+  "partial-wing-is": "it adds Jumping MP by atmosphere and weight class, which the speed factor does not take yet (TO:AUE p.192)",
+  "partial-wing-clan": "it adds Jumping MP by atmosphere and weight class, which the speed factor does not take yet (TO:AUE p.192)",
+  "umu-is": "UMU movement is counted as Cruising MP when submerged, not computed here (TO:AUE p.192)",
+  "umu-clan": "UMU movement is counted as Cruising MP when submerged, not computed here (TO:AUE p.192)",
+  "mechanical-jump-booster-is": "it adds Jumping MP chosen by the designer, which the record does not hold (TO:AUE p.192)",
+  "jump-pack-is": "it adds Jumping MP from the pack weight and the unit weight, not computed here (TO:AUE p.192)",
+  "jump-pack-clan": "it adds Jumping MP from the pack weight and the unit weight, not computed here (TO:AUE p.192)",
   "vehicular-mine-dispenser-is": "its BV is that of a 10-point minefield of the mine it carries, which the row does not fix (TO:AUE p. 195)",
   "vehicular-mine-dispenser-clan": "its BV is that of a 10-point minefield of the mine it carries, which the row does not fix (TO:AUE p. 195)",
 };
@@ -517,6 +538,8 @@ export const EQUIPMENT_BV: BvGroup[] = [
       ["artemis-v-clan", 0, undefined, { none: true }], ["mrm-apollo-fcs-is", 0, undefined, { none: true }],
       ["ppc-capacitor-is", 0, undefined, { none: true }], ["laser-insulator-is", 0, undefined, { none: true }], ["laser-insulator-clan", 0, undefined, { none: true }],
       ["coolant-pod-is", 0, undefined, { none: true }], ["coolant-pod-clan", 0, undefined, { none: true }],
+      // Supercharger: used in the unit ratings but with no BV of its own (note C, TO:AUE p.195)
+      ["supercharger-is", 0, undefined, { none: true }], ["supercharger-clan", 0, undefined, { none: true }],
     ],
   },
 ];
