@@ -15,6 +15,9 @@ const words = (list: string): RegExp => new RegExp(`(^|-)(${list})(-|$)`);
 /** The groups for everything that is not ammunition, in the order the picker lists them (and the order the patterns are tried,
  * except that the picker lists weapons first: see GROUP_ORDER). */
 export const EQUIPMENT_GROUPS: GroupRule[] = [
+  { id: "infantry", label: "Conventional infantry weapons", match: words("inf") },
+  { id: "vehicle", label: "Vehicle equipment", match: words("turret") },
+  { id: "capital", label: "Capital weapons", match: words("nac|nl|n-ppc|n-gauss|mass-driver|killer-whale|killer-whale-t|white-shark|white-shark-t|barracuda|barracuda-t|ar-10-launcher|kraken-t|screen-launcher") },
   { id: "battlearmor", label: "Battle armor equipment", match: words("ba") },
   { id: "artillery", label: "Artillery", match: words("arrow-iv|thumper|sniper|long-tom") },
   { id: "industrial", label: "Industrial equipment", match: words("backhoe|chainsaw|combine|dual-saw|pile-driver|mining-drill|rock-cutter|spot-welder|nail-rivet|wrecking-ball|salvage-arm|sprayer|fluid-suction|lift-hoist|bridgelayer|remote-sensor-dispenser|searchlight|ejection-seat|tracks|environmental-sealing|bulldozer|field-kitchen|mash|quarters|seating|lifeboat|escape-pod|extended-fuel-tank|communications-equipment|cargo") },
@@ -34,7 +37,7 @@ export const OTHER_GROUP = { id: "other", label: "Other equipment" };
 
 /** Ammunition, by the weapon family it feeds. The stem is the id without `ammo-`. */
 export const AMMO_GROUPS: GroupRule[] = [
-  { id: "ammo-other", label: "Ammunition: machine guns, flamers and other", match: words("plasma|chemical|flamer|machine-gun|nail-rivet|fluid-gun|taser|ams|c3-remote-sensor-launcher|pds|tear-gas") },
+  { id: "ammo-other", label: "Ammunition: machine guns, flamers and other", match: words("plasma|chemical|flamer|machine-gun|nail-rivet|fluid-gun|taser|ams|c3-remote-sensor-launcher|pds|tear-gas|remote-sensor-dispenser") },
   { id: "ammo-artillery", label: "Ammunition: artillery", match: words("arrow-iv|thumper|sniper|long-tom") },
   { id: "ammo-missile", label: "Ammunition: missile", match: words("lrm|srm|mrm|mml|atm|narc|thunder|thunderbolt|inferno|swarm|swarm-i|semi-guided|harpoon|artemis|mortar|streak|rocket") },
   { id: "ammo-ballistic", label: "Ammunition: ballistic", match: words("ac|lb|gauss|rifle|rotary|ultra|magshot|armor-piercing|flechette|precision|fragmentation") },
@@ -42,4 +45,4 @@ export const AMMO_GROUPS: GroupRule[] = [
 export const AMMO_OTHER_GROUP = { id: "ammo-other", label: "Ammunition: machine guns, flamers and other" };
 
 /** The order the picker lists the groups in. */
-export const GROUP_ORDER: string[] = ["battlearmor", "energy", "ballistic", "missile", "artillery", "physical", "special", "electronics", "stealth", "command", "defensive", "actuators", "heat", "industrial", "ammo-ballistic", "ammo-missile", "ammo-artillery", "ammo-other", "other"];
+export const GROUP_ORDER: string[] = ["battlearmor", "infantry", "vehicle", "capital", "energy", "ballistic", "missile", "artillery", "physical", "special", "electronics", "stealth", "command", "defensive", "actuators", "heat", "industrial", "ammo-ballistic", "ammo-missile", "ammo-artillery", "ammo-other", "other"];

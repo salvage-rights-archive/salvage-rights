@@ -262,6 +262,54 @@ describe("play statistics", () => {
   });
 });
 
+describe("conventional infantry weapons", () => {
+  // TechManual Conventional Infantry Weapons Table (printed pp. 349-352): damage is per trooper, range is a Base Range.
+  it.each([
+    ["inf-bow-compound-is", { mode: "Melee", baseRange: 0, damage: 0.01, shots: "1" }, 0.001],
+    ["inf-grenade-launcher-is", { mode: "Support", baseRange: 1, damage: 0.81, inferno: 0.34, shots: "10" }, 0.005],
+    ["inf-laser-pistol-er-clan", { size: "Small", baseRange: 1, damage: 0.21, clip: "cells" }, 0.001],
+    ["inf-particle-cannon-support-is", { size: "Medium", baseRange: 3, damage: 1.58, crew: "5" }, 1.8],
+  ])("%s carries the book's per-trooper figures", async (id, infantry, tons) => {
+    expect((await loadCatalog()).byId(id)).toMatchObject({ units: ["infantry"], kind: "weapon", slots: 0, tons, infantry });
+  });
+
+  it("is offered to infantry only: every infantry row names its unit type and no BattleMech picker lists one", async () => {
+    const real = await loadCatalog();
+    const rows = real.all().filter((r) => r.infantry !== undefined);
+    expect(rows.length).toBeGreaterThan(250);
+    expect(rows.every((r) => r.units?.length === 1 && r.units[0] === "infantry")).toBe(true);
+    expect(real.offered("total-warfare", { techBase: "mixed", year: null }).filter((r) => r.infantry)).toEqual([]);
+  });
+});
+
+describe("TechManual weapons table: the other unit types' columns (printed pp. 341-343)", () => {
+  // The Space columns (NA leaves a unit type out; another number is that unit type's slots) and the Aero values in parentheses, which
+  // agree with Total Warfare's Aero Attack Value and Aerospace Range columns (printed p. 303).
+  it.each([
+    ["medium-laser-is", ["mech", "industrialmech", "vehicle", "aero", "smallcraft", "dropship"], { aero: { rangeClass: "Short" } }],
+    ["lrm-5-is", ["mech", "industrialmech", "vehicle", "aero", "smallcraft", "dropship"], { aero: { damage: "3", rangeClass: "Long" } }],
+    ["ultra-ac-5-is", ["mech", "industrialmech", "vehicle", "aero", "smallcraft", "dropship"], { vehicle: { slots: 1 }, aero: { slots: 1, heat: 2, damage: "7", rangeClass: "Long" } }],
+    ["lb-2-x-ac-clan", ["mech", "industrialmech", "vehicle", "protomech", "aero", "smallcraft", "dropship"], { protomech: { slots: 1 } }],
+  ])("%s", async (id, units, by) => {
+    const row = (await loadCatalog()).byId(id);
+    expect(row?.units).toEqual(units);
+    expect(row?.by).toMatchObject(by);
+  });
+});
+
+describe("Interstellar Operations: Alternate Eras unit-type columns", () => {
+  // The Space columns of the Additional Alternate Era table (printed pp. 211, 213, 215): NA leaves the unit type out; a number that differs
+  // from the 'Mech's is the slots on that unit type.
+  it.each([
+    ["primitive-prototype-ac-5-is", ["mech", "industrialmech", "vehicle", "aero", "smallcraft", "dropship", "ship", "building"], { vehicle: { slots: 1, note: "Support vehicle: 4 slots" }, aero: { slots: 1 } }],
+    ["prototype-case-is", ["mech", "industrialmech", "vehicle", "aero"], { aero: { slots: 0 } }],
+  ])("%s may be mounted only on the unit types whose column is not NA", async (id, units, by) => {
+    const row = (await loadCatalog()).byId(id);
+    expect(row?.units).toEqual(units);
+    expect(row?.by).toMatchObject(by);
+  });
+});
+
 describe("EDITIONS", () => {
   it("starts with total-warfare, a play book and a construction book", () => {
     expect(EDITIONS[0]?.id).toBe("total-warfare");

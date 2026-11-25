@@ -10,8 +10,26 @@ import { SHEET_ALIASES, sheetNameVariants } from "../data/equipment/names";
 import { FORMULAS, resolveFormula } from "./formulas";
 import type { FactsOf, LocationCode, MechRecord, Mount, MountFacts, TechBase } from "./mech";
 
+/** The longest range band an aerospace unit's attack reaches, as the weapons table prints it in place of hex ranges. */
+export type AeroRange = "Short" | "Medium" | "Long" | "Extreme";
 export type EquipmentKind = "weapon" | "ammunition" | "heat-sink" | "jump-jet" | "other";
 export type { Span };
+/** A conventional infantry weapon's figures as TechManual's infantry weapons table prints them. Infantry damage is per trooper and
+ * range is a Base Range (the platoon's to-hit modifiers come from it), so none of it fits `heat`, `damage` or `range`. */
+export interface InfantryStats {
+  rating: string; // the table's Tech (Rating) letter
+  size: "Small" | "Medium";
+  mode: "Melee" | "Standard" | "Support";
+  damageType: "B" | "E" | "M" | "P";
+  flags?: string; // A anti-air, B burst-fire, F flame-based, N non-penetrating
+  baseRange: number;
+  damage: number; // each trooper
+  inferno?: number; // damage each with Inferno ammunition, where the table prints a second line
+  ammoKg?: number; // one clip
+  shots: string; // as printed: "6", "15/5" (shots and bursts), "1-D" (single-use), "NA"
+  crew: string; // the Crew Value as printed: "1", "2", "1E"
+  clip?: number | "cells" | "single-use"; // the table's second cost: C-bills per clip, or its asterisks
+}
 export interface EquipmentRow {
   id: string;
   name: string;
@@ -38,7 +56,7 @@ export interface EquipmentRow {
   /** The unit types that may mount the item (data/units.ts); absent means a BattleMech and an IndustrialMech. */
   units?: UnitId[];
   /** What differs for another unit type where the book prints a separate column (weight, slots, heat, damage, range). */
-  by?: Partial<Record<UnitId, Partial<Pick<EquipmentRow, "tons" | "slots" | "heat" | "damage" | "range">> & { note?: string }>>;
+  by?: Partial<Record<UnitId, Partial<Pick<EquipmentRow, "tons" | "slots" | "heat" | "damage" | "range">> & { note?: string; rangeClass?: AeroRange }>>;
   /** Items sold by the size the player chooses (a jump pack's tons, a booster's Jumping MP): the unit, range and step; the choice is `Mount.amount`. */
   amount?: { unit: string; min: number; max?: number; step: number };
   /** Years from which the item is Advanced and from which Standard, where the table prints era-dependent dates. Not filtered on yet. */
@@ -58,6 +76,8 @@ export interface EquipmentRow {
   shotsPerTon?: number;
   /** The page the play figures came from, when it is not `cite`. */
   playCite?: { book: string; page: number };
+  /** Conventional infantry weapons only: the per-trooper figures (see InfantryStats). */
+  infantry?: InfantryStats;
   /** A non-missile direct-fire or pulse weapon: its weight counts toward a targeting computer (TechManual p. 238). */
   directFire?: true;
   editions?: Record<string, Partial<Pick<EquipmentRow, "tons" | "slots" | "availability" | "locations" | "locationsQuad">>>;

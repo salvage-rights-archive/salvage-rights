@@ -67,6 +67,7 @@ export const COCKPIT_COST: Sourced & { rows: Record<string, { cost: number; cite
     primitive: { cost: 100_000, cite: { book: IO, page: 215 } },
     "superheavy-tripod": { cost: 500_000, cite: { book: IO, page: 217 } },
     superheavy: { cost: 300_000, cite: { book: IO, page: 215 } },
+    "superheavy-industrial": { cost: 200_000, cite: { book: IO, page: 215 } },
     quadvee: { cost: 375_000, cite: { book: IO, page: 215 } },
   },
 };
@@ -134,7 +135,7 @@ export const ENGINE_COST: Sourced & { divisor: number; rows: Record<string, { pe
 export const GYRO_COST: Sourced & { rows: Record<string, { perGyroTon: number }> } = {
   cite: { book: TM, page: 278 },
   checked: "page",
-  rows: { standard: { perGyroTon: 300_000 }, compact: { perGyroTon: 400_000 }, "heavy-duty": { perGyroTon: 500_000 }, xl: { perGyroTon: 750_000 } },
+  rows: { standard: { perGyroTon: 300_000 }, compact: { perGyroTon: 400_000 }, "heavy-duty": { perGyroTon: 500_000 }, xl: { perGyroTon: 750_000 }, superheavy: { perGyroTon: 500_000 } },
 };
 /** Jump jets: perJetSquared x (number of jets)^2 x unit tonnage (printed p.278, errata v8.0 only fixes the exponent's typesetting). */
 export const JUMP_JET_COST: Sourced & { rows: Record<string, { perJetSquared: number }> } = {
@@ -212,7 +213,8 @@ export const CONFIGURATION_COST: Record<string, { structureFactor?: number; conv
 // (printed p.282). A catalog row with no key here is reported as unpriced, never guessed.
 // ---------------------------------------------------------------------------------------------------------------
 /** C-bills each; or per whole ton of the item's weight; or per ton of the 'Mech (the book's "xTT" formulas: spikes are 50 x tonnage). */
-export type Price = number | { perTon: number } | { perUnitTon: number } | { perRating: number };
+export type Price = number | { perTon: number } | { perUnitTon: number } | { perRating: number } | { perWeight: number };
+// `perWeight` is C-bills for each ton of the item's own weight, not rounded to whole tons (a turret: 5,000 x the turret's tonnage).
 interface PriceGroup extends Sourced {
   prices: Record<string, Price>;
 }
@@ -458,6 +460,30 @@ export const EQUIPMENT_COST: PriceGroup[] = [
     cite: { book: TM, page: 297 },
     checked: "page",
     prices: { "ba-ap-gauss-rifle": 10000, "ba-bearhunter-superheavy-ac": 11250, "ba-er-micro-laser": 10000, "ba-micro-pulse-laser": 12500, "ba-heavy-small-laser": 20000, "ba-heavy-medium-laser": 100000, "ba-bomb-rack": 30000, "ba-advanced-srm-1": 15000, "ba-advanced-srm-2": 30000, "ba-advanced-srm-3": 45000, "ba-advanced-srm-4": 60000, "ba-advanced-srm-5": 75000, "ba-advanced-srm-6": 90000 },
+  },
+  {
+    // TO:AUE p.221 (Heavy Weapons and Equipment Construction Data: the weapon price of the naval weapons and mass drivers; the ammunition price beside it is not kept)
+    cite: { book: TO, page: 221 },
+    checked: "page",
+    prices: { "nac-10": 2000000, "nac-20": 5000000, "nac-25": 7500000, "nac-30": 10500000, "nac-35": 14000000, "nac-40": 18000000, "light-n-gauss": 20300000, "medium-n-gauss": 30350000, "heavy-n-gauss": 50050000, "nl-35": 500000, "nl-45": 850000, "nl-55": 1250000, "light-n-ppc": 2000000, "medium-n-ppc": 3250000, "heavy-n-ppc": 9050000, "light-mass-driver": 150000000, "medium-mass-driver": 280000000, "heavy-mass-driver": 500000000 },
+  },
+  {
+    // TechManual p.292 (Heavy Weapons and Equipment cost table: capital missile launchers and the screen launcher)
+    cite: { book: TM, page: 292 },
+    checked: "page",
+    prices: { "killer-whale": 150_000, "white-shark": 130_000, barracuda: 90_000, "ar-10-launcher": 250_000, "kraken-t": 500_000, "killer-whale-t": 165_000, "white-shark-t": 145_000, "barracuda-t": 100_000, "screen-launcher": 250_000 },
+  },
+  {
+    // TechManual p.279 (Combat Vehicle structural costs: a turret is 5,000 x its own tonnage; p.280 prints the same for a support vehicle)
+    cite: { book: TM, page: 279 },
+    checked: "page",
+    prices: { turret: { perWeight: 5_000 } },
+  },
+  {
+    // TechManual pp.298-301 (Conventional Infantry Weapons: the weapon's price; the clip's price is in the row's `infantry.clip`)
+    cite: { book: TM, page: 298 },
+    checked: "page",
+    prices: { "inf-bow-compound": 15, "inf-bow-daikyu": 30, "inf-bow-longbow": 20, "inf-bow-shortbow": 10, "inf-bow-hankyu": 15, "inf-club-blackjack-sap": 5, "inf-club-club-improvised": 0, "inf-crossbow-basic": 10, "inf-crossbow-heavy": 20, "inf-blade-axe": 25, "inf-blade-bokken": 15, "inf-blade-dao": 200, "inf-blade-carbon-reinforced-nails": 1000, "inf-blade-hatchet-tomahawk": 10, "inf-blade-katana-scimitar": 250, "inf-blade-knife-dagger-bayonet": 8, "inf-blade-no-dachi": 300, "inf-blade-sword": 30, "inf-blade-wakizashi": 150, "inf-blade-vibro-axe": 150, "inf-blade-vibro-blade": 100, "inf-blade-vibro-katana": 350, "inf-blade-vibro-sword-is": 300, "inf-blade-vibro-sword-clan": 500, "inf-nunchaku": 10, "inf-staff": 5, "inf-staff-pole-arm": 50, "inf-staff-stun-staff-single-end": 300, "inf-staff-stun-staff-double-end": 500, "inf-stunstick": 200, "inf-stunstick-mini": 50, "inf-whip": 18, "inf-whip-monowire": 200, "inf-whip-medusa": 2200, "inf-whip-neural-lash": 750, "inf-whip-neural-whip": 500, "inf-auto-pistol": 50, "inf-auto-pistol-hawk-eagle": 100, "inf-auto-pistol-magnum": 75, "inf-auto-pistol-m-g": 60, "inf-auto-pistol-nambu": 75, "inf-auto-pistol-serrek-7875d": 185, "inf-auto-pistol-sternsnacht-python": 125, "inf-dart-gun": 40, "inf-flare-pistol": 25, "inf-gauss-pistol": 1500, "inf-gauss-pistol-hold-out-mandrake": 750, "inf-gyrojet-pistol": 450, "inf-gyrojet-pistol-coventry-handrocket": 250, "inf-gyrojet-pistol-hold-out": 30, "inf-laser-pistol": 750, "inf-laser-pistol-blazer": 3000, "inf-laser-pistol-er": 1000, "inf-laser-pistol-hold-out": 100, "inf-laser-pistol-hold-out-white-dwarf": 250, "inf-laser-pistol-nakjima": 750, "inf-laser-pistol-sunbeam": 750, "inf-laser-pistol-sunbeam-nova": 1250, "inf-needler-pistol": 50, "inf-needler-pistol-hold-out": 20, "inf-needler-pistol-m-g-flechette": 100, "inf-needler-pistol-sea-eagle": 110, "inf-paint-gun-lgb-46r": 50, "inf-pistol-flamer": 50, "inf-pistol-hold-out": 20, "inf-pistol-makeshift": 15, "inf-pistol-tk-enforcer-semi-automatic": 110, "inf-pistol-spitball-gas-weapon": 6, "inf-pistol-sternsnacht-heavy-claymore": 200, "inf-pulse-laser-pistol-clan": 1500, "inf-pulse-laser-pistol-is": 1000, "inf-revolver": 60, "inf-revolver-magnum": 60, "inf-sonic-stunner": 100, "inf-tranq-gun": 30, "inf-auto-rifle": 80, "inf-elephant-gun": 100, "inf-gauss-rifle-thunderstroke": 2500, "inf-gauss-rifle-thunderstroke-ii": 3500, "inf-gyroslug-carbine": 800, "inf-gyroslug-carbine-star-king": 950, "inf-gyroslug-rifle": 1000, "inf-gyrojet-gun-heavy": 2500, "inf-gyrojet-rifle": 1000, "inf-laser-rifle": 1250, "inf-laser-rifle-blazer": 2190, "inf-laser-rifle-ebony-assault": 8500, "inf-laser-rifle-er": 2000, "inf-laser-rifle-er-starfire": 2500, "inf-laser-rifle-federated-barrett-m61a": 2150, "inf-laser-rifle-intek": 1250, "inf-laser-rifle-magna": 1500, "inf-laser-rifle-marx-xx": 1750, "inf-laser-rifle-mauser-960-assault-sys": 8000, "inf-laser-rifle-mauser-1200-lss": 10000, "inf-laser-rifle-mauser-iic": 18000, "inf-laser-rifle-maxell-pl-10": 2000, "inf-needler-rifle": 75, "inf-needler-rifle-shredder-heavy": 150, "inf-needler-rifle-m-g-flechette": 200, "inf-pulse-laser-rifle-clan": 3000, "inf-pulse-laser-rifle-is": 2000, "inf-rifle-bolt-action": 60, "inf-rifle-federated-barrett-m42b": 1385, "inf-rifle-federated-long": 120, "inf-rifle-imperator-ax-22-assault": 200, "inf-rifle-m-g-g-150": 270, "inf-rifle-makeshift": 20, "inf-rifle-minolta-9000-adv-sniper-sys": 1000, "inf-rifle-radium-sniper": 9500, "inf-rifle-sniper": 350, "inf-rifle-tk-assault": 150, "inf-rifle-zeus-heavy": 200, "inf-auto-shotgun": 200, "inf-ceres-arms-crowdbuster": 150, "inf-gel-gun-buccaneer": 200, "inf-shotgun-avenger-ccw": 345, "inf-shotgun-combat": 175, "inf-shotgun-double-barrel": 30, "inf-shotgun-double-barrel-sawed-off": 30, "inf-shotgun-pump-action": 40, "inf-shotgun-pump-action-sawed-off": 40, "inf-auto-pistol-mydron": 100, "inf-auto-pistol-stetta": 150, "inf-gauss-submachine-gun": 2000, "inf-machine-pistol-martial-eagle": 180, "inf-submachine-gun": 80, "inf-smg-gunther-mp-20": 125, "inf-smg-imperator-2894a1": 100, "inf-smg-ka-23-subgun": 350, "inf-smg-rorynex-rm-3-xxi": 80, "inf-smg-rugan": 100, "inf-grenade": 16, "inf-grenade-micro": 2, "inf-grenade-mini": 8, "inf-grenade-rocket-assisted": 50, "inf-aa-weapon-mk-1-light-aa": 1000, "inf-aa-weapon-mk-2-man-portable-aa": 3500, "inf-autocannon-bearhunter-super-heavy": 3000, "inf-autocannon-semi-portable": 2000, "inf-flamer-heavy": 200, "inf-flamer-man-portable": 100, "inf-gauss-cannon-grand-mauler": 5000, "inf-gauss-rifle-magshot": 8500, "inf-gauss-rifle-tsunami-heavy": 5500, "inf-gauss-rifle-light-david": 6000, "inf-gauss-rifle-light-king-david": 8000, "inf-grenade-launcher": 465, "inf-grenade-launcher-automatic": 975, "inf-grenade-launcher-compact": 290, "inf-grenade-launcher-heavy": 1500, "inf-grenade-launcher-heavy-auto": 4500, "inf-laser-hellbore-assault": 2500, "inf-lrm-launcher-corean-farshot": 2000, "inf-machine-gun-light": 400, "inf-machine-gun-portable": 1000, "inf-machine-gun-semi-portable": 1100, "inf-machine-gun-support": 1750, "inf-mortar-heavy": 5000, "inf-mortar-light": 1400, "inf-mrm-launcher": 2500, "inf-needler-support-firedrake": 500, "inf-particle-cannon-semi-portable": 7000, "inf-particle-cannon-support": 45000, "inf-plasma-rifle-man-portable": 7500, "inf-pulse-laser-dragonsbane-disp": 5000, "inf-recoilless-rifle-heavy": 3000, "inf-recoilless-rifle-light": 300, "inf-recoilless-rifle-medium": 2000, "inf-rocket-launcher-law": 350, "inf-rocket-launcher-v-law": 75, "inf-srm-launcher-standard-two-shot": 1500, "inf-srm-launcher-heavy": 3000, "inf-srm-launcher-light": 1500, "inf-support-laser": 10000, "inf-support-laser-er-is": 11250, "inf-support-laser-er-clan": 11250, "inf-support-laser-er-heavy-is": 80000, "inf-support-laser-er-heavy-clan": 80000, "inf-support-laser-er-semi-portable": 10000, "inf-support-laser-heavy": 40000, "inf-support-laser-heavy-semi-portable": 20000, "inf-support-laser-semi-portable": 5000, "inf-support-laser-ultra-heavy": 100000, "inf-support-pulse-laser": 16000, "inf-support-pulse-laser-heavy": 60000, "inf-support-pulse-laser-semi-portable": 12500 },
   },
 ];
 

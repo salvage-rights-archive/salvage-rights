@@ -108,6 +108,15 @@ describe("the rules check", () => {
   });
 });
 
+describe("superheavy parts", () => {
+  it("are data only: no BattleMech, tripod or Show everything choice offers a superheavy cockpit or gyro", () => {
+    const parts: [PartKind, string][] = [["cockpit", "superheavy"], ["cockpit", "superheavy-industrial"], ["cockpit", "superheavy-tripod"], ["gyro", "superheavy"]];
+    for (const configuration of ["biped", "quad", "tripod"]) {
+      for (const [kind, key] of parts) expect(partAvailable(kind, key, record({ configuration, rulesLevel: "unlimited", year: 3140 }), true), `${key} on a ${configuration}`).toBe(false);
+    }
+  });
+});
+
 describe("equipment groups", () => {
   it("never offers a BattleMech an item whose `units` leaves out the BattleMech, with or without Show everything", () => {
     const row = { ...catalog.byId("medium-laser-is")!, units: ["vehicle" as const] };
@@ -125,6 +134,13 @@ describe("equipment groups", () => {
       ["ammo-gauss-rifle-clan", "ammo-ballistic"],
       ["double-heat-sink-clan", "heat"],
       ["guardian-ecm-suite-is", "electronics"],
+      ["inf-laser-rifle-ebony-assault-is", "infantry"],
+      ["turret-is", "vehicle"],
+      ["kraken-t-is", "capital"],
+      ["heavy-n-ppc-clan", "capital"],
+      ["ammo-copperhead-sniper-is", "ammo-artillery"],
+      ["ammo-mortar-airburst-clan", "ammo-missile"],
+      ["ammo-remote-sensor-dispenser-is", "ammo-other"],
     ];
     expect(ids.map(([id]) => groupOf({ id, kind: id.startsWith("ammo-") ? "ammunition" : "weapon" }).id)).toEqual(ids.map(([, group]) => group));
   });

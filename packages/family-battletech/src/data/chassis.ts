@@ -36,6 +36,8 @@ interface Sourced {
 export interface PartFacts {
   techBase?: "inner-sphere" | "clan" | "both";
   rulesLevel?: "standard" | "advanced" | "experimental";
+  /** The unit tonnages the part is for, where the book limits it (a superheavy 'Mech's parts: 101 to 200 tons). */
+  tonnage?: { min: number; max: number };
   introduced?: { is?: number; clan?: number; prototype?: true };
   /** The years the part can be had (production dates, with an extinction and a reintroduction where the table prints them), for the
    * tech base the row is for. It takes the place of `introduced` in the availability rule; absent means no printed date, so no limit.
@@ -401,6 +403,8 @@ export interface GyroType extends PartFacts {
   label: string; // as the record sheets print it
   multiplier: number;
   slots: number;
+  /** The one configuration that may mount this gyro; absent means any. */
+  only?: string;
 }
 export const GYROS: Sourced & { types: Record<string, GyroType> } = {
   cite: { book: "TechManual", page: 50 },
@@ -410,6 +414,10 @@ export const GYROS: Sourced & { types: Record<string, GyroType> } = {
     compact: { name: "Compact", label: "Compact Gyro", multiplier: 1.5, slots: 2, techBase: "inner-sphere", availability: [{ from: 3068 }], availabilityCite: UTA(42) },
     "heavy-duty": { name: "Heavy-Duty", label: "Heavy Duty Gyro", multiplier: 2.0, slots: 4, techBase: "inner-sphere", availability: [{ from: 3067 }], availabilityCite: UTA(42) },
     xl: { name: "XL", label: "XL Gyro", multiplier: 0.5, slots: 6, techBase: "inner-sphere", availability: [{ from: 3067 }], availabilityCite: UTA(42) },
+    // The superheavy gyro (Interstellar Operations: Alternate Eras, rules printed p.156 Add Gyroscope; table p.217, date and Advanced level): the
+    // only gyro a superheavy 'Mech may use, weighing as much as a heavy-duty gyro (the engine rating over 100, rounded up, times 2) in two
+    // center torso slots. Data only: `only` names the body the editor does not offer yet.
+    superheavy: { name: "Superheavy", label: "Superheavy Gyro", multiplier: 2.0, slots: 2, only: "superheavy", tonnage: { min: 101, max: 200 }, techBase: "inner-sphere", rulesLevel: "advanced", availability: [{ from: 2940 }], cite: { book: IO, page: 217 }, checked: "page" },
   },
 };
 
@@ -483,6 +491,14 @@ export const COCKPITS: Sourced & { types: Record<string, CockpitType> } = {
       lifeSupport: [1, 6],
       rules: "Slots as a standard cockpit. Printed for Primitive BattleMechs, which have their own construction rules.",
     },
+    // Superheavy 'Mech cockpits (Interstellar Operations: Alternate Eras, rules printed p.156, Add Cockpit; costs and dates the Additional Alternate
+    // Era table, printed p.215 for the first two and p.217 for the tripod's; Advanced rules level, the table's Rules Level column). A superheavy
+    // 'Mech is 101 to 200 tons and its cockpit weighs 4 tons (5 for the tripod's) and keeps the standard head slots. The app builds no superheavy
+    // 'Mech yet: `only` names a body the editor does not offer, so no picker shows these and the rows are data only. The dates are the table's Latest
+    // Intro Date; the Universal Technology Advancement Table prints 3135 (not 2940) for the tripod cockpit, a conflict the book leaves.
+    superheavy: { name: "Superheavy", tons: 4, only: "superheavy", tonnage: { min: 101, max: 200 }, techBase: "inner-sphere", rulesLevel: "advanced", availability: [{ from: 3076 }], cite: { book: IO, page: 215 }, checked: "page", cockpit: [3], sensors: [2, 5], lifeSupport: [1, 6], rules: "The reinforced cockpit gives the head 4 points of structure and room for 12 armor points. A biped or quad superheavy may add a Command Console; no other cockpit type fits." },
+    "superheavy-industrial": { name: "Superheavy Industrial", tons: 4, only: "superheavy", tonnage: { min: 101, max: 200 }, techBase: "inner-sphere", rulesLevel: "advanced", industrial: true, availability: [{ from: 2940 }], cite: { book: IO, page: 215 }, checked: "page", cockpit: [3], sensors: [2, 5], lifeSupport: [1, 6], rules: "For superheavy IndustrialMechs." },
+    "superheavy-tripod": { name: "Superheavy Tripod", tons: 5, only: "superheavy-tripod", tonnage: { min: 101, max: 200 }, techBase: "inner-sphere", rulesLevel: "advanced", availability: [{ from: 2940 }], cite: { book: IO, page: 217 }, checked: "page", cockpit: [3], sensors: [2, 5], lifeSupport: [1, 6], rules: "Takes the place of the superheavy cockpit and duplicates a Command Console, so a superheavy tripod mounts no separate one." },
   },
 };
 
