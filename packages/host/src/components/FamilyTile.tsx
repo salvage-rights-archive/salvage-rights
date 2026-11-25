@@ -68,7 +68,9 @@ export function FamilyTile({
 
   if (onlyPath !== null) {
     return (
-      <Link {...common} to={onlyPath} aria-labelledby={nameId} aria-describedby={blurbId}>
+      // No aria-labelledby: the link's name is its own content (WCAG 2.5.3, Label in Name), so every word that is
+      // visible on the tile is part of the name.
+      <Link {...common} to={onlyPath}>
         {body(
           <span className="sr-tile__open" aria-hidden="true">
             Open &rarr;

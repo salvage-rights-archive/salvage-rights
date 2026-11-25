@@ -66,7 +66,8 @@ describe("landing page", () => {
     expect(tile.tagName).toBe("A");
     expect(tile.getAttribute("href")).toBe("/alpha/main/play");
     expect(within(tile).getByRole("heading", { name: "Family alpha" })).toBeTruthy();
-    expect(screen.getByRole("link", { name: "Family alpha" })).toBe(tile);
+    // The name is the tile's own content, so it holds everything visible on it.
+    expect(screen.getByRole("link", { name: /^Family alpha Blurb of alpha\./ })).toBe(tile);
   });
 
   it("shows a single tile large, with its artwork and credit", async () => {
