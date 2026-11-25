@@ -21,6 +21,20 @@ test.describe("dev edition", () => {
     await expect(page).toHaveTitle(`${(await heading.textContent()) ?? ""} · Salvage Rights`);
   });
 
+  test("the tiles show each game's icon and the coming-soon games, and fit 320 px with 44 px links", async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 700 });
+    await page.goto(`${DEV}/`);
+    const tile = page.getByTestId("family-tile").first();
+    await expect(tile.getByRole("link", { name: "Classic, BattleTech" }).locator("img")).toBeVisible();
+    await expect(tile.getByText("AeroTech 2 (coming soon)")).toBeVisible();
+    const widths = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, client: document.documentElement.clientWidth }));
+    expect(widths.scroll).toBe(widths.client);
+    for (const link of await tile.getByRole("link").all()) {
+      const box = await link.boundingBox();
+      if (box) expect(box.height).toBeGreaterThanOrEqual(44);
+    }
+  });
+
   test("hiding the families one at a time reaches the single layout, then the all-hidden line, and survives a reload", async ({ page }) => {
     await page.goto(`${DEV}/settings`);
     // The "Show ..." checkboxes are the families' own, one each.

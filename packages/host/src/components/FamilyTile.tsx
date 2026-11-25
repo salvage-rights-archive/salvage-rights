@@ -8,13 +8,66 @@ function firstPath(family: FamilyManifest, game: GameManifest): string | null {
   return first ? `/${family.id}/${game.id}/${first.path}` : null;
 }
 
+/** A decorative square picture beside a game's name; it drops out if it cannot load. */
+function GameIcon({ src }: { src: string | undefined }) {
+  const [failed, setFailed] = useState(false);
+  if (!src || failed) return null;
+  return (
+    <img
+      className="sr-tile__icon"
+      src={src}
+      alt=""
+      width={40}
+      height={40}
+      onError={() => {
+        setFailed(true);
+      }}
+    />
+  );
+}
+
+/** A game that is not ready yet: its icon, its name with a coming-soon mark, and its picture with the AI label. */
+function SoonGame({ game }: { game: GameManifest }) {
+  const [failed, setFailed] = useState(false);
+  const art = game.artwork;
+  return (
+    <li className="sr-tile__soon">
+      <span className="sr-tile__soon-name">
+        <GameIcon src={game.icon} />
+        <span>
+          {game.shortName}
+          <span className="sr-tile__soon-mark"> (coming soon)</span>
+        </span>
+      </span>
+      {art && !failed && (
+        <figure className="sr-tile__soon-art">
+          <img
+            src={art.src}
+            alt={art.alt}
+            width={800}
+            height={600}
+            loading="lazy"
+            onError={() => {
+              setFailed(true);
+            }}
+          />
+          <figcaption>{art.credit}</figcaption>
+        </figure>
+      )}
+    </li>
+  );
+}
+
 export function FamilyTile({
   family,
   games,
+  soon = [],
   size,
 }: {
   family: FamilyManifest;
   games: GameManifest[];
+  /** Games that are not ready yet and have an icon: listed after the ready ones, marked coming soon. */
+  soon?: GameManifest[];
   size: "grid" | "single";
 }) {
   const nameId = useId();
@@ -44,7 +97,7 @@ export function FamilyTile({
     </div>
   );
 
-  const only = games.length === 1 ? games[0] : undefined;
+  const only = games.length === 1 && soon.length === 0 ? games[0] : undefined;
   const onlyPath = only ? firstPath(family, only) : null;
   const common = {
     "data-testid": "family-tile",
@@ -89,11 +142,15 @@ export function FamilyTile({
             return path === null ? null : (
               <li key={game.id}>
                 <Link className="sr-tile__game" to={path} aria-label={`${game.shortName}, ${family.name}`}>
+                  <GameIcon src={game.icon} />
                   {game.shortName}
                 </Link>
               </li>
             );
           })}
+          {soon.map((game) => (
+            <SoonGame key={game.id} game={game} />
+          ))}
         </ul>,
       )}
     </div>

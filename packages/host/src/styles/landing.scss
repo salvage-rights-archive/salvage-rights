@@ -182,6 +182,55 @@
     text-decoration: none;
   }
 
+  // A decorative icon beside a game's name, shown at 40 px from a 128 px picture.
+  &__icon {
+    flex: none;
+    width: 40px;
+    height: 40px;
+    margin-right: var(--sr-space-2);
+    object-fit: cover;
+  }
+
+  // A game that is not ready: not a link, so it is a plain card with the picture first and the name under it.
+  &__soon {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sr-space-2);
+    padding: var(--sr-space-2);
+    background: var(--sr-bg);
+    color: var(--sr-ink);
+    border: var(--sr-border) dashed var(--sr-line-strong);
+    font-family: var(--sr-font-tag);
+    overflow-wrap: anywhere;
+  }
+
+  &__soon-name {
+    display: flex;
+    align-items: center;
+  }
+
+  &__soon-mark {
+    font-size: .85rem;
+  }
+
+  &__soon-art {
+    order: -1;
+    margin: 0;
+
+    img {
+      display: block;
+      width: 100%;
+      height: auto;
+      aspect-ratio: 4 / 3;
+      object-fit: cover;
+    }
+
+    figcaption {
+      margin-top: var(--sr-space-1);
+      font-size: .8rem;
+    }
+  }
+
   a.sr-tile__game:focus-visible {
     outline-offset: -5px;
   }
@@ -216,6 +265,12 @@
 
     .sr-tile__game {
       background: transparent;
+      border-color: var(--sr-header-line);
+    }
+
+    .sr-tile__soon {
+      background: transparent;
+      color: var(--sr-header-ink);
       border-color: var(--sr-header-line);
     }
 

@@ -56,6 +56,9 @@ describe("Classic BattleTech home", () => {
     renderHome();
     expect(await screen.findByRole("heading", { level: 1, name: "Classic BattleTech" })).toBeTruthy();
     expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
+    // The game's picture, with its AI label beside it.
+    const figure = screen.getByRole("img", { name: /soldiers cutting up a squat walking war machine/ }).closest("figure");
+    expect(within(figure as HTMLElement).getByText("Picture: AI-generated image (DeviantArt DreamUp), made by the Salvage Rights team.")).toBeTruthy();
     const select = await screen.findByLabelText<HTMLSelectElement>("Edition");
     expect(select.value).toBe("total-warfare");
     expect(screen.getByText(/^Play: Total Warfare \(Catalyst Game Labs\), corrected eleventh printing\. Construction: TechManual \(Catalyst Game Labs\),/)).toBeTruthy();

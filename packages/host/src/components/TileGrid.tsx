@@ -15,7 +15,13 @@ export function TileGrid({
   return (
     <div className="sr-tiles" data-size={layout}>
       {families.map((family) => (
-        <FamilyTile key={family.id} family={family} games={listedGames(family, settings)} size={layout} />
+        <FamilyTile
+          key={family.id}
+          family={family}
+          games={listedGames(family, settings)}
+          soon={family.games.filter((game) => !game.ready && game.icon !== undefined)}
+          size={layout}
+        />
       ))}
     </div>
   );

@@ -1251,3 +1251,21 @@ a.bt-button {
     font-size: 1.125rem;
   }
 }
+
+// A game picture at the top of its home page.
+.bt-game-art {
+  max-width: 28rem;
+  margin: 0 0 var(--sr-space-3);
+
+  img {
+    display: block;
+    width: 100%;
+    height: auto;
+    border: var(--sr-border) solid var(--sr-line);
+    border-radius: var(--sr-radius);
+  }
+
+  figcaption {
+    margin-top: var(--sr-space-1);
+  }
+}

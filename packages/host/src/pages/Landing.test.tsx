@@ -81,6 +81,28 @@ describe("landing page", () => {
     expect(screen.getByRole("link", { name: /^Family alpha / })).toBe(tile);
   });
 
+  it("puts each ready game's icon beside its name and lists a game that is not ready, marked coming soon, with its picture and label", async () => {
+    const alpha = fixtureFamily("alpha", {
+      games: [
+        fixtureGame("one", "Alpha One", { icon: "one.jpg" }),
+        fixtureGame("two", "Alpha Two"),
+        fixtureGame("late", "Alpha Late", { ready: false, routes: [], icon: "late.jpg", artwork: FIXTURE_ARTWORK }),
+        fixtureGame("bare", "Alpha Bare", { ready: false, routes: [] }),
+      ],
+    });
+    await renderLanding([alpha, fixtureFamily("beta")]);
+    const tile = (await screen.findAllByTestId("family-tile"))[0] as HTMLElement;
+    const one = within(tile).getByRole("link", { name: "Alpha One, Family alpha" });
+    expect(one.querySelector("img")?.getAttribute("alt")).toBe("");
+    expect(within(tile).getByRole("link", { name: "Alpha Two, Family alpha" }).querySelector("img")).toBeNull();
+    const late = within(tile).getByText("Alpha Late").closest("li") as HTMLElement;
+    expect(late.textContent).toContain("(coming soon)");
+    expect(within(late).queryByRole("link")).toBeNull();
+    expect(within(late).getByRole("img", { name: "A fixture picture" })).toBeTruthy();
+    expect(within(late).getByText("Fixture Artist")).toBeTruthy();
+    expect(within(tile).queryByText("Alpha Bare")).toBeNull();
+  });
+
   it("drops the artwork and its credit when the picture fails to load", async () => {
     await renderLanding([fixtureFamily("alpha", { artwork: FIXTURE_ARTWORK })]);
     const tile = await screen.findByTestId("family-tile");
