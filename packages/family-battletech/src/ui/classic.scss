@@ -245,9 +245,12 @@ a.bt-button {
       z-index: 10;
     }
 
+    // The header, status, notes and the record all keep a margin the width of the side column, so none of them can sit under it
+    // (a block that merely shares a line with a float was left to the browser, and Firefox let wide content run under the column).
     &__header,
     &__status,
-    &__info {
+    &__info,
+    &__body {
       margin-right: calc(var(--bt-side) + var(--sr-space-3));
     }
 
@@ -260,7 +263,7 @@ a.bt-button {
       // The rules check and the calculator share the column; each scrolls on its own, and together they fit the screen.
     }
 
-    // The record sits beside the floated rules check, whatever its length.
+
     &__body {
       display: flow-root;
 
