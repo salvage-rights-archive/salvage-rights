@@ -19,6 +19,13 @@ export function levelAtLeast(a: RulesLevel, b: RulesLevel): boolean {
   return rank(a) >= rank(b);
 }
 
+/** The tech bases a unit at `level` may choose: at Introductory only Inner Sphere (3025 technology); the current choice is kept so a selector never blanks. */
+export function techBaseChoices(level: RulesLevel | undefined, current: string): [string, string][] {
+  const all: [string, string][] = [["inner-sphere", "Inner Sphere"], ["clan", "Clan"], ["mixed", "Mixed"]];
+  if (levelAtLeast(level ?? DEFAULT_LEVEL, DEFAULT_LEVEL)) return all;
+  return all.filter(([value]) => value === "inner-sphere" || value === current);
+}
+
 /** The level's row (label, description, cite). */
 export function levelRow(level: RulesLevel): RulesLevelRow {
   return RULES_LEVELS[rank(level)] ?? RULES_LEVELS[rank(DEFAULT_LEVEL)] as RulesLevelRow;
