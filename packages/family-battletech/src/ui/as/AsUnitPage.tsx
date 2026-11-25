@@ -4,6 +4,7 @@ import { Link, useBlocker, useLocation, useNavigate, useSearchParams } from "rea
 import { AS_AEROSPACE_ROLES, AS_EDITION, AS_GROUND_ROLES, AS_UNIT_TYPES, SKILLS } from "../../data/alpha-strike";
 import { formatDamage, formatMove, formatSpecials, newAsUnit, parseDamage, parseMove, parseSpecials, unitFindings, unitTitle } from "../../rules/as-unit";
 import type { AsDamage, AsUnit } from "../../rules/as-unit";
+import { mulOfficial } from "../../rules/as-mul";
 import LeaveConfirm from "../editor/LeaveConfirm";
 import { readPicture } from "../picture";
 import { STORAGE_READ_FAILED, STORAGE_WRITE_FAILED } from "../storage";
@@ -348,7 +349,10 @@ function UnitForm({ initial, isNew, review, storage }: { initial: AsUnit; isNew:
         <h1 tabIndex={-1}>{title || "New unit"}</h1>
         <p className="bt-hint">{`Played under: ${AS_EDITION.name}`}</p>
         {base.source.kind !== "manual" && (
-          <p className="bt-credit">{`Source: ${base.source.kind === "mordel" ? "mordel.net" : base.source.kind}${base.source.credit ? `. ${base.source.credit}` : ""}${base.source.ref ? ` (${base.source.ref})` : ""}`}</p>
+          <p className="bt-credit">{`Source: ${base.source.kind === "mordel" ? "mordel.net" : base.source.kind === "mul-export" ? "Master Unit List" : base.source.kind}${base.source.credit ? `. ${base.source.credit}` : ""}${base.source.ref ? ` (${base.source.ref})` : ""}`}</p>
+        )}
+        {base.source.official !== undefined && (
+          <p className="bt-credit">{mulOfficial(unit).changed ? `NOT OFFICIAL: changed from the published design in the ${base.source.official.book}` : `OFFICIAL, ${base.source.official.book}`}</p>
         )}
         <div className="bt-actions">
           <button type="button" className="bt-button" disabled={!dirty || invalid} onClick={() => void save()}>
