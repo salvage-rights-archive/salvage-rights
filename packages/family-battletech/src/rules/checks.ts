@@ -15,6 +15,7 @@ import {
   HEAT_SINKS,
   INTERNAL_STRUCTURE,
   LAM,
+  MIXED_TECHNOLOGY,
   MYOMER,
   SHEET,
   SHIELDS,
@@ -23,7 +24,7 @@ import {
 import type { Cite, PartFacts, Span } from "../data/chassis";
 import { configurationInTime, equipmentPhase, eraOfRecord, eraOfYear, partPhase, partSpans, typeInTime, windowOf } from "./availability";
 import { locationsFor, mountableOn, mountsRequired, podMountable } from "./catalog";
-import { levelAtLeast, levelIn, levelItems, levelRow } from "./levels";
+import { levelAtLeast, levelIn, levelItems, levelRow, mixedPhase } from "./levels";
 import { datesText, partIsPrototypeOnly, partPrototype } from "./time";
 import type { Catalog, EquipmentRow } from "./catalog";
 import { ARM_FULL, armorSpread, armsOf, configurationOf, engineTons, freeHeatSinks, industrialRulesOf, layout as buildLayout, maxArmor, mechTypeOf, walkMP, weights } from "./mech";
@@ -530,6 +531,10 @@ function eraCheck({ record }: CheckInput): Finding[] {
   if (row && !bodyInTime) {
     const when = record.year !== null ? String(record.year) : `the ${eraOfRecord(record)?.name ?? "chosen"} era`;
     out.push(finding("availability", "error", `A ${row.name} is not available to ${record.techBase === "clan" ? "a Clan" : record.techBase === "mixed" ? "a mixed technology" : "an Inner Sphere"} 'Mech in ${when}; ${spansText(record.techBase === "clan" ? (row.clanAvailability ?? row.availability) : row.availability, prototypeOf(record.techBase === "clan" ? (row.clanPrototypeYear ?? row.prototypeYear) : row.prototypeYear))}.`, { where: { field: "configuration" }, cite: { book: "Interstellar Operations: Alternate Eras", page: 44 } }));
+  }
+  if (record.techBase === "mixed" && mixedPhase(record) === null) {
+    const when = record.year !== null ? String(record.year) : `the ${eraOfRecord(record)?.name ?? "chosen"} era`;
+    out.push(finding("availability", "error", `Mixed technology is not available in ${when}; the book dates its first prototypes to about ${MIXED_TECHNOLOGY.clanPrototypeYear}.`, { where: { field: "techBase" }, cite: MIXED_TECHNOLOGY.availabilityCite }));
   }
   return out;
 }

@@ -64,6 +64,8 @@ describe("rules levels", () => {
     ["a biped with an experimental item", editRecord(bipedRecord(), withMount("prototype")), "experimental"],
     ["a biped with a Standard item", editRecord(bipedRecord(), withMount("late-gun")), "standard"],
     ["a Clan record", bipedRecord({ techBase: "clan" }), "standard"],
+    ["a mixed record in its production years", bipedRecord({ techBase: "mixed", year: 3085 }), "advanced"],
+    ["a mixed record in its prototype years", bipedRecord({ techBase: "mixed", year: 3060 }), "experimental"],
     ["a biped with an endo steel structure", editRecord(bipedRecord(), (d) => void (d.chassis.structure = "endo-steel")), "standard"],
   ])("finds the lowest level for %s", (_name, record, expected) => {
     expect(lowestLevelFor(record, catalog)).toBe(expected);
@@ -130,9 +132,21 @@ describe("the Introductory level against the Quick-Start record sheets", () => {
 
 describe("tech base choices", () => {
   it("offers only Inner Sphere at Introductory, and keeps a current choice so the selector never blanks", () => {
-    expect(techBaseChoices("introductory", "inner-sphere").map(([v]) => v)).toEqual(["inner-sphere"]);
-    expect(techBaseChoices("introductory", "clan").map(([v]) => v)).toEqual(["inner-sphere", "clan"]);
-    expect(techBaseChoices("standard", "inner-sphere").map(([v]) => v)).toEqual(["inner-sphere", "clan", "mixed"]);
-    expect(techBaseChoices(undefined, "inner-sphere").map(([v]) => v)).toEqual(["inner-sphere", "clan", "mixed"]);
+    expect(techBaseChoices("introductory", "inner-sphere", { year: 3085 }).map(([v]) => v)).toEqual(["inner-sphere"]);
+    expect(techBaseChoices("introductory", "clan", { year: 3085 }).map(([v]) => v)).toEqual(["inner-sphere", "clan"]);
+    expect(techBaseChoices(undefined, "inner-sphere", { year: 3085 }).map(([v]) => v)).toEqual(["inner-sphere", "clan"]);
+  });
+
+  it("hides Mixed until its level and time: Advanced from production, Experimental from the prototype year, never before it; the current one stays", () => {
+    const offered = (level: RulesLevel, year: number | null, current = "inner-sphere") => techBaseChoices(level, current, { year }).some(([v]) => v === "mixed");
+    expect([offered("standard", 3085), offered("advanced", 3085), offered("advanced", null), offered("advanced", 3060), offered("experimental", 3060), offered("unlimited", 2830), offered("experimental", 2819), offered("standard", 3085, "mixed")]).toEqual([
+      false, true, true, false, true, true, false, true,
+    ]);
+  });
+
+  it("reports mixed technology before its first prototype year, with the page", () => {
+    const found = runChecks(bipedRecord({ techBase: "mixed", year: 2800, rulesLevel: "advanced" }), catalog).filter((f) => f.message.startsWith("Mixed technology is not available"));
+    expect(found).toHaveLength(1);
+    expect(found[0]?.cite).toMatchObject({ page: 45 });
   });
 });

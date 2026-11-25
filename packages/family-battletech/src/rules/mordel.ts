@@ -7,7 +7,7 @@ import { ARMOR, MYOMER, STRUCTURE_TYPES } from "../data/chassis";
 import type { MechType } from "../data/chassis";
 import type { Catalog, EquipmentRow } from "./catalog";
 import { levelAtLeast, lowestLevelFor } from "./levels";
-import { ARM_FULL, armorSpread, armsOf, configurationOf, layout, locationName, slotsTaken } from "./mech";
+import { ARM_FULL, armorSpread, armsOf, configurationOf, layout, locationName, partMountBase, slotsTaken } from "./mech";
 import type { LocationCode, MechRecord, Mount, TechBase } from "./mech";
 import { defaultFixedMounts, splitRecord } from "./omni";
 import type { OmniChassis, OmniConfiguration } from "./omni";
@@ -307,15 +307,15 @@ function convert(response: unknown, catalog: Catalog, editionId: string, now: st
 
   // Mounts: chassis parts that take slots, then the equipment list
   const mounts: Mount[] = [];
-  const partMounts = (part: "structure" | "armor", name: string, count: number) => {
+  const partMounts = (part: "structure" | "armor", name: string, count: number, base: TechBase) => {
     for (let i = 0; i < count; i++) {
-      mounts.push({ id: `${part}-${i + 1}`, equipmentId: null, part, name, techBase: unitClan ? "clan" : "inner-sphere", location: null, slot: null });
+      mounts.push({ id: `${part}-${i + 1}`, equipmentId: null, part, name, techBase: base, location: null, slot: null });
     }
   };
   const structure = own(STRUCTURE_TYPES.types, chassis.structure);
-  if (structure) partMounts("structure", structure.name, structure.slots);
+  if (structure) partMounts("structure", structure.name, structure.slots, partMountBase(structure, techBase));
   const armorType = own(ARMOR.types, chassis.armorType);
-  if (armorType) partMounts("armor", armorType.name, armorType.slots);
+  if (armorType) partMounts("armor", armorType.name, armorType.slots, partMountBase(armorType, techBase));
 
   /** Catalog row for a name: exactly, else "<weapon> (Ammo <shots>)" as the bin of that weapon with that many shots. A trailing
    * "[LRM]" or "[SRM]" (a multiple-missile launcher's bin) names the ammunition; any other tag ("[Water]") is dropped. */

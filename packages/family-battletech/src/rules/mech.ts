@@ -474,7 +474,7 @@ export interface NewMechOptions {
   tons: number;
   /** Walking MP; the engine rating is tons times this. */
   walk: number;
-  techBase: TechBase;
+  techBase: TechBase | "mixed";
   configuration: keyof typeof SHEET.configurations;
   year: number | null;
   /** The rules level to build under; standard when absent. */
@@ -524,7 +524,7 @@ export function newRecord(options: NewMechOptions, editionId: string, id: string
       id: `heat-sink-${n}`,
       equipmentId: options.techBase === "clan" ? "heat-sink-clan" : "heat-sink-is",
       name: "Heat Sink",
-      techBase: options.techBase,
+      techBase: options.techBase === "clan" ? "clan" : "inner-sphere",
       location: null,
       slot: null,
     });
@@ -532,11 +532,16 @@ export function newRecord(options: NewMechOptions, editionId: string, id: string
   // A Land-Air 'Mech needs at least LAM.minJumpMP jump jets (IO:AE p.108); they wait unplaced like the heat sinks.
   if (own(LAM.conversionPercent, record.configuration) !== undefined) {
     for (let n = 1; n <= LAM.minJumpMP; n += 1) {
-      record.mounts.push({ id: `jump-jet-${n}`, equipmentId: options.techBase === "clan" ? "jump-jet-clan" : "jump-jet-is", name: "Jump Jet", techBase: options.techBase, location: null, slot: null });
+      record.mounts.push({ id: `jump-jet-${n}`, equipmentId: options.techBase === "clan" ? "jump-jet-clan" : "jump-jet-is", name: "Jump Jet", techBase: options.techBase === "clan" ? "clan" : "inner-sphere", location: null, slot: null });
     }
   }
   return record;
 }
+
+/** The tech base the slot mounts of a chassis part carry: the record's, except on a mixed record, where the part's own (Clan endo steel
+ * on a mixed record is a Clan part, with the Clan slot count its row holds). */
+export const partMountBase = (part: { techBase?: "inner-sphere" | "clan" | "both" }, record: TechBase | "mixed"): TechBase =>
+  record === "mixed" ? (part.techBase === "clan" ? "clan" : "inner-sphere") : record;
 
 /** A new record with the change applied to a copy; the original and its nested parts are untouched. */
 export function editRecord(record: MechRecord, change: (draft: MechRecord) => void): MechRecord {

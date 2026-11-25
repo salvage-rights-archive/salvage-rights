@@ -97,7 +97,6 @@ describe("an IndustrialMech", () => {
 
   it.each<[string, (r: MechRecord) => MechRecord, string, number]>([
     ["a tonnage a BattleMech may have but not in steps of 5", (r) => editRecord(r, (d) => void (d.tons = 7)), "An IndustrialMech weighs 10 to 100 tons in steps of 5", 64],
-    ["a mixed technology base", (r) => editRecord(r, (d) => void (d.techBase = "mixed")), "Inner Sphere or Clan", 64],
     ["a tripod", (r) => editRecord(r, (d) => void (d.configuration = "tripod")), "biped or a quad", 65],
     ["standard structure", withChassis({ structure: "standard" }), "Standard structure is not allowed", 67],
     ["an XL engine", withChassis({ engine: { type: "xl", rating: 100 } }), "XL Fusion engine is not allowed", 68],
@@ -118,6 +117,12 @@ describe("an IndustrialMech", () => {
     const found = runChecks(make(cattleMaster()), catalog).filter((f) => f.level === "error" && f.message.includes(text));
     expect(found).toHaveLength(1);
     expect(found[0]?.cite?.page).toBe(page);
+  });
+
+  it("may be mixed technology (Tactical Operations: AUE p.189, newer than TechManual p.64), which needs Advanced level", () => {
+    const mixed = (patch: Partial<MechRecord>) => runChecks(cattleMaster({ techBase: "mixed", year: 3085, ...patch }), catalog).filter((f) => f.level === "error").map((f) => f.message);
+    expect(mixed({ rulesLevel: "advanced" })).toEqual([]);
+    expect(mixed({ rulesLevel: "standard" })).toEqual([expect.stringContaining("Mixed technology (tech base) is Advanced level")]);
   });
 
   it("is checked by the type's tonnage: 15 tons is allowed for it and not for a BattleMech, which also may not carry its parts or equipment", () => {
@@ -158,7 +163,7 @@ describe("an IndustrialMech", () => {
       choices({ year: 3025, techBase: "mixed", unitType: "mech" }),
       choices({ year: 2900, techBase: "clan" }),
       choices({ year: 2400, unitType: "mech" }),
-    ]).toEqual([["mech", "industrialmech"], ["mech"], ["mech", "omnimech"], ["mech", "industrialmech", "omnimech"], ["mech"]]); // mixed: no IndustrialMech, but the Clans' OmniMech
+    ]).toEqual([["mech", "industrialmech"], ["mech"], ["mech", "industrialmech", "omnimech"], ["mech", "industrialmech", "omnimech"], ["mech"]]); // mixed: the OmniMech too, and the IndustrialMech (Tactical Operations: AUE p.189)
   });
 
   it("offers an OmniMech from its production year, and from the Clan prototype year only at Experimental level, labelled prototype (IO:AE p.45)", () => {

@@ -11,7 +11,7 @@ import type { Catalog } from "../rules/catalog";
 import { runChecks } from "../rules/checks";
 import type { Finding } from "../rules/checks";
 import { changedSinceImport } from "../rules/mordel";
-import { ARM_FULL, bodyOf, configurationOf, editRecord, layout as buildLayout, locationName, mechTypeOf, setConfiguration, weights as buildWeights } from "../rules/mech";
+import { ARM_FULL, bodyOf, configurationOf, editRecord, layout as buildLayout, locationName, mechTypeOf, partMountBase, setConfiguration, weights as buildWeights } from "../rules/mech";
 import type { Layout, LocationCode, MechRecord } from "../rules/mech";
 import { configurationChoices, eraOfRecord, partChoices, setEra, setYear } from "../rules/availability";
 import type { PartKind } from "../rules/availability";
@@ -279,7 +279,7 @@ export function setPartType(draft: MechRecord, part: "structure" | "armor", type
   for (let n = 1; have < row.slots; n++) {
     const id = `${part}-${n}`;
     if (draft.mounts.some((m) => m.id === id)) continue;
-    draft.mounts.push({ id, equipmentId: null, part, name: row.name, techBase: draft.techBase === "clan" ? "clan" : "inner-sphere", location: null, slot: null });
+    draft.mounts.push({ id, equipmentId: null, part, name: row.name, techBase: partMountBase(row, draft.techBase), location: null, slot: null });
     have++;
   }
 }
@@ -886,7 +886,7 @@ function Editor({ initial, startAt, catalog, storage }: { initial: Doc; startAt?
                 id="field-techBase"
                 label="Tech base"
                 value={record.techBase}
-                options={techBaseChoices(record.rulesLevel, record.techBase)}
+                options={techBaseChoices(record.rulesLevel, record.techBase, record)}
                 changed={mark("techBase")}
                 disabled={fixedHere}
                 onChange={(v) => { edit((d) => void (d.techBase = v as MechRecord["techBase"])); }}

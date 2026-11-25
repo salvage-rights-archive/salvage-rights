@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
+import { STRUCTURE_TYPES } from "../data/chassis";
 import { bipedRecord, factsOf, lamRecord, mount, quadRecord, tripodRecord } from "./fixtures";
 import {
   armsOf,
   editRecord,
   newRecord,
+  partMountBase,
   setConfiguration,
   layout,
   maxArmor,
@@ -275,6 +277,13 @@ describe("Land-Air 'Mech construction", () => {
     expect(structurePoints(lamRecord())).toEqual(structurePoints(bipedRecord()));
     // 10 percent of 50 tons is 5; 15 percent for a bimodal is 7.5, which rounds up to 8; a biped has none.
     expect([lamRecord(), lamRecord({ configuration: "bimodal-lam" }), bipedRecord()].map((r) => line(r, "Conversion equipment"))).toEqual([5, 8, undefined]);
+  });
+});
+
+describe("a chassis part on a mixed record", () => {
+  it("carries the part's own tech base, so Clan endo steel keeps its Clan row and 7 slots, and a Clan record keeps its own", () => {
+    expect([partMountBase(STRUCTURE_TYPES.types["endo-steel-clan"] ?? {}, "mixed"), partMountBase(STRUCTURE_TYPES.types["endo-steel"] ?? {}, "mixed"), partMountBase({}, "clan")]).toEqual(["clan", "inner-sphere", "clan"]);
+    expect(STRUCTURE_TYPES.types["endo-steel-clan"]?.slots).toBe(7);
   });
 });
 
