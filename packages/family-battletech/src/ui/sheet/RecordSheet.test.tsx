@@ -45,7 +45,7 @@ describe("The record sheet", () => {
     expect(lines).toContain("Walking: 4");
     expect(lines).toContain("Running: 6");
     expect(lines).toContain("Jumping: 3");
-    expect(lines).toContain("Rules edition: TechManual, corrected sixth printing");
+    expect(lines).toContain("Rules edition: Total Warfare / TechManual");
     expect(lines).toContain("Rules level: Introductory");
     // Two Medium Lasers in two arms are two lines of one; the AC/10 is in the right torso.
     const ac = [...svg.querySelectorAll("[data-line]")].map((g) => [...g.querySelectorAll("text")].map((t) => t.textContent));

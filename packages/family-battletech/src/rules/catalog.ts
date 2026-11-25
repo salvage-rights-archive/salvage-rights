@@ -90,7 +90,8 @@ export interface EquipmentRow {
   infantry?: InfantryStats;
   /** A non-missile direct-fire or pulse weapon: its weight counts toward a targeting computer (TechManual p. 238). */
   directFire?: true;
-  editions?: Record<string, Partial<Pick<EquipmentRow, "tons" | "slots" | "availability" | "locations" | "locationsQuad">>>;
+  /** What differs under another edition: construction values, or play figures where the edition's play book prints them differently (the Core Rulebook's Type column). Shared values stay in the row. */
+  editions?: Record<string, Partial<Pick<EquipmentRow, "tons" | "slots" | "availability" | "locations" | "locationsQuad" | "type" | "heat" | "damage" | "range" | "shotsPerTon">>>;
   /** False for an item an OmniMech cannot carry in a pod: it may only be fixed equipment of the base (or, for MASC and the like, part of the
    * base chassis). Absent means it may be pod-mounted. `podCite` is the page that says so. */
   pod?: false;
@@ -318,7 +319,7 @@ export function inventoryLines(record: MechRecord, catalog: Catalog): InventoryL
   const groups = new Map<string, { qty: number; name: string; location: LocationCode | null; row: EquipmentRow | undefined }>();
   for (const mount of record.mounts) {
     if (mount.part) continue;
-    const row = mount.equipmentId === null ? undefined : catalog.byId(mount.equipmentId);
+    const row = mount.equipmentId === null ? undefined : catalog.rowFor(mount.equipmentId, record.editionId);
     if (mount.equipmentId !== null && !row) continue;
     if (row && row.kind !== "weapon" && row.range === undefined && row.damage === undefined) continue;
     const key = `${mount.location ?? "-"}|${mount.equipmentId ?? `?${mount.name}`}`;
