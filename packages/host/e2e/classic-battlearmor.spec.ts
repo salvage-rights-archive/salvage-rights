@@ -101,6 +101,6 @@ test("a weapon in a battle armor suit can go in a detachable weapon pack, and th
   // A light suit keeps the box while the record holds it, so it can be unticked.
   await page.getByLabel("Weight class").selectOption("light");
   await expect(pack).toBeChecked();
-  await pack.uncheck();
+  await pack.click();
   await expect(pack).toHaveCount(0);
 });
