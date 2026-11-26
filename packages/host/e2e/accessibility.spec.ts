@@ -155,6 +155,16 @@ test("the Aces home, library and card editor (each step and the picker) have no 
   }
 });
 
+test("the Aces library with the sample offer and with the sample cards added has no axe violations in either theme at 320 px", async ({ page }) => {
+  test.setTimeout(150_000);
+  await page.setViewportSize({ width: 320, height: 800 });
+  await expectNoViolations(page, DEV, [`${ACES}/cards`]);
+  await page.goto(`${DEV}${ACES}/cards`);
+  await page.getByRole("button", { name: "Add the sample cards" }).click();
+  await expectPage(page.getByText("Added the sample cards.")).toBeVisible();
+  await expectNoViolations(page, DEV, [`${ACES}/cards`]);
+});
+
 test("the Classic home with Export all has no axe violations in either theme, fits 320 px, and its file imports back", async ({ page }) => {
   test.setTimeout(120_000);
   await importMech(page, DEV);

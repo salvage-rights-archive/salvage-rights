@@ -25,6 +25,13 @@ describe("store transfer", () => {
     expect(await target.get("b")).toEqual({ c: [1, 2] });
   });
 
+  it("leaves out saved records flagged as samples", async () => {
+    const store = await openStore(ns());
+    await store.set("aces-card:mine", { record: { id: "mine" } });
+    await store.set("aces-card:sample-1", { record: { id: "sample-1", sample: true } });
+    expect(Object.keys((await exportStore(store)).entries)).toEqual(["aces-card:mine"]);
+  });
+
   it("overwrites same keys and keeps others", async () => {
     const name = ns();
     const store = await openStore(name);

@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 import type { Page } from "@playwright/test";
-import { ACES, DEV, expect, pickToken, saveAcesCard, saveAcesCommand, saveAsUnit, test } from "./fixtures";
+import { ACES, DEV, expect, pickToken, putAsUnits, saveAcesCard, saveAcesCommand, saveAsUnit, test } from "./fixtures";
 
 // Every card here is invented. No printed card, photo or scan is used.
 
@@ -63,6 +63,54 @@ test("enter an invented card, find it after a reload, see it in the library, and
   await page.getByLabel("Import a library file").setInputFiles(path);
   await expect(page.getByText("Added 1 card.")).toBeVisible();
   await expect(page.getByRole("heading", { name: "Brawler" })).toBeVisible();
+});
+
+test("a new player is offered our sample cards, can start a game with them, keeps them out of the library file, and can remove them for good", async ({ page }, testInfo) => {
+  test.setTimeout(90_000);
+  await page.setViewportSize({ width: 320, height: 800 });
+  await putAsUnits(page, ["Mine A", "Theirs A"]);
+  await page.goto(`${DEV}${ACES}/cards`);
+  await expect(page.getByRole("heading", { name: "Try our sample cards" })).toBeVisible();
+  await fitsPhone(page, "the sample offer");
+  await page.getByRole("button", { name: "Add the sample cards" }).click();
+  await expect(page.getByText("Added the sample cards.")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Try our sample cards" })).toBeHidden();
+  await expect(page.getByText("Sample deck. All 6 cards recorded")).toHaveCount(2);
+  await expect(page.getByRole("heading", { name: "Sample Captain" })).toBeVisible();
+  await fitsPhone(page, "the library with samples");
+
+  await page.goto(`${DEV}${ACES}/new-game`);
+  await page.getByLabel("Add a unit to your force").selectOption({ label: "Mine A (PV 20)" });
+  await page.getByRole("button", { name: "Add to your force", exact: true }).click();
+  await page.getByLabel("Add a unit to automated force").selectOption({ label: "Theirs A (PV 20)" });
+  await page.getByRole("button", { name: "Add to automated force", exact: true }).click();
+  await page.getByLabel("Aces deck of Theirs A").selectOption("Brawler");
+  await page.getByLabel("Commander", { exact: true }).selectOption("Sample Captain");
+  await page.getByRole("button", { name: "Start the game" }).click();
+  await expect(page.getByRole("heading", { level: 2, name: "Turn 1: Initiative" })).toBeVisible();
+
+  await page.goto(`${DEV}${ACES}/cards`);
+  const download = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Export library" }).click();
+  const path = testInfo.outputPath("library.json");
+  await (await download).saveAs(path);
+  const library = JSON.parse(await readFile(path, "utf8"));
+  expect([library.cards, library.commands, library.orders, library.supports].map((l: unknown[]) => l.length)).toEqual([0, 0, 0, 0]);
+
+  await page.getByRole("button", { name: "Remove the sample cards" }).click();
+  await expect(page.getByText("Removed the sample cards.")).toBeVisible();
+  await expect(page.getByText("No behaviour cards recorded yet.")).toBeVisible();
+  await page.reload();
+  await expect(page.getByText("No behaviour cards recorded yet.")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Try our sample cards" })).toBeHidden();
+});
+
+test("a player who has their own cards is not offered the samples", async ({ page }) => {
+  test.setTimeout(60_000);
+  await saveAcesCard(page, DEV);
+  await page.goto(`${DEV}${ACES}/cards`);
+  await expect(page.getByRole("heading", { name: "Brawler" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Try our sample cards" })).toBeHidden();
 });
 
 test("the editor does not scroll sideways at 320 px at any step, and every control is 44 px tall", async ({ page }) => {

@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import GamePicture from "../GamePicture";
+import { isSample } from "../../rules/aces-card";
 import { STORAGE_READ_FAILED } from "../storage";
 import GamesInProgress from "./GamesInProgress";
 import { ACES_CAMPAIGNS, ACES_CARDS, ACES_NEW_GAME } from "./routes";
@@ -16,7 +17,7 @@ export default function AcesHomePage() {
     void (async () => {
       try {
         const s = await openAcesStorage();
-        setCards((await s.list(["aces-card"])).length);
+        setCards((await s.list(["aces-card"])).filter((e) => !(e.record && isSample(e.record))).length);
       } catch {
         setProblem(STORAGE_READ_FAILED);
       }

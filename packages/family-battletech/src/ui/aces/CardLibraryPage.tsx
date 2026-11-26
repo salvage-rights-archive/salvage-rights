@@ -4,8 +4,9 @@ import { useEffect, useRef, useState } from "react";
 import type { ChangeEvent } from "react";
 import { Link } from "react-router";
 import { ACES_SPECIAL_ORDERS } from "../../data/aces-vocab";
-import { cardLevel, commandCompleteness, completeness, deckKey } from "../../rules/aces-card";
+import { cardLevel, commandCompleteness, completeness, deckKey, isSample } from "../../rules/aces-card";
 import type { AcesCard, AcesKind, AcesRecord, CommandCard, DeckCompleteness, SpecialOrderCard, SupportCard } from "../../rules/aces-card";
+import { withoutShadowedSamples } from "../../rules/aces-samples";
 import { STORAGE_READ_FAILED, STORAGE_WRITE_FAILED, downloadJson } from "../storage";
 import { ACES_COMMAND, ACES_ORDER, ACES_SUPPORT, ACES_CARD, ACES_HOME, cardHref, commandHref, orderHref, supportHref } from "./routes";
 import { downloadLibrary, fromLibraryFile, libraryOf, openAcesStorage, planLibraryImport } from "./storage";
@@ -63,6 +64,7 @@ export default function CardLibraryPage() {
   const [conflicts, setConflicts] = useState<AcesRecord[]>();
   const [status, setStatus] = useState("");
   const [problem, setProblem] = useState("");
+  const [declined, setDeclined] = useState(true);
   const keepRef = useRef<HTMLButtonElement>(null);
   const replaceRef = useRef<HTMLButtonElement>(null);
   const openerRef = useRef<HTMLElement | null>(null);
@@ -85,6 +87,7 @@ export default function CardLibraryPage() {
         const s = await openAcesStorage();
         setStorage(s);
         setEntries(await s.list());
+        setDeclined(await s.samplesDeclined());
       } catch {
         fail(STORAGE_READ_FAILED);
       }
@@ -122,7 +125,9 @@ export default function CardLibraryPage() {
   const commandKey = (c: CommandCard): string => (c.faction.trim() === "" ? c.commander.trim() : `${c.commander.trim()} (${c.faction.trim()})`);
   const ordersHave = ACES_SPECIAL_ORDERS.filter((o) => orders.some((r) => r.order === o.id));
   const ordersMissing = ACES_SPECIAL_ORDERS.filter((o) => !orders.some((r) => r.order === o.id));
-  const decks = completeness(cards);
+  const decks = completeness(withoutShadowedSamples(cards));
+  const hasSamples = records.some(isSample);
+  const offerSamples = storage !== undefined && entries.length === 0 && !declined;
   const broken = entries.filter((e) => !e.record);
 
   const remove = async (target: Target) => {
@@ -148,12 +153,50 @@ export default function CardLibraryPage() {
     }
   };
 
+  const addSamples = async () => {
+    if (!storage) return;
+    try {
+      await storage.addSamples();
+    } catch {
+      fail(STORAGE_WRITE_FAILED);
+      return;
+    }
+    if (await reload(storage)) say("Added the sample cards. They are marked Sample, and you can remove them at any time.");
+  };
+
+  const declineSamples = async () => {
+    if (!storage) return;
+    try {
+      await storage.declineSamples();
+    } catch {
+      fail(STORAGE_WRITE_FAILED);
+      return;
+    }
+    setDeclined(true);
+    say("We will not offer the sample cards again.");
+  };
+
+  const removeSamples = async () => {
+    if (!storage) return;
+    try {
+      await storage.removeSamples();
+    } catch {
+      fail(STORAGE_WRITE_FAILED);
+      return;
+    }
+    setDeclined(true);
+    focusList.current = true;
+    if (await reload(storage)) say("Removed the sample cards.");
+  };
+
   const duplicate = async (card: AcesCard) => {
     if (!storage) return;
     const sameSlot = cards.filter((c) => deckKey(c) === deckKey(card) && c.position === card.position).length;
     const label = `Copy ${String(sameSlot + 1)}`;
     try {
-      await storage.save({ ...structuredClone(card), id: crypto.randomUUID(), copy: label, source: { kind: "entered", at: new Date().toISOString() } });
+      const own = structuredClone(card);
+      delete own.sample;
+      await storage.save({ ...own, id: crypto.randomUUID(), copy: label, source: { kind: "entered", at: new Date().toISOString() } });
     } catch {
       fail(STORAGE_WRITE_FAILED);
       return;
@@ -234,6 +277,34 @@ export default function CardLibraryPage() {
         {problem}
       </div>
 
+      {offerSamples && (
+        <section className="bt-section" aria-labelledby="aces-samples">
+          <h2 id="aces-samples">Try our sample cards</h2>
+          <p>
+            You have no cards yet. We can add a small set of our own invention, two behaviour decks, a command deck, the five special orders and two support cards, so you can try a sortie and a game straight away. They are marked Sample, stay out of your library file, and you can remove them at any time.
+          </p>
+          <p>
+            <button type="button" className="bt-button" onClick={() => void addSamples()}>
+              Add the sample cards
+            </button>{" "}
+            <button type="button" className="bt-button bt-button--secondary" onClick={() => void declineSamples()}>
+              No thanks
+            </button>
+          </p>
+        </section>
+      )}
+      {hasSamples && (
+        <section className="bt-section" aria-labelledby="aces-samples-have">
+          <h2 id="aces-samples-have">Sample cards</h2>
+          <p>Cards marked Sample are ours, not yours. A deck, commander or order you record yourself is used in their place, and they are left out of your library file.</p>
+          <p>
+            <button type="button" className="bt-button bt-button--secondary" onClick={() => void removeSamples()}>
+              Remove the sample cards
+            </button>
+          </p>
+        </section>
+      )}
+
       <section className="bt-section" aria-labelledby="aces-decks">
         <h2 id="aces-decks" ref={headingRef} tabIndex={-1}>
           Behaviour decks
@@ -247,7 +318,7 @@ export default function CardLibraryPage() {
             {decks.map((d) => (
               <li key={d.key} className="bt-row aces-deck">
                 <h3 className="aces-deck__name">{d.key}</h3>
-                <p className="aces-deck__words">{deckWords(d)}</p>
+                <p className="aces-deck__words">{`${cards.filter((c) => deckKey(c) === d.key).every(isSample) ? "Sample deck. " : ""}${deckWords(d)}`}</p>
                 <ul className="bt-list aces-deck__cards">
                   {cards
                     .filter((c) => deckKey(c) === d.key)
@@ -258,7 +329,7 @@ export default function CardLibraryPage() {
                         <li key={c.id} className="bt-row">
                           <span className="bt-row__text">
                             {`Card ${String(c.position)} of ${String(c.of)}${c.copy ? `, ${c.copy}` : ""}`}
-                            <span className="bt-row__credit">{{ full: "Both sides in full", movement: "Movement side", combat: "Combat side", identity: "Identity only" }[cardLevel(c)]}</span>
+                            <span className="bt-row__credit">{`${isSample(c) ? "Sample. " : ""}${{ full: "Both sides in full", movement: "Movement side", combat: "Combat side", identity: "Identity only" }[cardLevel(c)]}`}</span>
                           </span>
                           <span className="bt-row__actions">
                             <Link className="bt-button" aria-label={`Open ${name}`} to={cardHref(c.id)}>
@@ -347,7 +418,7 @@ export default function CardLibraryPage() {
                     .sort((a, b) => a.letter.localeCompare(b.letter))
                     .map((c) => {
                       const name = `${d.key} card ${c.letter}`;
-                      return <CardRow key={c.id} text={`Card ${c.letter}, ${String(c.position)} of ${String(c.of)}`} credit={c.orders.length + c.strategy.length === 0 ? "Identity only" : "Recorded"} name={name} to={commandHref(c.id)} onDelete={(el) => { askDelete({ kind: "aces-command", id: c.id, name }, el); }} />;
+                      return <CardRow key={c.id} text={`Card ${c.letter}, ${String(c.position)} of ${String(c.of)}`} credit={`${isSample(c) ? "Sample. " : ""}${c.orders.length + c.strategy.length === 0 ? "Identity only" : "Recorded"}`} name={name} to={commandHref(c.id)} onDelete={(el) => { askDelete({ kind: "aces-command", id: c.id, name }, el); }} />;
                     })}
                 </ul>
               </li>
@@ -366,7 +437,7 @@ export default function CardLibraryPage() {
             <ul className="bt-list">
               {orders.map((c) => {
                 const name = `${ACES_SPECIAL_ORDERS.find((o) => o.id === c.order)?.label ?? c.order} special order`;
-                return <CardRow key={c.id} text={name} credit={c.column || c.preFilters?.length || c.spotter?.length ? "Recorded" : "Order only"} name={name} to={orderHref(c.id)} onDelete={(el) => { askDelete({ kind: "aces-order", id: c.id, name }, el); }} />;
+                return <CardRow key={c.id} text={name} credit={`${isSample(c) ? "Sample. " : ""}${c.column || c.preFilters?.length || c.spotter?.length ? "Recorded" : "Order only"}`} name={name} to={orderHref(c.id)} onDelete={(el) => { askDelete({ kind: "aces-order", id: c.id, name }, el); }} />;
               })}
             </ul>
           </>
@@ -382,7 +453,7 @@ export default function CardLibraryPage() {
             {[...supports]
               .sort((a, b) => a.name.localeCompare(b.name))
               .map((c) => (
-                <CardRow key={c.id} text={c.name} credit={`Cost ${String(c.cost)}, target number ${String(c.tn)}, damage ${String(c.damage)}${c.area ? ", area" : ""}`} name={`${c.name} support card`} to={supportHref(c.id)} onDelete={(el) => { askDelete({ kind: "aces-support", id: c.id, name: `${c.name} support card` }, el); }} />
+                <CardRow key={c.id} text={c.name} credit={`${isSample(c) ? "Sample. " : ""}Cost ${String(c.cost)}, target number ${String(c.tn)}, damage ${String(c.damage)}${c.area ? ", area" : ""}`} name={`${c.name} support card`} to={supportHref(c.id)} onDelete={(el) => { askDelete({ kind: "aces-support", id: c.id, name: `${c.name} support card` }, el); }} />
               ))}
           </ul>
         )}

@@ -1,9 +1,10 @@
 import "fake-indexeddb/auto";
 import { IDBFactory } from "fake-indexeddb";
 import { beforeEach, describe, expect, it } from "vitest";
-import { openStore } from "@salvage-rights/shared";
-import { newAcesCard } from "../../rules/aces-card";
+import { exportStore, openStore } from "@salvage-rights/shared";
+import { isSample, newAcesCard } from "../../rules/aces-card";
 import type { AcesCard, SupportCard } from "../../rules/aces-card";
+import { acesSamples } from "../../rules/aces-samples";
 import { emptyLibrary, fromLibraryFile, libraryOf, openAcesStorage, planLibraryImport, toLibraryFile } from "./storage";
 
 // Cards invented for the tests; no printed card.
@@ -47,6 +48,25 @@ describe("Aces card storage", () => {
       [{ ...plain, photos: [{ cardId: "c1", dataUrl: "http://example.invalid/a.png" }] }, "A picture in this file is damaged."],
     ];
     for (const [input, message] of cases) expect(fromLibraryFile(input)).toEqual({ ok: false, message });
+  });
+
+  it("adds the samples once, keeps them out of the library file and the backup, and removes them for good when asked", async () => {
+    const storage = await openAcesStorage();
+    await storage.save(card("c1", 123));
+    await storage.addSamples();
+    await storage.addSamples();
+    const entries = await storage.list();
+    const records = entries.flatMap((e) => (e.record ? [e.record] : []));
+    expect(records.filter(isSample)).toHaveLength(acesSamples(AT).length);
+    expect(records.filter((r) => !isSample(r)).map((r) => r.id)).toEqual(["c1"]);
+    const file = toLibraryFile(libraryOf(records));
+    expect([...file.cards, ...file.commands, ...file.orders, ...file.supports].map((r) => r.id)).toEqual(["c1"]);
+    expect(Object.keys((await exportStore(await openStore("battletech"))).entries)).toEqual(["aces-card:c1"]);
+
+    expect(await storage.samplesDeclined()).toBe(false);
+    await storage.removeSamples();
+    expect((await storage.list()).map((e) => e.id)).toEqual(["c1"]);
+    expect(await storage.samplesDeclined()).toBe(true);
   });
 
   it("plans an import: new ids are added, the same card is left, and a changed card under the same id is asked about", () => {

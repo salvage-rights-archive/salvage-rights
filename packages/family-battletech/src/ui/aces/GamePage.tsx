@@ -5,6 +5,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { RefObject } from "react";
 import { Link, useSearchParams } from "react-router";
+import { withoutShadowedSamples } from "../../rules/aces-samples";
 import type { AcesGame } from "../../rules/aces-game";
 import { undoLast, withSnapshot } from "../../rules/aces-game";
 import { emptySheet } from "../../rules/aces-resolve";
@@ -106,6 +107,7 @@ export default function GamePage() {
         const [entry, entries] = await Promise.all([s.get(id), openAcesStorage().then((a) => a.list())]);
         if (!live) return;
         const lib = libraryOf(entries.flatMap((e) => (e.record ? [e.record] : [])));
+        lib.orders = withoutShadowedSamples(lib.orders);
         setRecords({ cards: lib.cards, commands: lib.commands, orders: lib.orders, supports: lib.supports });
         if (!entry) setLoaded({ state: "missing" });
         else if (!entry.game) setLoaded({ state: "unreadable", message: entry.unreadable ?? "" });
