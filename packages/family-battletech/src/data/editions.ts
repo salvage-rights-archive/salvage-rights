@@ -180,40 +180,66 @@ export function bookName(title: string): string {
   return publisher === undefined ? title : `${title} (${publisher})`;
 }
 
-/** The Master Unit List's eras, names and years only; the list starts the Age of War in 2005. A year belongs to the era whose span holds
- * it; the last era is open-ended. Not included yet: the Clan-only eras of Interstellar Operations: Alternate Eras (Founding Years
- * 2800-2840, Golden Years 2841-3049, Post-Reaving 3086-3150), which overlap these and need a place as sub-eras. */
+/** The eras a unit can be built in. The first twelve are the Master Unit List's, which other tiles read by name (the list starts the Age of
+ * War in 2005); the rest are the sub-eras Interstellar Operations: Alternate Eras (IO:AE) adds for campaigns set in Clan space, which overlap
+ * the first twelve. A year belongs to every era whose span holds it, and the player picks which when it is more than one. The rules each era's
+ * "Technology Base" and "Alternate Era Units and Equipment" paragraphs give are read against the page images (printed pages in `cite`). */
 export interface EraRow {
   id: string;
   name: string;
   startYear: number;
   endYear?: number;
-  /** A Clan-only sub-era: it overlaps the Master Unit List era that holds its years, and picking it means the Clan technology base. */
-  techBase?: "clan";
-  /** The page that prints the era's name and years, where the table has no one source for all its rows (Gothic's eras). */
+  /** The space the era's rules are for: Inner Sphere (with the Periphery), Clan space, or both. Absent: not stated. */
+  space?: "inner-sphere" | "clan" | "both";
+  /** The tech bases a unit in this era may be built with, apart from Mixed technology (a construction option with its own dates). In the Succession
+   * Wars the two spaces do not cross: Clan technology stays in Clan space and Inner Sphere technology in the Inner Sphere (IO:AE p.9). Absent: not stated. */
+  techBases?: ("inner-sphere" | "clan")[];
+  /** Mixed technology is not used in this era: in the Succession Wars the Clan and Inner Sphere technology bases do not cross (IO:AE p.9). */
+  noMixed?: true;
+  /** The latest introduction date a unit or any of its equipment may have in this era, chassis types and armor included, for each tech base, where that is
+   * earlier than the era's end (Clan Post-Reaving: Clan and Mixed 3085, Inner Sphere 3049). Absent: the era's own years limit it. */
+  introCaps?: Partial<Record<"inner-sphere" | "clan" | "mixed", number>>;
+  /** The page that prints the era's name and years, and its rules where they are not the table's one source (Gothic's eras). */
   cite?: { book: string; page: number };
   checked?: "page" | "text";
 }
-export const ERAS: EraRow[] = [
-  { id: "age-of-war", name: "Age of War", startYear: 2005, endYear: 2570 },
-  { id: "star-league", name: "Star League", startYear: 2571, endYear: 2780 },
-  { id: "early-succession-war", name: "Early Succession War", startYear: 2781, endYear: 2900 },
-  { id: "late-succession-war-lostech", name: "Late Succession War - LosTech", startYear: 2901, endYear: 3019 },
-  { id: "late-succession-war-renaissance", name: "Late Succession War - Renaissance", startYear: 3020, endYear: 3049 },
-  { id: "clan-invasion", name: "Clan Invasion", startYear: 3050, endYear: 3061 },
-  { id: "civil-war", name: "Civil War", startYear: 3062, endYear: 3067 },
-  { id: "jihad", name: "Jihad", startYear: 3068, endYear: 3085 },
-  { id: "early-republic", name: "Early Republic", startYear: 3086, endYear: 3100 },
-  { id: "late-republic", name: "Late Republic", startYear: 3101, endYear: 3130 },
-  { id: "dark-ages", name: "Dark Ages", startYear: 3131, endYear: 3150 },
-  { id: "ilclan", name: "ilClan", startYear: 3151 },
-];
-/** The Clan sub-eras of Interstellar Operations: Alternate Eras (era table printed p.16, text pp.17 and 24, read against the page images).
- * They overlap the eras above, so a year in 2800-3049 or 3086-3150 belongs to two eras, one Inner Sphere and one Clan, and the player picks
- * which: it decides the tech base. They are not in `ERAS` (the Master Unit List's twelve, which other tiles read by name). */
 const IO_AE = "Interstellar Operations: Alternate Eras";
+const IS: EraRow["techBases"] = ["inner-sphere"];
+const BOTH: EraRow["techBases"] = ["inner-sphere", "clan"];
+export const ERAS: EraRow[] = [
+  // Age of War: no Clan technology, nothing introduced after 2570 (p.12). The book's years start in 2300; the list's earlier start is kept.
+  { id: "age-of-war", name: "Age of War", startYear: 2005, endYear: 2570, space: "inner-sphere", techBases: IS, cite: { book: IO_AE, page: 12 }, checked: "page" },
+  // Age of the Star League: no Clan technology, nothing introduced after 2780 (p.13).
+  { id: "star-league", name: "Star League", startYear: 2571, endYear: 2780, space: "inner-sphere", techBases: IS, cite: { book: IO_AE, page: 13 }, checked: "page" },
+  // Early Succession Wars: Clan technology only among Clan factions, Inner Sphere technology open to both; Inner Sphere units introduced by 2900 (p.13).
+  { id: "early-succession-war", name: "Early Succession War", startYear: 2781, endYear: 2900, space: "inner-sphere", techBases: IS, noMixed: true, cite: { book: IO_AE, page: 13 }, checked: "page" },
+  // Late Succession Wars (2901-3049): the same split, introduced by 3049 (p.14). The list divides it in two at 3020.
+  { id: "late-succession-war-lostech", name: "Late Succession War - LosTech", startYear: 2901, endYear: 3019, space: "inner-sphere", techBases: IS, noMixed: true, cite: { book: IO_AE, page: 14 }, checked: "page" },
+  { id: "late-succession-war-renaissance", name: "Late Succession War - Renaissance", startYear: 3020, endYear: 3049, space: "inner-sphere", techBases: IS, noMixed: true, cite: { book: IO_AE, page: 14 }, checked: "page" },
+  // Clan Invasion: both technology bases meet; Inner Sphere forces only the Inner Sphere base, Clan forces the Clan base; introduced by 3061 (p.18).
+  { id: "clan-invasion", name: "Clan Invasion", startYear: 3050, endYear: 3061, space: "both", techBases: BOTH, cite: { book: IO_AE, page: 18 }, checked: "page" },
+  // Civil War: the same, introduced by 3067 (p.20).
+  { id: "civil-war", name: "Civil War", startYear: 3062, endYear: 3067, space: "both", techBases: BOTH, cite: { book: IO_AE, page: 20 }, checked: "page" },
+  // Jihad (the Clans know it as the Wars of Reaving): the bases stay separate, Mixed units are more common; introduced by 3085 (p.22).
+  { id: "jihad", name: "Jihad", startYear: 3068, endYear: 3085, space: "both", techBases: BOTH, cite: { book: IO_AE, page: 22 }, checked: "page" },
+  // Dark Age, the Republic Age (3086-3130, the list divides it at 3101): Inner Sphere and Inner Sphere-resident Clan units introduced by 3130 (p.23).
+  { id: "early-republic", name: "Early Republic", startYear: 3086, endYear: 3100, space: "inner-sphere", techBases: BOTH, cite: { book: IO_AE, page: 23 }, checked: "page" },
+  { id: "late-republic", name: "Late Republic", startYear: 3101, endYear: 3130, space: "inner-sphere", techBases: BOTH, cite: { book: IO_AE, page: 23 }, checked: "page" },
+  // Late Dark Age (3131-3150): introduced by 3150 (pp.23 and 24).
+  { id: "dark-ages", name: "Dark Ages", startYear: 3131, endYear: 3150, space: "inner-sphere", techBases: BOTH, cite: { book: IO_AE, page: 23 }, checked: "page" },
+  // The ilClan Era is outside the book (p.11): no rules.
+  { id: "ilclan", name: "ilClan", startYear: 3151, cite: { book: IO_AE, page: 11 }, checked: "page" },
+];
+/** The sub-eras of campaigns set in Clan space, which overlap the eras above (IO:AE era table printed p.16, text pp.9, 17 and 24). Picking one decides
+ * the tech base. They are not in `ERAS` (the Master Unit List's twelve, which other tiles read by name). */
 export const CLAN_SUB_ERAS: EraRow[] = [
-  { id: "clan-founding-years", name: "Clan Founding Years", startYear: 2800, endYear: 2840, techBase: "clan", cite: { book: IO_AE, page: 16 }, checked: "page" },
-  { id: "clan-golden-years", name: "Clan Golden Years", startYear: 2841, endYear: 3049, techBase: "clan", cite: { book: IO_AE, page: 16 }, checked: "page" },
-  { id: "clan-post-reaving", name: "Clan Post-Reaving", startYear: 3086, endYear: 3150, techBase: "clan", cite: { book: IO_AE, page: 24 }, checked: "page" },
+  // The Star League in Exile: 2786-2801 on the factions list (p.16); it may only use the Inner Sphere technology base (p.17). It is a faction, but it
+  // changes what may be built, so it is an era choice here.
+  { id: "star-league-in-exile", name: "Star League in Exile (faction, 2786-2801)", startYear: 2786, endYear: 2801, space: "clan", techBases: IS, noMixed: true, cite: { book: IO_AE, page: 17 }, checked: "page" },
+  // Founding Years: Clan factions use the Clan base (and Inner Sphere units built before 2781); introduced by 2840 (p.17).
+  { id: "clan-founding-years", name: "Clan Founding Years", startYear: 2800, endYear: 2840, space: "clan", techBases: ["clan"], noMixed: true, cite: { book: IO_AE, page: 17 }, checked: "page" },
+  // Golden Years: the same, introduced by 3049 (p.17).
+  { id: "clan-golden-years", name: "Clan Golden Years", startYear: 2841, endYear: 3049, space: "clan", techBases: ["clan"], noMixed: true, cite: { book: IO_AE, page: 17 }, checked: "page" },
+  // Post-Reaving: the Homeworld Clans use the Clan base (introduced by 3085), the Escorpion Imperio Mixed, every other power the Inner Sphere base (introduced by 3049) (p.24).
+  { id: "clan-post-reaving", name: "Clan Post-Reaving", startYear: 3086, endYear: 3150, space: "clan", techBases: ["inner-sphere", "clan"], introCaps: { clan: 3085, mixed: 3085, "inner-sphere": 3049 }, cite: { book: IO_AE, page: 24 }, checked: "page" },
 ];

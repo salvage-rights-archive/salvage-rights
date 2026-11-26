@@ -266,7 +266,7 @@ describe("Land-Air 'Mech", () => {
   });
 
   it.each<Row>([
-    ["Clan technology", (d) => void (d.techBase = "clan"), { level: "error", text: "Inner Sphere technology only; this one is Clan", where: { field: "techBase" }, page: 108 }],
+    ["Mixed technology", (d) => void (d.techBase = "mixed"), { level: "error", text: "Inner Sphere technology only; this one is Mixed", where: { field: "techBase" }, page: 108 }],
     ["over 55 tons", (d) => void (d.tons = 60), { level: "error", text: "at most 55 tons; this one is 60 tons", where: { field: "tons" } }],
     ["an XL engine", (d) => void (d.chassis.engine.type = "xl"), { level: "error", text: "standard or compact fusion engine; XL Fusion is not allowed", where: { field: "chassis.engine" } }],
     ["an XL gyro", (d) => void (d.chassis.gyro = "xl"), { level: "error", text: "standard, compact or heavy-duty gyro; XL is not allowed", where: { field: "chassis.gyro" } }],

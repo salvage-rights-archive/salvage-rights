@@ -19,7 +19,7 @@ import type { Catalog, EquipmentRow } from "./catalog";
 import { DEFAULT_LEVEL, equipmentLevel, levelAtLeast, levelIn, partLevel } from "./levels";
 import { industrialRulesOf, mechTypeOf } from "./mech";
 import type { MechRecord } from "./mech";
-import { datesText, erasOfYear, partPrototype, partSpans, phaseIn, rowPhase, windowOf } from "./time";
+import { datesText, eraOfRecord, erasOfYear, partPrototype, partSpans, phaseIn, rowPhase, windowOf } from "./time";
 import type { Phase, When } from "./time";
 
 export { eraNeedsPick, eraOfRecord, eraOfYear, erasOfYear, partSpans, spansFit, windowOf } from "./time";
@@ -68,10 +68,23 @@ function baseFits(base: "inner-sphere" | "clan" | "both" | undefined, techBase: 
   return base === undefined || base === "both" || techBase === "mixed" || base === techBase || (techBase === "clan" && isStarLeagueTech(base, spans)); // Star League technology is a Clan record's own too (STAR_LEAGUE_TECH)
 }
 
+/** The spans a record reads an item's dates by. A Clan record takes Star League technology as its own, so the Inner Sphere extinctions of the Succession
+ * Wars do not hide it (the owner's ruling: that is why it was LosTech): from its first year it stays available. Anything else keeps its own spans. */
+export function ownSpans(record: Pick<MechRecord, "techBase">, base: "inner-sphere" | "clan" | "both" | undefined, spans: Span[] | undefined): Span[] | undefined {
+  return record.techBase === "clan" && spans !== undefined && isStarLeagueTech(base, spans) ? [{ from: Math.min(...spans.map((s) => s.from)) }] : spans;
+}
+
+/** Whether the era the record names limits its tech base to items introduced by a date (Clan Post-Reaving: 3085 for Clan, 3049 for Inner Sphere) and this item
+ * was introduced later (IO:AE p.24). */
+export function pastEraCap(record: When & Pick<MechRecord, "techBase">, spans: Span[] | undefined): boolean {
+  const cap = eraOfRecord(record)?.introCaps?.[record.techBase];
+  return cap !== undefined && spans !== undefined && spans.length > 0 && Math.min(...spans.map((s) => s.from)) > cap;
+}
+
 /** An equipment row's phase for a record: production, prototype or neither (read through the record's edition). */
 export function equipmentPhase(row: EquipmentRow, record: Subject & Pick<MechRecord, "editionId">, catalog: Catalog): Phase | null {
   const adjusted = catalog.rowFor(row.id, record.editionId) ?? row;
-  return phaseIn(adjusted.availability, row.prototypeYear, windowOf(record));
+  return phaseIn(ownSpans(record, row.techBase, adjusted.availability), row.prototypeYear, windowOf(record));
 }
 
 /** An equipment row: on the record's game's list, at or below the level, the record's tech base, and in the record's time (read through
@@ -84,6 +97,7 @@ export function equipmentAvailable(row: EquipmentRow, record: Subject & Pick<Mec
   if (!levelAtLeast(recordLevel(record), level)) return false;
   if (everything) return true;
   if (!baseFits(row.techBase, record.techBase, (catalog.rowFor(row.id, record.editionId) ?? row).availability)) return false;
+  if (pastEraCap(record, (catalog.rowFor(row.id, record.editionId) ?? row).availability)) return false;
   const phase = equipmentPhase(row, record, catalog);
   return phase === "production" || (phase === "prototype" && levelAtLeast(recordLevel(record), levelIn(level, phase, row.prototypeLevel)));
 }
@@ -104,7 +118,7 @@ const partRow = (kind: PartKind, key: string): PartRow | undefined => (Object.ha
 
 /** A chassis part's phase for a record: production, prototype or neither. A part with no dates printed is always in production. */
 export function partPhase(part: PartFacts, record: Pick<Subject, "techBase" | "year" | "era" | "editionId">): Phase | null {
-  return phaseIn(partSpans(part, record.techBase), partPrototype(part, record.techBase), windowOf(record));
+  return phaseIn(ownSpans(record, part.techBase, partSpans(part, record.techBase)), partPrototype(part, record.techBase), windowOf(record));
 }
 
 /** A chassis part by table and key. A key the table does not have is available (we know nothing against it). */
@@ -120,6 +134,7 @@ export function partAvailable(kind: PartKind, key: string, record: Subject, ever
   if (part.only !== undefined && part.only !== record.configuration) return false;
   if (everything) return true;
   if (!baseFits(part.techBase, record.techBase, partSpans(part, "inner-sphere"))) return false;
+  if (pastEraCap(record, partSpans(part, record.techBase))) return false;
   const phase = partPhase(part, record);
   return phase === "production" || (phase === "prototype" && levelAtLeast(recordLevel(record), levelIn(level, phase, part.prototypeLevel)));
 }
@@ -130,7 +145,7 @@ const configurationRow = (key: string): ConfigurationRow | undefined => (Object.
 export function configurationPhase(key: string, record: Pick<Subject, "techBase" | "year" | "era" | "editionId">): Phase | null {
   const row = configurationRow(key);
   if (!row) return "production";
-  return baseFits(row.techBase, record.techBase) ? rowPhase(row, record.techBase, windowOf(record)) : null;
+  return baseFits(row.techBase, record.techBase, row.availability) ? rowPhase({ ...row, availability: ownSpans(record, row.techBase, row.availability) ?? row.availability }, record.techBase, windowOf(record)) : null;
 }
 
 /** A body configuration's tech base and years against the record (not its level, which the level check reports); its prototype years count. */

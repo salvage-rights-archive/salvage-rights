@@ -148,7 +148,7 @@ describe("tech base choices", () => {
   it("hides Mixed until its level and time: Advanced from production, Experimental from the prototype year, never before it; the current one stays", () => {
     const offered = (level: RulesLevel, year: number | null, current = "inner-sphere") => techBaseChoices(level, current, { year }).some(([v]) => v === "mixed");
     expect([offered("standard", 3085), offered("advanced", 3085), offered("advanced", null), offered("advanced", 3060), offered("experimental", 3060), offered("unlimited", 2830), offered("experimental", 2819), offered("standard", 3085, "mixed")]).toEqual([
-      false, true, true, false, true, true, false, true,
+      false, true, true, false, true, false, false, true, // 2830: the Succession Wars keep the two technology bases apart (IO:AE p.9), so no Mixed
     ]);
   });
 

@@ -26,7 +26,7 @@ import {
   STRUCTURE_TYPES,
 } from "../data/chassis";
 import type { Cite, PartFacts, Span } from "../data/chassis";
-import { configurationInTime, equipmentPhase, eraNeedsPick, eraOfRecord, erasOfYear, partPhase, partSpans, typeInTime, windowOf } from "./availability";
+import { configurationInTime, equipmentPhase, eraOfRecord, erasOfYear, pastEraCap, partPhase, partSpans, typeInTime, windowOf } from "./availability";
 import { listed, RULESETS, rulesetOf } from "../data/rulesets";
 import { CLAN_CASE_IDS, clanCaseAllowed } from "./case";
 import { locationsFor, mountableOn, mountsRequired, podMountable } from "./catalog";
@@ -604,16 +604,28 @@ function eraCheck({ record, catalog }: CheckInput): Finding[] {
   if (record.era !== undefined && record.year !== null && !holding.some((era) => era.id === record.era)) {
     out.push(finding("availability", "warning", `The era is ${record.era}, but the year ${record.year} is ${holding[0] ? `in the ${holding[0].name} era` : "in no era we list"}. Choose the era again or change the year.`, { where: { field: "era" } }));
   }
-  // The pick only matters where the tech base does not already say which era the year means: an Inner Sphere or Clan record is in its own era.
-  if (record.year !== null && record.techBase === "mixed" && eraNeedsPick(record) && level !== "introductory") {
-    out.push(finding("availability", "error", `The year ${record.year} is in two eras (${holding.map((era) => era.name).join(" and ")}); pick one, since it decides the technology base.`, { where: { field: "era" }, cite: holding.find((era) => era.cite)?.cite }));
+  // Only an era the record actually names is held against its tech base: a record with none (an old save, a Mordel import, a year moved out of
+  // a picked sub-era) is in the era its tech base and year make it, a Clan unit in a Clan sub-era (IO:AE p.9).
+  const named = record.era === undefined ? undefined : [...ruleset.eras, ...(ruleset.subEras ?? [])].find((era) => era.id === record.era);
+  if (record.era !== undefined && named === undefined) {
+    out.push(finding("availability", "error", `The era "${record.era}" is not one we list; choose an era again.`, { where: { field: "era" } }));
   }
-  const pickedEra = eraOfRecord(record);
-  if (pickedEra?.techBase === "clan" && record.techBase === "inner-sphere" && holding.length > 1) {
-    out.push(finding("availability", "error", `The era is ${pickedEra.name}, a Clan sub-era, but the tech base is Inner Sphere.`, { where: { field: "techBase" }, cite: pickedEra.cite }));
+  if (named?.techBases && record.techBase !== "mixed" && !named.techBases.some((base) => base === record.techBase) && (record.year === null || holding.some((era) => era.id === named.id))) {
+    out.push(finding("availability", "error", `The era is ${named.name}, which uses ${named.techBases.map((base) => techBaseName(base)).join(" or ")} technology, but the tech base is ${techBaseName(record.techBase)}.`, { where: { field: "techBase" }, cite: named.cite }));
   }
-  if (pickedEra && pickedEra.techBase !== "clan" && record.techBase === "clan" && holding.length > 1) {
-    out.push(finding("availability", "error", `The era is ${pickedEra.name}, an Inner Sphere era, but the tech base is Clan.`, { where: { field: "techBase" }, cite: holding.find((era) => era.techBase === "clan")?.cite }));
+  // In the Succession Wars the Clan and Inner Sphere technology bases do not cross, so Mixed technology has no place there (IO:AE p.9).
+  if (record.techBase === "mixed" && holding.length > 0 && holding.every((era) => era.noMixed === true)) {
+    out.push(finding("availability", "error", `Mixed technology is not used in ${record.year ?? "this era"}: in the Succession Wars the Clan and Inner Sphere technology bases do not cross.`, { where: { field: "techBase" }, cite: { book: "Interstellar Operations: Alternate Eras", page: 9 } }));
+  }
+  // An era with its own date limit (Clan Post-Reaving) leaves out what was introduced after it.
+  if (named && holding.some((era) => era.id === named.id)) {
+    const cap = named.introCaps?.[record.techBase];
+    for (const mount of record.mounts) {
+      const row = mount.part || mount.equipmentId === null ? undefined : catalog.rowFor(mount.equipmentId, record.editionId);
+      if (cap !== undefined && row && pastEraCap(record, row.availability)) {
+        out.push(finding("availability", "error", `${mount.name} was introduced after ${cap}, the latest date ${named.name} allows ${techBaseName(record.techBase)} technology.`, { where: { mountId: mount.id }, cite: named.cite }));
+      }
+    }
   }
   const type = mechTypeOf(record);
   const row = configurationOf(record.configuration);
@@ -687,7 +699,7 @@ function configurationCheck({ record }: CheckInput): Finding[] {
   const row = configurationOf(record.configuration);
   if (!row) return [];
   const out: Finding[] = [];
-  if (record.configuration === "tripod" && record.techBase === "clan") {
+  if (record.configuration === "tripod" && record.techBase === "clan" && !isStarLeagueTech(row.techBase, row.availability)) {
     out.push(
       finding("configuration", "note", "The book gives the tripod's technology as Inner Sphere, and this record is Clan.", { where: { field: "configuration" }, cite: row.levelCite }),
     );
@@ -719,7 +731,7 @@ function lamCheck({ record, catalog }: CheckInput): Finding[] {
   const out: Finding[] = [];
   const cite = LAM.cite;
   const add = (message: string, where?: Finding["where"]) => out.push(finding("lam", "error", message, { where, cite }));
-  if (record.techBase !== "inner-sphere") add(`A Land-Air 'Mech uses Inner Sphere technology only; this one is ${techBaseName(record.techBase)}.`, { field: "techBase" });
+  if (record.techBase !== "inner-sphere" && !(record.techBase === "clan" && isStarLeagueTech("inner-sphere", configurationOf(record.configuration)?.availability))) add(`A Land-Air 'Mech uses Inner Sphere technology only; this one is ${techBaseName(record.techBase)}.`, { field: "techBase" });
   if (isPositive(record.tons) && record.tons > LAM.maxTons) add(`A Land-Air 'Mech weighs at most ${tons(LAM.maxTons)}; this one is ${tons(record.tons)}.`, { field: "tons" });
   const { engine, gyro, structure, armorType } = record.chassis;
   if (own(ENGINE_TYPES.types, engine.type) && !LAM.engines.includes(engine.type)) {

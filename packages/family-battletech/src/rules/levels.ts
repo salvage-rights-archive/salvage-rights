@@ -82,8 +82,10 @@ export function techBaseChoices(level: RulesLevel | undefined, current: string, 
   // era Inner Sphere, and Mixed by its own dates in both.
   const inYear = erasOfYear(when.year, ruleset);
   const picked = inYear.length > 1 ? inYear.find((era) => era.id === when.era) : undefined;
-  const eraFits = (value: string) => picked === undefined || (picked.techBase === "clan" ? value !== "inner-sphere" : value !== "clan");
-  return all.filter(([value]) => value === current || (offered(value) && eraFits(value) && (value === "inner-sphere" || (value === "clan" ? clanFits : mixedFits))));
+  const eraFits = (value: string) => picked?.techBases === undefined || value === "mixed" || picked.techBases.some((base) => base === value);
+  // In the Succession Wars years the Clan and Inner Sphere technology bases do not cross (IO:AE p.9), so Mixed is hidden there, whichever era is picked.
+  const noMixed = inYear.length > 0 ? inYear.every((era) => era.noMixed === true) : picked?.noMixed === true;
+  return all.filter(([value]) => value === current || (offered(value) && eraFits(value) && !(value === "mixed" && noMixed) && (value === "inner-sphere" || (value === "clan" ? clanFits : mixedFits))));
 }
 
 /** The level's row (label, description, cite), with the label the game shows where it has its own (Gothic's "Unofficial"). */

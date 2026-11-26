@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { ERAS } from "../data/editions";
 import type { Span } from "../data/chassis";
-import { configurationAvailable, configurationChoices, equipmentAvailable, eraOfRecord, erasOfYear, partAvailable, partChoices, setEra, setYear, typeAvailable } from "./availability";
+import { configurationAvailable, configurationChoices, equipmentAvailable, eraOfRecord, erasOfYear, pastEraCap, partAvailable, partChoices, setEra, setYear, typeAvailable } from "./availability";
 import type { PartKind } from "./availability";
 import { expand, groupOf, loadCatalog } from "./catalog";
 import type { Catalog } from "./catalog";
@@ -63,12 +63,12 @@ describe("chassis parts and body types", () => {
     expect(parts.map(([kind, key, patch]) => partAvailable(kind, key, record(patch)))).toEqual(parts.map(([, , , expected]) => expected));
   });
 
-  it("applies it to a body type: not before it exists, not above the level, not for a Clan unit, not after it goes extinct", () => {
+  it("applies it to a body type: not before it exists, not above the level, not after it goes extinct", () => {
     const bodies: [string, Partial<MechRecord>, boolean][] = [
       ["quad", { year: 3025 }, true],
       ["tripod", { year: 2500, rulesLevel: "advanced" }, false],
       ["tripod", { year: 3025 }, false],
-      ["tripod", { year: 3060, rulesLevel: "advanced", techBase: "clan" }, false],
+      ["tripod", { year: 3060, rulesLevel: "advanced", techBase: "clan" }, true], // Star League technology (2602) is a Clan unit's own
       ["tripod", { year: 3060, rulesLevel: "advanced" }, true],
       ["lam", { year: 3100, rulesLevel: "experimental" }, false],
     ];
@@ -264,5 +264,60 @@ describe("the year decides the era, and a dual year the tech base", () => {
     expect([offers("medium-laser-is", clan), offers("ultra-ac-20-is", { ...clan, year: 3060, era: undefined })]).toEqual([true, false]);
     const flagged = (id: string, patch: Partial<MechRecord>) => runChecks(record({ ...patch, mounts: [mount("m", id, "RA", 0)] }), catalog).some((f) => f.check === "availability" && f.level === "error" && f.message.includes("equipment, which a Clan"));
     expect([flagged("medium-laser-is", clan), flagged("ultra-ac-20-is", { ...clan, year: 3060, era: undefined })]).toEqual([false, true]);
+  });
+});
+
+describe("Inner Sphere body types in the Clan sub-eras", () => {
+  it("offers a Clan unit a Tripod in 2850 and a Land-Air Mech while its dates fit, as its own and not flagged as mixed", () => {
+    const clan = (year: number, configuration: string) => record({ techBase: "clan", year, era: "clan-golden-years", rulesLevel: "experimental", configuration });
+    expect([configurationAvailable("tripod", clan(2850, "tripod")), configurationAvailable("lam", clan(2810, "lam")), configurationAvailable("lam", clan(2850, "lam"))]).toEqual([true, true, false]);
+    const flagged = runChecks(clan(2850, "tripod"), catalog).filter((f) => (f.check === "configuration" || f.check === "availability") && /Inner Sphere/.test(f.message));
+    expect(flagged).toEqual([]);
+  });
+});
+
+describe("every era the year is in, and what the picked one allows", () => {
+  const eraErrors = (r: MechRecord) => runChecks(r, catalog).filter((f) => f.level === "error" && (f.where?.field === "era" || f.where?.field === "techBase")).map((f) => f.message);
+
+  it("offers every era or sub-era that holds the year, three at 2800, and the Star League in Exile (a faction) takes the Inner Sphere base only", () => {
+    expect(erasOfYear(2800).map((e) => e.id)).toEqual(["early-succession-war", "star-league-in-exile", "clan-founding-years"]);
+    expect(erasOfYear(2790).map((e) => e.id)).toEqual(["early-succession-war", "star-league-in-exile"]);
+    expect(erasOfYear(3100).map((e) => e.id)).toEqual(["early-republic", "clan-post-reaving"]);
+    const bases = (year: number, era: string) => techBaseChoices("unlimited", "inner-sphere", { year, era }).map(([v]) => v);
+    expect(bases(2790, "star-league-in-exile")).toEqual(["inner-sphere"]);
+  });
+
+  it("lets each era's own paragraph decide: the Dark Age keeps Clan open, Post-Reaving allows all three, the Succession Wars hide Mixed", () => {
+    const bases = (year: number, era: string) => techBaseChoices("unlimited", "", { year, era }).map(([v]) => v);
+    expect(bases(3100, "early-republic")).toEqual(["inner-sphere", "clan", "mixed"]);
+    expect(bases(3100, "clan-post-reaving")).toEqual(["inner-sphere", "clan", "mixed"]);
+    expect(bases(2900, "clan-golden-years")).toEqual(["clan"]);
+    expect(bases(2900, "early-succession-war")).toEqual(["inner-sphere"]);
+  });
+
+  it("holds a record to an era only if it names one: a Clan record with no era, an old save, or a year moved out of the pick has no error", () => {
+    expect(eraErrors(record({ techBase: "clan", year: 2900, rulesLevel: "advanced" }))).toEqual([]);
+    expect(eraErrors(record({ techBase: "clan", year: 2900, era: "early-succession-war", rulesLevel: "advanced" }))).toEqual([expect.stringContaining("which uses Inner Sphere technology, but the tech base is Clan")]);
+    const moved = record({ techBase: "clan", year: 2900, era: "clan-golden-years", rulesLevel: "advanced" });
+    setYear(moved, 3100);
+    expect([moved.era, eraErrors(moved)]).toEqual([undefined, []]);
+    expect(eraErrors(record({ year: 3025, era: "made-up" }))).toEqual([expect.stringContaining('The era "made-up" is not one we list')]);
+  });
+
+  it("keeps the two technology bases apart in the Succession Wars: Mixed is an error there, and a Clan item in an Inner Sphere record is too", () => {
+    expect(eraErrors(record({ techBase: "mixed", year: 2900, rulesLevel: "experimental" }))).toEqual([expect.stringContaining("Mixed technology is not used in 2900")]);
+    const clanGun = runChecks(record({ year: 2900, era: "early-succession-war", rulesLevel: "advanced", mounts: [mount("m", "er-medium-laser-clan", "RA", 0)] }), catalog);
+    expect(clanGun.some((f) => f.level === "error" && f.message.includes("Clan equipment"))).toBe(true);
+  });
+
+  it("gives a Clan unit Star League items whatever their Inner Sphere extinction: IS XL and ferro-fibrous in 2900", () => {
+    const clan = record({ techBase: "clan", year: 2900, era: "clan-golden-years", rulesLevel: "advanced" });
+    expect([partAvailable("engine", "xl", clan), partAvailable("armor", "ferro-fibrous", clan), partAvailable("engine", "xl", record({ year: 2900, rulesLevel: "advanced" }))]).toEqual([true, true, false]);
+  });
+
+  it("stops a Post-Reaving unit at the era's date limit for its tech base (3085 Clan, 3049 Inner Sphere)", () => {
+    const clan = record({ techBase: "clan", year: 3100, era: "clan-post-reaving" });
+    const inner = record({ year: 3100, era: "clan-post-reaving" });
+    expect([pastEraCap(clan, [{ from: 3100 }]), pastEraCap(clan, [{ from: 3050 }]), pastEraCap(inner, [{ from: 3060 }])]).toEqual([true, false, true]);
   });
 });

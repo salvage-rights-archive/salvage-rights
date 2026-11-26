@@ -6,6 +6,7 @@
 import { ARMOR, HEAT_SINK_RULES, MYOMER, STRUCTURE_TYPES } from "../data/chassis";
 import type { MechType } from "../data/chassis";
 import type { Catalog, EquipmentRow } from "./catalog";
+import { setYear } from "./availability";
 import { levelAtLeast, lowestLevelFor } from "./levels";
 import { ARM_FULL, armorSpread, armsOf, configurationOf, layout, locationName, mountParts, partMountBase, slotsTaken, splitOf } from "./mech";
 import type { LocationCode, MechRecord, Mount, TechBase } from "./mech";
@@ -514,6 +515,7 @@ function convert(response: unknown, catalog: Catalog, editionId: string, now: st
   }
 
   placeMounts(record, catalog, note);
+  if (record.year !== null) setYear(record, record.year); // the era follows the year where one era holds it; a year in two is left for the player to pick
   record.rulesLevel = lowestLevelFor(record, catalog);
   // Mordel's own `canon` flag is the one thing that makes an import OFFICIAL: a unit it marks canon is the publisher's design, and the
   // title of its first listed source is the book. Every other import is a member's design and reads as NOT OFFICIAL.
