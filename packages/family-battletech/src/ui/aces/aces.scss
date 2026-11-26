@@ -413,3 +413,17 @@
 .aces-drawer__row .bt-tag {
   margin-left: var(--sr-space-2);
 }
+
+// The figures of a campaign: a label above its value, so nothing is wider than the screen.
+.aces-facts {
+  margin: 0 0 var(--sr-space-3);
+
+  dt {
+    font-weight: 600;
+  }
+
+  dd {
+    margin: 0 0 var(--sr-space-2);
+    overflow-wrap: anywhere;
+  }
+}

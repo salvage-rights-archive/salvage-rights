@@ -154,7 +154,7 @@ function Campaign({ storage, campaign: initial, units }: { storage: CampaignStor
       {section === "overview" && (
         <section aria-labelledby="aces-c-overview">
           <h2 id="aces-c-overview">Overview</h2>
-          <dl className="aces-summary">
+          <dl className="aces-facts">
             <dt>Warchest</dt>
             <dd>{`${String(warchest(campaign))} SP`}</dd>
             <dt>Difficulty</dt>
