@@ -358,6 +358,7 @@ export const EQUIPMENT_COST: PriceGroup[] = [
       "prototype-lb-10-x-ac-lsw": 2_000_000, "prototype-ultra-ac-5": 1_000_000,
       "improved-atm-3": 100_000, "improved-atm-6": 250_000, "improved-atm-9": 450_000, "improved-atm-12": 700_000,
       "nova-cews": 1_110_000,
+      "fusillade-launcher": 100_000, "magnetic-clamp-system": 25_000, "protomech-quad-melee-weapon-system": 70_000,
     },
   },
   {
@@ -423,7 +424,7 @@ export const EQUIPMENT_COST: PriceGroup[] = [
     cite: { book: TO, page: 223 },
     checked: "page",
     prices: {
-      "ppc-capacitor": 150_000, "recon-camera": 10_000,
+      "ppc-capacitor": 150_000, "recon-camera": 10_000, "protomech-melee-weapon": 50_000,
       "light-rifle": 37_750, "medium-rifle": 75_500, "heavy-rifle": 90_000,
       "taser": 200_000, "thunderbolt-5": 50_000, "thunderbolt-10": 175_000, "thunderbolt-15": 325_000, "thunderbolt-20": 450_000,
     },

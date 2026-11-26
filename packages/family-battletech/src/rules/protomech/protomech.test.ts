@@ -134,3 +134,25 @@ describe("the ProtoMech autocannons", () => {
     expect([where(place("mg")), where(place("t"))]).toEqual([[], ["t"]]);
   });
 });
+
+describe("the ProtoMech-only items", () => {
+  const record = (extra: Partial<ProtoRecord> = {}): ProtoRecord => ({ ...newProtoRecord({ chassis: "Only", model: "1", tons: 9, walk: 3, year: 3080 }), rulesLevel: "experimental" as const, ...extra });
+  const findings = (r: ProtoRecord) => checkProto(r, catalog).filter((f) => f.check === "location" || f.check === "item").map((f) => f.where?.mountId);
+
+  it("keeps the melee weapon to one, on an arm, and values it at 1.25 per 5 tons of damage", () => {
+    const one = record({ mounts: [mount("a", "protomech-melee-weapon-clan", "la")] });
+    expect(findings(one)).toEqual([]);
+    expect(offeredEquipment(one, catalog).map((r) => r.id)).toContain("protomech-melee-weapon-clan");
+    expect(findings(record({ mounts: [mount("a", "protomech-melee-weapon-clan", "t")] }))).toEqual(["a"]);
+    expect(findings(record({ mounts: [mount("a", "protomech-melee-weapon-clan", "la"), mount("b", "protomech-melee-weapon-clan", "ra")] }))).toEqual(["b"]);
+    expect(protoBattleValue(one, catalog).unvalued).toEqual([]);
+    expect(protoCost(one, catalog).lines.some((l) => l.cost === 50_000)).toBe(true);
+  });
+
+  it("weighs the magnetic clamp by the tonnage of the ProtoMech and holds it to the torso; the quad melee system is not offered to a biped", () => {
+    const kgAt = (tons: number) => tally(record({ tons, mounts: [mount("c", "magnetic-clamp-system-clan", "t")] }), catalog).total - tally(record({ tons, mounts: [] }), catalog).total;
+    expect([kgAt(5), kgAt(8), kgAt(10)]).toEqual([250, 500, 1000]);
+    expect(findings(record({ mounts: [mount("c", "magnetic-clamp-system-clan", "la")] }))).toEqual(["c"]);
+    expect(offeredEquipment(record(), catalog).map((r) => r.id)).not.toContain("protomech-quad-melee-weapon-system-clan");
+  });
+});

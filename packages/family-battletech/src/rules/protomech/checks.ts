@@ -2,7 +2,7 @@
 // on one this version does not understand. Messages are our own words and state the numbers; a finding's `cite` names the deciding book and page. Standard construction
 // is TechManual pp. 80-89 (errata v8.0); the dates are Interstellar Operations: Alternate Eras (printed pp. 29 and 44). Rules levels follow the 'Mech side: ProtoMechs are
 // Standard rules in production, Experimental in their prototype years (IO:AE printed p. 27), and not part of Introductory (Inner Sphere, 3025 technology).
-import { PROTO_CODES, PROTO_DATES, PROTO_LIMITS, PROTO_LOCATION_NAMES, PROTO_PART_PAGES, PROTO_PARTS, PROTO_REAR_LOCATIONS, PROTO_WEIGHT } from "../../data/protomech";
+import { PROTO_CODES, PROTO_DATES, PROTO_LIMITS, PROTO_LOCATION_NAMES, PROTO_PART_PAGES, PROTO_PLACEMENT, PROTO_PARTS, PROTO_REAR_LOCATIONS, PROTO_WEIGHT } from "../../data/protomech";
 import type { ProtoCite } from "../../data/protomech";
 import { LEVEL_ORDER, levelAtLeast, levelIn, levelRow } from "../levels";
 import type { RulesLevel } from "../../data/chassis";
@@ -127,6 +127,8 @@ const mountsCheck: Check = (record, catalog, out) => {
         where,
       });
     }
+    const only = mount.equipmentId === null ? undefined : own(PROTO_PLACEMENT.only, mount.equipmentId);
+    if (only && !only.includes(mount.location)) out.push({ check: "location", level: "error", message: `${name} goes in ${only.map(nameOf).join(" or ")}, not in ${nameOf(mount.location)}.`, where, cite: page(PROTO_PLACEMENT.cite) });
     if (!Object.hasOwn(PROTO_LIMITS.rows, mount.location)) out.push({ check: "location", level: "error", message: `${name} is in "${mount.location}", which is not a ProtoMech location.`, where, cite: limitCite });
     if (mount.rear === true && !PROTO_REAR_LOCATIONS.includes(mount.location)) out.push({ check: "rear", level: "error", message: `${name} faces the rear, which only a torso weapon may.`, where, cite: TM(80) });
     const launch = launcherOf(mount);
@@ -137,6 +139,11 @@ const mountsCheck: Check = (record, catalog, out) => {
     }
     if (usesAmmo(mount) && (mount.shots === undefined || mount.shots <= 0)) out.push({ check: "ammo", level: "warning", message: `${name} has no ammunition.`, where, cite: TM(88) });
     if (!usesAmmo(mount) && mount.shots !== undefined && mount.shots > 0) out.push({ check: "ammo", level: "note", message: `${name} takes no ammunition, so its ${num(mount.shots)} shots weigh nothing.`, where });
+  }
+  for (const id of PROTO_PLACEMENT.one) {
+    const held = record.mounts.filter((m) => m.equipmentId === id);
+    const first = held[0];
+    if (held.length > 1 && first) out.push({ check: "item", level: "error", message: `A ProtoMech carries one ${mountName(first)} at most; this one has ${String(held.length)}.`, where: { mountId: held[1]?.id }, cite: page(PROTO_PLACEMENT.cite) });
   }
   const known = new Set(PROTO_CODES as string[]);
   for (const code of [...PROTO_CODES, ...new Set(record.mounts.map((m) => m.location).filter((c) => !known.has(c)))]) {
