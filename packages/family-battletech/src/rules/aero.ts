@@ -970,7 +970,7 @@ export function craftTally(record: AeroRecord, catalog?: Catalog): CraftTally {
   unknown.push(...bays.unknown, ...quarters.unknown);
   // A towing adapter (AeroTech 2 p. 47: 100 tons) the record says the vessel carries.
   const adapters = (record.systems?.["towing-adapter"] ?? 0) * (capitalSystemFigure("towing-adapter", record.editionId)?.tons ?? 0);
-  const others = capitalSystems(record).lines.filter((l) => l.kind !== "towing-adapter").reduce((sum, l) => sum + l.tons, 0);
+  const others = capitalSystems(record).lines.filter((l) => l.kind !== "towing-adapter" && l.allowed).reduce((sum, l) => sum + l.tons, 0);
   const c3 = (record.systems?.["naval-c3"] ?? 0) > 0 && capitalSystemFigure("naval-c3", record.editionId) !== undefined;
   const lines = [
     { label: "Engine", tons: engine ?? 0 },

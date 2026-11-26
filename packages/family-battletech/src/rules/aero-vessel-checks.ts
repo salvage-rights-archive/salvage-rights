@@ -5,7 +5,7 @@
 // not understand gets none from here.
 import { CAPITAL_FIGURES, CAPITAL_SYSTEMS, CRAFT_FIGURES, capitalSystemFigure, DEFAULT_AERO_EDITION, FIGHTER_ARMOR_TYPES, FIGHTER_EDITIONS, FIGHTER_PATCHWORK_TYPES, aeroEditionName } from "../data/aero";
 import type { FigureGroup } from "../data/aero";
-import { aeroLocationName, armorTypeAt, collarTotal, fighterPatchworkActive, capitalKind, capitalSystems, craftAmmoShortfalls, craftKind, heatByArc, locationsOf, stationKeeping, towingShare, vessel } from "./aero";
+import { aeroLocationName, armorTypeAt, capitalSystemLimit, collarTotal, fighterPatchworkActive, capitalKind, capitalSystems, craftAmmoShortfalls, craftKind, heatByArc, locationsOf, stationKeeping, towingShare, vessel } from "./aero";
 import type { AeroRecord } from "./aero";
 import type { AeroCheck, AeroFinding } from "./aero-checks";
 import { tidy } from "./walk";
@@ -281,6 +281,12 @@ const systemsCheck: AeroCheck = {
         const held = line.kind === "docking-hardpoint" ? collarTotal(record) : line.count;
         out.push({ check: "systems", level: "error", message: `${plural(held, line.kind === "docking-hardpoint" ? "docking collar" : label.toLowerCase())} are over the ${num(line.limit)} a ${num(record.tons)}-ton ${kindName(record)} may carry.`, where: { field: "systems" }, ...cite });
       }
+    }
+    // Repair facilities and DropShuttle bays bring collars of their own, so the limit applies to a ship with no hardpoint line at all.
+    if (!systems.lines.some((l) => l.kind === "docking-hardpoint" && l.count > 0) && capitalKind(record) !== undefined) {
+      const held = collarTotal(record);
+      const limit = capitalSystemLimit("docking-hardpoint", record);
+      if (held > 0 && limit !== undefined && held > limit) out.push({ check: "systems", level: "error", message: `${plural(held, "docking collar")} are over the ${num(limit)} a ${num(record.tons)}-ton ${kindName(record)} may carry.`, where: { field: "systems" }, ...withCite(page("docking-hardpoint")) });
     }
     if (systems.unknown.length > 0) out.push({ check: "systems", level: "note", message: `${systems.unknown.join(", ")} ${systems.unknown.length === 1 ? "is" : "are"} not a ship system ${aeroEditionName(record.editionId)} prints, so ${systems.unknown.length === 1 ? "it was" : "they were"} not weighed.`, where: { field: "systems" } });
     return out;

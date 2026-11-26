@@ -130,6 +130,8 @@ describe("large craft cost", () => {
     expect(line(record, "K-F drive coil")).toBe(60_000_000 + 75_000_000 * 3);
     const over = ship("tw-tm-so", { unitType: "warship", tons: 100_000, safe: 1 }, { systems: { "docking-hardpoint": 2, "repair-pressurized": 1000 } });
     expect(kinds2(over)).toContain("systems:error");
+    // With no hardpoint at all, a ship under 50,000 tons that mounts a repair facility is still over its limit of none.
+    expect(kinds2(ship("tw-tm-so", { unitType: "warship", tons: 20_000, safe: 1 }, { systems: { "repair-pressurized": 1000 } }))).toContain("systems:error");
   });
 
   it("a DropShip may carry a Naval C3: it weighs a hundredth of the ship and doubles its fire control, and is priced", () => {
@@ -141,6 +143,8 @@ describe("large craft cost", () => {
     expect([fire({ "naval-c3": 1 }), tally({ "naval-c3": 1 }).find((l) => l.label === "Ship systems")?.tons]).toEqual([fire({}) * 2, 100]);
     expect(line(dropship({ "naval-c3": 1 }), "Naval C3")).toBe(100_000 * 100);
     expect(kinds2(dropship({ "naval-c3": 1, "docking-hardpoint": 1 }))).toContain("systems:error");
+    // A system the type may not carry is reported, not weighed.
+    expect(craftTally(dropship({ "docking-hardpoint": 1 }), catalog).lines.some((l) => l.label === "Ship systems")).toBe(false);
   });
 
   it("AeroTech 2: Revised Edition prices no infantry bay, so one is listed as unpriced, while the current rules count it free", () => {
