@@ -37,7 +37,7 @@ import {
 import type { BvGroup, BvOptions } from "../data/bv";
 import { clanStructure } from "./case";
 import { physicalDamage } from "./formulas";
-import { industrialRulesOf, totalHeatSinks, walkMP } from "./mech";
+import { arcLocation, industrialRulesOf, mountParts, totalHeatSinks, walkMP } from "./mech";
 import type { LocationCode, MechRecord, Mount } from "./mech";
 import type { Catalog, EquipmentRow } from "./catalog";
 import { armorPoints, equipmentItems, heatSinkCapacity, jumpMP as jumpJets, mascOf, movementPenalty, own, roundHalfUp, stemOf, structureTotal, tidy, tsmOf } from "./walk";
@@ -296,7 +296,9 @@ export function battleValue(record: MechRecord, catalog: Catalog, pilot: PilotSk
     const host = items.find((i) => i.mount.id === cap.mount.linkedTo) ?? items.find((i) => !taken.has(i) && i.mount.location === cap.mount.location && own(CAPACITOR.bv, i.row.id) !== undefined);
     capacitors.set(cap, host && own(CAPACITOR.bv, host.row.id) !== undefined ? host : undefined);
   }
-  const gaussPoints = (item: Item, slots: number) => slots * BV_METHOD.gaussPerSlot * (exposure(item.mount.location) > 0 ? 1 : 0);
+  // A split Gauss weapon's slots count where each part lies (TechManual p.57): a part in a protected location adds nothing.
+  const gaussPoints = (item: Item, slots: number) =>
+    mountParts(item.mount, slots).reduce((sum, part) => sum + part.count * BV_METHOD.gaussPerSlot * (exposure(part.location) > 0 ? 1 : 0), 0);
 
   let explosive = 0;
   // A PPC with its capacitor is treated as a Gauss weapon (the table's double dagger, TO:AUE p. 194): every slot of the pair.
@@ -382,7 +384,7 @@ export function battleValue(record: MechRecord, catalog: Catalog, pilot: PilotSk
   }
 
   // Rear-firing weapons in the torsos, legs and head count half; if the forward ones there are worth less, they are halved instead.
-  const bodyMounted = (w: W) => !ARMS.includes(w.item.mount.location as LocationCode);
+  const bodyMounted = (w: W) => !ARMS.includes(arcLocation(w.item.mount) as LocationCode); // split into an arm, a weapon takes the torso arc (TM p.57)
   const rearBv = weapons.filter((w) => w.item.mount.rear && bodyMounted(w)).reduce((s, w) => s + w.bv, 0);
   const frontBv = weapons.filter((w) => !w.item.mount.rear && bodyMounted(w)).reduce((s, w) => s + w.bv, 0);
   const halveForward = rearBv > 0 && frontBv < rearBv;

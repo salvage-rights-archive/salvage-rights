@@ -7,7 +7,7 @@ import { ARMOR, HEAT_SINK_RULES, MYOMER, STRUCTURE_TYPES } from "../data/chassis
 import type { MechType } from "../data/chassis";
 import type { Catalog, EquipmentRow } from "./catalog";
 import { levelAtLeast, lowestLevelFor } from "./levels";
-import { ARM_FULL, armorSpread, armsOf, configurationOf, layout, locationName, partMountBase, slotsTaken } from "./mech";
+import { ARM_FULL, armorSpread, armsOf, configurationOf, layout, locationName, mountParts, partMountBase, slotsTaken, splitOf } from "./mech";
 import type { LocationCode, MechRecord, Mount, TechBase } from "./mech";
 import { canon, designKey } from "./official";
 import { defaultFixedMounts, resolveBase, resolveConfiguration, splitRecord } from "./omni";
@@ -147,6 +147,10 @@ const LOCATIONS: Record<string, LocationCode> = {
   RFL: "FRL",
   LRL: "RLL",
   RRL: "RRL",
+  // Our own quad codes, as the .mtf reader hands them on (Mordel's API never sends these, so they cannot be misread).
+  FLL: "FLL",
+  FRL: "FRL",
+  RLL: "RLL",
 };
 const TORSOS: LocationCode[] = ["CT", "LT", "RT"];
 // Where structure and armor slots go when Mordel does not say: arms, side torsos, legs, then the center torso and head, lowest
@@ -328,11 +332,15 @@ function convert(response: unknown, catalog: Catalog, editionId: string, now: st
     if (!bin) return {};
     const shots = Number(bin[2]);
     const stems = [bin[3] ? `${bin[1]} ${bin[3]}` : undefined, bin[1]].filter((x): x is string => x !== undefined);
-    const bins = stems.flatMap((stem) => [catalog.match(`${stem} Ammo`, tech), catalog.match(`${stem} Ammo (Half Ton)`, tech)]).filter((r): r is EquipmentRow => r !== undefined);
-    const only = bins.length === 1 ? bins[0] : undefined;
-    const row = only && only.shots === undefined ? only : bins.find((r) => r.shots === shots);
-    if (row) return { row };
-    return bins.length > 0 ? { why: `${name} is an ammunition bin of a size this tool does not recognise (${shots} shots), so it is not matched.` } : {};
+    // The tagged stem first: "LB 20-X AC (Ammo 5) [Cluster]" is the cluster bin, not the standard one (the live Barghest BGS-1T, bm 823).
+    for (const stem of stems) {
+      const bins = [catalog.match(`${stem} Ammo`, tech), catalog.match(`${stem} Ammo (Half Ton)`, tech)].filter((r): r is EquipmentRow => r !== undefined);
+      if (bins.length === 0) continue;
+      const only = bins.length === 1 ? bins[0] : undefined;
+      const row = only && only.shots === undefined ? only : bins.find((r) => r.shots === shots);
+      return row ? { row } : { why: `${name} is an ammunition bin of a size this tool does not recognise (${shots} shots), so it is not matched.` };
+    }
+    return {};
   };
 
   // Mordel lists an industrial cockpit's Advanced Fire Control as an item with no location and no slots; here it is the cockpit's variant.
@@ -340,6 +348,8 @@ function convert(response: unknown, catalog: Catalog, editionId: string, now: st
   const fixedFlags = new Map<string, boolean>();
   let entryMounts = 0;
   const idToMount = new Map<number, string>();
+  /** The slots Mordel gave each mount's entry, so a second entry for the same item (a split weapon) can be joined to it. */
+  const partSlots = new Map<string, number>();
   const links: { mountId: string; target: number }[] = [];
   const list = unit["equipment"];
   if (list !== undefined && list !== null && !Array.isArray(list)) wrong("equipment list");
@@ -359,9 +369,27 @@ function convert(response: unknown, catalog: Catalog, editionId: string, now: st
     const loc = code ? own(LOCATIONS, code.toUpperCase()) : undefined;
     if (code && !loc) note(`${name} is in "${code}", a location this tool does not know; it is left unplaced.`);
     const tech: TechBase = techOf(entry["technology"], `${name} technology`) ?? (unitClan ? "clan" : "inner-sphere");
+    const theirSlots = num(entry["slots"], `${name} slots`);
+    const theirId = num(entry["id"], `${name} id`);
+    // A weapon split over two locations comes as two entries with one `id` and one name, each with its location and its slots there
+    // (checked live on the TechManual Barghest BGS-1T, bm 823, on 2026-11-25: LB 20-X AC, CT 2 and RT 9). They are one mount: the part
+    // with more slots (the first on a tie) is its location, the other its `split`; the slots in each place are set when it is placed.
+    const joined = theirId === undefined ? undefined : mounts.find((m) => m.id === idToMount.get(theirId));
+    if (joined && joined.name === name && joined.location && loc && joined.location !== loc && joined.split === undefined && theirSlots !== undefined && theirSlots > 0) {
+      const before = partSlots.get(joined.id) ?? 1;
+      const [main, other] = theirSlots > before ? [loc, joined.location] : [joined.location, loc];
+      joined.location = main;
+      joined.split = { location: other, slot: 0, slots: Math.min(before, theirSlots) };
+      partSlots.set(joined.id, before + theirSlots);
+      if (joined.equipmentId === null) joined.slots = before + theirSlots;
+      const row = joined.equipmentId === null ? undefined : catalog.byId(joined.equipmentId);
+      if (row && typeof row.slots === "number" && row.slots !== before + theirSlots) {
+        note(`${name} is split ${before} and ${theirSlots} slots between the ${locationName(main)} and the ${locationName(other)}, where the equipment table says it takes ${row.slots}.`);
+      }
+      return;
+    }
     const { row, why } = find(name, tech);
     if (!row) note(why ?? `${name} is not in our equipment table.`);
-    const theirSlots = num(entry["slots"], `${name} slots`);
     const mount: Mount = { id: `mount-${index + 1}`, equipmentId: row?.id ?? null, name, techBase: tech, location: loc ?? null, slot: null };
     // An item that is not in the table keeps the slots Mordel gave it; one with no id and no location takes none.
     const slotless = entry["id"] == null && entry["location"] == null;
@@ -377,8 +405,8 @@ function convert(response: unknown, catalog: Catalog, editionId: string, now: st
     const fixedFlag = entry["fixed"];
     if (typeof fixedFlag === "boolean") fixedFlags.set(mount.id, fixedFlag);
     else if (fixedFlag !== undefined && fixedFlag !== null) wrong(`${name} fixed flag`);
-    const theirId = num(entry["id"], `${name} id`);
     if (theirId !== undefined) idToMount.set(theirId, mount.id);
+    if (theirSlots !== undefined) partSlots.set(mount.id, theirSlots);
     const target = num(entry["associated_id"], `${name} associated_id`);
     if (target !== undefined) links.push({ mountId: mount.id, target });
   });
@@ -516,7 +544,10 @@ const ARM_STEPS = [undefined, { lowerArm: true, hand: false }, { lowerArm: false
 function inferArms(record: MechRecord, catalog: Catalog, note: (text: string) => void) {
   if (record.configuration !== "biped" && record.configuration !== "tripod") return;
   for (const arm of ["LA", "RA"] as const) {
-    const needed = record.mounts.filter((m) => !m.part && m.location === arm).reduce((sum, m) => sum + Math.max(0, slotsTaken(m, record, catalog.factsOf)), 0);
+    const needed = record.mounts
+      .filter((m) => !m.part)
+      .flatMap((m) => mountParts(m, Math.max(0, slotsTaken(m, record, catalog.factsOf))))
+      .reduce((sum, part) => sum + (part.location === arm ? part.count : 0), 0);
     const freeWith = (step: (typeof ARM_STEPS)[number]) => {
       const cells = layout({ ...record, mounts: [], arms: step && { [arm]: step } }, catalog.factsOf).slots[arm] ?? [];
       return cells.filter((cell) => cell.kind === "empty").length;
@@ -555,19 +586,28 @@ function placeMounts(record: MechRecord, catalog: Catalog, note: (text: string) 
 
   for (const mount of record.mounts) {
     if (mount.part || !mount.location) continue;
-    const cells = free.get(mount.location);
-    if (!cells) {
-      note(`${mount.name} is in the ${mount.location}, which this ${record.configuration} does not have; it is left unplaced.`);
-      continue;
-    }
     const taken = slotsTaken(mount, record, catalog.factsOf);
     if (taken <= 0) continue;
-    for (let first = 0; first + taken <= cells.length; first++) {
-      if (cells.slice(first, first + taken).every(Boolean)) {
-        for (let i = 0; i < taken; i++) cells[first + i] = false;
-        mount.slot = first;
+    // Each part (two for a split weapon) takes the first free run of its size in its location; if one part finds none, neither is placed.
+    const claimed: { cells: boolean[]; first: number; count: number }[] = [];
+    for (const part of mountParts(mount, taken)) {
+      const cells = part.location ? free.get(part.location) : undefined;
+      if (!cells) {
+        note(`${mount.name} is in the ${part.location ?? "?"}, which this ${record.configuration} does not have; it is left unplaced.`);
         break;
       }
+      let first = 0;
+      while (first + part.count <= cells.length && !cells.slice(first, first + part.count).every(Boolean)) first++;
+      if (first + part.count > cells.length) break;
+      cells.fill(false, first, first + part.count);
+      claimed.push({ cells, first, count: part.count });
+    }
+    const split = splitOf(mount);
+    if (claimed.length === (split && split.slots < taken ? 2 : 1)) {
+      mount.slot = claimed[0]?.first ?? null;
+      if (split && claimed[1]) mount.split = { ...split, slot: claimed[1].first };
+    } else {
+      for (const { cells, first, count } of claimed) cells.fill(true, first, first + count);
     }
   }
 

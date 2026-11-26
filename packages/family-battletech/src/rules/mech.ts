@@ -70,7 +70,54 @@ export interface Mount {
   rear?: true;
   /** Set only on a resolved OmniMech configuration (rules/omni.ts): the mount is a pod item, not fixed equipment of the base. */
   pod?: true;
+  /** A weapon split over two adjacent locations (TechManual p.57): `slots` of its slots lie in this second location from `slot` on, and
+   * the rest in `location` from the mount's own `slot`. Absent on every other mount, and on every record saved before splits existed.
+   * `splitOf` reads it; the split check says whether the item may split and where. */
+  split?: { location: LocationCode; slot: number; slots: number };
 }
+
+/** A mount's second part, when its `split` is well formed: a location code, a first slot and a whole number of slots of at least one.
+ * Anything else reads as no split, so a damaged record lays out as an unsplit one. */
+export function splitOf(mount: Mount): Mount["split"] {
+  const split: unknown = mount.split;
+  if (typeof split !== "object" || split === null) return undefined;
+  const { location, slot, slots } = split as Record<string, unknown>;
+  const whole = (n: unknown): n is number => typeof n === "number" && Number.isInteger(n);
+  return typeof location === "string" && Object.hasOwn(LOCATION_NAMES, location) && whole(slot) && slot >= 0 && whole(slots) && slots >= 1
+    ? { location: location as LocationCode, slot, slots }
+    : undefined;
+}
+
+/** Each location a mount's slots lie in, with its first slot and its count there: one part, or two for a split weapon whose `split`
+ * leaves at least one slot in its own location. `taken` is the mount's whole count (`slotsTaken`). */
+export function mountParts(mount: Mount, taken: number): { location: LocationCode | null; slot: number | null; count: number }[] {
+  const split = splitOf(mount);
+  if (!split || split.slots >= taken) return [{ location: mount.location, slot: mount.slot, count: taken }];
+  return [
+    { location: mount.location, slot: mount.slot, count: taken - split.slots },
+    { location: split.location, slot: split.slot, count: split.slots },
+  ];
+}
+
+/** The locations whose slots a split weapon may share (TechManual p.57: two adjacent locations, never a leg): an arm and its side torso, a
+ * side torso and the center torso. The head is not counted as adjacent; see the split check. */
+const SPLIT_PAIRS: readonly (readonly [LocationCode, LocationCode])[] = [
+  ["LA", "LT"],
+  ["RA", "RT"],
+  ["LT", "CT"],
+  ["RT", "CT"],
+];
+export const canSplitBetween = (a: LocationCode | null, b: LocationCode | null): boolean => SPLIT_PAIRS.some(([x, y]) => (a === x && b === y) || (a === y && b === x));
+
+/** The location whose firing arc a mount uses: its own, except that a weapon split between an arm and its side torso takes the torso's,
+ * the more restrictive of the two (TechManual p.57). */
+export function arcLocation(mount: Mount): LocationCode | null {
+  const split = splitOf(mount);
+  return split && (mount.location === "LA" || mount.location === "RA") && split.location !== "LA" && split.location !== "RA" ? split.location : mount.location;
+}
+
+/** Whether a mount may be set to fire to the rear: every location it lies in must allow it (`canFireRear`), so a weapon split into an arm may not. */
+export const mountCanFireRear = (mount: Mount): boolean => canFireRear(mount.location) && canFireRear(splitOf(mount)?.location ?? mount.location);
 
 /** What a resolved OmniMech configuration remembers of its chassis, so cost, Battle Value, the checks and the sheet read it as any 'Mech. */
 export interface OmniLink {
@@ -403,29 +450,32 @@ export function layout(record: MechRecord, factsOf: FactsOf): Layout {
   for (const mount of record.mounts) {
     const taken = slotsTaken(mount, record, factsOf);
     if (taken <= 0) continue;
-    const cells = mount.location ? own(slots as Record<string, SlotCell[]>, mount.location) : undefined;
-    const first = mount.slot;
-    if (!mount.location || !cells || first === null || !Number.isInteger(first) || first < 0) {
+    // A split weapon has two parts; it is unplaced unless both have a location of this body and a first slot.
+    const parts = mountParts(mount, taken).map((part) => ({ ...part, cells: part.location ? own(slots as Record<string, SlotCell[]>, part.location) : undefined }));
+    if (parts.some((p) => !p.location || !p.cells || p.slot === null || !Number.isInteger(p.slot) || p.slot < 0)) {
       unplaced.push(mount);
       continue;
     }
-    for (let i = 0; i < taken; i++) {
-      const index = first + i;
-      const cell = cells[index];
-      if (!cell) {
-        overflow.push({ location: mount.location, mountId: mount.id });
-        break;
+    for (const { location, slot: first, count, cells } of parts) {
+      if (!location || !cells || first === null) continue;
+      for (let i = 0; i < count; i++) {
+        const index = first + i;
+        const cell = cells[index];
+        if (!cell) {
+          overflow.push({ location, mountId: mount.id });
+          break;
+        }
+        if (cell.kind !== "empty") {
+          const key = `${location}:${index}`;
+          const clash = clashes.get(key) ?? { location, slot: index, mountIds: [] };
+          if (cell.mountId && !clash.mountIds.includes(cell.mountId)) clash.mountIds.push(cell.mountId);
+          clash.mountIds.push(mount.id);
+          clashes.set(key, clash);
+          cells[index] = { ...cell, alsoLabels: [...(cell.alsoLabels ?? []), mount.name] };
+          continue;
+        }
+        cells[index] = { kind: "mount", label: mount.rear ? `${mount.name} (R)` : mount.name, mountId: mount.id };
       }
-      if (cell.kind !== "empty") {
-        const key = `${mount.location}:${index}`;
-        const clash = clashes.get(key) ?? { location: mount.location, slot: index, mountIds: [] };
-        if (cell.mountId && !clash.mountIds.includes(cell.mountId)) clash.mountIds.push(cell.mountId);
-        clash.mountIds.push(mount.id);
-        clashes.set(key, clash);
-        cells[index] = { ...cell, alsoLabels: [...(cell.alsoLabels ?? []), mount.name] };
-        continue;
-      }
-      cells[index] = { kind: "mount", label: mount.rear ? `${mount.name} (R)` : mount.name, mountId: mount.id };
     }
   }
   const conflicts = [...clashes.values()].sort(

@@ -30,7 +30,7 @@ import { locationsFor, mountableOn, mountsRequired, podMountable } from "./catal
 import { heatSinkMixAllowed, levelAtLeast, levelIn, levelItems, levelRow, mixedPhase } from "./levels";
 import { datesText, partIsPrototypeOnly, partPrototype } from "./time";
 import type { Catalog, EquipmentRow } from "./catalog";
-import { ARM_FULL, canFireRear, armorSpread, armsOf, configurationOf, donorTons, engineTons, freeHeatSinks, industrialRulesOf, layout as buildLayout, maxArmor, mechTypeOf, structurePoints, walkMP, weights } from "./mech";
+import { ARM_FULL, armorSpread, armsOf, canSplitBetween, configurationOf, donorTons, engineTons, freeHeatSinks, industrialRulesOf, layout as buildLayout, maxArmor, mechTypeOf, mountCanFireRear, slotsTaken, splitOf, structurePoints, walkMP, weights } from "./mech";
 import { locationName, type Layout, type LocationCode, type MechRecord, type Mount } from "./mech";
 import { mountedShields, missingActuators, shieldStats } from "./shields";
 import { equipmentItems, mascOf, movementPenalty, rowOf, stemOf, TSM_ROWS, tsmOf } from "./walk";
@@ -420,7 +420,7 @@ function placementCheck({ record, layout, catalog }: CheckInput): Finding[] {
     const row = rowOf(catalog, record, mount);
     const rule = hostRule(row);
     const where = { location: mount.location ?? undefined, mountId: mount.id };
-    if (mount.rear && !canFireRear(mount.location)) {
+    if (mount.rear && !mountCanFireRear(mount)) {
       out.push(finding("placement", "error", `${mount.name} is set to fire to the rear, but an arm weapon takes the firing arc of its arm; only torso, leg and head mounts may fire rearward.`, { where, cite: tm(57) }));
     }
     if (mount.linkedTo !== undefined) {
@@ -460,11 +460,15 @@ function placementCheck({ record, layout, catalog }: CheckInput): Finding[] {
     }
     if (!row || !mount.location) continue;
     const allowed = locationsFor(row, record.configuration);
-    if (allowed && !allowed.includes(mount.location)) {
+    // Both parts of a split weapon must be in places the item may go (the heavy Gauss rifle's torsos, p.219).
+    const second = splitOf(mount)?.location;
+    const places = second === undefined ? [mount.location] : [mount.location, second];
+    const outside = allowed && places.find((place) => !allowed.includes(place));
+    if (allowed && outside) {
       const message =
         allowed.length === 0
           ? `${mount.name} cannot be mounted on a ${record.configuration}.`
-          : `${mount.name} cannot go in the ${locationName(mount.location)}; it may go in ${allowed.map(locationName).join(", ")}.`;
+          : `${mount.name} cannot go in the ${locationName(outside)}; it may go in ${allowed.map(locationName).join(", ")}.`;
       out.push(finding("placement", "error", message, { where, cite: row.cite }));
     }
   }
@@ -1121,6 +1125,58 @@ function pairingCheck({ record, catalog }: CheckInput): Finding[] {
   return out;
 }
 
+// Split weapons (TechManual p.57, with errata v8.0 restating it): a ranged weapon of 8 or more slots may lie over two adjacent locations,
+// never a leg. Which items may split at all is each row's `splittable`, from its own entry: among autocannons only the AC/20, LB 20-X AC
+// and Ultra AC/20 (p.208); the heavy Gauss rifle only between a side torso and the center torso, which its torso-only `locations` and the
+// adjacency below give together (p.219). Adjacent here means an arm and its side torso, or a side torso and the center torso; the head is
+// not counted, as no rule names it. An IndustrialMech's own Step 5 (p.74), which the errata leave as printed, names only the AC/20, Ultra
+// AC/20, LB 20-X AC and heavy Gauss rifle (conflict 59).
+const SPLIT_MIN_SLOTS = 8;
+const AUTOCANNON = /(^|-)ac-/;
+const INDUSTRIAL_SPLITS = ["ac-20", "ultra-ac-20", "lb-20-x-ac", "heavy-gauss-rifle"];
+
+function splitCheck({ record, catalog }: CheckInput): Finding[] {
+  const out: Finding[] = [];
+  for (const mount of record.mounts) {
+    if (mount.split === undefined) continue;
+    const split = splitOf(mount);
+    const where = { location: mount.location ?? undefined, mountId: mount.id };
+    const taken = slotsTaken(mount, record, catalog.factsOf);
+    if (!split || split.slots >= taken) {
+      out.push(finding("split", "error", `${mount.name} is recorded as split, but the part named for a second location is not a usable place and count of slots for an item of ${num(taken)} slots; it is laid out as unsplit.`, { where, cite: tm(57) }));
+      continue;
+    }
+    const row = rowOf(catalog, record, mount);
+    if (taken < SPLIT_MIN_SLOTS) {
+      out.push(finding("split", "error", `${mount.name} takes ${num(taken)} slots; only a ranged weapon of ${SPLIT_MIN_SLOTS} or more slots may be split between two locations.`, { where, cite: tm(57) }));
+    } else if (row && row.splittable !== true) {
+      const autocannon = AUTOCANNON.test(row.id);
+      out.push(
+        finding("split", "error", `${mount.name} may not be split between locations${autocannon ? "; among autocannons only the AC/20, LB 20-X AC and Ultra AC/20 may" : ""}.`, {
+          where,
+          cite: autocannon ? tm(208) : tm(57),
+        }),
+      );
+    } else if (row && industrialRulesOf(record) && !INDUSTRIAL_SPLITS.includes(stemOf(row.id))) {
+      out.push(finding("split", "error", `${mount.name} may not be split on an IndustrialMech; only the AC/20, Ultra AC/20, LB 20-X AC and heavy Gauss rifle may.`, { where, cite: tm(74) }));
+    }
+    const isLeg = (loc: LocationCode | null) => loc !== null && !["HD", "CT", "LT", "RT", "LA", "RA"].includes(loc);
+    const leg = [mount.location, split.location].find(isLeg);
+    if (leg) {
+      out.push(finding("split", "error", `${mount.name} is split into the ${locationName(leg)}; a split weapon may not go in a leg.`, { where, cite: tm(57) }));
+    } else if (!canSplitBetween(mount.location, split.location)) {
+      const first = mount.location ? `the ${locationName(mount.location)}` : "no location";
+      out.push(
+        finding("split", "error", `${mount.name} is split between ${first} and the ${locationName(split.location)}, which are not adjacent; a split weapon lies in an arm and its side torso, or a side torso and the center torso.`, {
+          where,
+          cite: tm(57),
+        }),
+      );
+    }
+  }
+  return out;
+}
+
 export const CHECKS: Check[] = [
   { id: "weight", editions: "all", run: weightCheck },
   { id: "slots", editions: "all", run: slotsCheck },
@@ -1147,6 +1203,7 @@ export const CHECKS: Check[] = [
   { id: "myomer", editions: "all", run: myomerCheck },
   { id: "stealth", editions: "all", run: stealthCheck },
   { id: "clan-case", editions: "all", run: clanCaseCheck },
+  { id: "split", editions: "all", run: splitCheck },
 ];
 
 const NO_LAYOUT: Layout = { supported: false, locations: [], slots: {}, unplaced: [], conflicts: [], overflow: [], partSlots: [] };

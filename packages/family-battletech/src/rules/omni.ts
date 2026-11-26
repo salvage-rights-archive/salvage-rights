@@ -8,7 +8,7 @@ import { podMountable } from "./catalog";
 import { runChecks } from "./checks";
 import type { Finding } from "./checks";
 import { levelItems, levelRow, lowestLevelFor } from "./levels";
-import { armsOf, layout as buildLayout, newRecord, slotsTaken, weights } from "./mech";
+import { armsOf, layout as buildLayout, mountParts, newRecord, slotsTaken, splitOf, weights } from "./mech";
 import type { LocationCode, MechRecord, Mount, NewMechOptions, OmniLink } from "./mech";
 import { rowOf } from "./walk";
 
@@ -239,12 +239,16 @@ function replacePods(before: OmniChassis, after: OmniChassis, catalog: Catalog):
     const size = (m: Mount) => Math.max(1, slotsTaken(m, record, catalog.factsOf));
     const covers = (open: boolean[] | undefined, m: Mount) => open !== undefined && m.slot !== null && Array.from({ length: size(m) }, (_, i) => open[(m.slot ?? 0) + i] === true).every(Boolean);
     const placed = configuration.mounts.filter((m) => m.location !== null && m.slot !== null);
-    const moved = placed.filter((m) => covers(was[m.location ?? "CT"], m) && !covers(now[m.location ?? "CT"], m));
+    // A split pod (TechManual p.57) is not moved: its two parts stay, and the layout check names any clash.
+    const moved = placed.filter((m) => !splitOf(m) && covers(was[m.location ?? "CT"], m) && !covers(now[m.location ?? "CT"], m));
     const held: Partial<Record<LocationCode, Set<number>>> = {};
     for (const m of placed) {
-      if (moved.includes(m) || m.location === null || m.slot === null) continue;
-      const set = (held[m.location] ??= new Set());
-      for (let i = 0; i < size(m); i++) set.add(m.slot + i);
+      if (moved.includes(m)) continue;
+      for (const part of mountParts(m, size(m))) {
+        if (part.location === null || part.slot === null) continue;
+        const set = (held[part.location] ??= new Set());
+        for (let i = 0; i < part.count; i++) set.add(part.slot + i);
+      }
     }
     for (const m of moved) {
       const open = m.location === null ? undefined : now[m.location];
