@@ -5,6 +5,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it } from "vitest";
 import { figurePlates, type FigureUse, type IFigureLayout, type IFigureUnit, type IFigureUnitLocation } from "./figure-doll";
 import type { IDollFrame } from "./geometry";
+import ProtoDoll, { protoLayout } from "./proto-doll";
 import { edgeDistance, insideShape } from "./shape-bubbles";
 import VehicleDoll, { fitVehicleDoll, VEHICLE_LAYOUT_IDS, vehicleLayout } from "./vehicle-doll";
 
@@ -97,6 +98,26 @@ describe("the vehicle doll", () => {
     expect(fitted?.box.width).toBeLessThanOrEqual(400);
     expect(fitted?.box.height).toBeLessThanOrEqual(500);
     expect(Math.max((fitted?.box.width ?? 0) / 400, (fitted?.box.height ?? 0) / 500)).toBeGreaterThan(0.98);
+  });
+});
+
+describe("the ProtoMech doll", () => {
+  // The most each location holds, at 15 tons: Interstellar Operations: Alternate Eras, Expanded ProtoMech Structure and
+  // Armor Table, p. 95 (the same figures as TechManual p. 82 up to 9 tons). A quad has no arms and its legs take the
+  // Legs (Quad, All) column.
+  it.each([
+    ["biped", [at("hd", 9, 4), at("t", 30, 15), at("la", 6, 4), at("ra", 6, 4), at("lg", 16, 8), at("mg", 6, 2)]],
+    ["glider", [at("hd", 9, 4), at("t", 30, 15), at("la", 6, 4), at("ra", 6, 4), at("lg", 16, 8), at("mg", 6, 2)]],
+    ["quad", [at("hd", 9, 4), at("t", 30, 15), at("lg", 28, 14), at("mg", 6, 2)]],
+  ] as const)("holds a 15-ton %s's armor and structure", (layout, locations) => {
+    const unit: IFigureUnit = { layout, locations: [...locations] };
+    expect(problemsOf(protoLayout(unit), unit, "armor", ringsOf(<ProtoDoll unit={unit} use="armor" frame={FRAME} suffix="t" />), 18)).toEqual([]);
+    expect(problemsOf(protoLayout(unit), unit, "structure", ringsOf(<ProtoDoll unit={unit} use="structure" frame={FRAME} suffix="t" />), 18)).toEqual([]);
+  });
+
+  it("draws the main gun only for a unit that lists it", () => {
+    const unit: IFigureUnit = { layout: "biped", locations: [at("hd", 3, 1), at("t", 4, 2), at("la", 2, 1), at("ra", 2, 1), at("lg", 4, 2)] };
+    expect(Object.keys(ringsOf(<ProtoDoll unit={unit} use="armor" frame={FRAME} suffix="t" />)).sort()).toEqual(["hd", "la", "lg", "ra", "t"]);
   });
 });
 
