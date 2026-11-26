@@ -116,3 +116,24 @@ export const PRICES = { buyPerPv: 40, sellPerPv: 20, cite: acesCite(36), checked
 
 /** OMNI reconfiguration (p. 31): Size x 5 to a variant of equal or lower PV, otherwise the PV difference x 40. */
 export const OMNI_COST = { perSizeDown: 5, perPvUp: 40, cite: acesCite(31), checked: "page" } as const;
+
+export type RepairCategory = "destroyed" | "crippled" | "structure" | "armor" | "none";
+
+/** After-sortie figures (pp. 33-37; the sortie log on the log sheets, p. 4). Each is read against the page image. */
+export const AFTER_SORTIE = {
+  /** 2D6 needed to pass a Salvage Check, by unit type (p. 33). Other types have no printed number. */
+  salvage: { BM: 4, CV: 6, BA: 8, CI: 10 } as Record<string, number>,
+  /** Crew roll on 2D6 for a destroyed unit with no crew-killed or crew-stunned hit: this and below kills, this and below wounds (p. 33). */
+  crewKilledMax: 3,
+  crewWoundedMax: 6,
+  /** Rearming, per fielded unit that is not truly destroyed and has no ENE (p. 34). */
+  rearmPerUnit: 20,
+  /** Hiring crew for a unit without a Named Pilot, or treating a wounded Named Pilot (p. 34). */
+  personnelPerWounded: 100,
+  /** Repairs: Size times this, by how the unit ended the sortie (p. 34). Units other than BattleMechs count half their Size. */
+  repairPerSize: { destroyed: 100, crippled: 60, structure: 40, armor: 20, none: 0 } as Record<RepairCategory, number>,
+  /** The MVP's extra SP, which does not come out of the warchest (p. 35). */
+  mvpBonus: 20,
+  cites: { crew: acesCite(33), salvage: acesCite(33), expenses: acesCite(34), shares: acesCite(35), example: acesCite("36-37"), failed: acesCite(32), keywords: acesCite(25) },
+  checked: "page",
+} as const;

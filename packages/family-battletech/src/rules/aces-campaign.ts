@@ -3,6 +3,7 @@
 // throws on a record it does not fully understand. Findings are advice, never refusals. Words are ours; figures are in data/aces.ts.
 import {
   ADVANCED_CREATION,
+  AFTER_SORTIE,
   CAMPAIGN_FIGURES,
   DIFFICULTY,
   EXISTING_FORCE_BANDS,
@@ -14,7 +15,13 @@ import {
   type DifficultyRow,
   type PilotColumn,
   type PilotType,
+  type RepairCategory,
 } from "../data/aces";
+import { crippled } from "./as-play";
+import type { PlayState } from "./as-play";
+import type { AsCard } from "./as-unit";
+import { isEmplacement } from "./aces-game";
+import type { GameUnit } from "./aces-game";
 
 export interface Finding {
   id: string;
@@ -60,6 +67,33 @@ export interface LedgerEntry {
   /** SP in or out of the warchest. */
   amount: number;
   sortie?: string;
+  /** What the entry was, so a sortie's purchases and sales can be read back. */
+  kind?: "earnings" | "shares" | "buy" | "sell" | "hire";
+}
+
+/** One sortie on the campaign log (design 4). Purchases and sales are read from the ledger by `sortieTrades`, not stored twice. */
+export interface SortieRecord {
+  number: number;
+  date: string;
+  name?: string;
+  result: "win" | "failed";
+  /** SP spent on Reconnaissance before the sortie, by option, with the player's own labels. */
+  recon: { label: string; sp: number }[];
+  fielded: { unitId: string; pilotId?: string; commander?: boolean }[];
+  gameId?: string;
+  income: number;
+  /** SP lost (positive) or gained (negative) from Waypoints, as an expense. */
+  waypointSp: number;
+  rearm: number;
+  personnel: number;
+  repairs: number;
+  earnings: number;
+  /** SP the Named Pilots took from the earnings (the MVP bonus is not in it). */
+  shares: number;
+  /** The Most Valuable Pilot id. */
+  mvp?: string;
+  keywords: string[];
+  next?: number;
 }
 
 export interface AcesCampaign {
@@ -77,6 +111,7 @@ export interface AcesCampaign {
   roster: RosterUnit[];
   pilots: NamedPilot[];
   ledger: LedgerEntry[];
+  sorties: SortieRecord[];
 }
 
 const finding = (id: string, text: string, cite: string): Finding => ({ id, text, cite });
@@ -157,7 +192,7 @@ export function pilotCountFindings(c: AcesCampaign): Finding[] {
 /** Hiring adds the pilot; a replacement for a killed pilot also costs SP from the warchest. */
 export function hirePilot(c: AcesCampaign, pilot: NamedPilot, opts: { replacement?: boolean; ledgerId?: string } = {}): AcesCampaign {
   const ledger = opts.replacement
-    ? [...c.ledger, { id: opts.ledgerId ?? `hire-${pilot.id}`, label: `Hired ${pilot.callsign}`, amount: -CAMPAIGN_FIGURES.replacementPilotCost }]
+    ? [...c.ledger, { id: opts.ledgerId ?? `hire-${pilot.id}`, label: `Hired ${pilot.callsign}`, amount: -CAMPAIGN_FIGURES.replacementPilotCost, kind: "hire" as const }]
     : c.ledger;
   return { ...c, pilots: [...c.pilots, pilot], ledger };
 }
@@ -261,6 +296,7 @@ export function newCampaign(input: { id: string; name: string; book: AcesCampaig
     roster: [],
     pilots: [],
     ledger: [],
+    sorties: [],
   };
 }
 
@@ -277,30 +313,365 @@ export function setUnitStatus(c: AcesCampaign, unitId: string, status: RosterSta
 }
 
 /** Buying adds the unit and takes PV x 40 from the warchest; a short warchest is reported, not refused. */
-export function purchaseUnit(c: AcesCampaign, unit: Omit<RosterUnit, "status" | "boughtFor">, ledgerId: string): { campaign: AcesCampaign; findings: Finding[] } {
+export function purchaseUnit(c: AcesCampaign, unit: Omit<RosterUnit, "status" | "boughtFor">, ledgerId: string, sortie?: string): { campaign: AcesCampaign; findings: Finding[] } {
   const price = buyPrice(unit.pv);
   const campaign: AcesCampaign = {
     ...c,
     roster: [...c.roster, { ...unit, status: "active", boughtFor: price }],
-    ledger: [...c.ledger, { id: ledgerId, label: `Bought ${unit.name}`, amount: -price }],
+    ledger: [...c.ledger, { id: ledgerId, label: `Bought ${unit.name}`, amount: -price, kind: "buy" as const, ...(sortie ? { sortie } : {}) }],
   };
   const findings = warchest(campaign) < 0 ? [finding("warchest-short", `The warchest is ${warchest(campaign)} SP after buying ${unit.name}.`, PRICES.cite)] : [];
   return { campaign, findings };
 }
 
 /** Selling returns half the purchase price (PV x 20). */
-export function sellUnit(c: AcesCampaign, unitId: string, ledgerId: string): AcesCampaign {
+export function sellUnit(c: AcesCampaign, unitId: string, ledgerId: string, sortie?: string): AcesCampaign {
   const unit = c.roster.find((u) => u.unitId === unitId && u.status === "active");
   if (!unit) return c;
   const price = sellPrice(unit.pv);
   return {
     ...c,
     roster: c.roster.map((u) => (u.unitId === unitId ? { ...u, status: "sold", soldFor: price } : u)),
-    ledger: [...c.ledger, { id: ledgerId, label: `Sold ${unit.name}`, amount: price }],
+    ledger: [...c.ledger, { id: ledgerId, label: `Sold ${unit.name}`, amount: price, kind: "sell" as const, ...(sortie ? { sortie } : {}) }],
   };
 }
 
 /** Changing an OMNI unit's configuration before a sortie (p. 31). */
 export function omniCost(input: { size: number; oldPv: number; newPv: number }): number {
   return input.newPv <= input.oldPv ? input.size * OMNI_COST.perSizeDown : (input.newPv - input.oldPv) * OMNI_COST.perPvUp;
+}
+
+// ---- After the sortie (pp. 32-37) ----
+
+/** One fielded unit as the after-sortie steps see it. Rolls and hits the table state cannot know are typed in by the player. */
+export interface SortieUnit {
+  unitId: string;
+  name: string;
+  /** Card type code: BM, IM, CV, BA, CI and so on. */
+  type: string;
+  size: number;
+  /** The Named Pilot who crewed it, if one did. */
+  pilotId?: string;
+  commander?: boolean;
+  /** The ENE keyword: no rearming (p. 34). */
+  ene?: boolean;
+  /** Destroyed during the game. */
+  destroyed: boolean;
+  /** An Ammo or Fuel critical hit on a unit without CASE or CASEII (p. 33). */
+  ammoNoCase?: boolean;
+  /** Airborne and destroyed by crashing. */
+  crashed?: boolean;
+  emplacement?: boolean;
+  /** The 2D6 of the Salvage Check, once rolled. */
+  salvageRoll?: number;
+  /** For a unit type that has no printed Salvage Check number, the player decides. */
+  trulyDestroyed?: boolean;
+  /** A Crew Killed or Unit Destroyed critical hit; it wins over a stunned crew. */
+  crewKilledHit?: boolean;
+  /** A Crew Stunned critical hit. */
+  crewStunnedHit?: boolean;
+  /** The 2D6 for the crew, once rolled. No Edge may change it (p. 33). */
+  crewRoll?: number;
+  /** How the unit ended the game, for the repair bill; a destroyed unit always counts as destroyed. */
+  repair: RepairCategory;
+}
+
+export type Salvage = { truly: boolean | null; reason: "not-destroyed" | "ammo" | "crash" | "emplacement" | "salvage-failed" | "salvaged" | "roll-needed" | "no-number" };
+export type CrewResult = "none" | "killed" | "wounded" | "unscathed" | null;
+
+/** Is a destroyed unit truly destroyed (p. 33)? `null` while a roll is still missing. */
+export function salvageOutcome(u: SortieUnit): Salvage {
+  if (!u.destroyed) return { truly: false, reason: "not-destroyed" };
+  if (u.ammoNoCase) return { truly: true, reason: "ammo" };
+  if (u.crashed) return { truly: true, reason: "crash" };
+  if (u.emplacement) return { truly: true, reason: "emplacement" };
+  const need = AFTER_SORTIE.salvage[u.type];
+  if (need === undefined) return u.trulyDestroyed === undefined ? { truly: null, reason: "no-number" } : { truly: u.trulyDestroyed, reason: u.trulyDestroyed ? "salvage-failed" : "salvaged" };
+  if (u.salvageRoll === undefined) return { truly: null, reason: "roll-needed" };
+  return u.salvageRoll >= need ? { truly: false, reason: "salvaged" } : { truly: true, reason: "salvage-failed" };
+}
+
+/** The crew of a destroyed unit, whether or not the unit is truly destroyed (p. 33). `none`: the unit was not destroyed; `null`: a roll is missing. */
+export function crewOutcome(u: SortieUnit): CrewResult {
+  if (!u.destroyed) return "none";
+  if (u.crewKilledHit) return "killed";
+  if (u.crewStunnedHit) return "wounded";
+  if (u.crewRoll === undefined) return null;
+  if (u.crewRoll <= AFTER_SORTIE.crewKilledMax) return "killed";
+  return u.crewRoll <= AFTER_SORTIE.crewWoundedMax ? "wounded" : "unscathed";
+}
+
+const MECH_TYPES = ["BM", "IM"];
+/** BattleMechs count their full Size for repairs, every other type half (p. 34). An IndustrialMech is read as a BattleMech: the sortie log says non-'Mechs count half. */
+export const repairSize = (u: Pick<SortieUnit, "type" | "size">): number => (MECH_TYPES.includes(u.type) ? u.size : u.size / 2);
+
+/** The repair category and the flags the table state can tell us; ammo, fuel and crew hits are not kept there and are entered. */
+export function sortieUnitFromGame(g: GameUnit): Pick<SortieUnit, "unitId" | "name" | "type" | "size" | "pilotId" | "ene" | "destroyed" | "emplacement" | "repair"> {
+  return {
+    unitId: g.unitId,
+    name: g.name,
+    type: g.card.type,
+    size: g.card.size,
+    ...(g.pilotId ? { pilotId: g.pilotId } : {}),
+    ene: g.card.specials.some((s) => s.code === "ENE"),
+    destroyed: g.play.destroyed,
+    emplacement: isEmplacement(g.card),
+    repair: repairCategory(g.play, g.card),
+  };
+}
+
+/** How badly a unit is damaged, from the table state (p. 34): destroyed, crippled, any structure damage or critical hit, armor only, or none. */
+export function repairCategory(play: PlayState, card: AsCard): RepairCategory {
+  if (play.destroyed) return "destroyed";
+  if (crippled(play, card, "aces")) return "crippled";
+  const crits = play.crits.engine + play.crits.fireControl + play.crits.weapon + play.moveHits.length;
+  if (play.structure < card.structure || crits > 0 || play.stunned) return "structure";
+  return play.armor < card.armor ? "armor" : "none";
+}
+
+export type ShareRole = "participant" | "sat-out" | "killed";
+
+/**
+ * What each Named Pilot takes from the earnings (p. 35, as read in design 1.1). One share is the sortie's maximum or less when the
+ * earnings fall short: floor(earnings / (participants + half the others)). A pilot who sat out takes half a share, rounded down;
+ * a pilot killed takes nothing.
+ */
+export function pilotShares(earnings: number, cap: number, roles: { pilotId: string; role: ShareRole }[]): { pilotId: string; role: ShareRole; sp: number }[] {
+  const participants = roles.filter((r) => r.role === "participant").length;
+  const sitting = roles.filter((r) => r.role === "sat-out").length;
+  const weight = participants + sitting / 2;
+  const share = earnings > 0 && weight > 0 ? Math.min(Math.max(0, cap), Math.floor(earnings / weight)) : 0;
+  return roles.map((r) => ({ ...r, sp: r.role === "participant" ? share : r.role === "sat-out" ? Math.floor(share / 2) : 0 }));
+}
+
+/** Keywords with numbers are summed: PROGRESS-1 earned three times is PROGRESS 3 (p. 25). A keyword without a number counts once each time. */
+export function keywordTotals(c: Pick<AcesCampaign, "sorties">): Record<string, number> {
+  const totals: Record<string, number> = {};
+  for (const word of c.sorties.flatMap((s) => s.keywords)) {
+    const match = /^(.*\S)\s*-\s*(\d+)$/.exec(word.trim());
+    const name = (match?.[1] ?? word).trim().toUpperCase();
+    if (name === "") continue;
+    totals[name] = (totals[name] ?? 0) + (match?.[2] ? Number(match[2]) : 1);
+  }
+  return totals;
+}
+
+/** What a sortie bought and sold, read back from the ledger. */
+export function sortieTrades(c: Pick<AcesCampaign, "ledger">, sortie: string): { purchases: number; sales: number } {
+  const of = (kind: LedgerEntry["kind"]) => sum(c.ledger.filter((l) => l.sortie === sortie && l.kind === kind).map((l) => Math.abs(l.amount)));
+  return { purchases: of("buy"), sales: of("sell") };
+}
+
+export interface AfterSortieInput {
+  number: number;
+  date: string;
+  name?: string;
+  units: SortieUnit[];
+  gameId?: string;
+  /** The objectives' SP, before the difficulty percentage. */
+  primarySp: number;
+  otherSp: number;
+  recon: { label: string; sp: number }[];
+  /** SP lost (positive) or gained (negative) from Waypoints. */
+  waypointSp: number;
+  /** Named Pilots hired to replace killed ones, before the shares are worked out. */
+  hired: NamedPilot[];
+  /** The most each pilot may take, from the sortie outcome. */
+  shareCap: number;
+  mvpPilotId?: string;
+  keywords: string[];
+  next?: number;
+}
+
+export interface UnitSettlement {
+  unitId: string;
+  name: string;
+  salvage: Salvage;
+  crew: CrewResult;
+  category: RepairCategory;
+  /** The Size the repair bill counts (half for a unit that is not a BattleMech). */
+  size: number;
+  repairSp: number;
+  rearmed: boolean;
+}
+
+export interface Settlement {
+  units: UnitSettlement[];
+  /** Units whose rolls are still missing. */
+  pending: string[];
+  income: { base: number; percent: number; total: number };
+  expenses: {
+    recon: number;
+    waypoints: number;
+    rearm: { units: number; sp: number };
+    personnel: { wounded: number; replacements: number; sp: number };
+    repairs: number;
+    total: number;
+  };
+  earnings: number;
+  warchestBefore: number;
+  warchestAfterEarnings: number;
+  /** With no earnings, or a warchest at zero or below once they are in, the pilots are not improved (p. 34). */
+  skipImproving: boolean;
+  shares: { pilotId: string; role: ShareRole; sp: number }[];
+  shareTotal: number;
+  mvpBonus: number;
+  warchestAfter: number;
+  findings: Finding[];
+  record: SortieRecord;
+  campaign: AcesCampaign;
+}
+
+/**
+ * Steps 3 to 5 of the after-sortie steps: casualties, income and expenses, earnings, and the Named Pilots' shares and MVP. Pure; the
+ * result carries the updated campaign. A missing roll is listed in `pending` and counts as nothing happening until it is entered.
+ */
+export function settleSortie(c: AcesCampaign, input: AfterSortieInput): Settlement {
+  const a = AFTER_SORTIE;
+  const findings: Finding[] = [];
+  const named = new Map(c.pilots.map((p) => [p.id, p]));
+  const units: UnitSettlement[] = input.units.map((u) => {
+    const salvage = salvageOutcome(u);
+    const category: RepairCategory = u.destroyed ? "destroyed" : u.repair;
+    const size = repairSize(u);
+    const gone = salvage.truly === true;
+    return { unitId: u.unitId, name: u.name, salvage, crew: crewOutcome(u), category, size, repairSp: gone ? 0 : size * a.repairPerSize[category], rearmed: !gone && !u.ene };
+  });
+  const pending = input.units.filter((u, i) => units[i]?.salvage.truly === null || units[i]?.crew === null).map((u) => u.unitId);
+  if (pending.length > 0) findings.push(finding("rolls-missing", `${pending.length} unit${pending.length === 1 ? " has" : "s have"} a roll still to enter.`, a.cites.crew));
+  if (input.units.some((u) => u.type === "IM")) findings.push(finding("im-as-mech", "An IndustrialMech is counted as a BattleMech for repairs and its Salvage Check, because the sortie log counts only non-'Mechs at half Size.", a.cites.expenses));
+
+  // Crew: a Named Pilot wounded costs treatment, a killed one costs nothing; a generic crew wounded or killed costs a new crew.
+  const hurt: { pilotId: string; result: "wounded" | "killed" }[] = [];
+  let genericHurt = 0;
+  input.units.forEach((u, i) => {
+    const crew = units[i]?.crew;
+    if (crew !== "killed" && crew !== "wounded") return;
+    if (u.pilotId && named.has(u.pilotId)) hurt.push({ pilotId: u.pilotId, result: crew });
+    else genericHurt += 1;
+  });
+  const woundedNamed = hurt.filter((h) => h.result === "wounded").length;
+  const woundedCount = genericHurt + woundedNamed;
+  const recon = sum(input.recon.map((r) => r.sp));
+  const rearmUnits = units.filter((u) => u.rearmed).length;
+  const personnelSp = woundedCount * a.personnelPerWounded + input.hired.length * CAMPAIGN_FIGURES.replacementPilotCost;
+  const repairs = sum(units.map((u) => u.repairSp));
+  const expenses = {
+    recon,
+    waypoints: input.waypointSp,
+    rearm: { units: rearmUnits, sp: rearmUnits * a.rearmPerUnit },
+    personnel: { wounded: woundedCount, replacements: input.hired.length, sp: personnelSp },
+    repairs,
+    total: recon + input.waypointSp + rearmUnits * a.rearmPerUnit + personnelSp + repairs,
+  };
+  const percent = spPercent(c);
+  const base = input.primarySp + input.otherSp;
+  const income = { base, percent, total: (base * percent) / 100 };
+  const earnings = income.total - expenses.total;
+  const warchestBefore = warchest(c);
+  const warchestAfterEarnings = warchestBefore + earnings;
+  const skipImproving = earnings <= 0 || warchestAfterEarnings <= 0;
+  if (earnings < 0) findings.push(finding("debt", `The sortie lost ${-earnings} SP; it comes out of the warchest and the Named Pilots earn nothing from it.`, a.cites.expenses));
+  if (warchestAfterEarnings <= 0) findings.push(finding("warchest-empty", "The warchest is at zero or below, so the Named Pilots are not improved this time.", a.cites.expenses));
+
+  // Pilots: who took part, who sat out, who died.
+  const killedNow = new Set(hurt.filter((h) => h.result === "killed").map((h) => h.pilotId));
+  const woundedNow = new Set(hurt.filter((h) => h.result === "wounded").map((h) => h.pilotId));
+  const fieldedIds = new Set(input.units.flatMap((u) => (u.pilotId ? [u.pilotId] : [])));
+  const everyone = [...c.pilots, ...input.hired];
+  const roles = everyone
+    .filter((p) => !p.killed)
+    .map((p) => ({ pilotId: p.id, role: (killedNow.has(p.id) ? "killed" : fieldedIds.has(p.id) ? "participant" : "sat-out") as ShareRole }));
+  const shares = skipImproving ? roles.map((r) => ({ ...r, sp: 0 })) : pilotShares(earnings, input.shareCap, roles);
+  const shareTotal = sum(shares.map((s) => s.sp));
+  const mvpOk = input.mvpPilotId !== undefined && shares.some((s) => s.pilotId === input.mvpPilotId && s.role === "participant");
+  if (input.mvpPilotId !== undefined && !mvpOk && !skipImproving) findings.push(finding("mvp-not-eligible", "The Most Valuable Pilot must have taken part in the sortie and survived.", a.cites.shares));
+  const mvpBonus = mvpOk && !skipImproving ? a.mvpBonus : 0;
+
+  const id = `sortie-${String(input.number)}`;
+  const ledger: LedgerEntry[] = [...c.ledger];
+  if (earnings !== 0) ledger.push({ id: `${id}-earnings`, label: `Sortie ${String(input.number)} earnings`, amount: earnings, sortie: id, kind: "earnings" });
+  if (shareTotal > 0) ledger.push({ id: `${id}-shares`, label: `Sortie ${String(input.number)} Named Pilot shares`, amount: -shareTotal, sortie: id, kind: "shares" });
+
+  const pilots = everyone.map((p) => {
+    const sp = (shares.find((s) => s.pilotId === p.id)?.sp ?? 0) + (mvpOk && input.mvpPilotId === p.id ? mvpBonus : 0);
+    const killed = p.killed || killedNow.has(p.id);
+    return {
+      ...p,
+      totalSp: p.totalSp + sp,
+      // A pilot wounded earlier is recovered now; one wounded in this sortie is marked (p. 33).
+      wounded: !killed && woundedNow.has(p.id),
+      killed,
+      mvp: p.mvp + (mvpBonus > 0 && input.mvpPilotId === p.id ? 1 : 0),
+      sorties: p.sorties + (fieldedIds.has(p.id) ? 1 : 0),
+    };
+  });
+  const lost = new Set(units.filter((u) => u.salvage.truly === true).map((u) => u.unitId));
+  const record: SortieRecord = {
+    number: input.number,
+    date: input.date,
+    ...(input.name ? { name: input.name } : {}),
+    result: "win",
+    recon: input.recon,
+    fielded: input.units.map((u) => ({ unitId: u.unitId, ...(u.pilotId ? { pilotId: u.pilotId } : {}), ...(u.commander ? { commander: true } : {}) })),
+    ...(input.gameId ? { gameId: input.gameId } : {}),
+    income: income.total,
+    waypointSp: input.waypointSp,
+    rearm: expenses.rearm.sp,
+    personnel: personnelSp,
+    repairs,
+    earnings,
+    shares: shareTotal,
+    ...(mvpOk ? { mvp: input.mvpPilotId } : {}),
+    keywords: input.keywords,
+    ...(input.next === undefined ? {} : { next: input.next }),
+  };
+  const campaign: AcesCampaign = {
+    ...c,
+    roster: c.roster.map((r) => (lost.has(r.unitId) && r.status === "active" ? { ...r, status: "destroyed" as const } : r)),
+    pilots,
+    ledger,
+    sorties: [...c.sorties, record],
+  };
+  const out: Settlement = { units, pending, income, expenses, earnings, warchestBefore, warchestAfterEarnings, skipImproving, shares, shareTotal, mvpBonus, warchestAfter: warchestAfterEarnings - shareTotal, findings, record, campaign };
+  findings.push(...pilotCountFindings(campaign));
+  return out;
+}
+
+/**
+ * A failed sortie (p. 32): the loss may go on the campaign log, but no keywords, income, expenses, casualties or pilot changes are
+ * recorded, the damage is treated as never having happened, and the sortie is played again.
+ */
+export function failSortie(c: AcesCampaign, input: { number: number; date: string; name?: string }): AcesCampaign {
+  const record: SortieRecord = {
+    number: input.number,
+    date: input.date,
+    ...(input.name ? { name: input.name } : {}),
+    result: "failed",
+    recon: [],
+    fielded: [],
+    income: 0,
+    waypointSp: 0,
+    rearm: 0,
+    personnel: 0,
+    repairs: 0,
+    earnings: 0,
+    shares: 0,
+    keywords: [],
+  };
+  return { ...c, sorties: [...c.sorties, record] };
+}
+
+/** Sets the keywords gained and the sortie to play next on a recorded sortie (steps 2 and 7). */
+export function annotateSortie(c: AcesCampaign, number: number, notes: { keywords: string[]; next?: number }): AcesCampaign {
+  const at = c.sorties.findLastIndex((s) => s.number === number && s.result === "win");
+  if (at < 0) return c;
+  return { ...c, sorties: c.sorties.map((s, i) => (i === at ? { ...s, keywords: notes.keywords, ...(notes.next === undefined ? {} : { next: notes.next }) } : s)) };
+}
+
+/** Is a saved value a campaign this version can read? Anything else is listed untouched. */
+export function isAcesCampaign(v: unknown): v is AcesCampaign {
+  if (typeof v !== "object" || v === null) return false;
+  const c = v as Partial<AcesCampaign>;
+  return c.kind === "aces-campaign" && c.schema === 1 && typeof c.id === "string" && Array.isArray(c.roster) && Array.isArray(c.pilots) && Array.isArray(c.ledger) && Array.isArray(c.sorties);
 }
