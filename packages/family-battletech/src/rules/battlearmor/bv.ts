@@ -3,11 +3,12 @@
 // structure, pp. 296-297 for equipment (data/cost.ts) and p. 285 for the final formula. Fractions are kept to the end, then rounded half up.
 import { BATTLE_ARMOR_BV, TARGET_MODIFIER } from "../../data/bv";
 import { COST_FIGURES, GROUND_MP_COST, armorTypeOf, isMotive, manipulatorOf, weightClassOf } from "../../data/battlearmor";
-import type { Catalog } from "../catalog";
+import type { Catalog, EquipmentRow } from "../catalog";
 import { priceOf } from "../cost";
 import { skillMultiplier, speedFactor } from "../bv";
 import { roundHalfUp, tidy } from "../walk";
-import { build, carriesShots, figuresOf, shotsOf } from "./construct";
+import { dispenserBv, chosenMunition } from "../munitions";
+import { build, carriesShots, figuresOf, isMyomerBooster, isMechanicalBooster, myomerBonus, shotsOf } from "./construct";
 import type { BaRecord } from "./record";
 
 /** The Battle Armor Unit Size Modifier Table (printed p. 316): troopers in the unit, 1 to 6. */
@@ -15,7 +16,7 @@ export const SIZE_MODIFIER = [1.0, 2.2, 3.6, 5.2, 7.0, 9.0];
 /** Claws that aid a Swarm attack add to the weapon rating (v4.1 p. 310): magnets 3 a pair, vibro-claws 1 each (table p. 317). */
 const SWARM_CLAW_BV: Record<string, number> = { "battle-claw-magnets": 1.5, "heavy-claw-magnets": 1.5, "battle-claw-vibro": 1, "heavy-claw-vibro": 1 };
 /** Missile systems, which the direct-fire rating leaves out. */
-const MISSILE = /^ba-(lrm|srm|mrm|advanced-srm|rocket-launcher)-|^ba-compact-narc-|^ba-pop-up-mine-/;
+const MISSILE = /^ba-(lrm|srm|mrm|advanced-srm|rocket-launcher)-|^ba-compact-narc-|^ba-pop-up-mine-|^ba-tube-artillery-/;
 /** The Defensive Factor Modifier Table adds for a Camo System item (the armor types add theirs: data/battlearmor.ts). */
 const CAMO_ITEM_FACTOR = 0.2;
 const BATTLE_ARMOR_FACTOR = 0.1;
@@ -57,8 +58,10 @@ export function battleValue(record: BaRecord, catalog: Catalog): BaBv {
   const points = Math.max(0, record.armor.points);
   let defensive = points * (armor?.bvPerPoint ?? 2.5) + 1;
   const mounts = record.mounts.flatMap((mount) => {
-    const figures = figuresOf(mount, catalog, record.editionId);
-    return figures ? [{ mount, row: figures.row, entry: ENTRIES.get(figures.row.id) }] : [];
+    const figures = figuresOf(mount, catalog, record.editionId, record.weightClass);
+    // A mine dispenser is worth a 10-point minefield of its mine type (TO:AUE p. 195, note P), not a table line (rules/munitions.ts).
+    const mine = dispenserBv(figures?.row.id.startsWith("ba-mine-dispenser") ? chosenMunition(figures.row, mount.munition, catalog, record.editionId) : undefined);
+    return figures ? [{ mount, row: figures.row, entry: mine === undefined ? ENTRIES.get(figures.row.id) : { bv: mine } }] : [];
   });
   for (const m of mounts) if (m.entry?.defensive) defensive += 1;
   const tmm = Math.max(targetModifier(b.moves.ground, 0), b.moves.jump > 0 ? targetModifier(b.moves.jump, TARGET_MODIFIER.jumpBonus) : 0, b.moves.vtol > 0 ? targetModifier(b.moves.vtol, 1) : 0, b.moves.umu > 0 ? targetModifier(b.moves.umu, 0) : 0);
@@ -129,6 +132,24 @@ export function unitCost(record: BaRecord, catalog: Catalog): BaCost {
   for (const mount of record.mounts) {
     const row = mount.equipmentId === null ? undefined : catalog.rowFor(mount.equipmentId, record.editionId);
     const price = row ? priceOf(row) : undefined;
+    // The items whose price follows the suit: a myomer booster is 75,000 for each Ground MP it gives, a mechanical jump booster costs a jump jet of the class, and a reusable drop
+    // chute costs twice the drop chute it is fitted to (TO:AUE p. 225; a standard one if the suit carries none).
+    if (row && isMyomerBooster(row) && typeof price?.price === "object" && "perAmount" in price.price) {
+      equipment += price.price.perAmount * myomerBonus(record.weightClass);
+      continue;
+    }
+    if (row && isMechanicalBooster(row) && cls) {
+      equipment += cls.cost.jump;
+      continue;
+    }
+    if (row?.id.startsWith("ba-drop-chute-reusable")) {
+      const fitted = record.mounts.map((m) => (m.equipmentId === null ? undefined : catalog.rowFor(m.equipmentId, record.editionId))).find((r) => r !== undefined && /^ba-drop-chute-(standard|camouflage|stealth)-/.test(r.id));
+      const chute = fitted ? priceOf(fitted) : priceOf({ id: "ba-drop-chute-standard-is" } as EquipmentRow);
+      if (typeof chute?.price === "number") {
+        equipment += 2 * chute.price;
+        continue;
+      }
+    }
     if (!row || typeof price?.price !== "number") {
       unpriced.push(mount.name || mount.equipmentId || "an item");
       continue;

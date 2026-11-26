@@ -19,6 +19,8 @@ export interface BaMount {
   location: BaLocation | (string & {});
   /** Missile launchers and Narc: the shots of ammunition carried (one slot for each four, in the same location). */
   shots?: number;
+  /** The munition chosen for a mine dispenser: a catalog row id (rules/munitions.ts). Absent reads as the standard mine. */
+  munition?: string;
 }
 
 export interface BaRecord {
@@ -111,7 +113,7 @@ function part<T>(v: unknown, known: readonly (keyof T & string)[], fill: (o: Rec
   return { ...unknownKeys(o, known), ...fill(o) };
 }
 
-const MOUNT_KEYS = ["id", "equipmentId", "name", "location", "shots"] as const;
+const MOUNT_KEYS = ["id", "equipmentId", "name", "location", "shots", "munition"] as const;
 function mountOf(v: Record<string, unknown>, index: number): BaMount {
   const mount: BaMount = {
     ...unknownKeys(v, MOUNT_KEYS),
@@ -121,6 +123,7 @@ function mountOf(v: Record<string, unknown>, index: number): BaMount {
     location: str(v.location, "body"),
   };
   if (isNumber(v.shots)) mount.shots = v.shots;
+  if (isString(v.munition)) mount.munition = v.munition;
   return mount;
 }
 

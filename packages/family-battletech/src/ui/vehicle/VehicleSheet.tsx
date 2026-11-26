@@ -4,6 +4,7 @@
 import { ARMOR } from "../../data/chassis";
 import { bookName } from "../../data/editions";
 import type { Catalog } from "../../rules/catalog";
+import { nameWithMunition } from "../../rules/munitions";
 import { officialLabel } from "../../rules/official";
 import { vehicleBv } from "../../rules/vehicle/bv";
 import { vehicleOfficialState } from "../../rules/vehicle/checks";
@@ -43,7 +44,7 @@ export function inventoryRows(record: VehicleRecord, catalog: Catalog): Inventor
   for (const m of record.mounts) {
     const facts = itemFacts(m, record, catalog);
     if (facts.ammo) continue;
-    const key = `${m.equipmentId ?? m.name}|${m.location}`;
+    const key = `${m.equipmentId ?? m.name}|${m.location}|${m.munition ?? ""}`;
     const found = rows.get(key);
     if (found) {
       found.count += 1;
@@ -55,7 +56,7 @@ export function inventoryRows(record: VehicleRecord, catalog: Catalog): Inventor
     rows.set(key, {
       count: 1,
       qty: "1",
-      name: m.name || row?.name || "Item",
+      name: nameWithMunition(m.name || row?.name || "Item", row, m.munition, catalog, record.editionId),
       location: vehicleLocationName(m.location),
       heat: facts.weapon || facts.heat > 0 ? String(facts.heat) : "-",
       damage: row?.by?.vehicle?.damage ?? row?.damage ?? "-",

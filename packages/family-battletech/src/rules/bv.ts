@@ -12,6 +12,8 @@ import {
   CASE_ROWS,
   COOLANT_POD_IDS,
   DEAD_FIRE_AMMO_BV,
+  DEFENSIVE_MUNITIONS,
+  FACTORED_MUNITIONS,
   ENGINE_BV_MODIFIER,
   EQUIPMENT_BV,
   GYRO_BV_MODIFIER,
@@ -144,7 +146,7 @@ export function ammoBvEntryOf(id: string): { id: string; ammoBv?: number; option
 /** The launcher ammunition a munition counts as: the ammunition entry of the missile launcher on the unit that the munition feeds. A reason, in
  * place of an entry, when the unit has no such launcher or has launchers whose ammunition is worth different amounts (so which one the bin
  * is for is not known). Launchers with the same ammunition BV give the same figure whichever is meant; the first one holds the bin. */
-function launcherAmmo(row: EquipmentRow, items: Item[]): Entry | string {
+function launcherAmmo(row: EquipmentRow, items: { row: EquipmentRow }[]): Entry | string {
   const found = new Map<string, Entry>();
   for (const { row: launcher } of items) {
     const family = /^(lrm|srm|mml|atm)-\d+-(is|clan)$/.exec(launcher.id)?.[1] as "lrm" | "srm" | "mml" | "atm" | undefined;
@@ -160,7 +162,7 @@ function launcherAmmo(row: EquipmentRow, items: Item[]): Entry | string {
 /** Dead-Fire ammunition counts as the ammunition of the launcher size it is fired from (DEAD_FIRE_AMMO_BV, IO:AE p. 190): the launcher's entry carrying that figure a ton. A reason, in
  * place of an entry, when no launcher of its family is on the unit or the launchers on it are worth different amounts (which size the bin is for is not known); undefined
  * for any other row. An MML feeds both families, each in its own mode. */
-function deadFireAmmo(row: EquipmentRow, items: Item[]): Entry | string | undefined {
+function deadFireAmmo(row: EquipmentRow, items: { row: EquipmentRow }[]): Entry | string | undefined {
   const family = own(DEAD_FIRE_AMMO_BV.family, stemOf(row.id));
   if (family === undefined) return undefined;
   const found = new Map<string, Entry>();
@@ -175,6 +177,33 @@ function deadFireAmmo(row: EquipmentRow, items: Item[]): Entry | string | undefi
   if (new Set(launchers.map((e) => e.ammoBv)).size > 1) return "a Dead-Fire munition that fits launchers of different sizes, so which size the bin is for is not known";
   return launchers[0] as Entry;
 }
+
+/** A munition whose ammunition BV is its launcher's times a factor (FACTORED_MUNITIONS: the improved ATM munitions, the fuel-air shells): the entry of the launcher on the unit that fires it,
+ * with the factor applied to the ammunition figure. A reason, in place of an entry, when the unit has no such launcher or has launchers whose ammunition is worth different amounts;
+ * undefined for any other row. */
+function factoredAmmo(row: EquipmentRow, items: { row: EquipmentRow }[]): Entry | string | undefined {
+  const rule = own(FACTORED_MUNITIONS.rows, stemOf(row.id));
+  if (rule === undefined) return undefined;
+  const fires = new RegExp(rule.launcher);
+  const found = new Map<string, Entry>();
+  for (const { row: launcher } of items) {
+    const entry = WEAPONS.get(launcher.id);
+    if (entry?.ammoBv !== undefined && fires.test(launcher.id)) found.set(entry.id, { ...entry, ammoBv: entry.ammoBv * rule.factor });
+  }
+  const launchers = [...found.values()];
+  if (launchers.length === 0) return "a munition with no launcher on the unit that fires it, so its BV is not known";
+  if (new Set(launchers.map((e) => e.ammoBv)).size > 1) return "a munition that fits launchers whose ammunition is worth different amounts, so which it is for is not known";
+  return launchers[0] as Entry;
+}
+
+/** The ammunition BV of a munition the Battle Value tables give by a rule (Dead-Fire by launcher size, the factored munitions), for the other unit kinds: the entry carrying that figure, a reason
+ * in place of one, or undefined for any other row. `launchers` are the catalog rows of the weapons on the unit. */
+export function munitionAmmoEntry(row: EquipmentRow, launchers: EquipmentRow[]): { id: string; ammoBv?: number; options: BvOptions } | string | undefined {
+  const items = launchers.map((r) => ({ row: r }));
+  return deadFireAmmo(row, items) ?? factoredAmmo(row, items);
+}
+/** What a bin of the munition adds to the unit's Defensive Battle Value for each ton, where the tables print that (Retro-Streak ammunition, IO:AE p. 190), else undefined. */
+export const defensiveMunitionBv = (row: EquipmentRow): number | undefined => own(DEFENSIVE_MUNITIONS.rows, stemOf(row.id));
 
 /** The bands of the Target Movement Modifier table. */
 function movementModifier(hexes: number, jumped: boolean): number {
@@ -300,6 +329,9 @@ export function battleValue(record: MechRecord, catalog: Catalog, pilot: PilotSk
       defensiveEquipment += entry.bv;
       if (entry.options.defensiveAmmo) defensiveAmmo.set(entry.id, { systems: (defensiveAmmo.get(entry.id)?.systems ?? 0) + entry.bv, ammo: defensiveAmmo.get(entry.id)?.ammo ?? 0 });
     }
+    // Retro-Streak ammunition adds its figure to the Defensive Battle Value (IO:AE p. 190).
+    const defensiveMunition = row.kind === "ammunition" ? defensiveMunitionBv(row) : undefined;
+    if (defensiveMunition !== undefined) defensiveEquipment += defensiveMunition * binTons(tons);
     const ammoEntry = row.kind === "ammunition" ? AMMO.get(row.id) : undefined;
     if (ammoEntry?.options.defensiveAmmo) {
       const seen = defensiveAmmo.get(ammoEntry.id) ?? { systems: 0, ammo: 0 };
@@ -517,8 +549,8 @@ export function battleValue(record: MechRecord, catalog: Catalog, pilot: PilotSk
   for (const w of weapons) modelBv.set(w.entry.id, (modelBv.get(w.entry.id) ?? 0) + w.bv);
   const ammoBv = new Map<string, number>();
   for (const { mount, row, tons } of items) {
-    if (row.kind !== "ammunition") continue;
-    const resolved = AMMO.get(row.id) ?? (LAUNCHER_MUNITIONS.stems.includes(stemOf(row.id)) ? launcherAmmo(row, items) : deadFireAmmo(row, items));
+    if (row.kind !== "ammunition" || defensiveMunitionBv(row) !== undefined) continue;
+    const resolved = AMMO.get(row.id) ?? (LAUNCHER_MUNITIONS.stems.includes(stemOf(row.id)) ? launcherAmmo(row, items) : (deadFireAmmo(row, items) ?? factoredAmmo(row, items)));
     const entry = typeof resolved === "string" ? undefined : resolved;
     if (!entry) {
       unlisted({ mount, row }, typeof resolved === "string" ? resolved : "ammunition whose BV the books do not print");

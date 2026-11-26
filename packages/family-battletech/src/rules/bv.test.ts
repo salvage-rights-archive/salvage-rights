@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { BATTLE_ARMOR_BV, CASE_ROWS, DEAD_FIRE_AMMO_BV, EQUIPMENT_BV, LAM_BV, LAUNCHER_MUNITIONS, SPECIAL_MUNITIONS, UNFIXED, UNLISTED_IS_ZERO, WEAPON_BV } from "../data/bv";
+import { BATTLE_ARMOR_BV, CASE_ROWS, DEAD_FIRE_AMMO_BV, DEFENSIVE_MUNITIONS, EQUIPMENT_BV, FACTORED_MUNITIONS, LAM_BV, LAUNCHER_MUNITIONS, SPECIAL_MUNITIONS, UNFIXED, UNLISTED_IS_ZERO, WEAPON_BV } from "../data/bv";
 import { AMMUNITION } from "../data/equipment/ammunition";
 import { GOTHIC_EQUIPMENT } from "../data/equipment/gothic";
 import { OTHER } from "../data/equipment/other";
@@ -199,6 +199,21 @@ describe("the method's rules", () => {
     expect(none.unvalued.map((u) => u.why)).toEqual([expect.stringContaining("no launcher")]);
   });
 
+  it("Retro-Streak ammunition adds 15 a ton to the Defensive Battle Value; the improved ATM munitions are x2.0 and x1.3 of their launcher's ammunition, the fuel-air shells x1.4 (x1.0 for Arrow IV) (IO:AE p. 190)", () => {
+    const retro = battleValue(biped([m("streak-srm-4-is", "RA"), m("ammo-retro-streak-srm-is", "RT")]), catalog);
+    expect([retro.defensive.equipment, retro.offensive.ammunition, retro.complete]).toEqual([15, 0, true]);
+    const factored: [string, string, number][] = [
+      ["improved-atm-6-clan", "ammo-improved-magnetic-pulse-atm-clan", 78], ["improved-atm-6-clan", "ammo-improved-inferno-atm-clan", 50.7],
+      ["arrow-iv-is", "ammo-fuel-air-arrow-iv-is", 30], ["thumper-artillery-is", "ammo-fuel-air-thumper-is", 7], ["sniper-artillery-clan", "ammo-fuel-air-sniper-clan", 15.4],
+    ];
+    for (const [launcher, ammo, perTon] of factored) {
+      const bv = battleValue(biped([m(launcher, "RA"), m(ammo, "RT")]), catalog);
+      expect(bv.offensive.ammunition, ammo).toBeCloseTo(perTon, 6);
+      expect(bv.complete, ammo).toBe(true);
+    }
+    expect(battleValue(biped([m("ammo-fuel-air-thumper-is", "RT")]), catalog).unvalued.map((u) => u.why)).toEqual([expect.stringContaining("no launcher")]);
+  });
+
   it("stealth armor adds 10 to movement heat and 2 to the target modifier", () => {
     const plain = battleValue(biped([]), catalog);
     const stealth = battleValue(biped([], { chassis: { ...bipedRecord().chassis, armorType: "stealth" } }), catalog);
@@ -278,7 +293,9 @@ describe("Tactical Operations equipment", () => {
     const zero = (r: EquipmentRow) => r.kind !== "ammunition" && UNLISTED_IS_ZERO.books.includes(r.cite.book);
     // Alternative munitions added from TO:AUE p. 229 (mortar, remote sensor dispenser and Copperhead rounds): their Battle Value is the Battle Value work's to settle.
     const newMunitions = (r: EquipmentRow) => /^ammo-(mortar|copperhead|remote-sensor-dispenser)-/.test(r.id);
-    const leftOpen = (r: EquipmentRow) => r.id in UNFIXED || SPECIAL_MUNITIONS.stems.includes(stemOf(r.id)) || LAUNCHER_MUNITIONS.stems.includes(stemOf(r.id)) || stemOf(r.id) in DEAD_FIRE_AMMO_BV.family || newMunitions(r);
+    // The mine and grenade choices are never mounted (their BV is the dispenser's or launcher's); Retro-Streak, the improved ATM and the fuel-air shells are valued by rule (data/bv.ts).
+    const byRule = (r: EquipmentRow) => r.choiceFor !== undefined || stemOf(r.id) in FACTORED_MUNITIONS.rows || stemOf(r.id) in DEFENSIVE_MUNITIONS.rows;
+    const leftOpen = (r: EquipmentRow) => byRule(r) || r.id in UNFIXED || SPECIAL_MUNITIONS.stems.includes(stemOf(r.id)) || LAUNCHER_MUNITIONS.stems.includes(stemOf(r.id)) || stemOf(r.id) in DEAD_FIRE_AMMO_BV.family || newMunitions(r);
     // Abomination-only rows (Gothic) have no Battle Value: Abominations carry none.
     const abominationOnly = (r: EquipmentRow) => r.units?.length === 1 && r.units[0] === "abomination";
     const open = catalog.all().filter((r) => !abominationOnly(r) && !known.has(r.id) && !zero(r) && !leftOpen(r) && !["heat-sink", "jump-jet"].includes(r.kind) && !LAM_BV.fuelSlotIds.includes(r.id) && !(r.id in CASE_ROWS));

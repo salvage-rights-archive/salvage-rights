@@ -8,6 +8,7 @@ import { officialState } from "../../rules/battlearmor/checks";
 import { battleValue } from "../../rules/battlearmor/bv";
 import type { BaRecord } from "../../rules/battlearmor/record";
 import type { Catalog } from "../../rules/catalog";
+import { nameWithMunition } from "../../rules/munitions";
 import { officialLabel } from "../../rules/official";
 import { tidy } from "../../rules/walk";
 import Frame from "../sheet/Frame";
@@ -30,13 +31,13 @@ export function linesOf(record: BaRecord, catalog: Catalog): { weapons: Line[]; 
   const weapons: Line[] = [];
   const items: string[] = [];
   for (const mount of record.mounts) {
-    const figures = figuresOf(mount, catalog, record.editionId);
+    const figures = figuresOf(mount, catalog, record.editionId, record.weightClass);
     if (!figures) {
       items.push(`${mount.name || "Unknown item"} (${locationName(mount.location)})`);
       continue;
     }
     const { row } = figures;
-    const name = row.name.replace(/ \(Battle Armor\)$/, "");
+    const name = nameWithMunition(row.name.replace(/ \(Battle Armor\)$/, ""), row, mount.munition, catalog, record.editionId);
     const where = locationName(mount.location);
     if (row.kind === "weapon") {
       const label = carriesShots(row) ? `${name} (${String(shotsOf(mount))} shots), ${where}` : `${name}, ${where}`;

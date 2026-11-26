@@ -3,6 +3,7 @@
 // does not understand: an unknown weight class, armor type, manipulator or item is counted as nothing and reported in `unknown`, so the rules
 // check can say so. Weights are kilograms.
 import {
+  BA_BOOSTERS,
   MOTIVE,
   isMotive,
   SHOTS_PER_SLOT,
@@ -26,6 +27,11 @@ export const carriesShots = (row: EquipmentRow | undefined): boolean => row?.amm
 export const isBooster = (row: EquipmentRow | undefined): boolean => row?.id.startsWith("ba-jump-booster") === true;
 export const isWing = (row: EquipmentRow | undefined): boolean => row?.id.startsWith("ba-partial-wing") === true;
 export const isClamps = (row: EquipmentRow | undefined): boolean => row?.id.startsWith("ba-magnetic-clamps") === true;
+export const isMechanicalBooster = (row: EquipmentRow | undefined): boolean => row?.id.startsWith("ba-mechanical-jump-booster") === true;
+export const isMyomerBooster = (row: EquipmentRow | undefined): boolean => row?.id.startsWith("ba-myomer-booster") === true;
+export const isTubeArtillery = (row: EquipmentRow | undefined): boolean => row?.id.startsWith("ba-tube-artillery") === true;
+/** The Ground MP a myomer booster gives a suit of the weight class (0 for a class the book does not name). */
+export const myomerBonus = (weightClass: string): number => (Object.hasOwn(BA_BOOSTERS.myomerGroundBonus, weightClass) ? (BA_BOOSTERS.myomerGroundBonus[weightClass] ?? 0) : 0);
 
 /** Kilograms, with float noise off (the catalog stores tons). */
 const kgOfTons = (tons: number): number => tidy(tons * 1000);
@@ -41,11 +47,14 @@ export interface MountFigures {
   ammoKg: number;
   slots: number;
 }
-export function figuresOf(mount: BaMount, catalog: Catalog, editionId: string): MountFigures | undefined {
+/** `weightClass` is the suit's, for the one item whose weight follows it: the mechanical jump booster weighs twice a jump jet of the class (TO:AUE p. 225). */
+export function figuresOf(mount: BaMount, catalog: Catalog, editionId: string, weightClass?: string): MountFigures | undefined {
   const row = mount.equipmentId === null ? undefined : catalog.rowFor(mount.equipmentId, editionId);
   if (!row || typeof row.tons !== "number" || typeof row.slots !== "number") return undefined;
   const shots = carriesShots(row) ? shotsOf(mount) : 0;
-  return { row, itemKg: kgOfTons(row.tons), ammoKg: tidy(shots * (row.ammoKgPerShot ?? 0)), slots: row.slots + (shots > 0 ? ammoSlots(shots) : 0) };
+  const cls = isMechanicalBooster(row) && weightClass !== undefined ? weightClassOf(weightClass) : undefined;
+  const itemKg = cls ? tidy(BA_BOOSTERS.mechanicalJumpWeightFactor * cls.jump.kgPerMp) : kgOfTons(row.tons);
+  return { row, itemKg, ammoKg: tidy(shots * (row.ammoKgPerShot ?? 0)), slots: row.slots + (shots > 0 ? ammoSlots(shots) : 0) };
 }
 
 export interface SlotUse {
@@ -154,7 +163,7 @@ export function build(record: BaRecord, catalog: Catalog): BaBuild {
 
   const used: { mount: BaMount; figures: MountFigures }[] = [];
   for (const mount of record.mounts) {
-    const figures = figuresOf(mount, catalog, record.editionId);
+    const figures = figuresOf(mount, catalog, record.editionId, record.weightClass);
     if (!figures) {
       unknown.push(mount.name || mount.equipmentId || "an item");
       continue;
@@ -203,9 +212,12 @@ export function build(record: BaRecord, catalog: Catalog): BaBuild {
   // The partial wing adds a Jumping MP in atmosphere (TechManual printed p. 266); the figure shown is the atmospheric one.
   // The wing's Jumping MP may exceed the class maximum (TechManual printed p. 166, as for the jump booster): do not cap it.
   const wings = Math.min(1, used.filter((u) => isWing(u.figures.row)).length);
+  // A mechanical jump booster is a jump system of 1 Jumping MP; it does not add to jump jets (TO:AUE p. 99), and a partial wing adds to either.
+  const mechanical = used.some((u) => isMechanicalBooster(u.figures.row));
+  const jets = kind === "jump" ? motiveMp + boosters : 0;
   const moves: Moves = {
     ground: record.ground,
-    jump: kind === "jump" ? motiveMp + boosters + wings : 0,
+    jump: kind === "jump" || mechanical ? Math.max(jets, mechanical ? 1 : 0) + wings : 0,
     vtol: kind === "vtol" ? motiveMp : 0,
     umu: kind === "umu" ? motiveMp : 0,
   };
