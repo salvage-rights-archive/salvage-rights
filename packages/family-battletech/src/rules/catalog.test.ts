@@ -359,6 +359,8 @@ describe("Tactical Operations: Advanced Units and Equipment unit-type columns (p
     ["rotary-ac-5-clan", ["mech", "industrialmech", "vehicle", "aero", "smallcraft", "dropship", "ship", "building"], { vehicle: { slots: 1, note: "Support vehicle: 8 slots" }, aero: { slots: 1 } }],
     ["heavy-flamer-clan", ["mech", "industrialmech", "vehicle", "protomech", "building"], {}],
     ["light-mass-driver-is", ["ship"], {}],
+    ["hyperspectral-imager-is", ["vehicle", "aero", "smallcraft", "dropship", "ship", "building"], { vehicle: { note: "Support vehicle: 2 slots" } }],
+    ["vtol-mast-mount-clan", ["vehicle"], {}],
   ])("%s may be mounted only on the unit types whose column is not NA", async (id, units, by) => {
     const row = (await loadCatalog()).byId(id);
     expect(row?.units).toEqual(units);

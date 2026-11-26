@@ -1118,6 +1118,22 @@ export const OTHER: EquipmentGroup[] = [
       { id: "armored-motive-system-clan", name: "Armored Motive System", techBase: "clan", tons: "armored-motive-clan", availability: [{ from: 3057 }], units: ["vehicle"] },
     ],
   },
+  {
+    // Satellite imagers and the VTOL mast mount (TO:AUE printed p. 223 construction data, p. 222 play table, rules pp. 151 and 162, read against the
+    // page images). Imagers: type E, Advanced, one slot on a combat vehicle, fighter, small craft, DropShip, ship or building (the hyperspectral
+    // imager's support vehicle column prints 2, a note); a footprint of 1* on vehicles and buildings means the rules decide (p. 151). "ES" dates are
+    // written as 2200 and marked inferred (weapons.ts); the hyperspectral's 3055 is a prototype year only. The mast mount takes no slot (0*).
+    defaults: { kind: "other", cite: { book: TO, page: 223 }, playCite: { book: TO, page: 222 }, checked: "page", slots: 1, rulesLevel: "advanced", type: "E" },
+    items: [
+      { id: "hi-res-imager-is", name: "Hi-Res Imager", techBase: "inner-sphere", tons: 2.5, availability: [{ from: 2200 }], yearsInferred: true, units: ["vehicle", "aero", "smallcraft", "dropship", "ship", "building"] },
+      { id: "hi-res-imager-clan", name: "Hi-Res Imager", techBase: "clan", tons: 2.5, availability: [{ from: 2200 }], yearsInferred: true, units: ["vehicle", "aero", "smallcraft", "dropship", "ship", "building"] },
+      { id: "hyperspectral-imager-is", name: "Hyperspectral Imager", techBase: "inner-sphere", tons: 7.5, availability: [{ from: 3055 }], units: ["vehicle", "aero", "smallcraft", "dropship", "ship", "building"], by: { vehicle: { slots: 1, note: "Support vehicle: 2 slots" } } },
+      { id: "infrared-imager-is", name: "Infrared Imager", techBase: "inner-sphere", tons: 5, availability: [{ from: 2200 }], yearsInferred: true, units: ["vehicle", "aero", "smallcraft", "dropship", "ship", "building"] },
+      { id: "infrared-imager-clan", name: "Infrared Imager", techBase: "clan", tons: 5, availability: [{ from: 2200 }], yearsInferred: true, units: ["vehicle", "aero", "smallcraft", "dropship", "ship", "building"] },
+      { id: "vtol-mast-mount-is", name: "VTOL Mast Mount", techBase: "inner-sphere", tons: 0.5, slots: 0, type: "PE", availability: [{ from: 1950 }], playCite: { book: TO, page: 222 }, yearsInferred: true, units: ["vehicle"] },
+      { id: "vtol-mast-mount-clan", name: "VTOL Mast Mount", techBase: "clan", tons: 0.5, slots: 0, type: "PE", availability: [{ from: 1950 }], yearsInferred: true, units: ["vehicle"] },
+    ],
+  },
   // Aerospace and ship items from the Industrial Equipment table (TechManual, printed p. 344, read against the page image; item entries on pp. 209
   // and 227; dates from the Industrial Equipment cost table, printed p. 293: both "PS / -", so the Clan rows take the Inner Sphere year and are
   // marked inferred). The bay door weighs nothing and takes no space on a small craft or DropShip ("0*": the construction rules, p. 209, say how

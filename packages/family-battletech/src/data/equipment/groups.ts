@@ -16,7 +16,7 @@ const words = (list: string): RegExp => new RegExp(`(^|-)(${list})(-|$)`);
  * except that the picker lists weapons first: see GROUP_ORDER). */
 export const EQUIPMENT_GROUPS: GroupRule[] = [
   { id: "infantry", label: "Conventional infantry weapons", match: words("inf") },
-  { id: "vehicle", label: "Vehicle equipment", match: words("turret") },
+  { id: "vehicle", label: "Vehicle equipment", match: words("turret|mast-mount") },
   { id: "capital", label: "Capital weapons", match: words("nac|nl|n-ppc|n-gauss|mass-driver|killer-whale|killer-whale-t|white-shark|white-shark-t|barracuda|barracuda-t|ar-10-launcher|kraken-t|screen-launcher") },
   { id: "battlearmor", label: "Battle armor equipment", match: words("ba") },
   { id: "artillery", label: "Artillery", match: words("arrow-iv|thumper|sniper|long-tom") },
@@ -27,7 +27,7 @@ export const EQUIPMENT_GROUPS: GroupRule[] = [
   { id: "command", label: "Command consoles and modules", match: words("cockpit-command-console|collapsible-command-module|remote-drone-command-console") },
   { id: "defensive", label: "Defensive equipment", match: words("ams|case|shield|laser-anti-missile|pds|armored-component|armored-motive-system|harjel|harjel-ii|harjel-iii|full-head-ejection-system|aquatic-survival-system") },
   { id: "heat", label: "Heat and movement equipment", match: words("heat-sink|jump-jet|jump-pack|mechanical-jump-booster|partial-wing|umu|supercharger|masc|tsm|triple-strength|super-cooled|coolant|laser-insulator|lam") },
-  { id: "electronics", label: "Electronics and targeting", match: words("c3|ecm|probe|tag|cews|electronic-warfare|recon-camera|remote-sensor|remote-sensors|apollo|targeting-computer|artemis|viral-jammer|chaff|drone-operating-system") },
+  { id: "electronics", label: "Electronics and targeting", match: words("c3|ecm|probe|imager|tag|cews|electronic-warfare|recon-camera|remote-sensor|remote-sensors|apollo|targeting-computer|artemis|viral-jammer|chaff|drone-operating-system") },
   { id: "aerospace", label: "Bombs and aerospace equipment", match: words("bomb|bay-door|look-down-radar") },
   { id: "special", label: "Anti-personnel and special weapons", match: words("booby-trap|machine-gun|machine-gun-array|a-pods|b-pods|grenade|mine-dispenser|taser|fluid-gun|m-pod") },
   { id: "physical", label: "Physical weapons", match: words("melee|claws|mace|lance|talons|hatchet|sword|retractable-blade|chain-whip|flail|spikes|vibroblade") },

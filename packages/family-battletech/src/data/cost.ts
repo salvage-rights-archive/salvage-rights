@@ -253,6 +253,8 @@ export const EQUIPMENT_COST: PriceGroup[] = [
       "battlemech-turret-shoulder": { perWeight: 10_000 }, "battlemech-turret-head": { perWeight: 10_000 }, "battlemech-turret-quad": { perWeight: 10_000 },
       "dual-turret": { perWeight: 5_000 }, "sponson-turret": { perWeight: 4_000 }, "vtol-chin-turret": { perWeight: 5_000 },
       "armored-component": { perWeight: 300_000 }, "armored-motive-system": { perWeight: 100_000 },
+      // p.223: the satellite imagers and the VTOL mast mount
+      "hi-res-imager": 150_000, "hyperspectral-imager": 550_000, "infrared-imager": 250_000, "vtol-mast-mount": 50_000,
     },
   },
   {
