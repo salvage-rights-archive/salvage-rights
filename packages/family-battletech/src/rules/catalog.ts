@@ -61,6 +61,8 @@ export interface EquipmentRow {
   yearsInferred?: boolean;
   /** True when `tons` is not printed in any book and was worked out from the published designs that carry the item (the Light Blazer). */
   tonsInferred?: true;
+  /** True when the item's Battle Value (data/bv.ts) is not printed in any book and was worked out from the published designs that carry it. */
+  bvInferred?: true;
   /** The games that offer the item (data/rulesets.ts); absent means Classic only. */
   games?: GameId[];
   /** The page that gives the item's rules level, where it is not `cite` (a game's overlay sets it), and whether that level is our

@@ -67,7 +67,7 @@ describe("a 'Mech file from Mordel", () => {
     expect(structure).toHaveLength(14);
     expect(structure.filter((m) => m.location === "LT").map((m) => m.slot)).toEqual([0, 1, 2, 3, 4, 5, 6]);
     expect(r.mounts.filter((m) => m.part === "armor").filter((m) => m.location === "LL").map((m) => m.slot)).toEqual([4, 5]);
-    expect(r.source?.designer).toBe("Test Designer");
+    expect(r.source?.kind === "mordel" ? r.source.designer : undefined).toBe("Test Designer");
     expect(notes.join(" ")).not.toContain("does not name its designer");
   });
 

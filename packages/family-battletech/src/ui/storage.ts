@@ -136,12 +136,12 @@ function isBody(v: Record<string, unknown>): boolean {
 function isSource(v: unknown): boolean {
   if (!isObject(v)) return false;
   const { values, baseline } = v;
+  const isOrigin =
+    v.kind === "book"
+      ? isObject(v.cite) && isString(v.cite.book) && isNumber(v.cite.page)
+      : v.kind === "mordel" && isString(v.unitType) && isNumber(v.id) && isString(v.designer) && isString(v.fetchedAt);
   return (
-    v.kind === "mordel" &&
-    isString(v.unitType) &&
-    isNumber(v.id) &&
-    isString(v.designer) &&
-    isString(v.fetchedAt) &&
+    isOrigin &&
     isObject(values) &&
     (values.battleValue === undefined || isNumber(values.battleValue)) &&
     (values.cost === undefined || isNumber(values.cost)) &&

@@ -7,7 +7,7 @@ import { ERAS } from "../data/editions";
 import type { Catalog } from "./catalog";
 import { fromMordel } from "./mordel";
 import { LOCATION_NAMES } from "./mech";
-import type { LocationCode, MechRecord } from "./mech";
+import type { LocationCode, MechRecord, MordelSource } from "./mech";
 import { newAsUnit, parseDamage, parseMove, parseSpecials } from "./as-unit";
 import type { AsCard, AsDamage, AsUnit } from "./as-unit";
 import { AS_EDITION } from "../data/alpha-strike";
@@ -334,10 +334,11 @@ function convertMtf(text: string, catalog: Catalog, editionId: string, now: stri
   if (unmatched.size > 0 && !kept.some((n) => /not in our equipment table/.test(n))) kept.push(`${[...unmatched].join(", ")} ${unmatched.size === 1 ? "is" : "are"} not in our equipment table.`);
 
   const designerNamed = designer !== UNNAMED_MEMBER;
-  if (record.source) {
-    record.source = { ...record.source, unitType: industrial ? "im" : "bm", id: 0, designer, original: { file: "mtf", text } };
+  if (record.source?.kind === "mordel") {
+    const source: MordelSource = { ...record.source, unitType: industrial ? "im" : "bm", id: 0, designer, original: { file: "mtf", text } };
+    record.source = source;
     const { name, notes: fluffNotes, tons: t, year: y, techBase, configuration, chassis, armor, arms, mounts } = structuredClone(record);
-    record.source.baseline = { name, notes: fluffNotes, tons: t, year: y, techBase, configuration, chassis, armor, arms, mounts };
+    source.baseline = { name, notes: fluffNotes, tons: t, year: y, techBase, configuration, chassis, armor, arms, mounts };
   }
   return {
     ok: true,

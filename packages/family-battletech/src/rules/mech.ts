@@ -134,17 +134,31 @@ export interface MechRecord {
   imageUrl?: string;
   /** The player's own picture of the unit, scaled and encoded by `readPicture`; shown in place of Mordel's. */
   picture?: { dataUrl: string };
-  source?: {
-    kind: "mordel";
-    unitType: string;
-    id: number;
-    designer: string;
-    fetchedAt: string;
-    original: unknown;
-    values: { battleValue?: number; cost?: number; rulesLevel?: string; era?: string };
-    /** What the importer produced, kept so that "changed since import" compares with it and not with a newer importer. */
-    baseline?: Pick<MechRecord, "name" | "notes" | "tons" | "year" | "techBase" | "configuration" | "chassis" | "armor" | "arms" | "mounts">;
-  };
+  source?: MordelSource | BookSource;
+}
+
+/** What an importer or a book's data produced, kept so that "changed since" compares with it and not with a newer importer. */
+export type SourceBaseline = Pick<MechRecord, "name" | "notes" | "tons" | "year" | "techBase" | "configuration" | "chassis" | "armor" | "arms" | "mounts">;
+
+/** A design imported from mordel.net. */
+export interface MordelSource {
+  kind: "mordel";
+  unitType: string;
+  id: number;
+  designer: string;
+  fetchedAt: string;
+  original: unknown;
+  values: { battleValue?: number; cost?: number; rulesLevel?: string; era?: string };
+  baseline?: SourceBaseline;
+}
+
+/** A design typed from a book's own sheet (the Gothic box 'Mechs): the page it was read from and the figures the book prints, kept so
+ * the editor can show them beside ours. `baseline` is the design as typed. */
+export interface BookSource {
+  kind: "book";
+  cite: { book: string; page: number };
+  values: MordelSource["values"];
+  baseline?: SourceBaseline;
 }
 
 /** What the player states about whether the publisher put this design out (rules/official.ts reads it; the app never sets it on its own,

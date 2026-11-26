@@ -78,7 +78,7 @@ describe("the 'Mech types", () => {
     expect([mechTypeOf(saved).id, mechTypeOf({ unitType: "battlemech" as never }).id, mechTypeOf({ unitType: "omnimech" }).id]).toEqual(["mech", "mech", "omnimech"]);
     const read = (code: string) => {
       const result = fromMordel(mordelWith(mordelBiped(), { unit_type_short: code }), catalog, "total-warfare", "2026-11-25T00:00:00.000Z", () => "id");
-      return result.ok ? [result.record.unitType, result.record.source?.unitType] : result.message;
+      return result.ok ? [result.record.unitType, result.record.source?.kind === "mordel" ? result.record.source.unitType : undefined] : result.message;
     };
     expect([read("bm"), read("im")]).toEqual([["mech", "bm"], ["industrialmech", "im"]]);
     expect(read("cv")).toContain("only BattleMechs (bm) and IndustrialMechs (im)");

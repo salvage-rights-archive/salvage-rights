@@ -797,7 +797,7 @@ function Editor({ initial, unsaved, startAt, catalog, storage }: { initial: Doc;
       </div>
 
       <div className="bt-editor__info">
-        {source && <p className="bt-credit">Designed by {source.designer || "an unnamed designer"} on mordel.net</p>}
+        {source?.kind === "mordel" && <p className="bt-credit">Designed by {source.designer || "an unnamed designer"} on mordel.net</p>}
         {weightOpen && (
           <ul id="bt-weight-lines" className="bt-weight">
             {weights.lines.map((line, index) => (
