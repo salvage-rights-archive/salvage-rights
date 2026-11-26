@@ -1,6 +1,7 @@
 // The saved ProtoMechs, listed on the Classic home beside the 'Mechs and opened in the ProtoMech editor. Nothing shows until one is saved.
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router";
+import { optionSummary } from "../../rules/protomech/options";
 import { protoTitle } from "../../rules/protomech/record";
 import { STORAGE_READ_FAILED, STORAGE_WRITE_FAILED } from "../storage";
 import { OfficialBadge } from "./ProtoPanels";
@@ -48,7 +49,7 @@ export default function ProtoSavedUnits() {
             <li key={entry.id} className="bt-row">
               <span className="bt-row__text">
                 <strong>{name}</strong>
-                {record ? ` ProtoMech, ${String(record.tons)} tons` : ""}
+                {record ? ` ProtoMech, ${String(record.tons)} tons${optionSummary(record).map((o) => `, ${o}`).join("")}` : ""}
                 {record && <span className="bt-row__credit"><OfficialBadge record={record} /></span>}
                 {!record && <span className="bt-row__credit">{entry.unreadable}</span>}
               </span>

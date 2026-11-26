@@ -31,9 +31,11 @@ export const subjectOf = (record: ProtoRecord): Subject => ({
 
 export const levelOfRecord = (record: Pick<ProtoRecord, "rulesLevel">): RulesLevel => record.rulesLevel ?? DEFAULT_LEVEL;
 
-/** Where the record's time falls against a part's printed dates: production, prototype, or neither. No year and no era is no limit. */
+/** Where the record's time falls against a part's printed dates: production, prototype, or neither. No year and no era is no limit. A part with no production year
+ * (prototype only) is "production" from its prototype year to its extinction, at the part's own rules level. */
 export function datesPhase(record: ProtoRecord, dates: ProtoDates): Phase | null {
-  return phaseIn([{ from: dates.production }], dates.prototype, windowOf({ era: record.era, year: record.year, editionId: record.editionId }));
+  const prototypeOnly = dates.production === undefined;
+  return phaseIn([{ from: dates.production ?? dates.prototype, to: dates.extinct }], prototypeOnly ? undefined : dates.prototype, windowOf({ era: record.era, year: record.year, editionId: record.editionId }));
 }
 
 /** The launcher kinds' catalog rows; the other sizes of a launcher are not offered, since a ProtoMech builds one by its tubes. */

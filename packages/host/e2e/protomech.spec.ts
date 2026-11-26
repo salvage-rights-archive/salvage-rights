@@ -77,3 +77,55 @@ test("the ProtoMech editor and sheet have no axe violations in either theme", as
     }
   }
 });
+
+test("the ProtoMech part options appear with the rules level and year, and show on the sheet and the saved list", async ({ page }) => {
+  test.setTimeout(180_000);
+  await page.setViewportSize({ width: 320, height: 700 });
+  const editor = await startProto(page, "Optioned");
+  await page.getByLabel("Year", { exact: true }).fill("3080");
+  // Standard rules: the extended jump jets are on offer, the Experimental parts are hidden.
+  await expect(page.getByLabel("Jump system")).toBeVisible();
+  await expect(page.getByLabel("Jump system").locator("option")).toHaveCount(2);
+  await expect(page.getByLabel("Cockpit", { exact: true })).toHaveCount(0);
+  await expect(page.getByLabel("Armor type")).toHaveCount(0);
+  await page.getByLabel("Rules level").selectOption("experimental");
+  await expect(page.getByLabel("Cockpit", { exact: true })).toBeVisible();
+  await expect(page.getByLabel("Armor type")).toBeVisible();
+  await expect(page.getByLabel("Partial wing")).toBeVisible();
+  await page.getByLabel("Cockpit", { exact: true }).selectOption({ label: "Inner Sphere ProtoMech interface cockpit" });
+  await page.getByLabel("Armor type").selectOption({ label: "Electric Discharge ProtoMech (EDP) armor" });
+  await page.getByLabel("Jump system").selectOption({ label: "Extended jump jets (XJJ)" });
+  await page.getByLabel("Walking MP", { exact: true }).fill("4");
+  await page.getByLabel("Jumping MP", { exact: true }).fill("6");
+  await page.getByLabel("Torso armor", { exact: true }).fill("10");
+  await page.getByText("How it adds up").click();
+  await expect(page.getByText("Extended jump jets (XJJ): 1200 kg")).toBeVisible();
+  await expect(page.getByText("Electric Discharge ProtoMech (EDP) armor: 750 kg")).toBeVisible();
+  // Hide, do not mark: back to Standard rules the chosen options stay listed and the rules check reports them.
+  await page.getByLabel("Rules level").selectOption("standard");
+  await expect(page.getByLabel("Armor type")).toBeVisible();
+  await expect(page.getByText(/needs Experimental rules/).first()).toBeVisible();
+  await page.getByLabel("Rules level").selectOption("experimental");
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(page.getByText("Saved.")).toBeVisible();
+  const widths = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, client: document.documentElement.clientWidth }));
+  expect(widths.scroll).toBe(widths.client);
+  for (const control of await page.locator("button, select, input:not([type=file]):not([type=checkbox]), a.bt-button, label.pm-check").all()) {
+    const box = await control.boundingBox();
+    if (box) expect(box.height, (await control.textContent())?.slice(0, 30) ?? (await control.getAttribute("aria-label")) ?? "").toBeGreaterThanOrEqual(43.5);
+  }
+  for (const theme of ["Light", "Dark"] as const) {
+    await chooseTheme(page, theme);
+    await page.goto(`${DEV}${editor}`);
+    await expectPage(page.getByRole("heading", { level: 1, name: "Optioned" })).toBeVisible();
+    await expect(page.getByLabel("Armor type")).toBeVisible();
+    const results = await new AxeBuilder({ page }).analyze();
+    expect(results.violations, `${theme} theme`).toEqual([]);
+  }
+  await page.getByRole("link", { name: "Record sheet" }).first().click();
+  await expect(page.getByRole("heading", { name: "ProtoMech record sheet" })).toBeVisible();
+  await expect(page.getByText("Options", { exact: true }).first()).toBeAttached();
+  await expect(page.getByText(/Inner Sphere ProtoMech interface cockpit, Electric Discharge ProtoMech \(EDP\) armor, Extended jump jets \(XJJ\)/).first()).toBeAttached();
+  await page.goto(HOME);
+  await expect(page.getByText(/Extended jump jets \(XJJ\)/).first()).toBeVisible();
+});
