@@ -99,6 +99,8 @@ export interface IFigureDollProps {
     labelSize?: number;
     /** Label each location by its code rather than its name. */
     shortLabels?: boolean;
+    /** The least width and height, in sheet units, of a location hit area: a small part gets an invisible, larger one so a finger finds it. */
+    minTarget?: number;
 }
 
 export const FIGURE_LABEL = { armor: { size: 20, glyph: 0.62 }, structure: { size: 15, glyph: 0.62 } } as const;
@@ -155,6 +157,16 @@ const present = (layout: IFigureLayout, unit: IFigureUnit): { location: IFigureL
         const at = unit.locations.find((each) => each.code === location.code);
         return at ? [{ location, at }] : [];
     });
+
+/** An invisible rectangle around a part that is smaller than the least target, so that its button is as large as that. */
+const hitArea = (plates: Shape[], least: number | undefined): JSX.Element | null => {
+    if (!least || plates.length === 0) return null;
+    const xs = plates.flatMap((plate) => plate.map(([x]) => x)), ys = plates.flatMap((plate) => plate.map(([, y]) => y));
+    const [left, right, top, bottom] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
+    const width = Math.max(right - left, least), height = Math.max(bottom - top, least);
+    if (width === right - left && height === bottom - top) return null;
+    return <rect data-hit="" x={round((left + right) / 2 - width / 2)} y={round((top + bottom) / 2 - height / 2)} width={round(width)} height={round(height)} fill="transparent" aria-hidden="true" />;
+};
 
 export function FigureDoll(props: IFigureDollProps & { layout: IFigureLayout; testId: string }): JSX.Element {
     const { unit, use, frame, suffix, layout } = props;
@@ -233,6 +245,7 @@ export function FigureDoll(props: IFigureDollProps & { layout: IFigureLayout; te
                 } : {};
                 return (
                     <g key={location.code} data-loc={location.code} {...buttonProps}>
+                        {interactive ? hitArea(figurePlates(location, frame), props.minTarget) : null}
                         <g transform={frameTransform(frame)}>
                             <g transform={svgTransform(location.at)}>{location.part.draw(pen, ids)}</g>
                         </g>

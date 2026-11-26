@@ -155,7 +155,7 @@ export default function VehicleSheet({ record, catalog, textHeading }: { record:
         </Frame>
 
         <Frame rect={RECTS.armor} title="ARMOR AND STRUCTURE">
-          <VehicleDiagram locations={locations} use="armor" ink={INK} paper="#fff" label={`${name} armor points`} rect={{ x: RECTS.armor.x + 20, y: RECTS.armor.y + 40, w: RECTS.armor.w - 40, h: RECTS.armor.h - 60 }} />
+          <VehicleDiagram locations={locations} use="armor" motive={record.motive} ink={INK} label={`${name} armor points`} rect={{ x: RECTS.armor.x + 20, y: RECTS.armor.y + 40, w: RECTS.armor.w - 40, h: RECTS.armor.h - 60 }} />
         </Frame>
 
         <Frame rect={RECTS.inventory} title="WEAPONS AND EQUIPMENT INVENTORY">
