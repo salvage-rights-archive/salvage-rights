@@ -8,7 +8,7 @@ import { AFTER_SORTIE_STEPS, SHEET_FOOT, SORTIE_SETUP_STEPS, campaignLog, pilotC
 import { STORAGE_READ_FAILED } from "../storage";
 import { openCampaignStorage } from "./campaign-storage";
 import { campaignHref, ACES_CAMPAIGNS } from "./routes";
-import "./styles";
+import "./aces.scss";
 
 const SHEETS = [
   { id: "roster", name: "Player Force Roster" },
