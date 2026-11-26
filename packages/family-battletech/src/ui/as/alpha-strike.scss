@@ -140,3 +140,30 @@
     }
   }
 }
+
+.as-aids__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--sr-space-2);
+
+  @media (min-width: 40rem) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.as-aids__flags {
+  display: grid;
+  gap: var(--sr-space-1);
+  margin: var(--sr-space-3) 0;
+}
+
+.as-aids__flag {
+  display: flex;
+  align-items: center;
+  gap: var(--sr-space-2);
+  min-height: 2.75rem;
+}
+
+.as-aids__result {
+  margin: var(--sr-space-3) 0;
+}

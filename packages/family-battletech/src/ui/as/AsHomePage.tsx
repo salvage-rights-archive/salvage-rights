@@ -11,6 +11,7 @@ import AsForces from "./AsForces";
 import AsMordelImport from "./AsMordelImport";
 import AsMulImport from "./AsMulImport";
 import AsMordelFile from "./AsMordelFile";
+import AsConvert from "./AsConvert";
 import GamePicture from "../GamePicture";
 import { ACES_HEADING, ACES_HOME } from "../aces/routes";
 import "../classic.scss";
@@ -241,6 +242,15 @@ export default function AsHomePage() {
         </div>
       </section>
 
+      <section className="bt-section" aria-labelledby="as-aids">
+        <h2 id="as-aids">Play aids</h2>
+        <p>
+          <Link className="bt-button bt-button--secondary" to="/battletech/alpha-strike/aids">
+            To-hit calculator
+          </Link>
+        </p>
+      </section>
+
       <section className="bt-section" aria-labelledby="as-aces">
         <h2 id="as-aces">{ACES_HEADING}</h2>
         <p>
@@ -254,6 +264,7 @@ export default function AsHomePage() {
       <AsMordelImport />
       <AsMulImport />
       <AsMordelFile />
+      <AsConvert />
     </div>
   );
 }
