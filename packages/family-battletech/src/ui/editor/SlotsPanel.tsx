@@ -303,6 +303,7 @@ export default function SlotsPanel({
           </span>
           {changed.has(mount.id) && <Changed id={`${mountDomId(mount.id)}-changed`} />}
           {mount.rear && <span className="bt-tag">Fires to the rear</span>}
+          {mount.armorFor !== undefined && mount.location !== mount.armorFor && <span className="bt-tag">{`Armor of the ${locationName(mount.armorFor)}`}</span>}
           {mount.location && splitOf(mount) && <span className="bt-tag">{`Split: ${locationName(mount.location)} and ${locationName(splitOf(mount)?.location ?? mount.location)}`}</span>}
           {unmatched(mount) && <span className="bt-tag">Unmatched</span>}
           {locked && <span className="bt-tag">Fixed in the base</span>}

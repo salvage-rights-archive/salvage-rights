@@ -6,7 +6,7 @@
 // catalog row are the sparse overlay in data/equipment/gothic.ts (gothic-design s.2, s.2.1). Plain data and small lookups.
 import { MECH_TYPES, RULES_LEVELS } from "./chassis";
 import type { MechType, RulesLevel } from "./chassis";
-import { ALL_EDITIONS, ERAS } from "./editions";
+import { ALL_EDITIONS, ERAS, SUB_ERAS } from "./editions";
 import type { EraRow } from "./editions";
 
 export type GameId = "classic" | "gothic";
@@ -18,6 +18,8 @@ export interface Ruleset {
   name: string;
   /** Era table for selectors, `setEra`, `setYear`, `eraOfYear`. */
   eras: EraRow[];
+  /** Eras that overlap `eras` (Classic's Clan sub-eras): a year in two of them asks the player to pick one. */
+  subEras?: EraRow[];
   /** Default year for a new record. Classic: none. */
   defaultYear?: number;
   /** Levels offered, in ladder order (ids from RULES_LEVELS); a level not listed is hidden in this game's selectors. */
@@ -44,6 +46,7 @@ export const CLASSIC: Ruleset = {
   game: "classic",
   name: "Classic BattleTech",
   eras: ERAS,
+  subEras: SUB_ERAS,
   levels: RULES_LEVELS.map((row) => row.id),
   techBases: ["inner-sphere", "clan", "mixed"],
   unitTypes: MECH_TYPES.map((row) => row.id),

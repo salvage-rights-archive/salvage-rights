@@ -298,7 +298,7 @@ describe("Dark Age, signature and enhancement rules (TO:AUE pp. 192-194, IO:AE p
       ["mounted", [m("super-cooled-myomer-is", "LA")], {}, 0],
       ["named in the chassis", [], { chassis: { ...bipedRecord().chassis, myomer: "super-cooled" } }, 0],
       ["with jump jets", [m("super-cooled-myomer-is", "LA"), m("jump-jet-is", "LL")], {}, 3],
-      ["with a UMU", [m("super-cooled-myomer-is", "LA"), m("umu-is", "LL")], {}, 2],
+      ["with a UMU, which counts as a jump jet (TO:AUE p.192)", [m("super-cooled-myomer-is", "LA"), m("umu-is", "LL")], {}, 3],
     ];
     for (const [label, mounts, patch, heat] of cases) expect(battleValue(biped(mounts, patch), catalog).offensive.movementHeat, label).toBe(heat);
   });

@@ -19,12 +19,27 @@ export function eraOfYear(year: number | null, ruleset: Ruleset = CLASSIC): EraR
   return ruleset.eras.find((era) => year >= era.startYear && (era.endYear === undefined || year <= era.endYear));
 }
 
+/** Every era a year belongs to: its Master Unit List era, then any overlapping sub-era (a Clan one). Two means the player picks which. */
+export function erasOfYear(year: number | null, ruleset: Ruleset = CLASSIC): EraRow[] {
+  if (year === null || !Number.isFinite(year)) return [];
+  const main = eraOfYear(year, ruleset);
+  const subs = (ruleset.subEras ?? []).filter((era) => year >= era.startYear && (era.endYear === undefined || year <= era.endYear));
+  return main ? [main, ...subs] : subs;
+}
+
 /** The record's era: the one it names when that era exists and holds its year, else the era its year falls in, else none. */
 export function eraOfRecord(record: When): EraRow | undefined {
   const ruleset = rulesetOf(record.editionId);
-  const named = record.era === undefined ? undefined : ruleset.eras.find((era) => era.id === record.era);
-  if (named && (record.year === null || eraOfYear(record.year, ruleset)?.id === named.id)) return named;
+  const named = record.era === undefined ? undefined : [...ruleset.eras, ...(ruleset.subEras ?? [])].find((era) => era.id === record.era);
+  if (named && (record.year === null || erasOfYear(record.year, ruleset).some((era) => era.id === named.id))) return named;
   return eraOfYear(record.year, ruleset);
+}
+
+/** Whether the year is in two eras and the record names neither: the player has to pick one. A record that names an era that holds its year has picked. */
+export function eraNeedsPick(record: When): boolean {
+  const ruleset = rulesetOf(record.editionId);
+  if (erasOfYear(record.year, ruleset).length < 2) return false;
+  return record.era === undefined || !erasOfYear(record.year, ruleset).some((era) => era.id === record.era);
 }
 
 /** The stretch of years the record's technology may come from: its year, else its era's span, else none. None too in a game that prints

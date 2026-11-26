@@ -6,9 +6,9 @@ import { BASE_PATH, DEV_ORIGIN, FREE_ORIGIN } from "./urls";
 export const DEV = `${DEV_ORIGIN}${BASE_PATH}`;
 
 /**
- * Assertions for a page that loads its code on demand. Opening a family page shows "Loading�" until its chunks arrive, and a page that
+ * Assertions for a page that loads its code on demand. Opening a family page shows "Loading…" until its chunks arrive, and a page that
  * opens the on-device store needs a moment more; on a machine running many browsers that takes longer than an assertion's 5 seconds, and the
- * wait ended on the "Loading�" page (no heading, no enabled input). This waits for the page itself: it costs nothing when the page is
+ * wait ended on the "Loading…" page (no heading, no enabled input). This waits for the page itself: it costs nothing when the page is
  * quick, and a page that never arrives still fails, only later. The test's own timeout and the global defaults are unchanged.
  */
 export const LAZY_PAGE_MS = 25_000;
@@ -303,8 +303,8 @@ export async function saveAcesCard(page: Page, base: string): Promise<string> {
   await page.getByRole("button", { name: "2. Movement side" }).click();
   await page.getByLabel("Movement priority").fill("47");
   await page.getByRole("button", { name: "Record the three columns" }).click();
-  await pickToken(page, "Add a test to: When the Aggressive column applies", "has moved", "the ideal … has moved");
-  await pickToken(page, "Add a filter to the Aggressive column", "keep", "keep … from …");
+  await pickToken(page, "Add a test to: When the Aggressive column applies", "has moved", "the ideal â€¦ has moved");
+  await pickToken(page, "Add a filter to the Aggressive column", "keep", "keep â€¦ from â€¦");
   await page.getByRole("button", { name: "3. Combat side" }).click();
   await page.getByLabel("Combat priority").fill("112");
   await page.getByRole("button", { name: "Record the combat rules" }).click();
@@ -326,7 +326,7 @@ export async function saveAcesCommand(page: Page, base: string): Promise<string>
   await page.getByLabel("Commander").fill("Invented Marshal");
   await page.getByLabel("Faction").fill("Invented House");
   await page.getByRole("button", { name: "2. Orders" }).click();
-  await pickToken(page, "Add an order", "initiative", "Initiative roll …");
+  await pickToken(page, "Add an order", "initiative", "Initiative roll â€¦");
   await page.getByRole("button", { name: "3. Colour lists" }).click();
   await pickToken(page, "Add a key to the RED list", "no armor", "no Armor left");
   await page.getByRole("button", { name: "4. Support side" }).click();

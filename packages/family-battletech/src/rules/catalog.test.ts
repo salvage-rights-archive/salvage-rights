@@ -98,7 +98,7 @@ describe("offered and available", () => {
 
   it("keeps rows of the wanted tech base whose spans contain the year; mixed keeps both; a null year keeps every row", () => {
     expect(ids(catalog.offered("total-warfare", { techBase: "inner-sphere", year: 3025 }))).toEqual(["ac-2-is", "jump-jet-is", "ppc-is"]); // the Gauss rifle is in its gap
-    expect(ids(catalog.offered("total-warfare", { techBase: "clan", year: 3025 }))).toEqual(["er-medium-laser-clan"]);
+    expect(ids(catalog.offered("total-warfare", { techBase: "clan", year: 3025 }))).toEqual(["ac-2-is", "er-medium-laser-clan", "jump-jet-is", "ppc-is"]); // with the Star League rows an Inner Sphere item before 2781 is a Clan unit's own too
     expect(ids(catalog.offered("total-warfare", { techBase: "mixed", year: 3060 }))).toEqual(
       ["ac-2-is", "er-medium-laser-clan", "er-medium-laser-is", "gauss-rifle-is", "jump-jet-is", "ppc-is"],
     );

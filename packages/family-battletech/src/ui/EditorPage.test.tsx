@@ -84,7 +84,7 @@ describe("The 'Mech editor", () => {
     await open("imported-1");
     const card = (await screen.findByRole("heading", { level: 2, name: "Identity" })).closest("section");
     if (!card) throw new Error("no identity card");
-    expect([...card.querySelectorAll("label")].map((l) => l.textContent).slice(0, 6)).toEqual(["Name", "Model", "Type", "Configuration", "Rules level", "Tech base"]);
+    expect([...card.querySelectorAll("label")].map((l) => l.textContent).slice(0, 6)).toEqual(["Name", "Model", "Type", "Configuration", "Rules level", "Year"]);
     const type = within(card).getByLabelText<HTMLSelectElement>("Type");
     const config = within(card).getByLabelText<HTMLSelectElement>("Configuration");
     const texts = (select: HTMLSelectElement) => [...select.options].map((o) => o.text);

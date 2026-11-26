@@ -274,8 +274,6 @@ export const UNFIXED: Record<string, string> = {
   "talons-clan": "its BV is the kick damage after Triple-Strength Myomer times 1 (TO:AUE p.197), and the pair of Talons with their 1.5 on kicks (p.102) leaves the figure unclear",
   "partial-wing-is": "it adds Jumping MP by atmosphere and weight class, which the speed factor does not take yet (TO:AUE p.192)",
   "partial-wing-clan": "it adds Jumping MP by atmosphere and weight class, which the speed factor does not take yet (TO:AUE p.192)",
-  "umu-is": "UMU movement is counted as Cruising MP when submerged, not computed here (TO:AUE p.192)",
-  "umu-clan": "UMU movement is counted as Cruising MP when submerged, not computed here (TO:AUE p.192)",
   "mechanical-jump-booster-is": "it adds Jumping MP chosen by the designer, which the record does not hold (TO:AUE p.192)",
   "jump-pack-is": "it adds Jumping MP from the pack weight and the unit weight, not computed here (TO:AUE p.192)",
   "jump-pack-clan": "it adds Jumping MP from the pack weight and the unit weight, not computed here (TO:AUE p.192)",

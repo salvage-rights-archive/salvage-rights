@@ -11,7 +11,8 @@ import { changedSinceImport } from "../../rules/mordel";
 import { levelOfRecord, levelRow } from "../../rules/levels";
 import { rulesetOf } from "../../data/rulesets";
 import type { GameId } from "../../data/rulesets";
-import { layout as buildLayout, locationName, structurePoints, totalHeatSinks, walkMP, weights } from "../../rules/mech";
+import { ARMOR } from "../../data/chassis";
+import { armorTypeAt, layout as buildLayout, locationName, patchworkActive, structurePoints, totalHeatSinks, walkMP, weights } from "../../rules/mech";
 import { configurationLevel } from "../../rules/omni";
 import { equipmentItems, heatSinkCapacity, mascOf, movementPenalty, penalisedMovement, tsmOf } from "../../rules/walk";
 import type { Layout, LocationCode, MechRecord } from "../../rules/mech";
@@ -33,6 +34,8 @@ export interface LocationPoints {
   front: number | undefined;
   rear: number | undefined;
   structure: number | undefined;
+  /** The armor type of this location, set only when armor is patchwork (each location then says its own). */
+  armorType: string | undefined;
 }
 
 /** What Gothic adds to the sheet (absent in Classic). */
@@ -182,6 +185,7 @@ export function sheetFacts(record: MechRecord, catalog: Catalog, options: { dazz
       front: record.armor[code]?.front,
       rear: record.armor[code]?.rear,
       structure: structure[code],
+      armorType: patchworkActive(record) ? (Object.hasOwn(ARMOR.types, armorTypeAt(record, code)) ? ARMOR.types[armorTypeAt(record, code)]?.name : armorTypeAt(record, code)) : undefined,
     })),
     designer: record.source?.kind === "mordel" ? record.source.designer || "an unnamed designer" : undefined,
   };

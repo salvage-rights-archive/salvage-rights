@@ -139,7 +139,7 @@ describe("tech base choices", () => {
 
   it("hides Clan before the Clan Sub-Eras (2800, IO:AE p.17), keeps a current Clan record's choice, and reports it with the page", () => {
     const offered = (year: number | null, era?: string, current = "inner-sphere") => techBaseChoices("standard", current, { year, era }).some(([v]) => v === "clan");
-    expect([offered(2799), offered(2800), offered(null), offered(null, "star-league"), offered(null, "early-succession-war"), offered(2400, undefined, "clan")]).toEqual([false, true, true, false, true, true]);
+    expect([offered(2799), offered(2800), offered(null), offered(null, "star-league"), offered(null, "early-succession-war"), offered(2400, undefined, "clan")]).toEqual([false, true, true, false, false, true]);
     const found = runChecks(bipedRecord({ techBase: "clan", year: 2400 }), catalog).filter((f) => f.message.startsWith("Clan technology is not available"));
     expect(found).toHaveLength(1);
     expect(found[0]?.cite).toMatchObject({ page: 17 });
@@ -148,7 +148,7 @@ describe("tech base choices", () => {
   it("hides Mixed until its level and time: Advanced from production, Experimental from the prototype year, never before it; the current one stays", () => {
     const offered = (level: RulesLevel, year: number | null, current = "inner-sphere") => techBaseChoices(level, current, { year }).some(([v]) => v === "mixed");
     expect([offered("standard", 3085), offered("advanced", 3085), offered("advanced", null), offered("advanced", 3060), offered("experimental", 3060), offered("unlimited", 2830), offered("experimental", 2819), offered("standard", 3085, "mixed")]).toEqual([
-      false, true, true, false, true, true, false, true,
+      false, true, true, false, true, false, false, true, // 2830: the Succession Wars keep the two technology bases apart (IO:AE p.9), so no Mixed
     ]);
   });
 

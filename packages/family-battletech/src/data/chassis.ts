@@ -816,6 +816,55 @@ export const ARMOR: Sourced & { basePointsPerTon: number; types: Record<string, 
   },
 };
 
+/**
+ * Patchwork armor: a different armor type in each location, an Advanced construction option (Tactical Operations: AUE printed p.189,
+ * read against the page image). Its dates are the Construction Options row of Interstellar Operations: Alternate Eras (printed p.45):
+ * prototype "PS" (always, so `prototypeYear` is 0), production 3075, common ~3080. Before production it is Experimental (IO:AE printed
+ * p.27); from production, Advanced. Weight is the location's points times the type's tons per point (the Fractional Armor Table, printed
+ * p.188, which is 1 over the points per ton of the armor table), rounded up to the half ton for each location. `slots` is the space the
+ * Patchwork Armor Table gives each location that wears the type, the figure left of the slash (BattleMechs and Support Vehicles); the
+ * last four types are the Patchwork Armor Addendum (IO:AE printed p.82). A type with no entry (prototype ferro-fibrous, primitive,
+ * modular armor) is not offered. Stealth armor installed this way gives no stealth modifiers (the table's note).
+ */
+export const PATCHWORK_ARMOR: {
+  rulesLevel: RulesLevel;
+  availability: Span[];
+  prototypeYear: number;
+  cite: Cite;
+  availabilityCite: Cite;
+  addendumCite: Cite;
+  checked: Checked;
+  slots: Record<string, number>;
+} = {
+  rulesLevel: "advanced",
+  availability: [{ from: 3075 }],
+  prototypeYear: 0,
+  cite: { book: TO, page: 189 },
+  availabilityCite: { book: IO, page: 45 },
+  addendumCite: { book: IO, page: 82 },
+  checked: "page",
+  slots: {
+    standard: 0,
+    stealth: 2,
+    "light-ferro-fibrous": 1,
+    "ferro-fibrous": 2,
+    "ferro-fibrous-clan": 1,
+    "heavy-ferro-fibrous": 3,
+    industrial: 0,
+    commercial: 0,
+    "ferro-lamellor": 2,
+    hardened: 0,
+    "laser-reflective": 2,
+    "laser-reflective-clan": 1,
+    reactive: 2,
+    "reactive-clan": 1,
+    "anti-penetrative-ablation": 1,
+    "ballistic-reinforced": 2,
+    "heat-dissipating": 1,
+    "impact-resistant": 2,
+  },
+};
+
 // ---------------------------------------------------------------------------------------------------------------
 // Myomer enhancements (BattleMech MASC and TSM Table, printed p.52). MASC weighs a percentage of the 'Mech's tonnage
 // and takes the same number of slots (rounded normally); Triple-Strength Myomer weighs nothing and takes 6 slots,
@@ -1150,6 +1199,19 @@ export const MIXED_TECHNOLOGY: {
  * and says nothing may be produced with a Clan technology base in the Age of War or the Age of the Star League (Early Succession Wars:
  * Clan technology only among Clan factions). Equipment and parts carry their own, later, dates; this only gates the choice of the tech base. */
 export const CLAN_TECHNOLOGY: { firstYear: number; cite: Cite; checked: Checked } = { firstYear: 2800, cite: { book: IO_AE, page: 17 }, checked: "page" };
+/**
+ * Star League technology is Inner Sphere technology that existed before the Succession Wars, not a tech base of its own (owner's ruling of
+ * 2026-11-26). A Clan record may use it as its own, with no Mixed option: Interstellar Operations: Alternate Eras printed p.17 says that among
+ * Clan forces only Inner Sphere units built before 2781 may appear, and that the same limit applies to equipment selections. 2781 is where the
+ * Early Succession Wars begin (the era table, p.16), so the Star League ends in 2780. An item counts when its first production year is
+ * before 2781. Inner Sphere items from later stay Mixed-only for a Clan record (the Clan Invasion, 3050, is when Clan forces first meet
+ * Inner Sphere developments; the era table on p.16 ends the Clan Golden Years in 3049).
+ */
+export const STAR_LEAGUE_TECH: { endsBefore: number; cite: Cite; checked: Checked } = { endsBefore: 2781, cite: { book: IO, page: 17 }, checked: "page" };
+/** Whether an Inner Sphere row, by its production spans, is Star League technology: first available before 2781. No dates printed: not known to be. */
+export const isStarLeagueTech = (base: "inner-sphere" | "clan" | "both" | undefined, spans: Span[] | undefined): boolean =>
+  base === "inner-sphere" && spans !== undefined && spans.length > 0 && Math.min(...spans.map((s) => s.from)) < STAR_LEAGUE_TECH.endsBefore;
+
 /**
  * The FrankenMech option (Campaign Operations, corrected fourth printing, printed p.213; the v5.0 errata of 22 August 2024 only adds the
  * line barring heavier jump jets, which the fourth printing's text already holds). Campaign Operations calls all its rules optional and

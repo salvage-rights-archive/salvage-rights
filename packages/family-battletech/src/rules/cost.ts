@@ -27,7 +27,7 @@ import {
 import type { Price } from "../data/cost";
 import type { Catalog, EquipmentRow } from "./catalog";
 import { CLAN_CASE_IDS, clanStructure, explosiveLocations } from "./case";
-import { armsOf, configurationOf, industrialRulesOf } from "./mech";
+import { armorTypeAt, armorTypesUsed, armsOf, configurationOf, industrialRulesOf, patchworkActive, patchworkTons } from "./mech";
 import type { LocationCode, MechRecord, Mount } from "./mech";
 import { equipmentItems, mascOf, own, stemOf, tsmOf, TSM_ROWS, weightLine } from "./walk";
 
@@ -208,7 +208,17 @@ export function unitCost(record: MechRecord, catalog: Catalog, options: CostOpti
   // Armor
   const armor = own(ARMOR_COST.rows, chassis.armorType);
   const armorTons = weightLine(record, catalog, "Armor");
-  if (armor && armorTons !== null) add(structural, `Armor (${chassis.armorType}, ${armorTons} tons)`, armor.perTon * armorTons, `${money(armor.perTon)} x ${armorTons}`, { cite: armor.cite ?? ARMOR_COST.cite, checked: ARMOR_COST.checked });
+  if (patchworkActive(record)) {
+    // Patchwork armor is priced a type at a time, on the tons of the locations that wear it (each rounded up to the half ton, TO:AUE p.189).
+    for (const type of armorTypesUsed(record)) {
+      const row = own(ARMOR_COST.rows, type);
+      const typeTons = (Object.entries(record.armor) as [LocationCode, { front: number; rear?: number } | undefined][])
+        .filter(([loc]) => armorTypeAt(record, loc) === type)
+        .reduce<number | null>((sum, [, a]) => { const t = patchworkTons(type, a ? a.front + (a.rear ?? 0) : 0); return sum === null || t === null ? null : sum + t; }, 0);
+      if (row && typeTons !== null) add(structural, `Armor (${type}, ${typeTons} tons)`, row.perTon * typeTons, `${money(row.perTon)} x ${typeTons}`, { cite: row.cite ?? ARMOR_COST.cite, checked: ARMOR_COST.checked });
+      else skip(`Armor "${type}"`, row ? "its weight could not be worked out" : "the cost table has no such armor");
+    }
+  } else if (armor && armorTons !== null) add(structural, `Armor (${chassis.armorType}, ${armorTons} tons)`, armor.perTon * armorTons, `${money(armor.perTon)} x ${armorTons}`, { cite: armor.cite ?? ARMOR_COST.cite, checked: ARMOR_COST.checked });
   else skip(`Armor "${chassis.armorType}"`, armor ? "its weight could not be worked out" : "the cost table has no such armor");
 
   // Equipment: jump jets are priced together (the count is squared); everything else one mount at a time

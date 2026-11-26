@@ -109,6 +109,7 @@ test("build a Land-Air 'Mech through the form and see its rules level, conversio
   await form.getByLabel("Name").fill("Hawk");
   await form.getByLabel("Rules level").selectOption("experimental");
   await form.getByLabel("Configuration").selectOption({ label: "Land-Air 'Mech" });
+  await form.getByLabel("Year").fill("3060");
   await form.getByRole("button", { name: "Start building" }).click();
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Hawk");
   await page.getByLabel("Rules level").selectOption("standard");
@@ -129,6 +130,7 @@ test("build an IndustrialMech through the form, set its configuration to a quad 
   await expect(form.getByLabel("Configuration").locator("option")).toHaveText(["Biped", "Quad"]);
   await form.getByLabel("Configuration").selectOption({ label: "Quad" });
   await form.getByLabel("Tonnage").selectOption("10");
+  await form.getByLabel("Year").fill("3060");
   await form.getByRole("button", { name: "Start building" }).click();
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Hauler");
   await expect(page.getByLabel("Type", { exact: true })).toHaveValue("industrialmech");
@@ -168,6 +170,7 @@ test("build a tripod through the form and reach its record sheet", async ({ page
   await form.getByLabel("Tonnage").selectOption("55");
   await form.getByLabel("Rules level").selectOption("advanced");
   await form.getByLabel("Configuration").selectOption({ label: "Tripod" });
+  await form.getByLabel("Year").fill("3060");
   await form.getByRole("button", { name: "Start building" }).click();
   await expect(page.getByRole("list", { name: "Center Leg slots" })).toBeVisible();
   await page.getByLabel("Rules level").selectOption("standard");
@@ -188,6 +191,7 @@ test("change the rules level in the editor and see the picker and the rules chec
   await expect(form.getByLabel("Configuration").getByRole("option", { name: "Tripod" })).toHaveCount(0);
   await form.getByLabel("Rules level").selectOption("advanced");
   await form.getByLabel("Configuration").selectOption({ label: "Tripod" });
+  await form.getByLabel("Year").fill("3060");
   await form.getByRole("button", { name: "Start building" }).click();
   // The home page stays on screen until the editor has loaded: wait for the editor, or the level choice would go to the form.
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Strider");
@@ -224,6 +228,7 @@ test("build a 50-ton biped, place a medium laser and see Battle Value and cost u
   await form.getByLabel("Tonnage").selectOption("50");
   // Built under the Core Rulebook: the editor header names the edition and the calculator cites that play book.
   await page.getByLabel("Edition").selectOption("bcr-tm");
+  await form.getByLabel("Year").fill("3060");
   await form.getByRole("button", { name: "Start building" }).click();
   await expect(page.getByText("Built under: Core Rulebook (BCR) / TechManual")).toBeVisible();
   const rules = page.getByRole("region", { name: "Rules check" });
@@ -263,9 +268,10 @@ test("pick an era and a tech base in the editor and see the picker's groups and 
   const form = page.getByRole("form", { name: "Build a new one" });
   await form.getByLabel("Name").fill("Sorter");
   await form.getByLabel("Rules level").selectOption("experimental");
+  await form.getByLabel("Year").fill("3060");
   await form.getByRole("button", { name: "Start building" }).click();
   await page.getByLabel("Year").fill("3067");
-  await expect(page.getByLabel("Era")).toHaveValue("civil-war");
+  await expect(page.locator("#field-era")).toHaveText("Civil War (Late Invasion Era)"); // one era holds the year: shown as text, with the book's other name
 
   const dialog = page.getByRole("dialog");
   const open = async (search = "") => {
@@ -281,9 +287,9 @@ test("pick an era and a tech base in the editor and see the picker's groups and 
   };
 
   // Inner Sphere, Civil War: a Clan ER large laser is not offered, an Inner Sphere one is.
-  await open("ER Large Laser");
-  await expect(dialog.getByRole("button", { name: /^ER Large Laser Inner Sphere/ })).toBeVisible();
-  await expect(dialog.getByRole("button", { name: /^ER Large Laser Clan/ })).toHaveCount(0);
+  await open("ER Medium Laser");
+  await expect(dialog.getByRole("button", { name: /^ER Medium Laser Inner Sphere/ })).toBeVisible();
+  await expect(dialog.getByRole("button", { name: /^ER Medium Laser Clan/ })).toHaveCount(0);
   await dialog.getByLabel("Search by name").fill("");
   const isTotal = await fullTotal();
   const isGroups = await groups();
@@ -293,9 +299,9 @@ test("pick an era and a tech base in the editor and see the picker's groups and 
 
   // Clan, same era: the Inner Sphere laser goes and the Clan one comes; the counts differ.
   await page.getByLabel("Tech base").selectOption("clan");
-  await open("ER Large Laser");
-  await expect(dialog.getByRole("button", { name: /^ER Large Laser Clan/ })).toBeVisible();
-  await expect(dialog.getByRole("button", { name: /^ER Large Laser Inner Sphere/ })).toHaveCount(0);
+  await open("ER Medium Laser");
+  await expect(dialog.getByRole("button", { name: /^ER Medium Laser Clan/ })).toBeVisible();
+  await expect(dialog.getByRole("button", { name: /^ER Medium Laser Inner Sphere/ })).toHaveCount(0);
   await dialog.getByLabel("Search by name").fill("");
   expect(await fullTotal()).not.toBe(isTotal);
   await dialog.getByRole("button", { name: "Cancel" }).click();
@@ -303,8 +309,8 @@ test("pick an era and a tech base in the editor and see the picker's groups and 
 
   // An early era leaves out the groups that did not exist yet, and a closed group opens and closes by keyboard.
   await page.getByLabel("Tech base").selectOption("inner-sphere");
+  await page.getByLabel("Year").fill(""); // with no year the era is a free choice again
   await page.getByLabel("Era").selectOption("age-of-war");
-  await expect(page.getByLabel("Year")).toHaveValue("");
   await open();
   const early = await fullTotal();
   expect(early).toBeLessThan(isTotal);
@@ -323,6 +329,7 @@ test("build an OmniMech, add a configuration, compare them and reach a configura
   await form.getByLabel("Type", { exact: true }).selectOption({ label: "OmniMech" });
   await form.getByLabel("Tech base").selectOption("clan");
   await form.getByLabel("Tonnage").selectOption("20");
+  await form.getByLabel("Year").fill("3060");
   await form.getByRole("button", { name: "Start building" }).click();
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Falcon Prime");
   const tabs = page.getByRole("tablist", { name: "Base and configurations" });

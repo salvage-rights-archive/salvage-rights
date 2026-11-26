@@ -1,14 +1,14 @@
 // Rules levels: the order they come in, which level an item belongs to, and the lowest level that accepts everything a
 // 'Mech uses. Pure functions over the tables in data/chassis.ts and the catalog; nothing here throws on what it does not
 // know (an unknown part or an unmatched mount simply asks nothing of the level).
-import { INTRODUCTORY_PARTS, ARMOR, FRANKENMECH, COCKPITS, ENGINE_TYPES, GYROS, HEAT_SINK_RULES, HEAT_SINKS, MIXED_TECHNOLOGY, RULES_LEVELS, STRUCTURE_TYPES } from "../data/chassis";
+import { INTRODUCTORY_PARTS, ARMOR, FRANKENMECH, COCKPITS, ENGINE_TYPES, GYROS, HEAT_SINK_RULES, HEAT_SINKS, MIXED_TECHNOLOGY, PATCHWORK_ARMOR, RULES_LEVELS, STRUCTURE_TYPES } from "../data/chassis";
 import type { PartFacts, RulesLevel, RulesLevelRow, Span } from "../data/chassis";
 import { CLASSIC, inGame, listed, listsOpen, rulesetOf } from "../data/rulesets";
 import type { Ruleset } from "../data/rulesets";
 import type { Catalog, EquipmentRow } from "./catalog";
-import { configurationOf, mechTypeOf } from "./mech";
+import { armorTypesUsed, configurationOf, mechTypeOf, patchworkActive } from "./mech";
 import type { LocationCode, MechRecord } from "./mech";
-import { clanInTime, datesText, partPrototype, partSpans, phaseIn, rowPhase, windowOf } from "./time";
+import { clanInTime, datesText, erasOfYear, partPrototype, partSpans, phaseIn, rowPhase, windowOf } from "./time";
 import type { Phase, When } from "./time";
 
 export const LEVEL_ORDER: RulesLevel[] = RULES_LEVELS.map((row) => row.id);
@@ -52,6 +52,20 @@ export const heatSinkMixPossible = (record: Pick<MechRecord, "frankenmech" | "te
  * prototype years (the Clan prototype year counts, as a mixed record draws on both bases), or before either. No year or era is no limit. */
 export const mixedPhase = (when: When): Phase | null => rowPhase(MIXED_TECHNOLOGY, "mixed", windowOf(when));
 
+/** Where a record's time falls against the patchwork armor option's dates (data/chassis.ts PATCHWORK_ARMOR): in production, or in its prototype
+ * years (a prototype since before spaceflight, so no earlier year rules it out). No year or era is no limit. */
+export const patchworkPhase = (when: When): Phase | null => rowPhase(PATCHWORK_ARMOR, "inner-sphere", windowOf(when));
+
+/** Whether the editor should offer patchwork armor: the record's level reaches the option's at its time (Advanced from production in 3075,
+ * Experimental before), and it is not an OmniMech, whose armor is fixed with the base chassis. A record that already has it keeps it shown.
+ * Hide, do not mark. */
+export function patchworkOffered(record: Pick<MechRecord, "patchwork" | "chassis" | "rulesLevel" | "unitType" | "omni" | "year" | "era"> & { editionId?: string }): boolean {
+  if (patchworkActive(record)) return true;
+  if (record.omni !== undefined || record.unitType === "omnimech" || record.rulesLevel === undefined) return false;
+  const phase = patchworkPhase(record);
+  return phase !== null && levelAtLeast(record.rulesLevel, levelIn(PATCHWORK_ARMOR.rulesLevel, phase)) && inGame(undefined, rulesetOf(record.editionId), record.rulesLevel);
+}
+
 /** The tech bases a unit at `level` and in `when` may choose, the ones that do not fit hidden: at Introductory only Inner Sphere (3025
  * technology); Clan only once the Clan Sub-Eras begin (2800, IO:AE p.17); Mixed (an Advanced option, Experimental in its prototype years) only from its prototype year and at the level its phase
  * needs; and only the tech bases the game of `when`'s edition offers, unless it lifts its lists at that level. The current choice is
@@ -64,7 +78,16 @@ export function techBaseChoices(level: RulesLevel | undefined, current: string, 
   const clanFits = levelAtLeast(at, DEFAULT_LEVEL) && clanInTime(when);
   const ruleset = rulesetOf(when.editionId);
   const offered = (value: string) => listsOpen(ruleset, at) || ruleset.techBases.some((base) => base === value);
-  return all.filter(([value]) => value === current || (offered(value) && (value === "inner-sphere" || (value === "clan" ? clanFits : mixedFits))));
+  // A year in two eras (an Inner Sphere era and a Clan sub-era): the era picked decides the base, a Clan era offering Clan and an Inner Sphere
+  // era Inner Sphere, and Mixed by its own dates in both.
+  const inYear = erasOfYear(when.year, ruleset);
+  // With no year the era the record names still decides (hide, do not mark): the Star League in Exile leaves Clan out whatever the year.
+  const named = [...ruleset.eras, ...(ruleset.subEras ?? [])].find((era) => era.id === when.era);
+  const picked = inYear.length > 1 ? inYear.find((era) => era.id === when.era) : when.year === null ? named : undefined;
+  const eraFits = (value: string) => picked?.techBases === undefined || value === "mixed" || picked.techBases.some((base) => base === value);
+  // In the Succession Wars years the Clan and Inner Sphere technology bases do not cross (IO:AE p.9), so Mixed is hidden there, whichever era is picked.
+  const noMixed = inYear.length > 0 ? inYear.every((era) => era.noMixed === true) : picked?.noMixed === true;
+  return all.filter(([value]) => value === current || (offered(value) && eraFits(value) && !(value === "mixed" && noMixed) && (value === "inner-sphere" || (value === "clan" ? clanFits : mixedFits))));
 }
 
 /** The level's row (label, description, cite), with the label the game shows where it has its own (Gothic's "Unofficial"). */
@@ -178,6 +201,12 @@ export function levelItems(record: MechRecord, catalog: Catalog): LevelItem[] {
   part("gyro", GYROS, chassis.gyro, "chassis.gyro", "gyro");
   part("structure", STRUCTURE_TYPES, chassis.structure, "chassis.structure", "structure");
   part("armor", ARMOR, chassis.armorType, "chassis.armorType", "armor");
+  if (patchworkActive(record)) {
+    // Patchwork armor is an Advanced option (TO:AUE p.189), Experimental before its production year (IO:AE p.45); each type it brings has its own level.
+    const phase = patchworkPhase(record);
+    items.push(asListed({ what: "option", name: "Patchwork armor", level: levelIn(PATCHWORK_ARMOR.rulesLevel, phase), ...(phase === "prototype" ? { prototype: `Production ${String(PATCHWORK_ARMOR.availability[0]?.from ?? "")}` } : {}), cite: PATCHWORK_ARMOR.cite, where: { field: "patchwork" } }, listed(undefined, ruleset), ruleset));
+    for (const type of armorTypesUsed(record)) if (type !== chassis.armorType) part("armor", ARMOR, type, "patchwork", "armor");
+  }
   part("heat sink", HEAT_SINKS, chassis.heatSinks.type, "chassis.heatSinks", "heatSink");
   for (const group of chassis.heatSinks.extra ?? []) part("heat sink", HEAT_SINKS, group.type, "chassis.heatSinks", "heatSink");
   const cockpit = own(COCKPITS.types, chassis.cockpit) ? COCKPITS.types[chassis.cockpit] : undefined;

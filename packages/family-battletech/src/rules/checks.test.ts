@@ -58,7 +58,7 @@ describe("the shared fixtures", () => {
     ["tripod", tripodRecord()],
   ])("the %s is legal: no error findings, and the checks run in order", (_name, record) => {
     expect(errors(runChecks(record, catalog))).toEqual([]);
-    expect(CHECKS.map((c) => c.id)).toEqual(["weight", "slots", "armor", "engine", "heat-sinks", "jump", "placement", "availability", "level", "configuration", "unit-type", "unmatched", "parts", "era", "shields", "lam", "unsupported", "omni", "frankenmech", "arms", "pairing", "artemis", "myomer", "stealth", "clan-case", "split"]);
+    expect(CHECKS.map((c) => c.id)).toEqual(["weight", "slots", "armor", "engine", "heat-sinks", "jump", "placement", "availability", "level", "configuration", "unit-type", "unmatched", "parts", "era", "shields", "lam", "unsupported", "omni", "frankenmech", "arms", "pairing", "artemis", "myomer", "stealth", "patchwork", "aes", "umu", "clan-case", "split"]);
   });
 
   it("starts a new tripod with a level error at Standard, citing the page that makes it Advanced, and none at Advanced", () => {
@@ -266,7 +266,7 @@ describe("Land-Air 'Mech", () => {
   });
 
   it.each<Row>([
-    ["Clan technology", (d) => void (d.techBase = "clan"), { level: "error", text: "Inner Sphere technology only; this one is Clan", where: { field: "techBase" }, page: 108 }],
+    ["Mixed technology", (d) => void (d.techBase = "mixed"), { level: "error", text: "Inner Sphere technology only; this one is Mixed", where: { field: "techBase" }, page: 108 }],
     ["over 55 tons", (d) => void (d.tons = 60), { level: "error", text: "at most 55 tons; this one is 60 tons", where: { field: "tons" } }],
     ["an XL engine", (d) => void (d.chassis.engine.type = "xl"), { level: "error", text: "standard or compact fusion engine; XL Fusion is not allowed", where: { field: "chassis.engine" } }],
     ["an XL gyro", (d) => void (d.chassis.gyro = "xl"), { level: "error", text: "standard, compact or heavy-duty gyro; XL is not allowed", where: { field: "chassis.gyro" } }],

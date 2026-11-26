@@ -10,8 +10,8 @@
 // prototype year and a production year has three times (rules/time.ts): from production it is available as its book prints it;
 // from its prototype year to the year before production it is a prototype, available only at Experimental level and above (or
 // the level its `prototypeLevel` names, where the books print it lower); before its prototype year it does not exist.
-import { ARMOR, COCKPITS, ENGINE_TYPES, GYROS, HEAT_SINKS, MECH_TYPES, MYOMER, SHEET, STRUCTURE_TYPES } from "../data/chassis";
-import type { ConfigurationRow, MechType, MechTypeRow, PartFacts, RulesLevel } from "../data/chassis";
+import { ARMOR, COCKPITS, ENGINE_TYPES, GYROS, HEAT_SINKS, isStarLeagueTech, MECH_TYPES, MYOMER, SHEET, STRUCTURE_TYPES } from "../data/chassis";
+import type { ConfigurationRow, MechType, MechTypeRow, PartFacts, RulesLevel, Span } from "../data/chassis";
 import { inGame, listsOpen, rulesetOf } from "../data/rulesets";
 import { CLAN_CASE_IDS, clanCaseAllowed } from "./case";
 import { mountableOn } from "./catalog";
@@ -19,22 +19,25 @@ import type { Catalog, EquipmentRow } from "./catalog";
 import { DEFAULT_LEVEL, equipmentLevel, levelAtLeast, levelIn, partLevel } from "./levels";
 import { industrialRulesOf, mechTypeOf } from "./mech";
 import type { MechRecord } from "./mech";
-import { datesText, eraOfYear, partPrototype, partSpans, phaseIn, rowPhase, windowOf } from "./time";
+import { datesText, eraOfRecord, erasOfYear, partPrototype, partSpans, phaseIn, rowPhase, windowOf } from "./time";
 import type { Phase, When } from "./time";
 
-export { eraOfRecord, eraOfYear, partSpans, spansFit, windowOf } from "./time";
+export { eraNeedsPick, eraOfRecord, eraOfYear, erasOfYear, partSpans, spansFit, windowOf } from "./time";
 export type { Phase, When, Window } from "./time";
 
 // ---------------------------------------------------------------------------------------------------------------
 // Eras and years: kept consistent, in the era table of the draft's game (its edition's; none: Classic)
 // ---------------------------------------------------------------------------------------------------------------
 
-/** Set the year on a draft; the era follows it. A cleared year leaves the era as it was. */
+/** Set the year on a draft; the era follows it. A year in one era sets that era; a year in two (an Inner Sphere era and a Clan sub-era) keeps
+ * the era the draft already names if it holds the year, and otherwise leaves it unset for the player to pick. A cleared year leaves the era as it was. */
 export function setYear(draft: When, year: number | null): void {
   draft.year = year;
   if (year === null) return;
-  const era = eraOfYear(year, rulesetOf(draft.editionId));
-  if (era) draft.era = era.id;
+  const eras = erasOfYear(year, rulesetOf(draft.editionId));
+  if (draft.era !== undefined && eras.some((era) => era.id === draft.era)) return;
+  const only = eras.length === 1 ? eras[0] : undefined;
+  if (only) draft.era = only.id;
   else delete draft.era;
 }
 
@@ -42,13 +45,13 @@ export function setYear(draft: When, year: number | null): void {
  * disagree is the one state this keeps out; the era then limits what is offered by its whole span. */
 export function setEra(draft: When, id: string): void {
   const ruleset = rulesetOf(draft.editionId);
-  const era = ruleset.eras.find((row) => row.id === id);
+  const era = [...ruleset.eras, ...(ruleset.subEras ?? [])].find((row) => row.id === id);
   if (!era) {
     delete draft.era;
     return;
   }
   draft.era = era.id;
-  if (draft.year !== null && eraOfYear(draft.year, ruleset)?.id !== era.id) draft.year = null;
+  if (draft.year !== null && !erasOfYear(draft.year, ruleset).some((row) => row.id === era.id)) draft.year = null;
 }
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -61,14 +64,27 @@ type Subject = Pick<MechRecord, "techBase" | "year" | "era" | "rulesLevel" | "un
 const recordLevel = (record: Subject): RulesLevel => record.rulesLevel ?? DEFAULT_LEVEL;
 
 /** True when a part or row printed for `base` can be used by a record of `techBase`; no base printed, or "both", fits any. */
-function baseFits(base: "inner-sphere" | "clan" | "both" | undefined, techBase: MechRecord["techBase"]): boolean {
-  return base === undefined || base === "both" || techBase === "mixed" || base === techBase;
+function baseFits(base: "inner-sphere" | "clan" | "both" | undefined, techBase: MechRecord["techBase"], spans?: Span[]): boolean {
+  return base === undefined || base === "both" || techBase === "mixed" || base === techBase || (techBase === "clan" && isStarLeagueTech(base, spans)); // Star League technology is a Clan record's own too (STAR_LEAGUE_TECH)
+}
+
+/** The spans a record reads an item's dates by. A Clan record takes Star League technology as its own, so the Inner Sphere extinctions of the Succession
+ * Wars do not hide it (the owner's ruling: that is why it was LosTech): from its first year it stays available. Anything else keeps its own spans. */
+export function ownSpans(record: Pick<MechRecord, "techBase">, base: "inner-sphere" | "clan" | "both" | undefined, spans: Span[] | undefined): Span[] | undefined {
+  return record.techBase === "clan" && spans !== undefined && isStarLeagueTech(base, spans) ? [{ from: Math.min(...spans.map((s) => s.from)) }] : spans;
+}
+
+/** Whether the era the record names limits its tech base to items introduced by a date (Clan Post-Reaving: 3085 for Clan, 3049 for Inner Sphere) and this item
+ * was introduced later (IO:AE p.24). */
+export function pastEraCap(record: When & Pick<MechRecord, "techBase">, spans: Span[] | undefined): boolean {
+  const cap = eraOfRecord(record)?.introCaps?.[record.techBase];
+  return cap !== undefined && spans !== undefined && spans.length > 0 && Math.min(...spans.map((s) => s.from)) > cap;
 }
 
 /** An equipment row's phase for a record: production, prototype or neither (read through the record's edition). */
 export function equipmentPhase(row: EquipmentRow, record: Subject & Pick<MechRecord, "editionId">, catalog: Catalog): Phase | null {
   const adjusted = catalog.rowFor(row.id, record.editionId) ?? row;
-  return phaseIn(adjusted.availability, row.prototypeYear, windowOf(record));
+  return phaseIn(ownSpans(record, row.techBase, adjusted.availability), row.prototypeYear, windowOf(record));
 }
 
 /** An equipment row: on the record's game's list, at or below the level, the record's tech base, and in the record's time (read through
@@ -80,7 +96,8 @@ export function equipmentAvailable(row: EquipmentRow, record: Subject & Pick<Mec
   const level = equipmentLevel(catalog.rowFor(row.id, record.editionId) ?? row);
   if (!levelAtLeast(recordLevel(record), level)) return false;
   if (everything) return true;
-  if (!baseFits(row.techBase, record.techBase)) return false;
+  if (!baseFits(row.techBase, record.techBase, (catalog.rowFor(row.id, record.editionId) ?? row).availability)) return false;
+  if (pastEraCap(record, (catalog.rowFor(row.id, record.editionId) ?? row).availability)) return false;
   const phase = equipmentPhase(row, record, catalog);
   return phase === "production" || (phase === "prototype" && levelAtLeast(recordLevel(record), levelIn(level, phase, row.prototypeLevel)));
 }
@@ -101,7 +118,7 @@ const partRow = (kind: PartKind, key: string): PartRow | undefined => (Object.ha
 
 /** A chassis part's phase for a record: production, prototype or neither. A part with no dates printed is always in production. */
 export function partPhase(part: PartFacts, record: Pick<Subject, "techBase" | "year" | "era" | "editionId">): Phase | null {
-  return phaseIn(partSpans(part, record.techBase), partPrototype(part, record.techBase), windowOf(record));
+  return phaseIn(ownSpans(record, part.techBase, partSpans(part, record.techBase)), partPrototype(part, record.techBase), windowOf(record));
 }
 
 /** A chassis part by table and key. A key the table does not have is available (we know nothing against it). */
@@ -116,7 +133,8 @@ export function partAvailable(kind: PartKind, key: string, record: Subject, ever
   if (!levelAtLeast(recordLevel(record), level)) return false;
   if (part.only !== undefined && part.only !== record.configuration) return false;
   if (everything) return true;
-  if (!baseFits(part.techBase, record.techBase)) return false;
+  if (!baseFits(part.techBase, record.techBase, partSpans(part, "inner-sphere"))) return false;
+  if (pastEraCap(record, partSpans(part, record.techBase))) return false;
   const phase = partPhase(part, record);
   return phase === "production" || (phase === "prototype" && levelAtLeast(recordLevel(record), levelIn(level, phase, part.prototypeLevel)));
 }
@@ -127,7 +145,7 @@ const configurationRow = (key: string): ConfigurationRow | undefined => (Object.
 export function configurationPhase(key: string, record: Pick<Subject, "techBase" | "year" | "era" | "editionId">): Phase | null {
   const row = configurationRow(key);
   if (!row) return "production";
-  return baseFits(row.techBase, record.techBase) ? rowPhase(row, record.techBase, windowOf(record)) : null;
+  return baseFits(row.techBase, record.techBase, row.availability) ? rowPhase({ ...row, availability: ownSpans(record, row.techBase, row.availability) ?? row.availability }, record.techBase, windowOf(record)) : null;
 }
 
 /** A body configuration's tech base and years against the record (not its level, which the level check reports); its prototype years count. */

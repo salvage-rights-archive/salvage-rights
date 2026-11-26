@@ -12,11 +12,11 @@ import type { Catalog } from "../rules/catalog";
 import { runChecks } from "../rules/checks";
 import type { Finding } from "../rules/checks";
 import { changedSinceImport } from "../rules/mordel";
-import { ARM_FULL, bodyOf, configurationOf, donorTons, editRecord, layout as buildLayout, locationName, mechTypeOf, partMountBase, setConfiguration, setMyomer, structurePoints, weights as buildWeights } from "../rules/mech";
+import { ARM_FULL, armorTypeAt, bodyOf, configurationOf, donorTons, editRecord, layout as buildLayout, locationName, mechTypeOf, partMountBase, patchworkActive, patchworkSlotsFor, setConfiguration, setMyomer, structurePoints, weights as buildWeights } from "../rules/mech";
 import type { Layout, LocationCode, MechRecord } from "../rules/mech";
-import { configurationChoices, eraOfRecord, partChoices, setEra, setYear } from "../rules/availability";
+import { configurationChoices, eraNeedsPick, eraOfRecord, erasOfYear, partChoices, setEra, setYear } from "../rules/availability";
 import type { PartKind } from "../rules/availability";
-import { frankenMechOffered, heatSinkMixAllowed, heatSinkMixPossible, techBaseChoices, withLevel } from "../rules/levels";
+import { frankenMechOffered, heatSinkMixAllowed, heatSinkMixPossible, levelOfRecord, levelRow, techBaseChoices, withLevel } from "../rules/levels";
 import {
   BASE,
   applyBaseEdit,
@@ -31,7 +31,8 @@ import {
 import type { OmniChassis } from "../rules/omni";
 import { BaseBreaks, CompareView, ConfigurationBar, OMNI_PANEL_ID, PodSpacePanel, omniTabId } from "./editor/OmniBar";
 import type { OnChassis } from "./editor/OmniBar";
-import { ERAS } from "../data/editions";
+import { eraLabel } from "../data/editions";
+import type { EraRow } from "../data/editions";
 import LevelSelect from "./editor/LevelSelect";
 import TypeSelect from "./editor/TypeSelect";
 import ArmorPanel from "./editor/ArmorPanel";
@@ -115,6 +116,7 @@ export function NumberField({
   name,
   className,
   disabled,
+  needs,
 }: {
   id: string;
   label: string;
@@ -130,6 +132,8 @@ export function NumberField({
   onFocus?: () => void;
   /** Read-only: a part fixed in an OmniMech base, seen from a configuration. */
   disabled?: boolean;
+  /** Said when the field is empty and has to have a value (the year above Introductory): shown as its hint, and the field is marked invalid. */
+  needs?: string;
 }) {
   const [draft, setDraft] = useState<string>();
   const parse = (text: string): number | null | undefined => {
@@ -144,7 +148,7 @@ export function NumberField({
   const showDraft = draft !== undefined && (invalid || parsed === value);
   const shown = showDraft ? draft : value === null ? "" : String(value);
   return (
-    <Field id={id} label={label} className={className} changed={changed} hint={invalid ? "Enter a number." : undefined}>
+    <Field id={id} label={label} className={className} changed={changed} hint={invalid ? "Enter a number." : value === null ? needs : undefined}>
       {(describedBy) => (
         <>
           <input
@@ -153,7 +157,7 @@ export function NumberField({
             type="text"
             inputMode="decimal"
             value={shown}
-            aria-invalid={invalid || undefined}
+            aria-invalid={invalid || (value === null && needs !== undefined) || undefined}
             aria-describedby={describedBy}
             disabled={disabled}
             onFocus={onFocus}
@@ -211,7 +215,7 @@ function AreaField({ id, label, value, onChange, changed }: { id: string; label:
   );
 }
 
-function SelectField({
+export function SelectField({
   id,
   label,
   value,
@@ -261,12 +265,86 @@ function SelectField({
 // ---------------------------------------------------------------------------------------------------------------
 
 const PART_TABLES = { structure: STRUCTURE_TYPES, armor: ARMOR } as const;
+const armorRow = (type: string) => (Object.hasOwn(ARMOR.types, type) ? ARMOR.types[type] : undefined);
 
 /** Sets the structure or armor type and brings that type's part-slot mounts to the count the type needs: surplus ones go
  * from the unplaced first, then from the highest slot; missing ones are added unplaced. One edit, so Undo is one step. */
 export function setPartType(draft: MechRecord, part: "structure" | "armor", type: string): void {
   if (part === "structure") draft.chassis.structure = type;
-  else draft.chassis.armorType = type;
+  else {
+    draft.chassis.armorType = type;
+    syncArmorMounts(draft);
+    return;
+  }
+  bringPartMounts(draft, part, type);
+}
+
+/** Sets one location's patchwork armor type (Tactical Operations: AUE p.189); the chassis' own type, or none, takes the choice away. One edit. */
+export function setPatchwork(draft: MechRecord, location: LocationCode, type: string | null): void {
+  const next = { ...draft.patchwork };
+  if (type === null || type === draft.chassis.armorType) delete next[location];
+  else next[location] = type;
+  if (Object.keys(next).length === 0) delete draft.patchwork;
+  else draft.patchwork = next;
+  syncArmorMounts(draft);
+}
+
+/**
+ * Brings the armor slot mounts to what the record's armor needs. One type all over: the type's slot count, as `bringPartMounts` does.
+ * Patchwork: each location's type takes its own slots in that location (the Patchwork Armor Table), so each slot mount is for a location
+ * (`armorFor`); a slot already placed stays where it sits if that location still wants it, an unplaced one goes to a location that does,
+ * and surplus ones go. Patchwork entries for a location the body lacks, or that match the chassis' type, are dropped.
+ */
+export function syncArmorMounts(draft: MechRecord): void {
+  const config = configurationOf(draft.configuration);
+  if (draft.patchwork) {
+    for (const loc of Object.keys(draft.patchwork) as LocationCode[]) {
+      const type = draft.patchwork[loc];
+      if (type === undefined || type === draft.chassis.armorType || (config && !(loc in config.size))) delete draft.patchwork[loc];
+    }
+    if (Object.keys(draft.patchwork).length === 0) delete draft.patchwork;
+  }
+  if (!patchworkActive(draft)) {
+    for (const m of draft.mounts) delete m.armorFor;
+    bringPartMounts(draft, "armor", draft.chassis.armorType);
+    return;
+  }
+  const wanted = new Map<LocationCode, number>();
+  for (const loc of config ? (Object.keys(config.size) as LocationCode[]) : []) {
+    const n = patchworkSlotsFor(armorTypeAt(draft, loc)) ?? 0;
+    if (n > 0) wanted.set(loc, n);
+  }
+  const have = new Map<LocationCode, number>();
+  const kept = new Set<string>();
+  const take = (m: MechRecord["mounts"][number], loc: LocationCode) => {
+    m.armorFor = loc;
+    kept.add(m.id);
+    have.set(loc, (have.get(loc) ?? 0) + 1);
+  };
+  const mine = draft.mounts.filter((m) => m.part === "armor");
+  for (const m of mine) if (m.location !== null && (wanted.get(m.location) ?? 0) > (have.get(m.location) ?? 0)) take(m, m.location);
+  for (const m of mine) {
+    if (kept.has(m.id) || m.location !== null) continue;
+    const loc = [...wanted.keys()].find((l) => (wanted.get(l) ?? 0) > (have.get(l) ?? 0));
+    if (loc) take(m, loc);
+  }
+  draft.mounts = draft.mounts.filter((m) => m.part !== "armor" || kept.has(m.id));
+  for (const [loc, n] of wanted) {
+    const row = armorRow(armorTypeAt(draft, loc));
+    for (let k = have.get(loc) ?? 0; k < n; k++) {
+      let id = "";
+      for (let i = 1; id === ""; i++) if (!draft.mounts.some((m) => m.id === `armor-${String(i)}`)) id = `armor-${String(i)}`;
+      draft.mounts.push({ id, equipmentId: null, part: "armor", name: row?.name ?? "Armor", techBase: partMountBase(row ?? {}, draft.techBase), location: null, slot: null, armorFor: loc });
+    }
+  }
+  for (const m of draft.mounts) {
+    const row = m.part === "armor" && m.armorFor !== undefined ? armorRow(armorTypeAt(draft, m.armorFor)) : undefined;
+    if (row) m.name = row.name;
+  }
+}
+
+/** One type all over: brings that type's part-slot mounts to the count it needs. */
+function bringPartMounts(draft: MechRecord, part: "structure" | "armor", type: string): void {
   const table = PART_TABLES[part].types;
   const row = Object.hasOwn(table, type) ? table[type] : undefined;
   if (!row) return;
@@ -377,7 +455,7 @@ const CHASSIS_FIELDS: ChassisField[] = [
   { kind: "number", path: "chassis.heatSinks-count", label: "Heat sinks", read: (r) => r.chassis.heatSinks.count, write: (d, v) => void (d.chassis.heatSinks.count = v) },
 ];
 
-const eraChoices = (eras: typeof ERAS): [string, string][] => [["", "Any era"], ...eras.map((era): [string, string] => [era.id, `${era.name} (${String(era.startYear)}${era.endYear === undefined ? " on" : `-${String(era.endYear)}`})`])];
+const eraChoices = (eras: EraRow[]): [string, string][] => [["", "Any era"], ...eras.map((era): [string, string] => [era.id, `${eraLabel(era)} (${String(era.startYear)}${era.endYear === undefined ? " on" : `-${String(era.endYear)}`})`])];
 
 // ---------------------------------------------------------------------------------------------------------------
 // What a finding or a changed marker can point at
@@ -696,6 +774,7 @@ function Editor({ initial, unsaved, startAt, catalog, storage }: { initial: Doc;
     : [];
   const base = gameBase(record);
   const ruleset = rulesetOf(record.editionId);
+  const yearEras = erasOfYear(record.year, ruleset);
   const gothic = ruleset.game === "gothic";
   const open = listsOpen(ruleset, record.rulesLevel); // Unlimited opens the whole catalog, Clan rows and every unit type included
   // Items whose weight we worked out because no book prints it (the Light Blazer), each named once for the weight list.
@@ -941,9 +1020,40 @@ function Editor({ initial, unsaved, startAt, catalog, storage }: { initial: Doc;
                 options={configurationChoices(record, record.configuration)}
                 changed={mark("configuration")}
                 disabled={fixedHere}
-                onChange={(v) => { edit((d) => { setConfiguration(d, v); }); }}
+                onChange={(v) => { edit((d) => { setConfiguration(d, v); if (d.patchwork) syncArmorMounts(d); }); }}
               />
               <LevelSelect record={record} ruleset={ruleset} onChange={(level) => { edit((d) => void (d.rulesLevel = level)); }} />
+              <NumberField
+                id="field-year"
+                label="Year"
+                value={record.year}
+                allowEmpty
+                changed={mark("year")}
+                needs={ruleset.dated && levelOfRecord(record, catalog) !== "introductory" ? `Needs a year at ${levelRow(levelOfRecord(record, catalog), ruleset).label} rules.` : undefined}
+                onValid={(v) => { edit((d) => { setYear(d, v); }, "year"); }}
+              />
+              <div className="bt-grid__wide">
+              {(chassis !== undefined && !inBase) || (ruleset.dated && record.year !== null && yearEras.length === 1) ? (
+                <div className="bt-field">
+                  <span id="field-era-label" className="bt-label">
+                    Era
+                  </span>
+                  <span id="field-era" tabIndex={-1} aria-labelledby="field-era-label">
+                    {(() => { const era = eraOfRecord(record); return era ? eraLabel(era) : "Any era"; })()}
+                  </span>
+                  <span className="bt-hint">{chassis !== undefined && !inBase ? "A configuration's era follows its year. Set the year here, or the base's era in the base." : "The era follows the year."}</span>
+                </div>
+              ) : (
+              <SelectField
+                id="field-era"
+                label="Era"
+                value={ruleset.dated && record.year !== null && eraNeedsPick(record) ? "" : (eraOfRecord(record)?.id ?? "")}
+                options={ruleset.dated && record.year !== null && yearEras.length > 1 ? [["", "Choose an era"], ...yearEras.map((era): [string, string] => [era.id, `${eraLabel(era)} (${String(era.startYear)}${era.endYear === undefined ? " on" : `-${String(era.endYear)}`})`])] : eraChoices([...ruleset.eras, ...(ruleset.subEras ?? [])])}
+                changed={mark("era")}
+                onChange={(v) => { edit((d) => { setEra(d, v); }, "era"); }}
+              />
+              )}
+              </div>
               {(!gothic || open) && (
               <SelectField
                 id="field-techBase"
@@ -969,29 +1079,6 @@ function Editor({ initial, unsaved, startAt, catalog, storage }: { initial: Doc;
                   Searchlight (no weight, no slot; rulebook p. 90)
                 </label>
               )}
-              <NumberField id="field-year" label="Year" value={record.year} allowEmpty changed={mark("year")} onValid={(v) => { edit((d) => { setYear(d, v); }, "year"); }} />
-              <div className="bt-grid__wide">
-              {chassis !== undefined && !inBase ? (
-                <div className="bt-field">
-                  <span id="field-era-label" className="bt-label">
-                    Era
-                  </span>
-                  <span id="field-era" tabIndex={-1} aria-labelledby="field-era-label">
-                    {eraOfRecord(record)?.name ?? "Any era"}
-                  </span>
-                  <span className="bt-hint">A configuration's era follows its year. Set the year here, or the base's era in the base.</span>
-                </div>
-              ) : (
-              <SelectField
-                id="field-era"
-                label="Era"
-                value={eraOfRecord(record)?.id ?? ""}
-                options={eraChoices(ruleset.eras)}
-                changed={mark("era")}
-                onChange={(v) => { edit((d) => { setEra(d, v); }, "era"); }}
-              />
-              )}
-              </div>
               <NumberField id="field-tons" label={record.frankenmech ? "Tons (center torso donor)" : "Tons"} value={record.tons} changed={mark("tons")} disabled={fixedHere} onValid={(v) => { edit((d) => void (d.tons = v ?? d.tons), "tons"); }} />
             </div>
             {record.frankenmech && (

@@ -15,23 +15,25 @@ import {
   HEAT_SINK_RULES,
   HEAT_SINKS,
   INTERNAL_STRUCTURE,
+  isStarLeagueTech,
   LAM,
   CLAN_TECHNOLOGY,
   MIXED_TECHNOLOGY,
   MYOMER,
+  PATCHWORK_ARMOR,
   SHEET,
   SHIELDS,
   STRUCTURE_TYPES,
 } from "../data/chassis";
 import type { Cite, PartFacts, Span } from "../data/chassis";
-import { configurationInTime, equipmentPhase, eraOfRecord, eraOfYear, partPhase, partSpans, typeInTime, windowOf } from "./availability";
+import { configurationInTime, equipmentPhase, eraOfRecord, erasOfYear, pastEraCap, partPhase, partSpans, typeInTime, windowOf } from "./availability";
 import { listed, RULESETS, rulesetOf } from "../data/rulesets";
 import { CLAN_CASE_IDS, clanCaseAllowed } from "./case";
 import { locationsFor, mountableOn, mountsRequired, podMountable } from "./catalog";
-import { heatSinkMixAllowed, levelAtLeast, levelIn, levelItems, levelRow, mixedPhase } from "./levels";
+import { heatSinkMixAllowed, levelAtLeast, levelIn, levelItems, levelOfRecord, levelRow, mixedPhase } from "./levels";
 import { clanInTime, datesText, partIsPrototypeOnly, partPrototype } from "./time";
 import type { Catalog, EquipmentRow } from "./catalog";
-import { ARM_FULL, armorSpread, armsOf, canSplitBetween, configurationOf, donorTons, engineTons, freeHeatSinks, industrialRulesOf, layout as buildLayout, maxArmor, mechTypeOf, mountCanFireRear, slotsTaken, splitOf, structurePoints, walkMP, weights } from "./mech";
+import { ARM_FULL, armorSpread, armorTypeAt, armorTypesUsed, armsOf, canSplitBetween, configurationOf, donorTons, engineTons, freeHeatSinks, industrialRulesOf, layout as buildLayout, maxArmor, mechTypeOf, mountCanFireRear, patchworkActive, patchworkSlotsFor, slotsTaken, splitOf, structurePoints, walkMP, weights } from "./mech";
 import { locationName, type Layout, type LocationCode, type MechRecord, type Mount } from "./mech";
 import { mountedShields, missingActuators, shieldStats } from "./shields";
 import { equipmentItems, mascOf, movementPenalty, rowOf, stemOf, TSM_ROWS, tsmOf } from "./walk";
@@ -100,10 +102,13 @@ function heatSinkTypeOf(row: EquipmentRow): string {
 
 // What an item that `needs` something must be paired with, the book's page for it, and the size class a pairing is made
 // within. A `needs` with no entry here (liquid cargo space) has nothing in the record to check against and is left alone.
-const HOSTS: Record<string, { host: RegExp; what: string; page: number }> = {
+const HOSTS: Record<string, { host: RegExp; what: string; page: number; book?: string }> = {
   launcher: { host: /^(lrm|srm|mml)-\d+-(is|clan)$/, what: "standard LRM, SRM or MML launcher", page: PAGE.artemis },
   "machine-gun": { host: /^(?:(light|heavy)-)?machine-gun-(is|clan)$/, what: "machine gun", page: PAGE.machineGunArray },
+  // A PPC Capacitor is restricted to its PPC's location (TO:AUE printed pp.126 and 149; the BV addendum, p.194, lists the five PPCs it pairs with).
+  ppc: { host: /^(heavy-|light-|snub-nose-|er-)?ppc-is$/, what: "PPC", page: 149, book: "Tactical Operations: Advanced Units and Equipment" },
 };
+const hostCite = (rule: { page: number; book?: string }) => (rule.book === undefined ? tm(rule.page) : { book: rule.book, page: rule.page });
 export const hostRule = (row: EquipmentRow | undefined) => (row?.needs !== undefined && own(HOSTS, row.needs) ? HOSTS[row.needs] : undefined);
 const gunSize = (id: string | null) => /^(light|heavy)-/.exec(id ?? "")?.[1] ?? "standard";
 
@@ -194,9 +199,9 @@ function slotsCheck({ record, layout }: CheckInput): Finding[] {
   for (const p of layout.partSlots) {
     if (p.needed === p.present) continue;
     const structure = p.part === "structure";
-    const type = structure ? partName(STRUCTURE_TYPES, record.chassis.structure) : partName(ARMOR, record.chassis.armorType);
+    const type = structure ? `${partName(STRUCTURE_TYPES, record.chassis.structure)} structure` : patchworkActive(record) ? "Patchwork armor" : `${partName(ARMOR, record.chassis.armorType)} armor`;
     out.push(
-      finding("slots", "error", `${type} ${p.part} takes ${p.needed} critical slots; the record places ${p.present}.`, {
+      finding("slots", "error", `${type} takes ${p.needed} critical slots; the record places ${p.present}.`, {
         where: { field: structure ? "chassis.structure" : "chassis.armorType" },
         cite: structure ? STRUCTURE_TYPES.cite : ARMOR.cite,
       }),
@@ -204,7 +209,25 @@ function slotsCheck({ record, layout }: CheckInput): Finding[] {
   }
   // An armor type with a place for each of its slots (stealth): the count in every location must match. A location short of
   // slots is not reported while some armor slot is still unplaced, since that one is already an error above.
-  const spread = armorSpread(own(ARMOR.types, record.chassis.armorType) ? ARMOR.types[record.chassis.armorType] : undefined, record.configuration);
+  const patchwork = patchworkActive(record);
+  // Patchwork armor: each location's own type takes its own slots in that location (the Patchwork Armor Table, TO:AUE p.189).
+  if (patchwork) {
+    const armorMounts = record.mounts.filter((m) => m.part === "armor");
+    const anyUnplaced = armorMounts.some((m) => !m.location);
+    for (const loc of layout.locations) {
+      const type = armorTypeAt(record, loc);
+      const wanted = patchworkSlotsFor(type) ?? 0;
+      const found = armorMounts.filter((m) => m.location === loc).length;
+      if (found === wanted || (found < wanted && anyUnplaced)) continue;
+      out.push(
+        finding("slots", "error", `${partName(ARMOR, type)} patchwork armor takes ${wanted} slot${wanted === 1 ? "" : "s"} in the ${locationName(loc)}; the record places ${found}.`, {
+          where: { location: loc, field: "patchwork" },
+          cite: PATCHWORK_ARMOR.cite,
+        }),
+      );
+    }
+  }
+  const spread = patchwork ? undefined : armorSpread(own(ARMOR.types, record.chassis.armorType) ? ARMOR.types[record.chassis.armorType] : undefined, record.configuration);
   if (spread) {
     const armorMounts = record.mounts.filter((m) => m.part === "armor");
     const anyUnplaced = armorMounts.some((m) => !m.location);
@@ -268,7 +291,7 @@ function armorCheck({ record, layout, catalog }: CheckInput): Finding[] {
   const line = weights(record, catalog.factsOf).lines.find((l) => l.label === "Armor");
   if (line && line.tons !== null && Number.isFinite(line.tons)) {
     out.push(
-      finding("armor", "note", `The armor points carried need ${tons(line.tons)} of ${partName(ARMOR, record.chassis.armorType)} armor.`, {
+      finding("armor", "note", `The armor points carried need ${tons(line.tons)} of ${patchworkActive(record) ? "patchwork" : partName(ARMOR, record.chassis.armorType)} armor.`, {
         where: { field: "chassis.armorType" },
         cite: tm(PAGE.armorTons),
       }),
@@ -433,12 +456,12 @@ function placementCheck({ record, layout, catalog }: CheckInput): Finding[] {
       } else if (!host) {
         out.push(finding("placement", "error", `${mount.name} is linked to a mount that is not on this 'Mech.`, { where, cite: rule ? tm(rule.page) : row?.cite }));
       } else if (rule && !rule.host.test(host.equipmentId ?? "")) {
-        out.push(finding("placement", "error", `${mount.name} attaches to a ${rule.what}; ${host.name} is not one.`, { where, cite: tm(rule.page) }));
+        out.push(finding("placement", "error", `${mount.name} attaches to a ${rule.what}; ${host.name} is not one.`, { where, cite: hostCite(rule) }));
       } else if (rule && mount.location && host.location && mount.location !== host.location) {
         out.push(
           finding("placement", "error", `${mount.name} is in the ${locationName(mount.location)} but ${host.name} is in the ${locationName(host.location)}; they must share a location.`, {
             where,
-            cite: tm(rule.page),
+            cite: hostCite(rule),
           }),
         );
       }
@@ -451,14 +474,14 @@ function placementCheck({ record, layout, catalog }: CheckInput): Finding[] {
         out.push(
           finding("placement", "error", `${mount.name} links two to four machine guns of one size in its own location; the ${locationName(mount.location)} has ${guns.length}${sizes.size > 1 ? " of mixed sizes" : ""}.`, {
             where,
-            cite: tm(rule.page),
+            cite: hostCite(rule),
           }),
         );
       }
     } else if (rule && mount.linkedTo === undefined && mount.location) {
       const found = record.mounts.some((m) => m.id !== mount.id && m.location === mount.location && rule.host.test(m.equipmentId ?? ""));
       if (!found) {
-        out.push(finding("placement", "error", `${mount.name} needs a ${rule.what} in the same location, and the ${locationName(mount.location)} has none.`, { where, cite: tm(rule.page) }));
+        out.push(finding("placement", "error", `${mount.name} needs a ${rule.what} in the same location, and the ${locationName(mount.location)} has none.`, { where, cite: hostCite(rule) }));
       }
     }
     if (!row || !mount.location) continue;
@@ -529,7 +552,7 @@ function availabilityCheck({ record, catalog }: CheckInput): Finding[] {
       const owners = (row.games ?? []).map((game) => RULESETS[game].name).join(" or ");
       out.push(finding("availability", "error", `${mount.name} is ${owners} equipment, which a ${ruleset.name} 'Mech may not use.`, { where, cite: row.cite }));
     }
-    if (record.techBase !== "mixed" && row.techBase !== record.techBase) {
+    if (record.techBase !== "mixed" && row.techBase !== record.techBase && !(record.techBase === "clan" && isStarLeagueTech(row.techBase, row.availability))) {
       out.push(
         finding("availability", "error", `${mount.name} is ${techBaseName(row.techBase)} equipment, which ${record.techBase === "clan" ? "a" : "an"} ${techBaseName(record.techBase)} 'Mech may not use.`, {
           where,
@@ -568,11 +591,41 @@ function availabilityCheck({ record, catalog }: CheckInput): Finding[] {
 }
 
 /** The era and the year disagree, or the body type is not one this tech base and time had. */
-function eraCheck({ record }: CheckInput): Finding[] {
+function eraCheck({ record, catalog }: CheckInput): Finding[] {
   const out: Finding[] = [];
-  const holds = eraOfYear(record.year, rulesetOf(record.editionId));
-  if (record.era !== undefined && record.year !== null && holds?.id !== record.era) {
-    out.push(finding("availability", "warning", `The era is ${record.era}, but the year ${record.year} is ${holds ? `in the ${holds.name} era` : "in no era we list"}. Choose the era again or change the year.`, { where: { field: "era" } }));
+  const ruleset = rulesetOf(record.editionId);
+  const holding = erasOfYear(record.year, ruleset);
+  // Above Introductory a year is needed: it sets the era and the dates the books give each item (IO:AE p.27). Introductory is 3025 technology
+  // (Total Warfare p.275), so it may go without one. A record with none still loads; this is its error.
+  const level = levelOfRecord(record, catalog);
+  if (ruleset.dated && record.year === null && level !== "introductory") {
+    out.push(finding("availability", "error", `This 'Mech needs a year at ${levelRow(level, ruleset).label} rules: the year sets the era, and the era and year decide the technology offered.`, { where: { field: "year" }, cite: IO_UTA }));
+  }
+  if (record.era !== undefined && record.year !== null && !holding.some((era) => era.id === record.era)) {
+    out.push(finding("availability", "warning", `The era is ${record.era}, but the year ${record.year} is ${holding[0] ? `in the ${holding[0].name} era` : "in no era we list"}. Choose the era again or change the year.`, { where: { field: "era" } }));
+  }
+  // Only an era the record actually names is held against its tech base: a record with none (an old save, a Mordel import, a year moved out of
+  // a picked sub-era) is in the era its tech base and year make it, a Clan unit in a Clan sub-era (IO:AE p.9).
+  const named = record.era === undefined ? undefined : [...ruleset.eras, ...(ruleset.subEras ?? [])].find((era) => era.id === record.era);
+  if (record.era !== undefined && named === undefined) {
+    out.push(finding("availability", "error", `The era "${record.era}" is not one we list; choose an era again.`, { where: { field: "era" } }));
+  }
+  if (named?.techBases && record.techBase !== "mixed" && !named.techBases.some((base) => base === record.techBase) && (record.year === null || holding.some((era) => era.id === named.id))) {
+    out.push(finding("availability", "error", `The era is ${named.name}, which uses ${named.techBases.map((base) => techBaseName(base)).join(" or ")} technology, but the tech base is ${techBaseName(record.techBase)}.`, { where: { field: "techBase" }, cite: named.cite }));
+  }
+  // In the Succession Wars the Clan and Inner Sphere technology bases do not cross, so Mixed technology has no place there (IO:AE p.9).
+  if (record.techBase === "mixed" && holding.length > 0 && holding.every((era) => era.noMixed === true)) {
+    out.push(finding("availability", "error", `Mixed technology is not used in ${record.year ?? "this era"}: in the Succession Wars the Clan and Inner Sphere technology bases do not cross.`, { where: { field: "techBase" }, cite: { book: "Interstellar Operations: Alternate Eras", page: 9 } }));
+  }
+  // An era with its own date limit (Clan Post-Reaving) leaves out what was introduced after it.
+  if (named && holding.some((era) => era.id === named.id)) {
+    const cap = named.introCaps?.[record.techBase];
+    for (const mount of record.mounts) {
+      const row = mount.part || mount.equipmentId === null ? undefined : catalog.rowFor(mount.equipmentId, record.editionId);
+      if (cap !== undefined && row && pastEraCap(record, row.availability)) {
+        out.push(finding("availability", "error", `${mount.name} was introduced after ${cap}, the latest date ${named.name} allows ${techBaseName(record.techBase)} technology.`, { where: { mountId: mount.id }, cite: named.cite }));
+      }
+    }
   }
   const type = mechTypeOf(record);
   const row = configurationOf(record.configuration);
@@ -614,6 +667,7 @@ function unmatchedCheck({ record, catalog }: CheckInput): Finding[] {
     ["heat sink type", chassis.heatSinks.type, HEAT_SINKS.types, "chassis.heatSinks"],
   ];
   for (const group of chassis.heatSinks.extra ?? []) parts.push(["extra heat sink type", group.type, HEAT_SINKS.types, "chassis.heatSinks"]);
+  for (const type of armorTypesUsed(record).slice(1)) parts.push(["patchwork armor type", type, ARMOR.types, "patchwork"]);
   for (const [label, key, table, field] of parts) {
     if (!own(table, key)) {
       out.push(finding("unmatched", "note", `The ${label} ${quoted(key)} is not in our tables, so what depends on it is not checked.`, { where: { field } }));
@@ -645,7 +699,7 @@ function configurationCheck({ record }: CheckInput): Finding[] {
   const row = configurationOf(record.configuration);
   if (!row) return [];
   const out: Finding[] = [];
-  if (record.configuration === "tripod" && record.techBase === "clan") {
+  if (record.configuration === "tripod" && record.techBase === "clan" && !isStarLeagueTech(row.techBase, row.availability)) {
     out.push(
       finding("configuration", "note", "The book gives the tripod's technology as Inner Sphere, and this record is Clan.", { where: { field: "configuration" }, cite: row.levelCite }),
     );
@@ -677,7 +731,7 @@ function lamCheck({ record, catalog }: CheckInput): Finding[] {
   const out: Finding[] = [];
   const cite = LAM.cite;
   const add = (message: string, where?: Finding["where"]) => out.push(finding("lam", "error", message, { where, cite }));
-  if (record.techBase !== "inner-sphere") add(`A Land-Air 'Mech uses Inner Sphere technology only; this one is ${techBaseName(record.techBase)}.`, { field: "techBase" });
+  if (record.techBase !== "inner-sphere" && !(record.techBase === "clan" && isStarLeagueTech("inner-sphere", configurationOf(record.configuration)?.availability))) add(`A Land-Air 'Mech uses Inner Sphere technology only; this one is ${techBaseName(record.techBase)}.`, { field: "techBase" });
   if (isPositive(record.tons) && record.tons > LAM.maxTons) add(`A Land-Air 'Mech weighs at most ${tons(LAM.maxTons)}; this one is ${tons(record.tons)}.`, { field: "tons" });
   const { engine, gyro, structure, armorType } = record.chassis;
   if (own(ENGINE_TYPES.types, engine.type) && !LAM.engines.includes(engine.type)) {
@@ -689,8 +743,11 @@ function lamCheck({ record, catalog }: CheckInput): Finding[] {
   if ((STRUCTURE_TYPES.types[structure]?.slots ?? 0) > 0 && own(STRUCTURE_TYPES.types, structure)) {
     add(`${partName(STRUCTURE_TYPES, structure)} structure takes critical slots, which a Land-Air 'Mech may not use.`, { field: "chassis.structure" });
   }
-  if ((ARMOR.types[armorType]?.slots ?? 0) > 0 && own(ARMOR.types, armorType)) {
-    add(`${partName(ARMOR, armorType)} armor takes critical slots, which a Land-Air 'Mech may not use.`, { field: "chassis.armorType" });
+  for (const type of armorTypesUsed(record)) {
+    const slots = type === armorType && !patchworkActive(record) ? ARMOR.types[type]?.slots : patchworkSlotsFor(type);
+    if ((slots ?? 0) > 0 && own(ARMOR.types, type)) {
+      add(`${partName(ARMOR, type)} armor takes critical slots, which a Land-Air 'Mech may not use.`, { field: type === armorType ? "chassis.armorType" : "patchwork" });
+    }
   }
   for (const arm of ["LA", "RA"] as const) {
     if (armsOf(record)?.[arm]?.lowerArm === false) add(`A Land-Air 'Mech must have both lower arm actuators; the ${locationName(arm)} has none.`, { location: arm });
@@ -742,13 +799,14 @@ function partsCheck({ record, catalog }: CheckInput): Finding[] {
     ["myomer", MYOMER, chassis.myomer, "chassis.myomer"],
   ];
   for (const group of chassis.heatSinks.extra ?? []) parts.push(["heat sink", HEAT_SINKS, group.type, "chassis.heatSinks"]);
+  for (const type of armorTypesUsed(record).slice(1)) parts.push(["armor", ARMOR, type, "patchwork"]);
   for (const [what, table, key, field] of parts) {
     const part = own(table.types, key) ? table.types[key] : undefined;
     if (!part) continue;
     const where = { field };
     const cite = part.cite ?? table.cite;
     const clanOnly = part.techBase === "clan" && record.techBase === "inner-sphere";
-    const isOnly = part.techBase === "inner-sphere" && record.techBase === "clan";
+    const isOnly = part.techBase === "inner-sphere" && record.techBase === "clan" && !isStarLeagueTech(part.techBase, partSpans(part, "inner-sphere"));
     if (clanOnly || isOnly) {
       out.push(finding("parts", "error", `${part.name} ${what} is ${clanOnly ? "Clan" : "Inner Sphere"} technology; this is ${record.techBase === "clan" ? "a Clan" : "an Inner Sphere"} 'Mech.`, { where, cite }));
     }
@@ -901,7 +959,7 @@ function unitTypeCheck({ record, catalog }: CheckInput): Finding[] {
 const LAUNCHER = /^(lrm|srm|mml)-\d+-(is|clan)$/;
 const MASC_IDS = ["masc-is", "masc-clan"];
 const ARTEMIS_IV = /^(prototype-)?artemis-iv-/;
-const GUARDIAN = /guardian-ecm/;
+const GUARDIAN = /guardian-ecm|angel-ecm|watchdog-cews/; // the Angel ECM (TO:AUE p.91) and the Watchdog CEWS (p.90) work in a stealth armor unit's Guardian's place
 const STEALTH_ECM_PAGE = 213;
 // A Gauss rifle, autocannon (any kind) or PPC: the weapons that keep the lower arm and hand off the arm they sit in on an OmniMech (TechManual p.57).
 const ARM_HEAVY = /(^|-)(gauss|ppc)(-|$)|(^|-)ac-\d|-x-ac-/;
@@ -979,10 +1037,79 @@ function myomerCheck({ record, catalog }: CheckInput): Finding[] {
   return [finding("myomer", "error", "MASC and Triple-Strength Myomer cannot be on the same 'Mech; remove one of them.", { where: { mountId: masc.mounts[0]?.mount.id, field: "chassis.myomer" }, cite: MYOMER.cite })];
 }
 
+/**
+ * Patchwork armor (TO:AUE p.189): only the types on the Patchwork Armor Table (and the IO:AE addendum) may be mixed, only in locations the
+ * body has, and not on an OmniMech (whose armor is fixed with the base chassis, a rule this tool does not model). A note says what stealth
+ * armor gives in a patchwork. The weight, slots, Battle Value and level are in the checks and sums for each.
+ */
+function patchworkCheck({ record, layout }: CheckInput): Finding[] {
+  if (!patchworkActive(record)) return [];
+  const out: Finding[] = [];
+  const cite = PATCHWORK_ARMOR.cite;
+  for (const [loc, type] of Object.entries(record.patchwork ?? {}) as [LocationCode, string | undefined][]) {
+    if (type === undefined || type === record.chassis.armorType) continue;
+    const where = { location: loc, field: "patchwork" };
+    if (own(ARMOR.types, type) && patchworkSlotsFor(type) === undefined) {
+      out.push(finding("patchwork", "error", `${partName(ARMOR, type)} armor is not on the Patchwork Armor Table, so it may not be mounted in the ${locationName(loc)}.`, { where, cite }));
+    }
+    if (layout.supported && !layout.locations.includes(loc)) {
+      out.push(finding("patchwork", "error", `This ${record.configuration} has no ${locationName(loc)}, but a patchwork armor type is set there.`, { where, cite }));
+    }
+  }
+  if (record.omni !== undefined) {
+    out.push(finding("patchwork", "warning", "Armor is fixed with an OmniMech's base chassis; this tool does not check patchwork armor on one.", { where: { field: "patchwork" }, cite }));
+  }
+  if (armorTypesUsed(record).includes("stealth")) {
+    out.push(finding("patchwork", "note", "Stealth armor installed as patchwork gives no stealth modifiers, and needs no Guardian ECM Suite.", { where: { field: "patchwork" }, cite }));
+  }
+  return out;
+}
+
+/** UMUs are mounted as jump jets are, and a unit with UMUs may mount no jump jets of any kind, though Mechanical Jump Boosters are allowed (TO:AUE printed p.104). */
+function umuCheck({ record, catalog }: CheckInput): Finding[] {
+  const items = equipmentItems(record, catalog).items;
+  const umus = items.filter((i) => stemOf(i.row.id) === "umu");
+  const jets = items.filter((i) => i.row.kind === "jump-jet" && stemOf(i.row.id) !== "umu");
+  if (umus.length === 0 || jets.length === 0) return [];
+  return [finding("umu", "error", `A 'Mech with UMUs may not mount jump jets of any kind; this one has ${jets.length} alongside ${umus.length} UMU${umus.length === 1 ? "" : "s"}. Mechanical Jump Boosters are allowed.`, { where: { mountId: jets[0]?.mount.id }, cite: { book: "Tactical Operations: Advanced Units and Equipment", page: 104 } })];
+}
+
+/**
+ * The Actuator Enhancement System (TO:AUE printed p.90, construction rules): one to a limb, the leg kind on every leg or none, no leg kind on a
+ * heavy or assault 'Mech (so no four-legged heavy or assault 'Mech has one at all), and none beside MASC, Triple-Strength Myomer or a Targeting Computer.
+ */
+function aesCheck({ record, catalog }: CheckInput): Finding[] {
+  const aes = record.mounts.flatMap((m) => {
+    const id = rowOf(catalog, record, m)?.id ?? "";
+    return id.startsWith("aes-arm") || id.startsWith("aes-leg") ? [{ mount: m, leg: id.startsWith("aes-leg") }] : [];
+  });
+  if (aes.length === 0) return [];
+  const out: Finding[] = [];
+  const cite = { book: "Tactical Operations: Advanced Units and Equipment", page: 90 };
+  const places = new Set<string>();
+  for (const { mount } of aes) {
+    if (mount.location === null) continue;
+    if (places.has(mount.location)) out.push(finding("aes", "error", `The ${locationName(mount.location)} has more than one AES; the book allows one to a limb.`, { where: { mountId: mount.id, location: mount.location }, cite }));
+    places.add(mount.location);
+  }
+  const legs = (Object.keys(configurationOf(record.configuration)?.size ?? {}) as LocationCode[]).filter((loc) => ["LL", "RL", "CL", "FLL", "FRL", "RLL", "RRL"].includes(loc));
+  const legAes = aes.filter((a) => a.leg);
+  if (legAes.length > 0) {
+    const bare = legs.filter((loc) => !legAes.some((a) => a.mount.location === loc));
+    if (bare.length > 0) out.push(finding("aes", "error", `A leg AES must be on every leg; the ${bare.map(locationName).join(", ")} ${bare.length === 1 ? "has" : "have"} none.`, { where: { location: bare[0] }, cite }));
+    if (record.tons >= 60) out.push(finding("aes", "error", `A heavy or assault 'Mech (60 tons and up) cannot mount a leg AES; this one is ${tons(record.tons)}.`, { where: { mountId: legAes[0]?.mount.id }, cite }));
+  }
+  const items = equipmentItems(record, catalog).items;
+  const clash = [mascOf(record, items).mounts.length > 0 ? "MASC" : "", tsmOf(record, items) !== undefined ? "Triple-Strength Myomer" : "", items.some((i) => stemOf(i.row.id) === "targeting-computer") ? "a Targeting Computer" : "", items.some((i) => stemOf(i.row.id) === "industrial-tsm") ? "Industrial Triple-Strength Myomer" : ""].filter(Boolean);
+  if (clash.length > 0) out.push(finding("aes", "error", `AES is incompatible with ${clash.join(" and ")}, which this 'Mech also has.`, { where: { mountId: aes[0]?.mount.id }, cite }));
+  return out;
+}
+
 /** Stealth armor needs a Guardian ECM Suite on the same 'Mech (TechManual p.56 table note, p.213). A prototype Guardian counts. */
 function stealthCheck({ record }: CheckInput): Finding[] {
-  if (record.chassis.armorType !== "stealth" || record.mounts.some((m) => GUARDIAN.test(m.equipmentId ?? ""))) return [];
-  return [finding("stealth", "error", "Stealth armor needs a Guardian ECM Suite on the same 'Mech, and none is mounted.", { where: { field: "chassis.armorType" }, cite: tm(STEALTH_ECM_PAGE) })];
+  // Stealth armor installed as patchwork gives no stealth modifiers (TO:AUE p.189), so it asks for no ECM Suite either.
+  if (record.chassis.armorType !== "stealth" || patchworkActive(record) || record.mounts.some((m) => GUARDIAN.test(m.equipmentId ?? ""))) return [];
+  return [finding("stealth", "error", "Stealth armor needs a Guardian ECM Suite (or an Angel ECM Suite or Watchdog CEWS, which work in its place) on the same 'Mech, and none is mounted.", { where: { field: "chassis.armorType" }, cite: tm(STEALTH_ECM_PAGE) })];
 }
 
 /** Clan CASE belongs to a Clan internal structure, where it is automatic (TechManual p.210), or to a FrankenMech on Clan parts. An explicit Clan CASE
@@ -1209,6 +1336,9 @@ export const CHECKS: Check[] = [
   { id: "artemis", editions: "all", run: artemisCheck },
   { id: "myomer", editions: "all", run: myomerCheck },
   { id: "stealth", editions: "all", run: stealthCheck },
+  { id: "patchwork", editions: "all", run: patchworkCheck },
+  { id: "aes", editions: "all", run: aesCheck },
+  { id: "umu", editions: "all", run: umuCheck },
   { id: "clan-case", editions: "all", run: clanCaseCheck },
   { id: "split", editions: "all", run: splitCheck },
 ];

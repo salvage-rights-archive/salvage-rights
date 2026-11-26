@@ -37,7 +37,7 @@ import {
 import type { BvGroup, BvOptions } from "../data/bv";
 import { clanStructure } from "./case";
 import { physicalDamage } from "./formulas";
-import { arcLocation, industrialRulesOf, mountParts, totalHeatSinks, walkMP } from "./mech";
+import { arcLocation, armorTypeAt, armorTypesUsed, industrialRulesOf, mountParts, patchworkActive, totalHeatSinks, walkMP } from "./mech";
 import type { LocationCode, MechRecord, Mount } from "./mech";
 import type { Catalog, EquipmentRow } from "./catalog";
 import { armorPoints, equipmentItems, heatSinkCapacity, jumpMP as jumpJets, mascOf, movementPenalty, own, roundHalfUp, stemOf, structureTotal, tidy, tsmOf } from "./walk";
@@ -195,7 +195,8 @@ export function battleValue(record: MechRecord, catalog: Catalog, pilot: PilotSk
   const binTons = (tons: number | undefined) => (tons !== undefined && tons > 0 ? tons : 1);
   const isLam = record.configuration === "lam" || record.configuration === "bimodal-lam";
   const standardLam = record.configuration === "lam";
-  const stealth = chassis.armorType === "stealth";
+  const patchwork = patchworkActive(record);
+  const stealth = chassis.armorType === "stealth" && !patchwork; // stealth armor installed as patchwork gives no stealth modifiers (TO:AUE p.189)
   const tsm = tsmOf(record, items) !== undefined;
   const mascFound = mascOf(record, items);
   const masc = mascFound.mounts.length > 0; // a chassis that only names MASC has no MASC to run on: the mount is what counts (the placement check asks for it)
@@ -209,18 +210,20 @@ export function battleValue(record: MechRecord, catalog: Catalog, pilot: PilotSk
   // Shields take Walking MP away (Running follows from it, above) and hardened armor takes Running MP alone; the Defensive and Speed
   // Factors count the result (TO:AUE p. 192); a large shield's "no jumping" is not counted, the jump rating is used as normal (p. 193).
   const runMP = Math.max(0, (masc ? walk * 2 : Math.ceil(walkMax * 1.5)) - penalty.run); // MASC: double the Walking MP, Total Warfare p. 137; running: p. 53
-  const jumpMP = jumpJets(items);
+  // A UMU is calculated as if it were a jump jet (TO:AUE p.192, the BattleMech UMU System entry); the highest of the two movements counts.
+  const jumpMP = Math.max(jumpJets(items), items.filter((i) => BV_RULE_ITEMS.superCooledMyomer.umuIds.includes(i.row.id)).length);
   const improvedJets = has(IMPROVED_JUMP_JET_IDS);
   const cruise = jumpMP * LAM_BV.cruisePerJumpMP;
   const flank = Math.ceil(cruise * LAM_BV.flankFactor);
 
   // ---- Defensive Battle Rating ----------------------------------------------------------------------------------
-  const armorMod = own(ARMOR_BV_MODIFIER.values, chassis.armorType) ?? own(ADVANCED_BV_MODIFIERS.armor, chassis.armorType)?.value;
+  const armorModOf = (type: string) => own(ARMOR_BV_MODIFIER.values, type) ?? own(ADVANCED_BV_MODIFIERS.armor, type)?.value;
+  const armorMod = armorModOf(chassis.armorType);
   const structureMod = own(STRUCTURE_BV_MODIFIER.values, chassis.structure) ?? own(ADVANCED_BV_MODIFIERS.structure, chassis.structure)?.value;
   const engineMod = own(ENGINE_BV_MODIFIER.values, chassis.engine.type) ?? own(ADVANCED_BV_MODIFIERS.engine, chassis.engine.type)?.value;
   const gyroMod = own(GYRO_BV_MODIFIER.values, chassis.gyro);
   for (const [what, value, key] of [
-    ["armor type", armorMod, chassis.armorType],
+    ...armorTypesUsed(record).map((type) => ["armor type", armorModOf(type), type] as const),
     ["internal structure type", structureMod, chassis.structure],
     ["engine type", engineMod, chassis.engine.type],
     ["gyro type", gyroMod, chassis.gyro],
@@ -243,7 +246,18 @@ export function battleValue(record: MechRecord, catalog: Catalog, pilot: PilotSk
     const a = record.armor[loc];
     if (a) harjelArmor += (a.front + (a.rear ?? 0)) * (torsoCockpit && loc === "CT" ? TORSO_COCKPIT_BV.armorFactor : 1) * (multiplier - 1);
   }
-  const armor = (armorTotal + harjelArmor) * BV_METHOD.armorFactor * (armorMod ?? 1);
+  // Patchwork armor: the modified rating is worked out location by location and summed before the armor factor (TO:AUE p.194).
+  const patchworkArmor = (): number => {
+    let sum = 0;
+    for (const [loc, a] of Object.entries(record.armor) as [LocationCode, { front: number; rear?: number } | undefined][]) {
+      if (!a) continue;
+      const points = a.front + (a.rear ?? 0);
+      const cockpit = torsoCockpit && loc === "CT" ? TORSO_COCKPIT_BV.armorFactor : 1;
+      sum += (points * cockpit + points * cockpit * ((harjel.get(loc) ?? 1) - 1)) * (armorModOf(armorTypeAt(record, loc)) ?? 1);
+    }
+    return sum * BV_METHOD.armorFactor;
+  };
+  const armor = patchwork ? patchworkArmor() : (armorTotal + harjelArmor) * BV_METHOD.armorFactor * (armorMod ?? 1);
   const structureBv = structure * BV_METHOD.structureFactor * (structureMod ?? 1) * (engineMod ?? 1);
   const gyro = record.tons * (gyroMod ?? 1);
 
