@@ -9,7 +9,7 @@ import type { RulesLevel } from "../data/chassis";
 import { DEFAULT_AERO_EDITION, FIGHTER_ARMOR_TYPES, FIGHTER_FIGURES, aeroEditionName, aeroTypesFor, figureOf, kindFigureOf } from "../data/aero";
 import type { AeroTypeRow, FigureGroup, FighterKind } from "../data/aero";
 import { AERO_WEAPON_EDITIONS, aeroWeaponOffered } from "../data/aero-weapons";
-import { fighterArcs, fighterArmor, fighterArmorLimit, fighterHeat, fighterKind, fighterPartsNotOffered, fighterTally, engineRating, fuelPoints, locationsOf, wingsMatch, aeroLocationName } from "./aero";
+import { fighterArcs, fighterArmor, fighterArmorLimit, energyWeaponHeat, fighterHeat, fighterKind, fighterPartsNotOffered, fighterTally, engineRating, fuelPoints, locationsOf, wingsMatch, aeroLocationName } from "./aero";
 import type { AeroRecord } from "./aero";
 import { partPhase } from "./availability";
 import type { Catalog } from "./catalog";
@@ -61,7 +61,7 @@ const typeCheck: AeroCheck = {
     const out: AeroFinding[] = [];
     const where = { field: "tons" };
     // Small craft and DropShips wait for their checks (see typeReady in ui/aero/edit.ts); say so rather than read "no problems".
-    if (record.unitType === "small-craft" || record.unitType === "dropship") out.push({ check: "type", level: "note", message: `The checks for a ${row.label.toLowerCase()} are not built yet, so nothing here has been checked beyond its weight range.`, where: { field: "unitType" }, cite: row.cite });
+    if (record.unitType === "small-craft" || record.unitType === "dropship") out.push({ check: "type", level: "note", message: `The checks for a ${row.label.toLowerCase()} are not built yet, so nothing here has been checked beyond its weight range.`, where: { field: "unitType" } });
     if (min !== undefined && record.tons < min) out.push({ check: "type", level: "error", message: `At ${num(record.tons)} tons the unit is under the ${num(min)} tons ${edition} allows a ${row.label.toLowerCase()}.`, where, cite: row.cite });
     if (max !== undefined && record.tons > max) out.push({ check: "type", level: "error", message: `At ${num(record.tons)} tons the unit is over the ${num(max)} tons ${edition} allows a ${row.label.toLowerCase()}.`, where, cite: row.cite });
     if (step !== undefined && min !== undefined && tidy((record.tons - min) % step) !== 0) out.push({ check: "type", level: "warning", message: `${edition} builds a ${row.label.toLowerCase()} in steps of ${num(step)} tons; ${num(record.tons)} is not on a step.`, where, cite: row.cite });
@@ -167,6 +167,11 @@ const heatCheck: AeroCheck = {
   run({ record, catalog }) {
     if (!fighterKind(record) || record.mounts.length === 0) return [];
     const heat = fighterHeat(record);
+    // A conventional fighter makes heat only from its energy weapons, and its sinks must cover all of it.
+    if (fighterKind(record) === "conventional" && figureOf(FIGHTER_FIGURES.energyHeatSinks, record.editionId) !== undefined) {
+      const energy = energyWeaponHeat(record, catalog);
+      return energy > heat.capacity ? [{ check: "heat", level: "error", message: `The energy weapons make ${num(energy)} heat and the sinks take away ${num(heat.capacity)}: a conventional fighter needs sinks for all of it.`, where: { field: "heatSinks" }, ...withCite(pageOf(FIGHTER_FIGURES.energyHeatSinks, record.editionId)) }] : [];
+    }
     const generated = tidy(
       record.mounts.reduce((sum, m) => {
         const row = m.equipmentId === null ? undefined : catalog.byId(m.equipmentId);

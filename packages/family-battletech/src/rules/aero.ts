@@ -360,6 +360,16 @@ export function fighterArmor(record: AeroRecord): FighterArmor {
   return { bought, free, available, allocated, over: available === null ? null : allocated - available };
 }
 
+/** The heat of every energy weapon a fighter carries, read from the edition's own weapon table (an item the table does not list adds none). */
+export function energyWeaponHeat(record: AeroRecord, catalog: Catalog): number {
+  return tidy(
+    record.mounts.reduce((sum, mount) => {
+      const facts = mount.equipmentId === null ? undefined : mountFacts(mount, record.editionId, catalog);
+      return sum + (facts?.energy && mount.equipmentId !== null ? (aeroWeaponFigures(catalog, mount.equipmentId, record.editionId)?.heat ?? 0) : 0);
+    }, 0),
+  );
+}
+
 export interface FighterHeat {
   /** Sinks the engine gives free; none with an internal combustion engine. */
   free: number;

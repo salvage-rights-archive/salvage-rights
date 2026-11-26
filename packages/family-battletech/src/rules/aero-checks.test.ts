@@ -32,6 +32,14 @@ describe("aerospace rules check", () => {
     expect(kinds(checkAero(fighter(editionId, { ...sound, ...build }, mounts), catalog))).toContain(expected);
   });
 
+  it("a conventional fighter must carry sinks for its energy weapons (not its cannon) in the three later editions", () => {
+    for (const edition of ["aerotech2", "aerotech2-revised", "tw-tm-so"]) {
+      const lasers = fighter(edition, { ...sound, unitType: "conventional-fighter" }, [["NO", "large-laser-is"], ["NO", "large-laser-is"], ["NO", "ac-5-is"]]);
+      expect(checkAero(lasers, catalog).filter((f) => f.check === "heat" && f.level === "error"), edition).toHaveLength(1);
+      expect(checkAero({ ...lasers, heatSinks: { type: "single", count: 6 } }, catalog).filter((f) => f.check === "heat"), edition).toEqual([]);
+    }
+  });
+
   it("a fighter built under AeroTech and checked under AeroTech 2 lists the arc and armor findings", () => {
     const at1 = fighter("aerotech-1986", { ...sound, armor: { type: "standard", tons: 5, points: { CP: 10, EN: 10, FU: 20, NO: 20, LW: 10, RW: 10 } } }, [
       ["LW", "large-laser-is"], ["RW", "medium-laser-is"], ...Array.from({ length: 6 }, (): [string, string] => ["NO", "medium-laser-is"]),
