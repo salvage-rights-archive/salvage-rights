@@ -5,7 +5,8 @@ import type { Store } from "@salvage-rights/shared";
 import { currentEditionId } from "../../data/editions";
 import { AS_SOURCE_KINDS } from "../../rules/as-unit";
 import type { AsDamage, AsSpecial, AsUnit } from "../../rules/as-unit";
-import type { AsForce } from "../../rules/as-force";
+import type { AsForce, PlayFilter } from "../../rules/as-force";
+import { readFilter } from "../../rules/as-force";
 import { downloadJson, isPicture } from "../storage";
 
 export interface AsEntry {
@@ -35,6 +36,9 @@ export interface AsStorage {
   saveForce(force: AsForce): Promise<void>;
   rawForce(id: string): Promise<unknown>;
   removeForce(id: string): Promise<void>;
+  /** The year and tech base the player is picking units for. */
+  getFilter(): Promise<PlayFilter>;
+  setFilter(filter: PlayFilter): Promise<void>;
 }
 
 export interface AsUnitFile {
@@ -271,6 +275,8 @@ function wrap(store: Store): AsStorage {
     },
     rawForce: (id) => store.get<unknown>(FORCE_PREFIX + id),
     removeForce: (id) => store.delete(FORCE_PREFIX + id),
+    getFilter: async () => readFilter(await store.get<unknown>("as-play-filter")),
+    setFilter: (filter) => store.set("as-play-filter", filter),
   };
 }
 

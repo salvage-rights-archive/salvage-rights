@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { duplicateForce, forceTotals, newAsForce, pvStep, skillAdjustedPv } from "./as-force";
+import { duplicateForce, forceTotals, inPlay, newAsForce, pvStep, readFilter, skillAdjustedPv } from "./as-force";
 import { newAsUnit } from "./as-unit";
 import type { AsUnit } from "./as-unit";
 
@@ -43,5 +43,23 @@ describe("Alpha Strike force rules", () => {
     expect(copy.members).toEqual(force.members);
     copy.members[0]!.skill = 0;
     expect(force.members[0]?.skill).toBe(6);
+  });
+});
+
+describe("the play filter", () => {
+  const unit = (year: number | null | undefined, techBase?: AsUnit["techBase"]): AsUnit => ({ ...newAsUnit("u"), year, techBase });
+  it.each([
+    [unit(3050), { year: 3025 }, false],
+    [unit(3025), { year: 3025 }, true],
+    [unit(undefined), { year: 3025 }, true],
+    [unit(3000, "clan"), { techBase: "inner-sphere" as const }, false],
+    [unit(3000, "mixed"), { techBase: "inner-sphere" as const }, true],
+    [unit(3000, "inner-sphere"), {}, true],
+  ])("%#: picks or hides", (u, filter, shown) => {
+    expect(inPlay(u, filter)).toBe(shown);
+  });
+  it("reads a stored filter and drops what it does not know", () => {
+    expect(readFilter({ year: 3050.5, techBase: "both", extra: 1 })).toEqual({});
+    expect(readFilter({ year: 3050, techBase: "clan" })).toEqual({ year: 3050, techBase: "clan" });
   });
 });
