@@ -2,6 +2,7 @@
 // (for Undo and Redo), derives everything else from the current record, and hands each panel what it shows and an
 // `onEdit(change)` callback. Every edit goes through `editRecord`.
 import { editionName } from "../data/editions";
+import { baseOf, gameBase, gameOfPath, RULESETS } from "../data/rulesets";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import type { ChangeEvent, CSSProperties, ReactNode } from "react";
 import { Link, useBlocker, useLocation, useNavigate, useSearchParams } from "react-router";
@@ -51,7 +52,6 @@ export type Change = (draft: MechRecord) => void;
 export type OnEdit = (change: Change, field?: string) => void;
 
 const HISTORY_LIMIT = 100;
-const HOME = "/battletech/classic/home";
 
 // ---------------------------------------------------------------------------------------------------------------
 // Small shared pieces: the ids that findings and change markers point at, and the labelled fields.
@@ -434,7 +434,9 @@ export default function EditorPage() {
 function EditorLoader() {
   const [params] = useSearchParams();
   const id = params.get("id") ?? "";
-  const draftState = (useLocation().state as { draft?: unknown } | null)?.draft;
+  const location = useLocation();
+  const draftState = (location.state as { draft?: unknown } | null)?.draft;
+  const game = gameOfPath(location.pathname);
   const [loaded, setLoaded] = useState<Loaded>({ state: "loading" });
 
   useEffect(() => {
@@ -476,8 +478,8 @@ function EditorLoader() {
         <p>{loaded.state === "missing" ? "That 'Mech is not saved on this device." : `This saved 'Mech cannot be read. ${loaded.message}`}</p>
       )}
       <p>
-        <Link className="sr-action" to={HOME}>
-          Back to Classic BattleTech
+        <Link className="sr-action" to={`${baseOf(game)}/home`}>
+          Back to {RULESETS[game].name}
         </Link>
       </p>
     </div>
@@ -688,12 +690,13 @@ function Editor({ initial, unsaved, startAt, catalog, storage }: { initial: Doc;
         source.values.era !== undefined && `era ${source.values.era}`,
       ].filter(Boolean)
     : [];
+  const base = gameBase(record);
   const mark = (path: string) => changed.has(path);
   const notes = importNotes(useLocation().state);
   // Once a 'Mech opened for review is saved, its address names it, so a reload finds it.
   const savedId = unsaved && savedDoc !== undefined && !isChassis(savedDoc) ? savedDoc.id : undefined;
   useEffect(() => {
-    if (savedId !== undefined) void navigate(`/battletech/classic/editor?id=${encodeURIComponent(savedId)}`, { replace: true, state: { notes, saved: true } });
+    if (savedId !== undefined) void navigate(`${base}/editor?id=${encodeURIComponent(savedId)}`, { replace: true, state: { notes, saved: true } });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [savedId]);
   const notesId = useId();
@@ -729,7 +732,7 @@ function Editor({ initial, unsaved, startAt, catalog, storage }: { initial: Doc;
       <header className="bt-editor__header">
         <div className="bt-editor__title">
           {/* Leaving with unsaved changes asks first (the blocker below). */}
-          <Link className="bt-back" to={HOME}>
+          <Link className="bt-back" to={`${base}/home`}>
             <span aria-hidden="true">&larr; </span>Your 'Mechs
           </Link>
           <h1 tabIndex={-1}>{title || "Unnamed 'Mech"}</h1>
@@ -772,7 +775,7 @@ function Editor({ initial, unsaved, startAt, catalog, storage }: { initial: Doc;
             </button>
           )}
           {/* A navigation: leaving with unsaved changes asks first, and the sheet shows what is saved. */}
-          <Link className="bt-button bt-button--secondary" to={`/battletech/classic/sheet?id=${encodeURIComponent(chassis ? chassis.id : record.id)}${chassis ? `&c=${encodeURIComponent(activeId)}` : ""}`}>
+          <Link className="bt-button bt-button--secondary" to={`${base}/sheet?id=${encodeURIComponent(chassis ? chassis.id : record.id)}${chassis ? `&c=${encodeURIComponent(activeId)}` : ""}`}>
             Record sheet
           </Link>
           <button

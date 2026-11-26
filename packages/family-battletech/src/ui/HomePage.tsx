@@ -3,6 +3,7 @@ import type { ChangeEvent } from "react";
 import { Link, useNavigate } from "react-router";
 import { ENGINE_WEIGHTS, INTERNAL_STRUCTURE, MECH_TYPES } from "../data/chassis";
 import type { MechType } from "../data/chassis";
+import { baseOf } from "../data/rulesets";
 import { DEFAULT_EDITION, EDITIONS, bookName, editionName } from "../data/editions";
 import { configurationAvailable, configurationChoices, typeAvailable } from "../rules/availability";
 import { techBaseChoices, withLevel } from "../rules/levels";
@@ -18,13 +19,15 @@ import LevelSelect from "./editor/LevelSelect";
 import { OfficialBadge } from "./editor/Marks";
 import TypeSelect from "./editor/TypeSelect";
 import type { MechRecord, NewMechOptions } from "../rules/mech";
-import { MAX_LIBRARY_BYTES, STORAGE_READ_FAILED, STORAGE_WRITE_FAILED, downloadLibrary, downloadMech, downloadOmni, fromLibraryFile, fromMechFile, fromOmniFile, openFamilyStorage } from "./storage";
+import { MAX_LIBRARY_BYTES, STORAGE_READ_FAILED, STORAGE_WRITE_FAILED, downloadLibrary, downloadMech, downloadOmni, fileGame, fromLibraryFile, fromMechFile, fromOmniFile, openFamilyStorage, wrongGameMessage } from "./storage";
 import type { FamilyStorage, SavedEntry } from "./storage";
 import emptyBay from "../artwork/empty-bay.jpg";
 import GamePicture from "./GamePicture";
 import "./classic.scss";
 
 const MAX_IMPORT_BYTES = 1024 * 1024;
+/** This page lists the Classic designs only; Gothic ones are on the Gothic home. */
+const classicOnly = (entries: SavedEntry[]) => entries.filter((entry) => entry.game === "classic");
 // The choices a new 'Mech starts from, read from the book's own tables.
 const TONNAGES = Object.keys(INTERNAL_STRUCTURE.rows).map(Number);
 const MAX_RATING = Math.max(...Object.keys(ENGINE_WEIGHTS.rows).map(Number));
@@ -80,6 +83,8 @@ export default function HomePage() {
   const [problem, setProblem] = useState("");
   /** True after a vehicle file or an Alpha Strike text was picked here: the page then links to the Alpha Strike home. */
   const [offerAs, setOfferAs] = useState(false);
+  /** True after a Gothic file was picked here: the page then links to the Gothic home. */
+  const [offerGothic, setOfferGothic] = useState(false);
   const keepRef = useRef<HTMLButtonElement>(null);
   const openerRef = useRef<HTMLElement | null>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
@@ -120,7 +125,7 @@ export default function HomePage() {
         const s = await openFamilyStorage();
         setStorage(s);
         setEdition(await s.getEdition());
-        setEntries(await s.list());
+        setEntries(classicOnly(await s.list()));
       } catch {
         setProblem(STORAGE_READ_FAILED);
       }
@@ -137,7 +142,7 @@ export default function HomePage() {
     (entries.length === 0 ? emptyRef.current : headingRef.current)?.focus();
   }, [entries]);
 
-  const reload = (s: FamilyStorage) => attempt(STORAGE_READ_FAILED, async () => void setEntries(await s.list()));
+  const reload = (s: FamilyStorage) => attempt(STORAGE_READ_FAILED, async () => void setEntries(classicOnly(await s.list())));
 
   const current = EDITIONS.find((e) => e.id === edition);
   const bookLine = (["play", "construction"] as const)
@@ -212,6 +217,7 @@ export default function HomePage() {
     const chosen = input.files?.[0];
     if (!chosen || !storage) return;
     say("");
+    setOfferGothic(false);
     let message = "";
     if (chosen.size > MAX_LIBRARY_BYTES) {
       message = "That file is too large to be a 'Mech file.";
@@ -223,6 +229,11 @@ export default function HomePage() {
         message = chosen.size > MAX_IMPORT_BYTES ? "That file is too large to be a 'Mech file." : "That file is not a 'Mech file.";
       }
       const kindOf = typeof parsed === "object" && parsed !== null && "kind" in parsed ? parsed.kind : undefined;
+      const wrong = message ? undefined : wrongGameMessage("classic", fileGame(parsed));
+      if (wrong) {
+        message = wrong;
+        setOfferGothic(true);
+      }
       if (!message && kindOf !== "library" && chosen.size > MAX_IMPORT_BYTES) message = "That file is too large to be a 'Mech file.";
       if (!message && kindOf === "library") {
         const library = fromLibraryFile(parsed);
@@ -311,6 +322,13 @@ export default function HomePage() {
       <div role="alert" className="bt-problem">
         {problem}
       </div>
+      {offerGothic && (
+        <p>
+          <Link className="sr-action" to={`${baseOf("gothic")}/home`}>
+            Go to the Gothic home
+          </Link>
+        </p>
+      )}
       {offerAs && (
         <p>
           <Link className="sr-action" to="/battletech/alpha-strike/home">

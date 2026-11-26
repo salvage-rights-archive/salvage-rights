@@ -224,6 +224,17 @@ export async function saveAsUnit(page: Page, base: string, name: string, pv: num
 }
 
 export const ACES = "/battletech/aces-preview";
+/** Gothic's pages until the game turns ready (G-9); then "/battletech/gothic". */
+export const GOTHIC = "/battletech/gothic-preview";
+
+/** Starts from a box 'Mech on the Gothic home (nothing from the sheets but its figures); returns the editor's path with its id. */
+export async function startGothicBox(page: Page, base: string, name: string): Promise<string> {
+  await page.goto(`${base}${GOTHIC}/home`);
+  await page.getByRole("button", { name: `Start from ${name}` }).click();
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(name);
+  const editor = new URL(page.url());
+  return `${editor.pathname.replace(/^\/salvage-rights/, "")}${editor.search}`;
+}
 
 /** Opens a picker by its button, searches it and picks the entry whose name is given. */
 export async function pickToken(page: Page, opener: string, search: string, entry: string): Promise<void> {

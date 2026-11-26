@@ -28,6 +28,15 @@ const acesPreviewRoutes: FamilyRoute[] = [
   { path: "aces-preview/game", label: "Aces game", section: "workshop", load: () => import("./ui/aces/GamePage") },
 ];
 
+// Gothic's pages are written as the game's own routes. The host serves them only once the game is ready (G-9), so until then they are
+// also reachable as family routes under gothic-preview, where `gameBase` (data/rulesets.ts) sends every link.
+const gothicRoutes: FamilyRoute[] = [
+  { path: "home", label: "BattleTech: Gothic", section: "workshop", load: () => import("./ui/gothic/GothicHomePage") },
+  { path: "editor", label: "Gothic 'Mech editor", section: "workshop", load: () => import("./ui/EditorPage") },
+  { path: "sheet", label: "Gothic record sheet", section: "workshop", load: () => import("./ui/SheetPage") },
+];
+const gothicPreviewRoutes: FamilyRoute[] = gothicRoutes.map((route) => ({ ...route, path: `gothic-preview/${route.path}` }));
+
 function comingSoon(id: string, shortName: string, fullName: string): GameManifest {
   return { id, shortName, fullName, ready: false, routes: [], ...GAME_ART[id] };
 }
@@ -44,12 +53,12 @@ const manifest: FamilyManifest = {
     { id: "alpha-strike", shortName: "Alpha Strike", fullName: "BattleTech: Alpha Strike", ready: true, routes: alphaStrikeRoutes, ...GAME_ART["alpha-strike"] },
     comingSoon("aces", "Aces", "BattleTech: Aces"),
     comingSoon("aerotech", "AeroTech", "BattleTech: AeroTech"),
-    comingSoon("gothic", "Gothic", "BattleTech: Gothic"),
+    { id: "gothic", shortName: "Gothic", fullName: "BattleTech: Gothic", ready: false, routes: gothicRoutes, ...GAME_ART["gothic"] },
   ],
   unitTypes: (EDITIONS[0]?.unitTypes ?? []).filter((unit) => unit.ready), // the types the edition can build (data/editions.ts)
   eras: ERAS, // the Master Unit List's twelve (data/editions.ts)
   measures: ["hexes"],
-  routes: acesPreviewRoutes,
+  routes: [...acesPreviewRoutes, ...gothicPreviewRoutes],
   credits: {
     owner:
       // The non-affiliation notice fan projects for this game commonly carry, word for word, then two lines of our own.

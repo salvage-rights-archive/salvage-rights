@@ -89,8 +89,18 @@ export function rulesetOf(editionId: string | undefined): Ruleset {
   return RULESETS[game];
 }
 
-/** Where a record's pages live: `/battletech/classic` or `/battletech/gothic`. */
-export const gameBase = (record: { editionId: string }): string => `/battletech/${rulesetOf(record.editionId).game}`;
+/** Where Gothic's pages live. The host serves a game's own routes only once the game is ready, so until Gothic turns ready (G-9) they
+ * sit under a family route of their own, as Aces' do (ui/aces/routes.ts); G-9 changes this one value to "/battletech/gothic". */
+export const GOTHIC_BASE = "/battletech/gothic-preview";
+
+/** The pages' base address of a game. */
+export const baseOf = (game: GameId): string => (game === "gothic" ? GOTHIC_BASE : "/battletech/classic");
+
+/** Where a record's pages live: Classic's or Gothic's. */
+export const gameBase = (record: { editionId: string }): string => baseOf(rulesetOf(record.editionId).game);
+
+/** The game a page address belongs to: for pages that cannot read a record (a missing one) and still must link to the right home. */
+export const gameOfPath = (pathname: string): GameId => (/\/battletech\/gothic(-preview)?\//.test(pathname) ? "gothic" : "classic");
 
 const rank = (level: RulesLevel) => RULES_LEVELS.findIndex((row) => row.id === level);
 
