@@ -101,6 +101,13 @@ export const BOOKS: Record<string, BookDates> = {
   "Quick-Strike: Introductory 'Mech Cards": { printing: "2012 cards", printed: "2012-01", approx: true },
   "BattleTech Quick-Start Rules": { printing: "2021 rules", printed: "2021-01", approx: true },
   "Alpha Strike Companion": { printing: "first and only printing", printed: "2014-01", approx: true, errata: "v1.6", errataDated: "2022-12-06" },
+  // The AeroTech line. Each of these prints only a year, so the month is a placeholder (approx).
+  AeroTech: { printing: "FASA 1609", printed: "1986-01", approx: true },
+  BattleSpace: { printing: "FASA 1680", printed: "1993-01", approx: true },
+  "AeroTech 2": { printing: "FASA 1718, 2000 printing", printed: "2000-01", approx: true, errata: "v1.2", errataDated: "2003-01-11" },
+  "AeroTech 2: Revised Edition": { printing: "FanPro 35011", printed: "2004-01", approx: true },
+  "AeroTech 2: Record Sheets": { printing: "FanPro 10973", printed: "2002-01", approx: true },
+  "Strategic Operations: Advanced Aerospace Rules": { printing: "third printing", printed: "2021-01", approx: true, errata: "v5.0", errataDated: "2024-11-15" },
 };
 
 /** The later of a book's printing and errata dates; undefined for a book not in BOOKS. */
@@ -130,6 +137,12 @@ const PUBLISHERS: Record<string, string> = {
   "Quick-Strike: Introductory 'Mech Cards": "Catalyst Game Labs",
   "BattleTech Quick-Start Rules": "Catalyst Game Labs",
   "Alpha Strike Companion": "Catalyst Game Labs",
+  AeroTech: "FASA",
+  BattleSpace: "FASA",
+  "AeroTech 2": "FASA",
+  "AeroTech 2: Revised Edition": "FanPro",
+  "AeroTech 2: Record Sheets": "FanPro",
+  "Strategic Operations: Advanced Aerospace Rules": "Catalyst Game Labs",
 };
 
 /** A book's title with its publisher, as citations show it: `TechManual (Catalyst Game Labs)`. */
