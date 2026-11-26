@@ -115,6 +115,10 @@ function isArms(v: unknown): boolean {
   return v === undefined || (isObject(v) && Object.values(v).every((a) => isObject(a) && typeof a.lowerArm === "boolean" && typeof a.hand === "boolean"));
 }
 
+function isPatchwork(v: unknown): boolean {
+  return v === undefined || (isObject(v) && Object.values(v).every(isString));
+}
+
 /** The parts of a record the editor reads and the import baseline copies: everything but the identity and the source. */
 function isBody(v: Record<string, unknown>): boolean {
   const { name, armor, mounts, notes } = v;
@@ -133,7 +137,8 @@ function isBody(v: Record<string, unknown>): boolean {
     mounts.every(isMount) &&
     isObject(notes) &&
     Object.values(notes).every((n) => n === undefined || isString(n)) &&
-    isArms(v.arms)
+    isArms(v.arms) &&
+    isPatchwork(v.patchwork)
   );
 }
 
@@ -201,6 +206,7 @@ function isConfiguration(v: unknown): boolean {
     (v.year === undefined || v.year === null || isNumber(v.year)) &&
     (v.rulesLevel === undefined || isString(v.rulesLevel)) &&
     isArms(v.arms) &&
+    isPatchwork(v.patchwork) &&
     Array.isArray(v.mounts) &&
     v.mounts.every(isMount) &&
     (v.notes === undefined || (isObject(v.notes) && Object.values(v.notes).every((n) => n === undefined || isString(n)))) &&

@@ -12,7 +12,7 @@ import type { Catalog } from "../rules/catalog";
 import { runChecks } from "../rules/checks";
 import type { Finding } from "../rules/checks";
 import { changedSinceImport } from "../rules/mordel";
-import { ARM_FULL, bodyOf, configurationOf, donorTons, editRecord, layout as buildLayout, locationName, mechTypeOf, partMountBase, setConfiguration, setMyomer, structurePoints, weights as buildWeights } from "../rules/mech";
+import { ARM_FULL, armorTypeAt, bodyOf, configurationOf, donorTons, editRecord, layout as buildLayout, locationName, mechTypeOf, partMountBase, patchworkActive, patchworkSlotsFor, setConfiguration, setMyomer, structurePoints, weights as buildWeights } from "../rules/mech";
 import type { Layout, LocationCode, MechRecord } from "../rules/mech";
 import { configurationChoices, eraOfRecord, partChoices, setEra, setYear } from "../rules/availability";
 import type { PartKind } from "../rules/availability";
@@ -211,7 +211,7 @@ function AreaField({ id, label, value, onChange, changed }: { id: string; label:
   );
 }
 
-function SelectField({
+export function SelectField({
   id,
   label,
   value,
@@ -261,12 +261,86 @@ function SelectField({
 // ---------------------------------------------------------------------------------------------------------------
 
 const PART_TABLES = { structure: STRUCTURE_TYPES, armor: ARMOR } as const;
+const armorRow = (type: string) => (Object.hasOwn(ARMOR.types, type) ? ARMOR.types[type] : undefined);
 
 /** Sets the structure or armor type and brings that type's part-slot mounts to the count the type needs: surplus ones go
  * from the unplaced first, then from the highest slot; missing ones are added unplaced. One edit, so Undo is one step. */
 export function setPartType(draft: MechRecord, part: "structure" | "armor", type: string): void {
   if (part === "structure") draft.chassis.structure = type;
-  else draft.chassis.armorType = type;
+  else {
+    draft.chassis.armorType = type;
+    syncArmorMounts(draft);
+    return;
+  }
+  bringPartMounts(draft, part, type);
+}
+
+/** Sets one location's patchwork armor type (Tactical Operations: AUE p.189); the chassis' own type, or none, takes the choice away. One edit. */
+export function setPatchwork(draft: MechRecord, location: LocationCode, type: string | null): void {
+  const next = { ...draft.patchwork };
+  if (type === null || type === draft.chassis.armorType) delete next[location];
+  else next[location] = type;
+  if (Object.keys(next).length === 0) delete draft.patchwork;
+  else draft.patchwork = next;
+  syncArmorMounts(draft);
+}
+
+/**
+ * Brings the armor slot mounts to what the record's armor needs. One type all over: the type's slot count, as `bringPartMounts` does.
+ * Patchwork: each location's type takes its own slots in that location (the Patchwork Armor Table), so each slot mount is for a location
+ * (`armorFor`); a slot already placed stays where it sits if that location still wants it, an unplaced one goes to a location that does,
+ * and surplus ones go. Patchwork entries for a location the body lacks, or that match the chassis' type, are dropped.
+ */
+export function syncArmorMounts(draft: MechRecord): void {
+  const config = configurationOf(draft.configuration);
+  if (draft.patchwork) {
+    for (const loc of Object.keys(draft.patchwork) as LocationCode[]) {
+      const type = draft.patchwork[loc];
+      if (type === undefined || type === draft.chassis.armorType || (config && !(loc in config.size))) delete draft.patchwork[loc];
+    }
+    if (Object.keys(draft.patchwork).length === 0) delete draft.patchwork;
+  }
+  if (!patchworkActive(draft)) {
+    for (const m of draft.mounts) delete m.armorFor;
+    bringPartMounts(draft, "armor", draft.chassis.armorType);
+    return;
+  }
+  const wanted = new Map<LocationCode, number>();
+  for (const loc of config ? (Object.keys(config.size) as LocationCode[]) : []) {
+    const n = patchworkSlotsFor(armorTypeAt(draft, loc)) ?? 0;
+    if (n > 0) wanted.set(loc, n);
+  }
+  const have = new Map<LocationCode, number>();
+  const kept = new Set<string>();
+  const take = (m: MechRecord["mounts"][number], loc: LocationCode) => {
+    m.armorFor = loc;
+    kept.add(m.id);
+    have.set(loc, (have.get(loc) ?? 0) + 1);
+  };
+  const mine = draft.mounts.filter((m) => m.part === "armor");
+  for (const m of mine) if (m.location !== null && (wanted.get(m.location) ?? 0) > (have.get(m.location) ?? 0)) take(m, m.location);
+  for (const m of mine) {
+    if (kept.has(m.id) || m.location !== null) continue;
+    const loc = [...wanted.keys()].find((l) => (wanted.get(l) ?? 0) > (have.get(l) ?? 0));
+    if (loc) take(m, loc);
+  }
+  draft.mounts = draft.mounts.filter((m) => m.part !== "armor" || kept.has(m.id));
+  for (const [loc, n] of wanted) {
+    const row = armorRow(armorTypeAt(draft, loc));
+    for (let k = have.get(loc) ?? 0; k < n; k++) {
+      let id = "";
+      for (let i = 1; id === ""; i++) if (!draft.mounts.some((m) => m.id === `armor-${String(i)}`)) id = `armor-${String(i)}`;
+      draft.mounts.push({ id, equipmentId: null, part: "armor", name: row?.name ?? "Armor", techBase: partMountBase(row ?? {}, draft.techBase), location: null, slot: null, armorFor: loc });
+    }
+  }
+  for (const m of draft.mounts) {
+    const row = m.part === "armor" && m.armorFor !== undefined ? armorRow(armorTypeAt(draft, m.armorFor)) : undefined;
+    if (row) m.name = row.name;
+  }
+}
+
+/** One type all over: brings that type's part-slot mounts to the count it needs. */
+function bringPartMounts(draft: MechRecord, part: "structure" | "armor", type: string): void {
   const table = PART_TABLES[part].types;
   const row = Object.hasOwn(table, type) ? table[type] : undefined;
   if (!row) return;
@@ -941,7 +1015,7 @@ function Editor({ initial, unsaved, startAt, catalog, storage }: { initial: Doc;
                 options={configurationChoices(record, record.configuration)}
                 changed={mark("configuration")}
                 disabled={fixedHere}
-                onChange={(v) => { edit((d) => { setConfiguration(d, v); }); }}
+                onChange={(v) => { edit((d) => { setConfiguration(d, v); if (d.patchwork) syncArmorMounts(d); }); }}
               />
               <LevelSelect record={record} ruleset={ruleset} onChange={(level) => { edit((d) => void (d.rulesLevel = level)); }} />
               {(!gothic || open) && (

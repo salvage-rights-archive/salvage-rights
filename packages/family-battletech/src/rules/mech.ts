@@ -17,6 +17,7 @@ import {
   LAM,
   MECH_TYPES,
   MYOMER,
+  PATCHWORK_ARMOR,
   SHEET,
   STRUCTURE_TYPES,
   STRUCTURE_WEIGHT,
@@ -57,6 +58,7 @@ export interface Mount {
   id: string;
   equipmentId: string | null; // null: not in our table
   part?: "structure" | "armor"; // a slot taken by the structure or armor type, not by an equipment item
+  armorFor?: LocationCode; // with patchwork armor: the location whose armor type this slot is for, and where it has to sit
   name: string;
   techBase: TechBase;
   location: LocationCode | null;
@@ -175,6 +177,9 @@ export interface MechRecord {
     heatSinks: { type: string; count: number; extra?: { type: string; count: number }[] };
   };
   armor: Partial<Record<LocationCode, { front: number; rear?: number }>>;
+  /** Patchwork armor (Tactical Operations: AUE p.189): the armor type of each location that differs from `chassis.armorType`. Absent
+   * means one type all over, as in every record saved before the option existed. */
+  patchwork?: Partial<Record<LocationCode, string>>;
   /** Which arm actuators a biped's arm has. Absent (or an arm absent from it) means the lower arm and the hand are both there. */
   arms?: Partial<Record<"LA" | "RA", { lowerArm: boolean; hand: boolean }>>;
   mounts: Mount[];
@@ -187,7 +192,7 @@ export interface MechRecord {
 }
 
 /** What an importer or a book's data produced, kept so that "changed since" compares with it and not with a newer importer. */
-export type SourceBaseline = Pick<MechRecord, "name" | "notes" | "tons" | "year" | "techBase" | "configuration" | "chassis" | "armor" | "arms" | "mounts">;
+export type SourceBaseline = Pick<MechRecord, "name" | "notes" | "tons" | "year" | "techBase" | "configuration" | "chassis" | "armor" | "arms" | "patchwork" | "mounts">;
 
 /** A design imported from mordel.net. */
 export interface MordelSource {
@@ -291,6 +296,33 @@ export function configurationLabel(name: string): string {
  * no spread of its own for takes the biped's. */
 export function armorSpread(armor: ArmorType | undefined, configuration: string): Partial<Record<LocationCode, number>> | undefined {
   return armor?.slotsIn && (own(armor.slotsIn, configuration) ?? armor.slotsIn.biped);
+}
+
+/** The armor type a location wears: its patchwork choice, else the chassis' armor type (Tactical Operations: AUE p.189). */
+export function armorTypeAt(record: Pick<MechRecord, "chassis" | "patchwork">, location: LocationCode): string {
+  const choice = record.patchwork && own(record.patchwork, location) ? record.patchwork[location] : undefined;
+  return choice ?? record.chassis.armorType;
+}
+
+/** Whether any location wears another armor type than the chassis': only then do the patchwork weight, slot and Battle Value rules apply. */
+export const patchworkActive = (record: Pick<MechRecord, "chassis" | "patchwork">): boolean =>
+  Object.values(record.patchwork ?? {}).some((type) => type !== undefined && type !== record.chassis.armorType);
+
+/** Every armor type the record uses, the chassis' first. */
+export function armorTypesUsed(record: Pick<MechRecord, "chassis" | "patchwork">): string[] {
+  return [...new Set([record.chassis.armorType, ...Object.values(record.patchwork ?? {}).filter((t): t is string => t !== undefined)])];
+}
+
+/** The critical slots a location's armor type takes when armor is patchwork (the Patchwork Armor Table); undefined for a type the table does not list. */
+export function patchworkSlotsFor(type: string): number | undefined {
+  return own(PATCHWORK_ARMOR.slots, type);
+}
+
+/** The tons of armor in one location when armor is patchwork: its points times the type's weight per point (1 over its points per ton),
+ * rounded up to the half ton for the location. Null for a type we have no row for or points that are not a number. */
+export function patchworkTons(type: string, points: number): number | null {
+  const row = own(ARMOR.types, type);
+  return row && Number.isFinite(points) ? ceilHalf(points / (ARMOR.basePointsPerTon * row.multiplier)) : null;
 }
 
 /** The layout a configuration shares (a Land-Air 'Mech is a biped here); an unknown one is its own name. */
@@ -443,7 +475,12 @@ export function layout(record: MechRecord, factsOf: FactsOf): Layout {
     partSlots.push({ part: "structure", needed: structure.slots, present: record.mounts.filter((m) => m.part === "structure").length });
   }
   const armor = own(ARMOR.types, record.chassis.armorType);
-  if (armor) {
+  if (patchworkActive(record)) {
+    // Patchwork: each location's type takes its own slots in that location (the Patchwork Armor Table); a type the table lacks takes none.
+    const here = configurationOf(record.configuration);
+    const needed = (here ? (Object.keys(here.size) as LocationCode[]) : []).reduce((sum, loc) => sum + (patchworkSlotsFor(armorTypeAt(record, loc)) ?? 0), 0);
+    partSlots.push({ part: "armor", needed, present: record.mounts.filter((m) => m.part === "armor").length });
+  } else if (armor) {
     // A type with a place for each slot takes as many as the configuration's places add up to (a tripod's third leg takes some).
     const spread = armorSpread(armor, record.configuration);
     const needed = spread ? Object.values(spread).reduce((sum, n) => sum + n, 0) : armor.slots;
@@ -530,9 +567,15 @@ export function weights(record: MechRecord, factsOf: FactsOf): { lines: WeightLi
 
   const armorType = own(ARMOR.types, chassis.armorType);
   const points = Object.values(record.armor).reduce((sum, a) => sum + (a ? a.front + (a.rear ?? 0) : 0), 0);
+  // Patchwork armor weighs each location on its own, rounded up to the half ton there (Tactical Operations: AUE p.189).
+  const perLocation = patchworkActive(record)
+    ? (Object.entries(record.armor) as [LocationCode, { front: number; rear?: number } | undefined][]).map(([loc, a]) => patchworkTons(armorTypeAt(record, loc), a ? a.front + (a.rear ?? 0) : 0))
+    : undefined;
   lines.push({
     label: "Armor",
-    tons: armorType && Number.isFinite(points) ? ceilHalf(points / (ARMOR.basePointsPerTon * armorType.multiplier)) : null,
+    tons: perLocation
+      ? perLocation.some((t) => t === null) ? null : tidy(perLocation.reduce((sum: number, t) => sum + (t ?? 0), 0))
+      : armorType && Number.isFinite(points) ? ceilHalf(points / (ARMOR.basePointsPerTon * armorType.multiplier)) : null,
   });
 
   let energyTons = 0;

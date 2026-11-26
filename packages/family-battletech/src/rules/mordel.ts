@@ -668,6 +668,9 @@ export function changedSinceImport(record: MechRecord): Set<string> {
   for (const loc of new Set([...Object.keys(record.armor), ...Object.keys(was.armor)])) {
     differ(`armor.${loc}`, record.armor[loc as LocationCode], was.armor[loc as LocationCode]);
   }
+  for (const loc of new Set([...Object.keys(record.patchwork ?? {}), ...Object.keys(was.patchwork ?? {})])) {
+    differ(`patchwork.${loc}`, record.patchwork?.[loc as LocationCode], was.patchwork?.[loc as LocationCode]);
+  }
   for (const arm of ["LA", "RA"] as const) differ(`arms.${arm}`, armsOf(record)?.[arm] ?? ARM_FULL, armsOf(was)?.[arm] ?? ARM_FULL);
   const now = new Map(record.mounts.map((m) => [m.id, m]));
   for (const m of was.mounts) {

@@ -816,6 +816,55 @@ export const ARMOR: Sourced & { basePointsPerTon: number; types: Record<string, 
   },
 };
 
+/**
+ * Patchwork armor: a different armor type in each location, an Advanced construction option (Tactical Operations: AUE printed p.189,
+ * read against the page image). Its dates are the Construction Options row of Interstellar Operations: Alternate Eras (printed p.45):
+ * prototype "PS" (always, so `prototypeYear` is 0), production 3075, common ~3080. Before production it is Experimental (IO:AE printed
+ * p.27); from production, Advanced. Weight is the location's points times the type's tons per point (the Fractional Armor Table, printed
+ * p.188, which is 1 over the points per ton of the armor table), rounded up to the half ton for each location. `slots` is the space the
+ * Patchwork Armor Table gives each location that wears the type, the figure left of the slash (BattleMechs and Support Vehicles); the
+ * last four types are the Patchwork Armor Addendum (IO:AE printed p.82). A type with no entry (prototype ferro-fibrous, primitive,
+ * modular armor) is not offered. Stealth armor installed this way gives no stealth modifiers (the table's note).
+ */
+export const PATCHWORK_ARMOR: {
+  rulesLevel: RulesLevel;
+  availability: Span[];
+  prototypeYear: number;
+  cite: Cite;
+  availabilityCite: Cite;
+  addendumCite: Cite;
+  checked: Checked;
+  slots: Record<string, number>;
+} = {
+  rulesLevel: "advanced",
+  availability: [{ from: 3075 }],
+  prototypeYear: 0,
+  cite: { book: TO, page: 189 },
+  availabilityCite: { book: IO, page: 45 },
+  addendumCite: { book: IO, page: 82 },
+  checked: "page",
+  slots: {
+    standard: 0,
+    stealth: 2,
+    "light-ferro-fibrous": 1,
+    "ferro-fibrous": 2,
+    "ferro-fibrous-clan": 1,
+    "heavy-ferro-fibrous": 3,
+    industrial: 0,
+    commercial: 0,
+    "ferro-lamellor": 2,
+    hardened: 0,
+    "laser-reflective": 2,
+    "laser-reflective-clan": 1,
+    reactive: 2,
+    "reactive-clan": 1,
+    "anti-penetrative-ablation": 1,
+    "ballistic-reinforced": 2,
+    "heat-dissipating": 1,
+    "impact-resistant": 2,
+  },
+};
+
 // ---------------------------------------------------------------------------------------------------------------
 // Myomer enhancements (BattleMech MASC and TSM Table, printed p.52). MASC weighs a percentage of the 'Mech's tonnage
 // and takes the same number of slots (rounded normally); Triple-Strength Myomer weighs nothing and takes 6 slots,

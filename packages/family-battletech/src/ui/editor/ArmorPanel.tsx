@@ -3,7 +3,9 @@
 import { useState } from "react";
 import { ARMOR } from "../../data/chassis";
 import type { Catalog } from "../../rules/catalog";
-import { allocateArmor, armorPointsForTons, bodyOf, locationName, maxArmor } from "../../rules/mech";
+import { partChoices } from "../../rules/availability";
+import { patchworkOffered } from "../../rules/levels";
+import { allocateArmor, armorPointsForTons, armorTypeAt, bodyOf, locationName, maxArmor, patchworkActive, patchworkSlotsFor } from "../../rules/mech";
 import type { Layout, LocationCode, MechRecord } from "../../rules/mech";
 import { dollBox } from "../doll/box";
 import MechDoll from "../doll/mech-doll";
@@ -11,7 +13,7 @@ import { PAPER } from "../doll/pen";
 import { STRUCTURE_SCALE, dollUnitFromRecord, recordCodeOf } from "../doll/layouts";
 import type { DollUse } from "../doll/layouts";
 import { shieldPoints } from "../../rules/shields";
-import { NumberField, fieldId } from "../EditorPage";
+import { NumberField, SelectField, fieldId, setPatchwork } from "../EditorPage";
 import type { OnEdit } from "../EditorPage";
 
 const WITH_REAR: string[] = ["CT", "LT", "RT"];
@@ -55,7 +57,8 @@ export default function ArmorPanel({
   const locations = (layout.supported ? layout.locations : Object.keys(record.armor)) as LocationCode[];
   const max = maxArmor(record);
   const points = Object.values(record.armor).reduce((sum, a) => sum + (a ? a.front + (a.rear ?? 0) : 0), 0);
-  const type = Object.hasOwn(ARMOR.types, record.chassis.armorType) ? (ARMOR.types[record.chassis.armorType]?.name ?? record.chassis.armorType) : record.chassis.armorType;
+  const patchwork = patchworkActive(record);
+  const type = patchwork ? "patchwork armor" : Object.hasOwn(ARMOR.types, record.chassis.armorType) ? (ARMOR.types[record.chassis.armorType]?.name ?? record.chassis.armorType) : record.chassis.armorType;
   const shields = shieldPoints(record, catalog);
   const unit = dollUnitFromRecord(record, shields);
   // A shield is a location on the doll with no field of its own: what it draws is said in words here.
@@ -157,17 +160,17 @@ export default function ArmorPanel({
           id="armor-tons"
           label="Armor tons"
           value={tons}
-          disabled={readOnly}
+          disabled={readOnly || patchwork}
           onValid={(value) => {
             setTonsTyped(value ?? 0);
           }}
-          after={<span className="bt-hint">{buyable === null ? "points unknown" : `= ${buyable} points`}</span>}
+          after={<span className="bt-hint">{patchwork ? "points per type vary: set each location" : buyable === null ? "points unknown" : `= ${buyable} points`}</span>}
         />
         <button
           type="button"
           id="armor-allocate"
           className="bt-button bt-button--secondary"
-          disabled={readOnly || buyable === null}
+          disabled={readOnly || patchwork || buyable === null}
           onClick={() => {
             onEdit((draft) => {
               draft.armor = allocateArmor(draft, buyable ?? 0);
@@ -194,6 +197,32 @@ export default function ArmorPanel({
           Allocate spreads the points of the tons above over the locations: each in proportion to its maximum, the head near 9, the torsos about 3 front to 1 rear. This spread is our own helper, not a book rule. Every figure can be edited afterwards.
         </p>
       </div>
+      {patchworkOffered(record) && (
+        <details className="bt-patchwork" open={patchwork || undefined}>
+          <summary>Patchwork armor</summary>
+          <p className="bt-hint">
+            {`A different armor type in each location (Tactical Operations: Advanced Units and Equipment, p. 189). Each location weighs its own armor, rounded up to the half ton, and its type takes its slots in that location. The armor points of one location are all of one type.`}
+          </p>
+          <div className="bt-grid">
+            {locations.map((location) => (
+              <SelectField
+                key={location}
+                id={`field-patchwork-${location}`}
+                label={`${locationName(location)} armor`}
+                value={armorTypeAt(record, location)}
+                options={partChoices("armor", record, armorTypeAt(record, location)).filter(([key]) => patchworkSlotsFor(key) !== undefined || key === armorTypeAt(record, location))}
+                changed={changed.has(`patchwork.${location}`)}
+                disabled={readOnly}
+                onChange={(value) => {
+                  onEdit((draft) => {
+                    setPatchwork(draft, location, value);
+                  });
+                }}
+              />
+            ))}
+          </div>
+        </details>
+      )}
       <div className="bt-armor">
         {unit ? (
           <div className="bt-armor__doll">{doll("armor", 1)}</div>

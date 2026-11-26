@@ -19,6 +19,7 @@ import {
   CLAN_TECHNOLOGY,
   MIXED_TECHNOLOGY,
   MYOMER,
+  PATCHWORK_ARMOR,
   SHEET,
   SHIELDS,
   STRUCTURE_TYPES,
@@ -31,7 +32,7 @@ import { locationsFor, mountableOn, mountsRequired, podMountable } from "./catal
 import { heatSinkMixAllowed, levelAtLeast, levelIn, levelItems, levelRow, mixedPhase } from "./levels";
 import { clanInTime, datesText, partIsPrototypeOnly, partPrototype } from "./time";
 import type { Catalog, EquipmentRow } from "./catalog";
-import { ARM_FULL, armorSpread, armsOf, canSplitBetween, configurationOf, donorTons, engineTons, freeHeatSinks, industrialRulesOf, layout as buildLayout, maxArmor, mechTypeOf, mountCanFireRear, slotsTaken, splitOf, structurePoints, walkMP, weights } from "./mech";
+import { ARM_FULL, armorSpread, armorTypeAt, armorTypesUsed, armsOf, canSplitBetween, configurationOf, donorTons, engineTons, freeHeatSinks, industrialRulesOf, layout as buildLayout, maxArmor, mechTypeOf, mountCanFireRear, patchworkActive, patchworkSlotsFor, slotsTaken, splitOf, structurePoints, walkMP, weights } from "./mech";
 import { locationName, type Layout, type LocationCode, type MechRecord, type Mount } from "./mech";
 import { mountedShields, missingActuators, shieldStats } from "./shields";
 import { equipmentItems, mascOf, movementPenalty, rowOf, stemOf, TSM_ROWS, tsmOf } from "./walk";
@@ -204,7 +205,25 @@ function slotsCheck({ record, layout }: CheckInput): Finding[] {
   }
   // An armor type with a place for each of its slots (stealth): the count in every location must match. A location short of
   // slots is not reported while some armor slot is still unplaced, since that one is already an error above.
-  const spread = armorSpread(own(ARMOR.types, record.chassis.armorType) ? ARMOR.types[record.chassis.armorType] : undefined, record.configuration);
+  const patchwork = patchworkActive(record);
+  // Patchwork armor: each location's own type takes its own slots in that location (the Patchwork Armor Table, TO:AUE p.189).
+  if (patchwork) {
+    const armorMounts = record.mounts.filter((m) => m.part === "armor");
+    const anyUnplaced = armorMounts.some((m) => !m.location);
+    for (const loc of layout.locations) {
+      const type = armorTypeAt(record, loc);
+      const wanted = patchworkSlotsFor(type) ?? 0;
+      const found = armorMounts.filter((m) => m.location === loc).length;
+      if (found === wanted || (found < wanted && anyUnplaced)) continue;
+      out.push(
+        finding("slots", "error", `${partName(ARMOR, type)} patchwork armor takes ${wanted} slot${wanted === 1 ? "" : "s"} in the ${locationName(loc)}; the record places ${found}.`, {
+          where: { location: loc, field: "patchwork" },
+          cite: PATCHWORK_ARMOR.cite,
+        }),
+      );
+    }
+  }
+  const spread = patchwork ? undefined : armorSpread(own(ARMOR.types, record.chassis.armorType) ? ARMOR.types[record.chassis.armorType] : undefined, record.configuration);
   if (spread) {
     const armorMounts = record.mounts.filter((m) => m.part === "armor");
     const anyUnplaced = armorMounts.some((m) => !m.location);
@@ -268,7 +287,7 @@ function armorCheck({ record, layout, catalog }: CheckInput): Finding[] {
   const line = weights(record, catalog.factsOf).lines.find((l) => l.label === "Armor");
   if (line && line.tons !== null && Number.isFinite(line.tons)) {
     out.push(
-      finding("armor", "note", `The armor points carried need ${tons(line.tons)} of ${partName(ARMOR, record.chassis.armorType)} armor.`, {
+      finding("armor", "note", `The armor points carried need ${tons(line.tons)} of ${patchworkActive(record) ? "patchwork" : partName(ARMOR, record.chassis.armorType)} armor.`, {
         where: { field: "chassis.armorType" },
         cite: tm(PAGE.armorTons),
       }),
@@ -614,6 +633,7 @@ function unmatchedCheck({ record, catalog }: CheckInput): Finding[] {
     ["heat sink type", chassis.heatSinks.type, HEAT_SINKS.types, "chassis.heatSinks"],
   ];
   for (const group of chassis.heatSinks.extra ?? []) parts.push(["extra heat sink type", group.type, HEAT_SINKS.types, "chassis.heatSinks"]);
+  for (const type of armorTypesUsed(record).slice(1)) parts.push(["patchwork armor type", type, ARMOR.types, "patchwork"]);
   for (const [label, key, table, field] of parts) {
     if (!own(table, key)) {
       out.push(finding("unmatched", "note", `The ${label} ${quoted(key)} is not in our tables, so what depends on it is not checked.`, { where: { field } }));
@@ -689,8 +709,11 @@ function lamCheck({ record, catalog }: CheckInput): Finding[] {
   if ((STRUCTURE_TYPES.types[structure]?.slots ?? 0) > 0 && own(STRUCTURE_TYPES.types, structure)) {
     add(`${partName(STRUCTURE_TYPES, structure)} structure takes critical slots, which a Land-Air 'Mech may not use.`, { field: "chassis.structure" });
   }
-  if ((ARMOR.types[armorType]?.slots ?? 0) > 0 && own(ARMOR.types, armorType)) {
-    add(`${partName(ARMOR, armorType)} armor takes critical slots, which a Land-Air 'Mech may not use.`, { field: "chassis.armorType" });
+  for (const type of armorTypesUsed(record)) {
+    const slots = type === armorType && !patchworkActive(record) ? ARMOR.types[type]?.slots : patchworkSlotsFor(type);
+    if ((slots ?? 0) > 0 && own(ARMOR.types, type)) {
+      add(`${partName(ARMOR, type)} armor takes critical slots, which a Land-Air 'Mech may not use.`, { field: type === armorType ? "chassis.armorType" : "patchwork" });
+    }
   }
   for (const arm of ["LA", "RA"] as const) {
     if (armsOf(record)?.[arm]?.lowerArm === false) add(`A Land-Air 'Mech must have both lower arm actuators; the ${locationName(arm)} has none.`, { location: arm });
@@ -742,6 +765,7 @@ function partsCheck({ record, catalog }: CheckInput): Finding[] {
     ["myomer", MYOMER, chassis.myomer, "chassis.myomer"],
   ];
   for (const group of chassis.heatSinks.extra ?? []) parts.push(["heat sink", HEAT_SINKS, group.type, "chassis.heatSinks"]);
+  for (const type of armorTypesUsed(record).slice(1)) parts.push(["armor", ARMOR, type, "patchwork"]);
   for (const [what, table, key, field] of parts) {
     const part = own(table.types, key) ? table.types[key] : undefined;
     if (!part) continue;
@@ -979,9 +1003,38 @@ function myomerCheck({ record, catalog }: CheckInput): Finding[] {
   return [finding("myomer", "error", "MASC and Triple-Strength Myomer cannot be on the same 'Mech; remove one of them.", { where: { mountId: masc.mounts[0]?.mount.id, field: "chassis.myomer" }, cite: MYOMER.cite })];
 }
 
+/**
+ * Patchwork armor (TO:AUE p.189): only the types on the Patchwork Armor Table (and the IO:AE addendum) may be mixed, only in locations the
+ * body has, and not on an OmniMech (whose armor is fixed with the base chassis, a rule this tool does not model). A note says what stealth
+ * armor gives in a patchwork. The weight, slots, Battle Value and level are in the checks and sums for each.
+ */
+function patchworkCheck({ record, layout }: CheckInput): Finding[] {
+  if (!patchworkActive(record)) return [];
+  const out: Finding[] = [];
+  const cite = PATCHWORK_ARMOR.cite;
+  for (const [loc, type] of Object.entries(record.patchwork ?? {}) as [LocationCode, string | undefined][]) {
+    if (type === undefined || type === record.chassis.armorType) continue;
+    const where = { location: loc, field: "patchwork" };
+    if (own(ARMOR.types, type) && patchworkSlotsFor(type) === undefined) {
+      out.push(finding("patchwork", "error", `${partName(ARMOR, type)} armor is not on the Patchwork Armor Table, so it may not be mounted in the ${locationName(loc)}.`, { where, cite }));
+    }
+    if (layout.supported && !layout.locations.includes(loc)) {
+      out.push(finding("patchwork", "error", `This ${record.configuration} has no ${locationName(loc)}, but a patchwork armor type is set there.`, { where, cite }));
+    }
+  }
+  if (record.omni !== undefined) {
+    out.push(finding("patchwork", "warning", "Armor is fixed with an OmniMech's base chassis; this tool does not check patchwork armor on one.", { where: { field: "patchwork" }, cite }));
+  }
+  if (armorTypesUsed(record).includes("stealth")) {
+    out.push(finding("patchwork", "note", "Stealth armor installed as patchwork gives no stealth modifiers, and needs no Guardian ECM Suite.", { where: { field: "patchwork" }, cite }));
+  }
+  return out;
+}
+
 /** Stealth armor needs a Guardian ECM Suite on the same 'Mech (TechManual p.56 table note, p.213). A prototype Guardian counts. */
 function stealthCheck({ record }: CheckInput): Finding[] {
-  if (record.chassis.armorType !== "stealth" || record.mounts.some((m) => GUARDIAN.test(m.equipmentId ?? ""))) return [];
+  // Stealth armor installed as patchwork gives no stealth modifiers (TO:AUE p.189), so it asks for no ECM Suite either.
+  if (record.chassis.armorType !== "stealth" || patchworkActive(record) || record.mounts.some((m) => GUARDIAN.test(m.equipmentId ?? ""))) return [];
   return [finding("stealth", "error", "Stealth armor needs a Guardian ECM Suite on the same 'Mech, and none is mounted.", { where: { field: "chassis.armorType" }, cite: tm(STEALTH_ECM_PAGE) })];
 }
 
@@ -1209,6 +1262,7 @@ export const CHECKS: Check[] = [
   { id: "artemis", editions: "all", run: artemisCheck },
   { id: "myomer", editions: "all", run: myomerCheck },
   { id: "stealth", editions: "all", run: stealthCheck },
+  { id: "patchwork", editions: "all", run: patchworkCheck },
   { id: "clan-case", editions: "all", run: clanCaseCheck },
   { id: "split", editions: "all", run: splitCheck },
 ];

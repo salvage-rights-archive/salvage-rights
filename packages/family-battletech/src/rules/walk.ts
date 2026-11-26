@@ -4,8 +4,8 @@
 import { ARMOR } from "../data/chassis";
 import { SHEET_HEAT_SINKS } from "../data/sheet";
 import type { Catalog, EquipmentRow } from "./catalog";
-import { slotsTaken, structurePoints, weights } from "./mech";
-import type { MechRecord, Mount } from "./mech";
+import { armorTypeAt, configurationOf, patchworkActive, slotsTaken, structurePoints, weights } from "./mech";
+import type { LocationCode, MechRecord, Mount } from "./mech";
 import { shieldMovement } from "./shields";
 
 /** A lookup that only sees a table's own keys, so a key like "constructor" is unknown rather than a surprise. */
@@ -59,7 +59,10 @@ export interface MovementPenalty {
 }
 export function movementPenalty(record: MechRecord, catalog: Catalog): MovementPenalty {
   const shield = shieldMovement(record, catalog);
-  const armor = own(ARMOR.types, record.chassis.armorType);
+  // Hardened armor takes a Running MP away; patchwork armor only when a leg wears it (TO:AUE p.189, note under the Patchwork Armor Table).
+  const legs = (Object.keys(configurationOf(record.configuration)?.size ?? {}) as LocationCode[]).filter((loc) => ["LL", "RL", "CL", "FLL", "FRL", "RLL", "RRL"].includes(loc));
+  const worn = patchworkActive(record) && legs.length > 0 ? legs.map((loc) => armorTypeAt(record, loc)) : [record.chassis.armorType];
+  const armor = worn.map((type) => own(ARMOR.types, type)).find((row) => row?.movement !== undefined) ?? own(ARMOR.types, worn[0] ?? record.chassis.armorType);
   const armorRun = Math.max(0, -(armor?.movement?.run ?? 0));
   const because: string[] = [];
   const short: string[] = [];
