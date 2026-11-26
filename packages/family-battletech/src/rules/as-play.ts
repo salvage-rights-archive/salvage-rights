@@ -67,7 +67,7 @@ const cite = (pages: string): string => `Alpha Strike: Commander's Edition, ${pa
 
 const has = (card: AsCard, code: string): boolean => card.specials.some((s) => s.code === code);
 const typeOf = (card: AsCard) => AS_UNIT_TYPES.find((t) => t.code === card.type);
-const tracksHeat = (card: AsCard): boolean => typeOf(card)?.heat === true;
+export const tracksHeat = (card: AsCard): boolean => typeOf(card)?.heat === true;
 const isVehicle = (card: AsCard): boolean => card.type === "CV" || card.type === "SV";
 const isBuilding = (card: AsCard): boolean => card.type === "BD";
 
