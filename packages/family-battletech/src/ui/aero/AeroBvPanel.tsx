@@ -65,7 +65,7 @@ function CostBreakdown({ cost }: { cost: AeroCost }) {
       <Rows
         rows={[
           ["Subtotal", number(cost.subtotal)],
-          ["Final multiplier", number(cost.multiplier)],
+          [cost.multiplierFor === "" ? "Final multiplier" : `Final multiplier (${cost.multiplierFor})`, number(cost.multiplier)],
         ]}
       />
     </>
@@ -139,7 +139,7 @@ function Figures({ bv, cost }: { bv: AeroBv; cost: AeroCost | null }) {
           </Disclosure>
         </>
       ) : (
-        // JumpShips, WarShips and stations: the Battle Value alone is not the whole answer.
+        // A unit of a type this edition prices not at all (an unknown type): the Battle Value stands alone.
         <p className="bt-calc__differs" data-testid="cost-total">
           Cost: not worked out yet
         </p>
