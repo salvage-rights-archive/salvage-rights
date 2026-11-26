@@ -16,7 +16,7 @@ export function GlossSwitch({ id }: { id: string }) {
   return (
     <label className="as-aids__flag" htmlFor={id}>
       <input id={id} type="checkbox" checked={glosses} onChange={(event) => { setSpecialSettings({ glosses: event.target.checked }); }} />
-      Show our short notes on special abilities
+      Show our short notes
     </label>
   );
 }

@@ -27,7 +27,7 @@ describe("Special abilities", () => {
     // HPG is optional and the level is Standard, but the link asked for it, so it is listed and says why.
     expect(document.getElementById("special-HPG")?.textContent).toContain("Listed because you followed a link");
     expect(document.getElementById("special-ABA")).toBeNull();
-    await user.click(screen.getAllByLabelText("Show our short notes on special abilities")[0]!);
+    await user.click(screen.getAllByLabelText("Show our short notes")[0]!);
     expect(document.getElementById("special-AMP")?.textContent).toContain("naval");
     await user.selectOptions(screen.getByLabelText("Rules level"), "advanced");
     expect(document.getElementById("special-ABA")).toBeTruthy();
@@ -45,7 +45,7 @@ describe("Special abilities", () => {
     expect(screen.getByText("p. 78")).toBeTruthy();
     expect(screen.getByText("QQ1")).toBeTruthy();
     expect(screen.queryByText(/with a spotter/)).toBeNull();
-    await user.click(screen.getByLabelText("Show our short notes on special abilities"));
+    await user.click(screen.getByLabelText("Show our short notes"));
     expect(screen.getByText(/with a spotter/)).toBeTruthy();
   });
 });

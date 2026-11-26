@@ -32,7 +32,7 @@ test("a unit's specials link to the aids page, the notes switch adds our line, a
   await expect(card.getByRole("link")).toHaveCount(3);
   await expect(card).toContainText("p. 78");
   await expect(card).not.toContainText("with a spotter");
-  await card.getByLabel("Show our short notes on special abilities").check();
+  await card.getByLabel("Show our short notes").check();
   await expect(card).toContainText("with a spotter");
 
   // HPG is an optional ability and the aids page starts at Standard: the link still lands on its entry.
