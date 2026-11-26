@@ -112,6 +112,7 @@ function AutomatedAttack({ game, records, apply, unit, headingRef }: Pick<PanelP
             damage={damage}
             minimal={minimal}
             ov={decision.ov}
+            ovAdds={kind === "weapon" ? wd.ovAdds : 0}
             attackerOnHit={hit?.toAttackerOnHit ?? 0}
             attackerOnMiss={hit?.toAttackerOnMiss ?? 0}
             apply={apply}

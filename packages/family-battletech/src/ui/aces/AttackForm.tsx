@@ -69,13 +69,15 @@ interface RollBlockProps {
   minimal?: boolean;
   /** The Overheat points used, which heat the unit in the End Phase. */
   ov: number;
+  /** The OV points that add damage at this range; a failed 0* roll leaves these standing. */
+  ovAdds?: number;
   attackerOnHit?: number;
   attackerOnMiss?: number;
   apply: Apply;
 }
 
 /** The roll and its result, then Record: the damage is staged on the target and the attacker is done. */
-export function RollBlock({ game, attacker, targetId, kind, physical, tn, damage, minimal = false, ov, attackerOnHit = 0, attackerOnMiss = 0, apply }: RollBlockProps) {
+export function RollBlock({ game, attacker, targetId, kind, physical, tn, damage, minimal = false, ov, ovAdds = 0, attackerOnHit = 0, attackerOnMiss = 0, apply }: RollBlockProps) {
   const multi = game.rules.multipleAttackRolls && kind !== "physical";
   const rolls = Math.max(1, Math.ceil(damage));
   const target = unitById(game, targetId);
@@ -85,23 +87,28 @@ export function RollBlock({ game, attacker, targetId, kind, physical, tn, damage
   const [pipped, setPipped] = useState(false);
   const [damageText, setDamageText] = useState("");
   const [successText, setSuccessText] = useState("");
+  const [zeroHit, setZeroHit] = useState(false);
   const [twelve, setTwelve] = useState(false);
   const [dieText, setDieText] = useState("");
   const [rear, setRear] = useState(false);
 
   const roll = Number.parseInt(rollText, 10);
-  const successes = Number.parseInt(successText, 10);
+  // A 0* hit with OV under Multiple Attack Rolls: the 0* point and each OV point have their own attack roll (ASCE p. 175), so we ask for them apart.
+  const split = multi && minimal && ovAdds > 0;
+  const typedHits = Number.parseInt(successText, 10);
+  const successes = split ? typedHits + (zeroHit ? 1 : 0) : typedHits;
   const die = Number.parseInt(dieText, 10);
   const rollOk = validRoll(roll);
-  const successOk = Number.isInteger(successes) && successes >= 0 && successes <= rolls;
+  const successOk = Number.isInteger(typedHits) && typedHits >= 0 && typedHits <= (split ? ovAdds : rolls);
   const hit = multi ? successOk && successes > 0 : rollOk && rollHits(tn, roll, pipped);
   const natural12 = multi ? twelve : roll === 12;
-  const needsDie = minimal && hit;
+  const needsDie = minimal && hit && (!split || zeroHit);
   const dieOk = validDie(die);
-  // A 0* hit that rolls under 4 delivers nothing (and no critical check); a rear hit adds its point to what is delivered.
-  const cardDamage = minimal ? (dieOk && !minimalDelivers(die) ? 0 : damage) : damage;
+  // A 0* hit that rolls under 4 loses its own point but keeps any OV (ASCE pp. 48, 53, 174). In Multiple Attack Rolls each point, OV included,
+  // gets its own attack roll (p. 175): the 0* point and each OV point are rolled apart, and only the OV hits and a 0* hit with a die of 4 or more land. A rear hit adds 1 even when the 0* roll fails (ASCE p. 48, 7th printing).
+  const cardDamage = minimal ? (dieOk && !minimalDelivers(die) ? ovAdds : damage) : damage;
   const typed = Number.parseInt(damageText, 10);
-  const baseDamage = multi ? (minimal ? (dieOk && minimalDelivers(die) ? 1 : 0) : successes) : damageText === "" ? cardDamage : Number.isFinite(typed) ? typed : cardDamage;
+  const baseDamage = multi ? (minimal ? (split ? typedHits : 0) + (dieOk && minimalDelivers(die) && needsDie ? 1 : 0) : successes) : damageText === "" ? cardDamage : Number.isFinite(typed) ? typed : cardDamage;
   const dealt = hit ? Math.max(0, baseDamage) + (rear && rearPossible ? 1 : 0) : 0;
   const ready = (multi ? successOk : rollOk) && (!needsDie || dieOk);
   const damageEnded = hit && dealt === 0;
@@ -111,7 +118,11 @@ export function RollBlock({ game, attacker, targetId, kind, physical, tn, damage
     if (multi) {
       const dice = Array.from({ length: rolls }, (_, i) => dice2d6(game, count + i));
       const r = resolveMultipleRolls(rolls, tn, dice);
-      setSuccessText(String(r.successes));
+      if (split) {
+        // The first die is the 0* point's own roll; the rest are the OV points' rolls.
+        setZeroHit(resolveMultipleRolls(1, tn, dice.slice(0, 1)).successes > 0);
+        setSuccessText(String(resolveMultipleRolls(rolls - 1, tn, dice.slice(1)).successes));
+      } else setSuccessText(String(r.successes));
       setTwelve(r.naturalTwelves > 0);
       apply((g) => bumpRollCount(g, rolls), { undo: false });
     } else {
@@ -149,8 +160,14 @@ export function RollBlock({ game, attacker, targetId, kind, physical, tn, damage
         <>
           <p className="bt-hint">{`Multiple attack rolls: roll 2D6 ${String(rolls)} ${rolls === 1 ? "time" : "times"}; each roll of ${String(tn)} or more succeeds.`}</p>
           <div className="bt-field">
-            <label htmlFor="atk-successes">{`Rolls that succeeded, 0 to ${String(rolls)}`}</label>
-            <input id="atk-successes" type="number" inputMode="numeric" min={0} max={rolls} value={successText} onChange={(e) => { setSuccessText(e.target.value); }} />
+            {split && (
+              <label className="bt-check" htmlFor="atk-zero-hit">
+                <input id="atk-zero-hit" type="checkbox" checked={zeroHit} onChange={(e) => { setZeroHit(e.target.checked); }} />
+                The 0* point&apos;s own attack roll succeeded
+              </label>
+            )}
+            <label htmlFor="atk-successes">{split ? `Overheat rolls that succeeded, 0 to ${String(ovAdds)}` : `Rolls that succeeded, 0 to ${String(rolls)}`}</label>
+            <input id="atk-successes" type="number" inputMode="numeric" min={0} max={split ? ovAdds : rolls} value={successText} onChange={(e) => { setSuccessText(e.target.value); }} />
             <button type="button" className="bt-button bt-button--secondary" onClick={rollForMe}>
               Roll the dice for me
             </button>
@@ -182,7 +199,7 @@ export function RollBlock({ game, attacker, targetId, kind, physical, tn, damage
         {multi && successOk && <p>{`${String(successes)} of ${String(rolls)} succeeded.`}</p>}
         {hit && natural12 && !damageEnded && <p>A natural 12 calls for a critical hit roll in the End Phase.</p>}
         {kind === "physical" && physical === "anti-mech" && hit && <p>An Anti-&apos;Mech hit calls for a critical hit roll in the End Phase.</p>}
-        {damageEnded && minimal && <p>The hit delivers no damage, so there is no critical hit check.</p>}
+        {damageEnded && <p>The hit delivers no damage, so there is no critical hit check.</p>}
       </div>
       {needsDie && (
         <div className="bt-field">
@@ -196,7 +213,7 @@ export function RollBlock({ game, attacker, targetId, kind, physical, tn, damage
       {hit && rearPossible && (
         <label className="bt-check" htmlFor="atk-rear">
           <input id="atk-rear" type="checkbox" checked={rear} onChange={(e) => { setRear(e.target.checked); }} />
-          The hit struck the target&apos;s rear (1 more damage)
+          The hit struck the target&apos;s rear (1 more damage, even when a 0* roll fails; ASCE p. 48, 7th printing)
         </label>
       )}
       {!multi && hit && (
@@ -327,6 +344,7 @@ export function ManualAttack({ game, attacker, apply, onCancel }: { game: AcesGa
                 damage={damage}
                 minimal={wd?.rollsMinimal === true || ind?.rollsMinimal === true}
                 ov={used}
+                ovAdds={wd?.ovAdds ?? 0}
                 attackerOnHit={costs?.toAttackerOnHit ?? 0}
                 attackerOnMiss={costs?.toAttackerOnMiss ?? 0}
                 apply={apply}

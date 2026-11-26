@@ -172,9 +172,9 @@ export interface WeaponDamage {
   minimal: boolean;
   /** Points an Overheat adds at this range: at Short and Medium, and Long with OVL (ASCE p. 53). */
   ovAdds: number;
-  /** What a hit deals; a minimal hit deals 1 once its 1D6 roll allows it. */
+  /** The most a hit can deal; a minimal hit's own point comes only once its 1D6 roll allows it, and any OV is delivered regardless. */
   total: number;
-  /** A hit with no Overheat to add still has to roll 1D6 for its one point (ASCE p. 48; Quick-Start p. 21). */
+  /** A hit at a 0* bracket rolls 1D6 for its one point, with or without OV (ASCE p. 48; Quick-Start p. 21). */
   rollsMinimal: boolean;
 }
 
@@ -185,8 +185,10 @@ export function weaponDamage(u: GameUnit, distance: number, ov: number): WeaponD
   const minimal = raw > 0 && raw < 1;
   const base = minimal ? 0 : raw;
   const ovAdds = bracket === "S" || bracket === "M" || (bracket === "L" && u.card.specials.some((s) => s.code === "OVL")) ? Math.max(0, ov) : 0;
-  const sum = base + ovAdds;
-  return { bracket, base, minimal, ovAdds, total: sum === 0 && minimal ? 1 : sum, rollsMinimal: sum === 0 && minimal };
+  // ASCE p. 48 has the 0* 1D6 rolled every time a successful attack is made at a 0* bracket, and p. 53 has OV add its points on top of the
+  // printed value, so a 0* bracket with OV still rolls. Where the books leave it open (p. 174 only names the roll), we do not let a failed
+  // 0* roll wipe out the OV: the OV points are delivered either way and the roll decides only the one point of the 0*.
+  return { bracket, base, minimal, ovAdds, total: ovAdds + (minimal ? 1 : base), rollsMinimal: minimal };
 }
 
 /** The Indirect Fire damage now, Weapon Hits taken off; 0* is minimal (Aces p. 3). */

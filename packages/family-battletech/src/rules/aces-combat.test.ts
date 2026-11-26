@@ -187,6 +187,7 @@ describe("Aces Combat and End Phases", () => {
   it("a 0* hit that rolls under 4 delivers nothing and stages no critical check, and the Edge pip is spent with the attack, not before (ASCE p. 48; Aces p. 24)", () => {
     const zero = newGame({}, [unit("M1", "Brawler", 20, { edge: 2 }, { damage: { s: { value: 0, minimal: true }, m: { value: 0 }, l: { value: 0 } } })]);
     expect(weaponDamage(zero.sides.player.units[0]!, 3, 0)).toMatchObject({ rollsMinimal: true, total: 1 });
+    expect(weaponDamage(zero.sides.player.units[0]!, 3, 2)).toMatchObject({ rollsMinimal: true, ovAdds: 2, total: 3 });
     expect([minimalDelivers(3), minimalDelivers(4)]).toEqual([false, true]);
     const swing = { attackerId: "p1", targetId: "a1", kind: "weapon" as const, tn: 6, roll: 12, hit: true, natural12: true, minimalRoll: 3, damage: 0 };
     const missed = recordAttack(zero, swing);
