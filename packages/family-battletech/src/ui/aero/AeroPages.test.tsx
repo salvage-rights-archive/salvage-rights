@@ -64,9 +64,9 @@ describe("AeroTech pages", () => {
     expect((screen.getByLabelText("Type") as HTMLSelectElement).value).toBe("aerospace-fighter");
     expect((screen.getByLabelText("Name") as HTMLInputElement).value).toBe("Wasp");
     expect((screen.getByLabelText("Tons") as HTMLInputElement).value).toBe("30");
-    // BattleSpace's types have no construction in the app yet: listed, not offered, and nothing can be started.
+    // BattleSpace has no type we build yet: none is listed, and nothing can be started.
     await user.selectOptions(screen.getByLabelText("Edition"), "battlespace");
-    expect(optionsOf("Type").every((text) => text?.endsWith("(not built yet)"))).toBe(true);
+    expect(optionsOf("Type").join()).not.toContain("fighter");
     expect((screen.getByRole("button", { name: "Start building" }) as HTMLButtonElement).disabled).toBe(true);
   });
 

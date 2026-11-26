@@ -6,16 +6,22 @@ import { DEFAULT_AERO_EDITION, FIGHTER_FIGURES, aeroTypesFor, figureOf } from ".
 import type { AeroType, AeroTypeRow } from "../../data/aero";
 import { AERO_WEAPON_EDITIONS, aeroWeaponOffered, ammoRowOf } from "../../data/aero-weapons";
 import type { UnitId } from "../../data/units";
-import { craftKind, fighterKind, locationsOf, newAeroRecord } from "../../rules/aero";
+import { fighterKind, locationsOf, newAeroRecord } from "../../rules/aero";
 import type { AeroMount, AeroRecord } from "../../rules/aero";
 import { mountableOn } from "../../rules/catalog";
 import type { Catalog, EquipmentRow } from "../../rules/catalog";
 import { phaseIn, windowOf } from "../../rules/time";
 
-/** Whether the app builds this unit type under the edition: fighters, small craft and DropShips where the books print their construction. The others (JumpShips, WarShips, stations) are listed and wait. */
+/**
+ * Whether the app builds this unit type under the edition: the fighters today. Small craft and DropShips can be built in the editor but
+ * wait here (and so are hidden from every new-unit list) until AERO-10 brings back their sheets together with their checks: the weight tally,
+ * structural integrity range (TM p. 187), armor limit and allocation (TM p. 191), arcs and fire control (TM p. 196), matched arcs and bay
+ * limits (TM p. 195), minimum ammunition (TM p. 194), crew (TM p. 189), doors (TM p. 196) and the DropShip zero-heat rule (TM p. 193).
+ * The others (JumpShips, WarShips, stations) wait too. A saved record of a waiting type still opens.
+ */
 export function typeReady(editionId: string, unitType: string): boolean {
   if (fighterKind({ unitType }) !== undefined) return figureOf(FIGHTER_FIGURES.maxThrustFactor, editionId) !== undefined;
-  return craftKind({ unitType, editionId }) !== undefined;
+  return false;
 }
 
 export const typeRow = (editionId: string, unitType: string): AeroTypeRow | undefined => aeroTypesFor(editionId).find((row) => row.type === unitType);

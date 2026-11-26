@@ -399,6 +399,8 @@ export interface FighterFigures {
   armorRounding: FigureGroup<"nearest" | "down">;
   armorLimit: KindGroup<ArmorLimitFigure>;
   freeHeatSinks: FigureGroup<{ fusion: number; ice: number }>;
+  /** A conventional fighter must carry sinks for the heat of all its energy weapons (its non-energy weapons make none). */
+  energyHeatSinks: FigureGroup<true>;
   heatSinkTypes: KindGroup<string[]>;
   arms: FigureGroup<ArmsFigure>;
   wingsMatch: FigureGroup<boolean>;
@@ -457,6 +459,8 @@ export const FIGHTER_FIGURES: FighterFigures = {
   },
   /** Heat sinks that come free with the engine: with any fusion engine, none with an internal combustion (turbine) one. */
   freeHeatSinks: [share(ALL("33", "48", "67", "193"), { fusion: 10, ice: 0 })],
+  /** A conventional fighter must carry enough sinks (the free ones count) for the heat of all its energy weapons. AeroTech 2 p. 46 by its errata v1.2 (the book printed that such a fighter may not mount energy weapons), Revised p. 64 (which points to p. 20), TechManual p. 193. */
+  energyHeatSinks: [share(LATER("46; errata v1.2", "64, 20", "193"), true)],
   /** Heat sink types each kind may use, where the book restricts them (a conventional fighter: single sinks only). */
   heatSinkTypes: {
     aerospace: [share({ [E.at1]: "33" }, ["single"]), share(LATER("48", "67", "193"), ["single", "double"])],

@@ -2,8 +2,7 @@ import AxeBuilder from "@axe-core/playwright";
 import type { Page } from "@playwright/test";
 import { DEV, expect, test } from "./fixtures";
 
-// AeroTech's pages sit under a family route until the game is ready (AERO-9); see ui/aero/routes.ts.
-const AERO = "/battletech/aerotech-preview";
+const AERO = "/battletech/aerotech";
 
 /** Builds a bare fighter under an edition (by id) from the home page and returns the editor's path. */
 async function startUnit(page: Page, edition: string, name: string): Promise<string> {

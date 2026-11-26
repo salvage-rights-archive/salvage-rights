@@ -141,6 +141,8 @@ const AT2_NOTICE = "AeroTech 2, p. 104 (its foot line gives permission to photoc
 const AT2R_NOTICE = "AeroTech 2: Revised Edition, PDF index 158 (its foot line gives permission to photocopy for personal use)";
 const CURRENT_NOTICE = "Blank Record Sheets (Catalyst CAT35001RS), PDF index 12-13 (their foot lines give permission to photocopy for personal use)";
 const THRESHOLD_CITE = "AeroTech 2, p. 19; Total Warfare, p. 239";
+// AeroTech 2 Revised prints the rule itself, rounding included, on p. 28 (read on the page image).
+const AT2R_THRESHOLD_CITE = "AeroTech 2: Revised Edition, p. 28";
 
 export const SHEET_PROFILES: SheetProfile[] = [
   {
@@ -184,7 +186,7 @@ export const SHEET_PROFILES: SheetProfile[] = [
     title: "Aerospace fighter record sheet",
     armor: ["NO", "LW", "RW", "AF"],
     thresholds: true,
-    thresholdCite: THRESHOLD_CITE,
+    thresholdCite: AT2R_THRESHOLD_CITE,
     critical: AT2_CRITICAL,
     velocity: "across",
     velocityColumns: ["Thrust", "Velocity", "Effective Velocity", "Altitude Level", "Fuel"],
@@ -201,7 +203,7 @@ export const SHEET_PROFILES: SheetProfile[] = [
     title: "Conventional aircraft record sheet",
     armor: ["NO", "LW", "RW", "AF"],
     thresholds: true,
-    thresholdCite: THRESHOLD_CITE,
+    thresholdCite: AT2R_THRESHOLD_CITE,
     critical: AT2_CRITICAL,
     velocity: "across",
     velocityColumns: ["Thrust", "Velocity", "Effective Velocity", "Altitude Level", "Fuel"],

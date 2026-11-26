@@ -132,7 +132,7 @@ describe("Classic BattleTech home", () => {
     const texts = (select: HTMLSelectElement) => [...select.options].map((o) => o.text);
     expect([type.value, config.value]).toEqual(["mech", "biped"]); // a new unit starts as a BattleMech biped
     // The aerospace units come after the 'Mechs, and go (with the level they need) when the rules level is below Standard.
-    expect(texts(type)).toEqual(["BattleMech", "IndustrialMech", "OmniMech", "Aerospace fighter", "Conventional fighter", "Small craft", "DropShip"]);
+    expect(texts(type)).toEqual(["BattleMech", "IndustrialMech", "OmniMech", "Aerospace fighter", "Conventional fighter"]);
     await user.selectOptions(within(form).getByLabelText("Rules level"), "introductory");
     expect(texts(type)).toEqual(["BattleMech"]);
     await user.selectOptions(within(form).getByLabelText("Rules level"), "experimental");
@@ -158,18 +158,22 @@ describe("Classic BattleTech home", () => {
     renderHome();
     const form = await screen.findByRole("form", { name: "Build a new one" });
     expect(screen.getByRole("link", { name: "Go to the AeroTech home" }).getAttribute("href")).toBe(AERO_HOME);
-    await user.selectOptions(within(form).getByLabelText("Type"), "aero:dropship");
-    // A DropShip has no configuration or walking speed; it has a tonnage and a Safe Thrust.
+    await user.selectOptions(within(form).getByLabelText("Type"), "aero:conventional-fighter");
+    // A fighter has no configuration or walking speed; it has a tonnage and a Safe Thrust.
     expect(within(form).queryByLabelText("Configuration")).toBeNull();
     expect(within(form).queryByLabelText("Walking MP")).toBeNull();
     await user.type(within(form).getByLabelText("Name"), "Leopard");
     const tons = within(form).getByLabelText("Tonnage");
     await user.clear(tons);
-    await user.type(tons, "1900");
+    // A tonnage of nothing builds nothing.
+    await user.type(tons, "0");
+    expect(within(form).getByRole<HTMLButtonElement>("button", { name: "Start building" }).disabled).toBe(true);
+    await user.clear(tons);
+    await user.type(tons, "30");
     await user.click(within(form).getByRole("button", { name: "Start building" }));
     await waitFor(async () => {
       const [entry] = await (await openAeroStorage()).list();
-      expect(entry?.record).toMatchObject({ unitType: "dropship", tons: 1900, editionId: "tw-tm-so", name: { chassis: "Leopard" }, rulesLevel: "standard" });
+      expect(entry?.record).toMatchObject({ unitType: "conventional-fighter", tons: 30, editionId: "tw-tm-so", name: { chassis: "Leopard" }, rulesLevel: "standard" });
     });
     // Nothing went into the 'Mech list.
     expect(await (await openFamilyStorage()).list()).toHaveLength(0);

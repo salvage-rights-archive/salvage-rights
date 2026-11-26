@@ -73,7 +73,9 @@ function lineOf(mount: AeroMount, record: AeroRecord, catalog: Catalog, qty: num
   const attack = f?.attack === undefined ? "" : String(f.attack);
   // The one attack value stands in every bracket up to the weapon's longest range class (the first bracket when the class is not known).
   const covered = reach > 0 ? reach : 1;
-  const av = [0, 1, 2, 3].map((band) => (attack !== "" && band < covered ? attack : "")) as WeaponLine["av"];
+  // A value that changes by range ("10/8") gives one figure to each bracket, in order.
+  const steps = attack.split("/");
+  const av = [0, 1, 2, 3].map((band) => (steps.length > 1 ? (steps[band] ?? "") : attack !== "" && band < covered ? attack : "")) as WeaponLine["av"];
   const hexes = f?.hexRange === undefined ? "" : f.hexRange.map((n) => String(n)).join("/");
   return { qty, name: mount.name, loc: `${mount.arc}${mount.aft === true ? " aft" : ""}`, heat: text(f?.heat), av, damage: attack, hexes };
 }
