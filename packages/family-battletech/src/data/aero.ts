@@ -603,6 +603,8 @@ export interface CraftFigures {
   bayLimit: FigureGroup<number>;
   /** Whether one bay may hold weapons of different sizes of one class. */
   mixedSizes: FigureGroup<boolean>;
+  /** A vessel built to tow other vessels adds this share to its structural mass (AeroTech 2 only; its equipment table's footnote asks for a tenth of the whole mass instead, a disagreement we report). */
+  towingSiShare: FigureGroup<number>;
   /** The least shots of ammunition for each weapon that uses it; Ultra and rotary autocannon need more. */
   minShots: FigureGroup<{ shots: number; ultra: number; rotary: number }>;
   /** A DropShip's crew by use. */
@@ -656,6 +658,7 @@ export const CRAFT_FIGURES: CraftFigures = {
   bayLimit: [share(THREE("46-47; errata v1.2", "66", "195"), 700)],
   // Conflict 42 in the archive ledger.
   mixedSizes: [share({ [E.at2]: "46-47; errata v1.2" }, false), share({ [E.at2r]: "66", [E.current]: "195" }, true)],
+  towingSiShare: [share({ [E.at2]: "44" }, 0.1)],
   minShots: [share(THREE("46; errata v1.2", "66", "194"), { shots: 10, ultra: 20, rotary: 60 })],
   crew: [share(THREE("48", "68", "189"), { civilian: { base: 3, perTons: 5000 }, military: { base: 4, perTons: 5000 } })],
   // Conflict 62 in the archive ledger: the AeroTech 2 books put a small craft with the civilian DropShip row, TechManual gives it a flat 3.
@@ -794,6 +797,8 @@ export interface CapitalFigures {
   engine: FigureGroup<{ stationKeeping: number; perThrust: number }>;
   /** A WarShip may mount a station-keeping drive in place of a maneuvering drive (for less than 1 Safe Thrust). */
   warshipStationKeeping: FigureGroup<boolean>;
+  /** The Safe Thrust a station-keeping drive gives a WarShip that uses one. The book prints no SI range for such a ship; we read the WarShip's own range off the Max Thrust this gives. */
+  stationKeepingThrust: FigureGroup<number>;
   /** Max Thrust is Safe Thrust times this, rounded up (WarShips; a station-keeping drive has no Max Thrust). Fallback: the fighter row. */
   maxThrustFactor: FigureGroup<number>;
   kfDrive: FigureGroup<Record<"jumpship" | "warship", KfDriveFigure>>;
@@ -845,6 +850,7 @@ const CAPITAL_FUEL: [number, number][] = [[0, 10], [110000, 5], [250000, 2.5]];
 export const CAPITAL_FIGURES: CapitalFigures = {
   engine: [capShare(CAP3("44", "61", "135"), { stationKeeping: 0.012, perThrust: 0.06 })],
   warshipStationKeeping: [capShare(SO_ONLY("135"), true)],
+  stationKeepingThrust: [capShare(SO_ONLY("135"), 0.2)],
   maxThrustFactor: [capShare(SO_ONLY("135"), 1.5)],
   kfDrive: [capShare(CAP3("44", "61", "137"), KF)],
   sailIntegrity: [capShare(CAP3("44", "61", "137"), { base: 1, per: 20 })],

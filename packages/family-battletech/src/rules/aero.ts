@@ -68,6 +68,8 @@ export interface AeroRecord {
   engine: { type: string };
   /** The Structural Integrity chosen for a large craft; absent on fighters, which derive it. */
   si?: number;
+  /** A vessel built to tow others: the edition that asks for it adds a share to the structure's mass (`towingSiShare`). */
+  towing?: boolean;
   fuelTons: number;
   /** `points` is keyed by the edition's armor locations (`locationsOf`); a key the edition lacks is kept. */
   armor: { type: string; tons: number; points: Record<string, number> };
@@ -560,8 +562,10 @@ export function craftSiTons(record: AeroRecord): number | null {
   const divisors = figureOf(CRAFT_FIGURES.siMassDivisor, record.editionId);
   const si = craftSI(record);
   const rounding = craftRounding(record);
-  return !divisors || si === null || !rounding ? null : roundMass((si * record.tons) / divisors[craftShape(record)], rounding.si);
+  return !divisors || si === null || !rounding ? null : roundMass(((si * record.tons) / divisors[craftShape(record)]) * (1 + towingShare(record)), rounding.si);
 }
+/** The share a towing vessel adds to its structure's mass, where the edition prints one (and the record says it tows). */
+export const towingShare = (record: Pick<AeroRecord, "towing" | "editionId">): number => (record.towing === true ? (figureOf(CRAFT_FIGURES.towingSiShare, record.editionId) ?? 0) : 0);
 
 /** Control systems: 0.75 percent of the tons (a small craft's up to a half ton in TechManual, a DropShip's up to a whole ton). */
 export function craftControlTons(record: AeroRecord): number | null {
@@ -957,10 +961,14 @@ export function stationKeeping(record: Pick<AeroRecord, "unitType" | "editionId"
   return kind !== "warship" || (record.engine.type === "station-keeping" && figureOf(CAPITAL_FIGURES.warshipStationKeeping, record.editionId) === true);
 }
 
-/** A WarShip's Max Thrust: Safe Thrust times 1.5, rounded up. null for a station-keeping drive (it has none) and for any other unit. */
+/** A WarShip's Max Thrust: Safe Thrust times 1.5, rounded up. A WarShip on a station-keeping drive reads the drive's own Safe Thrust (0.2 x 1.5 = 0.3, up to 1). null for a JumpShip or station (their drive has none) and for any other unit. */
 export function capitalMaxThrust(record: AeroRecord): number | null {
   const factor = capitalFigureOf(CAPITAL_FIGURES.maxThrustFactor, record.editionId, FIGHTER_FIGURES.maxThrustFactor);
-  return factor === undefined || capitalKind(record) === undefined || stationKeeping(record) ? null : Math.ceil(tidy(record.thrust.safe * factor));
+  const kind = capitalKind(record);
+  if (factor === undefined || kind === undefined) return null;
+  if (!stationKeeping(record)) return Math.ceil(tidy(record.thrust.safe * factor));
+  const drive = figureOf(CAPITAL_FIGURES.stationKeepingThrust, record.editionId);
+  return kind === "warship" && drive !== undefined ? Math.ceil(tidy(drive * factor)) : null;
 }
 
 /** Engine tons: a station-keeping drive's fixed share of the tons (1.2 percent), or a WarShip's share per point of Safe Thrust (6 percent) times its Safe Thrust. */
@@ -991,7 +999,7 @@ export function capitalSiTons(record: AeroRecord): number | null {
   const divisors = figureOf(CAPITAL_FIGURES.siMass, record.editionId);
   const rounding = capitalRounding(record);
   if (kind === undefined || si === null || !divisors || !rounding) return null;
-  return roundMass(kind === "warship" ? (si * record.tons) / divisors.warship : record.tons / divisors[kind], rounding.si);
+  return roundMass((kind === "warship" ? (si * record.tons) / divisors.warship : record.tons / divisors[kind]) * (1 + towingShare(record)), rounding.si);
 }
 
 export interface CapitalDrive {
@@ -1236,4 +1244,96 @@ export function capitalPartsNotOffered(record: AeroRecord): ("engine" | "armor" 
 /** The ship system kinds an edition prints (for the editor's list). */
 export function capitalSystemsFor(editionId: string): { kind: string; label: string }[] {
   return CAPITAL_SYSTEMS.filter((row) => figureOf(row.figures, editionId) !== undefined).map(({ kind, label }) => ({ kind, label }));
+}
+
+// ---- One reading for every vessel ---------------------------------------------------------------------------------------------
+// A small craft, DropShip, JumpShip, WarShip or station is built by the same steps with different figures. The editor, the rules check and the
+// record sheet read them through these, so each asks one question (what is the tally of this unit?) and never branches on the kind itself.
+
+export type VesselGroup = "craft" | "capital";
+/** Which family of figures the record is built by: the small craft and DropShip rows, the capital ship rows, or undefined (a fighter, an unknown type, an edition that builds neither). */
+export function vesselGroup(record: Pick<AeroRecord, "unitType" | "editionId">): VesselGroup | undefined {
+  return craftKind(record) !== undefined ? "craft" : capitalKind(record) !== undefined ? "capital" : undefined;
+}
+
+export interface VesselArmor {
+  perTon: number | null;
+  bought: number | null;
+  free: number;
+  available: number | null;
+  allocated: number;
+  over: number | null;
+  limitTons: number | null;
+  tonsOver: number | null;
+}
+
+/** Every derived figure of a small craft, DropShip or capital ship, read from the right group. */
+export interface Vessel {
+  group: VesselGroup;
+  maxThrust: number | null;
+  engineTons: number | null;
+  siRange: { min: number; max: number } | null;
+  si: number | null;
+  siTons: number | null;
+  controlTons: number | null;
+  fuelPoints: number | null;
+  pumpTons: number | null;
+  armor: VesselArmor | null;
+  heat: FighterHeat | null;
+  arcs: CraftArc[];
+  unmatched: string[];
+  bays: CraftWeaponBay[];
+  crew: CraftCrew | null;
+  doors: CraftDoors | null;
+  tally: CraftTally;
+  notOffered: ("engine" | "armor" | "heat-sinks")[];
+}
+/** The unit read as a vessel, or null for a fighter, an unknown type and an edition that builds neither group. */
+export function vessel(record: AeroRecord, catalog?: Catalog): Vessel | null {
+  const group = vesselGroup(record);
+  if (group === "craft") {
+    return {
+      group,
+      maxThrust: craftMaxThrust(record),
+      engineTons: craftEngineTons(record),
+      siRange: craftSiRange(record),
+      si: craftSI(record),
+      siTons: craftSiTons(record),
+      controlTons: craftControlTons(record),
+      fuelPoints: craftFuelPoints(record),
+      pumpTons: craftPumpTons(record),
+      armor: craftArmor(record),
+      heat: craftHeat(record),
+      arcs: craftArcs(record, catalog),
+      unmatched: craftArcsUnmatched(record, catalog),
+      bays: craftWeaponBays(record, catalog),
+      crew: craftCrew(record, catalog),
+      doors: craftDoors(record),
+      tally: craftTally(record, catalog),
+      notOffered: craftPartsNotOffered(record),
+    };
+  }
+  if (group === "capital") {
+    return {
+      group,
+      maxThrust: capitalMaxThrust(record),
+      engineTons: capitalEngineTons(record),
+      siRange: capitalSiRange(record),
+      si: capitalSI(record),
+      siTons: capitalSiTons(record),
+      controlTons: capitalControlTons(record),
+      fuelPoints: capitalFuelPoints(record),
+      pumpTons: capitalPumpTons(record),
+      armor: capitalArmor(record),
+      heat: capitalHeat(record),
+      arcs: capitalArcs(record, catalog),
+      unmatched: capitalArcsUnmatched(record, catalog),
+      bays: capitalWeaponBays(record, catalog),
+      crew: capitalCrew(record, catalog),
+      doors: capitalDoors(record),
+      tally: capitalTally(record, catalog),
+      notOffered: capitalPartsNotOffered(record),
+    };
+  }
+  return null;
 }

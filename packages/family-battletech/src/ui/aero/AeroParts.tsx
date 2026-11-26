@@ -104,7 +104,7 @@ export function IdentityPanel({ record, catalog, onEdit }: PartProps & { catalog
           label="Type"
           value={record.unitType}
           options={types}
-          hint={row ? `${row.cite}.${typeReady(edition, record.unitType) ? "" : " The checks for this type are not built yet, so only its identity and weight range are checked."}` : undefined}
+          hint={row ? `${row.cite}.${typeReady(edition, record.unitType) ? "" : ""}` : undefined}
           className="bt-level"
           onChange={(v) => {
             onEdit((d) => {

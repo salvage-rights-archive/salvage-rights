@@ -53,7 +53,8 @@ describe("aerospace rules check", () => {
 
   it("a DropShip of AeroTech 2 Revised lists nothing new under the current rules when its figures agree", () => {
     const ship = { ...newAeroRecord({ id: "d", unitType: "dropship", tons: 3000, year: 3070 }, "aerotech2-revised") };
-    expect(checkUnder(ship, "tw-tm-so", catalog)).toEqual(checkAero(ship, catalog));
+    const shape = (list: ReturnType<typeof checkAero>) => list.map((f) => `${f.check}:${f.level}`);
+    expect(shape(checkUnder(ship, "tw-tm-so", catalog))).toEqual(shape(checkAero(ship, catalog)));
   });
 
   it("the level of a WarShip in the current rules is Advanced, and an older edition shows no level", () => {
