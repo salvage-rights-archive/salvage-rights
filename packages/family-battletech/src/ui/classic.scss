@@ -629,8 +629,11 @@ a.bt-button {
     }
   }
 
+  align-items: start;
+
   .bt-field {
     margin: 0;
+    align-content: start;
 
     input,
     select {

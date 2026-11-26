@@ -197,7 +197,8 @@ export default function HomePage() {
   // and Configuration lists re-filter as those fields change and nothing offered is out of the rules.
   const yearTyped = /^\d{4}$/.test(yearText.trim()) ? Number(yearText.trim()) : null;
   const when = { year: yearTyped };
-  const subject = { techBase: draft.techBase, year: yearTyped, rulesLevel: draft.rulesLevel };
+  const techBase = techBaseChoices(draft.rulesLevel, "inner-sphere", when).some(([value]) => value === draft.techBase) ? draft.techBase : "inner-sphere"; // a year that rules the chosen tech base out gives way to Inner Sphere
+  const subject = { techBase, year: yearTyped, rulesLevel: draft.rulesLevel };
   const usable = (id: MechType) => MECH_TYPES.find((t) => t.id === id)?.ready === true && typeAvailable(id, subject);
   const unitType: MechType = draft.unitType !== undefined && usable(draft.unitType) ? draft.unitType : (MECH_TYPES.find((t) => usable(t.id))?.id ?? "mech");
   const typed = { ...subject, unitType };
@@ -228,7 +229,7 @@ export default function HomePage() {
         chassis: draft.chassis.trim(),
         model: draft.model.trim(),
         unitType: aeroPicked.id as AeroType,
-        techBase: draft.techBase,
+        techBase,
         tons: aeroTonnage,
         safeThrust: aeroThrust,
         rulesLevel: draft.rulesLevel,
@@ -243,7 +244,7 @@ export default function HomePage() {
   const build = async () => {
     if (aeroPicked) return buildAero();
     if (!storage || !draft.chassis.trim()) return;
-    const options = { ...draft, configuration, tons, chassis: draft.chassis.trim(), model: draft.model.trim(), walk: Math.min(draft.walk, walks.at(-1) ?? 1), year: yearTyped };
+    const options = { ...draft, techBase, configuration, tons, chassis: draft.chassis.trim(), model: draft.model.trim(), walk: Math.min(draft.walk, walks.at(-1) ?? 1), year: yearTyped };
     // An OmniMech is a chassis (its fixed base and a Prime to start) and is saved as one.
     const made = unitType === "omnimech" ? newOmniChassis(options, edition, crypto.randomUUID()) : newRecord({ ...options, unitType }, edition, crypto.randomUUID());
     if ("mounts" in made) setYear(made, yearTyped);
@@ -672,8 +673,8 @@ export default function HomePage() {
             />
             <div className="bt-field">
               <label htmlFor="bt-new-tech">Tech base</label>
-              <select id="bt-new-tech" value={draft.techBase} onChange={(e) => setDraft({ ...draft, techBase: e.target.value as NewMechOptions["techBase"] })}>
-                {techBaseChoices(draft.rulesLevel, draft.techBase, when).map(([value, label]) => (
+              <select id="bt-new-tech" value={techBase} onChange={(e) => setDraft({ ...draft, techBase: e.target.value as NewMechOptions["techBase"] })}>
+                {techBaseChoices(draft.rulesLevel, techBase, when).map(([value, label]) => (
                   <option key={value} value={value}>
                     {label}
                   </option>

@@ -274,14 +274,19 @@ test("pick an era and a tech base in the editor and see the picker's groups and 
   };
   const groups = async () => (await dialog.getByRole("heading", { level: 3 }).allTextContents()).map((t) => t.trim());
   const total = async () => Number(((await dialog.getByRole("status").textContent()) ?? "").split(" ")[0]);
+  // The count of the whole list, read once the cleared search has put every group back (until then the status shows the few rows found).
+  const fullTotal = async () => {
+    await expect.poll(total).toBeGreaterThan(5);
+    return total();
+  };
 
   // Inner Sphere, Civil War: a Clan ER large laser is not offered, an Inner Sphere one is.
   await open("ER Large Laser");
   await expect(dialog.getByRole("button", { name: /^ER Large Laser Inner Sphere/ })).toBeVisible();
   await expect(dialog.getByRole("button", { name: /^ER Large Laser Clan/ })).toHaveCount(0);
   await dialog.getByLabel("Search by name").fill("");
+  const isTotal = await fullTotal();
   const isGroups = await groups();
-  const isTotal = await total();
   expect(isGroups.some((g) => g.includes("Energy weapons"))).toBe(true);
   await dialog.getByRole("button", { name: "Cancel" }).click();
   await expect(dialog).toHaveCount(0);
@@ -292,7 +297,7 @@ test("pick an era and a tech base in the editor and see the picker's groups and 
   await expect(dialog.getByRole("button", { name: /^ER Large Laser Clan/ })).toBeVisible();
   await expect(dialog.getByRole("button", { name: /^ER Large Laser Inner Sphere/ })).toHaveCount(0);
   await dialog.getByLabel("Search by name").fill("");
-  expect(await total()).not.toBe(isTotal);
+  expect(await fullTotal()).not.toBe(isTotal);
   await dialog.getByRole("button", { name: "Cancel" }).click();
   await expect(dialog).toHaveCount(0);
 
@@ -301,7 +306,7 @@ test("pick an era and a tech base in the editor and see the picker's groups and 
   await page.getByLabel("Era").selectOption("age-of-war");
   await expect(page.getByLabel("Year")).toHaveValue("");
   await open();
-  const early = await total();
+  const early = await fullTotal();
   expect(early).toBeLessThan(isTotal);
   const toggle = dialog.getByRole("button", { name: /^Energy weapons/ });
   await toggle.focus();

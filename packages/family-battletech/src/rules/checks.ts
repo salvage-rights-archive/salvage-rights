@@ -16,6 +16,7 @@ import {
   HEAT_SINKS,
   INTERNAL_STRUCTURE,
   LAM,
+  CLAN_TECHNOLOGY,
   MIXED_TECHNOLOGY,
   MYOMER,
   SHEET,
@@ -28,7 +29,7 @@ import { listed, RULESETS, rulesetOf } from "../data/rulesets";
 import { CLAN_CASE_IDS, clanCaseAllowed } from "./case";
 import { locationsFor, mountableOn, mountsRequired, podMountable } from "./catalog";
 import { heatSinkMixAllowed, levelAtLeast, levelIn, levelItems, levelRow, mixedPhase } from "./levels";
-import { datesText, partIsPrototypeOnly, partPrototype } from "./time";
+import { clanInTime, datesText, partIsPrototypeOnly, partPrototype } from "./time";
 import type { Catalog, EquipmentRow } from "./catalog";
 import { ARM_FULL, armorSpread, armsOf, canSplitBetween, configurationOf, donorTons, engineTons, freeHeatSinks, industrialRulesOf, layout as buildLayout, maxArmor, mechTypeOf, mountCanFireRear, slotsTaken, splitOf, structurePoints, walkMP, weights } from "./mech";
 import { locationName, type Layout, type LocationCode, type MechRecord, type Mount } from "./mech";
@@ -583,6 +584,10 @@ function eraCheck({ record }: CheckInput): Finding[] {
   if (row && !bodyInTime) {
     const when = record.year !== null ? String(record.year) : `the ${eraOfRecord(record)?.name ?? "chosen"} era`;
     out.push(finding("availability", "error", `${aOrAn(row.name)} is not available to ${record.techBase === "clan" ? "a Clan" : record.techBase === "mixed" ? "a mixed technology" : "an Inner Sphere"} 'Mech in ${when}; ${spansText(record.techBase === "clan" ? (row.clanAvailability ?? row.availability) : row.availability, prototypeOf(record.techBase === "clan" ? (row.clanPrototypeYear ?? row.prototypeYear) : row.prototypeYear))}.`, { where: { field: "configuration" }, cite: { book: "Interstellar Operations: Alternate Eras", page: 44 } }));
+  }
+  if (record.techBase === "clan" && !clanInTime(record)) {
+    const when = record.year !== null ? String(record.year) : `the ${eraOfRecord(record)?.name ?? "chosen"} era`;
+    out.push(finding("availability", "error", `Clan technology is not available in ${when}; the Clan Sub-Eras begin in ${CLAN_TECHNOLOGY.firstYear}.`, { where: { field: "techBase" }, cite: CLAN_TECHNOLOGY.cite }));
   }
   if (record.techBase === "mixed" && mixedPhase(record) === null) {
     const when = record.year !== null ? String(record.year) : `the ${eraOfRecord(record)?.name ?? "chosen"} era`;
