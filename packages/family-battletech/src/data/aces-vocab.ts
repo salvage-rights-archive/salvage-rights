@@ -414,3 +414,72 @@ export type SpecialOrderKind = (typeof ACES_SPECIAL_ORDERS)[number]["id"];
 export const ACES_DECK_SIZE = 6;
 
 export const tokenById: ReadonlyMap<string, VocabToken> = new Map(ACES_TOKENS.map((tok) => [tok.id, tok]));
+
+// ---- The resolver's words (rules/aces-resolve.ts) --------------------------------------------------------------------------------
+// Questions, decision log lines and reminders are data there; their words are ours, here. `{name}` is filled from the line's own
+// words (unit names, our labels); every row names the page whose rule it follows.
+
+export interface ResolverWords {
+  text: string;
+  cite: string;
+  checked: "page";
+}
+
+const w = (text: string, pages: string): ResolverWords => ({ text, cite: p(pages), checked: "page" });
+
+/** What the resolver asks the players during an activation. */
+export const ACES_PROMPTS = {
+  distances: w("How far is each of these enemies from {unit}, in inches?", "12"),
+  sight: w("Which of these enemies can {unit} see from where it stands?", "9"),
+  attackable: w("Which of these could {unit} attack after moving (in sight, at a range where its damage is above 0)?", "9, 12"),
+  condition: w("For {unit}, is this so: {text}?", "11"),
+  key: w("Which of these fit: {text}?", "12"),
+  flag: w("Which of these fit: {text}?", "12"),
+  tie: w("The card does not settle it ({text}). Which one serves the automated force best?", "10, 11"),
+} as const satisfies Record<string, ResolverWords>;
+export type PromptId = keyof typeof ACES_PROMPTS;
+
+/** One line of the activation's decision log. */
+export const ACES_LOG = {
+  "read-card": w("{unit}: this side of its card is not recorded, so read the printed card.", "7"),
+  "order-column": w("The command card sets the {column} column.", "11"),
+  "order-filters": w("The command card puts {count} filters first, numbered 0.", "14"),
+  "order-mode": w("The command card rules out {mode}.", "11"),
+  "order-other": w("The command card's order: {text}.", "8"),
+  "special-column": w("{order}: the order card's column replaces the three columns.", "16"),
+  "special-missing": w("{order}: the order card is not recorded, so read it.", "16"),
+  "objective-filters": w("Movement objective: its filters come first, numbered 0a to 0c.", "17"),
+  "objective-standstill": w("Movement objective: it stands still, so the objective's filters do not apply.", "17"),
+  "condition-false": w("{column}: the condition does not hold.", "11"),
+  "condition-true": w("{column}: the condition holds.", "11"),
+  "column-forced": w("{column}: used without its condition.", "11"),
+  "column-no-target": w("{column}: no enemy fits its target flags, so on to the next column.", "12"),
+  "column-default": w("{column}: the default column.", "11"),
+  ideal: w("The ideal {colour} is {target}.", "9"),
+  "ideal-none": w("There is no ideal {colour}: no enemy counts.", "9"),
+  "big-table": w('Only enemies within 48" count toward the ideal.', "9"),
+  "no-colours": w("No command card is recorded, so the {colour} list is empty.", "12"),
+  zone: w("{zone}: {units}.", "12"),
+  dropped: w("Left out: {units} ({flag}).", "12"),
+  "key-narrowed": w("{key}: {units}.", "12"),
+  "key-ignored": w("{key}: no enemy fits, so it is passed over.", "9, 12"),
+  "nested-list": w("A colour list inside a colour list is passed over.", "12"),
+  "tie-chosen": w("The players chose {target} ({text}).", "10, 11"),
+  target: w("Target: {target}.", "12"),
+  "no-enemies": w("No enemy is in play: it holds position and counts as moving by Ground.", "16"),
+  hold: w("No column finds a target: it holds position and counts as moving by Ground.", "16"),
+  mode: w("It moves by {mode}.", "14"),
+  "mode-alt": w("It may use {mode} if that reaches a better place.", "14"),
+  "mode-alt-when": w("{mode}: its condition holds.", "14"),
+  "no-jump": w("It cannot jump, so it moves by Ground.", "14"),
+} as const satisfies Record<string, ResolverWords>;
+export type LogId = keyof typeof ACES_LOG;
+
+/** Shown with a movement decision. */
+export const ACES_REMINDERS = {
+  "no-standstill": w('Never stand still unless told: if it already stands within 1" of the best place, move it 1" to an equal place so it keeps its TMM.', "14"),
+  facing: w("Face it toward the target with the target in its firing arc; if it can, no enemy in its rear and none outside its arc.", "14"),
+  "face-deployment": w("Face it toward where enemies may come on.", "16"),
+  flip: w("Mark how it moved and turn its top card to the combat side; a Move First or Move Last token is discarded.", "14"),
+} as const satisfies Record<string, ResolverWords>;
+export type ReminderId = keyof typeof ACES_REMINDERS;
