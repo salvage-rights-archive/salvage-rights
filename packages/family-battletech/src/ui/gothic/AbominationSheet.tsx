@@ -369,7 +369,7 @@ function ModelText({ model, catalog, handler }: { model: BlockModel; catalog: Ca
           ))}
         </ul>
       ) : (
-        <p>{unit ? "A type this version does not know." : `${String(model.creatures)} trackers of ${String(model.rows)} rows, left blank.`}</p>
+        <p>{unit ? "A type this version does not know." : `${String(model.creatures)} ${model.creatures === 1 ? "tracker" : "trackers"} of ${String(model.rows)} ${model.rows === 1 ? "row" : "rows"}, left blank.`}</p>
       )}
     </section>
   );

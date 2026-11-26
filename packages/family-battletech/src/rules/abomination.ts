@@ -95,7 +95,7 @@ export function checkAbomination(unit: AbominationUnit, level: RulesLevel, catal
     findings.push({ check: "creatures", level: "error", message: `${stats.creatures} creatures; a ${size.label} unit has 1 to ${size.maxCreatures}.` });
   }
   if (size && unit.custom?.pipRows !== undefined && unit.custom.pipRows !== size.rows) {
-    findings.push({ check: "rows", level: "error", message: `${unit.custom.pipRows} pip rows per creature; a ${size.label} has ${size.rows}.` });
+    findings.push({ check: "rows", level: "error", message: `${unit.custom.pipRows} pip ${unit.custom.pipRows === 1 ? "row" : "rows"} per creature; a ${size.label} has ${size.rows}.` });
   }
   if (size && size.height >= 2 && (stats.mob !== null || stats.hobble !== null)) {
     findings.push({ check: "physical", level: "error", message: `A ${size.label} has Mob or Hobble damage, but it cannot share a hex with a 'Mech.` });
