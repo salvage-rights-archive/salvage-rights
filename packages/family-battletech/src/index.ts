@@ -27,6 +27,8 @@ const acesRoutes: FamilyRoute[] = [
   { path: "game", label: "Aces game", section: "workshop", load: () => import("./ui/aces/GamePage") },
   { path: "after", label: "Aces after-sortie steps", section: "workshop", load: () => import("./ui/aces/AfterSortiePage") },
   { path: "sortie", label: "Aces sortie", section: "workshop", load: () => import("./ui/aces/SortiePage") },
+  { path: "campaigns", label: "Aces campaigns", section: "workshop", load: () => import("./ui/aces/CampaignsPage") },
+  { path: "campaign", label: "Aces campaign", section: "workshop", load: () => import("./ui/aces/CampaignPage") },
 ];
 
 // Gothic's pages are the game's own routes (every link is built from `GOTHIC_BASE`, data/rulesets.ts). One route to a line, so a later
