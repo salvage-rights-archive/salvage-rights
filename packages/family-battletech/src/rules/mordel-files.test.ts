@@ -35,6 +35,13 @@ describe("a 'Mech file from Mordel", () => {
     expect(r.official).toBeUndefined();
   });
 
+  it("reads a slot line ending in (R) as the same item firing to the rear", () => {
+    const { record: r, notes } = record(STRIDER.replace("Left Torso:\nHeat Sink\nHeat Sink", "Left Torso:\nHeat Sink\nMedium Laser (R)"));
+    expect(r.mounts.find((m) => m.location === "LT" && m.slot === 1)).toMatchObject({ name: "Medium Laser", equipmentId: "medium-laser-is", rear: true });
+    expect(r.mounts.filter((m) => m.rear)).toHaveLength(1);
+    expect(notes.join(" ")).not.toContain("(R)");
+  });
+
   it("reads a mixed technology file: prefixes pick the tech base, structure and armor slots go where the file puts them, and the member is credited", () => {
     const text = STRIDER.replace("TechBase:Inner Sphere", "TechBase:Mixed (IS Chassis)")
       .replace("Structure:Standard", "Structure:IS Endo Steel")

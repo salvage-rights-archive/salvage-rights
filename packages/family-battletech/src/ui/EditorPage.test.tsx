@@ -280,6 +280,27 @@ describe("The critical slots", () => {
     ]);
   });
 
+  it("offers the Rear toggle only where rear fire is allowed; it sets and clears rear and changes the Battle Value", async () => {
+    // A laser in the left torso is worth less than the AC/10 in the right torso, so firing it to the rear halves it.
+    const record = await saved(mordelBiped());
+    await (await openFamilyStorage()).save({ ...record, mounts: record.mounts.map((m) => (m.id === "mount-3" ? { ...m, location: "LT" as const, slot: 4 } : m)) });
+    await open("imported-1");
+    await screen.findByRole("heading", { name: "Critical slots" });
+    const user = userEvent.setup();
+    await openActions(user, "Right Arm");
+    expect(within(slotList("Right Arm")).queryByRole("button", { name: "Fire Medium Laser to the rear" })).toBeNull();
+    await openActions(user, "Left Torso");
+    const total = () => screen.getByTestId("bv-total").textContent;
+    const before = total();
+    const toggle = () => within(slotList("Left Torso")).getByRole("button", { name: "Fire Medium Laser to the rear" });
+    await user.click(toggle());
+    expect(toggle().getAttribute("aria-pressed")).toBe("true");
+    await waitFor(() => { expect(total()).not.toBe(before); });
+    await user.click(toggle());
+    expect(toggle().getAttribute("aria-pressed")).toBe("false");
+    await waitFor(() => { expect(total()).toBe(before); });
+  });
+
   it("moves a mount by keyboard to a free slot in another location, and Escape leaves it where it was", async () => {
     await saved(mordelBiped());
     const user = userEvent.setup();

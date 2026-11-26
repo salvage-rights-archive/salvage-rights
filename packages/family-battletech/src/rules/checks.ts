@@ -28,7 +28,7 @@ import { locationsFor, mountableOn, mountsRequired, podMountable } from "./catal
 import { heatSinkMixAllowed, levelAtLeast, levelIn, levelItems, levelRow, mixedPhase } from "./levels";
 import { datesText, partIsPrototypeOnly, partPrototype } from "./time";
 import type { Catalog, EquipmentRow } from "./catalog";
-import { ARM_FULL, armorSpread, armsOf, configurationOf, donorTons, engineTons, freeHeatSinks, industrialRulesOf, layout as buildLayout, maxArmor, mechTypeOf, structurePoints, walkMP, weights } from "./mech";
+import { ARM_FULL, canFireRear, armorSpread, armsOf, configurationOf, donorTons, engineTons, freeHeatSinks, industrialRulesOf, layout as buildLayout, maxArmor, mechTypeOf, structurePoints, walkMP, weights } from "./mech";
 import { locationName, type Layout, type LocationCode, type MechRecord, type Mount } from "./mech";
 import { mountedShields, missingActuators, shieldStats } from "./shields";
 import { equipmentItems, mascOf, movementPenalty, rowOf, stemOf, TSM_ROWS } from "./walk";
@@ -418,6 +418,9 @@ function placementCheck({ record, layout, catalog }: CheckInput): Finding[] {
     const row = rowOf(catalog, record, mount);
     const rule = hostRule(row);
     const where = { location: mount.location ?? undefined, mountId: mount.id };
+    if (mount.rear && !canFireRear(mount.location)) {
+      out.push(finding("placement", "error", `${mount.name} is set to fire to the rear, but an arm weapon takes the firing arc of its arm; only torso, leg and head mounts may fire rearward.`, { where, cite: tm(57) }));
+    }
     if (mount.linkedTo !== undefined) {
       const host = record.mounts.find((m) => m.id === mount.linkedTo);
       if (mount.linkedTo === mount.id) {

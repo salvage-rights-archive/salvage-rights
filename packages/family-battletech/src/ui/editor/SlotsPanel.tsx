@@ -4,7 +4,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import type { Catalog, EquipmentRow } from "../../rules/catalog";
-import { bodyOf, locationName, slotsTaken } from "../../rules/mech";
+import { bodyOf, canFireRear, locationName, slotsTaken } from "../../rules/mech";
 import type { Layout, LocationCode, MechRecord, Mount, SlotCell } from "../../rules/mech";
 import { Changed, mountDomId } from "../EditorPage";
 import type { OnEdit } from "../EditorPage";
@@ -132,6 +132,7 @@ export default function SlotsPanel({
       if (!target) return;
       target.location = location;
       target.slot = slot;
+      if (!canFireRear(location)) delete target.rear;
     });
   };
   const remove = (mount: Mount) => {
@@ -166,6 +167,7 @@ export default function SlotsPanel({
             {mount.name}
           </span>
           {changed.has(mount.id) && <Changed id={`${mountDomId(mount.id)}-changed`} />}
+          {mount.rear && <span className="bt-tag">Fires to the rear</span>}
           {unmatched(mount) && <span className="bt-tag">Unmatched</span>}
           {locked && <span className="bt-tag">Fixed in the base</span>}
         </span>
@@ -211,6 +213,26 @@ export default function SlotsPanel({
                 >
                   Replace
                 </button>
+                {canFireRear(mount.location) && catalog.byId(mount.equipmentId ?? "")?.kind === "weapon" && (
+                  <button
+                    type="button"
+                    id={`rear-${mount.id}`}
+                    className="bt-button bt-button--secondary"
+                    aria-pressed={mount.rear === true}
+                    aria-label={`Fire ${mount.name} to the rear`}
+                    onClick={() => {
+                      pendingFocus.current = `rear-${mount.id}`;
+                      onEdit((draft) => {
+                        const target = draft.mounts.find((m) => m.id === mount.id);
+                        if (!target) return;
+                        if (target.rear) delete target.rear;
+                        else target.rear = true;
+                      });
+                    }}
+                  >
+                    Rear
+                  </button>
+                )}
                 <button type="button" className="bt-button bt-button--secondary" aria-label={`Remove ${mount.name}`} onClick={() => { remove(mount); }}>
                   Remove
                 </button>

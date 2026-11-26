@@ -61,6 +61,16 @@ describe("The record sheet", () => {
     expect(svg.querySelectorAll("[data-diagram]")).toHaveLength(3);
   });
 
+  it("prints (R) after a rear-firing weapon in the critical table", async () => {
+    const rear = editRecord(await recordOf(mordelBiped()), (d) => {
+      const gun = d.mounts.find((m) => m.location === "RT" && m.name === "AC/10");
+      if (gun) gun.rear = true;
+    });
+    const { svg } = await drawn(rear);
+    const cells = [...svg.querySelectorAll("[data-location='RT'] [data-slot='mount']")].map((g) => g.textContent);
+    expect(cells.filter((t) => t?.includes("AC/10 (R)"))).toHaveLength(7);
+  });
+
   it("has no credit and prints the calculated Battle Value for a Mech made here", async () => {
     const record = await recordOf(mordelBiped());
     delete record.source;

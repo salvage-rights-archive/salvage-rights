@@ -201,6 +201,14 @@ describe("placement", () => {
   });
 });
 
+describe("rear-firing placement (TM p.57)", () => {
+  const rearLaser = (location: LocationCode): Edit => (d) => void d.mounts.push({ ...mount("rl", "medium-laser", location, 3), rear: true });
+  it("flags a rear-firing weapon in an arm and not one in a side torso", () => {
+    expectFinding(forCheck(editRecord(bipedRecord(), rearLaser("LA")), "placement"), { level: "error", text: "rl is set to fire to the rear", where: { location: "LA", mountId: "rl" }, page: 57 });
+    expect(forCheck(editRecord(bipedRecord(), rearLaser("LT")), "placement").filter((f) => f.where?.mountId === "rl")).toEqual([]);
+  });
+});
+
 describe("availability", () => {
   const withDoubleSink: Edit = (d) => {
     d.year = 2900;

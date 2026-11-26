@@ -130,6 +130,7 @@ interface Item {
   slot: number;
   slots: number;
   tech: "inner-sphere" | "clan";
+  rear?: true;
 }
 
 /**
@@ -205,7 +206,9 @@ function convertMtf(text: string, catalog: Catalog, editionId: string, now: stri
       }
       let run = 1;
       while (lines[i + run] === line) run += 1;
-      const found = find(line);
+      // A rear-firing item's line ends in "(R)"; the rest of the line is its name.
+      const rear = /\s*\(R\)$/i.test(line);
+      const found = find(rear ? line.replace(/\s*\(R\)$/i, "") : line);
       const each = found.row && typeof found.row.slots === "number" && found.row.slots > 0 ? found.row.slots : undefined;
       const size = each ?? run;
       const name = found.row?.name ?? found.name ?? line;
@@ -213,7 +216,7 @@ function convertMtf(text: string, catalog: Catalog, editionId: string, now: stri
       for (let taken = 0; taken < run; taken += size) {
         const length = Math.min(size, run - taken);
         if (length < size) notes.push(`${line} fills ${length} slots in the ${LOCATION_NAMES[location]} where the equipment table says it takes ${size}; it is kept as ${length}.`);
-        items.push({ name, location, slot: i + taken, slots: length, tech: found.tech });
+        items.push({ name, location, slot: i + taken, slots: length, tech: found.tech, ...(rear ? { rear: true as const } : {}) });
       }
       i += run;
     }
@@ -286,7 +289,7 @@ function convertMtf(text: string, catalog: Catalog, editionId: string, now: stri
       myomer: key("myomer") ? { type: key("myomer") } : null,
       heat_sinks: sinks ? { type: sinkKind?.type || "Single", technology: sinkKind?.technology ?? null, count: Number(sinks[1]) } : null,
       locations: [...armorEntries].map(([code, a]) => ({ code, armor: a.front ?? 0, rear_armor: a.rear ?? 0 })),
-      equipment: items.map((item) => ({ name: item.name, location: item.location, technology: item.tech === "clan" ? "Clan" : "Inner Sphere", slots: item.slots, id: null })),
+      equipment: items.map((item) => ({ name: item.name, location: item.location, technology: item.tech === "clan" ? "Clan" : "Inner Sphere", slots: item.slots, id: null, facing: item.rear ? "Rear" : "Front" })),
       fluff,
     },
   };

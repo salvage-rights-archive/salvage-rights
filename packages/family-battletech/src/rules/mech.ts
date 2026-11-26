@@ -46,6 +46,11 @@ export function locationName(code: string): string {
 
 export type TechBase = "inner-sphere" | "clan";
 
+/** Torso, head and leg mounts may be set to fire to the rear; an arm weapon takes the arc of its arm (TechManual p.57). */
+export function canFireRear(location: LocationCode | null): boolean {
+  return location !== null && location !== "LA" && location !== "RA";
+}
+
 export interface Mount {
   id: string;
   equipmentId: string | null; // null: not in our table
@@ -59,7 +64,7 @@ export interface Mount {
   linkedTo?: string;
   /** The size the player chose for an item sold by size (a jump pack's tons, a mechanical jump booster's Jumping MP): see `EquipmentRow.amount`. */
   amount?: number;
-  /** The item fires to the rear (torso, leg and head mounts only matter); read by the Battle Value rules. The importer does not set it. */
+  /** The item fires to the rear. Only torso, leg and head mounts may (TechManual p.57; see `canFireRear`); the Battle Value rules, the sheet and both importers read it. */
   rear?: true;
   /** Set only on a resolved OmniMech configuration (rules/omni.ts): the mount is a pod item, not fixed equipment of the base. */
   pod?: true;
@@ -418,7 +423,7 @@ export function layout(record: MechRecord, factsOf: FactsOf): Layout {
         cells[index] = { ...cell, alsoLabels: [...(cell.alsoLabels ?? []), mount.name] };
         continue;
       }
-      cells[index] = { kind: "mount", label: mount.name, mountId: mount.id };
+      cells[index] = { kind: "mount", label: mount.rear ? `${mount.name} (R)` : mount.name, mountId: mount.id };
     }
   }
   const conflicts = [...clashes.values()].sort(

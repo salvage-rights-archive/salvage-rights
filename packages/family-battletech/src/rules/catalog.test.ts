@@ -250,6 +250,14 @@ describe("play statistics", () => {
     ]);
   });
 
+  it("lists a rear-firing weapon as its own line after the forward ones, in a location written like LT(R)", () => {
+    const record = bipedRecord({ mounts: [mount("f", "ml", "LT", 0), { ...mount("r", "ml", "LT", 1), rear: true }, mount("f2", "ml", "LT", 2)] });
+    expect(inventoryLines(record, STATS).map((l) => [l.qty, l.name, l.location])).toEqual([
+      [2, "Medium Laser", "LT"],
+      [1, "Medium Laser", "LT(R)"],
+    ]);
+  });
+
   it("sums an ammunition item's shots over its bins and gives null where the row has no figure", () => {
     const record = bipedRecord({
       mounts: [mount("a1", "ammo-ac", "LT", 0), mount("a2", "ammo-ac", "RT", 0), mount("h", "ammo-mg-half", "CT", 0), mount("n", "ammo-none", "LL", 0)],

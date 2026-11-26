@@ -325,20 +325,23 @@ function locationRank(record: MechRecord, location: LocationCode | null): number
  * or a damage. A figure the row lacks, and every figure of an unmatched mount, prints as an em dash; a range band of 0
  * (the book's dash) also prints as one. */
 export function inventoryLines(record: MechRecord, catalog: Catalog): InventoryLine[] {
-  const groups = new Map<string, { qty: number; name: string; location: LocationCode | null; row: EquipmentRow | undefined }>();
+  const groups = new Map<string, { qty: number; name: string; location: LocationCode | null; rear: boolean; row: EquipmentRow | undefined }>();
   for (const mount of record.mounts) {
     if (mount.part) continue;
     const row = mount.equipmentId === null ? undefined : catalog.rowFor(mount.equipmentId, record.editionId);
     if (mount.equipmentId !== null && !row) continue;
     if (row && row.kind !== "weapon" && row.range === undefined && row.damage === undefined) continue;
-    const key = `${mount.location ?? "-"}|${mount.equipmentId ?? `?${mount.name}`}`;
+    // A rear-firing weapon is its own line, in its location written "LT(R)".
+    const rear = mount.rear === true;
+    const key = `${mount.location ?? "-"}${rear ? "(R)" : ""}|${mount.equipmentId ?? `?${mount.name}`}`;
     const group = groups.get(key);
     if (group) group.qty += 1;
-    else groups.set(key, { qty: 1, name: row?.name ?? mount.name, location: mount.location, row });
+    else groups.set(key, { qty: 1, name: row?.name ?? mount.name, location: mount.location, rear, row });
   }
   return [...groups.values()]
-    .sort((a, b) => locationRank(record, a.location) - locationRank(record, b.location) || a.name.localeCompare(b.name))
-    .flatMap(({ qty, name, location, row }): InventoryLine[] => {
+    .sort((a, b) => locationRank(record, a.location) - locationRank(record, b.location) || Number(a.rear) - Number(b.rear) || a.name.localeCompare(b.name))
+    .flatMap(({ qty, name, location: where, rear, row }): InventoryLine[] => {
+      const location = where !== null && rear ? (`${where}(R)` as const) : where;
       const bands = (range: EquipmentRow["range"]) => ({
         min: range === undefined || range[0] === 0 ? DASH : String(range[0]),
         short: range === undefined || range[1] === 0 ? DASH : String(range[1]),
