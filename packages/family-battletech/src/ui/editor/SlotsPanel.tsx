@@ -4,7 +4,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import type { Catalog, EquipmentRow } from "../../rules/catalog";
-import { bodyOf, canFireRear, locationName, slotsTaken } from "../../rules/mech";
+import { bodyOf, canSplitBetween, locationName, mountCanFireRear, slotsTaken, splitOf } from "../../rules/mech";
 import type { Layout, LocationCode, MechRecord, Mount, SlotCell } from "../../rules/mech";
 import { Changed, NumberField, mountDomId } from "../EditorPage";
 import { hostRule } from "../../rules/checks";
@@ -133,8 +133,87 @@ export default function SlotsPanel({
       if (!target) return;
       target.location = location;
       target.slot = slot;
-      if (!canFireRear(location)) delete target.rear;
+      if (location === null) delete target.split;
+      if (!mountCanFireRear(target)) delete target.rear;
     });
+  };
+
+  /** For a weapon the book lets split (or one already split): which adjacent location takes part of it, how many slots and from which slot.
+   * Choosing a location puts there what does not fit from the weapon's first slot to the end of its own location, at least one slot. */
+  const splitControls = (mount: Mount) => {
+    const split = splitOf(mount);
+    if (!mount.location || (!split && catalog.byId(mount.equipmentId ?? "")?.splittable !== true)) return null;
+    const own = mount.location;
+    const taken = slotsTaken(mount, record, catalog.factsOf);
+    const adjacent = layout.locations.filter((loc) => canSplitBetween(own, loc));
+    const options = split && !adjacent.includes(split.location) ? [...adjacent, split.location] : adjacent;
+    const edit = (change: (target: Mount) => void, focus: string) => {
+      onEdit((draft) => {
+        const target = draft.mounts.find((m) => m.id === mount.id);
+        if (target) change(target);
+      }, focus);
+    };
+    const choose = (to: string) => {
+      const loc = options.find((l) => l === to);
+      if (!loc) {
+        edit((target) => {
+          delete target.split;
+        }, `split-${mount.id}`);
+        return;
+      }
+      const room = (layout.slots[own]?.length ?? 0) - (mount.slot ?? 0);
+      const slots = Math.min(taken - 1, Math.max(1, taken - room));
+      const cells = layout.slots[loc] ?? [];
+      const at = cells.findIndex((_, i) => cells.slice(i, i + slots).length === slots && cells.slice(i, i + slots).every((c) => c.kind === "empty" || c.mountId === mount.id));
+      edit((target) => {
+        target.split = { location: loc, slot: Math.max(0, at), slots };
+        if (!mountCanFireRear(target)) delete target.rear;
+      }, `split-${mount.id}`);
+    };
+    return (
+      <>
+        <span className="bt-field bt-slot__field">
+          <label htmlFor={`split-${mount.id}`}>{`Split ${mount.name} into`}</label>
+          <select id={`split-${mount.id}`} value={split?.location ?? ""} onChange={(event) => { choose(event.target.value); }}>
+            <option value="">Not split</option>
+            {options.map((loc) => (
+              <option key={loc} value={loc}>
+                {locationName(loc)}
+              </option>
+            ))}
+          </select>
+        </span>
+        {split && (
+          <>
+            <NumberField
+              id={`split-slots-${mount.id}`}
+              label={`Slots in the ${locationName(split.location)}`}
+              className="bt-slot__field"
+              value={split.slots}
+              after={<span className="bt-hint">{`1 to ${taken - 1}`}</span>}
+              onValid={(value) => {
+                if (value === null || !Number.isInteger(value) || value < 1 || value >= taken) return;
+                edit((target) => {
+                  if (target.split) target.split.slots = value;
+                }, `split-slots-${mount.id}`);
+              }}
+            />
+            <NumberField
+              id={`split-slot-${mount.id}`}
+              label={`First slot in the ${locationName(split.location)}`}
+              className="bt-slot__field"
+              value={split.slot + 1}
+              onValid={(value) => {
+                if (value === null || !Number.isInteger(value) || value < 1 || value > (layout.slots[split.location]?.length ?? 0)) return;
+                edit((target) => {
+                  if (target.split) target.split.slot = value - 1;
+                }, `split-slot-${mount.id}`);
+              }}
+            />
+          </>
+        )}
+      </>
+    );
   };
   const remove = (mount: Mount) => {
     pendingFocus.current = "bt-slots";
@@ -224,6 +303,7 @@ export default function SlotsPanel({
           </span>
           {changed.has(mount.id) && <Changed id={`${mountDomId(mount.id)}-changed`} />}
           {mount.rear && <span className="bt-tag">Fires to the rear</span>}
+          {mount.location && splitOf(mount) && <span className="bt-tag">{`Split: ${locationName(mount.location)} and ${locationName(splitOf(mount)?.location ?? mount.location)}`}</span>}
           {unmatched(mount) && <span className="bt-tag">Unmatched</span>}
           {locked && <span className="bt-tag">Fixed in the base</span>}
         </span>
@@ -269,7 +349,7 @@ export default function SlotsPanel({
                 >
                   Replace
                 </button>
-                {canFireRear(mount.location) && catalog.byId(mount.equipmentId ?? "")?.kind === "weapon" && (
+                {mountCanFireRear(mount) && catalog.byId(mount.equipmentId ?? "")?.kind === "weapon" && (
                   <button
                     type="button"
                     id={`rear-${mount.id}`}
@@ -293,6 +373,7 @@ export default function SlotsPanel({
                   Remove
                 </button>
                 {sizeAndLink(mount)}
+                {splitControls(mount)}
               </>
             )}
           </span>
@@ -377,7 +458,9 @@ export default function SlotsPanel({
                     : blocksOf(cells, seen).map((block) => {
                         const span = { gridRow: `span ${block.length}` };
                         const mount = block.kind === "mount" ? record.mounts.find((m) => m.id === block.mountId) : undefined;
-                        if (mount && block.kind === "mount" && block.first) return mountRow(mount, range(mount.slot ?? block.start, slotsTaken(mount, record, catalog.factsOf)), block.start, span);
+                        // A split weapon's controls sit on the part met first; its slot numbers are that part's own.
+                        const slots = mount && splitOf(mount) ? range(block.start, block.length) : mount ? range(mount.slot ?? block.start, slotsTaken(mount, record, catalog.factsOf)) : "";
+                        if (mount && block.kind === "mount" && block.first) return mountRow(mount, slots, block.start, span);
                         return (
                           <li key={block.start} className={`bt-slot bt-slot--${block.kind}`} style={span}>
                             <span className="bt-slot__n">{range(block.start, block.length)}</span>

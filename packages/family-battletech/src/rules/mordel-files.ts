@@ -131,6 +131,10 @@ interface Item {
   slots: number;
   tech: "inner-sphere" | "clan";
   rear?: true;
+  /** The file's line and the slots the equipment table gives the item, when the run in this location is shorter than that. */
+  short?: { line: string; size: number };
+  /** Shared by the two runs of one split weapon. */
+  pair?: number;
 }
 
 /**
@@ -215,11 +219,21 @@ function convertMtf(text: string, catalog: Catalog, editionId: string, now: stri
       if (!found.row) unmatched.add(line);
       for (let taken = 0; taken < run; taken += size) {
         const length = Math.min(size, run - taken);
-        if (length < size) notes.push(`${line} fills ${length} slots in the ${LOCATION_NAMES[location]} where the equipment table says it takes ${size}; it is kept as ${length}.`);
-        items.push({ name, location, slot: i + taken, slots: length, tech: found.tech, ...(rear ? { rear: true as const } : {}) });
+        items.push({ name, location, slot: i + taken, slots: length, tech: found.tech, ...(rear ? { rear: true as const } : {}), ...(length < size ? { short: { line, size } } : {}) });
       }
       i += run;
     }
+  }
+  // A split weapon (TechManual p.57) is two short runs of one item in two locations whose slots add up to the item's: they become one
+  // mount, weighed once. A short run with no partner is kept at the length the file gives, with a note.
+  let pairs = 0;
+  for (const a of items) {
+    if (!a.short || a.pair !== undefined) continue;
+    const b = items.find((x) => x !== a && x.pair === undefined && x.short?.size === a.short?.size && x.name === a.name && x.tech === a.tech && x.location !== a.location && x.slots + a.slots === a.short?.size);
+    if (b) a.pair = b.pair = ++pairs;
+  }
+  for (const item of items) {
+    if (item.short && item.pair === undefined) notes.push(`${item.short.line} fills ${item.slots} slots in the ${LOCATION_NAMES[item.location]} where the equipment table says it takes ${item.short.size}; it is kept as ${item.slots}.`);
   }
   if (items.length === 0 && file.weapons.length > 0) {
     // A file with no slot lists still names its weapons and where they are.
@@ -289,7 +303,7 @@ function convertMtf(text: string, catalog: Catalog, editionId: string, now: stri
       myomer: key("myomer") ? { type: key("myomer") } : null,
       heat_sinks: sinks ? { type: sinkKind?.type || "Single", technology: sinkKind?.technology ?? null, count: Number(sinks[1]) } : null,
       locations: [...armorEntries].map(([code, a]) => ({ code, armor: a.front ?? 0, rear_armor: a.rear ?? 0 })),
-      equipment: items.map((item) => ({ name: item.name, location: item.location, technology: item.tech === "clan" ? "Clan" : "Inner Sphere", slots: item.slots, id: null, facing: item.rear ? "Rear" : "Front" })),
+      equipment: items.map((item) => ({ name: item.name, location: item.location, technology: item.tech === "clan" ? "Clan" : "Inner Sphere", slots: item.slots, id: item.pair ?? null, facing: item.rear ? "Rear" : "Front" })),
       fluff,
     },
   };
@@ -300,8 +314,13 @@ function convertMtf(text: string, catalog: Catalog, editionId: string, now: stri
 
   // The file's own slot for each item, structure slot and armor slot; its own arm actuators.
   const fromFile = new Map<string, { location: LocationCode; slot: number }>();
+  /** A split weapon's two runs, by the id of the one mount the API import made of them (its first entry's). */
+  const splitFromFile = new Map<string, Item[]>();
   items.forEach((item, at) => {
-    if (item.slot >= 0) fromFile.set(`mount-${at + 1}`, { location: item.location, slot: item.slot });
+    if (item.pair !== undefined) {
+      const first = items.findIndex((x) => x.pair === item.pair);
+      splitFromFile.set(`mount-${first + 1}`, [...(splitFromFile.get(`mount-${first + 1}`) ?? []), item]);
+    } else if (item.slot >= 0) fromFile.set(`mount-${at + 1}`, { location: item.location, slot: item.slot });
   });
   const fileFits = (["structure", "armor"] as const).every((p) => partCells.filter((c) => c.part === p).length === record.mounts.filter((m) => m.part === p).length);
   if (fileFits) {
@@ -313,6 +332,13 @@ function convertMtf(text: string, catalog: Catalog, editionId: string, now: stri
       if (spot) {
         m.location = spot.location;
         m.slot = spot.slot;
+      }
+      const runs = splitFromFile.get(m.id);
+      const own = runs?.find((r) => r.location === m.location);
+      const other = runs?.find((r) => r !== own);
+      if (m.split && own && other && other.location === m.split.location) {
+        m.slot = own.slot;
+        m.split = { ...m.split, slot: other.slot };
       }
     }
     kept = kept.filter((n) => !/^Mordel does not say where the .* slots are\./.test(n));

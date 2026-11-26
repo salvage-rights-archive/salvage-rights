@@ -210,7 +210,7 @@ describe("Printed sheet conventions", () => {
       d.tons = 60;
       plus(d, "axe", "hatchet-is", "RA", 2);
     });
-    expect(sheetFacts(record, await loadCatalog()).inventory.find((l) => l.name === "Hatchet")).toMatchObject({ location: "RA", damage: "12" });
+    expect(sheetFacts(record, await loadCatalog()).inventory.find((l) => l.name === "Hatchet")).toMatchObject({ location: "RA", heat: "—", damage: "12" });
   });
 
   it("brackets the running MP for MASC and the walking and running MP for TSM", async () => {

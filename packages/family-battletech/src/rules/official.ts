@@ -29,7 +29,7 @@ export function canon(value: unknown): string {
 // ---------------------------------------------------------------------------------------------------------------
 
 /** A mount without its id, so that two records built from one design agree whatever ids their mounts were given. */
-const mountShape = (m: Mount) => canon({ equipmentId: m.equipmentId, name: m.name, techBase: m.techBase, location: m.location, slot: m.slot, part: m.part, slots: m.slots, amount: m.amount, rear: m.rear, linked: m.linkedTo !== undefined });
+const mountShape = (m: Mount) => canon({ equipmentId: m.equipmentId, name: m.name, techBase: m.techBase, location: m.location, slot: m.slot, part: m.part, slots: m.slots, amount: m.amount, rear: m.rear, split: m.split, linked: m.linkedTo !== undefined });
 
 /** The design as the mark sees it: tonnage, tech base, year, body, chassis parts, armor, arm actuators and every mount. Not the name, the
  * notes or the picture (renaming and describing a unit does not change the design), and not the rules level or the OmniMech link. */

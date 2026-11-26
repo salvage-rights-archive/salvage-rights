@@ -12,6 +12,7 @@ import { SHEET_ALIASES, sheetNameVariants } from "../data/equipment/names";
 import { PHYSICAL_BV } from "../data/bv";
 import { FORMULAS, physicalDamage, resolveFormula } from "./formulas";
 import type { FactsOf, LocationCode, MechRecord, Mount, MountFacts, TechBase } from "./mech";
+import { splitOf } from "./mech";
 
 /** The longest range band an aerospace unit's attack reaches, as the weapons table prints it in place of hex ranges. */
 export type AeroRange = "Short" | "Medium" | "Long" | "Extreme";
@@ -355,23 +356,28 @@ function locationRank(record: MechRecord, location: LocationCode | null): number
  * or a damage. A figure the row lacks, and every figure of an unmatched mount, prints as an em dash; a range band of 0
  * (the book's dash) also prints as one. */
 export function inventoryLines(record: MechRecord, catalog: Catalog): InventoryLine[] {
-  const groups = new Map<string, { qty: number; name: string; location: LocationCode | null; rear: boolean; row: EquipmentRow | undefined }>();
+  const groups = new Map<string, { qty: number; name: string; location: LocationCode | null; second?: LocationCode; rear: boolean; row: EquipmentRow | undefined }>();
   for (const mount of record.mounts) {
     if (mount.part) continue;
     const row = mount.equipmentId === null ? undefined : catalog.rowFor(mount.equipmentId, record.editionId);
     if (mount.equipmentId !== null && !row) continue;
     if (row && row.kind !== "weapon" && row.range === undefined && row.damage === undefined) continue;
-    // A rear-firing weapon is its own line, in its location written "LT(R)".
+    // A rear-firing weapon is its own line, in its location written "LT(R)". A split weapon is written with both locations, the one
+    // nearer the center torso first ("CT/LT", "LT/LA"), as the published sheets print it.
     const rear = mount.rear === true;
-    const key = `${mount.location ?? "-"}${rear ? "(R)" : ""}|${mount.equipmentId ?? `?${mount.name}`}`;
+    const split = splitOf(mount)?.location;
+    const pair = split === undefined || split === mount.location ? undefined : [mount.location, split].sort((a, b) => locationRank(record, a) - locationRank(record, b));
+    const [location, second] = pair ? [pair[0] ?? null, pair[1] ?? undefined] : [mount.location, undefined];
+    const key = `${location ?? "-"}${second ? `/${second}` : ""}${rear ? "(R)" : ""}|${mount.equipmentId ?? `?${mount.name}`}`;
     const group = groups.get(key);
     if (group) group.qty += 1;
-    else groups.set(key, { qty: 1, name: row?.name ?? mount.name, location: mount.location, rear, row });
+    else groups.set(key, { qty: 1, name: row?.name ?? mount.name, location, ...(second ? { second } : {}), rear, row });
   }
   return [...groups.values()]
     .sort((a, b) => locationRank(record, a.location) - locationRank(record, b.location) || Number(a.rear) - Number(b.rear) || a.name.localeCompare(b.name))
-    .flatMap(({ qty, name, location: where, rear, row }): InventoryLine[] => {
-      const location = where !== null && rear ? (`${where}(R)` as const) : where;
+    .flatMap(({ qty, name, location: inner, second, rear, row }): InventoryLine[] => {
+      const where = inner !== null && second ? `${inner}/${second}` : inner;
+      const location = where !== null && rear ? `${where}(R)` : where;
       const bands = (range: EquipmentRow["range"]) => ({
         min: range === undefined || range[0] === 0 ? DASH : String(range[0]),
         short: range === undefined || range[1] === 0 ? DASH : String(range[1]),
@@ -383,10 +389,13 @@ export function inventoryLines(record: MechRecord, catalog: Catalog): InventoryL
         return physical === undefined ? (r?.damage ?? DASH) : String(typeof physical === "number" ? physical : physicalDamage(physical, record.tons));
       };
       const modes = row?.modes;
+      // A physical weapon that makes no heat (a hatchet, a sword) prints a dash, as the published sheets do; a gun's 0 stays 0.
+      const physical = row !== undefined && Object.hasOwn(PHYSICAL_BV.rows, row.id);
+      const heat = row?.heat === undefined || (physical && row.heat === 0) ? DASH : String(row.heat);
       // A multi-mode launcher prints its name and heat, then one line per mode with that mode's damage and ranges.
       const first: InventoryLine = modes
-        ? { qty, name, location: location ?? DASH, heat: row?.heat === undefined ? DASH : String(row.heat), damage: "", min: "", short: "", medium: "", long: "" }
-        : { qty, name, location: location ?? DASH, heat: row?.heat === undefined ? DASH : String(row.heat), damage: damageOf(row), ...bands(row?.range) };
+        ? { qty, name, location: location ?? DASH, heat, damage: "", min: "", short: "", medium: "", long: "" }
+        : { qty, name, location: location ?? DASH, heat, damage: damageOf(row), ...bands(row?.range) };
       return [first, ...(modes ?? []).map((m): InventoryLine => ({ qty: 0, name: m.name, location: "", heat: "", damage: m.damage, ...bands(m.range), sub: true }))];
     });
 }
