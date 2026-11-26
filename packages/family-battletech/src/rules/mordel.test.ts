@@ -102,6 +102,11 @@ describe("fromMordel", () => {
     expect(imported(crowded).record.mounts.map((m) => m.slot)).toEqual([4, 5, null]);
   });
 
+  it("reads an equipment entry with Rear facing as a rear-firing mount, and Front as a plain one", () => {
+    const { record } = imported(withEquipment([entry(1, "Medium Laser", "LT", { facing: "Rear" }), entry(2, "Medium Laser", "LT", { facing: "Front" })]));
+    expect(record.mounts.filter((m) => m.rear).map((m) => m.id)).toEqual(["mount-1"]);
+  });
+
   it("keeps an unmatched item with Mordel's slot count, links associated items, and stores odd configurations as given", () => {
     const { record, notes } = imported(mordelWith(mordelOdd(), { configuration: "Biped" }));
     expect(notes).toContain("Frobnicator 9000 is not in our equipment table.");

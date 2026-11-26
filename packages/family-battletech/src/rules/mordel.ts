@@ -369,6 +369,7 @@ function convert(response: unknown, catalog: Catalog, editionId: string, now: st
     const stack = sect(entry["stacks"], `${name} stacks`);
     const steps = num(stack?.["count"], `${name} stack count`);
     if (row?.amount && steps !== undefined && steps > 0) mount.amount = steps * row.amount.step;
+    if (str(entry["facing"], `${name} facing`)?.toLowerCase() === "rear") mount.rear = true;
     if (!row && theirSlots !== undefined && theirSlots >= 0) mount.slots = theirSlots;
     else if (!row && slotless) mount.slots = 0;
     mounts.push(mount);
