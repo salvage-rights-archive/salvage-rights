@@ -15,6 +15,7 @@ import {
   nextUnlock,
   pilotStats,
   purchaseUnit,
+  reconPaid,
   sellPrice,
   sellUnit,
   settleSortie,
@@ -124,7 +125,11 @@ function Steps({ loaded, number, onSaved }: { loaded: Loaded; number: number; on
   const [items, setItems] = useState<SortieItem[]>(() => initialItems(campaign, loaded.game));
   const [primary, setPrimary] = useState("");
   const [other, setOther] = useState("");
-  const [recon, setRecon] = useState("");
+  // The reconnaissance paid for when the sortie was started (Sortie page) is already the expense; the player may change it.
+  const [recon, setRecon] = useState(() => {
+    const paid = reconPaid(campaign, number).reduce((a, r) => a + r.sp, 0);
+    return paid > 0 ? String(paid) : "";
+  });
   const [waypoints, setWaypoints] = useState("");
   const [hired, setHired] = useState<NamedPilot[]>([]);
   const [newCallsign, setNewCallsign] = useState("");
