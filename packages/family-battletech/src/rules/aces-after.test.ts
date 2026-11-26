@@ -52,6 +52,9 @@ describe("After-sortie steps", () => {
   it("works the p. 36-37 example by figures: income 1,800, expenses 940, earnings 860, shares 280, warchest 980", () => {
     const s = settleSortie(base(), input(example(), { mvpPilotId: "gus" }));
     expect(s.income.total).toBe(1800);
+    // Income rounds to whole SP, half up (owner ruling): 105 SP at 90% is 94.5, at a custom 65% is 68.25.
+    const rounded: [Partial<ReturnType<typeof base>>, number][] = [[{ difficulty: "veteran" }, 95], [{ difficulty: "legendary", customSpPercent: 65 }, 68]];
+    for (const [patch, want] of rounded) expect(settleSortie({ ...base(), ...patch }, input([unit("a", "BM", 2)], { primarySp: 105, otherSp: 0 })).income.total).toBe(want);
     expect(s.expenses).toMatchObject({ recon: 100, rearm: { units: 5, sp: 100 }, personnel: { wounded: 2, sp: 200 }, repairs: 540, total: 940 });
     expect(s.earnings).toBe(860);
     expect(s.shareTotal).toBe(280);

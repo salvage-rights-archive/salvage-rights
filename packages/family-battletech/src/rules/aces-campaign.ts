@@ -566,7 +566,8 @@ export function settleSortie(c: AcesCampaign, input: AfterSortieInput): Settleme
   };
   const percent = spPercent(c);
   const base = input.primarySp + input.otherSp;
-  const income = { base, percent, total: (base * percent) / 100 };
+  // The book gives no rounding for income; owner ruling (2026-11-25): standard rounding to whole SP.
+  const income = { base, percent, total: Math.round((base * percent) / 100) };
   const earnings = income.total - expenses.total;
   const warchestBefore = warchest(c);
   const warchestAfterEarnings = warchestBefore + earnings;
