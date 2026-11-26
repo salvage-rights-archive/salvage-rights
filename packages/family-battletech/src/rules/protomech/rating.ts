@@ -3,7 +3,7 @@
 // (data/bv.ts keys them by catalog id; data/cost.ts prices them); a launcher built by the tube has its own table (data/protomech.ts). Pure functions; nothing throws.
 import { bvEntryOf, speedFactor } from "../bv";
 import { TARGET_MODIFIER } from "../../data/bv";
-import { PROTO_BV, PROTO_COST, PROTO_LAUNCHER_SIZES } from "../../data/protomech";
+import { PROTO_BV, PROTO_COST, PROTO_LAUNCHER_SIZES, PROTO_MELEE } from "../../data/protomech";
 import type { Catalog } from "../catalog";
 import { priceOf, roundUpCents } from "../cost";
 import { armorPoints, ammoKg, engineKg, engineRating, launcherOf, mountName, plainRun, rowOf, structurePoints, tubesOf } from "./build";
@@ -61,6 +61,7 @@ function figuresOf(mount: ProtoMount, catalog: Catalog, record: ProtoRecord): Om
   }
   const row = rowOf(catalog, record, mount);
   if (!row) return "an item not in our equipment table";
+  if (row.id === PROTO_MELEE.row) return { bv: Math.ceil(record.tons / PROTO_MELEE.tonsPerDamage) * PROTO_MELEE.bvFactor, ammoPerTon: 0, defensive: false, defensiveAmmo: false };
   const entry = bvEntryOf(row.id);
   if (!entry) return "an item with no Battle Value in our tables";
   return { bv: entry.options.none === true ? 0 : entry.bv, ammoPerTon: entry.ammoBv ?? 0, defensive: entry.options.defensive === true, defensiveAmmo: entry.options.defensiveAmmo === true };

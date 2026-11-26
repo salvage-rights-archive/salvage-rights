@@ -277,6 +277,7 @@ export const UNFIXED: Record<string, string> = {
   "mechanical-jump-booster-is": "it adds Jumping MP chosen by the designer, which the record does not hold (TO:AUE p.192)",
   "jump-pack-is": "it adds Jumping MP from the pack weight and the unit weight, not computed here (TO:AUE p.192)",
   "jump-pack-clan": "it adds Jumping MP from the pack weight and the unit weight, not computed here (TO:AUE p.192)",
+  "protomech-quad-melee-weapon-system-clan": "its BV is its damage (2 per 5 tons of a quadruped ProtoMech) times 1.25 (IO:AE p. 190), and the editor builds no quadruped yet",
   "vehicular-mine-dispenser-is": "its BV is that of a 10-point minefield of the mine it carries, which the row does not fix (TO:AUE p. 195)",
   "vehicular-mine-dispenser-clan": "its BV is that of a 10-point minefield of the mine it carries, which the row does not fix (TO:AUE p. 195)",
 };
@@ -608,7 +609,6 @@ export const EQUIPMENT_BV: BvGroup[] = [
       ["prototype-remote-sensors-is", 0, 0], ["prototype-tag-is", 0],
       ["prototype-case-is", 0, undefined, { none: true }], ["prototype-artemis-iv-is", 0, undefined, { none: true }],
       ["prototype-triple-strength-myomer-is", 0, undefined, { none: true }],
-      ["nova-cews-clan", 68, undefined, { defensive: true }],
       ["risc-advanced-pds-is", 64, 22, { defensive: true, defensiveAmmo: true }],
       ["risc-viral-jammer-decoy-is", 284, undefined, { defensive: true }], ["risc-viral-jammer-homing-is", 284, undefined, { defensive: true }],
       // The table's double section mark: treat as a Gauss weapon critical space for the Defensive Battle Rating (p. 191).
@@ -618,6 +618,15 @@ export const EQUIPMENT_BV: BvGroup[] = [
       ["risc-laser-pulse-module-is", 0, undefined, { none: true, gauss: true }], ["risc-heat-sink-override-kit-is", 0, undefined, { none: true }],
       ["super-cooled-myomer-is", 0, undefined, { none: true }], ["harjel-ii-clan", 0, undefined, { none: true }], ["harjel-iii-clan", 0, undefined, { none: true }],
       ["remote-drone-command-console-is", 0],
+    ],
+  },
+  {
+    // The same table continued, printed p. 190: the Clan Wars of Reaving items and the Nova CEWS.
+    cite: { book: IO, page: 190 },
+    checked: "page",
+    rows: [
+      ["nova-cews-clan", 68, undefined, { defensive: true }],
+      ["fusillade-launcher-clan", 11], ["magnetic-clamp-system-clan", 1],
     ],
   },
   {

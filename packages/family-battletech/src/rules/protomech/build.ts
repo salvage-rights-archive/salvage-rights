@@ -2,7 +2,7 @@
 // the weight of every mounted item and its ammunition, and the weight tally. Every figure is read from data/protomech.ts; this file only does the
 // arithmetic. Kilograms throughout. Pure functions; nothing here throws, and a record that does not fit the tables (a weight the book has no row for,
 // an item we do not know) gives undefined or null for that figure and a note in `unknown`, never a guess.
-import { PROTO_AMMO_KG, PROTO_CODES, PROTO_LAUNCHERS, PROTO_MOVE, PROTO_PARTS, PROTO_STRUCTURE } from "../../data/protomech";
+import { PROTO_AMMO_KG, PROTO_BANDED_KG, PROTO_CODES, PROTO_LAUNCHERS, PROTO_MOVE, PROTO_PARTS, PROTO_STRUCTURE } from "../../data/protomech";
 import type { ProtoLauncher, ProtoLocation, ProtoStructureRow } from "../../data/protomech";
 import { groupOf } from "../catalog";
 import type { Catalog, EquipmentRow } from "../catalog";
@@ -79,9 +79,11 @@ export const rowOf = (catalog: Catalog, record: Pick<ProtoRecord, "editionId">, 
   mount.equipmentId === null ? undefined : catalog.rowFor(mount.equipmentId, record.editionId);
 
 /** The weight of one mounted item, in kilograms: a launcher by its tubes (p. 89), any other item at the catalog's tons x 1,000 (p. 87). Undefined when it cannot be weighed. */
-export function mountKg(mount: ProtoMount, catalog: Catalog, record: Pick<ProtoRecord, "editionId">): number | undefined {
+export function mountKg(mount: ProtoMount, catalog: Catalog, record: Pick<ProtoRecord, "editionId" | "tons">): number | undefined {
   const launch = launcherOf(mount);
   if (launch) return tubesOf(mount) * launch.launcher.kgPerTube;
+  const bands = mount.equipmentId === null ? undefined : own(PROTO_BANDED_KG.rows, mount.equipmentId);
+  if (bands) return [...bands].reverse().find((band) => record.tons >= band.fromTons)?.kg;
   const tons = rowOf(catalog, record, mount)?.tons;
   return typeof tons === "number" ? Math.round(tons * 1000) : undefined;
 }

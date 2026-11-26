@@ -318,6 +318,19 @@ describe("Interstellar Operations: Alternate Eras unit-type columns", () => {
   });
 });
 
+describe("Tactical Operations: Advanced Units and Equipment unit-type columns (printed pp. 217, 219, 221, 223)", () => {
+  // The Space columns of the Heavy Weapons and Equipment Construction Data: NA leaves the unit type out; a number that differs from the Mech column is the slots there.
+  it.each([
+    ["rotary-ac-5-clan", ["mech", "industrialmech", "vehicle", "aero", "smallcraft", "dropship", "ship", "building"], { vehicle: { slots: 1, note: "Support vehicle: 8 slots" }, aero: { slots: 1 } }],
+    ["heavy-flamer-clan", ["mech", "industrialmech", "vehicle", "protomech", "building"], {}],
+    ["light-mass-driver-is", ["ship"], {}],
+  ])("%s may be mounted only on the unit types whose column is not NA", async (id, units, by) => {
+    const row = (await loadCatalog()).byId(id);
+    expect(row?.units).toEqual(units);
+    expect(row?.by ?? {}).toMatchObject(by);
+  });
+});
+
 describe("rows an OmniMech cannot pod-mount (TechManual p.53, TO:AUE pp.87-112 and 148-160, IO:AE pp.83-88)", () => {
   it("are flagged pod: false with the page that says so, and the items the books let a pod carry are not", async () => {
     const catalog = await loadCatalog();
