@@ -43,10 +43,11 @@ const gothicRoutes: FamilyRoute[] = [
 const gothicPreviewRoutes: FamilyRoute[] = gothicRoutes.map((route) => ({ ...route, path: `gothic-preview/${route.path}` }));
 
 // AeroTech's pages are written as the game's own routes. The host serves them only once the game is ready (AERO-9), so until then they are
-// also reachable as family routes under aerotech-preview (ui/aero/routes.ts), where every link goes. The sheet joins in AERO-9.
+// also reachable as family routes under aerotech-preview (ui/aero/routes.ts), where every link goes.
 const aeroRoutes: FamilyRoute[] = [
   { path: "home", label: "BattleTech: AeroTech", section: "workshop", load: () => import("./ui/aero/AeroHomePage") },
   { path: "editor", label: "AeroTech unit editor", section: "workshop", load: () => import("./ui/aero/AeroEditorPage") },
+  { path: "sheet", label: "AeroTech record sheet", section: "workshop", load: () => import("./ui/aero/AeroSheetPage") },
 ];
 const aeroPreviewRoutes: FamilyRoute[] = aeroRoutes.map((route) => ({ ...route, path: `aerotech-preview/${route.path}` }));
 

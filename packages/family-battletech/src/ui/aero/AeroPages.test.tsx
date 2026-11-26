@@ -9,7 +9,8 @@ import { newAeroRecord } from "../../rules/aero";
 import type { AeroRecord } from "../../rules/aero";
 import AeroEditorPage from "./AeroEditorPage";
 import AeroHomePage from "./AeroHomePage";
-import { AERO_EDITOR, AERO_HOME } from "./routes";
+import AeroSheetPage from "./AeroSheetPage";
+import { AERO_EDITOR, AERO_HOME, AERO_SHEET } from "./routes";
 import { openAeroStorage } from "./storage";
 
 beforeEach(() => {
@@ -123,5 +124,54 @@ describe("AeroTech pages", () => {
     expect(under.getByText(/20 armor points are set but the armor gives 0/)).toBeTruthy();
     // The unit itself is unchanged.
     expect((screen.getByRole("button", { name: "Save" }) as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it("every unit reads NOT OFFICIAL until the player states a book; a change to the design takes it away, and Undo gets it back", async () => {
+    const user = userEvent.setup();
+    await save(fighter("a", "tw-tm-so"));
+    openEditor("a");
+    const panel = within((await screen.findByRole("heading", { name: "Official or not" })).closest("section") as HTMLElement);
+    expect(panel.getByText("NOT OFFICIAL")).toBeTruthy();
+    expect((panel.getByRole("button", { name: "Mark OFFICIAL" }) as HTMLButtonElement).disabled).toBe(true);
+    await user.type(panel.getByLabelText("Book"), "TechManual");
+    await user.type(panel.getByLabelText("Page (optional)"), "12");
+    await user.click(panel.getByRole("button", { name: "Mark OFFICIAL" }));
+    expect(panel.getByText("OFFICIAL")).toBeTruthy();
+    expect(panel.getByText("TechManual, p. 12")).toBeTruthy();
+    // A change to the design (not the name) turns it NOT OFFICIAL and says which book it came from.
+    await user.type(screen.getByLabelText("Fuel tons"), "1");
+    expect(panel.getByText("NOT OFFICIAL")).toBeTruthy();
+    expect(panel.getByText(/changed from the published design in TechManual/)).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Undo" }));
+    expect(panel.getByText("OFFICIAL")).toBeTruthy();
+    await user.click(panel.getByRole("button", { name: "Mark NOT OFFICIAL" }));
+    expect(panel.getByText("NOT OFFICIAL")).toBeTruthy();
+    expect(panel.queryByText(/changed from/)).toBeNull();
+  });
+
+  it("the sheet page prints a fighter, says plainly when a unit has no sheet yet, and links the editor to it", async () => {
+    await save(fighter("a", "tw-tm-so"));
+    await save({ ...newAeroRecord({ id: "d", chassis: "Leopard", model: "", unitType: "dropship", tons: 1900 }, "tw-tm-so") });
+    const router = createMemoryRouter(
+      [
+        { path: AERO_SHEET, element: <AeroSheetPage /> },
+        { path: AERO_EDITOR, element: <AeroEditorPage /> },
+        { path: AERO_HOME, element: <h1>AeroTech home</h1> },
+      ],
+      { initialEntries: [`${AERO_SHEET}?id=a`] },
+    );
+    render(<RouterProvider router={router} />);
+    expect(await screen.findByRole("heading", { level: 1, name: "Sabre SB-27 record sheet" })).toBeTruthy();
+    expect(screen.getByRole("img", { name: "Sabre SB-27 aerospace fighter record sheet" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Print" })).toBeTruthy();
+    await router.navigate(`${AERO_SHEET}?id=d`);
+    expect(await screen.findByText(/We have no record sheet yet for this unit type/)).toBeTruthy();
+    expect(screen.queryByRole("img")).toBeNull();
+    // From the editor, a fighter links to its sheet and a DropShip does not.
+    await router.navigate(`${AERO_EDITOR}?id=a`);
+    expect(await screen.findByRole("link", { name: "Record sheet" })).toBeTruthy();
+    await router.navigate(`${AERO_EDITOR}?id=d`);
+    await screen.findByRole("heading", { level: 1, name: "Leopard" });
+    expect(screen.queryByRole("link", { name: "Record sheet" })).toBeNull();
   });
 });

@@ -6,7 +6,10 @@ import type { MechType } from "../data/chassis";
 import { baseOf } from "../data/rulesets";
 import { DEFAULT_EDITION, EDITIONS, bookName, editionName } from "../data/editions";
 import { configurationAvailable, configurationChoices, typeAvailable } from "../rules/availability";
-import { techBaseChoices, withLevel } from "../rules/levels";
+import { levelAtLeast, techBaseChoices, withLevel } from "../rules/levels";
+import { DEFAULT_AERO_EDITION } from "../data/aero";
+import { newAeroRecord } from "../rules/aero";
+import type { AeroType } from "../data/aero";
 import { loadCatalog } from "../rules/catalog";
 import { mechTypeOf, newRecord } from "../rules/mech";
 import { fileKind, fromMtf, wrongFileMessage } from "../rules/mordel-files";
@@ -18,6 +21,10 @@ import type { OmniChassis } from "../rules/omni";
 import LevelSelect from "./editor/LevelSelect";
 import { OfficialBadge } from "./editor/Marks";
 import TypeSelect from "./editor/TypeSelect";
+import { startTons, typeReady, typeRow, weightHint } from "./aero/edit";
+import { NumberField } from "./aero/fields";
+import { AERO_HOME, editorHref } from "./aero/routes";
+import { openAeroStorage } from "./aero/storage";
 import type { MechRecord, NewMechOptions } from "../rules/mech";
 import { MAX_LIBRARY_BYTES, STORAGE_READ_FAILED, STORAGE_WRITE_FAILED, downloadLibrary, downloadMech, downloadOmni, fileGame, fromLibraryFile, fromMechFile, fromOmniFile, openFamilyStorage, wrongGameMessage } from "./storage";
 import type { FamilyStorage, SavedEntry } from "./storage";
@@ -85,6 +92,10 @@ export default function HomePage() {
   const [offerAs, setOfferAs] = useState(false);
   /** True after a Gothic file was picked here: the page then links to the Gothic home. */
   const [offerGothic, setOfferGothic] = useState(false);
+  /** The aerospace unit chosen in the new-unit list, when one is: it opens the AeroTech editor under the current rules. */
+  const [aeroType, setAeroType] = useState<string>();
+  const [aeroTons, setAeroTons] = useState<number>();
+  const [aeroThrust, setAeroThrust] = useState(5);
   const keepRef = useRef<HTMLButtonElement>(null);
   const openerRef = useRef<HTMLElement | null>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
@@ -198,7 +209,37 @@ export default function HomePage() {
   // The walking speeds the largest engine in the table allows at this tonnage.
   const walks = Array.from({ length: Math.floor(MAX_RATING / tons) }, (_, i) => i + 1);
 
+  // The aerospace units the current rules build, offered at the rules levels that include them (hidden below, never marked).
+  const aeroOptions = (["aerospace-fighter", "conventional-fighter", "small-craft", "dropship"] as const).flatMap((type) => {
+    const row = typeRow(DEFAULT_AERO_EDITION, type);
+    if (!row || !typeReady(DEFAULT_AERO_EDITION, type) || !levelAtLeast(draft.rulesLevel ?? "standard", row.level ?? "standard")) return [];
+    return [{ id: type, label: row.label, note: `${row.label}: built under the current rules and opened in the AeroTech editor. ${row.cite}.`, row }];
+  });
+  const aeroPicked = aeroOptions.find((option) => option.id === aeroType);
+  const aeroRow = aeroPicked?.row;
+
+  const buildAero = async () => {
+    if (!storage || !aeroPicked || !aeroRow || !draft.chassis.trim()) return;
+    const made = newAeroRecord(
+      {
+        id: crypto.randomUUID(),
+        chassis: draft.chassis.trim(),
+        model: draft.model.trim(),
+        unitType: aeroPicked.id as AeroType,
+        techBase: draft.techBase,
+        tons: aeroTons ?? startTons(aeroRow),
+        safeThrust: aeroThrust,
+        rulesLevel: draft.rulesLevel,
+      },
+      DEFAULT_AERO_EDITION,
+    );
+    const aeroStorage = await openAeroStorage().catch(() => undefined);
+    if (!aeroStorage || !(await attempt(STORAGE_WRITE_FAILED, () => aeroStorage.save(made)))) return;
+    void navigate(editorHref(made.id));
+  };
+
   const build = async () => {
+    if (aeroPicked) return buildAero();
     if (!storage || !draft.chassis.trim()) return;
     const options = { ...draft, configuration, tons, chassis: draft.chassis.trim(), model: draft.model.trim(), walk: Math.min(draft.walk, walks.at(-1) ?? 1), year: null };
     // An OmniMech is a chassis (its fixed base and a Prime to start) and is saved as one.
@@ -588,7 +629,20 @@ export default function HomePage() {
               <label htmlFor="bt-new-model">Model</label>
               <input id="bt-new-model" value={draft.model} onChange={(e) => setDraft({ ...draft, model: e.target.value })} />
             </div>
-            <TypeSelect id="bt-new-type" record={typed} onChange={(next) => { setDraft({ ...draft, unitType: next }); }} />
+            <TypeSelect
+              id="bt-new-type"
+              record={typed}
+              onChange={(next) => { setDraft({ ...draft, unitType: next }); }}
+              aero={{
+                options: aeroOptions,
+                chosen: aeroPicked?.id,
+                onChoose: (id) => {
+                  setAeroType(id);
+                  setAeroTons(undefined);
+                },
+              }}
+            />
+            {!aeroPicked && (
             <div className="bt-field">
               <label htmlFor="bt-new-config">Configuration</label>
               <select
@@ -603,6 +657,7 @@ export default function HomePage() {
                 ))}
               </select>
             </div>
+            )}
             <LevelSelect
               id="bt-new-level"
               record={draft}
@@ -622,6 +677,13 @@ export default function HomePage() {
                 ))}
               </select>
             </div>
+            {aeroPicked && aeroRow ? (
+              <>
+                <NumberField id="bt-new-aero-tons" label="Tonnage" value={aeroTons ?? startTons(aeroRow)} min={0} hint={weightHint(aeroRow.weight)} onValid={(tons) => { setAeroTons(tons ?? undefined); }} />
+                <NumberField id="bt-new-aero-thrust" label="Safe Thrust" value={aeroThrust} min={0} onValid={(thrust) => { setAeroThrust(thrust ?? 0); }} />
+              </>
+            ) : (
+            <>
             <div className="bt-field">
               <label htmlFor="bt-new-tons">Tonnage</label>
               <select id="bt-new-tons" value={tons} onChange={(e) => setDraft({ ...draft, tons: Number(e.target.value) })}>
@@ -642,9 +704,11 @@ export default function HomePage() {
                 ))}
               </select>
             </div>
+            </>
+            )}
           </div>
           <p className="bt-hint">
-            {unitType === "industrialmech" ? "You start with an industrial frame and cockpit, a standard fusion engine" : "You start with standard parts"}, ten
+            {aeroPicked ? "You start with a standard engine, no fuel, no armor, no heat sinks and no equipment. The AeroTech editor's rules check shows what is left to do." : unitType === "industrialmech" ? "You start with an industrial frame and cockpit, a standard fusion engine" : "You start with standard parts"}, ten
             heat sinks, no armor and no equipment. {unitType === "omnimech" && "An OmniMech starts as a base chassis with an empty Prime configuration. "}The editor's rules check shows what is left to do.
           </p>
           <button type="submit" className="bt-button" disabled={!storage}>
@@ -654,6 +718,11 @@ export default function HomePage() {
         <p>
           <Link className="sr-action" to="/battletech/classic/import">
             Import from Mordel
+          </Link>
+        </p>
+        <p>
+          <Link className="sr-action" to={AERO_HOME}>
+            Go to the AeroTech home
           </Link>
         </p>
         <div className="bt-field">

@@ -9,18 +9,19 @@ import { loadCatalog } from "../../rules/catalog";
 import type { Catalog } from "../../rules/catalog";
 import { craftKind, craftTally, fighterKind, fighterTally, locationsOf } from "../../rules/aero";
 import type { AeroRecord } from "../../rules/aero";
-import { aeroOfficialState, checkAero } from "../../rules/aero-checks";
+import { checkAero } from "../../rules/aero-checks";
 import type { AeroFinding } from "../../rules/aero-checks";
-import { officialLabel } from "../../rules/official";
 import LeaveConfirm from "../editor/LeaveConfirm";
 import AeroBoundary from "./AeroBoundary";
+import AeroOfficialPanel, { AeroOfficialBadge } from "./AeroOfficial";
 import { STORAGE_READ_FAILED, STORAGE_WRITE_FAILED } from "../storage";
 import { CraftPanel, WeaponsPanel, arcDomId, mountDomId } from "./AeroArcs";
 import AeroFindings from "./AeroFindings";
 import { ArmorPanel, EnginePanel, HeatPanel, IdentityPanel, WeightLines } from "./AeroParts";
 import type { AeroOnEdit } from "./edit";
 import { fieldId } from "./fields";
-import { AERO_HOME } from "./routes";
+import { sheetProfileFor } from "../../data/aero-sheet";
+import { AERO_HOME, sheetHref } from "./routes";
 import { downloadAero, openAeroStorage } from "./storage";
 import type { AeroStorage } from "./storage";
 import "../classic.scss";
@@ -183,8 +184,6 @@ function Editor({ initial, catalog, storage }: { initial: AeroRecord; catalog: C
   }, [dirty]);
 
   const title = `${record.name.chassis} ${record.name.model}`.trim();
-  const mark = aeroOfficialState(record);
-  const label = officialLabel(mark);
   const weightText =
     tally === undefined ? undefined : tally.unknown.length === 0 ? `${String(tally.total)} of ${String(record.tons)} tons` : `${String(tally.total)} of ${String(record.tons)} tons, not counting what could not be weighed`;
 
@@ -203,14 +202,9 @@ function Editor({ initial, catalog, storage }: { initial: AeroRecord; catalog: C
           </Link>
           <h1 tabIndex={-1}>{title || "Unnamed unit"}</h1>
           <p className="bt-hint">Built under: {aeroEditionName(record.editionId)}</p>
-          {record.official !== undefined && (
-            <p>
-              <span className="bt-official" data-official={mark.official}>
-                <strong className="bt-official__badge">{label.badge}</strong>
-                {label.detail && <span className="bt-official__detail">{` ${label.detail}`}</span>}
-              </span>
-            </p>
-          )}
+          <p>
+            <AeroOfficialBadge record={record} />
+          </p>
         </div>
         <div className="bt-actions">
           <button
@@ -223,6 +217,11 @@ function Editor({ initial, catalog, storage }: { initial: AeroRecord; catalog: C
           >
             Save
           </button>
+          {sheetProfileFor(record.editionId, record.unitType) && (
+            <Link className="bt-button bt-button--secondary" to={sheetHref(record.id)}>
+              Record sheet
+            </Link>
+          )}
           <button type="button" className="bt-button bt-button--secondary" disabled={history.past.length === 0} onClick={undo}>
             Undo
           </button>
@@ -285,6 +284,7 @@ function Editor({ initial, catalog, storage }: { initial: AeroRecord; catalog: C
           <EnginePanel record={record} onEdit={edit} />
           <ArmorPanel record={record} onEdit={edit} />
           <HeatPanel record={record} onEdit={edit} />
+          <AeroOfficialPanel key={record.id} record={record} onEdit={edit} />
         </div>
         <WeaponsPanel record={record} catalog={catalog} onEdit={edit} />
         <CraftPanel record={record} catalog={catalog} onEdit={edit} />
