@@ -2,8 +2,22 @@
 // small play calculations the sheet and the tracker share. A record is plain data; there is no class. Nothing here throws on a record
 // it does not understand: a type id this version does not know is kept as it is (and reported by the check), and keys this version does
 // not know are kept too, so a record written by a later version survives a round trip through this one.
-import { ABOM_CLASSES, ABOM_TYPES, ABOMINATION_ONLY_INITIATIVE, DEFAULT_SKILLS, FRAYED, HANDLER, MOB_HOBBLE_MODIFIERS, RANDOM_CREATURE, STUMBLE_DAMAGE } from "../data/gothic";
-import type { AbomClass, AbomClassId, AbomStats, AbomType, AbomWeapon } from "../data/gothic";
+import {
+  ABOM_CLASSES,
+  ABOM_TYPES,
+  ABOMINATION_ONLY_INITIATIVE,
+  DEFAULT_SKILLS,
+  FRAYED,
+  HANDLER,
+  HEX_STACK_WEIGHT,
+  MECH_STACK_REDUCTION,
+  MOB_HOBBLE_MODIFIERS,
+  PLANETARY_CONDITIONS,
+  RANDOM_CREATURE,
+  STUMBLE_DAMAGE,
+  ULTRAVIOLET,
+} from "../data/gothic";
+import type { AbomClass, AbomClassId, AbomStats, AbomType, AbomWeapon, ConditionId, MechInHex } from "../data/gothic";
 import { RULES_LEVELS } from "../data/chassis";
 import type { RulesLevel } from "../data/chassis";
 import type { Catalog, EquipmentRow } from "./catalog";
@@ -477,4 +491,71 @@ export function forceWithDefaults(value: unknown, fallbackId = ""): GothicForce 
     mechs: list(value.mechs, forceMechOf),
     units: list(value.units, forceUnitOf),
   };
+}
+
+// ---- Stacking (rulebook p. 64 footnote and p. 69) ---------------------------------------------------------------------------
+
+/** One Abomination unit in a hex. `height` is levels above the ground for a unit flying on VTOL MP; absent for a unit on the ground. */
+export interface StackUnit {
+  classId: AbomClassId;
+  height?: number;
+}
+
+export interface StackCheck {
+  legal: boolean;
+  /** Each class's limit with a 'Mech in the hex (never below 0). */
+  limits: Record<AbomClassId, number>;
+  /** The stack weight the hex holds, and what the counted units use of it. */
+  capacity: number;
+  used: number;
+  /** How many more of each class would still fit, by its limit and by the weight together. */
+  room: Record<AbomClassId, number>;
+  /** The classes over their limit; `overWeight` when the Swarmer equivalents are over the hex's capacity. */
+  overLimit: AbomClassId[];
+  overWeight: boolean;
+}
+
+/**
+ * Whether Abomination units may end a move in one hex, and what room is left. A 'Mech in the hex takes its reduction off every class
+ * limit and off the hex's weight (our reading: both shrink together, which gives the table the owner ruled on: alone 6/3/2/1,
+ * friendly 4/1/0/0, enemy 2/0/0/0). Mixed classes count by Swarmer equivalents (p. 69). A unit flying above the ground ignores
+ * stacking unless another unit in the hex is at the same height, and then those units count.
+ */
+export function stackCheck(units: readonly StackUnit[], mech: MechInHex = "none"): StackCheck {
+  const cut = mech === "none" ? 0 : MECH_STACK_REDUCTION[mech];
+  const counted = units.filter((u, i) => (u.height ?? 0) <= 0 || units.some((o, j) => j !== i && (o.height ?? 0) === u.height));
+  const capacity = Math.max(0, HEX_STACK_WEIGHT - cut);
+  const used = counted.reduce((sum, u) => sum + (abomClassOf(u.classId)?.stackWeight ?? 0), 0);
+  const limits = {} as Record<AbomClassId, number>;
+  const room = {} as Record<AbomClassId, number>;
+  const overLimit: AbomClassId[] = [];
+  for (const c of ABOM_CLASSES) {
+    const have = counted.filter((u) => u.classId === c.id).length;
+    limits[c.id] = Math.max(0, c.stackLimit - cut);
+    room[c.id] = Math.max(0, Math.min(limits[c.id] - have, Math.floor((capacity - used) / c.stackWeight)));
+    if (have > limits[c.id]) overLimit.push(c.id);
+  }
+  return { legal: overLimit.length === 0 && used <= capacity, limits, capacity, used, room, overLimit, overWeight: used > capacity };
+}
+
+// ---- Planetary conditions (rulebook p. 90) ----------------------------------------------------------------------------------
+
+export interface ConditionEffect {
+  /** Extra MP cost per hex, and the modifier to weapon and to physical attacks. */
+  mp: number;
+  weapon: number;
+  physical: number;
+}
+
+/**
+ * A planetary condition's figures for a unit with ultraviolet sensitivity (an Abomination, or a 'Mech driven by a Frayed MechWarrior):
+ * the condition's own figures, then the ultraviolet change: ignored, lowered by 2 (never below 0) or raised by 1, on movement and on
+ * both kinds of attack. Heat on the target (p. 90) is not applied: an Abomination keeps no heat.
+ */
+export function conditionEffect(id: ConditionId, who: "abomination" | "frayed" = "abomination"): ConditionEffect | undefined {
+  const base = PLANETARY_CONDITIONS.find((c) => c.ids.includes(id));
+  if (!base) return undefined;
+  const uv = ULTRAVIOLET.find((u) => u.ids.includes(id))?.[who] ?? 0;
+  const adjust = (n: number) => (uv === "ignore" ? 0 : Math.max(0, n + uv));
+  return { mp: adjust(base.mp), weapon: adjust(base.weapon), physical: adjust(base.physical) };
 }
