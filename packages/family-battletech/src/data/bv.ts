@@ -640,6 +640,10 @@ export const EQUIPMENT_BV: BvGroup[] = [
     rows: [
       ["nova-cews-clan", 68, undefined, { defensive: true }],
       ["fusillade-launcher-clan", 11], ["magnetic-clamp-system-clan", 1],
+      // Printed p. 190: no BV of their own; they enable BV skill modifiers the editor does not apply (the neurohelmet: -1 Piloting, p. 189)
+      ["damage-interrupt-circuit-is", 0], ["direct-neural-interface-modification-is", 0], ["enhanced-imaging-interface-clan", 0],
+      ["battlemech-neural-interface-unit-is", 0], ["battlemech-neural-interface-unit-clan", 0],
+      ["sldf-advanced-neurohelmet-mech-is", 0, undefined, { none: true }], ["sldf-advanced-neurohelmet-fighter-is", 0, undefined, { none: true }],
     ],
   },
   {

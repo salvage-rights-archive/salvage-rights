@@ -83,6 +83,7 @@ export const COCKPIT_COST: Sourced & { rows: Record<string, { cost: number; cite
     "torso-mounted": { cost: 750_000, cite: { book: TO, page: 219 } },
     interface: { cost: 1_500_000, cite: { book: IO, page: 213 } },
     "interface-clan": { cost: 1_500_000, cite: { book: IO, page: 213 } },
+    vrpp: { cost: 1_250_000, cite: { book: IO, page: 213 } },
     primitive: { cost: 100_000, cite: { book: IO, page: 215 } },
     "superheavy-tripod": { cost: 500_000, cite: { book: IO, page: 217 } },
     superheavy: { cost: 300_000, cite: { book: IO, page: 215 } },
@@ -379,6 +380,9 @@ export const EQUIPMENT_COST: PriceGroup[] = [
       "prototype-lb-10-x-ac-lsw": 2_000_000, "prototype-ultra-ac-5": 1_000_000,
       "improved-atm-3": 100_000, "improved-atm-6": 250_000, "improved-atm-9": 450_000, "improved-atm-12": 700_000,
       "nova-cews": 1_110_000,
+      // p.213: cockpit and pilot-interface items (the SLDF neurohelmets 5,000 a pilot)
+      "damage-interrupt-circuit": 150, "direct-neural-interface-modification": 500_000, "enhanced-imaging-interface": 400_000,
+      "sldf-advanced-neurohelmet-mech": 5_000, "sldf-advanced-neurohelmet-fighter": 5_000, "battlemech-neural-interface-unit": 650_000,
       "fusillade-launcher": 100_000, "magnetic-clamp-system": 25_000, "protomech-quad-melee-weapon-system": 70_000,
     },
   },

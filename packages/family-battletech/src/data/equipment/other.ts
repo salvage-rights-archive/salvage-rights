@@ -290,6 +290,30 @@ export const OTHER: EquipmentGroup[] = [
     ],
   },
   {
+    // Cockpit and pilot-interface items (IO:AE printed p. 213 construction data, p. 212 play table, rules pp. 62-64 and 69-70 and 110-111, read against the page
+    // images). All weigh nothing and take no slot: each only raises the cockpit's price (the table's "0*"). Rules level is the play table's (Experimental); the entries
+    // print Advanced for the neural interface modification and the SLDF neurohelmet, which the book panel should settle. Dates: the Universal Technology
+    // Advancement Table (printed pp. 33-34) where it staged them. The damage interrupt circuit is prototype-only (3055, extinct 3060). The neurohelmet's
+    // cost is its table's 5,000 per pilot; the neural interface modification's table price is 500,000 where its entry (p. 62) says an added 250,000 (a doubt).
+    // BattleMech Neural Interface Unit: a PA(L) battle armor part only (p. 110): 100 kg, 2 slots in the torso.
+    defaults: { kind: "other", techBase: "inner-sphere", cite: { book: IO, page: 213 }, playCite: { book: IO, page: 212 }, checked: "page", rulesLevel: "experimental", tons: 0, slots: 0, type: "PE" },
+    items: [
+      { id: "damage-interrupt-circuit-is", name: "Damage Interrupt Circuit", aliases: ["DIC"], availability: [{ from: 3055, to: 3060 }], playCite: { book: IO, page: 62 } },
+      { id: "direct-neural-interface-modification-is", name: "Direct Neural Interface Modification", aliases: ["DNI Cockpit Modification"], availability: [{ from: 3055 }], prototypeYear: 3052, units: ["mech", "industrialmech", "vehicle", "aero"] },
+      { id: "sldf-advanced-neurohelmet-mech-is", name: "SLDF Advanced Neurohelmet (MechWarrior)", availability: [{ from: 2759, to: 2770 }], prototypeYear: 2755 },
+      { id: "sldf-advanced-neurohelmet-fighter-is", name: "SLDF Advanced Neurohelmet (Fighter Pilot)", availability: [{ from: 2761, to: 2770 }], prototypeYear: 2758, units: ["aero"] },
+      { id: "battlemech-neural-interface-unit-is", name: "BattleMech Neural Interface Unit", aliases: ["BattleMech NIU"], tons: 0.1, slots: 2, availability: [{ from: 3078 }], units: ["battlearmor"] },
+    ],
+  },
+  {
+    defaults: { kind: "other", techBase: "clan", cite: { book: IO, page: 213 }, playCite: { book: IO, page: 212 }, checked: "page", rulesLevel: "experimental", tons: 0, slots: 0, type: "PE" },
+    items: [
+      // Enhanced imaging interface: weightless, no slot on a Clan BattleMech (entry p. 69; the ProtoMech's is built in, at no price).
+      { id: "enhanced-imaging-interface-clan", name: "Enhanced Imaging Interface", aliases: ["EI Interface"], availability: [{ from: 3048 }] },
+      { id: "battlemech-neural-interface-unit-clan", name: "BattleMech Neural Interface Unit", aliases: ["BattleMech NIU"], tons: 0.1, slots: 2, availability: [{ from: 3083 }], units: ["battlearmor"] },
+    ],
+  },
+  {
     defaults: { kind: "other", techBase: "inner-sphere", cite: { book: IO, page: 215 }, playCite: { book: IO, page: 214 }, checked: "page", rulesLevel: "experimental" },
     items: [
       // RISC and Dark Age electronics and equipment
