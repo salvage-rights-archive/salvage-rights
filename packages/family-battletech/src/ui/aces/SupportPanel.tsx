@@ -79,7 +79,7 @@ export default function SupportPanel({ game, records, apply }: Pick<PanelProps, 
               <CardRoll key={`${decision.next.card}:${decision.next.target}`} game={game} records={records} apply={apply} cardId={decision.next.card} targetId={decision.next.target} />
             </>
           ) : (
-            <p role="status">No card is played now.</p>
+            <p role="status">{`No card is played now. ${fromResolver(game, decision.log).map((l) => l.text).join(" ")}`}</p>
           )}
           {decision.saved.length > 0 && <p className="bt-hint">{`Kept for later: ${decision.saved.map((s) => `${records.supports?.find((c) => c.id === s.card)?.name ?? s.card} (${s.why})`).join("; ")}.`}</p>}
           <details>

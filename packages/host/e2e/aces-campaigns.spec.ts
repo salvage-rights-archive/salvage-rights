@@ -172,6 +172,20 @@ test("the campaign pages at 320 px, in both themes, without axe violations", asy
     await noViolations(page, `campaign ${name}, light`);
   }
 
+  await page.getByRole("button", { name: "Overview", exact: true }).click();
+  await page.getByRole("link", { name: "Print the sheets" }).click();
+  await expect(page.getByRole("heading", { name: "Aces: Player Force Roster" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Aces: Campaign Log" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Aces: Sortie Log" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Aces: Named Pilots" })).toBeVisible();
+  await fitsPhone(page, "print page, light");
+  await noViolations(page, "print page, light");
+  await page.emulateMedia({ media: "print" });
+  await expect(page.getByRole("button", { name: "Print", exact: true })).toBeHidden();
+  await expect(page.getByRole("heading", { name: "Aces: Player Force Roster" })).toBeVisible();
+  await page.emulateMedia({ media: "screen" });
+  const printUrl = page.url();
+
   await page.goto(`${DEV}/settings`);
   await page.getByRole("radio", { name: "Dark" }).check();
   await page.goto(url);
@@ -179,6 +193,9 @@ test("the campaign pages at 320 px, in both themes, without axe violations", asy
     await page.getByRole("button", { name, exact: true }).click();
     await noViolations(page, `campaign ${name}, dark`);
   }
+  await page.goto(printUrl);
+  await expect(page.getByRole("heading", { name: "Aces: Campaign Log" })).toBeVisible();
+  await noViolations(page, "print page, dark");
   await page.goto(list);
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   await noViolations(page, "campaigns, dark");

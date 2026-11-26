@@ -24,7 +24,7 @@ import SortiesSection from "./SortiesSection";
 import { downloadCampaigns } from "./campaign-file";
 import { openCampaignStorage } from "./campaign-storage";
 import type { CampaignStorage } from "./campaign-storage";
-import { ACES_CAMPAIGNS, afterHref, gameHref, sortieHref } from "./routes";
+import { ACES_CAMPAIGNS, afterHref, gameHref, printHref, sortieHref } from "./routes";
 import "./styles";
 
 const SECTIONS = [
@@ -136,6 +136,9 @@ function Campaign({ storage, campaign: initial, units }: { storage: CampaignStor
         <button type="button" className="bt-button bt-button--secondary" onClick={() => { downloadCampaigns([campaign], units, true); setStatus("Export started."); }}>
           Export this campaign
         </button>
+        <Link className="bt-button bt-button--secondary" to={printHref(campaign.id)}>
+          Print the sheets
+        </Link>
       </div>
       {dirty && <p className="bt-hint">You have changes that are not saved.</p>}
       <div role="status">{status}</div>

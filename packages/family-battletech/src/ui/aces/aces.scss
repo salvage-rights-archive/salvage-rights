@@ -427,3 +427,129 @@
     overflow-wrap: anywhere;
   }
 }
+
+// The printed campaign sheets (ui/aces/AcesPrintPage.tsx). On screen they are plain boxes; on paper only they print, landscape.
+.aces-sheet {
+  margin: 0 0 var(--sr-space-4);
+  padding: var(--sr-space-3);
+  border: var(--sr-border) solid var(--sr-line-strong);
+  background: #fff;
+  color: #000;
+  overflow-x: auto;
+
+  h2,
+  h3 {
+    margin: 0 0 var(--sr-space-2);
+    color: #000;
+  }
+
+  &__fields {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: 0 var(--sr-space-3);
+    margin: 0 0 var(--sr-space-3);
+
+    dt {
+      font-weight: 600;
+    }
+
+    dd {
+      margin: 0;
+    }
+  }
+
+  &__cols {
+    display: grid;
+    gap: var(--sr-space-3);
+
+    @media (min-width: 56rem) {
+      grid-template-columns: 2fr 1fr;
+    }
+  }
+
+  &__table {
+    width: 100%;
+    margin: 0 0 var(--sr-space-3);
+    border-collapse: collapse;
+
+    caption {
+      font-weight: 600;
+      text-align: left;
+    }
+
+    th,
+    td {
+      padding: 0.35rem 0.4rem;
+      border: 1px solid #000;
+      text-align: left;
+      vertical-align: top;
+    }
+  }
+
+  &__steps {
+    margin: 0 0 var(--sr-space-3);
+    padding-left: 1.25rem;
+  }
+
+  &__note,
+  &__memorial,
+  &__fields-line,
+  &__steps-line {
+    margin: 0 0 var(--sr-space-2);
+  }
+
+  &__cards {
+    display: grid;
+    gap: var(--sr-space-3);
+
+    @media (min-width: 56rem) {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+
+  &__pilot {
+    padding: var(--sr-space-2);
+    border: 1px solid #000;
+    break-inside: avoid;
+  }
+
+  &__foot {
+    margin: var(--sr-space-3) 0 0;
+    font-size: 0.8rem;
+  }
+}
+
+@media print {
+  @page {
+    size: landscape;
+    margin: 0.4in;
+  }
+
+  .aces-print__bar {
+    display: none;
+  }
+
+  .aces-sheet {
+    border: 0;
+    padding: 0;
+    break-after: page;
+    overflow: visible;
+
+    &:last-of-type {
+      break-after: auto;
+    }
+
+    &__cols,
+    &__cards {
+      display: grid;
+    }
+
+    &__cols {
+      grid-template-columns: 2fr 1fr;
+    }
+
+    &__cards {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+}
