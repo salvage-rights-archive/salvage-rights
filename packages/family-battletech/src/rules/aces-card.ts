@@ -80,6 +80,8 @@ export interface AcesCard {
   of: number;
   /** The player's own label when they own several copies of a deck. */
   copy?: string;
+  /** The player's word that this deck's combat side has no overheat band; when absent the subtype decides (`hasOvBand`). */
+  noOv?: boolean;
   movement: { priority: number | null; columns?: Record<ColumnId, Column> };
   combat: { priority: number | null; target?: TargetRule & { keys: Key[] }; overheat?: OvRow[] };
   /** The player's own words; kept on the device and in their own library file. */
@@ -187,6 +189,7 @@ export function isAcesCard(v: unknown): v is AcesCard {
     isNumber(v.position) &&
     isNumber(v.of) &&
     optional(v.copy, isString) &&
+    optional(v.noOv, (x) => typeof x === "boolean") &&
     isObject(movement) &&
     isPriority(movement.priority) &&
     optional(movement.columns, (c) => isObject(c) && isColumn(c.aggressive) && isColumn(c.balanced) && isColumn(c.cautious)) &&
@@ -382,6 +385,14 @@ export function deckKey(card: Pick<AcesCard, "deck">): string {
   const role = card.deck.role.trim();
   const sub = card.deck.subtype?.trim();
   return sub ? `${role} (${sub})` : role;
+}
+
+/** Subtypes whose combat side prints no overheat band (design 0.4: vehicles and infantry); the player can say otherwise. */
+const NO_OV_SUBTYPES = ["hover", "infantry"];
+
+/** Whether the card's combat side has overheat rows: the player's own word first, else the subtype. */
+export function hasOvBand(card: Pick<AcesCard, "deck" | "noOv">): boolean {
+  return card.noOv === undefined ? !NO_OV_SUBTYPES.includes((card.deck.subtype ?? "").trim().toLowerCase()) : !card.noOv;
 }
 
 /** The five fields the deck engine needs (rules/aces-deck.ts). */

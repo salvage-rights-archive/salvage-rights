@@ -223,4 +223,38 @@ export async function saveAsUnit(page: Page, base: string, name: string, pv: num
   await expect(page.getByText("Saved.")).toBeVisible();
 }
 
+export const ACES = "/battletech/aces-preview";
+
+/** Opens a picker by its button, searches it and picks the entry whose name is given. */
+export async function pickToken(page: Page, opener: string, search: string, entry: string): Promise<void> {
+  await page.getByRole("button", { name: opener, exact: true }).click();
+  await page.getByLabel("Search the list").fill(search);
+  await page.getByRole("button", { name: entry, exact: true }).click();
+}
+
+/**
+ * Saves an invented Aces card (nothing from a printed card): a Brawler, card 3 of 6, with a condition and a filter in its
+ * Aggressive column, a combat rule and one overheat row. Returns the editor's path (with its id) for a later visit.
+ */
+export async function saveAcesCard(page: Page, base: string): Promise<string> {
+  await page.goto(`${base}${ACES}/card`);
+  await page.getByLabel("Role", { exact: true }).selectOption("Brawler");
+  await page.getByLabel(/^Card number in the deck/).selectOption("3");
+  await page.getByRole("button", { name: "2. Movement side" }).click();
+  await page.getByLabel("Movement priority").fill("47");
+  await page.getByRole("button", { name: "Record the three columns" }).click();
+  await pickToken(page, "Add a test to: When the Aggressive column applies", "has moved", "the ideal … has moved");
+  await pickToken(page, "Add a filter to the Aggressive column", "keep", "keep … from …");
+  await page.getByRole("button", { name: "3. Combat side" }).click();
+  await page.getByLabel("Combat priority").fill("112");
+  await page.getByRole("button", { name: "Record the combat rules" }).click();
+  await pickToken(page, "Add a way to choose", "no armor", "no Armor left");
+  await page.getByRole("button", { name: "Add an overheat row" }).click();
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(page.getByText("Saved.")).toBeVisible();
+  await page.waitForURL(/[?]id=/);
+  const saved = new URL(page.url());
+  return `${saved.pathname.replace(/^\/salvage-rights/, "")}${saved.search}`;
+}
+
 export { expect };

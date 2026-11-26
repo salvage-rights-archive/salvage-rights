@@ -1,0 +1,177 @@
+// Styles for the Aces pages. Theme tokens only; every class starts with aces-. The buttons, fields and rows are the Classic
+// pages' (classic.scss) and the preview card is Alpha Strike's (alpha-strike.scss).
+
+.aces-icon {
+  flex: none;
+  width: 1rem;
+  height: 1rem;
+}
+
+.aces-icon-label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sr-space-1);
+}
+
+.aces-doors .bt-row {
+  min-height: 44px;
+}
+
+.aces-deck {
+  display: block;
+
+  &__name {
+    margin: 0;
+  }
+
+  &__words {
+    margin: var(--sr-space-1) 0 var(--sr-space-2);
+  }
+
+  &__cards {
+    margin-top: var(--sr-space-2);
+  }
+}
+
+.aces-editor {
+  &__body {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--sr-space-4);
+
+    @media (min-width: 60rem) {
+      grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+      align-items: start;
+    }
+  }
+
+  &__form,
+  &__side {
+    min-width: 0;
+  }
+}
+
+.aces-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sr-space-2);
+  margin-bottom: var(--sr-space-3);
+}
+
+// The chosen step or column is filled with the accent and also carries its pressed state for assistive technology.
+.aces-step[aria-pressed="true"] {
+  background: var(--sr-accent-bg);
+  color: var(--sr-on-accent);
+  outline: var(--sr-border) solid var(--sr-line-strong);
+}
+
+.aces-fieldset {
+  margin: 0 0 var(--sr-space-2);
+  padding: var(--sr-space-2);
+  border: var(--sr-border) solid var(--sr-field-line);
+  border-radius: var(--sr-radius);
+}
+
+.aces-chip {
+  display: inline-flex;
+  margin-right: var(--sr-space-3);
+}
+
+.aces-stepper {
+  &__row {
+    display: flex;
+    flex: 1 1 9rem;
+    min-width: 0;
+    gap: var(--sr-space-1);
+
+    input {
+      flex: 1 1 4rem;
+      min-width: 0;
+      text-align: center;
+    }
+  }
+
+  &__button {
+    min-width: 44px;
+    padding: 0;
+  }
+}
+
+.aces-use {
+  display: block;
+
+  &__text {
+    display: block;
+    margin-bottom: var(--sr-space-2);
+  }
+}
+
+.aces-params {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sr-space-2) var(--sr-space-3);
+  margin-top: var(--sr-space-2);
+
+  > * {
+    flex: 1 1 min(14rem, 100%);
+    min-width: 0;
+  }
+}
+
+.aces-list,
+.aces-condition,
+.aces-column > h3,
+.aces-side > h3 {
+  margin-bottom: var(--sr-space-3);
+}
+
+.aces-picker {
+  margin: var(--sr-space-2) 0;
+
+  &__panel {
+    margin-top: var(--sr-space-2);
+    padding: var(--sr-space-3);
+    background: var(--sr-surface-sunk);
+    border: var(--sr-border) solid var(--sr-line-strong);
+    border-radius: var(--sr-radius);
+  }
+
+  &__group {
+    margin: var(--sr-space-2) 0 var(--sr-space-1);
+  }
+
+  &__list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sr-space-2);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  &__item {
+    text-align: left;
+  }
+}
+
+.aces-preview-col {
+  margin: var(--sr-space-2) 0;
+  padding-top: var(--sr-space-2);
+  border-top: var(--sr-border) solid var(--sr-line);
+
+  h3,
+  dl,
+  dd {
+    margin: 0;
+  }
+
+  dt {
+    color: var(--sr-ink-muted);
+    font-size: .85rem;
+  }
+
+  &__filters {
+    margin: var(--sr-space-1) 0 0;
+    padding-left: var(--sr-space-4);
+  }
+}
