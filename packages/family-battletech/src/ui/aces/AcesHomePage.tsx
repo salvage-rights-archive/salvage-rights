@@ -48,7 +48,7 @@ export default function AcesHomePage() {
         <li className="bt-row">
           <span className="bt-row__text">
             <strong>Play a game</strong>
-            <span className="bt-row__credit">Set up a game from two Alpha Strike forces. Playing the turns is not ready yet.</span>
+            <span className="bt-row__credit">Set up a game from two Alpha Strike forces.</span>
           </span>
           <Link className="bt-button" to={ACES_NEW_GAME}>
             Set up a game

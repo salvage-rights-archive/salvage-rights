@@ -118,5 +118,5 @@ test("set up sortie 1 with invented units at 320 px, in both themes without axe 
 
   await page.getByLabel("Bolt BT-2 (BM, 30 PV)").check();
   await page.getByRole("button", { name: "Create the game" }).click();
-  await expect(page).toHaveURL(/aces-preview\/game\?id=/);
+  await expect(page).toHaveURL(new RegExp(`${ACES}/game\\?id=`));
 });
