@@ -42,9 +42,9 @@ describe("the ten types", () => {
     expect(stats?.creatures).toBeLessThanOrEqual(stats?.size?.maxCreatures ?? 0);
   });
 
-  it("every type passes its own check, its weapons being Abomination rows (the Light Blazer row comes from the ruleset piece)", () => {
+  it("every type passes its own check, its weapons being Abomination rows", () => {
     for (const type of ABOM_TYPES) {
-      const findings = checkAbomination(newAbominationUnit(type.id, "u"), "standard", catalog).filter((f) => !f.message.includes("light-blazer-gothic"));
+      const findings = checkAbomination(newAbominationUnit(type.id, "u"), "standard", catalog);
       expect(findings, type.id).toEqual([]);
     }
   });

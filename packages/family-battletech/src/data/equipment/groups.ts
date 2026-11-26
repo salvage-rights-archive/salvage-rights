@@ -31,7 +31,7 @@ export const EQUIPMENT_GROUPS: GroupRule[] = [
   { id: "special", label: "Anti-personnel and special weapons", match: words("booby-trap|machine-gun|machine-gun-array|a-pods|b-pods|grenade|mine-dispenser|taser|fluid-gun|m-pod") },
   { id: "physical", label: "Physical weapons", match: words("claws|mace|lance|talons|hatchet|sword|retractable-blade|chain-whip|flail|spikes|vibroblade") },
   { id: "missile", label: "Missile weapons", match: words("lrm|srm|mrm|mml|atm|rocket-launcher|narc|thunderbolt|mortar") },
-  { id: "energy", label: "Energy weapons", match: words("laser|ppc|plasma|flamer|tsemp|binary|bombast|centurion|capacitor|chemical") },
+  { id: "energy", label: "Energy weapons", match: words("laser|ppc|plasma|flamer|tsemp|binary|blazer|bombast|centurion|capacitor|chemical") },
   { id: "ballistic", label: "Ballistic weapons", match: words("ac|lb|gauss|rifle|rotary|ultra|magshot") },
 ];
 export const OTHER_GROUP = { id: "other", label: "Other equipment" };

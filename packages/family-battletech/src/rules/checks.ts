@@ -24,6 +24,7 @@ import {
 } from "../data/chassis";
 import type { Cite, PartFacts, Span } from "../data/chassis";
 import { configurationInTime, equipmentPhase, eraOfRecord, eraOfYear, partPhase, partSpans, typeInTime, windowOf } from "./availability";
+import { listed, RULESETS, rulesetOf } from "../data/rulesets";
 import { CLAN_CASE_IDS, clanCaseAllowed } from "./case";
 import { locationsFor, mountableOn, mountsRequired, podMountable } from "./catalog";
 import { heatSinkMixAllowed, levelAtLeast, levelIn, levelItems, levelRow, mixedPhase } from "./levels";
@@ -511,10 +512,16 @@ function unavailableBecause(row: EquipmentRow, name: string, year: number): stri
 
 function availabilityCheck({ record, catalog }: CheckInput): Finding[] {
   const out: Finding[] = [];
+  const ruleset = rulesetOf(record.editionId);
   for (const mount of record.mounts) {
     const row = rowOf(catalog, record, mount);
     if (!row) continue;
     const where = { mountId: mount.id };
+    // Another game's item, in a game that never lifts its list (Classic): no level allows it. Where the game lifts its list, the level check reports it.
+    if (!listed(row.games, ruleset) && ruleset.openAt === undefined) {
+      const owners = (row.games ?? []).map((game) => RULESETS[game].name).join(" or ");
+      out.push(finding("availability", "error", `${mount.name} is ${owners} equipment, which a ${ruleset.name} 'Mech may not use.`, { where, cite: row.cite }));
+    }
     if (record.techBase !== "mixed" && row.techBase !== record.techBase) {
       out.push(
         finding("availability", "error", `${mount.name} is ${techBaseName(row.techBase)} equipment, which ${record.techBase === "clan" ? "a" : "an"} ${techBaseName(record.techBase)} 'Mech may not use.`, {
@@ -530,7 +537,7 @@ function availabilityCheck({ record, catalog }: CheckInput): Finding[] {
     if (phase === "prototype") {
       // A prototype is Experimental-level equipment until its production year (IO:AE printed p.27); the level check reports a unit built lower.
       const when = record.year !== null ? String(record.year) : `the ${eraOfRecord(record)?.name ?? "chosen"} era`;
-      const needs = levelRow(levelIn("standard", phase, row.prototypeLevel)).label;
+      const needs = levelRow(levelIn("standard", phase, row.prototypeLevel), ruleset).label;
       out.push(finding("availability", "note", `${mount.name} is a prototype in ${when} (${datesText(row.prototypeYear, row.availability[0]?.from).toLowerCase()}); it needs ${needs} rules.`, { where, cite: IO_UTA }));
     }
     if (record.year === null && window !== null && phase === null) {
@@ -556,7 +563,7 @@ function availabilityCheck({ record, catalog }: CheckInput): Finding[] {
 /** The era and the year disagree, or the body type is not one this tech base and time had. */
 function eraCheck({ record }: CheckInput): Finding[] {
   const out: Finding[] = [];
-  const holds = eraOfYear(record.year);
+  const holds = eraOfYear(record.year, rulesetOf(record.editionId));
   if (record.era !== undefined && record.year !== null && holds?.id !== record.era) {
     out.push(finding("availability", "warning", `The era is ${record.era}, but the year ${record.year} is ${holds ? `in the ${holds.name} era` : "in no era we list"}. Choose the era again or change the year.`, { where: { field: "era" } }));
   }
@@ -609,12 +616,13 @@ function unmatchedCheck({ record, catalog }: CheckInput): Finding[] {
 function levelCheck({ record, catalog }: CheckInput): Finding[] {
   const level = record.rulesLevel;
   if (level === undefined) return [];
+  const ruleset = rulesetOf(record.editionId); // the game's own level names (Gothic: "Unofficial")
   return levelItems(record, catalog)
     .filter((item) => !levelAtLeast(level, item.level))
     .map((item) => {
-      const needs = levelRow(item.level).label;
+      const needs = levelRow(item.level, ruleset).label;
       const why = item.prototype === undefined ? `is ${needs} level` : `is a prototype in this unit's time (${item.prototype.toLowerCase()}), and prototypes are ${needs} level`;
-      return finding("level", "error", `${item.name} (${item.what}) ${why}; this unit is built at ${levelRow(level).label} level. It needs ${needs} or higher.`, {
+      return finding("level", "error", `${item.name} (${item.what}) ${why}; this unit is built at ${levelRow(level, ruleset).label} level. It needs ${needs} or higher.`, {
         where: item.where,
         cite: item.cite ?? tm(PAGE.techBase),
       });
@@ -739,7 +747,7 @@ function partsCheck({ record, catalog }: CheckInput): Finding[] {
     if (spans !== undefined && phase === null) {
       out.push(finding("parts", "error", `${part.name} ${what} is not available in ${when}; ${spansText(spans, part, record.techBase)}.`, { where, cite: part.availabilityCite ?? cite }));
     } else if (phase === "prototype") {
-      const needs = levelRow(levelIn("standard", phase, part.prototypeLevel)).label;
+      const needs = levelRow(levelIn("standard", phase, part.prototypeLevel), rulesetOf(record.editionId)).label;
       out.push(finding("parts", "note", `${part.name} ${what} is a prototype in ${when} (${datesText(partPrototype(part, record.techBase), spans?.[0]?.from).toLowerCase()}); it needs ${needs} rules.`, { where, cite: IO_UTA }));
     }
     if (part.industrial && industrialRulesOf(record) === undefined) {
