@@ -494,7 +494,7 @@ export const ACES_LOG = {
   "ov-capped": w("OV is held to {ov} so it does not shut itself down.", "19"),
   "ov-indirect": w("No OV is added to an indirect attack.", "20"),
   "hold-fire": w("It holds fire.", "19"),
-  physical: w("Physical attack ({kind}): {why}.", "20"),
+  physical: w("Physical attack ({kind}, reach 1 inch, or 2 with MEL, as in ASCE p. 46): {why}.", "20"),
   // ---- Command (pp. 10, 20-21) ----
   "initiative-modifier": w("The command card changes the Initiative roll by {n}.", "10"),
   "token-given": w("{token} goes to {unit}.", "8, 10"),

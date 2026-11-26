@@ -447,10 +447,11 @@ describe("Aces combat and command resolver", () => {
     expect(play(fight(hold, [unit("mark")], { unit: unit("hound", { type: "CV" }) }), { inches: { mark: 10 } }).decision).toMatchObject({ attack: "weapon", ov: 0 });
   });
 
-  it("attacks physically only from base contact, when weapons cannot reach, physical damage is higher, or it has a Fire Control hit or heat (p. 20)", () => {
-    const sized = (size: number): TableUnit => {
+  it("attacks physically from base contact when weapons cannot reach, and within 1 inch (2 with MEL) when physical damage is higher or it has a Fire Control hit or heat (p. 20; ASCE p. 46)", () => {
+    const mel = [{ code: "MEL", values: [], raw: "MEL" }];
+    const sized = (size: number, specials: AsCard["specials"] = []): TableUnit => {
       const u = unit("hound");
-      return { ...u, card: { ...u.card, size } };
+      return { ...u, card: { ...u.card, size, specials } };
     };
     const noGuns = unit("hound", { damage: { s: { value: 0 }, m: { value: 0 }, l: { value: 0 } } });
     const jammed = unit("hound");
@@ -461,7 +462,10 @@ describe("Aces combat and command resolver", () => {
       ["Fire Control hit", jammed, 0, { attack: "physical" }],
       ["heat", unit("hound", { heat: 1 }), 0, { attack: "physical" }],
       ["nothing in favour", unit("hound"), 0, { attack: "weapon" }],
-      ["not in base contact", unit("hound", { heat: 1 }), 1, { attack: "weapon" }],
+      ["1 inch with heat", unit("hound", { heat: 1 }), 1, { attack: "physical", physical: "standard" }],
+      ["1.5 inches without MEL", unit("hound", { heat: 1 }), 1.5, { attack: "weapon" }],
+      ["2 inches with MEL and more damage", sized(3, mel), 2, { attack: "physical", physical: "melee" }],
+      ["3 inches with MEL", sized(3, mel), 3, { attack: "weapon" }],
     ];
     for (const [name, attacker, distance, expected] of rows) {
       expect(play(fight(combatCard(anyZone), [unit("mark")], { unit: attacker }), { inches: { mark: distance } }).decision, name).toMatchObject(expected);
