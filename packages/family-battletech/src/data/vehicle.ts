@@ -10,6 +10,8 @@ export interface BookPage {
 }
 const TM = "TechManual";
 const BV = "TechManual Battle Value v4.1";
+const TO = "Tactical Operations: Advanced Units and Equipment";
+const IO = "Interstellar Operations: Alternate Eras";
 
 export type MotiveId = "tracked" | "wheeled" | "hover" | "wige" | "vtol" | "naval" | "hydrofoil" | "submarine";
 export type VehicleSheet = "ground" | "naval" | "vtol";
@@ -94,13 +96,24 @@ export const VEHICLE_ENGINES: { id: string; slots: number; shielded: boolean; te
 ];
 export const ENGINE_SLOTS_CITE: BookPage = { book: TM, page: 101 };
 
-/** The armor a Combat Vehicle may wear (p. 105 table): the multiplier on 16 points a ton and the slots lost. Keys are `ARMOR.types` ids (data/chassis.ts). */
-export const VEHICLE_ARMOR: { id: string; slots: number }[] = [
+/** The armor a Combat Vehicle may wear: the slots lost (the multiplier on 16 points a ton is the armor row's). Keys are `ARMOR.types` ids (data/chassis.ts).
+ * The first five are TM p. 105; the others are the Combat Vehicle (CV) column of the Advanced Armor Tables, TO:AUE printed p. 92 and IO:AE printed p. 82
+ * (read against the page images), which name the same armor rows the 'Mech uses. Heat-dissipating and impact-resistant armor print N/A for vehicles, so
+ * they are not here; modular armor is an item and vehicular stealth armor has no row yet. */
+export const VEHICLE_ARMOR: { id: string; slots: number; cite?: BookPage }[] = [
   { id: "standard", slots: 0 },
   { id: "light-ferro-fibrous", slots: 1 },
   { id: "ferro-fibrous", slots: 2 },
   { id: "ferro-fibrous-clan", slots: 1 },
   { id: "heavy-ferro-fibrous", slots: 3 },
+  { id: "ferro-lamellor", slots: 1, cite: { book: TO, page: 92 } },
+  { id: "hardened", slots: 1, cite: { book: TO, page: 92 } },
+  { id: "laser-reflective", slots: 1, cite: { book: TO, page: 92 } },
+  { id: "laser-reflective-clan", slots: 1, cite: { book: TO, page: 92 } },
+  { id: "reactive", slots: 2, cite: { book: TO, page: 92 } },
+  { id: "reactive-clan", slots: 1, cite: { book: TO, page: 92 } },
+  { id: "anti-penetrative-ablation", slots: 1, cite: { book: IO, page: 82 } },
+  { id: "ballistic-reinforced", slots: 1, cite: { book: IO, page: 82 } },
 ];
 export const ARMOR_CITE: BookPage = { book: TM, page: 105 };
 

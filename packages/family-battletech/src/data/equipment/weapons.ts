@@ -681,6 +681,36 @@ export const WEAPONS: EquipmentGroup[] = [
       { id: "bomb-mines-clan", name: "Mine Bomb", aliases: ["Mines Bomb"], techBase: "clan", damage: "20", availability: [{ from: 1950 }], yearsInferred: true },
     ],
   },
+  // The other bombs and air-launched missiles of the Alternative Munitions tables (TO:AUE printed pp. 169-172 entries; construction data p. 227 for
+  // weight, price and the Latest Intro Date, play data and rules level p. 226, read against the page images). Weight is the Weight column (one ton
+  // each, two for the anti-ship pair, half a ton for the light air-to-air missile); the bomb slots the missiles take on a hardpoint (5, 6, 6, 5, 5, 2)
+  // are the rules' own and are not modelled, as with the bombs above. Years are the item entries' staged years (introduced, extinct, recovered);
+  // the prototype year is IO:AE's (printed p. 53), and for the items the table prints with a "P" (anti-ship 3071, anti-ship EW 3067) the production
+  // year is IO:AE's too (~3075, 3073). Clan columns: the light air-to-air missile is 3074 (table and IO:AE agree), the others the IS introduction year.
+  // IO:AE prints a Clan anti-ship missile from 3076 where TO:AUE's table says "IS" only; IO:AE fills the stage TO:AUE leaves out, so the Clan row is 3076. Damage is the aero figure of the
+  // table; "Special" where it prints rules only. Prices are per bomb. The Inferno and Torpedo bombs date from before spaceflight (the Torpedo is new here).
+  {
+    defaults: { kind: "weapon", cite: { book: TO, page: 227 }, playCite: { book: TO, page: 226 }, checked: "page", tons: 1, slots: 0, heat: 0, units: ["aero"], rulesLevel: "advanced" },
+    items: [
+      { id: "bomb-air-to-air-arrow-is", name: "Air-to-Air Arrow (AAA) Missile", techBase: "inner-sphere", damage: "20", availability: [{ from: 3072 }], prototypeYear: 3069 },
+      { id: "bomb-anti-ship-missile-is", name: "Anti-Ship (AS) Missile", techBase: "inner-sphere", tons: 2, damage: "30", availability: [{ from: 3075 }], prototypeYear: 3071, rulesLevel: "experimental" },
+      { id: "bomb-anti-ship-ew-missile-is", name: "Anti-Ship EW (ASEW) Missile", techBase: "inner-sphere", tons: 2, damage: "Special", availability: [{ from: 3073 }], prototypeYear: 3067 },
+      { id: "bomb-arrow-iv-homing-is", name: "Arrow IV Homing Missile (Air-Launched)", techBase: "inner-sphere", damage: "Special", availability: [{ from: 2600, to: 2830 }, { from: 3047 }], prototypeYear: 2595 },
+      { id: "bomb-arrow-iv-non-homing-is", name: "Arrow IV Non-Homing Missile (Air-Launched)", techBase: "inner-sphere", damage: "Special", availability: [{ from: 2623, to: 2859 }, { from: 3046 }], prototypeYear: 2622 },
+      { id: "bomb-light-air-to-air-is", name: "Light Air-to-Air (LAA) Missile", techBase: "inner-sphere", tons: 0.5, damage: "6", availability: [{ from: 3072 }], prototypeYear: 3069 },
+      { id: "bomb-thunder-fascam-is", name: "Thunder (FASCAM) Bomb", techBase: "inner-sphere", damage: "Special", availability: [{ from: 2623, to: 2840 }, { from: 3052 }], prototypeYear: 2600 },
+      { id: "bomb-thunder-active-is", name: "Thunder Active Bomb", techBase: "inner-sphere", damage: "Special", availability: [{ from: 3065 }], prototypeYear: 3060 },
+      { id: "bomb-thunder-vibrabomb-is", name: "Thunder Vibrabomb", techBase: "inner-sphere", damage: "Special", availability: [{ from: 3065 }], prototypeYear: 3060 },
+      { id: "bomb-torpedo-is", name: "Torpedo Bomb", techBase: "inner-sphere", damage: "10", availability: [{ from: 1950 }] },
+      { id: "bomb-air-to-air-arrow-clan", name: "Air-to-Air Arrow (AAA) Missile", techBase: "clan", damage: "20", availability: [{ from: 3072 }] },
+      { id: "bomb-anti-ship-missile-clan", name: "Anti-Ship (AS) Missile", techBase: "clan", tons: 2, damage: "30", availability: [{ from: 3076 }], rulesLevel: "experimental", cite: { book: IO, page: 53 } },
+      { id: "bomb-arrow-iv-homing-clan", name: "Arrow IV Homing Missile (Air-Launched)", techBase: "clan", damage: "Special", availability: [{ from: 2600 }] },
+      { id: "bomb-arrow-iv-non-homing-clan", name: "Arrow IV Non-Homing Missile (Air-Launched)", techBase: "clan", damage: "Special", availability: [{ from: 2623 }] },
+      { id: "bomb-light-air-to-air-clan", name: "Light Air-to-Air (LAA) Missile", techBase: "clan", tons: 0.5, damage: "6", availability: [{ from: 3074 }] },
+      { id: "bomb-thunder-fascam-clan", name: "Thunder (FASCAM) Bomb", techBase: "clan", damage: "Special", availability: [{ from: 2623 }] },
+      { id: "bomb-torpedo-clan", name: "Torpedo Bomb", techBase: "clan", damage: "10", availability: [{ from: 1950 }] },
+    ],
+  },
   // Abomination-mounted weapons the catalog lacked (BattleTech: Gothic, printed p. 92, read against the page image). Abominations have no
   // construction rules, so there is no weight or slot count (0), no heat (Abominations track none, p. 65) and no dates (Gothic is undated;
   // the span is a placeholder, hence yearsInferred). They are for Abominations only (`units`), so no BattleMech record is ever offered them.

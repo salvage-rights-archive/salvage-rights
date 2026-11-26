@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { loadCatalog } from "../catalog";
+import { armorTypeOf } from "../../data/battlearmor";
 import { armorChoices, manipulatorChoices, motiveChoices, suitOffered, weightClassChoices } from "./availability";
 import { battleValue, unitCost } from "./bv";
 import { checkBa, markOfficial, officialState } from "./checks";
@@ -109,6 +110,17 @@ describe("battle armor availability", () => {
     expect(manipulatorChoices({ ...clan, techBase: "inner-sphere", year: 3040 }).map((row) => row.id)).toContain("salvage-arm");
     expect(suitOffered("introductory")).toBe(false);
     expect(suitOffered("standard")).toBe(true);
+  });
+});
+
+describe("battle armor laser-reflective and reactive armor (TO:AUE p. 92)", () => {
+  it("is offered to both tech bases at the Experimental level once produced, with its weight, slots and price", () => {
+    for (const techBase of ["inner-sphere", "clan"] as const) {
+      const subject = { techBase, year: 3095, era: undefined, rulesLevel: "experimental" as const, editionId: "total-warfare" };
+      expect(armorChoices(subject).map((row) => row.id)).toEqual(expect.arrayContaining(["laser-reflective", "reactive"]));
+      expect(armorChoices({ ...subject, rulesLevel: "standard" }).map((row) => row.id)).not.toContain("reactive");
+    }
+    expect(["laser-reflective", "reactive"].map((id) => armorTypeOf(id))).toMatchObject([{ kg: { "inner-sphere": 55, clan: 30 }, slots: 7, costPerPoint: 37_000 }, { kg: { "inner-sphere": 60, clan: 35 }, slots: 7, costPerPoint: 37_000 }]);
   });
 });
 

@@ -559,7 +559,39 @@ export const EQUIPMENT_COST: PriceGroup[] = [
     checked: "page",
     prices: { "bomb-high-explosive": 5_000, "bomb-cluster": 8_000, "bomb-laser-guided": 10_000, "bomb-inferno": 6_000, "bomb-mines": 12_000 },
   },
+  {
+    // TO:AUE p.227 (Heavy Weapons Ammunition Construction Data, Bombs; the book's dagger says the figure is per bomb, not per ton)
+    cite: { book: TO, page: 227 },
+    checked: "page",
+    prices: {
+      "bomb-air-to-air-arrow": 9_000, "bomb-anti-ship-missile": 15_000, "bomb-anti-ship-ew-missile": 20_000, "bomb-arrow-iv-homing": 3_000,
+      "bomb-arrow-iv-non-homing": 2_000, "bomb-light-air-to-air": 6_000, "bomb-thunder-fascam": 12_000, "bomb-thunder-active": 36_000,
+      "bomb-thunder-vibrabomb": 24_000, "bomb-torpedo": 7_000,
+    },
+  },
 ];
+
+/**
+ * Alternative munition prices per ton (TO:AUE printed pp. 225 and 227, Heavy Weapons Ammunition Construction Data, read against the page images). The
+ * table prints either a price (`perTon`) or a multiplier (`times`) on the price of the standard round of the weapon the munition serves, so a multiplier
+ * has no figure of its own here. Keys are the id stems (without `-is` and `-clan`). Arrow IV (Homing), the standard Arrow IV round, is 15,000 a ton and
+ * Arrow IV (Non-Homing) 10,000 (the catalog has no row for the latter). The Copperhead rows are x1.5, as the same table prints them.
+ */
+export const MUNITION_PRICE: Sourced & { rows: Record<string, { perTon: number } | { times: number }> } = {
+  cite: { book: TO, page: 227 },
+  checked: "page",
+  rows: {
+    "ammo-flamer-coolant": { perTon: 3_000 }, "ammo-flamer-corrosive": { perTon: 5_000 }, "ammo-flamer-flame-retardant-foam": { perTon: 1_000 },
+    "ammo-flamer-inferno-fuel": { perTon: 2_000 }, "ammo-flamer-oil-slick": { perTon: 2_000 }, "ammo-flamer-paint-obscurant": { perTon: 1_000 },
+    "ammo-flamer-water": { perTon: 500 }, "ammo-air-defense-arrow": { perTon: 45_000 }, "ammo-arrow-iv": { perTon: 15_000 },
+    "ammo-caseless-ac": { times: 1.5 }, "ammo-flak-ac": { times: 1.5 }, "ammo-tracer-ac": { times: 1.5 }, "ammo-arrow-iv-cluster": { times: 1.5 },
+    "ammo-cluster-long-tom": { times: 1.5 }, "ammo-cluster-sniper": { times: 1.5 }, "ammo-cluster-thumper": { times: 1.5 }, "ammo-flechette-artillery": { times: 1.5 },
+    "ammo-copperhead-long-tom": { times: 1.5 }, "ammo-copperhead-sniper": { times: 1.5 }, "ammo-copperhead-thumper": { times: 1.5 },
+    "ammo-thunder-fascam-artillery": { times: 1.5 }, "ammo-arrow-iv-illumination": { times: 0.5 }, "ammo-illumination-artillery": { times: 0.5 },
+    "ammo-arrow-iv-smoke": { times: 0.5 }, "ammo-smoke-artillery": { times: 0.5 }, "ammo-arrow-iv-laser-inhibiting": { times: 4 }, "ammo-inferno-iv": { times: 1 },
+    "ammo-thunder-active-iv": { times: 3 }, "ammo-thunder-vibrabomb-iv": { times: 2 },
+  },
+};
 
 /** Retractable blade (printed p.293, Industrial Equipment): the mechanism, plus the blade at a price per ton of its weight.
  * The blade's weight is the 'Mech's tonnage over 20, rounded up to a half ton (p.237), then up to a whole ton as the table's

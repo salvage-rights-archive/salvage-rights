@@ -367,10 +367,10 @@ export const AMMUNITION: EquipmentGroup[] = [
   // p. 229, read against the page image; the rules level and rules pages are the Alternative Munitions play table, p. 228): the mortar munitions,
   // the remote sensor dispenser sensors and the Copperhead artillery rounds. Like the other special munitions here they carry no shots per ton:
   // the table gives them "x1" of the standard munition of the weapon, and the bin is a ton in a slot. Not added: the mine types (the table leaves
-  // their shots and weight to the special rules, "**"), the other artillery, missile and bomb munitions, and "HPC" ammunition, which none of the
+  // their shots and weight to the special rules, "**"), and "HPC" ammunition, which none of the
   // rulebook extracts in the archive names.
   {
-    defaults: { kind: "ammunition", techBase: "inner-sphere", cite: { book: TO, page: 229 }, checked: "page", tons: 1, slots: 1, rulesLevel: "advanced" },
+    defaults: { kind: "ammunition", techBase: "inner-sphere", cite: { book: TO, page: 229 }, checked: "page", tons: 1, slots: 1, rulesLevel: "advanced", units: ["mech", "industrialmech", "vehicle"] },
     items: [
       { id: "ammo-mortar-airburst-is", name: "Mortar Airburst Ammo", availability: [{ from: 2544 }], prototypeYear: 2540, playCite: { book: TO, page: 228 } },
       { id: "ammo-mortar-anti-personnel-is", name: "Mortar Anti-Personnel Ammo", availability: [{ from: 2531 }], prototypeYear: 2526, playCite: { book: TO, page: 228 } },
@@ -379,13 +379,13 @@ export const AMMUNITION: EquipmentGroup[] = [
       { id: "ammo-mortar-semi-guided-is", name: "Mortar Semi-Guided Ammo", availability: [{ from: 3064 }], prototypeYear: 3055, playCite: { book: TO, page: 228 } },
       { id: "ammo-mortar-smoke-is", name: "Mortar Smoke Ammo", availability: [{ from: 2531 }], prototypeYear: 2526, playCite: { book: TO, page: 228 } },
       { id: "ammo-remote-sensor-dispenser-is", name: "Remote Sensor Dispenser Ammo", availability: [{ from: 2590 }], playCite: { book: TO, page: 228 }, units: ["mech", "industrialmech", "vehicle"] },
-      { id: "ammo-copperhead-long-tom-is", name: "Copperhead (Long Tom) Ammo", availability: [{ from: 3051 }], cite: { book: TO, page: 226 }, checked: "text" },
-      { id: "ammo-copperhead-sniper-is", name: "Copperhead (Sniper) Ammo", availability: [{ from: 3051 }], cite: { book: TO, page: 226 }, checked: "text" },
-      { id: "ammo-copperhead-thumper-is", name: "Copperhead (Thumper) Ammo", availability: [{ from: 3051 }], cite: { book: TO, page: 227 } },
+      { id: "ammo-copperhead-long-tom-is", name: "Copperhead (Long Tom) Ammo", availability: [{ from: 2645, to: 2825 }, { from: 3051 }], prototypeYear: 2640, cite: { book: TO, page: 225 }, playCite: { book: TO, page: 224 }, units: ["mech", "industrialmech", "vehicle"] },
+      { id: "ammo-copperhead-sniper-is", name: "Copperhead (Sniper) Ammo", availability: [{ from: 2645, to: 2825 }, { from: 3051 }], prototypeYear: 2640, cite: { book: TO, page: 225 }, playCite: { book: TO, page: 224 }, units: ["mech", "industrialmech", "vehicle"] },
+      { id: "ammo-copperhead-thumper-is", name: "Copperhead (Thumper) Ammo", availability: [{ from: 2645, to: 2825 }, { from: 3051 }], prototypeYear: 2640, cite: { book: TO, page: 227 }, playCite: { book: TO, page: 226 }, units: ["mech", "industrialmech", "vehicle"] },
     ],
   },
   {
-    defaults: { kind: "ammunition", techBase: "clan", cite: { book: TO, page: 229 }, checked: "page", tons: 1, slots: 1, rulesLevel: "advanced" },
+    defaults: { kind: "ammunition", techBase: "clan", cite: { book: TO, page: 229 }, checked: "page", tons: 1, slots: 1, rulesLevel: "advanced", units: ["mech", "industrialmech", "vehicle"] },
     items: [
       { id: "ammo-mortar-airburst-clan", name: "Mortar Airburst Ammo", availability: [{ from: 2544 }], playCite: { book: TO, page: 228 } },
       { id: "ammo-mortar-anti-personnel-clan", name: "Mortar Anti-Personnel Ammo", availability: [{ from: 2531 }], playCite: { book: TO, page: 228 } },
@@ -393,9 +393,80 @@ export const AMMUNITION: EquipmentGroup[] = [
       { id: "ammo-mortar-flare-clan", name: "Mortar Flare Ammo", availability: [{ from: 2536 }], playCite: { book: TO, page: 228 } },
       { id: "ammo-mortar-smoke-clan", name: "Mortar Smoke Ammo", availability: [{ from: 2531 }], playCite: { book: TO, page: 228 } },
       { id: "ammo-remote-sensor-dispenser-clan", name: "Remote Sensor Dispenser Ammo", availability: [{ from: 2590 }], playCite: { book: TO, page: 228 }, units: ["mech", "industrialmech", "vehicle"] },
-      { id: "ammo-copperhead-long-tom-clan", name: "Copperhead (Long Tom) Ammo", availability: [{ from: 2645 }], cite: { book: TO, page: 226 }, checked: "text" },
-      { id: "ammo-copperhead-sniper-clan", name: "Copperhead (Sniper) Ammo", availability: [{ from: 2645 }], cite: { book: TO, page: 226 }, checked: "text" },
-      { id: "ammo-copperhead-thumper-clan", name: "Copperhead (Thumper) Ammo", availability: [{ from: 2645 }], cite: { book: TO, page: 227 } },
+      { id: "ammo-copperhead-long-tom-clan", name: "Copperhead (Long Tom) Ammo", availability: [{ from: 2645 }], cite: { book: TO, page: 225 }, playCite: { book: TO, page: 224 }, units: ["mech", "industrialmech", "vehicle"] },
+      { id: "ammo-copperhead-sniper-clan", name: "Copperhead (Sniper) Ammo", availability: [{ from: 2645 }], cite: { book: TO, page: 225 }, playCite: { book: TO, page: 224 }, units: ["mech", "industrialmech", "vehicle"] },
+      { id: "ammo-copperhead-thumper-clan", name: "Copperhead (Thumper) Ammo", availability: [{ from: 2645 }], cite: { book: TO, page: 227 }, playCite: { book: TO, page: 226 }, units: ["mech", "industrialmech", "vehicle"] },
+    ],
+  },
+  // The rest of the alternative munitions that are loads of ammunition (TO:AUE printed pp. 164-175, entries; construction data pp. 225 and 227, play
+  // data and rules level pp. 224 and 226, read against the page images): autocannon (caseless, flak, tracer), artillery and Arrow IV rounds, and flamer,
+  // fluid gun and sprayer fluids. Like the mortar rounds they carry no shots: the table gives them "x1" of the standard munition of the weapon they
+  // serve (caseless carries twice the shots, laser-inhibiting Arrow IV half), and the bin is a ton in a slot. Years: the item entry's staged years
+  // (introduced, extinct, recovered) where it prints them, the table's where it does not; a stage the entry omits comes from IO:AE printed pp. 53-54
+  // (prototype year, and the production year of an item whose Latest Intro Date here is a "P"): caseless 3056 / 3079, air-defense arrow 3068 / 3080,
+  // laser-inhibiting 3053 / 3083. "PS" is 1950 and "ES" 2200 (marked inferred), as elsewhere. Not added: the Anti-Ship and other bombs (weapons.ts), the mines
+  // and the grenade-launcher munitions, which are not bins (a dispenser or one-shot launcher takes its type, TO:AUE pp. 137, 175-179), and Arrow IV Homing,
+  // which is the standard Arrow IV ammunition above. The IS Copperhead years above follow the same entry (introduced 2645, extinct 2825, recovered 3051).
+  // Two entries disagree with their table: Tracer (entry circa 2310, table 2300; IO:AE ~2300) and Smoke Arrow IV (entry circa 2620, table Clan 2600; IO:AE
+  // 2600). The Inner Sphere rows take the entry (the panel method for munitions); the Clan rows take their own Clan column (2300, 2600). Both go to the next
+  // book panel. IO:AE fills a Clan introduction where TO:AUE gives none, as it does for the sub-capital weapons: Clan caseless 3109, Clan armor-piercing and
+  // flechette autocannon rounds 3105 (printed p. 53). The Clan chaff grenade (3063) and inferno mine (3066) have no row (grenade and mine types are not bins);
+  // the Clan anti-ship missile (3076) is in weapons.ts. Caseless carries twice, and laser-inhibiting half, the shots of the standard round (`shotsFactor`).
+  {
+    defaults: { kind: "ammunition", techBase: "inner-sphere", cite: { book: TO, page: 225 }, playCite: { book: TO, page: 224 }, checked: "page", tons: 1, slots: 1, rulesLevel: "advanced", units: ["mech", "industrialmech", "vehicle"] },
+    items: [
+      { id: "ammo-caseless-ac-is", name: "Caseless Autocannon Ammo", shotsFactor: 2, availability: [{ from: 3079 }], prototypeYear: 3056, rulesLevel: "experimental" },
+      { id: "ammo-flak-ac-is", name: "Flak Autocannon Ammo", availability: [{ from: 2310 }] },
+      { id: "ammo-tracer-ac-is", name: "Tracer Autocannon Ammo", availability: [{ from: 2310 }] },
+      { id: "ammo-air-defense-arrow-is", name: "Air-Defense Arrow (ADA) Ammo", availability: [{ from: 3080 }], prototypeYear: 3068, rulesLevel: "experimental" },
+      { id: "ammo-arrow-iv-cluster-is", name: "Arrow IV (Cluster) Ammo", availability: [{ from: 2620, to: 2830 }, { from: 3047 }], prototypeYear: 2594 },
+      { id: "ammo-cluster-long-tom-is", name: "Cluster (Long Tom) Ammo", availability: [{ from: 1950 }] },
+      { id: "ammo-cluster-sniper-is", name: "Cluster (Sniper) Ammo", availability: [{ from: 1950 }] },
+      { id: "ammo-cluster-thumper-is", name: "Cluster (Thumper) Ammo", availability: [{ from: 1950 }] },
+      { id: "ammo-flechette-artillery-is", name: "Flechette Artillery Ammo", availability: [{ from: 1950 }], cite: { book: TO, page: 227 }, playCite: { book: TO, page: 226 } },
+      { id: "ammo-arrow-iv-illumination-is", name: "Arrow IV (Illumination) Ammo", availability: [{ from: 2621, to: 2831 }, { from: 3047 }], prototypeYear: 2615, cite: { book: TO, page: 227 }, playCite: { book: TO, page: 226 } },
+      { id: "ammo-illumination-artillery-is", name: "Illumination Artillery Ammo", availability: [{ from: 1950 }], cite: { book: TO, page: 227 }, playCite: { book: TO, page: 226 } },
+      { id: "ammo-arrow-iv-laser-inhibiting-is", name: "Arrow IV (Laser-Inhibiting) Ammo", shotsFactor: 0.5, availability: [{ from: 3083 }], prototypeYear: 3053, rulesLevel: "experimental", cite: { book: TO, page: 227 }, playCite: { book: TO, page: 226 } },
+      { id: "ammo-inferno-iv-is", name: "Inferno-IV Ammo", availability: [{ from: 3055 }], prototypeYear: 3053, cite: { book: TO, page: 227 }, playCite: { book: TO, page: 226 } },
+      { id: "ammo-arrow-iv-smoke-is", name: "Arrow IV (Smoke) Ammo", availability: [{ from: 2620, to: 2840 }, { from: 3044 }], prototypeYear: 2595, cite: { book: TO, page: 227 }, playCite: { book: TO, page: 226 } },
+      { id: "ammo-smoke-artillery-is", name: "Smoke Artillery Ammo", availability: [{ from: 1950 }], cite: { book: TO, page: 227 }, playCite: { book: TO, page: 226 } },
+      { id: "ammo-thunder-fascam-artillery-is", name: "Thunder (FASCAM) Artillery Ammo", availability: [{ from: 2621, to: 2833 }, { from: 3051 }], cite: { book: TO, page: 227 }, playCite: { book: TO, page: 226 } },
+      { id: "ammo-thunder-active-iv-is", name: "Thunder Active-IV Ammo", availability: [{ from: 3065 }], prototypeYear: 3056, cite: { book: TO, page: 227 }, playCite: { book: TO, page: 226 } },
+      { id: "ammo-thunder-vibrabomb-iv-is", name: "Thunder Vibrabomb-IV Ammo", availability: [{ from: 3065 }], prototypeYear: 3056, cite: { book: TO, page: 227 }, playCite: { book: TO, page: 226 } },
+      { id: "ammo-flamer-coolant-is", name: "Coolant Ammo (Flamer/Fluid Gun/Sprayer)", availability: [{ from: 2200 }], cite: { book: TO, page: 227 }, playCite: { book: TO, page: 226 }, yearsInferred: true },
+      { id: "ammo-flamer-corrosive-is", name: "Corrosive Ammo (Fluid Gun/Sprayer)", availability: [{ from: 1950 }], cite: { book: TO, page: 227 }, playCite: { book: TO, page: 226 } },
+      { id: "ammo-flamer-flame-retardant-foam-is", name: "Flame-Retardant Foam Ammo (Fluid Gun/Sprayer)", availability: [{ from: 1950 }], cite: { book: TO, page: 227 }, playCite: { book: TO, page: 226 } },
+      { id: "ammo-flamer-inferno-fuel-is", name: "Inferno Fuel Ammo (Flamer/Fluid Gun)", availability: [{ from: 2400 }], prototypeYear: 2390, cite: { book: TO, page: 227 }, playCite: { book: TO, page: 226 } },
+      { id: "ammo-flamer-oil-slick-is", name: "Oil Slick Ammo (Fluid Gun/Sprayer)", availability: [{ from: 1950 }], cite: { book: TO, page: 227 }, playCite: { book: TO, page: 226 } },
+      { id: "ammo-flamer-paint-obscurant-is", name: "Paint/Obscurant Ammo (Fluid Gun/Sprayer)", availability: [{ from: 2200 }], cite: { book: TO, page: 227 }, playCite: { book: TO, page: 226 }, yearsInferred: true },
+      { id: "ammo-flamer-water-is", name: "Water Ammo (Flamer/Fluid Gun/Sprayer)", availability: [{ from: 1950 }], cite: { book: TO, page: 227 }, playCite: { book: TO, page: 226 } },
+    ],
+  },
+  {
+    defaults: { kind: "ammunition", techBase: "clan", cite: { book: TO, page: 225 }, playCite: { book: TO, page: 224 }, checked: "page", tons: 1, slots: 1, rulesLevel: "advanced", units: ["mech", "industrialmech", "vehicle"] },
+    items: [
+      { id: "ammo-flak-ac-clan", name: "Flak Autocannon Ammo", availability: [{ from: 2310 }] },
+      { id: "ammo-caseless-ac-clan", name: "Caseless Autocannon Ammo", shotsFactor: 2, availability: [{ from: 3109 }], rulesLevel: "experimental", cite: { book: IO, page: 53 }, playCite: { book: TO, page: 224 } },
+      { id: "ammo-armor-piercing-clan", name: "Armor-Piercing Autocannon Ammo", availability: [{ from: 3105 }], cite: { book: IO, page: 53 } },
+      { id: "ammo-flechette-clan", name: "Flechette Autocannon Ammo", availability: [{ from: 3105 }], cite: { book: IO, page: 53 } },
+      { id: "ammo-tracer-ac-clan", name: "Tracer Autocannon Ammo", availability: [{ from: 2300 }] },
+      { id: "ammo-arrow-iv-cluster-clan", name: "Arrow IV (Cluster) Ammo", availability: [{ from: 2620 }] },
+      { id: "ammo-cluster-long-tom-clan", name: "Cluster (Long Tom) Ammo", availability: [{ from: 1950 }] },
+      { id: "ammo-cluster-sniper-clan", name: "Cluster (Sniper) Ammo", availability: [{ from: 1950 }] },
+      { id: "ammo-cluster-thumper-clan", name: "Cluster (Thumper) Ammo", availability: [{ from: 1950 }] },
+      { id: "ammo-flechette-artillery-clan", name: "Flechette Artillery Ammo", availability: [{ from: 1950 }], cite: { book: TO, page: 227 }, playCite: { book: TO, page: 226 } },
+      { id: "ammo-arrow-iv-illumination-clan", name: "Arrow IV (Illumination) Ammo", availability: [{ from: 2621 }], cite: { book: TO, page: 227 }, playCite: { book: TO, page: 226 } },
+      { id: "ammo-illumination-artillery-clan", name: "Illumination Artillery Ammo", availability: [{ from: 1950 }], cite: { book: TO, page: 227 }, playCite: { book: TO, page: 226 } },
+      { id: "ammo-arrow-iv-smoke-clan", name: "Arrow IV (Smoke) Ammo", availability: [{ from: 2600 }], cite: { book: TO, page: 227 }, playCite: { book: TO, page: 226 } },
+      { id: "ammo-smoke-artillery-clan", name: "Smoke Artillery Ammo", availability: [{ from: 1950 }], cite: { book: TO, page: 227 }, playCite: { book: TO, page: 226 } },
+      { id: "ammo-thunder-fascam-artillery-clan", name: "Thunder (FASCAM) Artillery Ammo", availability: [{ from: 2621 }], cite: { book: TO, page: 227 }, playCite: { book: TO, page: 226 } },
+      { id: "ammo-flamer-coolant-clan", name: "Coolant Ammo (Flamer/Fluid Gun/Sprayer)", availability: [{ from: 2200 }], cite: { book: TO, page: 227 }, playCite: { book: TO, page: 226 }, yearsInferred: true },
+      { id: "ammo-flamer-corrosive-clan", name: "Corrosive Ammo (Fluid Gun/Sprayer)", availability: [{ from: 1950 }], cite: { book: TO, page: 227 }, playCite: { book: TO, page: 226 } },
+      { id: "ammo-flamer-flame-retardant-foam-clan", name: "Flame-Retardant Foam Ammo (Fluid Gun/Sprayer)", availability: [{ from: 1950 }], cite: { book: TO, page: 227 }, playCite: { book: TO, page: 226 } },
+      { id: "ammo-flamer-inferno-fuel-clan", name: "Inferno Fuel Ammo (Flamer/Fluid Gun)", availability: [{ from: 2400 }], cite: { book: TO, page: 227 }, playCite: { book: TO, page: 226 } },
+      { id: "ammo-flamer-oil-slick-clan", name: "Oil Slick Ammo (Fluid Gun/Sprayer)", availability: [{ from: 1950 }], cite: { book: TO, page: 227 }, playCite: { book: TO, page: 226 } },
+      { id: "ammo-flamer-paint-obscurant-clan", name: "Paint/Obscurant Ammo (Fluid Gun/Sprayer)", availability: [{ from: 2200 }], cite: { book: TO, page: 227 }, playCite: { book: TO, page: 226 }, yearsInferred: true },
+      { id: "ammo-flamer-water-clan", name: "Water Ammo (Flamer/Fluid Gun/Sprayer)", availability: [{ from: 1950 }], cite: { book: TO, page: 227 }, playCite: { book: TO, page: 226 } },
     ],
   },
   // Missile munitions from the same tables (TO:AUE printed pp. 226-229, read against the page images; construction data pp. 227 and 229,
