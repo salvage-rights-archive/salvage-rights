@@ -704,11 +704,11 @@ export const WEAPONS: EquipmentGroup[] = [
     items: [
       { id: "srt-2-is", name: "SRT 2", aliases: ["SRT-2", "Short-Range Torpedo 2"], tons: 1, slots: 1, type: "C, M, S", heat: 2, damage: "2/Msl", range: [0, 3, 6, 9] },
       { id: "srt-4-is", name: "SRT 4", aliases: ["SRT-4", "Short-Range Torpedo 4"], tons: 2, slots: 1, type: "C, M, S", heat: 3, damage: "2/Msl", range: [0, 3, 6, 9] },
-      { id: "srt-6-is", name: "SRT 6", aliases: ["SRT-6", "Short-Range Torpedo 6"], tons: 3, slots: 2, type: "C, M, S", heat: 4, damage: "2/Msl", range: [0, 3, 6, 9] },
+      { id: "srt-6-is", name: "SRT 6", aliases: ["SRT-6", "Short-Range Torpedo 6"], tons: 3, slots: 2, type: "C, M, S", heat: 4, damage: "2/Msl", range: [0, 3, 6, 9], by: { vehicle: { slots: 1, note: "Support vehicle: 2 slots" } } },
       { id: "lrt-5-is", name: "LRT 5", aliases: ["LRT-5", "Long-Range Torpedo 5"], tons: 2, slots: 1, type: "C, M, S", heat: 2, damage: "1/Msl", range: [6, 7, 14, 21] },
-      { id: "lrt-10-is", name: "LRT 10", aliases: ["LRT-10", "Long-Range Torpedo 10"], tons: 5, slots: 2, type: "C, M, S", heat: 4, damage: "1/Msl", range: [6, 7, 14, 21] },
-      { id: "lrt-15-is", name: "LRT 15", aliases: ["LRT-15", "Long-Range Torpedo 15"], tons: 7, slots: 3, type: "C, M, S", heat: 5, damage: "1/Msl", range: [6, 7, 14, 21] },
-      { id: "lrt-20-is", name: "LRT 20", aliases: ["LRT-20", "Long-Range Torpedo 20"], tons: 10, slots: 5, type: "C, M, S", heat: 6, damage: "1/Msl", range: [6, 7, 14, 21] },
+      { id: "lrt-10-is", name: "LRT 10", aliases: ["LRT-10", "Long-Range Torpedo 10"], tons: 5, slots: 2, type: "C, M, S", heat: 4, damage: "1/Msl", range: [6, 7, 14, 21], by: { vehicle: { slots: 1, note: "Support vehicle: 2 slots" } } },
+      { id: "lrt-15-is", name: "LRT 15", aliases: ["LRT-15", "Long-Range Torpedo 15"], tons: 7, slots: 3, type: "C, M, S", heat: 5, damage: "1/Msl", range: [6, 7, 14, 21], by: { vehicle: { slots: 1, note: "Support vehicle: 3 slots" } } },
+      { id: "lrt-20-is", name: "LRT 20", aliases: ["LRT-20", "Long-Range Torpedo 20"], tons: 10, slots: 5, type: "C, M, S", heat: 6, damage: "1/Msl", range: [6, 7, 14, 21], by: { vehicle: { slots: 1, note: "Support vehicle: 5 slots" } } },
     ],
   },
   {
@@ -719,8 +719,8 @@ export const WEAPONS: EquipmentGroup[] = [
       { id: "srt-6-clan", name: "SRT 6", aliases: ["SRT-6", "Short-Range Torpedo 6"], tons: 1.5, slots: 1, type: "C, M, S", heat: 4, damage: "2/Msl", range: [0, 3, 6, 9] },
       { id: "lrt-5-clan", name: "LRT 5", aliases: ["LRT-5", "Long-Range Torpedo 5"], tons: 1, slots: 1, type: "C, M, S", heat: 2, damage: "1/Msl", range: [0, 7, 14, 21] },
       { id: "lrt-10-clan", name: "LRT 10", aliases: ["LRT-10", "Long-Range Torpedo 10"], tons: 2.5, slots: 1, type: "C, M, S", heat: 4, damage: "1/Msl", range: [0, 7, 14, 21] },
-      { id: "lrt-15-clan", name: "LRT 15", aliases: ["LRT-15", "Long-Range Torpedo 15"], tons: 3.5, slots: 2, type: "C, M, S", heat: 5, damage: "1/Msl", range: [0, 7, 14, 21] },
-      { id: "lrt-20-clan", name: "LRT 20", aliases: ["LRT-20", "Long-Range Torpedo 20"], tons: 5, slots: 4, type: "C, M, S", heat: 6, damage: "1/Msl", range: [0, 7, 14, 21] },
+      { id: "lrt-15-clan", name: "LRT 15", aliases: ["LRT-15", "Long-Range Torpedo 15"], tons: 3.5, slots: 2, type: "C, M, S", heat: 5, damage: "1/Msl", range: [0, 7, 14, 21], by: { vehicle: { slots: 1, note: "Support vehicle: 2 slots" } } },
+      { id: "lrt-20-clan", name: "LRT 20", aliases: ["LRT-20", "Long-Range Torpedo 20"], tons: 5, slots: 4, type: "C, M, S", heat: 6, damage: "1/Msl", range: [0, 7, 14, 21], by: { vehicle: { slots: 1, note: "Support vehicle: 4 slots" } } },
     ],
   },
 ];

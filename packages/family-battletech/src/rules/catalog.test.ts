@@ -335,13 +335,13 @@ describe("missile munitions from TO:AUE pp. 226-229 and IO:AE p. 213", () => {
   });
 
   it.each([
-    ["srt-4-is", "srm-4-is", "ammo-srt-4-is", 2380],
+    ["srt-6-is", "srm-6-is", "ammo-srt-6-is", 2380],
     ["lrt-20-clan", "lrm-20-clan", "ammo-lrt-20-clan", 2824],
   ])("%s is the launcher %s fitted as a torpedo launcher, with its own ammunition (TechManual p. 230)", async (id, launcher, ammo, from) => {
     const real = await loadCatalog();
     const row = real.byId(id);
     const base = real.byId(launcher);
-    expect({ tons: row?.tons, slots: row?.slots, heat: row?.heat, damage: row?.damage, range: row?.range }).toEqual({ tons: base?.tons, slots: base?.slots, heat: base?.heat, damage: base?.damage, range: base?.range });
+    expect({ tons: row?.tons, slots: row?.slots, heat: row?.heat, damage: row?.damage, range: row?.range, vehicle: row?.by?.vehicle }).toEqual({ tons: base?.tons, slots: base?.slots, heat: base?.heat, damage: base?.damage, range: base?.range, vehicle: base?.by?.vehicle });
     expect(row?.availability[0]?.from).toBe(from);
     expect(real.byId(ammo)?.shotsPerTon).toBe(real.byId(launcher.replace(/^/, "ammo-"))?.shotsPerTon);
   });

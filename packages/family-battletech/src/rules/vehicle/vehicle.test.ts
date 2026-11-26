@@ -58,6 +58,7 @@ describe("the rules check", () => {
     ["weight over the vehicle's tons", build({ ...sound, tons: 10, armor: { type: "standard", tons: 8, points: {} } }), "weight:error"],
     ["over the motive type's top weight", build({ motive: "vtol", tons: 40, cruise: 3 }), "type:error"],
     ["a VTOL turret", build({ ...sound, motive: "vtol", turret: true, tons: 20 }), "type:error"],
+    ["an armored motive system on a VTOL (TO:AUE p. 95)", build({ ...sound, motive: "vtol", tons: 20 }, [["body", "armored-motive-system-is"]]), "type:error"],
     ["WiGE below 5 cruising MP", build({ motive: "wige", tons: 20, cruise: 4 }), "engine:error"],
     ["more armor than the tons give", build({ ...sound, armor: { type: "standard", tons: 1, points: { f: 40 } } }), "armor:error"],
     ["too few heat sinks for the lasers", build({ ...sound, heatSinks: { count: 2 } }, [["f", "large-laser-is"]]), "heat:error"],

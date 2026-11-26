@@ -402,6 +402,8 @@ export const AMMUNITION: EquipmentGroup[] = [
   // play figures and rules level pp. 226 and 228). Dates are the Latest Intro Date column; a "P" date (prototype only, nothing later printed)
   // is the first year with no second one, and an item the Universal Technology Advancement Table (IO:AE printed pp. 55-56) marks extinct ends
   // there. Where that table's older dates differ from this newer printing, this printing's are used (conflict 90 in the archive).
+  // Magnetic-Pulse SRM and LRM: TO:AUE prints "3057X" (extinct and not recovered); the span 3057 to 3065 and the 3055 prototype year are the Universal Technology
+  // Advancement Table (IO:AE printed p. 56: prototype 3055, production 3057, "Ext: 3065").
   // A ton carries the launcher's standard shots times `shotsFactor` (the Ammo column: x0.5 or x1). The tables give weight x1: the bin is a
   // ton in a slot. Not added here: Anti-Ship and other bomb and artillery munitions, the grenade-launcher, flamer and mine munitions.
   {
@@ -440,6 +442,8 @@ export const AMMUNITION: EquipmentGroup[] = [
   // Special munitions of the Additional Alternate Era table (IO:AE printed pp. 212-213; the item entries are on pp. 61-62, 98-99, 125-127). Dates
   // are those p. 213 prints, "P" being a prototype year, except Retro-Streak and Shoot-and-Sit, where the Universal Technology Advancement Table
   // (pp. 55-56) prints a different year and the extinction (conflict 91 in the archive). A ton carries the launcher's standard shots where the
+  // The dates not on p. 213 come from the same table (printed pp. 55-56): Anti-TSM prototype 3026 and production 3027 (p. 213 prints 3027 only); Listen-Kill
+  // prototype about 3037 and "Ext: 3040" (p. 213 prints 3037P and no end); Improved Magnetic Pulse ATM "Ext: 3080"; Retro-Streak and Shoot-and-Sit as above.
   // launcher is one the catalog can follow (LRM, SRM, MML, ATM); Retro-Streak, Shoot-and-Sit and the improved ATM munitions name none.
   {
     defaults: { kind: "ammunition", techBase: "inner-sphere", cite: { book: IO, page: 213 }, playCite: { book: IO, page: 212 }, checked: "page", tons: 1, slots: 1, rulesLevel: "experimental", units: ["mech", "industrialmech", "vehicle"] },

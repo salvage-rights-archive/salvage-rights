@@ -229,6 +229,11 @@ describe("weapon damage by range (ASC pp. 99-110, errata v1.6)", () => {
     expect(sums(mech(60, 4, withArtemis))?.slice(0, 3)).toEqual([0.6, 1.2, 1.2]);
     // MML 5: 24 LRM shots and 20 SRM shots in one ton each, 22 on average, so 22 for the one launcher: no reduction.
     expect(sums(mech(60, 4, [item("mml-5-is"), item("ammo-mml-5-lrm-is"), item("ammo-mml-5-srm-is")]))?.slice(0, 3)).toEqual([0.6, 0.45, 0.3]);
+    // A special munition counts the launcher's shots times its multiplier: an LRM 20 has 6 shots (under 10), and a ton of Heat-Seeking (x0.5) could add 3 (still under
+    // 10, so the rule applies either way), but a ton of Smoke (x1) could add 6 (over 10), which decides it, so no value.
+    const lrm20 = [item("lrm-20-is"), item("ammo-lrm-20-is")];
+    expect(sums(mech(60, 4, [...lrm20, item("ammo-heat-seeking-lrm-is")]))).not.toBeNull();
+    expect(sums(mech(60, 4, [...lrm20, item("ammo-smoke-lrm-is")]))).toBeNull();
   });
 
   it("a weapon the book or our catalog cannot place is a finding and no value; artillery and melee items are left to their abilities", () => {

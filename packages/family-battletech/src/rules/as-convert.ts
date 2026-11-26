@@ -537,7 +537,7 @@ export function convertWeapons(record: MechRecord, catalog: Catalog): Step<Weapo
     const specials = family ? ammoItems.filter((a) => a.row.feeds?.includes(family as "lrm" | "srm" | "mml")) : [];
     if (specials.length > 0) {
       const perTon = mml ? Math.max(catalog.byId(ids[0]!)?.shotsPerTon ?? 0, catalog.byId(ids[1]!)?.shotsPerTon ?? 0) : (catalog.byId(ids[0]!)?.shotsPerTon ?? 0);
-      const most = shots + specials.reduce((s, a) => s + perTon * (a.tons ?? 1), 0);
+      const most = shots + specials.reduce((s, a) => s + perTon * (a.tons ?? 1) * (a.row.shotsFactor ?? 1), 0);
       if (shots / count < need !== most / count < need) {
         block({ code: "special-ammunition", part: item.mount.name, message: "The unit carries special munitions for this launcher, and how their shots are shared decides whether the ammunition rule applies; the book does not say, so we do not guess.", cite: WEAPON_RULES.ammunition.cite });
         return null;
