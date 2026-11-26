@@ -7,7 +7,8 @@ import { aeroBattleValue, aeroCost } from "../../rules/aero-bv";
 import type { AeroBv, AeroCost } from "../../rules/aero-bv";
 import { Disclosure, Rows, cbills, useScrolls } from "../editor/CalculatorPanel";
 
-const number = (x: number) => x.toLocaleString("en-US", { maximumFractionDigits: 3 });
+// Adding 0 turns a deduction of nothing (-0) into 0.
+const number = (x: number) => (x + 0).toLocaleString("en-US", { maximumFractionDigits: 3 });
 const plural = (n: number, one: string, many: string) => `${String(n)} ${n === 1 ? one : many}`;
 
 function BvBreakdown({ bv }: { bv: AeroBv }) {
