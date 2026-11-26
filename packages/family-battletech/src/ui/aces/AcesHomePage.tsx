@@ -3,11 +3,10 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import GamePicture from "../GamePicture";
 import { STORAGE_READ_FAILED } from "../storage";
-import { ACES_CARDS } from "./routes";
+import GamesInProgress from "./GamesInProgress";
+import { ACES_CARDS, ACES_NEW_GAME } from "./routes";
 import { openAcesStorage } from "./storage";
-import "../classic.scss";
-import "../as/alpha-strike.scss";
-import "./aces.scss";
+import "./styles";
 
 export default function AcesHomePage() {
   const [cards, setCards] = useState<number>();
@@ -49,8 +48,11 @@ export default function AcesHomePage() {
         <li className="bt-row">
           <span className="bt-row__text">
             <strong>Play a game</strong>
-            <span className="bt-row__credit">Not ready yet. It comes after the cards.</span>
+            <span className="bt-row__credit">Set up a game from two Alpha Strike forces. Playing the turns is not ready yet.</span>
           </span>
+          <Link className="bt-button" to={ACES_NEW_GAME}>
+            Set up a game
+          </Link>
         </li>
         <li className="bt-row">
           <span className="bt-row__text">
@@ -65,6 +67,7 @@ export default function AcesHomePage() {
           </span>
         </li>
       </ul>
+      <GamesInProgress />
     </div>
   );
 }

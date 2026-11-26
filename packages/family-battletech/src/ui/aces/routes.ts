@@ -12,3 +12,6 @@ export const ACES_ORDER = `${ACES_BASE}/order`;
 export const orderHref = (id: string): string => `${ACES_ORDER}?id=${encodeURIComponent(id)}`;
 export const ACES_SUPPORT = `${ACES_BASE}/support`;
 export const supportHref = (id: string): string => `${ACES_SUPPORT}?id=${encodeURIComponent(id)}`;
+export const ACES_NEW_GAME = `${ACES_BASE}/new-game`;
+export const ACES_GAME = `${ACES_BASE}/game`;
+export const gameHref = (id: string): string => `${ACES_GAME}?id=${encodeURIComponent(id)}`;

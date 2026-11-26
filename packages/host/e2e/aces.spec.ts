@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 import type { Page } from "@playwright/test";
-import { ACES, DEV, expect, pickToken, saveAcesCard, saveAcesCommand, test } from "./fixtures";
+import { ACES, DEV, expect, pickToken, saveAcesCard, saveAcesCommand, saveAsUnit, test } from "./fixtures";
 
 // Every card here is invented. No printed card, photo or scan is used.
 
@@ -152,4 +152,35 @@ test("an invented commander card A is entered at 320 px, with a special order an
   await expect(page.getByText("1 of 5 recorded. Missing Forced withdrawal, Movement objective, Destroy objective, Indirect attacks.")).toBeVisible();
   await expect(page.getByRole("link", { name: "Open Invented Barrage support card" })).toBeVisible();
   await fitsPhone(page, "library with every kind");
+});
+
+async function addUnits(page: Page, side: string, names: string[], pv: number): Promise<void> {
+  for (const name of names) {
+    await page.getByLabel(`Add a unit to ${side}`).selectOption({ label: `${name} (PV ${String(pv)})` });
+    await page.getByRole("button", { name: `Add to ${side}`, exact: true }).click();
+  }
+}
+
+test("a three against four game is set up on a 320 px phone, started, listed on the home and resumed", async ({ page }) => {
+  test.setTimeout(120_000);
+  await saveAcesCard(page, DEV);
+  for (const name of ["Mine A", "Mine B", "Mine C", "Theirs A", "Theirs B", "Theirs C", "Theirs D"]) await saveAsUnit(page, DEV, name, 20);
+  await page.setViewportSize({ width: 320, height: 700 });
+  await page.goto(`${DEV}${ACES}/home`);
+  await page.getByRole("link", { name: "Set up a game" }).click();
+  await addUnits(page, "your force", ["Mine A", "Mine B", "Mine C"], 20);
+  await addUnits(page, "automated force", ["Theirs A", "Theirs B", "Theirs C", "Theirs D"], 20);
+  await expect(page.getByText("Automated force: 4 units, 80 PV.")).toBeVisible();
+  const widths = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, client: document.documentElement.clientWidth }));
+  expect(widths.scroll).toBe(widths.client);
+  for (const control of await page.locator("button, select, input:not([type=checkbox]), label:has(input[type=checkbox]), a.bt-button").all()) {
+    const box = await control.boundingBox();
+    if (box) expect(box.height, (await control.textContent())?.slice(0, 30) ?? "").toBeGreaterThanOrEqual(43.5);
+  }
+  await page.getByRole("button", { name: "Start the game" }).click();
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("New game");
+  await page.goto(`${DEV}${ACES}/home`);
+  await expect(page.getByText("Turn 1")).toBeVisible();
+  await page.getByRole("link", { name: "Resume New game" }).click();
+  await expect(page.getByRole("heading", { level: 2, name: "Automated force" })).toBeVisible();
 });
