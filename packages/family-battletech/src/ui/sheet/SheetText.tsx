@@ -5,7 +5,8 @@ import { bracketed } from "./facts";
 import type { SheetFacts } from "./facts";
 import { armorText, structureText } from "./Diagrams";
 
-export default function SheetText({ facts, record, marks = [] }: { facts: SheetFacts; record: { id: string }; marks?: [string, string][] }) {
+/** `heading` names this copy when several sheets share a page (a force prints them all), so each landmark has its own name. */
+export default function SheetText({ facts, record, marks = [], heading = "The record sheet as text" }: { facts: SheetFacts; record: { id: string }; marks?: [string, string][]; heading?: string }) {
   const id = `sheet-text-${record.id}`;
   const terms: [string, string][] = [
     ["Type", facts.title],
@@ -28,7 +29,7 @@ export default function SheetText({ facts, record, marks = [] }: { facts: SheetF
   const slots = facts.layout.supported ? facts.layout.locations : [];
   return (
     <section className="sr-visually-hidden bt-sheet-text" aria-labelledby={`${id}-heading`}>
-      <h2 id={`${id}-heading`}>The record sheet as text</h2>
+      <h2 id={`${id}-heading`}>{heading}</h2>
       <dl>
         {terms.map(([term, value]) => (
           <div key={term}>

@@ -14,6 +14,7 @@ import { loadCatalog } from "../../rules/catalog";
 import type { Catalog } from "../../rules/catalog";
 import { DEFAULT_LEVEL, levelAtLeast, levelRow } from "../../rules/levels";
 import LevelSelect from "../editor/LevelSelect";
+import { LeaveGuard } from "../editor/LeaveConfirm";
 import GamePicture from "../GamePicture";
 import { MAX_LIBRARY_BYTES, STORAGE_READ_FAILED, STORAGE_WRITE_FAILED } from "../storage";
 import { AbominationSheets } from "./AbominationSheet";
@@ -45,6 +46,9 @@ const typeName = (unit: AbominationUnit): string => {
 };
 const unitName = (unit: AbominationUnit): string => (unit.label.trim() ? `${unit.label.trim()} (${typeName(unit)})` : typeName(unit));
 
+/** The most pips in one row of any box type, the cap on a custom type. */
+const MAX_PIPS_PER_ROW = Math.max(...ABOM_TYPES.map((t) => t.pipsPerRow));
+
 const BLANK_CUSTOM: AbomCustom = { name: "", classId: "swarmer", creatures: 1, pipsPerRow: 6, ground: 1, weapons: [], mob: null, hobble: null, melee: null };
 
 /** A whole number from a text field; undefined when the field is empty or not a number. */
@@ -53,7 +57,7 @@ const wholeOf = (text: string): number | undefined => {
   return text.trim() === "" || !Number.isInteger(n) || n < 0 ? undefined : n;
 };
 
-function NumberField({ id, label, value, onChange, optional }: { id: string; label: string; value: number | null | undefined; onChange: (next: number | undefined) => void; optional?: boolean }) {
+function NumberField({ id, label, value, onChange, optional, max }: { id: string; label: string; value: number | null | undefined; onChange: (next: number | undefined) => void; optional?: boolean; max?: number }) {
   return (
     <div className="bt-field">
       <label htmlFor={id}>{optional ? `${label} (blank for none)` : label}</label>
@@ -62,6 +66,7 @@ function NumberField({ id, label, value, onChange, optional }: { id: string; lab
         type="number"
         inputMode="numeric"
         min={0}
+        max={max}
         value={value ?? ""}
         onChange={(event) => {
           onChange(wholeOf(event.target.value));
@@ -78,6 +83,8 @@ export default function AbominationsPage() {
   const [level, setLevel] = useState<RulesLevel>(DEFAULT_LEVEL);
   /** The unit in the form: a new one from a type, or a saved one opened. */
   const [draft, setDraft] = useState<AbominationUnit>();
+  /** The draft as it was when opened, to tell unsaved work from an untouched form. */
+  const [opened, setOpened] = useState<{ id: string; json: string }>();
   const [printing, setPrinting] = useState<AbominationUnit>();
   const [confirming, setConfirming] = useState<{ id: string; name: string }>();
   const [status, setStatus] = useState("");
@@ -201,6 +208,11 @@ export default function AbominationsPage() {
     input.value = "";
   };
 
+  /** Opens a unit in the form and remembers how it started, so only real edits count as unsaved work. */
+  const startDraft = (unit: AbominationUnit) => {
+    setDraft(unit);
+    setOpened({ id: unit.id, json: JSON.stringify(unit) });
+  };
   const patch = (change: Partial<AbominationUnit>) => {
     setDraft((d) => (d ? { ...d, ...change } : d));
   };
@@ -240,13 +252,16 @@ export default function AbominationsPage() {
     );
   }
 
+  const dirty = draft !== undefined && opened?.id === draft.id && JSON.stringify(draft) !== opened.json;
   const stats = draft ? unitStats(draft) : undefined;
   const custom = draft?.custom;
   const weaponCount = custom?.weapons.length ?? 0;
+  const maxCreatures = ABOM_CLASSES.find((c) => c.id === custom?.classId)?.maxCreatures ?? 1;
   const weaponChoices = catalog ? catalog.all().filter((row) => (row.units ?? []).includes("abomination")) : [];
 
   return (
     <div className="sr-page">
+      <LeaveGuard dirty={dirty} />
       <h1>Abomination units</h1>
       <GamePicture game="gothic" />
       <p>
@@ -297,7 +312,7 @@ export default function AbominationsPage() {
                     ))}
                   </span>
                   <span className="bt-row__actions">
-                    <button type="button" className="bt-button" aria-label={`Open ${name}`} onClick={() => { setLevel(unit.rulesLevel ?? DEFAULT_LEVEL); setDraft(structuredClone(unit)); }}>
+                    <button type="button" className="bt-button" aria-label={`Open ${name}`} onClick={() => { setLevel(unit.rulesLevel ?? DEFAULT_LEVEL); startDraft(structuredClone(unit)); }}>
                       Open
                     </button>
                     <button type="button" className="bt-button bt-button--secondary" aria-label={`Record sheet for ${name}`} disabled={!catalog} onClick={() => { setPrinting(unit); }}>
@@ -370,7 +385,7 @@ export default function AbominationsPage() {
                   </div>
                   <div className="bt-field">
                     <label htmlFor="bt-abom-class">Size class</label>
-                    <select id="bt-abom-class" value={custom.classId} onChange={(event) => { patchCustom({ classId: event.target.value as AbomClassId }); }}>
+                    <select id="bt-abom-class" value={custom.classId} onChange={(event) => { const classId = event.target.value as AbomClassId; patchCustom({ classId, creatures: Math.min(custom.creatures, ABOM_CLASSES.find((c) => c.id === classId)?.maxCreatures ?? custom.creatures) }); }}>
                       {ABOM_CLASSES.map((c) => (
                         <option key={c.id} value={c.id}>
                           {c.label}
@@ -378,8 +393,8 @@ export default function AbominationsPage() {
                       ))}
                     </select>
                   </div>
-                  <NumberField id="bt-abom-creatures" label="Creatures" value={custom.creatures} onChange={(n) => { patchCustom({ creatures: n ?? 1 }); }} />
-                  <NumberField id="bt-abom-pips" label="Pips in each row" value={custom.pipsPerRow} onChange={(n) => { patchCustom({ pipsPerRow: n ?? 0 }); }} />
+                  <NumberField id="bt-abom-creatures" label="Creatures" max={maxCreatures} value={custom.creatures} onChange={(n) => { patchCustom({ creatures: Math.min(Math.max(n ?? 1, 1), maxCreatures) }); }} />
+                  <NumberField id="bt-abom-pips" label="Pips in each row" max={MAX_PIPS_PER_ROW} value={custom.pipsPerRow} onChange={(n) => { patchCustom({ pipsPerRow: Math.min(n ?? 0, MAX_PIPS_PER_ROW) }); }} />
                   <NumberField id="bt-abom-ground" label="Ground MP" value={custom.ground} onChange={(n) => { patchCustom({ ground: n ?? 0 }); }} />
                   <NumberField id="bt-abom-jump" label="Jump MP" optional value={custom.jump} onChange={(n) => { const { jump: _drop, ...rest } = custom; void _drop; setDraft({ ...draft, custom: n === undefined ? rest : { ...rest, jump: n } }); }} />
                   <NumberField id="bt-abom-vtol" label="VTOL MP" optional value={custom.vtol} onChange={(n) => { const { vtol: _drop, ...rest } = custom; void _drop; setDraft({ ...draft, custom: n === undefined ? rest : { ...rest, vtol: n } }); }} />
@@ -462,7 +477,7 @@ export default function AbominationsPage() {
                     <span className="bt-row__credit">{`${String(type.creatures)} creatures of ${String(size.rows * type.pipsPerRow)} pips. ${moveText(type)}. ${weaponsText(type.weapons, catalog)}.`}</span>
                   </span>
                   <span className="bt-row__actions">
-                    <button type="button" className="bt-button" aria-label={`Add ${type.name}`} onClick={() => { setDraft(newAbominationUnit(type.id)); }}>
+                    <button type="button" className="bt-button" aria-label={`Add ${type.name}`} onClick={() => { startDraft(newAbominationUnit(type.id)); }}>
                       Add
                     </button>
                   </span>
@@ -479,7 +494,7 @@ export default function AbominationsPage() {
               onClick={() => {
                 const { typeId: _none, ...blank } = newAbominationUnit("");
                 void _none;
-                setDraft({ ...blank, custom: structuredClone(BLANK_CUSTOM) });
+                startDraft({ ...blank, custom: structuredClone(BLANK_CUSTOM) });
               }}
             >
               Start a custom type

@@ -2,13 +2,22 @@
 // A saved unit that cannot be read is listed with a note, never thrown or dropped.
 import { openStore } from "@salvage-rights/shared";
 import type { Store } from "@salvage-rights/shared";
-import { withDefaults } from "../../rules/abomination";
-import type { AbominationUnit } from "../../rules/abomination";
+import { forceWithDefaults, withDefaults } from "../../rules/abomination";
+import type { AbominationUnit, GothicForce } from "../../rules/abomination";
 import { downloadJson } from "../storage";
 
 /** The store prefix of an Abomination unit. A backup of everything picks the units up by it. */
 export const ABOM_PREFIX = "gothic-abom:";
 
+/** The store prefix of a force. */
+export const FORCE_PREFIX = "gothic-force:";
+
+export interface ForceEntry {
+  id: string;
+  force?: GothicForce;
+  unreadable?: string;
+  savedAt?: string;
+}
 /** The store prefix of a unit's tracker state on the play page (`gothic-play:<unit id>`). */
 export const PLAY_PREFIX = "gothic-play:";
 
@@ -25,6 +34,11 @@ export interface GothicStorage {
   list(): Promise<AbomEntry[]>;
   save(unit: AbominationUnit): Promise<void>;
   remove(id: string): Promise<void>;
+  /** Every saved force, readable or not, newest first. */
+  listForces(): Promise<ForceEntry[]>;
+  getForce(id: string): Promise<ForceEntry | undefined>;
+  saveForce(force: GothicForce): Promise<void>;
+  removeForce(id: string): Promise<void>;
   /** The tracker state kept for each unit on the table, by unit id, as stored (the page reads it against the unit). */
   playStates(): Promise<Record<string, unknown>>;
   savePlay(unitId: string, state: unknown): Promise<void>;
@@ -67,6 +81,13 @@ function entryOf(id: string, stored: unknown): AbomEntry {
   return unit ? { id, unit, savedAt } : { id, savedAt, unreadable: "This saved unit is incomplete or from a different version." };
 }
 
+function forceEntryOf(id: string, stored: unknown): ForceEntry {
+  if (!isObject(stored)) return { id, unreadable: "This saved force is not in a form the app understands." };
+  const savedAt = typeof stored.savedAt === "string" ? stored.savedAt : undefined;
+  const force = forceWithDefaults(stored.force, id);
+  return force ? { id, force, savedAt } : { id, savedAt, unreadable: "This saved force is incomplete or from a different version." };
+}
+
 function wrap(store: Store): GothicStorage {
   return {
     persistent: store.persistent,
@@ -77,6 +98,17 @@ function wrap(store: Store): GothicStorage {
     },
     save: (unit) => store.set(ABOM_PREFIX + unit.id, { unit, savedAt: new Date().toISOString() }),
     remove: (id) => store.delete(ABOM_PREFIX + id),
+    listForces: async () => {
+      const keys = (await store.keys()).filter((k) => k.startsWith(FORCE_PREFIX));
+      const entries = await Promise.all(keys.map(async (k) => forceEntryOf(k.slice(FORCE_PREFIX.length), await store.get<unknown>(k))));
+      return entries.sort((a, b) => (b.savedAt ?? "").localeCompare(a.savedAt ?? ""));
+    },
+    getForce: async (id) => {
+      const stored = await store.get<unknown>(FORCE_PREFIX + id);
+      return stored === undefined ? undefined : forceEntryOf(id, stored);
+    },
+    saveForce: (force) => store.set(FORCE_PREFIX + force.id, { force, savedAt: new Date().toISOString() }),
+    removeForce: (id) => store.delete(FORCE_PREFIX + id),
     playStates: async () => {
       const keys = (await store.keys()).filter((k) => k.startsWith(PLAY_PREFIX));
       return Object.fromEntries(await Promise.all(keys.map(async (k) => [k.slice(PLAY_PREFIX.length), await store.get<unknown>(k)] as const)));

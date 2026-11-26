@@ -269,6 +269,15 @@ describe("The Gothic record sheet", () => {
     expect(lines).toContain("Frayed");
   });
 
+  it("prints our calculated Battle Value once a box design is changed", async () => {
+    const { record, catalog } = await box("FS9-HB");
+    const changed = editRecord(record, (d) => {
+      d.armor.LA = { front: (d.armor.LA?.front ?? 0) + 1 };
+    });
+    const { lines } = draw(changed, catalog);
+    expect(lines.some((line) => /^BV: [\d,]+ \(calculated, pilot 4\/5\)$/.test(line))).toBe(true);
+  });
+
   it("prints a Handler line on a 45-ton 'Mech and none on a 35-ton one", async () => {
     const heavy = await box("PXH-1");
     expect(draw(heavy.record, heavy.catalog).svg.querySelector("[data-box='handler']")).not.toBeNull();

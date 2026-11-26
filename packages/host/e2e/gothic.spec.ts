@@ -1,4 +1,4 @@
-import { DEV, GOTHIC, expect, startGothicBox, test } from "./fixtures";
+import { DEV, GOTHIC, buildGothicForce, expect, startGothicBox, test } from "./fixtures";
 
 const HOME = `${DEV}${GOTHIC}/home`;
 const BOX = "UrbanMech UM-R60B";
@@ -86,6 +86,41 @@ test("the Gothic sheet's Dazzle switch adds the Dazzle lines and fits a phone", 
   expect(widths.scroll).toBe(widths.client);
 });
 
+test("build a force from two box 'Mechs and three units, print all sheets, on a phone and a desktop", async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.setViewportSize({ width: 320, height: 700 });
+  const forcePath = await buildGothicForce(page, DEV);
+  const sideways = () => page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  expect(await sideways()).toBe(0);
+  await expect(page.getByTestId("force-bv")).toContainText("'Mech Battle Value");
+  await expect(page.getByText("No Initiative modifier applies.")).toBeVisible();
+  for (const control of await page.locator("button, select, input:not([type=file]):not([type=checkbox]), a.bt-button").all()) {
+    const box = await control.boundingBox();
+    if (box) expect(box.height, (await control.textContent())?.slice(0, 30) ?? "").toBeGreaterThanOrEqual(43.5);
+  }
+
+  // Printing: both 'Mech sheets with the pilot filled in, then the three units on one page.
+  await page.getByRole("button", { name: "Print all sheets" }).click();
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Test Lance record sheets");
+  await expect(page.locator("svg.bt-sheet")).toHaveCount(3);
+  await expect(page.locator("svg.bt-sheet").first()).toHaveAttribute("aria-label", /UrbanMech UM-R60B record sheet/);
+  await expect(page.locator("svg.bt-sheet").nth(1).getByText("Ann", { exact: true })).toBeVisible();
+  await expect(page.locator("svg.bt-sheet").nth(1).getByText(/^Handler for: .*Gnat One/)).toBeVisible();
+  expect(await sideways()).toBe(0);
+  await page.emulateMedia({ media: "print" });
+  await expect(page.getByRole("button", { name: "Print", exact: true })).toBeHidden();
+  const pdf = await page.pdf({ format: "Letter" });
+  expect(pdf.toString("latin1").match(/\/Type\s*\/Page[^s]/g)?.length ?? 0).toBe(3);
+  await page.emulateMedia({ media: "screen" });
+
+  // The same force on a desktop width, back from storage.
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto(`${DEV}${forcePath}`);
+  await expect(page.getByLabel("Force name")).toHaveValue("Test Lance");
+  await expect(page.getByLabel(/^Pilot name for Phoenix Hawk PXH-1T/)).toHaveValue("Ann");
+  await page.getByRole("button", { name: "Print all sheets" }).click();
+  await expect(page.locator("svg.bt-sheet")).toHaveCount(3);
+});
 test("play a Tyrant through two phases on a phone: 44 px pips, nothing scrolls sideways, and the table survives a reload", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 700 });
   await page.goto(HOME);

@@ -1,6 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import type { Page } from "@playwright/test";
-import { ACES, CLASSIC, DEV, FAKE_KEY, FREE, GOTHIC, answerQuestions, expect, importMech, putAsUnits, saveAcesCard, saveAcesCommand, saveAsUnit, startGothicBox, test } from "./fixtures";
+import { ACES, CLASSIC, DEV, FAKE_KEY, FREE, GOTHIC, answerQuestions, buildGothicForce, expect, importMech, putAsUnits, saveAcesCard, saveAcesCommand, saveAsUnit, startGothicBox, test } from "./fixtures";
 
 async function chooseTheme(page: Page, base: string, theme: "Light" | "Dark") {
   await page.goto(`${base}/settings`);
@@ -301,6 +301,21 @@ test("the Gothic Abomination units page, its form, a custom form and a unit shee
   }
 });
 
+test("the Gothic forces list, a force and its print view have no axe violations in either theme", async ({ page }) => {
+  test.setTimeout(120_000);
+  const forcePath = await buildGothicForce(page, DEV);
+  for (const theme of ["Light", "Dark"] as const) {
+    await chooseTheme(page, DEV, theme);
+    await page.goto(`${DEV}${GOTHIC}/force`);
+    await scan(page, theme, "the forces list");
+    await page.goto(`${DEV}${forcePath}`);
+    await expect(page.getByLabel("Force name")).toHaveValue("Test Lance");
+    await scan(page, theme, "the force");
+    await page.getByRole("button", { name: "Print all sheets" }).click();
+    await expect(page.locator("svg.bt-sheet")).toHaveCount(3);
+    await scan(page, theme, "the force print view");
+  }
+});
 test("the Gothic Abomination tracker, empty and with a unit on the table, has no axe violations in either theme", async ({ page }) => {
   test.setTimeout(120_000);
   for (const theme of ["Light", "Dark"] as const) {

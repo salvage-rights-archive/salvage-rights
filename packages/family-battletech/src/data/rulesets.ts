@@ -89,9 +89,8 @@ export function rulesetOf(editionId: string | undefined): Ruleset {
   return RULESETS[game];
 }
 
-/** Where Gothic's pages live. The host serves a game's own routes only once the game is ready, so until Gothic turns ready (G-9) they
- * sit under a family route of their own, as Aces' do (ui/aces/routes.ts); G-9 changes this one value to "/battletech/gothic". */
-export const GOTHIC_BASE = "/battletech/gothic-preview";
+/** Where Gothic's pages live: the game's own routes, served now that Gothic is ready. */
+export const GOTHIC_BASE = "/battletech/gothic";
 
 /** The pages' base address of a game. */
 export const baseOf = (game: GameId): string => (game === "gothic" ? GOTHIC_BASE : "/battletech/classic");

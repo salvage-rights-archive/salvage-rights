@@ -3,11 +3,12 @@
 // creature roll helper. Every figure comes from `rules/abomination.ts`; the page holds no rules of its own. State is kept on the
 // device per unit (`gothic-play:<unit id>`), so a reload or a closed tab loses nothing.
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Link } from "react-router";
+import { Link, useSearchParams } from "react-router";
 import type { AbomWeapon } from "../../data/gothic";
 import { GOTHIC_BASE } from "../../data/rulesets";
 import {
   activeCreatures,
+  addOverflow,
   clusterColumn,
   creatureFor,
   damageModifier,
@@ -25,7 +26,7 @@ import {
   trackerWithDefaults,
   unitStats,
 } from "../../rules/abomination";
-import type { AbominationUnit, TrackerState, UnitStats } from "../../rules/abomination";
+import type { AbominationUnit, GothicForce, TrackerState, UnitStats } from "../../rules/abomination";
 import { loadCatalog } from "../../rules/catalog";
 import type { Catalog } from "../../rules/catalog";
 import GamePicture from "../GamePicture";
@@ -41,12 +42,22 @@ const typeName = (unit: AbominationUnit, stats: UnitStats | undefined): string =
 const unitName = (unit: AbominationUnit, stats: UnitStats | undefined): string => (unit.label.trim() ? `${unit.label.trim()} (${typeName(unit, stats)})` : typeName(unit, stats));
 const signed = (n: number): string => (n > 0 ? `+${String(n)}` : String(n));
 
-/**
- * The units the player can put on the table. Today these are the saved units. When forces land (G-9), a force's Abomination entries
- * are chosen here instead: pass the unit ids the chosen force lists and filter `entries` by them; nothing else on this page changes.
- */
+/** The units the player can put on the table when no force is open: every saved unit. */
 export function unitsToChoose(entries: readonly AbomEntry[]): AbominationUnit[] {
   return entries.flatMap((entry) => (entry.unit ? [entry.unit] : []));
+}
+
+/**
+ * The units a force puts on the table, one per force entry (a saved unit entered twice is two units, each tracked on its own, under
+ * the entry's id). The entry's Handler bonus counts only while the 'Mech it names has a Handler aboard (p. 80).
+ */
+export function forceUnits(force: GothicForce, entries: readonly AbomEntry[]): AbominationUnit[] {
+  return force.units.flatMap((entry) => {
+    const saved = entries.find((e) => e.unit?.id === entry.unitId)?.unit;
+    if (!saved) return [];
+    const handled = entry.handlerBonus && force.mechs.some((m) => m.id === entry.handlerOf && m.handler);
+    return [{ ...structuredClone(saved), id: entry.id, handlerBonus: handled }];
+  });
 }
 
 interface UnitTrackerProps {
@@ -96,6 +107,18 @@ function UnitTracker({ unit, stats, state, catalog, onChange, onRemove }: UnitTr
         <div>
           <dt>Damage this phase</dt>
           <dd>{phaseDamage}</dd>
+        </div>
+        <div>
+          <dt>Extra damage past the last pip</dt>
+          <dd>
+            <span aria-live="polite">{state.overflow ?? 0}</span>{" "}
+            <button type="button" className="bt-button bt-button--secondary" aria-label={`Add 1 extra damage: ${name}`} onClick={() => { onChange(addOverflow(state, 1)); }}>
+              Add 1
+            </button>{" "}
+            <button type="button" className="bt-button bt-button--secondary" disabled={(state.overflow ?? 0) === 0} aria-label={`Take back 1 extra damage: ${name}`} onClick={() => { onChange(addOverflow(state, -1)); }}>
+              Take back 1
+            </button>
+          </dd>
         </div>
         <div>
           <dt>Stumble target</dt>
@@ -232,6 +255,9 @@ export default function TrackerPage() {
   const [states, setStates] = useState<Record<string, TrackerState>>({});
   const [catalog, setCatalog] = useState<Catalog>();
   const [loaded, setLoaded] = useState(false);
+  const forceId = useSearchParams()[0].get("force");
+  /** The force the page was opened from: its name and the saved-unit ids it lists. */
+  const [force, setForce] = useState<{ name: string; units: AbominationUnit[] }>();
   const [problem, setProblem] = useState("");
   const savedRef = useRef<HTMLHeadingElement>(null);
 
@@ -241,12 +267,15 @@ export default function TrackerPage() {
         const s = await openGothicStorage();
         const list = await s.list();
         const stored = await s.playStates();
+        const asked = forceId ? (await s.getForce(forceId))?.force : undefined;
+        const onForce = asked ? forceUnits(asked, list) : undefined;
         const next: Record<string, TrackerState> = {};
-        for (const unit of unitsToChoose(list)) {
+        for (const unit of onForce ?? unitsToChoose(list)) {
           const stats = unitStats(unit);
           if (stats && unit.id in stored) next[unit.id] = trackerWithDefaults(stored[unit.id], stats);
         }
         setStorage(s);
+        setForce(asked && onForce ? { name: asked.name.trim() || "Unnamed force", units: onForce } : undefined);
         setEntries(list);
         setStates(next);
       } catch {
@@ -259,7 +288,7 @@ export default function TrackerPage() {
         // The weapon names wait; the tracker still works from the ids.
       }
     })();
-  }, []);
+  }, [forceId]);
 
   const keep = useCallback(
     async (unitId: string, next: TrackerState | undefined) => {
@@ -280,7 +309,7 @@ export default function TrackerPage() {
     [storage],
   );
 
-  const units = unitsToChoose(entries);
+  const units = force ? force.units : unitsToChoose(entries);
   const onTable = units.filter((u) => u.id in states);
   const waiting = units.filter((u) => !(u.id in states));
 
@@ -297,6 +326,13 @@ export default function TrackerPage() {
       <div role="alert" className="bt-problem">
         {problem}
       </div>
+
+      {force && (
+        <p className="bt-hint">
+          {`Showing the units of ${force.name}. `}
+          <Link to={`${GOTHIC_BASE}/play`}>Show every saved unit</Link>
+        </p>
+      )}
 
       <section className="bt-section" aria-labelledby="bt-play-choose">
         <h2 id="bt-play-choose" ref={savedRef} tabIndex={-1}>

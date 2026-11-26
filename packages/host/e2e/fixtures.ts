@@ -224,8 +224,8 @@ export async function saveAsUnit(page: Page, base: string, name: string, pv: num
 }
 
 export const ACES = "/battletech/aces";
-/** Gothic's pages until the game turns ready (G-9); then "/battletech/gothic". */
-export const GOTHIC = "/battletech/gothic-preview";
+/** Gothic's pages. */
+export const GOTHIC = "/battletech/gothic";
 
 /** Starts from a box 'Mech on the Gothic home (nothing from the sheets but its figures); returns the editor's path with its id. */
 export async function startGothicBox(page: Page, base: string, name: string): Promise<string> {
@@ -234,6 +234,46 @@ export async function startGothicBox(page: Page, base: string, name: string): Pr
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(name);
   const editor = new URL(page.url());
   return `${editor.pathname.replace(/^\/salvage-rights/, "")}${editor.search}`;
+}
+
+/**
+ * Builds a Gothic force on the Gothic pages: two box 'Mechs (the 30-ton UM-R60B leads, then the 45-ton PXH-1T with a Handler) and three
+ * Gnat units, two of them on that Handler. Leaves the page on the saved force and returns its path with the id.
+ */
+export async function buildGothicForce(page: Page, base: string): Promise<string> {
+  await startGothicBox(page, base, "UrbanMech UM-R60B");
+  await startGothicBox(page, base, "Phoenix Hawk PXH-1T");
+  await page.goto(`${base}${GOTHIC}/abominations`);
+  await expect(page.getByLabel("Import a file")).toBeEnabled();
+  for (const label of ["Gnat One", "Gnat Two", "Gnat Three"]) {
+    await page.getByRole("button", { name: "Add Gnat" }).click();
+    await page.getByLabel("Label").fill(label);
+    await page.getByRole("button", { name: "Save", exact: true }).click();
+    await expect(page.getByText(`${label} (Gnat) saved.`)).toBeVisible();
+  }
+  await page.goto(`${base}${GOTHIC}/home`);
+  await page.getByRole("link", { name: "Forces" }).click();
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Gothic forces");
+  await page.getByRole("button", { name: "Start a new force" }).click();
+  await page.getByLabel("Force name").fill("Test Lance");
+  await page.getByLabel("Add a 'Mech").selectOption({ label: "UrbanMech UM-R60B, 30 tons" });
+  await page.getByRole("button", { name: "Add 'Mech" }).click();
+  await page.getByLabel("Add a 'Mech").selectOption({ label: "Phoenix Hawk PXH-1T, 45 tons" });
+  await page.getByRole("button", { name: "Add 'Mech" }).click();
+  await page.getByLabel(/^Pilot name for Phoenix Hawk PXH-1T/).fill("Ann");
+  await page.getByLabel(/^Handler aboard Phoenix Hawk PXH-1T/).check();
+  for (const label of ["Gnat One", "Gnat Two", "Gnat Three"]) {
+    await page.getByLabel("Add a unit").selectOption({ label: `${label} (Gnat)` });
+    await page.getByRole("button", { name: "Add unit" }).click();
+  }
+  for (const label of ["Gnat One", "Gnat Two"]) {
+    await page.getByLabel(`Handler for ${label} (Gnat)`).selectOption({ index: 1 });
+    await page.getByLabel(`Handler bonus for ${label} (Gnat)`).check();
+  }
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(page.getByText("Saved.")).toBeVisible();
+  const saved = new URL(page.url());
+  return `${saved.pathname.replace(/^\/salvage-rights/, "")}${saved.search}`;
 }
 
 /** Opens a picker by its button, searches it and picks the entry whose name is given. */

@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef } from "react";
+import { useBlocker } from "react-router";
 import { dialogKeyDown } from "./dialog";
 
 /** The unsaved-changes question, a modal dialog like the picker: focus goes to Stay and comes back there. */
@@ -42,4 +43,21 @@ export default function LeaveConfirm({ proceed, reset }: { proceed: () => void; 
       </div>
     </div>
   );
+}
+
+/** The whole guard for a page with unsaved work: leaving inside the app asks first, and closing or reloading the tab warns. */
+export function LeaveGuard({ dirty }: { dirty: boolean }) {
+  const blocker = useBlocker(dirty);
+  useEffect(() => {
+    if (!dirty) return;
+    const warn = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", warn);
+    return () => {
+      window.removeEventListener("beforeunload", warn);
+    };
+  }, [dirty]);
+  return blocker.state === "blocked" ? <LeaveConfirm proceed={blocker.proceed} reset={blocker.reset} /> : null;
 }

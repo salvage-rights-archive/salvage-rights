@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { IDBFactory } from "fake-indexeddb";
 import { MemoryRouter } from "react-router";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { newAbominationUnit } from "../../rules/abomination";
+import { newAbominationUnit, newForce, newForceMech, newForceUnit } from "../../rules/abomination";
 import { openGothicStorage } from "./storage";
 import TrackerPage from "./TrackerPage";
 
@@ -30,6 +30,44 @@ const fact = (name: string) => screen.getByText(name).parentElement?.querySelect
 const column = (weapon: string) => screen.getAllByRole("listitem").find((li) => li.querySelector("strong")?.textContent?.endsWith(weapon))?.textContent;
 
 describe("The Abomination tracker", () => {
+  it("offers only the units of the force it was opened from", async () => {
+    const storage = await openGothicStorage();
+    await storage.save({ ...newAbominationUnit("tyrant", "t-1"), label: "In force" });
+    await storage.save({ ...newAbominationUnit("gnat", "g-1"), label: "Left out" });
+    await storage.saveForce({ ...newForce("f1"), name: "Lance", units: [newForceUnit("t-1", "e1")] });
+    render(<MemoryRouter initialEntries={["/play?force=f1"]}><TrackerPage /></MemoryRouter>);
+    expect(await screen.findByRole("button", { name: "Put on the table: In force (Tyrant)" }, { timeout: 5000 })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /Left out/ })).toBeNull();
+    expect(screen.getByText(/Showing the units of Lance/)).toBeTruthy();
+  });
+
+  it("tracks a unit entered twice as two, and applies the Handler bonus only to the entry whose 'Mech has a Handler", async () => {
+    const user = userEvent.setup();
+    const storage = await openGothicStorage();
+    await storage.save({ ...newAbominationUnit("tyrant", "t-1"), label: "Twin" });
+    await storage.saveForce({
+      ...newForce("f1"),
+      mechs: [{ ...newForceMech("r-1", "m1"), handler: true }],
+      units: [{ ...newForceUnit("t-1", "e1"), handlerOf: "m1", handlerBonus: true }, newForceUnit("t-1", "e2")],
+    });
+    render(<MemoryRouter initialEntries={["/play?force=f1"]}><TrackerPage /></MemoryRouter>);
+    const puts = await screen.findAllByRole("button", { name: "Put on the table: Twin (Tyrant)" }, { timeout: 5000 });
+    expect(puts).toHaveLength(2);
+    await user.click(puts[0]!);
+    await user.click(screen.getByRole("button", { name: "Put on the table: Twin (Tyrant)" }));
+    const stumbles = screen.getAllByText("Stumble target").map((dt) => dt.parentElement?.querySelector("dd")?.textContent);
+    expect(stumbles).toEqual(["3", "4"]);
+  });
+
+  it("counts damage past a creature's last pip toward the phase, and End phase clears it", async () => {
+    const user = userEvent.setup();
+    await play("gnat", user);
+    await user.click(screen.getByRole("button", { name: /^Add 1 extra damage: / }));
+    expect(fact("Damage this phase")).toBe("1");
+    await user.click(screen.getByRole("button", { name: /^End phase: / }));
+    expect(fact("Damage this phase")).toBe("0");
+  });
+
   it("takes a creature out when its last pip is marked and raises the attack modifier", async () => {
     const user = userEvent.setup();
     await play("tyrant", user);
