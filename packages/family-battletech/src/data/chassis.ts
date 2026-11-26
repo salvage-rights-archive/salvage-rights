@@ -1439,11 +1439,11 @@ export const SUPERHEAVY: SuperheavyRules = {
   heatSinksPerCell: { single: 2, compact: 4, "double-clan": 1 },
   ammoPerCell: 2,
   barred: [
-    { stems: ["jump-jet", "improved-jump-jet", "mechanical-jump-booster", "partial-wing", "umu", "jump-pack"], why: "no jump jet, booster, wing or underwater maneuvering unit has been made for a machine this large" },
-    { stems: ["masc", "supercharger", "aes-arm", "aes-leg"], why: "its larger actuators and thicker myomer do not work with speed or strength enhancements" },
-    { stems: ["armored-component"], why: "armored components may not be fitted to a superheavy 'Mech" },
+    { stems: ["jump-jet", "improved-jump-jet", "mechanical-jump-booster", "partial-wing", "umu", "jump-pack"], why: "nothing has been built that can lift or drive a machine this heavy through the air or under water" },
+    { stems: ["masc", "supercharger", "aes-arm", "aes-leg"], why: "a machine this big cannot use a speed or strength booster" },
+    { stems: ["armored-component"], why: "the rules do not let a machine this size carry armored components" },
   ],
-  noEffect: { stems: ["chameleon-lps", "null-signature-system", "void-signature-system"], why: "a superheavy 'Mech is too large for a stealth system to work" },
+  noEffect: { stems: ["chameleon-lps", "null-signature-system", "void-signature-system"], why: "a machine this large is too big for the system to hide it" },
   dates: {
     mech: { availability: [{ from: 3078 }], prototypeYear: 3077 },
     industrialmech: { availability: [{ from: 2940 }], prototypeYear: 2930 },

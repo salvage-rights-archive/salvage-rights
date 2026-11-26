@@ -487,7 +487,8 @@ function placementCheck({ record, layout, catalog }: CheckInput): Finding[] {
       }
     }
     if (!row || !mount.location) continue;
-    const allowed = locationsFor(row, record.configuration);
+    // A superheavy 'Mech may mount the Heavy Gauss rifle in an arm (IO:AE printed p.157).
+    const allowed = superheavyOf(record) && /^heavy-gauss-rifle-/.test(row.id) ? undefined : locationsFor(row, record.configuration);
     // Both parts of a split weapon must be in places the item may go (the heavy Gauss rifle's torsos, p.219).
     const second = splitOf(mount)?.location;
     const places = second === undefined ? [mount.location] : [mount.location, second];
@@ -718,6 +719,10 @@ function configurationCheck({ record }: CheckInput): Finding[] {
   }
   const cockpit = own(COCKPITS.types, record.chassis.cockpit) ? COCKPITS.types[record.chassis.cockpit] : undefined;
   const required = requiredCockpit(record);
+  const gyro = own(GYROS.types, record.chassis.gyro) ? GYROS.types[record.chassis.gyro] : undefined;
+  if (!superheavyOf(record) && gyro?.tonnage && gyro.tonnage.min > SUPERHEAVY.standardMaxTons) {
+    out.push(finding("configuration", "error", `The ${gyro.name} gyro is for a superheavy 'Mech of ${gyro.tonnage.min} tons or more; this one weighs ${num(record.tons)}.`, { where: { field: "chassis.gyro" }, cite: gyro.cite ?? GYROS.cite }));
+  }
   if (required && record.chassis.cockpit !== required) {
     const needed = partName(COCKPITS, required);
     const body = superheavyOf(record) ? `superheavy ${record.configuration}` : record.configuration;
@@ -1217,7 +1222,9 @@ function armCheck({ record, catalog }: CheckInput): Finding[] {
     const arm = location === "LA" || location === "RA";
     const has = { ...ARM_FULL, ...(arm ? armsOf(record)?.[location] : undefined) };
     const place = locationName(location);
-    const seen = new Set<string>();
+    const seen = new Map<string, number>();
+    // A superheavy 'Mech may mount up to two items of industrial equipment per location (IO:AE printed p.157).
+    const most = superheavyOf(record) ? 2 : 1;
     for (const { mount, row, stem } of items) {
       const where = { location, mountId: mount.id };
       const blade = own(BLADE_PAGES, stem);
@@ -1232,10 +1239,10 @@ function armCheck({ record, catalog }: CheckInput): Finding[] {
           out.push(finding("arms", "error", `${mount.name} in the ${place} replaces the hand; remove the hand actuator from that arm first.`, { where, cite }));
         }
       }
-      if (seen.has(stem)) {
-        out.push(finding("arms", "error", `The ${place} holds more than one ${row.name}; the book allows one of each kind per ${arm ? "arm" : "location"}.`, { where, cite }));
+      if ((seen.get(stem) ?? 0) >= most) {
+        out.push(finding("arms", "error", `The ${place} holds more than ${most === 1 ? "one" : "two"} ${row.name}; the book allows ${most === 1 ? "one" : "two"} of each kind per ${arm ? "arm" : "location"}${most === 1 ? "" : " on a superheavy 'Mech"}.`, { where, cite }));
       }
-      seen.add(stem);
+      seen.set(stem, (seen.get(stem) ?? 0) + 1);
     }
     const kinds = [...new Set(items.filter((i) => isExclusiveTool(i.row)).map((i) => i.stem))];
     if (kinds.length > 1) {
@@ -1364,7 +1371,7 @@ function superheavyCheck({ record, catalog }: CheckInput): Finding[] {
       structure: "its structure is a superheavy kind",
       engine: "only fusion engines have the power to move one",
       gyro: "every superheavy 'Mech needs the superheavy gyro",
-      myomer: "its larger actuators and thicker myomer do not work with MASC, Triple-Strength Myomer or other enhancements",
+      myomer: "a machine this big cannot use MASC, Triple-Strength Myomer or any other speed or strength booster",
     };
     add("error", `${partName(table, key)} ${what} is not allowed on a superheavy ${kind}; ${reason[what]}. It may use ${keys.map((k) => partName(table, k)).join(", ")}.`, { field });
   }
@@ -1421,6 +1428,8 @@ function primitiveCheck({ record, catalog }: CheckInput): Finding[] {
     }
   }
   const jets = record.mounts.filter((m) => rowOf(catalog, record, m)?.kind === "jump-jet");
+  // The prototype jump jet is introduced in 2464 and the standard one produced from 2471 (IO:AE printed p.114), so a Primitive 'Mech may jump from 2464, on the staged
+  // dates the jump jet row carries. The Mackie example (p.117) says jump jets do not appear "even in prototype form" until 2471; the rule text and p.114 stand (conflict 122).
   if (jets.length > 0 && record.year !== null && record.year < rules.jumpFrom) {
     add("error", `A Primitive 'Mech cannot jump before ${rules.jumpFrom}, when the prototype jump jet appears; this one is dated ${record.year}.`, { field: "year" }, IO_PRIMITIVE_JUMP);
   }

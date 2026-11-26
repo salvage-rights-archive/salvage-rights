@@ -9,7 +9,7 @@ import { unitCost } from "./cost";
 import { editRecord, layout, maxArmor, newRecord, structurePoints, weights } from "./mech";
 import type { MechRecord, Mount } from "./mech";
 import { levelItems } from "./levels";
-import { partAvailable } from "./availability";
+import { equipmentAvailable, partAvailable } from "./availability";
 
 const catalog = createCatalog(expand([...WEAPONS, ...AMMUNITION, ...OTHER]));
 
@@ -55,14 +55,50 @@ describe("a superheavy 'Mech", () => {
     expect(layout(three, catalog.factsOf).conflicts).toHaveLength(1);
   });
 
-  it("is checked: Inner Sphere only, weights of 105 to 200, no jump jets, the superheavy gyro and cockpit", () => {
-    const messages = (record: MechRecord) => runChecks(record, catalog).filter((f) => f.level === "error").map((f) => f.message);
+  const messages = (record: MechRecord) => runChecks(record, catalog).filter((f) => f.level === "error").map((f) => f.message);
+  const mentions = (record: MechRecord, text: string) => messages(record).some((m) => m.includes(text));
+
+  it("is legal as the book's example builds it, and is Inner Sphere only", () => {
     expect(messages(omega()).filter((m) => /superheavy|weighs/i.test(m))).toEqual([]);
-    expect(messages(editRecord(omega(), (d) => void (d.tons = 102))).some((m) => m.includes("105 to 200 tons as a superheavy"))).toBe(true);
-    expect(messages(editRecord(omega(), (d) => void (d.techBase = "clan"))).some((m) => m.includes("Inner Sphere technology only"))).toBe(true);
-    expect(messages(editRecord(omega(), (d) => void d.mounts.push(mountAt("jj", "jump-jet-is", "LL", 0)))).some((m) => m.includes("cannot be mounted on a superheavy"))).toBe(true);
-    expect(messages(editRecord(omega(), (d) => void (d.chassis.gyro = "standard"))).some((m) => m.includes("Gyro") || m.includes("gyro"))).toBe(true);
-    expect(messages(editRecord(omega(), (d) => void (d.chassis.cockpit = "standard"))).some((m) => m.includes("must mount the Superheavy cockpit"))).toBe(true);
+    expect(mentions(editRecord(omega(), (d) => void (d.techBase = "clan")), "Inner Sphere technology only")).toBe(true);
+  });
+
+  it("weighs 105 to 200 tons in fives", () => {
+    expect(mentions(editRecord(omega(), (d) => void (d.tons = 102)), "105 to 200 tons as a superheavy")).toBe(true);
+  });
+
+  it("may not mount jump jets", () => {
+    expect(mentions(editRecord(omega(), (d) => void d.mounts.push(mountAt("jj", "jump-jet-is", "LL", 0))), "cannot be mounted on a superheavy")).toBe(true);
+  });
+
+  it("needs the superheavy gyro and cockpit, and a standard 'Mech may not have the superheavy gyro", () => {
+    expect(mentions(editRecord(omega(), (d) => void (d.chassis.gyro = "standard")), "gyro")).toBe(true);
+    expect(mentions(editRecord(omega(), (d) => void (d.chassis.cockpit = "standard")), "must mount the Superheavy cockpit")).toBe(true);
+    expect(mentions(editRecord(omega(), (d) => void (d.tons = 100)), "gyro is for a superheavy 'Mech")).toBe(true);
+  });
+
+  it("may mount the Heavy Gauss rifle in an arm and two of one industrial tool in a location, where a standard 'Mech may not", () => {
+    const gauss = editRecord(omega(), (d) => void d.mounts.push(mountAt("hg", "heavy-gauss-rifle-is", "LA", 4)));
+    expect(messages(gauss).filter((m) => m.includes("cannot go in the"))).toEqual([]);
+    const tools = (tons: number) => editRecord(omega(), (d) => {
+      d.tons = tons;
+      d.mounts.push(mountAt("t1", "backhoe-is", "LT", 5), mountAt("t2", "backhoe-is", "LT", 8));
+    });
+    expect(messages(tools(150)).filter((m) => m.includes("holds more than"))).toEqual([]);
+    expect(messages(tools(100)).filter((m) => m.includes("holds more than"))).toHaveLength(1);
+  });
+
+  it("shares one cell between rounds of a weapon's ammunition of different types, and not between two weapons", () => {
+    const cell = (a: string, b: string) => layout(editRecord(omega(), (d) => void (d.mounts = [mountAt("a", a, "LT", 5), mountAt("b", b, "LT", 5)])), catalog.factsOf).conflicts.length;
+    expect(cell("ammo-lb-10-x-is", "ammo-lb-10-x-cluster-is")).toBe(0);
+    expect(cell("ammo-lb-10-x-is", "ammo-ac-10-is")).toBe(1);
+  });
+
+  it("hides what its rules bar from the picker: jump jets, boosters and a QuadVee's wheels", () => {
+    const row = (id: string) => catalog.byId(id)!;
+    const subject = { ...omega(), tons: 150 };
+    expect([equipmentAvailable(row("jump-jet-is"), subject, catalog), equipmentAvailable(row("masc-is"), subject, catalog), equipmentAvailable(row("wheels-clan"), subject, catalog)]).toEqual([false, false, false]);
+    expect(equipmentAvailable(row("jump-jet-is"), { ...subject, tons: 100, year: 3080 }, catalog)).toBe(true);
   });
 
   it("needs Advanced rules, and its years (a BattleMech from 3078, prototype 3077)", () => {

@@ -14,7 +14,7 @@ import { PHYSICAL_BV } from "../data/bv";
 import { FORMULAS, physicalDamage, resolveFormula } from "./formulas";
 import type { FactsOf, LocationCode, MechRecord, Mount, MountFacts, TechBase } from "./mech";
 import { SUPERHEAVY } from "../data/chassis";
-import { superheavyOf, splitOf } from "./mech";
+import { bodyOf, superheavyOf, splitOf } from "./mech";
 
 /** The longest range band an aerospace unit's attack reaches, as the weapons table prints it in place of hex ranges. */
 export type AeroRange = "Short" | "Medium" | "Long" | "Extreme";
@@ -240,6 +240,11 @@ function seenIn(row: EquipmentRow, editionId: string, overlays: Overlays): Equip
   return override || ours ? { ...row, ...override, ...ours } : row;
 }
 
+/** The weapon a round of ammunition is for, whatever its type: the row id without the munition words, so that a superheavy 'Mech's cell may hold two kinds of one weapon's
+ * ammunition (IO:AE printed p.157). A heuristic over the catalog's ids; an id with none of the words is its own family. */
+const MUNITION_WORDS = /-(cluster|precision|armor-piercing|ap|caseless|tracer|flak|flechette|incendiary|inferno|semi-guided|narc-capable|artemis-capable|swarm-i|swarm|thunder|standard)(?=-(is|clan)$|$)/g;
+export const ammoFamily = (id: string): string => id.replace(MUNITION_WORDS, "");
+
 /** The heat sink type key a heat sink row stands for (the chassis' `heatSinks.type`). */
 export function heatSinkTypeOf(row: Pick<EquipmentRow, "id" | "techBase">): string {
   if (row.id.startsWith("compact")) return "compact";
@@ -289,7 +294,7 @@ export function createCatalog(rows: EquipmentRow[], overlays: Overlays = {}): Ca
     if (tons === undefined || slots === undefined) return undefined;
     // A superheavy 'Mech's cell holds two heat sinks (four compact, one Clan double) or two rounds of one kind of ammunition (IO:AE printed p.157).
     const capacity = !superheavyOf(record) ? undefined : row.kind === "heat-sink" ? (SUPERHEAVY.heatSinksPerCell[heatSinkTypeOf(row)] ?? 1) : row.kind === "ammunition" ? SUPERHEAVY.ammoPerCell : undefined;
-    const pack = capacity !== undefined && capacity > 1 ? { pack: { key: row.id, capacity } } : {};
+    const pack = capacity !== undefined && capacity > 1 ? { pack: { key: row.kind === "ammunition" ? ammoFamily(row.id) : row.id, capacity } } : {};
     // An energy weapon is what an IndustrialMech's power amplifiers are a share of (the picker's Energy weapons group).
     return row.heavyEnergy || (row.kind === "weapon" && groupOf(row).id === "energy") ? ({ tons, slots, energy: true, ...pack } satisfies MountFacts) : ({ tons, slots, ...pack } satisfies MountFacts);
   };
@@ -364,7 +369,7 @@ const QUAD_ORDER: LocationCode[] = ["HD", "CT", "LT", "RT", "FLL", "FRL", "RLL",
 
 /** Position of a location in record-sheet order for the record's configuration; codes outside it sort after the rest. */
 function locationRank(record: MechRecord, location: LocationCode | null): number {
-  const order = record.configuration === "quad" ? QUAD_ORDER : BIPED_ORDER;
+  const order = bodyOf(record.configuration) === "quad" ? QUAD_ORDER : BIPED_ORDER;
   if (location === null) return order.length + 1;
   const at = order.indexOf(location);
   return at === -1 ? order.length : at;

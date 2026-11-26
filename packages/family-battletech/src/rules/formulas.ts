@@ -2,7 +2,7 @@
 // `slots` (a string); `resolveFormula` evaluates it. Most are one line of the SCALED table: a share of the unit's tonnage
 // (or of its engine's weight, or of a size the player chose), a rounding rule and optional extras, so a new ratio item is
 // a table entry, not a function. The few that read other mounts or a printed band are plain functions. Pure; nothing throws.
-import { engineRatingOf, engineTons } from "./mech";
+import { bodyOf, engineRatingOf, engineTons } from "./mech";
 import type { Catalog, EquipmentRow } from "./catalog";
 import type { MechRecord, Mount } from "./mech";
 
@@ -26,7 +26,7 @@ const ROUND: Record<Rounding, (x: number) => number> = { ceil: (x) => Math.ceil(
 function scaled(spec: Scaled): Formula {
   return (_row, record, _catalog, mount) => {
     const base = spec.of === "tons" ? record.tons : (engineTons(record.chassis.engine.type, engineRatingOf(record)) ?? 0);
-    const divisor = record.configuration === "quad" && spec.quad !== undefined ? spec.quad : spec.divide;
+    const divisor = bodyOf(record.configuration) === "quad" && spec.quad !== undefined ? spec.quad : spec.divide;
     const raw = divisor !== undefined ? base / divisor : base * (spec.times ?? 1);
     return ROUND[spec.round](raw * (spec.perAmount ? (mount?.amount ?? 1) : 1)) + (spec.add ?? 0);
   };

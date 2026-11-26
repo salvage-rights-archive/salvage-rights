@@ -6,7 +6,7 @@ import { createCatalog, expand } from "./catalog";
 import { runChecks } from "./checks";
 import { unitCost } from "./cost";
 import { levelItems } from "./levels";
-import { partAvailable, typeAvailable } from "./availability";
+import { equipmentAvailable, partAvailable, typeAvailable } from "./availability";
 import { editRecord, engineRatingOf, newRecord, weights } from "./mech";
 import type { MechRecord, Mount } from "./mech";
 
@@ -59,5 +59,10 @@ describe("a Primitive 'Mech", () => {
     expect(partAvailable("armor", "ferro-fibrous", subject)).toBe(false);
     expect(partAvailable("armor", "primitive", { ...subject, unitType: "mech" })).toBe(false);
     expect(partAvailable("engine", "ice", subject)).toBe(true);
+  });
+  it("hides from the picker equipment introduced after 2500 and the improved jump jets", () => {
+    const subject = { ...mackie({ year: 2480 }), tons: 100 };
+    const row = (id: string) => catalog.byId(id)!;
+    expect([equipmentAvailable(row("medium-laser-is"), subject, catalog), equipmentAvailable(row("er-large-laser-is"), subject, catalog), equipmentAvailable(row("improved-jump-jet-is"), subject, catalog)]).toEqual([true, false, false]);
   });
 });

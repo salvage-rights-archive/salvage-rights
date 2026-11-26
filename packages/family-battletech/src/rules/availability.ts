@@ -17,6 +17,7 @@ import { CLAN_CASE_IDS, clanCaseAllowed } from "./case";
 import { mountableOn } from "./catalog";
 import type { Catalog, EquipmentRow } from "./catalog";
 import { DEFAULT_LEVEL, equipmentLevel, levelAtLeast, levelIn, partLevel } from "./levels";
+import { SUPERHEAVY } from "../data/chassis";
 import { industrialRulesOf, mechTypeOf, primitiveRulesOf, requiredCockpit, superheavyOf } from "./mech";
 import type { MechRecord } from "./mech";
 import { datesText, eraOfRecord, erasOfYear, partPrototype, partSpans, phaseIn, rowPhase, windowOf } from "./time";
@@ -89,8 +90,21 @@ export function equipmentPhase(row: EquipmentRow, record: Subject & Pick<MechRec
 
 /** An equipment row: on the record's game's list, at or below the level, the record's tech base, and in the record's time (read through
  * the record's edition, so a game's own level for the row counts). */
+/** Whether the unit's own construction rules shut an item out: a superheavy 'Mech's jump and speed equipment (IO:AE printed p.156), a Primitive 'Mech's improved
+ * jets, boosters and enhancements and anything introduced after 2500 (p.118), and a QuadVee's wheels for any other unit (p.128). Hidden, even with Show everything. */
+export function equipmentBarredFor(row: EquipmentRow, record: Subject): boolean {
+  const stem = row.id.replace(/-(is|clan)$/, "");
+  if (stem === "wheels" && record.configuration !== "quadvee") return true;
+  if (record.tons !== undefined && superheavyOf({ tons: record.tons }) && SUPERHEAVY.barred.some((b) => b.stems.includes(stem))) return true;
+  const primitive = primitiveRulesOf(record);
+  if (!primitive) return false;
+  const first = row.availability.length === 0 ? undefined : Math.min(...row.availability.map((s) => s.from));
+  return primitive.barredStems.includes(stem) || (first !== undefined && first > primitive.equipmentUntil);
+}
+
 export function equipmentAvailable(row: EquipmentRow, record: Subject & Pick<MechRecord, "editionId">, catalog: Catalog, everything = false): boolean {
-  if (!mountableOn(row, mechTypeOf(record).unit)) return false; // a row whose `units` leaves out the unit's type is never offered to it, not even with Show everything
+  if (!mountableOn(row, mechTypeOf(record).unit)) return false;
+  if (equipmentBarredFor(row, record)) return false; // the unit's own rules bar it: hidden, never marked (the Picker keeps the item a mount already is) // a row whose `units` leaves out the unit's type is never offered to it, not even with Show everything
   if (CLAN_CASE_IDS.includes(row.id) && !clanCaseAllowed(record)) return false; // Clan CASE is for a Clan structure (TM p.210); hidden, never marked, even with Show everything
   if (!inGame(row.games, rulesetOf(record.editionId), record.rulesLevel)) return false; // another game's row: hidden, never marked, even with Show everything
   const level = equipmentLevel(catalog.rowFor(row.id, record.editionId) ?? row);
