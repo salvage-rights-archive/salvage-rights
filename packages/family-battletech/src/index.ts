@@ -15,6 +15,14 @@ const alphaStrikeRoutes: FamilyRoute[] = [
   { path: "force", label: "Alpha Strike force", section: "workshop", load: () => import("./ui/as/AsForcePage") },
 ];
 
+// Aces is not ready, and the host serves only a ready game's own routes, so its pages sit under family routes of their own until
+// ACES-9 (see ui/aces/routes.ts). They are reachable by address and from the Alpha Strike home.
+const acesPreviewRoutes: FamilyRoute[] = [
+  { path: "aces-preview/home", label: "Aces", section: "workshop", load: () => import("./ui/aces/AcesHomePage") },
+  { path: "aces-preview/cards", label: "Aces cards", section: "workshop", load: () => import("./ui/aces/CardLibraryPage") },
+  { path: "aces-preview/card", label: "Aces card", section: "workshop", load: () => import("./ui/aces/CardEditorPage") },
+];
+
 function comingSoon(id: string, shortName: string, fullName: string): GameManifest {
   return { id, shortName, fullName, ready: false, routes: [], ...GAME_ART[id] };
 }
@@ -36,7 +44,7 @@ const manifest: FamilyManifest = {
   unitTypes: (EDITIONS[0]?.unitTypes ?? []).filter((unit) => unit.ready), // the types the edition can build (data/editions.ts)
   eras: ERAS, // the Master Unit List's twelve (data/editions.ts)
   measures: ["hexes"],
-  routes: [],
+  routes: acesPreviewRoutes,
   credits: {
     owner:
       // The non-affiliation notice fan projects for this game commonly carry, word for word, then two lines of our own.

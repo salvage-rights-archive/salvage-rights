@@ -238,6 +238,15 @@ export default function AsHomePage() {
         </div>
       </section>
 
+      <section className="bt-section" aria-labelledby="as-aces">
+        <h2 id="as-aces">Aces (in progress)</h2>
+        <p>
+          <Link className="bt-button bt-button--secondary" to="/battletech/aces-preview/home">
+            Record your Aces cards
+          </Link>
+        </p>
+      </section>
+
       <AsForces />
       <AsMordelImport />
       <AsMulImport />

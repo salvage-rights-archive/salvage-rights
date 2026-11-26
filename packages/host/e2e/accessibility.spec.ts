@@ -1,6 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import type { Page } from "@playwright/test";
-import { CLASSIC, DEV, FAKE_KEY, FREE, expect, importMech, saveAsUnit, test } from "./fixtures";
+import { ACES, CLASSIC, DEV, FAKE_KEY, FREE, expect, importMech, saveAcesCard, saveAsUnit, test } from "./fixtures";
 
 async function chooseTheme(page: Page, base: string, theme: "Light" | "Dark") {
   await page.goto(`${base}/settings`);
@@ -132,4 +132,23 @@ test("the Alpha Strike force page and the home with forces have no axe violation
   await expect(page.getByRole("region", { name: "Totals" })).toContainText("over the limit");
   const forcePage = new URL(page.url());
   await expectNoViolations(page, DEV, ["/battletech/alpha-strike/home", `${forcePage.pathname.replace(/^\/salvage-rights/, "")}${forcePage.search}`]);
+});
+
+test("the Aces home, library and card editor (each step and the picker) have no axe violations in either theme", async ({ page }) => {
+  test.setTimeout(150_000);
+  const editor = await saveAcesCard(page, DEV);
+  await expectNoViolations(page, DEV, [`${ACES}/home`, `${ACES}/cards`]);
+  for (const theme of ["Light", "Dark"] as const) {
+    await chooseTheme(page, DEV, theme);
+    await page.goto(`${DEV}${editor}`);
+    await scan(page, theme, "the card editor, identity");
+    await page.getByRole("button", { name: "2. Movement side" }).click();
+    await page.getByRole("button", { name: "Aggressive", exact: true }).click();
+    await scan(page, theme, "the card editor, Aggressive column");
+    await page.getByRole("button", { name: "Add a filter to the Aggressive column" }).click();
+    await scan(page, theme, "the card editor, picker open");
+    await page.keyboard.press("Escape");
+    await page.getByRole("button", { name: "3. Combat side" }).click();
+    await scan(page, theme, "the card editor, combat side");
+  }
 });
