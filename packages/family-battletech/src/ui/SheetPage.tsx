@@ -1,19 +1,18 @@
 // The record sheet page: one saved 'Mech as the sheet to print at the table, with a short bar above it (not printed).
 import { useEffect, useMemo, useState } from "react";
-import { Link, useSearchParams } from "react-router";
+import { Link, useLocation, useSearchParams } from "react-router";
 import { loadCatalog } from "../rules/catalog";
 import type { Catalog } from "../rules/catalog";
 import { runChecks } from "../rules/checks";
 import type { MechRecord } from "../rules/mech";
 import { BASE, configurationTitle, primaryOf, resolveBase, resolveConfiguration } from "../rules/omni";
 import type { OmniChassis } from "../rules/omni";
+import { baseOf, gameBase, gameOfPath, RULESETS } from "../data/rulesets";
 import RecordBoundary from "./RecordBoundary";
 import RecordSheet from "./sheet/RecordSheet";
 import { sheetTitle } from "./sheet/facts";
 import { STORAGE_READ_FAILED, openFamilyStorage } from "./storage";
 import "./classic.scss";
-
-const HOME = "/battletech/classic/home";
 
 type Loaded =
   | { state: "loading" }
@@ -37,6 +36,7 @@ function SheetLoader() {
   const [params] = useSearchParams();
   const id = params.get("id") ?? "";
   const asked = params.get("c") ?? undefined;
+  const game = gameOfPath(useLocation().pathname);
   const [loaded, setLoaded] = useState<Loaded>({ state: "loading" });
 
   useEffect(() => {
@@ -78,8 +78,8 @@ function SheetLoader() {
         <p>{loaded.state === "missing" ? "That 'Mech is not saved on this device." : `This saved 'Mech cannot be read. ${loaded.message}`}</p>
       )}
       <p>
-        <Link className="sr-action" to={HOME}>
-          Back to Classic BattleTech
+        <Link className="sr-action" to={`${baseOf(game)}/home`}>
+          Back to {RULESETS[game].name}
         </Link>
       </p>
     </div>
@@ -87,16 +87,17 @@ function SheetLoader() {
 }
 
 function Sheet({ record, catalog, chassis }: { record: MechRecord; catalog: Catalog; chassis?: OmniChassis }) {
+  const base = gameBase(record);
   const errors = useMemo(() => runChecks(record, catalog).filter((f) => f.level === "error").length, [record, catalog]);
   return (
     <div className="sr-page bt-sheetpage">
       <div className="bt-sheetpage__bar">
         <h1 tabIndex={-1}>{`${sheetTitle(record)} record sheet`}</h1>
         <div className="bt-actions">
-          <Link className="bt-back" to={HOME}>
+          <Link className="bt-back" to={`${base}/home`}>
             <span aria-hidden="true">&larr; </span>Your 'Mechs
           </Link>
-          <Link className="bt-button bt-button--secondary" to={`/battletech/classic/editor?id=${encodeURIComponent(chassis ? chassis.id : record.id)}${chassis ? `&c=${encodeURIComponent(record.omni?.configurationId ?? BASE)}` : ""}`}>
+          <Link className="bt-button bt-button--secondary" to={`${base}/editor?id=${encodeURIComponent(chassis ? chassis.id : record.id)}${chassis ? `&c=${encodeURIComponent(record.omni?.configurationId ?? BASE)}` : ""}`}>
             Edit
           </Link>
           <button
@@ -117,7 +118,7 @@ function Sheet({ record, catalog, chassis }: { record: MechRecord; catalog: Cata
                 key={c.id}
                 className="bt-button bt-button--secondary"
                 aria-current={record.omni?.configurationId === c.id ? "page" : undefined}
-                to={`/battletech/classic/sheet?id=${encodeURIComponent(chassis.id)}&c=${encodeURIComponent(c.id)}`}
+                to={`${base}/sheet?id=${encodeURIComponent(chassis.id)}&c=${encodeURIComponent(c.id)}`}
               >
                 {c.label}
               </Link>

@@ -3,6 +3,8 @@
 import { openStore } from "@salvage-rights/shared";
 import type { Store } from "@salvage-rights/shared";
 import { DEFAULT_EDITION, EDITIONS, currentEditionId } from "../data/editions";
+import { rulesetOf } from "../data/rulesets";
+import type { GameId } from "../data/rulesets";
 import type { MechRecord } from "../rules/mech";
 import type { OmniChassis } from "../rules/omni";
 
@@ -14,6 +16,8 @@ export interface SavedEntry {
   chassis?: OmniChassis;
   unreadable?: string;
   savedAt?: string;
+  /** The game the saved design belongs to, from its edition (an unreadable one that names none reads as Classic). Each home lists its own. */
+  game: GameId;
 }
 
 export interface FamilyStorage {
@@ -339,18 +343,39 @@ export function downloadJson(filename: string, value: unknown): void {
   }, 1000);
 }
 
+/** What a home page says to a file made for another game (or for both), pointing at the page that takes it. Undefined: the file fits. */
+export function wrongGameMessage(page: GameId, file: GameId | "mixed" | undefined): string | undefined {
+  if (file === undefined || file === page) return undefined;
+  if (file === "mixed") return "That file holds both Classic and Gothic designs. Export each game's designs from its own page.";
+  return file === "gothic" ? "That is a Gothic file. Import it on the Gothic page." : "That is a Classic file. Import it on the Classic page.";
+}
+
+/** The game a stored design or a file's design belongs to: its edition's, else Classic. Reads a design that is too damaged to show too. */
+function gameOfDesign(design: unknown): GameId {
+  return rulesetOf(isObject(design) && isString(design.editionId) ? currentEditionId(design.editionId) : undefined).game;
+}
+
+/** The game a file's designs belong to: one game, or `mixed` when a saved-list file holds both (it is then refused on either page). */
+export function fileGame(file: unknown): GameId | "mixed" | undefined {
+  if (!isObject(file)) return undefined;
+  const designs = [file.record, file.chassis, ...(Array.isArray(file.mechs) ? file.mechs : []), ...(Array.isArray(file.omnis) ? file.omnis : [])].filter((d) => d !== undefined);
+  const games = new Set(designs.map(gameOfDesign));
+  return games.size === 0 ? undefined : games.size === 1 ? [...games][0] : "mixed";
+}
+
 function entryOf(id: string, stored: unknown, kind: SavedEntry["kind"] = "mech"): SavedEntry {
   const what = kind === "omni" ? "OmniMech" : "'Mech";
-  if (!isObject(stored)) return { id, kind, unreadable: `This saved ${what} is not in a form the app understands.` };
+  if (!isObject(stored)) return { id, kind, game: "classic", unreadable: `This saved ${what} is not in a form the app understands.` };
   const savedAt = isString(stored.savedAt) ? stored.savedAt : undefined;
+  const game = gameOfDesign(kind === "omni" ? stored.chassis : stored.record);
   if (kind === "omni") {
-    if (!isOmniChassis(stored.chassis)) return { id, kind, savedAt, unreadable: "This saved OmniMech is incomplete or from a different version." };
-    return { id, kind, chassis: migrated(stored.chassis), savedAt };
+    if (!isOmniChassis(stored.chassis)) return { id, kind, game, savedAt, unreadable: "This saved OmniMech is incomplete or from a different version." };
+    return { id, kind, game, chassis: migrated(stored.chassis), savedAt };
   }
   if (!isMechRecord(stored.record)) {
-    return { id, kind, savedAt, unreadable: "This saved 'Mech is incomplete or from a different version." };
+    return { id, kind, game, savedAt, unreadable: "This saved 'Mech is incomplete or from a different version." };
   }
-  return { id, kind, record: migrated(stored.record), savedAt };
+  return { id, kind, game, record: migrated(stored.record), savedAt };
 }
 
 function wrap(store: Store): FamilyStorage {

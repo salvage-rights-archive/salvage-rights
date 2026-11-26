@@ -1,6 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import type { Page } from "@playwright/test";
-import { ACES, CLASSIC, DEV, FAKE_KEY, FREE, expect, importMech, saveAcesCard, saveAcesCommand, saveAsUnit, test } from "./fixtures";
+import { ACES, CLASSIC, DEV, FAKE_KEY, FREE, GOTHIC, expect, importMech, saveAcesCard, saveAcesCommand, saveAsUnit, startGothicBox, test } from "./fixtures";
 
 async function chooseTheme(page: Page, base: string, theme: "Light" | "Dark") {
   await page.goto(`${base}/settings`);
@@ -216,4 +216,10 @@ test("the Aces game setup, the game page and the home with a game in progress ha
     await expect(page.getByText("Turn 1").first()).toBeVisible();
     await scan(page, theme, "the Aces home with games");
   }
+});
+
+test("the Gothic home, a box Mech editor and its sheet have no axe violations in either theme", async ({ page }) => {
+  test.setTimeout(120_000);
+  const editorPath = await startGothicBox(page, DEV, "UrbanMech UM-R60B");
+  await expectNoViolations(page, DEV, [`${GOTHIC}/home`, editorPath, editorPath.replace("/editor", "/sheet")]);
 });

@@ -2,16 +2,17 @@
 // says which record it is, offers a copy of what is stored (to keep or to send in) and offers to delete it.
 import { Component, useState } from "react";
 import type { ErrorInfo, ReactNode } from "react";
-import { Link, useNavigate } from "react-router";
+import { Link, useLocation, useNavigate } from "react-router";
+import { baseOf, gameOfPath, RULESETS } from "../data/rulesets";
 import { downloadJson, openFamilyStorage } from "./storage";
 import "./classic.scss";
-
-const HOME = "/battletech/classic/home";
 
 function Failure({ id, message }: { id: string; message: string }) {
   const [status, setStatus] = useState("");
   const [confirming, setConfirming] = useState(false);
   const navigate = useNavigate();
+  const game = gameOfPath(useLocation().pathname);
+  const home = `${baseOf(game)}/home`;
 
   const exportRaw = async () => {
     try {
@@ -25,7 +26,7 @@ function Failure({ id, message }: { id: string; message: string }) {
   const remove = async () => {
     try {
       await (await openFamilyStorage()).remove(id);
-      void navigate(HOME);
+      void navigate(home);
     } catch {
       setConfirming(false);
       setStatus("We could not delete that record.");
@@ -73,8 +74,8 @@ function Failure({ id, message }: { id: string; message: string }) {
             Delete this record
           </button>
         )}
-        <Link className="bt-button bt-button--secondary" to={HOME}>
-          Back to Classic BattleTech
+        <Link className="bt-button bt-button--secondary" to={home}>
+          Back to {RULESETS[game].name}
         </Link>
       </p>
       <p role="status">{status}</p>
