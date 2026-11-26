@@ -5,7 +5,7 @@
 // not understand gets none from here.
 import { CAPITAL_FIGURES, CAPITAL_SYSTEMS, CRAFT_FIGURES, capitalSystemFigure, DEFAULT_AERO_EDITION, FIGHTER_ARMOR_TYPES, FIGHTER_EDITIONS, FIGHTER_PATCHWORK_TYPES, aeroEditionName } from "../data/aero";
 import type { FigureGroup } from "../data/aero";
-import { aeroLocationName, armorTypeAt, fighterPatchworkActive, capitalKind, capitalSystems, craftAmmoShortfalls, craftKind, heatByArc, locationsOf, stationKeeping, towingShare, vessel } from "./aero";
+import { aeroLocationName, armorTypeAt, capitalSystemLimit, collarTotal, fighterPatchworkActive, capitalKind, capitalSystems, craftAmmoShortfalls, craftKind, heatByArc, locationsOf, stationKeeping, towingShare, vessel } from "./aero";
 import type { AeroRecord } from "./aero";
 import type { AeroCheck, AeroFinding } from "./aero-checks";
 import { tidy } from "./walk";
@@ -236,7 +236,7 @@ const hottestBayCheck: AeroCheck = {
 const systemsCheck: AeroCheck = {
   id: "systems",
   run({ record }) {
-    if (capitalKind(record) === undefined) return [];
+    if (capitalKind(record) === undefined && record.unitType !== "dropship") return [];
     const systems = capitalSystems(record);
     const out: AeroFinding[] = [];
     const page = (kind: string) => {
@@ -244,13 +244,49 @@ const systemsCheck: AeroCheck = {
       return row === undefined ? undefined : pageOf(row.figures, record.editionId);
     };
     for (const line of systems.lines) {
-      const label = CAPITAL_SYSTEMS.find((r) => r.kind === line.kind)?.label ?? line.kind;
-      const dates = capitalSystemFigure(line.kind, record.editionId)?.dates;
-      if (dates !== undefined && record.year !== null && record.year < dates.prototype && line.count > 0) {
-        out.push({ check: "systems", level: "error", message: `${label} (the kind that mates with a DropShip's K-F boom) is not built before ${String(dates.prototype)}; a ship of ${String(record.year)} mounts the pre-boom docking collar instead (Interstellar Operations: Alternate Eras, p. 113).`, where: { field: "systems" }, ...withCite(page(line.kind)) });
+      if (line.count <= 0) continue;
+      const row = CAPITAL_SYSTEMS.find((r) => r.kind === line.kind);
+      const label = row?.label ?? line.kind;
+      const figure = capitalSystemFigure(line.kind, record.editionId);
+      const dates = figure?.dates;
+      const cite = withCite(page(line.kind));
+      const at = (message: string, level: "error" | "warning" = "error"): AeroFinding => ({ check: "systems", level, message, where: { field: "systems" }, ...cite });
+      if (dates !== undefined && record.year !== null && record.year < dates.prototype) {
+        out.push(at(`${label} is not built before ${String(dates.prototype)}${figure?.beforeNote === undefined ? "" : `; ${figure.beforeNote}`}.`));
       }
-      if (!line.allowed) out.push({ check: "systems", level: "error", message: `A ${kindName(record)} does not carry ${label.toLowerCase()} in ${aeroEditionName(record.editionId)}.`, where: { field: "systems" }, ...withCite(page(line.kind)) });
-      else if (line.limit !== undefined && line.count > line.limit) out.push({ check: "systems", level: "error", message: `${plural(line.count, label.toLowerCase())} are over the ${num(line.limit)} a ${num(record.tons)}-ton ${kindName(record)} may carry.`, where: { field: "systems" }, ...withCite(page(line.kind)) });
+      // The Inner Sphere lost some of this technology for a time; the book gives no such gap for the Clans.
+      if (figure?.lost !== undefined && record.year !== null && record.techBase === "inner-sphere" && record.year >= figure.lost.from && record.year < figure.lost.back) {
+        out.push(at(`${label} was lost to the Inner Sphere from ${String(figure.lost.from)} until ${String(figure.lost.back)}.`, "warning"));
+      }
+      if (figure?.techBase !== undefined && record.techBase !== "mixed" && record.techBase !== figure.techBase) {
+        out.push(at(`${label} is ${figure.techBase === "inner-sphere" ? "Inner Sphere" : "Clan"} technology, and the unit is ${record.techBase === "clan" ? "Clan" : "Inner Sphere"}.`, "warning"));
+      }
+      const range = figure?.unitTons;
+      if (range !== undefined) {
+        const low = range.min !== undefined && record.tons < range.min;
+        const high = range.max !== undefined && record.tons > range.max;
+        const notOver = range.over !== undefined && record.tons <= range.over;
+        const offStep = range.step !== undefined && range.min !== undefined && !low && tidy((record.tons - range.min) % range.step) !== 0;
+        if (low || high || notOver) {
+          const words = range.over !== undefined ? `more than ${num(range.over)} tons` : range.min !== undefined && range.max !== undefined ? `${num(range.min)} to ${num(range.max)} tons` : range.max !== undefined ? `${num(range.max)} tons or less` : `at least ${num(range.min ?? 0)} tons`;
+          out.push(at(`${label} is for units of ${words}; this one is ${num(record.tons)}.`));
+        } else if (offStep) out.push(at(`${label} is built in steps of ${num(range.step ?? 0)} tons; ${num(record.tons)} is not on a step.`, "warning"));
+      }
+      for (const other of figure?.excludes ?? []) {
+        if ((record.systems?.[other] ?? 0) > 0) out.push(at(`${label} cannot be carried with ${(CAPITAL_SYSTEMS.find((r) => r.kind === other)?.label ?? other).toLowerCase()}.`));
+      }
+      if (!line.allowed) out.push({ check: "systems", level: "error", message: `A ${kindName(record)} does not carry ${label.toLowerCase()} in ${aeroEditionName(record.editionId)}.`, where: { field: "systems" }, ...cite });
+      else if (line.limit !== undefined && (line.kind === "docking-hardpoint" ? collarTotal(record) : line.count) > line.limit) {
+        // Each naval repair facility and DropShuttle bay counts two collars against the hardpoint limit (TO:AUE p. 146, IO:AE p. 113).
+        const held = line.kind === "docking-hardpoint" ? collarTotal(record) : line.count;
+        out.push({ check: "systems", level: "error", message: `${plural(held, line.kind === "docking-hardpoint" ? "docking collar" : label.toLowerCase())} are over the ${num(line.limit)} a ${num(record.tons)}-ton ${kindName(record)} may carry.`, where: { field: "systems" }, ...cite });
+      }
+    }
+    // Repair facilities and DropShuttle bays bring collars of their own, so the limit applies to a ship with no hardpoint line at all.
+    if (!systems.lines.some((l) => l.kind === "docking-hardpoint" && l.count > 0) && capitalKind(record) !== undefined) {
+      const held = collarTotal(record);
+      const limit = capitalSystemLimit("docking-hardpoint", record);
+      if (held > 0 && limit !== undefined && held > limit) out.push({ check: "systems", level: "error", message: `${plural(held, "docking collar")} are over the ${num(limit)} a ${num(record.tons)}-ton ${kindName(record)} may carry.`, where: { field: "systems" }, ...withCite(page("docking-hardpoint")) });
     }
     if (systems.unknown.length > 0) out.push({ check: "systems", level: "note", message: `${systems.unknown.join(", ")} ${systems.unknown.length === 1 ? "is" : "are"} not a ship system ${aeroEditionName(record.editionId)} prints, so ${systems.unknown.length === 1 ? "it was" : "they were"} not weighed.`, where: { field: "systems" } });
     return out;

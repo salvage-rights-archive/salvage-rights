@@ -188,7 +188,7 @@ export interface AeroCostFigures {
   roundLargeToMillion: boolean;
 }
 
-const SHARED: Omit<AeroCostFigures, "armorPerTon" | "engineControl" | "casePerAmmoClass" | "buysAmmunition" | "roundLargeToMillion" | "vstolPerTon" | "amplifierPerTon"> = {
+const SHARED: Omit<AeroCostFigures, "armorPerTon" | "engineControl" | "casePerAmmoClass" | "buysAmmunition" | "roundLargeToMillion" | "vstolPerTon" | "amplifierPerTon" | "dockingCollar"> = {
   cockpit: 200_000,
   lifeSupport: 50_000,
   sensorsPerTon: 2_000,
@@ -196,7 +196,6 @@ const SHARED: Omit<AeroCostFigures, "armorPerTon" | "engineControl" | "casePerAm
   siPerPoint: { "aerospace-fighter": 50_000, "conventional-fighter": 4_000, craft: 100_000 },
   attitudeThruster: 25_000,
   landingGearPerTon: 10,
-  dockingCollar: 10_000,
   bridge: { base: 200_000, perTon: 10 },
   computer: 200_000,
   // AeroTech 2 prints 50,000 x (passengers + crew) / 10, the same sum.
@@ -211,12 +210,17 @@ const SHARED: Omit<AeroCostFigures, "armorPerTon" | "engineControl" | "casePerAm
   final: { fighterDivisor: 200, smallCraftDivisor: 50, spheroid: 28, aerodyne: 36, omni: 1.25 },
 };
 
+/** Capital ship armor a ton (AeroTech 2 pp. 51-52, AeroTech 2: Revised Edition pp. 77-78, Strategic Operations: Advanced Aerospace Rules p. 146: the same three figures in all). */
+const CAPITAL_ARMOR_PRICE = { "improved-ferro-aluminum": 50_000, "ferro-carbide": 75_000, "lamellor-ferro-carbide": 100_000 };
+
 export const AERO_COST: FigureGroup<AeroCostFigures> = [
   {
     editions: [AT2, AT2R],
     value: {
       ...SHARED,
-      armorPerTon: { standard: 10_000, "ferro-aluminum": 20_000, "ferro-aluminum-clan": 20_000 },
+      armorPerTon: { standard: 10_000, "ferro-aluminum": 20_000, "ferro-aluminum-clan": 20_000, ...CAPITAL_ARMOR_PRICE },
+      // A DropShip's collar: AeroTech 2 p. 51 and AeroTech 2: Revised Edition p. 77 print 10,000 (a hardpoint on a JumpShip, WarShip or station is 100,000, see AERO_CAPITAL_COST).
+      dockingCollar: 10_000,
       engineControl: 1_000,
       casePerAmmoClass: 50_000,
       buysAmmunition: true,
@@ -231,11 +235,13 @@ export const AERO_COST: FigureGroup<AeroCostFigures> = [
       ...SHARED,
       vstolPerTon: 5_000,
       amplifierPerTon: 20_000,
-      armorPerTon: { standard: 10_000, "ferro-aluminum": 20_000, "ferro-aluminum-clan": 20_000, "light-ferro-aluminum": 15_000, "heavy-ferro-aluminum": 25_000 },
+      armorPerTon: { standard: 10_000, "ferro-aluminum": 20_000, "ferro-aluminum-clan": 20_000, "light-ferro-aluminum": 15_000, "heavy-ferro-aluminum": 25_000, ...CAPITAL_ARMOR_PRICE },
+      // Strategic Operations: Advanced Aerospace Rules p. 146 prices every docking collar at 100,000 (owner ruling, 2026-11-27); TechManual p. 283 prints 10,000 for a DropShip's.
+      dockingCollar: 100_000,
       buysAmmunition: false,
       roundLargeToMillion: false,
     },
-    cite: { [CURRENT]: "TechManual pp. 283, 285" },
+    cite: { [CURRENT]: "TechManual pp. 283, 285; Strategic Operations: Advanced Aerospace Rules pp. 146-148" },
     checked: "page",
   },
 ];
@@ -273,5 +279,153 @@ export const AERO_PRICE_OVERLAYS: PriceOverlayGroup[] = [
       "ammo-arrow-iv": 10_000, "ammo-sniper-artillery": 6_000, "ammo-thumper-artillery": 4_500,
       "ammo-ams": 2_000, "ammo-improved-narc-launcher": 7_500, "ammo-narc-missile-beacon": 6_000,
     },
+  },
+];
+
+// ---------------------------------------------------------------------------------------------------------------------------------
+// Large craft: JumpShips, WarShips and space stations. AeroTech 2 (p. 51) and AeroTech 2: Revised Edition (p. 77) print one cost table
+// for them and the current rules print another (Strategic Operations: Advanced Aerospace Rules pp. 146-148, with errata v5.0); the figures
+// below are the same where both print the item. What a large craft shares with a DropShip (bridge, computer, sensors, structure, drive unit,
+// engine, fuel, armor, heat sinks, weapons) is in AERO_COST above.
+// ---------------------------------------------------------------------------------------------------------------------------------
+
+/** The price of a ship system (CAPITAL_SYSTEMS in data/aero.ts): `each` for one (or one ton of capacity), or `perTon` of what the system weighs. */
+export type CapitalSystemPrice = { each: number } | { perTon: number };
+
+/** A K-F drive component: a base plus a figure for each docking collar the vessel carries. */
+export interface CollarPrice {
+  base: number;
+  perCollar: number;
+}
+export interface CapitalCostFigures {
+  /** One docking collar (a hardpoint in the AeroTech 2 books). */
+  collar: number;
+  /** The Engine Control Unit. */
+  engineControl: number;
+  kf: {
+    coil: CollarPrice;
+    initiator: CollarPrice;
+    controller: number;
+    /** Tankage: per point of K-F Drive Integrity. */
+    tankagePerIntegrity: number;
+    /** Sail: per ton of sail. */
+    sailPerTon: number;
+    charging: CollarPrice;
+    /** Multiply every drive component by this: a compact core, a lithium-fusion battery, both, and the sub-compact drive. */
+    compact: number;
+    battery: number;
+    compactBattery: number;
+    subCompact?: number;
+  };
+  /** K-F drive support systems (current rules only): a JumpShip's 10,000,000 a 10,000 tons; a WarShip's 20,000,000 a (50 + tons / 10,000). */
+  support?: { jumpship: { rate: number; perTons: number }; warship: { rate: number; base: number; perTons: number } };
+  /** Final cost multipliers, applied to the sum of structure and equipment. */
+  multiplier: { jumpship: number; warship: number; "space-station": number };
+  systems: Record<string, CapitalSystemPrice>;
+}
+
+const SHIP_SYSTEMS = {
+  "grav-deck-small": { each: 5_000_000 },
+  "grav-deck-medium": { each: 10_000_000 },
+  "grav-deck-large": { each: 40_000_000 },
+  "energy-storage-battery": { each: 1_000_000 },
+} satisfies Record<string, CapitalSystemPrice>;
+
+const KF_PRICES: CapitalCostFigures["kf"] = {
+  coil: { base: 60_000_000, perCollar: 75_000_000 },
+  initiator: { base: 25_000_000, perCollar: 5_000_000 },
+  controller: 50_000_000,
+  tankagePerIntegrity: 50_000,
+  sailPerTon: 50_000,
+  charging: { base: 500_000, perCollar: 200_000 },
+  compact: 5,
+  battery: 3,
+  compactBattery: 15,
+};
+
+export const AERO_CAPITAL_COST: FigureGroup<CapitalCostFigures> = [
+  {
+    editions: [AT2, AT2R],
+    value: {
+      collar: 100_000,
+      engineControl: 1_000,
+      kf: KF_PRICES,
+      multiplier: { jumpship: 1.25, warship: 2, "space-station": 5 },
+      systems: { ...SHIP_SYSTEMS, "towing-adapter": { each: 100_000 }, hpg: { each: 1_000_000_000 } },
+    },
+    cite: { [AT2]: "AeroTech 2 pp. 51-52", [AT2R]: "AeroTech 2: Revised Edition pp. 77-78" },
+    checked: "page",
+  },
+  {
+    editions: [CURRENT],
+    value: {
+      collar: 100_000,
+      engineControl: 1_000,
+      kf: { ...KF_PRICES, subCompact: 16 },
+      support: { jumpship: { rate: 10_000_000, perTons: 10_000 }, warship: { rate: 20_000_000, base: 50, perTons: 10_000 } },
+      multiplier: { jumpship: 1.25, warship: 2, "space-station": 5 },
+      systems: {
+        ...SHIP_SYSTEMS,
+        "repair-unpressurized": { each: 5_000 },
+        "repair-pressurized": { each: 10_000 },
+        "repair-reinforced": { each: 30_000 },
+        "naval-c3": { perTon: 100_000 },
+        "pcmt-low-density": { each: 200_000 },
+      },
+    },
+    cite: { [CURRENT]: "Strategic Operations: Advanced Aerospace Rules pp. 146-148; Tactical Operations: Advanced Units and Equipment pp. 219, 221, 223" },
+    checked: "page",
+  },
+];
+
+/**
+ * A DropShip's docking collar by the year of the ship (current rules; Interstellar Operations: Alternate Eras p. 113 and table p. 211): the pre-boom collar before 2458, the collar with the
+ * prototype K-F boom in 2458-2469, and 100,000 from 2470 (owner ruling, 2026-11-27; the book's text says 10,000 for new construction). No year reads 100,000.
+ */
+export const DROPSHIP_COLLAR_BY_YEAR: { before: number; price: number; what: string }[] = [
+  { before: 2458, price: 500_000, what: "pre-boom collar" },
+  { before: 2470, price: 1_010_000, what: "collar with the prototype K-F boom" },
+];
+
+/** The final multipliers that replace a space station's (IO:AE p. 180): the K-F adapter and the modular station, which fold their adapters' cost in. */
+export const STATION_MULTIPLIERS: Record<string, number> = { "space-station-kf-adapter": 20, "modular-space-station": 50 };
+export const STATION_MULTIPLIER_CITE = "Interstellar Operations: Alternate Eras p. 180, Strategic Operations: Advanced Aerospace Rules errata v5.0 (p. 139)";
+
+/**
+ * Transport bay prices: a cubicle (a cargo bay's ton), the ProtoMech bay's five cubicles, and a bay door. Infantry and battle armor bays and
+ * quarters cost nothing on a DropShip, small craft or large craft (TechManual p. 277; Strategic Operations: Advanced Aerospace Rules p. 148).
+ * A bay kind in neither `cubicle` nor `free` has no price in the edition's table.
+ */
+export interface BayPrices {
+  cubicle: Record<string, number>;
+  /** A ProtoMech bay is priced for each five cubicles; absent where the table prints none. */
+  protomechPer?: number;
+  door: number;
+  /** The kinds that cost nothing. */
+  free: string[];
+}
+// Infantry and battle armor bays cost nothing in the current rules (TechManual p. 277, SO:AA p. 148); the AeroTech 2 books print no such exemption and no price for them, so they are listed as unpriced there.
+const FREE_BAYS = ["cargo", "infantry-foot", "infantry-jump", "infantry-motorized", "infantry-mechanized", "battle-armor", "battle-armor-is", "battle-armor-clan", "battle-armor-6"];
+export const AERO_BAY_PRICES: FigureGroup<BayPrices> = [
+  {
+    editions: [AT2, AT2R],
+    value: {
+      cubicle: { mech: 20_000, fighter: 20_000, "small-craft": 20_000, "vehicle-light": 10_000, "vehicle-heavy": 10_000, "vehicle-superheavy": 10_000 },
+      door: 1_000,
+      free: ["cargo"],
+    },
+    cite: { [AT2]: "AeroTech 2 pp. 51-52", [AT2R]: "AeroTech 2: Revised Edition pp. 77-78" },
+    checked: "page",
+  },
+  {
+    editions: [CURRENT],
+    value: {
+      cubicle: { mech: 20_000, fighter: 20_000, "small-craft": 20_000, "vehicle-light": 10_000, "vehicle-heavy": 10_000, "vehicle-superheavy": 20_000 },
+      protomechPer: 10_000,
+      door: 1_000,
+      free: FREE_BAYS,
+    },
+    cite: { [CURRENT]: "TechManual pp. 277, 293-294; Strategic Operations: Advanced Aerospace Rules p. 148" },
+    checked: "page",
   },
 ];
