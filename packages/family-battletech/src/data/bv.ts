@@ -307,8 +307,8 @@ export const SPECIAL_MUNITIONS: Sourced & { stems: string[]; why: string } = {
     "ammo-harpoon", "ammo-inferno", "ammo-tear-gas", "ammo-semi-guided", "ammo-swarm", "ammo-swarm-i", "ammo-thunder",
     "ammo-thunder-augmented", "ammo-thunder-inferno", "ammo-thunder-vibrabomb", "ammo-thunder-active", "ammo-narc-explosive",
     "ammo-improved-narc-ecm", "ammo-improved-narc-explosive", "ammo-improved-narc-haywire", "ammo-improved-narc-nemesis",
-    // TO:AUE pp. 226-229 and IO:AE p. 213. IO:AE p. 190 prints an ammunition BV for the Dead-Fire sizes (LRM 5 to 20, SRM 2 to 6) and Retro-Streak, and a
-    // multiplier for the improved ATM munitions; those are per launcher size and left to the Battle Value work with the rest.
+    // TO:AUE pp. 226-229 and IO:AE p. 213. IO:AE p. 190 prints an ammunition BV for Retro-Streak and a multiplier for the improved ATM munitions, left to the
+    // Battle Value work with the rest. The Dead-Fire stems stay here for a unit whose launcher size cannot be told (DEAD_FIRE_AMMO_BV below).
     "ammo-acid-srm", "ammo-anti-radiation-srm", "ammo-anti-radiation-lrm", "ammo-bola-narc-pods", "ammo-follow-the-leader-lrm",
     "ammo-heat-seeking-srm", "ammo-heat-seeking-lrm", "ammo-incendiary-lrm", "ammo-magnetic-pulse-srm", "ammo-magnetic-pulse-lrm",
     "ammo-mine-clearance-srm", "ammo-mine-clearance-lrm", "ammo-smoke-srm", "ammo-smoke-lrm", "ammo-tandem-charge-srm",
@@ -323,6 +323,20 @@ export const SPECIAL_MUNITIONS: Sourced & { stems: string[]; why: string } = {
     "ammo-flamer-paint-obscurant", "ammo-flamer-water",
   ],
   why: "a special munition: its BV comes from its launcher's ammunition BV (TO:AUE p. 198), the row does not say which launcher, and the book does not say how its modifier is applied",
+};
+/** Dead-Fire ammunition: BV a ton by the size of the launcher that fires it (IO:AE printed p. 190, the Alternate Era Weapons and Equipment Battle Value Table, which errata
+ * v3.01 repeats). The row is one per launcher family, so the size comes from the launcher on the unit that the bin feeds. An MML has a figure for each of its two ammunition
+ * modes, the table's SRM line and LRM line, which the errata lists as "SRM/LRM" in that order. `family` maps a catalog stem to the key of the launcher family it fires from. */
+export const DEAD_FIRE_AMMO_BV: Sourced & { family: Record<string, "lrm" | "srm">; perTon: Record<string, Record<number, number>> } = {
+  cite: { book: IO, page: 190 },
+  checked: "page",
+  family: { "ammo-dead-fire-lrm": "lrm", "ammo-dead-fire-srm": "srm" },
+  perTon: {
+    lrm: { 5: 9, 10: 17, 15: 26, 20: 35 },
+    srm: { 2: 4, 4: 7, 6: 10 },
+    "mml-lrm": { 3: 6, 5: 9, 7: 12, 9: 17 },
+    "mml-srm": { 3: 6, 5: 8, 7: 11, 9: 15 },
+  },
 };
 /** Munitions the Battle Value rules give no figure of their own: a bin of one counts as a bin of the standard ammunition of the launcher it feeds.
  * Artemis-capable ammunition is standard ammunition: the Artemis IV increase of 20 percent is on the launcher and "does not apply to the launcher's

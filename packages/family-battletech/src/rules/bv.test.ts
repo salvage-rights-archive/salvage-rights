@@ -181,6 +181,24 @@ describe("the method's rules", () => {
     expect(two.unvalued.map((u) => u.name)).toEqual(["ammo-er-atm-clan"]);
   });
 
+  it("Dead-Fire ammunition is worth the figure of its launcher's size (an MML by mode), and is reported when two sizes could take it or none can", () => {
+    const sizes: [string, string, number][] = [
+      ["lrm-5-is", "lrm", 9], ["lrm-10-is", "lrm", 17], ["lrm-15-is", "lrm", 26], ["lrm-20-is", "lrm", 35],
+      ["srm-2-is", "srm", 4], ["srm-4-is", "srm", 7], ["srm-6-is", "srm", 10],
+      ["mml-3-is", "lrm", 6], ["mml-5-is", "lrm", 9], ["mml-7-is", "lrm", 12], ["mml-9-is", "lrm", 17],
+      ["mml-3-is", "srm", 6], ["mml-5-is", "srm", 8], ["mml-7-is", "srm", 11], ["mml-9-is", "srm", 15],
+    ];
+    for (const [launcher, family, perTon] of sizes) {
+      const bv = battleValue(biped([m(launcher, "RA"), m(`ammo-dead-fire-${family}-is`, "RT")]), catalog);
+      expect(bv.offensive.ammunition, `${launcher} ${family}`).toBe(perTon);
+      expect(bv.complete, `${launcher} ${family}`).toBe(true);
+    }
+    const two = battleValue(biped([m("lrm-5-is", "RA"), m("lrm-10-is", "LA"), m("ammo-dead-fire-lrm-is", "RT")]), catalog);
+    expect(two.unvalued.map((u) => u.name)).toEqual(["ammo-dead-fire-lrm-is"]);
+    const none = battleValue(biped([m("srm-4-is", "RA"), m("ammo-dead-fire-lrm-is", "RT")]), catalog);
+    expect(none.unvalued.map((u) => u.name)).toEqual(["ammo-dead-fire-lrm-is"]);
+  });
+
   it("stealth armor adds 10 to movement heat and 2 to the target modifier", () => {
     const plain = battleValue(biped([]), catalog);
     const stealth = battleValue(biped([], { chassis: { ...bipedRecord().chassis, armorType: "stealth" } }), catalog);
