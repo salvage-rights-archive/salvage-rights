@@ -1,13 +1,15 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router";
 import { AS_FORCE_CITES, AS_SKILL_NAMES, SKILLS } from "../../data/alpha-strike";
-import { clampSkill, duplicateForce, forceTotals, inPlay } from "../../rules/as-force";
+import { clampSkill, duplicateForce, forceTotals, groupsOf, inPlay, playLevel } from "../../rules/as-force";
+import { levelAtLeast } from "../../rules/levels";
 import type { AsForce, PlayFilter } from "../../rules/as-force";
 import { asOfficialMark } from "../../rules/as-mul";
 import { unitTitle } from "../../rules/as-unit";
 import { GlossSwitch, SpecialLinks } from "./AsSpecials";
 import type { AsUnit } from "../../rules/as-unit";
 import { STORAGE_READ_FAILED, STORAGE_WRITE_FAILED } from "../storage";
+import { GroupsSection } from "./AsGroups";
 import { forceHref, limitWords, printForceHref } from "./AsForces";
 import { downloadForce, openAsStorage } from "./storage";
 import type { AsStorage } from "./storage";
@@ -80,6 +82,7 @@ function ForceEditor({ initial, roster, filter, storage }: { initial: AsForce; r
   const keepRef = useRef<HTMLButtonElement>(null);
   const deleteRef = useRef<HTMLButtonElement>(null);
   const membersRef = useRef<HTMLHeadingElement>(null);
+  const groupsRef = useRef<HTMLHeadingElement>(null);
 
   useEffect(() => {
     if (confirming) keepRef.current?.focus();
@@ -88,6 +91,9 @@ function ForceEditor({ initial, roster, filter, storage }: { initial: AsForce; r
   const byId = new Map(roster.map((u) => [u.id, u]));
   const totals = forceTotals(force, byId);
   const over = totals.room !== undefined && totals.room < 0;
+  const groups = groupsOf(force);
+  // Groups, formations and officers belong to force building (Standard and up); a force that already uses them keeps them in view.
+  const building = levelAtLeast(playLevel(filter), "standard");
   const limitBad = limitText.trim() !== "" && !/^\d+$/.test(limitText.trim());
 
   const change = async (next: AsForce, message = "Saved.") => {
@@ -268,6 +274,31 @@ function ForceEditor({ initial, roster, filter, storage }: { initial: AsForce; r
                     ) : (
                       <span className="bt-row__text as-member__name">This unit is no longer in your roster.</span>
                     )}
+                    {line.unit && (groups.length > 0 || building || line.member.officer !== undefined) && (
+                      <div className="as-member__more">
+                        {(groups.length > 0 || line.member.group !== undefined) && (
+                          <div className="bt-field">
+                            <label htmlFor={`as-group-${String(index)}`}>Group</label>
+                            <select id={`as-group-${String(index)}`} value={groups.some((g) => g.id === line.member.group) ? line.member.group : ""} onChange={(e) => void setMember(index, { group: e.target.value || undefined })}>
+                              <option value="">No group</option>
+                              {groups.map((g) => (
+                                <option key={g.id} value={g.id}>{g.name.trim() || "Unnamed group"}</option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
+                        {(building || line.member.officer !== undefined) && (
+                          <div className="bt-field">
+                            <label htmlFor={`as-officer-${String(index)}`}>Officer</label>
+                            <select id={`as-officer-${String(index)}`} value={line.member.officer ?? ""} onChange={(e) => void setMember(index, { officer: e.target.value === "commander" || e.target.value === "key" ? e.target.value : undefined })}>
+                              <option value="">Not an officer</option>
+                              <option value="commander">Force commander</option>
+                              <option value="key">Key officer</option>
+                            </select>
+                          </div>
+                        )}
+                      </div>
+                    )}
                     <button type="button" className="bt-button bt-button--secondary" aria-label={name ? `Remove ${name}` : "Remove this unit"} onClick={() => { remove(index); }}>
                       Remove
                     </button>
@@ -284,6 +315,8 @@ function ForceEditor({ initial, roster, filter, storage }: { initial: AsForce; r
           </>
         )}
       </section>
+
+      {(building || groups.length > 0) && <GroupsSection force={force} totals={totals} change={change} headingRef={groupsRef} />}
 
       <section className="bt-section" aria-labelledby="as-force-add">
         <h2 id="as-force-add">Add from your roster</h2>

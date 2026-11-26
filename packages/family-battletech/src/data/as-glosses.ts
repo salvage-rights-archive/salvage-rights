@@ -151,3 +151,37 @@ export const AS_GLOSSES: Record<string, string> = {
 };
 // No note, on purpose: CAP, SCAP, SDS-C, SDS-CM, SDS-SC and MSL (the capital-scale weapons, which the book sends to its own chapter, p. 156),
 // where a line from us would say only what the name already says.
+
+// Short notes on the formation bonuses (data/as-formations.ts), in our own words, keyed by the formation id. Shown only behind the same switch;
+// without a line the formation shows its name, bonus names and page.
+export const AS_FORMATION_GLOSSES: Record<string, string> = {
+  battle: "A Lucky pool of the unit count plus 2 points that any unit may draw on; with a unit's own Lucky, at most 4 rerolls a unit.",
+  "battle-light": "The same Lucky pool as the Battle Lance.",
+  "battle-medium": "The same Lucky pool as the Battle Lance.",
+  "battle-heavy": "The same Lucky pool as the Battle Lance.",
+  assault: "Pick Demoralizer or Multi-Tasker at the start; each turn up to half the units (round down) use it.",
+  "assault-fast": "As the Assault Lance, and up to 2 units a turn also use Stand-Aside.",
+  striker: "75% of the units (round normally) have Speed Demon.",
+  "striker-light": "The same Speed Demon bonus as the Striker/Cavalry Lance.",
+  "striker-heavy": "The same Speed Demon bonus as the Striker/Cavalry Lance.",
+  fire: "Each turn up to half the units (round down) use Sniper.",
+  "fire-support": "Each turn up to half the units (round down) use Oblique Attacker.",
+  "fire-artillery": "Each turn up to half the units (round down) use Oblique Artilleryman.",
+  "fire-direct": "Each turn up to half the units (round down) use Weapon Specialist.",
+  "fire-antiair": "Each turn up to half the units (round down) get the Anti-Aircraft Specialists command ability on their weapon attacks.",
+  recon: "Pick one of three SPAs at the start; every unit has it for the whole scenario.",
+  "recon-light": "As the Recon Lance, but each unit may take a different one of the three.",
+  "recon-heavy": "As the Recon Lance, but only up to half the units (round up) have the pick.",
+  pursuit: "75% of the units have Blood Stalker, and all may name the same enemy formation as the target.",
+  "pursuit-probe": "The same bonus as the Pursuit Lance.",
+  "pursuit-sweep": "The same bonus as the Pursuit Lance.",
+  command: "Half the units (round up) get one free SPA from the list, each its own; the commander's unit gets Tactical Genius, or +1 to the force's Initiative if it already has it.",
+  "command-vehicle": "The same bonus as the Command Lance.",
+  support: "Name one other formation to support; half the units (round down) take the same SPAs as it.",
+  interceptor: "Units with Thrust 9 or less have Speed Demon, and up to 2 also have Range Master (Long).",
+  superiority: "Up to half the units get up to 2 of the three SPAs, in any mix.",
+  "fire-support-squadron": "Two pairs of fighters each get a different one of the four SPAs.",
+  strike: "Up to half the units have Speed Demon and the rest have Golden Goose.",
+  ew: "The Communications Disruption command ability against one enemy lance or squadron.",
+  transport: "Pick one of three SPAs for every Transport-role unit.",
+};

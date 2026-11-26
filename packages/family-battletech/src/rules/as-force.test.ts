@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { duplicateForce, forceTotals, inPlay, newAsForce, playFindings, pvStep, readFilter, skillAdjustedPv } from "./as-force";
-import { newAsUnit } from "./as-unit";
+import { checkFormation, duplicateForce, findFormation, forceTotals, groupFindings, groupTotals, inPlay, newAsForce, playFindings, pvStep, readFilter, skillAdjustedPv } from "./as-force";
+import { newAsUnit, parseMove } from "./as-unit";
 import type { AsUnit } from "./as-unit";
 
 const unitWithPv = (id: string, pv: number): AsUnit => {
@@ -69,5 +69,98 @@ describe("the play filter", () => {
   it("reads a stored filter and drops what it does not know", () => {
     expect(readFilter({ year: 3050.5, techBase: "both", rulesLevel: "huge", editionId: "old", extra: 1 })).toEqual({});
     expect(readFilter({ year: 3050, techBase: "clan", rulesLevel: "advanced", editionId: "asce" })).toEqual({ year: 3050, techBase: "clan", rulesLevel: "advanced", editionId: "asce" });
+  });
+});
+
+describe("groups and formation types", () => {
+  type Spec = { size?: number; role?: string; move?: string; armor?: number; m?: number; l?: number; s?: number; type?: string; specials?: string[]; model?: string };
+  const unit = (id: string, spec: Spec): AsUnit => {
+    const u = newAsUnit(id);
+    const parsed = parseMove(spec.move ?? "6\"");
+    u.card = {
+      ...u.card,
+      type: spec.type ?? "BM",
+      size: spec.size ?? 2,
+      role: spec.role ?? null,
+      armor: spec.armor ?? 4,
+      move: parsed.ok ? parsed.value : [],
+      damage: { s: { value: spec.s ?? 2 }, m: { value: spec.m ?? 2 }, l: { value: spec.l ?? 1 } },
+      specials: (spec.specials ?? []).map((code) => ({ code, values: [], raw: code })),
+      pv: 30,
+    };
+    u.name = { chassis: spec.model ?? id, model: "" };
+    return u;
+  };
+  const group = (specs: Spec[], officerAt?: number) => {
+    const units = specs.map((s, i) => unit(`u${String(i)}`, s));
+    const force = { ...newAsForce("f"), members: units.map((u, i) => ({ unitId: u.id, skill: 4, group: "g", ...(i === officerAt ? { officer: "commander" as const } : {}) })) };
+    const totals = forceTotals(force, new Map(units.map((u) => [u.id, u])));
+    return { force: { ...force, groups: [{ id: "g", name: "G" }] }, totals };
+  };
+  const meets = (id: string, specs: Spec[], officerAt?: number): boolean => {
+    const { totals } = group(specs, officerAt);
+    return checkFormation(findFormation(id)!, totals.lines).met;
+  };
+  const four = (spec: Spec): Spec[] => [spec, spec, spec, spec];
+
+  it("checks each formation type against a group that meets it and one that does not", () => {
+    const cases: [string, Spec[], Spec[], number?][] = [
+      ["battle", [{ size: 3, role: "Brawler" }, { size: 3, role: "Sniper" }, { size: 2, role: "Skirmisher" }, { size: 1 }], [{ size: 3, role: "Brawler" }, { size: 2 }, { size: 2 }, { size: 1 }]],
+      ["battle-light", [{ size: 1, role: "Scout" }, { size: 1 }, { size: 1 }, { size: 2 }], [{ size: 1 }, { size: 1 }, { size: 1 }, { size: 2 }]],
+      ["assault", [{ size: 3, role: "Juggernaut", m: 3, armor: 5 }, { size: 3, m: 3, armor: 5 }, { size: 3, m: 3, armor: 5 }, { size: 2, m: 3, armor: 5 }], [{ size: 3, role: "Juggernaut", m: 3, armor: 5 }, { size: 3, m: 3, armor: 5 }, { size: 2, m: 3, armor: 5 }, { size: 2, m: 3, armor: 5 }]],
+      ["assault-fast", [{ size: 3, role: "Juggernaut", m: 3, armor: 5, move: "10\"" }, { size: 3, m: 3, armor: 5, move: "6\"/4\"j" }, { size: 3, m: 3, armor: 5, move: "10\"" }, { size: 2, m: 3, armor: 5, move: "10\"" }], [{ size: 3, role: "Juggernaut", m: 3, armor: 5 }, { size: 3, m: 3, armor: 5 }, { size: 3, m: 3, armor: 5 }, { size: 2, m: 3, armor: 5 }]],
+      ["striker", [{ move: "10\"", role: "Striker" }, { move: "8\"/8\"j", role: "Skirmisher" }, { move: "12\"" }, { move: "10\"" }], [{ move: "10\"", role: "Striker" }, { move: "8\"", role: "Skirmisher" }, { move: "12\"" }, { move: "10\"" }]],
+      ["fire-support", [{ specials: ["IF"] }, { specials: ["IF"] }, { specials: ["IF"] }, {}], [{ specials: ["IF"] }, { specials: ["IF"] }, {}, {}]],
+      ["fire-artillery", [{ specials: ["ARTLT"] }, { specials: ["ARTAC"] }, {}, {}], [{ specials: ["ARTLT"] }, {}, {}, {}]],
+      ["fire-antiair", [{ role: "Sniper", specials: ["FLK"] }, { role: "Sniper", specials: ["AC"] }, { role: "Missile Boat" }, { role: "Missile Boat" }], [{ role: "Sniper", specials: ["FLK"] }, { role: "Sniper" }, { role: "Missile Boat" }, { role: "Missile Boat" }]],
+      ["recon-light", [{ size: 1, move: "12\"", role: "Scout" }, { size: 1, move: "14\"", role: "Scout" }], [{ size: 1, move: "12\"", role: "Scout" }, { size: 1, move: "10\"", role: "Scout" }]],
+      ["pursuit", [{ size: 2, move: "12\"", m: 2 }, { size: 2, move: "12\"" }, { size: 1, move: "14\"" }, { size: 2, move: "8\"" }], [{ size: 3, move: "12\"", m: 2 }, { size: 2, move: "12\"" }, { size: 1, move: "14\"" }, { size: 2, move: "8\"" }]],
+      ["command", [{ role: "Sniper" }, { role: "Skirmisher" }, { role: "Scout" }, { role: "Brawler" }], [{ role: "Sniper" }, { role: "Brawler" }, { role: "Scout" }, { role: "Brawler" }], 0],
+      ["support", [{}], []],
+      ["interceptor", [{ type: "AF", role: "Interceptor" }, { type: "AF", role: "Interceptor" }, { type: "AF", role: "Dogfighter" }], [{ type: "AF", role: "Interceptor" }, { type: "AF", role: "Dogfighter" }]],
+      ["ew", [{ type: "AF", specials: ["ECM"] }, { type: "AF", specials: ["TAG"] }, { type: "AF" }], [{ type: "AF", specials: ["ECM"] }, { type: "AF" }]],
+    ];
+    for (const [id, good, bad, officerAt] of cases) {
+      expect(meets(id, good, officerAt), `${id} meets`).toBe(true);
+      expect(meets(id, bad, id === "command" ? undefined : officerAt), `${id} fails`).toBe(false);
+    }
+  });
+
+  it("lets every unit with the ideal role stand in for the requirements, but never for a variation", () => {
+    const scouts = four({ role: "Scout", move: "4\"", size: 3 });
+    expect(meets("recon", scouts)).toBe(true);
+    expect(meets("recon-light", scouts)).toBe(false);
+    expect(checkFormation(findFormation("recon")!, group(scouts).totals.lines).waivedBy).toBe("Scout");
+  });
+
+  it("scales a count to a Star and rounds a percentage up, and names what is missing", () => {
+    const star = group([...Array.from({ length: 4 }, () => ({ size: 3, role: "Sniper" })), { size: 1 }]);
+    expect(checkFormation(findFormation("battle")!, star.totals.lines).met).toBe(true); // 3 of 4 scales to 4 of 5
+    const thin = group([{ size: 3, role: "Sniper" }, { size: 3, role: "Sniper" }, { size: 1 }, { size: 1 }, { size: 1 }]);
+    const failed = checkFormation(findFormation("battle")!, thin.totals.lines);
+    expect(failed.missing).toEqual([
+      "At least 50% of the units: Size 3 or more (the group has 2, needs 3)",
+      "At least 3 units: role Brawler, Sniper or Skirmisher (the group has 2, needs 4)",
+    ]);
+  });
+
+  it("needs matched pairs only when the group is all vehicles", () => {
+    const tank = (model: string): Spec => ({ type: "CV", size: 1, move: "10\"t", model });
+    const pairs = [tank("A"), tank("A"), tank("B"), tank("B")];
+    const odd = [tank("A"), tank("B"), tank("C"), tank("D")];
+    const scout = { role: "Scout" };
+    expect(meets("battle-light", pairs.map((p) => ({ ...p, ...scout })))).toBe(true);
+    expect(meets("battle-light", odd.map((p) => ({ ...p, ...scout })))).toBe(false);
+  });
+
+  it("keeps the totals when a unit moves between groups, and advises on a group the wrong size for its organisation", () => {
+    const g = group(four({ size: 2 }));
+    const two = { ...g.force, groups: [{ id: "g", name: "A", org: "is-lance" }, { id: "h", name: "B" }], members: g.force.members.map((m, i) => (i < 1 ? { ...m, group: "h" } : m)) };
+    const by = groupTotals(two, forceTotals(two, new Map(g.totals.lines.flatMap((l) => (l.unit ? [[l.unit.id, l.unit] as const] : [])))));
+    expect(by.groups.map((x) => [x.count, x.total])).toEqual([[3, 90], [1, 30]]);
+    expect(by.ungrouped.count).toBe(0);
+    expect(by.groups.reduce((sum, x) => sum + x.total, 0)).toBe(g.totals.total);
+    expect(groupFindings(two.groups[0]!, 3)[0]).toContain("4 ground units");
+    expect(groupFindings(two.groups[0]!, 4)).toEqual([]);
   });
 });

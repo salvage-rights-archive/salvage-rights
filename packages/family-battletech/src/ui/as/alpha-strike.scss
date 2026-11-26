@@ -495,6 +495,34 @@
   grid-column: 1 / -1;
 }
 
+.as-member .as-member__more {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: var(--sr-space-2);
+
+  .bt-field {
+    grid-column: auto;
+  }
+}
+
+.as-group {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--sr-space-2);
+  overflow-wrap: anywhere;
+
+  select,
+  input {
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .as-group__check ul {
+    margin: 0;
+  }
+}
+
 .as-specials-aid {
   .as-spec {
     overflow-wrap: anywhere;
