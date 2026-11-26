@@ -54,7 +54,7 @@ export const ERROR_INK = "rgb(179,38,30)";
 const FOCUS_GAP = 7;
 
 /** A convex plate with every corner pushed `gap` away from its middle. */
-const grown = (shape: Shape, gap: number): Shape => {
+export const grown = (shape: Shape, gap: number): Shape => {
     const [cx, cy] = centroid(shape);
     return shape.map(([x, y]): BubblePoint => {
         const length = Math.hypot(x - cx, y - cy) || 1;
@@ -113,7 +113,7 @@ export const fillPlates = (plates: Shape[], count: number, maxPitch: number): { 
 };
 
 /** Lighter or heavier line for the smaller uses, so every figure reads the same weight on the sheet. */
-const penFor = (use: DollUse, pen: IPenStyle): IPenStyle => {
+export const penFor = (use: DollUse, pen: IPenStyle): IPenStyle => {
     if (use === "transfer") {
         return { ...pen, contour: pen.contour * 2.5, plateBorder: 0, panel: 0, rivetRadius: 0, hatchJoints: false, hazardAccents: false, constructionLines: false };
     }

@@ -3,17 +3,21 @@
 import { useEffect, useRef, useState } from "react";
 import type { ChangeEvent } from "react";
 import { Link } from "react-router";
+import type { AcesRecord } from "../../rules/aces-card";
 import { difficultyRow, warchest } from "../../rules/aces-campaign";
 import type { AcesCampaign } from "../../rules/aces-campaign";
+import type { AcesGame } from "../../rules/aces-game";
 import type { AsUnit } from "../../rules/as-unit";
 import { openAsStorage } from "../as/storage";
 import type { AsStorage } from "../as/storage";
 import { STORAGE_READ_FAILED, STORAGE_WRITE_FAILED, downloadJson } from "../storage";
 import NewCampaignForm from "./NewCampaignForm";
-import { MAX_IMPORT_BYTES, downloadCampaigns, keepBoth, planCampaignImport, readImport } from "./campaign-file";
+import { MAX_IMPORT_BYTES, downloadCampaigns, keepBoth, keepBothGame, planCampaignImport, planExtras, readImport } from "./campaign-file";
 import type { ImportPlan, ImportRead } from "./campaign-file";
 import { openCampaignStorage } from "./campaign-storage";
 import type { CampaignEntry, CampaignStorage } from "./campaign-storage";
+import { openGameStorage } from "./game-storage";
+import { openAcesStorage } from "./storage";
 import { ACES_HOME, campaignHref } from "./routes";
 import "./aces.scss";
 
@@ -21,6 +25,8 @@ const plural = (n: number, one: string): string => `${String(n)} ${one}${n === 1
 
 interface Pending {
   conflicts: AcesCampaign[];
+  cards: AcesRecord[];
+  games: AcesGame[];
 }
 
 export default function CampaignsPage() {
@@ -114,11 +120,19 @@ export default function CampaignsPage() {
     say(`Export started.${lacking > 0 ? ` ${plural(lacking, "roster unit")} could not be added to the file because ${lacking === 1 ? "it is" : "they are"} no longer saved on this device.` : ""}`);
   };
 
-  const save = async (campaigns: AcesCampaign[], newUnits: AsUnit[]) => {
+  const save = async (campaigns: AcesCampaign[], newUnits: AsUnit[], cards: AcesRecord[] = [], games: AcesGame[] = []) => {
     if (!storage || !asStorage) return false;
     try {
       for (const u of newUnits) await asStorage.save(u);
       for (const c of campaigns) await storage.save(c);
+      if (cards.length > 0) {
+        const cardStore = await openAcesStorage();
+        for (const r of cards) await cardStore.save(r);
+      }
+      if (games.length > 0) {
+        const gameStore = await openGameStorage();
+        for (const g of games) await gameStore.save(g);
+      }
     } catch {
       fail(STORAGE_WRITE_FAILED);
       return false;
@@ -149,16 +163,29 @@ export default function CampaignsPage() {
           message = result.message;
         } else {
           const plan: ImportPlan = planCampaignImport(result.read, { campaigns: readable, units });
-          if (await save(plan.add, plan.addUnits) && (await reload(storage, asStorage))) {
-            const from = result.read.source === "jbt" ? "a BattleTech Tools backup" : "the file";
-            const parts = [`Added ${plural(plan.add.length, "campaign")} from ${from}.`];
+          let extras = planExtras({ cards: [], games: [] }, { cards: [], games: [] });
+          if (result.read.cards.length > 0 || result.read.games.length > 0) {
+            try {
+              const haveCards = (await (await openAcesStorage()).list()).flatMap((e) => (e.record ? [e.record] : []));
+              const haveGames = (await (await openGameStorage()).list()).flatMap((e) => (e.game ? [e.game] : []));
+              extras = planExtras(result.read, { cards: haveCards, games: haveGames });
+            } catch {
+              fail(STORAGE_READ_FAILED);
+              input.value = "";
+              return;
+            }
+          }
+          if (await save(plan.add, plan.addUnits, extras.addCards, extras.addGames) && (await reload(storage, asStorage))) {
+            const from = result.read.source === "jbt" ? "a BattleTech Tools backup" : result.read.source === "jbt-export" ? "a BattleTech Tools Aces export" : "the file";
+            const parts = [`Added ${plural(plan.add.length, "campaign")}${extras.addCards.length > 0 ? `, ${plural(extras.addCards.length, "card")}` : ""}${extras.addGames.length > 0 ? `, ${plural(extras.addGames.length, "game")} in progress` : ""} from ${from}.`];
+            if (extras.sameCards + extras.sameGames > 0) parts.push(`${plural(extras.sameCards, "card")} and ${plural(extras.sameGames, "game")} already here, unchanged.`);
             if (plan.same > 0) parts.push(`${plural(plan.same, "campaign")} already here, unchanged.`);
             if (plan.keptUnits > 0) parts.push(`${plural(plan.keptUnits, "unit")} you already have under the same name were kept as yours.`);
             if (plan.missingUnits > 0) parts.push(`${plural(plan.missingUnits, "roster unit")} named by the campaigns is not saved here, so it cannot be fielded until you add it.`);
             parts.push(...result.read.notes);
             say(parts.join(" "));
             setLeft(result.read.left.filter((l) => l.lines.length > 0));
-            if (plan.conflicts.length > 0) setPending({ conflicts: plan.conflicts });
+            if (plan.conflicts.length + extras.conflictCards.length + extras.conflictGames.length > 0) setPending({ conflicts: plan.conflicts, cards: extras.conflictCards, games: extras.conflictGames });
           }
         }
       }
@@ -172,8 +199,10 @@ export default function CampaignsPage() {
     const list = pending.conflicts;
     setPending(undefined);
     const next = how === "replace" ? list : list.map((c) => keepBoth(c, crypto.randomUUID()));
-    if ((await save(next, [])) && (await reload(storage, asStorage))) say(how === "replace" ? `Replaced ${plural(list.length, "campaign")} with the file's version.` : `Kept both: ${plural(list.length, "campaign")} saved beside yours as imported copies.`);
-  };
+    const cards = how === "replace" ? pending.cards : pending.cards.map((r) => ({ ...r, id: crypto.randomUUID() }) as AcesRecord);
+    const games = how === "replace" ? pending.games : pending.games.map((g) => keepBothGame(g, crypto.randomUUID()));
+    const what = [list.length > 0 ? plural(list.length, "campaign") : "", pending.cards.length > 0 ? plural(pending.cards.length, "card") : "", pending.games.length > 0 ? plural(pending.games.length, "game") : ""].filter((w) => w !== "").join(", ");
+    if ((await save(next, [], cards, games)) && (await reload(storage, asStorage))) say(how === "replace" ? `Replaced ${what} with the file's version.` : `Kept both: ${what} saved beside yours as imported copies.`);  };
 
   const askDelete = (target: { id: string; name: string }, opener: HTMLElement) => {
     openerRef.current = opener;
@@ -261,7 +290,7 @@ export default function CampaignsPage() {
         )}
         {pending && (
           <div className="bt-confirm" role="group" aria-label="Campaigns that are already here">
-            <p>{`${plural(pending.conflicts.length, "campaign")} in the file ${pending.conflicts.length === 1 ? "has" : "have"} the same id as ${pending.conflicts.length === 1 ? "one" : "ones"} you have saved, with other contents. Replace yours, or keep both?`}</p>
+            <p>{`${[pending.conflicts.length > 0 ? plural(pending.conflicts.length, "campaign") : "", pending.cards.length > 0 ? plural(pending.cards.length, "card") : "", pending.games.length > 0 ? plural(pending.games.length, "game") : ""].filter((w) => w !== "").join(", ")} in the file ${pending.conflicts.length + pending.cards.length + pending.games.length === 1 ? "has" : "have"} the same id as ${pending.conflicts.length + pending.cards.length + pending.games.length === 1 ? "one" : "ones"} you have saved, with other contents. Replace yours, or keep both?`}</p>
             <span className="bt-row__actions">
               <button type="button" ref={replaceRef} className="bt-button" onClick={() => void settle("replace")}>
                 Replace mine
@@ -291,7 +320,7 @@ export default function CampaignsPage() {
 
       <section className="bt-section" aria-labelledby="aces-camp-file">
         <h2 id="aces-camp-file">Your campaign file</h2>
-        <p className="bt-hint">A file holds your campaigns and the Alpha Strike units their rosters use. You can also import the Aces campaigns from a BattleTech Tools backup file.</p>
+        <p className="bt-hint">A file holds your campaigns and the Alpha Strike units their rosters use. You can also import the Aces campaigns from a BattleTech Tools backup file. Its AcesExport.json file brings your cards, the game in progress and the units they use as well.</p>
         <p>
           <button type="button" className="bt-button bt-button--secondary" disabled={readable.length === 0} onClick={() => { exportThese(readable, false); }}>
             Export all campaigns

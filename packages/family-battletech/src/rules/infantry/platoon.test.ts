@@ -49,6 +49,14 @@ describe("platoon build (the book's examples)", () => {
     expect([bv.targetModifier, bv.speed, bv.bv]).toEqual([2, 0.77, 168]);
   });
 
+  it("Battle Value with the Advanced infantry rules: damage divisor and specialty modifier; unknown cases are not worked out", () => {
+    const foot = make({ primary: "inf-auto-rifle-is", armor: "ballistic-plate-standard", specializations: ["marines"], perSquad: 7, squads: 4 });
+    const bv = infantryBv(foot, catalog);
+    expect([bv.defensive, bv.bv]).toEqual([84, 146]); // 28 x 2 x 1.5 = 84; (84 + 2 x 28 x 1.59 x 0.54) x 1.3 x 0.85
+    expect(infantryBv({ ...foot, armor: "sneak-1" }, catalog).bv).toBeUndefined();
+    expect(infantryBv(make({ primary: "inf-auto-rifle-is", armor: "flak-standard" }, { motive: "hover" }), catalog).bv).toBeUndefined();
+  });
+
   it("splits a platoon into the fewest even lines, odd troopers to the first", () => {
     expect([splitLines(100, 30), splitLines(37, 30), splitLines(28, 30), splitLines(0, 30)]).toEqual([[25, 25, 25, 25], [19, 18], [28], []]);
   });
@@ -65,5 +73,6 @@ describe("record and check", () => {
     const r = make({ primary: "inf-blade-sword-is", armor: "flak-standard", secondary: { weapon: "inf-mortar-heavy-is", perSquad: 2 } }, { motive: "hover" });
     const checks = checkInfantry(r, catalog).map((f) => f.check);
     expect(checks).toEqual(expect.arrayContaining(["mechanized-melee", "secondary-limit", "armor-level"]));
+    expect(checkInfantry({ ...r, rulesLevel: "introductory" }, catalog).map((f) => f.check)).toContain("introductory-infantry");
   });
 });

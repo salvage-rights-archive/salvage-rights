@@ -31,12 +31,12 @@ export interface Motive extends Cited {
 }
 /** Conventional Infantry Motive Types Table (TM p. 145), Weight Table (p. 155), Base Costs (p. 282); VTOL types TO:AUE p. 136. */
 export const MOTIVES: Motive[] = [
-  { id: "foot", label: "Foot", mechanized: false, maxSquad: 10, maxPlatoon: 30, mp: 1, mpType: "Ground", prohibited: "Water (any)", weight: 0.085, breakdown: 1, costFactor: 1, rating: "A", level: "introductory", cite: { book: TM, page: 145 }, checked: "page" },
-  { id: "motorized", label: "Motorized", mechanized: false, maxSquad: 10, maxPlatoon: 30, mp: 3, mpType: "Ground", prohibited: "Water (any)", weight: 0.195, breakdown: 1, costFactor: 1.6, rating: "B", level: "introductory", cite: { book: TM, page: 145 }, checked: "page" },
-  { id: "jump", label: "Jump", mechanized: false, maxSquad: 10, maxPlatoon: 30, mp: 3, mpType: "Jump", prohibited: "Water (any)", weight: 0.165, breakdown: 1, costFactor: 2.6, rating: "D", level: "introductory", cite: { book: TM, page: 145 }, checked: "page" },
-  { id: "hover", label: "Mechanized, hover", mechanized: true, maxSquad: 5, maxPlatoon: 20, mp: 5, mpType: "Hover", prohibited: "Woods (any)", weight: 1, breakdown: 5, costFactor: 3.2, rating: "C", level: "introductory", cite: { book: TM, page: 145 }, checked: "page" },
-  { id: "tracked", label: "Mechanized, tracked", mechanized: true, maxSquad: 7, maxPlatoon: 28, mp: 3, mpType: "Tracked", prohibited: "Heavy woods, water (depth 1+)", weight: 1, breakdown: 5, costFactor: 3.2, rating: "B", level: "introductory", cite: { book: TM, page: 145 }, checked: "page" },
-  { id: "wheeled", label: "Mechanized, wheeled", mechanized: true, maxSquad: 6, maxPlatoon: 24, mp: 4, mpType: "Wheeled", prohibited: "Rough, rubble, woods (any), water (depth 1+)", weight: 1, breakdown: 5, costFactor: 3.2, rating: "A", level: "introductory", cite: { book: TM, page: 145 }, checked: "page" },
+  { id: "foot", label: "Foot", mechanized: false, maxSquad: 10, maxPlatoon: 30, mp: 1, mpType: "Ground", prohibited: "Water (any)", weight: 0.085, breakdown: 1, costFactor: 1, rating: "A", level: "standard", cite: { book: TM, page: 145 }, checked: "page" },
+  { id: "motorized", label: "Motorized", mechanized: false, maxSquad: 10, maxPlatoon: 30, mp: 3, mpType: "Ground", prohibited: "Water (any)", weight: 0.195, breakdown: 1, costFactor: 1.6, rating: "B", level: "standard", cite: { book: TM, page: 145 }, checked: "page" },
+  { id: "jump", label: "Jump", mechanized: false, maxSquad: 10, maxPlatoon: 30, mp: 3, mpType: "Jump", prohibited: "Water (any)", weight: 0.165, breakdown: 1, costFactor: 2.6, rating: "D", level: "standard", cite: { book: TM, page: 145 }, checked: "page" },
+  { id: "hover", label: "Mechanized, hover", mechanized: true, maxSquad: 5, maxPlatoon: 20, mp: 5, mpType: "Hover", prohibited: "Woods (any)", weight: 1, breakdown: 5, costFactor: 3.2, rating: "C", level: "standard", cite: { book: TM, page: 145 }, checked: "page" },
+  { id: "tracked", label: "Mechanized, tracked", mechanized: true, maxSquad: 7, maxPlatoon: 28, mp: 3, mpType: "Tracked", prohibited: "Heavy woods, water (depth 1+)", weight: 1, breakdown: 5, costFactor: 3.2, rating: "B", level: "standard", cite: { book: TM, page: 145 }, checked: "page" },
+  { id: "wheeled", label: "Mechanized, wheeled", mechanized: true, maxSquad: 6, maxPlatoon: 24, mp: 4, mpType: "Wheeled", prohibited: "Rough, rubble, woods (any), water (depth 1+)", weight: 1, breakdown: 5, costFactor: 3.2, rating: "A", level: "standard", cite: { book: TM, page: 145 }, checked: "page" },
   // TO:AUE p. 136: Microlite 6 VTOL MP, 2 troopers a squad, no support weapons; Micro-copter 5 VTOL MP, 4 a squad, 0 or 1 support weapon (-1 MP with one); at most 4 squads; weights p. 152 (1.5 and 2); cost x4 and x4.5 of the total (p. 225).
   { id: "microlite", label: "Mechanized, microlite VTOL", mechanized: true, maxSquad: 2, maxPlatoon: 8, mp: 6, mpType: "VTOL", prohibited: "", weight: 1.5, breakdown: 2, costFactor: 4, rating: "C", level: "advanced", cite: { book: TO, page: 136 }, checked: "page" },
   { id: "microcopter", label: "Mechanized, micro-copter VTOL", mechanized: true, maxSquad: 4, maxPlatoon: 16, mp: 5, mpType: "VTOL", prohibited: "", weight: 2, breakdown: 4, costFactor: 4.5, rating: "C", level: "advanced", cite: { book: TO, page: 136 }, checked: "page" },
@@ -96,6 +96,8 @@ export interface ArmorKit extends Cited {
   /** The year introduced; "PS" (pre-spaceflight) is 1950 and "ES" (early spaceflight) 2200, as everywhere. */
   year: number;
   cost: number;
+  /** The stealth bonus to the Defensive Factor (TO:AUE p. 191): DEST +0.2. A sneak suit's depends on which systems it has, which the table does not say. */
+  bvStealth?: number;
 }
 const PS = 1950;
 const ES = 2200;
@@ -146,7 +148,7 @@ export const ARMOR_KITS: ArmorKit[] = [
   { id: "kit-taurian", name: "Taurian Concordat or Calderon kit", divisor: 1, techBase: "inner-sphere", rating: "C", availability: "X-X-B", year: 3047, cost: 370, cite: C2, checked: "page" },
   { id: "kit-word-of-blake", name: "Word of Blake kit", divisor: 2, techBase: "inner-sphere", rating: "F", availability: "X-X-D", year: 3055, cost: 4300, cite: C2, checked: "page" },
   { id: "kit-generic", name: "Other Periphery or generic kit", divisor: 1, techBase: "both", rating: "C", availability: "B-B-B", year: ES, cost: 330, cite: C2, checked: "page" },
-  { id: "sneak-dest", name: "DEST infiltration suit", divisor: 1, stealth: true, techBase: "inner-sphere", rating: "D", availability: "X-E-E", year: 2840, cost: 50000, cite: C2, checked: "page" },
+  { id: "sneak-dest", name: "DEST infiltration suit", divisor: 1, stealth: true, bvStealth: 0.2, techBase: "inner-sphere", rating: "D", availability: "X-E-E", year: 2840, cost: 50000, cite: C2, checked: "page" },
   { id: "sneak-1", name: "Sneak suit (one system)", divisor: 1, stealth: true, techBase: "both", rating: "D", availability: "C-C-C", year: 2450, cost: 7000, cite: C2, checked: "page" },
   { id: "sneak-2", name: "Sneak suit (two systems)", divisor: 1, stealth: true, techBase: "both", rating: "D", availability: "D-D-D", year: 2460, cost: 21000, cite: C2, checked: "page" },
   { id: "sneak-3", name: "Sneak suit (three systems)", divisor: 1, stealth: true, techBase: "both", rating: "D", availability: "D-E-E", year: 2475, cost: 28000, cite: C2, checked: "page" },
@@ -170,6 +172,8 @@ export interface Specialization extends Cited {
   mpType?: string;
   addedTons: number;
   costFactor: number;
+  /** The Battle Value modifier the Unit Type Modifiers Table (TO:AUE p. 193) adds for the specialty. */
+  bvModifier: number;
   /** Motive types the specialty requires; absent means any. */
   motives?: MotiveId[];
   prohibited?: string;
@@ -177,12 +181,12 @@ export interface Specialization extends Cited {
 const S = { book: TO, page: 153 };
 /** Specialized Infantry Types Table (TO:AUE p. 153) with the cost factors of the Conventional Infantry Construction Data table (p. 225). Advanced; Veteran or better. */
 export const SPECIALIZATIONS: Specialization[] = [
-  { id: "combat-engineers", name: "Combat engineers", maxSquad: 10, maxPlatoon: [20, 2], maxSecondary: 0, mp: null, addedTons: 0.1, costFactor: 5, cite: S, checked: "page" },
-  { id: "marines", name: "Marines", maxSquad: 10, maxPlatoon: [30, 4], maxSecondary: null, mp: null, addedTons: 0, costFactor: 3, cite: S, checked: "page" },
-  { id: "mountain", name: "Mountain troops", maxSquad: 10, maxPlatoon: [20, 2], maxSecondary: 1, mp: 1, mpType: "Ground", addedTons: 0, costFactor: 2, motives: ["foot"], prohibited: "Water (any)", cite: S, checked: "page" },
-  { id: "paratroops", name: "Paratroops", maxSquad: 10, maxPlatoon: [30, 3], maxSecondary: 1, mp: 1, mpType: "Ground", addedTons: 0.05, costFactor: 3, motives: ["foot"], prohibited: "Water (any)", cite: S, checked: "page" },
-  { id: "scuba-standard", name: "SCUBA (standard)", maxSquad: 10, maxPlatoon: [30, 4], maxSecondary: 0, mp: 1, mpType: "Sub", addedTons: 0.05, costFactor: 2, motives: ["foot"], prohibited: "Water (depth 3+)", cite: S, checked: "page" },
-  { id: "scuba-motorized", name: "SCUBA (motorized)", maxSquad: 6, maxPlatoon: [12, 2], maxSecondary: 1, mp: 2, mpType: "Sub", addedTons: 0.1, costFactor: 2.5, motives: ["motorized"], prohibited: "Water (depth 3+)", cite: S, checked: "page" },
+  { id: "combat-engineers", name: "Combat engineers", maxSquad: 10, maxPlatoon: [20, 2], maxSecondary: 0, mp: null, addedTons: 0.1, costFactor: 5, bvModifier: 0.1, cite: S, checked: "page" },
+  { id: "marines", name: "Marines", maxSquad: 10, maxPlatoon: [30, 4], maxSecondary: null, mp: null, addedTons: 0, costFactor: 3, bvModifier: 0.3, cite: S, checked: "page" },
+  { id: "mountain", name: "Mountain troops", maxSquad: 10, maxPlatoon: [20, 2], maxSecondary: 1, mp: 1, mpType: "Ground", addedTons: 0, costFactor: 2, motives: ["foot"], prohibited: "Water (any)", bvModifier: 0.2, cite: S, checked: "page" },
+  { id: "paratroops", name: "Paratroops", maxSquad: 10, maxPlatoon: [30, 3], maxSecondary: 1, mp: 1, mpType: "Ground", addedTons: 0.05, costFactor: 3, motives: ["foot"], prohibited: "Water (any)", bvModifier: 0.1, cite: S, checked: "page" },
+  { id: "scuba-standard", name: "SCUBA (standard)", maxSquad: 10, maxPlatoon: [30, 4], maxSecondary: 0, mp: 1, mpType: "Sub", addedTons: 0.05, costFactor: 2, motives: ["foot"], prohibited: "Water (depth 3+)", bvModifier: 0.1, cite: S, checked: "page" },
+  { id: "scuba-motorized", name: "SCUBA (motorized)", maxSquad: 6, maxPlatoon: [12, 2], maxSecondary: 1, mp: 2, mpType: "Sub", addedTons: 0.1, costFactor: 2.5, motives: ["motorized"], prohibited: "Water (depth 3+)", bvModifier: 0.1, cite: S, checked: "page" },
 ];
 export const specializationOf = (id: string): Specialization | undefined => SPECIALIZATIONS.find((s) => s.id === id);
 /** Weight of a specialized trooper before the added tons: Combat engineers and Marines use the motive's own figure (with the anti-'Mech kit included), the others 0.1 (TO:AUE p. 152). */
@@ -190,5 +194,7 @@ export const SPECIALIST_BASE_TONS: Record<MotiveId, number> = { foot: 0.1, motor
 
 /** Battle Value (TM Battle Value v4.1 p. 309 and the Conventional Infantry Weapons BV Table pp. 5-8 of the replacement pages): troopers x 1.5 x defensive factor, plus weapon BV x speed factor. */
 export const INFANTRY_BV = { perTrooper: 1.5, cite: { book: "TechManual Battle Value v4.1", page: 309 }, checked: "page" } as const;
+/** Battle Value with the Advanced infantry rules (TO:AUE pp. 191 and 193): the defense line is the damage divisor x 1.5 a trooper, the Defensive Factor gains the stealth bonus, and the total is multiplied by 1 plus the specialties' modifiers. */
+export const ADVANCED_INFANTRY_BV = { cite: { book: TO, page: 191 }, modifiersCite: { book: TO, page: 193 }, checked: "page" } as const;
 
 /** Beast-mounted infantry, field guns and field artillery (TO:AUE pp. 106-108, 122-123) are later pieces: see .superpowers/infantry-design.md. */

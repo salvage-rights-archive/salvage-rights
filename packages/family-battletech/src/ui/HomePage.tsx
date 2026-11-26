@@ -26,6 +26,12 @@ import { NumberField } from "./aero/fields";
 import { AERO_HOME, editorHref } from "./aero/routes";
 import { openAeroStorage } from "./aero/storage";
 import { INFANTRY_CHOICE, InfantrySaved, startInfantry } from "./infantry/HomePart";
+import { newProtoRecord } from "../rules/protomech/record";
+import { PROTO_WEIGHT } from "../data/protomech";
+import ProtoSavedUnits from "./protomech/ProtoSavedUnits";
+import { protoNewOptions } from "./protomech/newOptions";
+import { editorHref as protoEditorHref } from "./protomech/routes";
+import { openProtoStorage } from "./protomech/storage";
 import type { MechRecord, NewMechOptions } from "../rules/mech";
 import { MAX_LIBRARY_BYTES, STORAGE_READ_FAILED, STORAGE_WRITE_FAILED, downloadLibrary, downloadMech, downloadOmni, fileGame, fromLibraryFile, fromMechFile, fromOmniFile, openFamilyStorage, wrongGameMessage } from "./storage";
 import type { FamilyStorage, SavedEntry } from "./storage";
@@ -95,7 +101,11 @@ export default function HomePage() {
   const [aeroTons, setAeroTons] = useState<number>();
   const [aeroThrust, setAeroThrust] = useState(5);
   /** True when conventional infantry is the choice in the new-unit list: it opens the infantry editor. */
-  const [infantryPicked, setInfantryPicked] = useState(false);
+  const [infantryWanted, setInfantryPicked] = useState(false);
+  /** The ProtoMech chosen in the new-unit list, when it is: it opens the ProtoMech editor. */
+  const [protoType, setProtoType] = useState<string>();
+  const [protoTons, setProtoTons] = useState(5);
+  const [protoWalk, setProtoWalk] = useState(4);
   /** The year typed in the build form, as text; empty or not a year means no year, and nothing is hidden by time. */
   const [yearText, setYearText] = useState("");
   /** The era picked when the typed year is in two eras (an Inner Sphere era and a Clan sub-era). */
@@ -234,6 +244,20 @@ export default function HomePage() {
   const aeroPicked = aeroOptions.find((option) => option.id === aeroType);
   const aeroRow = aeroPicked?.row;
 
+  // The ProtoMech the current rules build (Clan only, from its prototype years), offered where the level, year and era allow it (hidden, never marked).
+  const protoOptions = protoNewOptions({ rulesLevel: draft.rulesLevel, year: yearTyped, era: eraChosen?.id, clanOffered: offeredBases.some(([value]) => value === "clan") });
+  const protoPicked = protoOptions.some((option) => option.id === protoType);
+  // Infantry is Level Two (Total Warfare p. 9): not offered at Introductory.
+  const infantryOffered = levelAtLeast(draft.rulesLevel ?? "standard", "standard");
+  const infantryPicked = infantryWanted && infantryOffered;
+  const buildProto = async () => {
+    if (!storage || !draft.chassis.trim() || missing !== "") return;
+    const made = newProtoRecord({ chassis: draft.chassis.trim(), model: draft.model.trim(), tons: protoTons, walk: protoWalk, year: yearTyped, ...(eraChosen ? { era: eraChosen.id } : {}), rulesLevel: draft.rulesLevel });
+    const protoStorage = await openProtoStorage().catch(() => undefined);
+    if (!protoStorage || !(await attempt(STORAGE_WRITE_FAILED, () => protoStorage.save(made)))) return;
+    void navigate(protoEditorHref(made.id));
+  };
+
   const buildAero = async () => {
     const aeroTonnage = aeroTons ?? startTons(aeroRow ?? undefined);
     if (!storage || !aeroPicked || !aeroRow || !draft.chassis.trim() || aeroTonnage <= 0 || missing !== "") return;
@@ -258,6 +282,7 @@ export default function HomePage() {
   };
 
   const build = async () => {
+    if (protoPicked) return buildProto();
     if (aeroPicked) return buildAero();
     if (infantryPicked) {
       if (missing !== "" || !draft.chassis.trim()) return;
@@ -640,6 +665,8 @@ export default function HomePage() {
         )}
       </section>
 
+      <ProtoSavedUnits />
+
       <section className="bt-section" aria-labelledby="bt-add">
         <h2 id="bt-add">Add a 'Mech</h2>
         <form
@@ -670,11 +697,20 @@ export default function HomePage() {
                 onChoose: (id) => {
                   setAeroType(id);
                   setAeroTons(undefined);
+                  if (id !== undefined) { setProtoType(undefined); setInfantryPicked(false); }
                 },
               }}
-              infantry={{ options: [INFANTRY_CHOICE], chosen: infantryPicked ? INFANTRY_CHOICE.id : undefined, onChoose: (id) => { setInfantryPicked(id !== undefined); if (id !== undefined) setAeroType(undefined); } }}
+              protomech={{
+                options: protoOptions,
+                chosen: protoPicked ? protoType : undefined,
+                onChoose: (id) => {
+                  setProtoType(id);
+                  if (id !== undefined) { setAeroType(undefined); setInfantryPicked(false); }
+                },
+              }}
+              infantry={{ options: infantryOffered ? [INFANTRY_CHOICE] : [], chosen: infantryPicked ? INFANTRY_CHOICE.id : undefined, onChoose: (id) => { setInfantryPicked(id !== undefined); if (id !== undefined) { setAeroType(undefined); setProtoType(undefined); } } }}
             />
-            {!aeroPicked && !infantryPicked && (
+            {!aeroPicked && !protoPicked && !infantryPicked && (
             <div className="bt-field">
               <label htmlFor="bt-new-config">Configuration</label>
               <select
@@ -731,17 +767,43 @@ export default function HomePage() {
                 </select>
               </div>
             )}
+            {protoPicked ? (
+              <div className="bt-field">
+                <span className="bt-label">Tech base</span>
+                <span>Clan</span>
+              </div>
+            ) : (
             <div className="bt-field">
               <label htmlFor="bt-new-tech">Tech base</label>
-              <select id="bt-new-tech" value={techBase} onChange={(e) => setDraft({ ...draft, techBase: e.target.value as NewMechOptions["techBase"] })}>
-                {techBaseChoices(draft.rulesLevel, techBase, when).map(([value, label]) => (
+              <select id="bt-new-tech" value={infantryPicked && techBase === "mixed" ? "inner-sphere" : techBase} onChange={(e) => setDraft({ ...draft, techBase: e.target.value as NewMechOptions["techBase"] })}>
+                {techBaseChoices(draft.rulesLevel, techBase, when).filter(([value]) => !(infantryPicked && value === "mixed")).map(([value, label]) => (
                   <option key={value} value={value}>
                     {label}
                   </option>
                 ))}
               </select>
             </div>
-            {aeroPicked && aeroRow ? (
+            )}
+            {protoPicked ? (
+              <>
+                <div className="bt-field">
+                  <label htmlFor="bt-new-proto-tons">Tonnage</label>
+                  <select id="bt-new-proto-tons" value={protoTons} onChange={(e) => { setProtoTons(Number(e.target.value)); }}>
+                    {Array.from({ length: PROTO_WEIGHT.max - PROTO_WEIGHT.min + 1 }, (_, i) => PROTO_WEIGHT.min + i).map((each) => (
+                      <option key={each} value={each}>{each} tons</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="bt-field">
+                  <label htmlFor="bt-new-proto-walk">Walking MP</label>
+                  <select id="bt-new-proto-walk" value={protoWalk} onChange={(e) => { setProtoWalk(Number(e.target.value)); }}>
+                    {Array.from({ length: 14 }, (_, i) => i + 1).map((walk) => (
+                      <option key={walk} value={walk}>{walk}</option>
+                    ))}
+                  </select>
+                </div>
+              </>
+            ) : aeroPicked && aeroRow ? (
               <>
                 <NumberField id="bt-new-aero-tons" label="Tonnage" value={aeroTons ?? startTons(aeroRow)} min={0} hint={weightHint(aeroRow.weight)} onValid={(tons) => { setAeroTons(tons ?? undefined); }} />
                 <NumberField id="bt-new-aero-thrust" label="Safe Thrust" value={aeroThrust} min={0} onValid={(thrust) => { setAeroThrust(thrust ?? 0); }} />
@@ -772,7 +834,7 @@ export default function HomePage() {
             )}
           </div>
           <p className="bt-hint">
-            {aeroPicked ? "You start with a standard engine, no fuel, no armor, no heat sinks and no equipment. The AeroTech editor's rules check shows what is left to do." : unitType === "industrialmech" ? "You start with an industrial frame and cockpit, a standard fusion engine" : "You start with standard parts"}, ten
+            {infantryPicked ? "You start with a platoon of the standard size for its type and affiliation, no weapons and no armor. The infantry rules check shows what is left to do." : protoPicked ? "You start with the chassis and an engine for the walking speed, no jump jets, no heat sinks, no armor and no equipment. The ProtoMech editor's rules check shows what is left to do." : aeroPicked ? "You start with a standard engine, no fuel, no armor, no heat sinks and no equipment. The AeroTech editor's rules check shows what is left to do." : unitType === "industrialmech" ? "You start with an industrial frame and cockpit, a standard fusion engine" : "You start with standard parts"}, ten
             heat sinks, no armor and no equipment. {unitType === "omnimech" && "An OmniMech starts as a base chassis with an empty Prime configuration. "}The editor's rules check shows what is left to do.
           </p>
           {missing !== "" && <p id="bt-new-missing" className="bt-hint">{missing}</p>}

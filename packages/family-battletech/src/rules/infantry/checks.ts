@@ -2,6 +2,7 @@
 import { WEAPON_RULES, armorKitOf, specializationOf } from "../../data/infantry-tables";
 import type { Catalog } from "../catalog";
 import { DEFAULT_LEVEL, equipmentLevel, levelAtLeast, levelRow } from "../levels";
+import { yearEraFindings } from "../checks";
 import { infantryBv, infantryCost, platoonOf } from "./platoon";
 import type { InfantryRecord } from "./platoon";
 
@@ -25,10 +26,10 @@ export function checkInfantry(record: InfantryRecord, catalog: Catalog): Infantr
   const m = p.motive;
   const mechanized = m?.mechanized ?? false;
 
+  if (level === "introductory") add("error", "introductory-infantry", "Infantry is Level Two: it is not used at the Introductory level.", at("Total Warfare", 9), "rulesLevel");
+  for (const f of yearEraFindings(record, level, "platoon")) found.push({ level: f.level, check: "year", message: f.message, cite: f.cite ? at(f.cite.book, f.cite.page) : undefined, where: f.where?.field ? { field: f.where.field } : undefined });
   if (!m) add("error", "motive", `The platoon type "${record.motive}" is not one this app knows.`, at(TM, 145), "motive");
-  if (level !== "introductory" && record.year === null) add("warning", "year", `A year is needed at ${levelRow(level).label} rules.`, undefined, "year");
   if (m && !levelAtLeast(level, m.level)) add("error", "motive-level", `${m.label} infantry is an Advanced option.`, at(m.cite.book, m.cite.page), "motive");
-  if (level === "introductory" && record.techBase === "clan") add("error", "introductory-tech", "The Introductory level is Inner Sphere only.", at("Total Warfare", 275), "techBase");
 
   if (m) {
     if (record.perSquad > m.maxSquad) add("error", "squad", `A ${m.label.toLowerCase()} squad holds at most ${String(m.maxSquad)} troopers.`, at(TM, 145), "perSquad");
@@ -81,14 +82,13 @@ export function checkInfantry(record: InfantryRecord, catalog: Catalog): Infantr
       else {
         if (spec.motives && m && !spec.motives.includes(m.id)) add("error", "spec-motive", `${spec.name} needs ${spec.motives.map((x) => x).join(" or ")} infantry.`, at(TO, 153), "specializations");
         if (spec.maxSquad !== null && record.perSquad > spec.maxSquad) add("error", "spec-squad", `${spec.name} squads hold at most ${String(spec.maxSquad)} troopers.`, at(TO, 153), "perSquad");
-        if (spec.maxPlatoon && p.troopers > spec.maxPlatoon[0]) add("error", "spec-platoon", `${spec.name} platoons hold at most ${String(spec.maxPlatoon[0])} troopers.`, at(TO, 153), "squads");
-        if (spec.maxPlatoon && record.squads > spec.maxPlatoon[1]) add("error", "spec-squads", `${spec.name} platoons have at most ${String(spec.maxPlatoon[1])} squads.`, at(TO, 153), "squads");
         if (spec.maxSecondary !== null && record.secondary.perSquad > spec.maxSecondary) add("error", "spec-secondary", `${spec.name} carry at most ${String(spec.maxSecondary)} Secondary Weapons a squad.`, at(TO, 153), "secondary");
       }
     }
   }
   if (record.skills.gunnery > 8 || record.skills.antiMech > 8) add("warning", "skill", "Skill ratings run from 0 to 8.", at("TechManual Battle Value v4.1", 314), "skills");
   const bv = infantryBv(record, catalog);
+  if (bv.reason) add("note", "bv-reason", `The Battle Value is not worked out: ${bv.reason}`, at(TO, 191));
   for (const name of bv.unvalued) add("note", "bv-unvalued", `${name} has no Battle Value in our table, so the platoon's is not worked out.`);
   for (const name of infantryCost(record, catalog).unpriced) add("note", "unpriced", `${name} has no price in our table, so the cost is not complete.`);
   return found;

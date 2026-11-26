@@ -23,6 +23,7 @@ export interface AeroTypeChoices {
 }
 
 const AERO_PREFIX = "aero:";
+const PROTO_PREFIX = "protomech:";
 const INFANTRY_PREFIX = "infantry:";
 
 export default function TypeSelect({
@@ -31,6 +32,7 @@ export default function TypeSelect({
   id = "field-unitType",
   className,
   aero,
+  protomech,
   infantry,
 }: {
   record: Subject;
@@ -38,33 +40,41 @@ export default function TypeSelect({
   id?: string;
   className?: string;
   aero?: AeroTypeChoices;
-  /** Conventional infantry, a group of its own that opens the infantry editor (the same shape as `aero`). */
+  /** The ProtoMech, when the rules level, year and era offer it: the same shape as `aero`; it opens the ProtoMech editor. */
+  protomech?: AeroTypeChoices;
+  /** Conventional infantry, when the rules level offers it (Level Two): the same shape as `aero`; it opens the infantry editor. */
   infantry?: AeroTypeChoices;
 }) {
   const choices = typeChoices(record);
   const current = mechTypeOf(record);
   const noteId = `${id}-note`;
   const waiting = choices.flatMap((choice) => (choice.disabled === undefined ? [] : [`${MECH_TYPES.find((t) => t.id === choice.id)?.label ?? choice.id} is not offered yet: ${choice.disabled}`]));
-  const pickedInfantry = infantry?.chosen === undefined ? undefined : infantry.options.find((option) => option.id === infantry.chosen);
-  const picked = pickedInfantry ?? (aero?.chosen === undefined ? undefined : aero.options.find((option) => option.id === aero.chosen));
+  const picked = aero?.chosen === undefined ? undefined : aero.options.find((option) => option.id === aero.chosen);
+  const protoPicked = protomech?.chosen === undefined ? undefined : protomech.options.find((option) => option.id === protomech.chosen);
+  const infantryPicked = infantry?.chosen === undefined ? undefined : infantry.options.find((option) => option.id === infantry.chosen);
   return (
     <div className={className ? `bt-field bt-level ${className}` : "bt-field bt-level"}>
       <label htmlFor={id}>Type</label>
       <select
         id={id}
-        value={pickedInfantry ? `${INFANTRY_PREFIX}${pickedInfantry.id}` : picked ? `${AERO_PREFIX}${picked.id}` : current.id}
+        value={infantryPicked ? `${INFANTRY_PREFIX}${infantryPicked.id}` : protoPicked ? `${PROTO_PREFIX}${protoPicked.id}` : picked ? `${AERO_PREFIX}${picked.id}` : current.id}
         aria-describedby={noteId}
         onChange={(event) => {
           const value = event.target.value;
           if (value.startsWith(INFANTRY_PREFIX)) {
             aero?.onChoose(undefined);
+            protomech?.onChoose(undefined);
             infantry?.onChoose(value.slice(INFANTRY_PREFIX.length));
+          } else if (value.startsWith(PROTO_PREFIX)) {
+            infantry?.onChoose(undefined);
+            protomech?.onChoose(value.slice(PROTO_PREFIX.length));
           } else if (value.startsWith(AERO_PREFIX)) {
             infantry?.onChoose(undefined);
             aero?.onChoose(value.slice(AERO_PREFIX.length));
           } else {
             infantry?.onChoose(undefined);
             aero?.onChoose(undefined);
+            protomech?.onChoose(undefined);
             onChange(value as MechType);
           }
         }}
@@ -83,6 +93,15 @@ export default function TypeSelect({
             ))}
           </optgroup>
         )}
+        {protomech && protomech.options.length > 0 && (
+          <optgroup label="ProtoMech (opens the ProtoMech editor)">
+            {protomech.options.map((option) => (
+              <option key={option.id} value={`${PROTO_PREFIX}${option.id}`}>
+                {option.label}
+              </option>
+            ))}
+          </optgroup>
+        )}
         {infantry && infantry.options.length > 0 && (
           <optgroup label="Infantry (opens the infantry editor)">
             {infantry.options.map((option) => (
@@ -94,8 +113,8 @@ export default function TypeSelect({
         )}
       </select>
       <span id={noteId} className="bt-hint bt-level__note">
-        {picked ? picked.note : `${current.description} ${bookName(current.cite.book)}, p. ${String(current.cite.page)}.`}
-        {!picked && waiting.length > 0 && ` ${waiting.join(" ")}`}
+        {infantryPicked ? infantryPicked.note : protoPicked ? protoPicked.note : picked ? picked.note : `${current.description} ${bookName(current.cite.book)}, p. ${String(current.cite.page)}.`}
+        {!picked && !protoPicked && !infantryPicked && waiting.length > 0 && ` ${waiting.join(" ")}`}
       </span>
     </div>
   );

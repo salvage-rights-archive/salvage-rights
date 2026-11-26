@@ -1,6 +1,7 @@
 // The Classic home's share of the infantry pages: the entry in the new-unit list, the call that starts a platoon, and the list of saved platoons.
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
+import { motiveOf } from "../../data/infantry-tables";
 import { newInfantryRecord } from "../../rules/infantry/platoon";
 import type { InfantryRecord } from "../../rules/infantry/platoon";
 import { setYear } from "../../rules/availability";
@@ -54,7 +55,7 @@ export function InfantrySaved() {
           return (
             <li key={entry.id} className="bt-row">
               <span className="bt-row__text">
-                <strong>{title}</strong> {`${String(record.squads * record.perSquad)} troopers, ${record.motive}`}
+                <strong>{title}</strong> {`${String(record.squads * record.perSquad)} troopers, ${motiveOf(record.motive)?.label ?? record.motive}`}
               </span>
               <span className="bt-row__actions">
                 <Link className="bt-button" aria-label={`Open ${title}`} to={editorHref(record.id)}>

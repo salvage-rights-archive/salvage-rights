@@ -158,7 +158,8 @@ function Editor({ initial, catalog, storage }: { initial: InfantryRecord; catalo
   const secondaries = withCurrent(offered.filter((r) => r.infantry !== undefined), record.secondary.weapon);
   const motives = MOTIVES.filter((m) => m.id === record.motive || levelAtLeast(level, m.level));
   const kitsOffered = ARMOR_KITS.filter((k) => k.id === record.armor || (levelAtLeast(level, "advanced") && (k.techBase === "both" || k.techBase === record.techBase) && (record.year === null || k.year <= record.year)));
-  const specsOffered = SPECIALIZATIONS.filter((s) => record.specializations.includes(s.id) || levelAtLeast(level, "advanced"));
+  // Hide, do not mark: a specialty the platoon type rules out is not listed (one already held stays). Combat engineers wait until their sub-types can be chosen.
+  const specsOffered = SPECIALIZATIONS.filter((s) => record.specializations.includes(s.id) || (levelAtLeast(level, "advanced") && s.id !== "combat-engineers" && (s.motives === undefined || s.motives.includes(platoon.motive?.id ?? "foot"))));
   const when = { year: record.year, era: record.era, editionId: record.editionId };
   const yearEras = erasOfYear(record.year);
   const bases = techBaseChoices(level, record.techBase, when).filter(([value]) => value !== "mixed");
@@ -172,7 +173,14 @@ function Editor({ initial, catalog, storage }: { initial: InfantryRecord; catalo
     }
   };
   const title = `${record.name.chassis} ${record.name.model}`.trim();
-  const target = (f: InfantryFinding): string | undefined => (f.where ? `field-${f.where.field}` : undefined);
+  const target = (f: InfantryFinding): string | undefined => {
+    const field = f.where?.field;
+    if (field === undefined) return undefined;
+    if (field === "skills") return "field-gunnery";
+    if (field === "specializations") return `field-spec-${record.specializations[0] ?? "marines"}`;
+    if (field === "rulesLevel") return "field-rulesLevel";
+    return `field-${field}`;
+  };
 
   return (
     <div className="sr-page bt-editor" onBlur={() => { setHistory((h) => (h.group === undefined ? h : { ...h, group: undefined })); }}>
@@ -231,7 +239,7 @@ function Editor({ initial, catalog, storage }: { initial: InfantryRecord; catalo
             <li>{`Movement ${String(platoon.mp)} ${platoon.mpType}${platoon.moveOrShoot ? ", move or fire" : ""}`}</li>
             <li>{`Damage ${String(platoon.totalDamage)} at full strength, ${num(platoon.perTrooper)} a trooper`}</li>
             <li>{`Weight ${num(platoon.weight)} tons`}</li>
-            <li>{bv.bv === undefined ? "Battle Value: not worked out yet." : `Battle Value ${String(bv.bv)}`}</li>
+            <li>{bv.bv === undefined ? `Battle Value: not worked out${bv.reason ? `. ${bv.reason}` : " yet."}` : `Battle Value ${String(bv.bv)}`}</li>
             <li>{`Cost ${money(cost.total)} C-bills`}</li>
           </ul>
           <InfantryDiagram locations={platoon.lines.map((n, i) => ({ code: lineCode(i, platoon.lines.length), name: platoon.lines.length === 1 ? "Platoon" : `Sub-platoon ${String(i + 1)}`, armor: n }))} use="armor" />

@@ -64,7 +64,7 @@ type Subject = Pick<MechRecord, "techBase" | "year" | "era" | "rulesLevel" | "un
 const recordLevel = (record: Subject): RulesLevel => record.rulesLevel ?? DEFAULT_LEVEL;
 
 /** True when a part or row printed for `base` can be used by a record of `techBase`; no base printed, or "both", fits any. */
-function baseFits(base: "inner-sphere" | "clan" | "both" | undefined, techBase: MechRecord["techBase"], spans?: Span[]): boolean {
+export function baseFits(base: "inner-sphere" | "clan" | "both" | undefined, techBase: MechRecord["techBase"], spans?: Span[]): boolean {
   return base === undefined || base === "both" || techBase === "mixed" || base === techBase || (techBase === "clan" && isStarLeagueTech(base, spans)); // Star League technology is a Clan record's own too (STAR_LEAGUE_TECH)
 }
 

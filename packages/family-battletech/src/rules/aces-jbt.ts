@@ -33,16 +33,16 @@ export interface JbtResult {
 export const JBT_LIBRARY_NOTE =
   "This backup also holds a card library. We did not convert it: its cards are free text and ours are chosen from our own lists, so a conversion would be a guess. Record your cards in My cards.";
 
-type Obj = Record<string, unknown>;
-const isObject = (v: unknown): v is Obj => typeof v === "object" && v !== null && !Array.isArray(v);
-const text = (v: unknown, fallback = ""): string => (typeof v === "string" ? v.slice(0, JBT_CAPS.text) : fallback);
-const whole = (v: unknown): number => {
+export type Obj = Record<string, unknown>;
+export const isObject = (v: unknown): v is Obj => typeof v === "object" && v !== null && !Array.isArray(v);
+export const text = (v: unknown, fallback = ""): string => (typeof v === "string" ? v.slice(0, JBT_CAPS.text) : fallback);
+export const whole = (v: unknown): number => {
   const n = typeof v === "number" ? v : typeof v === "string" && v.trim() !== "" ? Number(v) : 0;
   return Number.isFinite(n) ? Math.round(n) : 0;
 };
-const list = (v: unknown, cap: number): unknown[] => (Array.isArray(v) ? v.slice(0, cap) : []);
+export const list = (v: unknown, cap: number): unknown[] => (Array.isArray(v) ? v.slice(0, cap) : []);
 // An id that names a property every object has must never become one of ours.
-const safeId = (v: unknown): string => {
+export const safeId =(v: unknown): string => {
   const s = text(v).trim();
   return s !== "" && !(s in {}) ? s : "";
 };
@@ -61,10 +61,12 @@ function special(code: string): AsSpecial {
 /** The unit a roster line stands for: one already saved from the Master Unit List with the same id, else a stand-in. */
 function unitFor(row: Obj, campaignId: string, index: number, have: readonly AsUnit[]): { unit: AsUnit; made: boolean } {
   const mul = whole(row.mulID);
-  const known = mul > 0 ? have.find((u) => u.source.kind === "mul-export" && u.source.ref === String(mul)) : undefined;
-  if (known) return { unit: known, made: false };
   const chassis = text(row.chassis).trim();
   const variant = text(row.variant).trim();
+  // A unit saved from the Master Unit List, or read from the same export's own forces (those hold the whole card), matches by list id or by name.
+  const sameName = (u: AsUnit): boolean => u.source.credit === JBT_NAME && `${u.name.chassis} ${u.name.model}`.trim().toLowerCase() === `${chassis} ${variant}`.trim().toLowerCase();
+  const known = have.find((u) => (mul > 0 && (u.source.kind === "mul-export" || u.source.credit === JBT_NAME) && u.source.ref === String(mul)) || (chassis !== "" && sameName(u)));
+  if (known) return { unit: known, made: false };
   const name = text(row.name).trim();
   const unit = newAsUnit(`jbt-${campaignId}-${safeId(row.id) || String(index)}`);
   unit.name = { chassis: chassis || name || "Unnamed unit", model: variant };

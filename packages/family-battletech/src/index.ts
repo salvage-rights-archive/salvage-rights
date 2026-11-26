@@ -10,6 +10,8 @@ const classicRoutes: FamilyRoute[] = [
   { path: "sheet", label: "Record sheet", section: "workshop", load: () => import("./ui/SheetPage") },
   { path: "infantry-editor", label: "Infantry editor", section: "workshop", load: () => import("./ui/infantry/InfantryEditorPage") },
   { path: "infantry-sheet", label: "Infantry record sheet", section: "workshop", load: () => import("./ui/infantry/InfantrySheetPage") },
+  { path: "protomech-editor", label: "ProtoMech editor", section: "workshop", load: () => import("./ui/protomech/ProtoEditorPage") },
+  { path: "protomech-sheet", label: "ProtoMech record sheet", section: "workshop", load: () => import("./ui/protomech/ProtoSheetPage") },
 ];
 
 const alphaStrikeRoutes: FamilyRoute[] = [

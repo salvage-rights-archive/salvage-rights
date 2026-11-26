@@ -2,8 +2,8 @@
 // range modifiers, movement, weight, cost and Battle Value. A record is plain data; nothing here throws on one it does not understand, and
 // keys this version does not know are kept. Rules: TechManual pp. 144-155 with errata v8.0 (see data/infantry-tables.ts).
 import { TARGET_MODIFIER } from "../../data/bv";
-import { INFANTRY_INFERNO_BV, INFANTRY_WEAPON_BV } from "../../data/infantry-bv";
-import { ANTI_MECH, ARMOR_KITS, FORMATIONS, INFANTRY_BV, MOTIVES, RANGE_MODIFIERS, SPECIALIST_BASE_TONS, WEAPON_RULES, armorKitOf, motiveOf, specializationOf } from "../../data/infantry-tables";
+import { INFANTRY_WEAPON_BV } from "../../data/infantry-bv";
+import { ADVANCED_INFANTRY_BV, ANTI_MECH, ARMOR_KITS, FORMATIONS, INFANTRY_BV, MOTIVES, RANGE_MODIFIERS, SPECIALIST_BASE_TONS, WEAPON_RULES, armorKitOf, motiveOf, specializationOf } from "../../data/infantry-tables";
 import type { ArmorKit, Formation, Motive, Specialization } from "../../data/infantry-tables";
 import type { RulesLevel } from "../../data/chassis";
 import { skillMultiplier, speedFactor } from "../bv";
@@ -186,9 +186,12 @@ export function platoonOf(record: InfantryRecord, catalog: Catalog): Platoon {
   const burstSecondary = perSquadSecondary >= 2 && flagsOf(secondary).includes("B");
   const heavyBurst = (primaryTroopers > 0 && (capped || flagsOf(primary).includes("B"))) || burstSecondary;
   const crewed = (row: EquipmentRow | undefined) => (row?.infantry?.crew ?? "1") !== "1";
-  const pointBlank = ruling?.infantry?.damageType === "P" ? 1 : 0;
+  // Point-blank weapons add their +1 at hex 0 whichever weapon sets the range (TM p. 152).
+  const pointBlank = (primaryTroopers > 0 && primary?.infantry?.damageType === "P") || (perSquadSecondary >= 1 && secondary?.infantry?.damageType === "P") ? 1 : 0;
+  // Heavy Burst's -1 at hex 0 holds when the burst weapon is the one that sets the range; its damage bonus holds either way.
+  const burstSetsRange = ruling === primary ? primaryTroopers > 0 && (capped || flagsOf(primary).includes("B")) : burstSecondary;
   const crew = (primaryTroopers > 0 && crewed(primary)) || (perSquadSecondary >= 1 && crewed(secondary)) ? 1 : 0;
-  const sameHex = (table[0] ?? 0) + pointBlank + crew - (heavyBurst ? 1 : 0);
+  const sameHex = (table[0] ?? 0) + pointBlank + crew - (burstSetsRange ? 1 : 0);
   const rangeMods = table.map((m, i) => (i === 0 ? sameHex : m));
 
   const specials: string[] = [];
@@ -267,9 +270,9 @@ const priceNumber = (row: EquipmentRow | undefined): number | undefined => {
   return typeof found?.price === "number" ? found.price : undefined;
 };
 
-/** A trooper costs 2,000 x the square root of his weapon's price, times the motive's factor (and 5 for the anti-'Mech kit); the platoon is the sum,
- * times each specialty's factor, plus the armor kit's price for each trooper. The book does not say whether a Secondary Weapon operator pays for
- * his Secondary or his Primary Weapon: he is costed with the Secondary (as his damage is). The armor kit is added after the multipliers. */
+/** A trooper costs 2,000 x the square root of his weapon's price, times the motive's factor (and 5 for the anti-'Mech kit); the platoon is the sum
+ * plus the armor kit's price for each trooper, times each specialty's factor. The book does not say whether a Secondary Weapon operator pays for
+ * his Secondary or his Primary Weapon: he is costed with the Secondary (as his damage is). */
 export function infantryCost(record: InfantryRecord, catalog: Catalog): InfantryCost {
   const p = platoonOf(record, catalog);
   const notes: string[] = [];
@@ -281,9 +284,10 @@ export function infantryCost(record: InfantryRecord, catalog: Catalog): Infantry
   const trooper = (price: number | undefined) => 2000 * Math.sqrt(price ?? 0);
   const factor = (p.motive?.costFactor ?? 1) * (record.antiMech && !(p.motive?.mechanized ?? false) ? ANTI_MECH.costFactor : 1);
   let total = (p.primaryTroopers * trooper(primaryPrice) + p.secondaryTroopers * trooper(secondaryPrice)) * factor;
-  for (const s of p.specializations) total *= s.costFactor;
+  // The kit is priced for each trooper and sits inside the total the specialty factors (the "TC" of TO:AUE p. 225) multiply.
   if (p.armor) total += p.armor.cost * p.troopers;
-  if (p.armor) notes.push("The armor kit's price is added for each trooper after the other factors; the books do not say where it goes.");
+  for (const s of p.specializations) total *= s.costFactor;
+  if (p.armor) notes.push("The armor kit's price is added for each trooper before the specialty factors; the books do not say so in words (owner question).");
   return { total: roundUpCents(total), perTrooper: p.troopers === 0 ? 0 : roundUpCents(total / p.troopers), notes, unpriced };
 }
 
@@ -299,6 +303,8 @@ export interface InfantryBv {
   targetModifier: number;
   skill: number;
   unvalued: string[];
+  /** Why the platoon's Battle Value is not worked out, where it is not for a reason other than a weapon without a value. */
+  reason?: string;
 }
 const stemOf = (id: string): string => id.replace(/-(is|clan)$/, "");
 const bvOf = (row: EquipmentRow | undefined): number | undefined => (row ? INFANTRY_WEAPON_BV[stemOf(row.id)] : undefined);
@@ -308,32 +314,30 @@ export function infantryBv(record: InfantryRecord, catalog: Catalog): InfantryBv
   const unvalued: string[] = [];
   for (const row of [p.primary, p.secondary]) if (row && bvOf(row) === undefined) unvalued.push(row.name);
   const jumper = p.mpType === "Jump";
-  const hexes = p.mp;
-  const band = TARGET_MODIFIER.bands.find(([most]) => hexes <= most);
+  const band = TARGET_MODIFIER.bands.find(([most]) => p.mp <= most);
   const targetModifier = (band?.[1] ?? 0) + (jumper ? TARGET_MODIFIER.jumpBonus : 0);
-  const defensive = p.troopers * INFANTRY_BV.perTrooper * (1 + targetModifier / 10);
   const mechanized = p.motive?.mechanized ?? false;
+  // With an armor kit or a specialty the Advanced infantry rules apply (TO:AUE pp. 191, 193); the parts of them the books leave open are "not worked out".
+  const advanced = p.armor !== undefined || p.specializations.length > 0;
+  let reason: string | undefined;
+  if (advanced && mechanized) reason = "Advanced infantry rules do not say which Unit Type Modifier a mechanized platoon takes.";
+  else if (p.armor?.stealth && p.armor.bvStealth === undefined) reason = "The book does not say which stealth systems a sneak suit has, so its Defensive Factor bonus is not known.";
+  const divisor = advanced ? (p.armor?.divisor ?? 1) : 1;
+  const stealth = p.armor?.bvStealth ?? 0;
+  const defensive = p.troopers * divisor * INFANTRY_BV.perTrooper * (1 + targetModifier / 10 + stealth);
   const single = p.primaryTroopers * (bvOf(p.primary) ?? 0) + p.secondaryTroopers * (bvOf(p.secondary) ?? 0);
   const weaponBv = mechanized ? single : single * 2; // all non-mechanized infantry can make anti-'Mech attacks: the weapons count again
   const speed = speedFactor(p.mp);
   const offensive = weaponBv * speed;
   const antiMechSkill = mechanized || !record.antiMech ? ANTI_MECH.defaultSkill : record.skills.antiMech;
   const skill = skillMultiplier({ gunnery: record.skills.gunnery, piloting: antiMechSkill });
-  return {
-    bv: unvalued.length > 0 || !p.primary ? undefined : roundHalfUp((defensive + offensive) * skill),
-    defensive,
-    offensive,
-    weaponBv,
-    speed,
-    targetModifier,
-    skill,
-    unvalued,
-  };
+  const unitType = advanced ? 1 + p.specializations.reduce((sum, s) => sum + s.bvModifier, 0) : 1;
+  const worked = unvalued.length === 0 && p.primary !== undefined && reason === undefined;
+  return { bv: worked ? roundHalfUp((defensive + offensive) * unitType * skill) : undefined, defensive, offensive, weaponBv, speed, targetModifier, skill, unvalued, reason };
 }
-export const INFERNO_BV = INFANTRY_INFERNO_BV;
 
 /** The armor kits a tech base and year may use (Advanced). */
 export function armorKitsFor(techBase: InfantryTechBase, year: number | null): ArmorKit[] {
   return ARMOR_KITS.filter((k) => (k.techBase === "both" || k.techBase === techBase) && (year === null || k.year <= year));
 }
-export { MOTIVES };
+export { ADVANCED_INFANTRY_BV, MOTIVES };
