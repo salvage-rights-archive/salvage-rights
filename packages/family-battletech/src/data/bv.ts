@@ -271,7 +271,6 @@ export const UNFIXED: Record<string, string> = {
   // Items whose BV is a modifier or a figure that depends on the unit, which the BV rules here do not compute (TO:AUE pp.192-197).
   "blue-shield-is": "it adds 0.2 to the armor type modifier and counts as a Gauss weapon for the defensive rating (TO:AUE pp.192, 194)",
   "lance-is": "its BV is its damage (the unit's tonnage divided by 5, rounded up) times 1 (TO:AUE pp.101, 195), but the book does not say what Triple-Strength Myomer does to a Lance's damage",
-  "mace-is": "its BV is its damage times 1 (TO:AUE p.195), and the pages read do not print the Mace's damage",
   "talons-clan": "its BV is the kick damage after Triple-Strength Myomer times 1 (TO:AUE p.197), and the pair of Talons with their 1.5 on kicks (p.102) leaves the figure unclear",
   "partial-wing-is": "it adds Jumping MP by atmosphere and weight class, which the speed factor does not take yet (TO:AUE p.192)",
   "partial-wing-clan": "it adds Jumping MP by atmosphere and weight class, which the speed factor does not take yet (TO:AUE p.192)",
@@ -350,7 +349,7 @@ export const BV_RULE_ITEMS: {
 /** Rows that add to Heat Efficiency (RISC emergency coolant system: +4, IO:AE p. 190). */
 export const HEAT_EFFICIENCY_BONUS: Record<string, number> = { "risc-emergency-coolant-system-is": 4 };
 /** Physical weapons: BV is the weapon's damage times the factor (the table's footnote ** says damage after TSM). Damage by 'Mech tonnage: Total Warfare p. 146, TechManual pp. 220, 236, 237. */
-export const PHYSICAL_BV: Sourced & { rows: Record<string, { factor: number; damage: "hatchet" | "sword" | "blade" | "claws" | number; fixed?: true }> } = {
+export const PHYSICAL_BV: Sourced & { rows: Record<string, { factor: number; damage: "hatchet" | "sword" | "blade" | "claws" | "mace" | number; fixed?: true }> } = {
   cite: { book: TM, page: 317 },
   checked: "page",
   rows: {
@@ -362,6 +361,9 @@ export const PHYSICAL_BV: Sourced & { rows: Record<string, { factor: number; dam
     "chain-whip-is": { factor: 1.725, damage: 3, fixed: true },
     // Claws: 1 damage per 7 tons, rounded up, doubled by Triple-Strength Myomer (TO:AUE p.100); BV factor 1.275 (p.195).
     "claws-is": { factor: 1.275, damage: "claws" },
+    // Mace: 1 damage per 4 tons, rounded up (TO:AUE p.216, read on the page image); BV is that damage times 1 (TO:AUE p.195). It makes the
+    // Gothic MAD-3H's printed Battle Value reproduce exactly (G-2).
+    "mace-is": { factor: 1, damage: "mace" },
   },
 };
 
@@ -529,6 +531,15 @@ export const WEAPON_BV: BvGroup[] = [
       ["streak-lrm-15-clan", 259, 32, { heat: "streak" }], ["streak-lrm-20-clan", 345, 43, { heat: "streak" }],
       ["arrow-iv-clan", 240, 30], ["sniper-artillery-clan", 96, 11], ["thumper-artillery-clan", 48, 5],
     ],
+  },
+  {
+    // The Gothic Light Blazer (catalog row `light-blazer-gothic`, flagged `bvInferred`): no book prints its Battle Value. 148 is the one
+    // figure that, run through this table's method, reproduces the three printed Battle Values that carry it: the FS9-HB (1,067), the
+    // KGC-0KP (1,986) and the MAD-3H (1,735, with its Mace at 19). Searched over 0 to 600 with the engine; the FS9-HB and the KGC-0KP
+    // alone fix it at 148, and the MAD-3H then lands exactly (G-2; owner answer 5). Sheets index 4, 12 and 16 print those figures.
+    cite: { book: "BattleTech: Gothic Deluxe Record Sheets", page: 4 },
+    checked: "text",
+    rows: [["light-blazer-gothic", 148]],
   },
 ];
 /** "Other Equipment" and the physical and industrial items: BV added in full, never sorted by heat. */

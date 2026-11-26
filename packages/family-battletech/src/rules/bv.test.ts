@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { BATTLE_ARMOR_BV, CASE_ROWS, EQUIPMENT_BV, LAM_BV, LAUNCHER_MUNITIONS, SPECIAL_MUNITIONS, UNFIXED, UNLISTED_IS_ZERO, WEAPON_BV } from "../data/bv";
 import { AMMUNITION } from "../data/equipment/ammunition";
+import { GOTHIC_EQUIPMENT } from "../data/equipment/gothic";
 import { OTHER } from "../data/equipment/other";
 import { WEAPONS } from "../data/equipment/weapons";
 import { battleValue, skillMultiplier, speedFactor } from "./bv";
@@ -10,7 +11,7 @@ import { bipedRecord, mount } from "./fixtures";
 import type { LocationCode, MechRecord, Mount } from "./mech";
 import { stemOf } from "./walk";
 
-const catalog = createCatalog(expand([...WEAPONS, ...AMMUNITION, ...OTHER]));
+const catalog = createCatalog(expand([...WEAPONS, ...AMMUNITION, ...OTHER, ...GOTHIC_EQUIPMENT]));
 
 let n = 0;
 /** A mount of a catalog row; the placement does not matter to Battle Value, only the location does. */

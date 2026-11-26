@@ -18,11 +18,12 @@ export const GOTHIC_EQUIPMENT: EquipmentGroup[] = [
     // Heat, damage and ranges: rulebook p. 93. Type: the sheets' "[DE]" (PDF indices 4, 12, 16). Slots: 2, the two-line bracket in the
     // critical table of the FS9-HB and KGC-0KP (indices 4, 16). Tons: printed nowhere; 1.5 is what the weight budgets of the FS9-HB
     // against the FS9-H and the KGC-0KP against the KGC-0000 leave per weapon, and the MAD-3H against the MAD-3R agrees (conflict 37,
-    // owner answer 5). No cost (Gothic has no C-bill prices) and no Battle Value printed. The sheets put it in arms and side torsos;
+    // owner answer 5). No cost (Gothic has no C-bill prices). Battle Value: none printed; 148 is inferred from the three sheets that carry
+    // it (data/bv.ts), so `bvInferred`. The sheets put it in arms and side torsos;
     // nothing limits where. The Stone Giant's sheet (index 34) calls it "Light Binary Laser". Its level is the sheets' "Unofficial".
     defaults: { kind: "weapon", techBase: "inner-sphere", games: ["gothic"], availability: [{ from: 3015 }], yearsInferred: true, cite: { book: RULEBOOK, page: 93 }, checked: "page" },
     items: [
-      { id: "light-blazer-gothic", name: "Light Blazer", aliases: ["Light Binary Laser"], tons: 1.5, tonsInferred: true, slots: 2, type: "DE", heat: 6, damage: "7", range: [0, 3, 6, 9], rulesLevel: "licensed-noncanon", levelCite: { book: SHEETS, page: 4 }, units: ["mech", "abomination"], directFire: true },
+      { id: "light-blazer-gothic", name: "Light Blazer", aliases: ["Light Binary Laser"], tons: 1.5, tonsInferred: true, bvInferred: true, slots: 2, type: "DE", heat: 6, damage: "7", range: [0, 3, 6, 9], rulesLevel: "licensed-noncanon", levelCite: { book: SHEETS, page: 4 }, units: ["mech", "abomination"], directFire: true },
     ],
   },
 ];

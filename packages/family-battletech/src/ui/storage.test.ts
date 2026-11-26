@@ -101,6 +101,13 @@ describe("mech files", () => {
     expect(fromMechFile(JSON.parse(JSON.stringify(file)))).toEqual({ ok: true, record });
   });
 
+  it("round-trips a record typed from a book (the Gothic box 'Mechs) with its page and printed figures, and refuses a source that names neither", () => {
+    const record = bipedRecord({ editionId: "gothic", source: { kind: "book", cite: { book: "BattleTech: Gothic Deluxe Record Sheets", page: 4 }, values: { battleValue: 1067 } } });
+    expect(fromMechFile(JSON.parse(JSON.stringify(toMechFile(record))))).toEqual({ ok: true, record });
+    expect(isMechRecord({ ...record, source: { kind: "book", values: {} } })).toBe(false);
+    expect(isMechRecord({ ...record, source: { kind: "other", cite: { book: "b", page: 1 }, values: {} } })).toBe(false);
+  });
+
   it("reads a record with no extra heat sink groups as before and round-trips one with them", () => {
     const old = bipedRecord();
     expect(fromMechFile(JSON.parse(JSON.stringify(toMechFile(old))))).toEqual({ ok: true, record: old });

@@ -349,7 +349,7 @@ describe("changedSinceImport", () => {
     expect(changedSinceImport({ ...base, source: undefined })).toEqual(new Set());
     expect(changedSinceImport({ ...base, tons: 99, source: base.source && { ...base.source, baseline: undefined } })).toEqual(new Set());
     for (const original of [null, 5, { status: "Error" }]) {
-      expect(changedSinceImport({ ...base, source: base.source && { ...base.source, original } })).toEqual(new Set());
+      expect(changedSinceImport({ ...base, source: base.source?.kind === "mordel" ? { ...base.source, original } : base.source })).toEqual(new Set());
     }
   });
 });

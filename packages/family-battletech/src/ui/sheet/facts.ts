@@ -146,7 +146,7 @@ export function sheetFacts(record: MechRecord, catalog: Catalog): SheetFacts {
       rear: record.armor[code]?.rear,
       structure: structure[code],
     })),
-    designer: record.source ? record.source.designer || "an unnamed designer" : undefined,
+    designer: record.source?.kind === "mordel" ? record.source.designer || "an unnamed designer" : undefined,
   };
 }
 

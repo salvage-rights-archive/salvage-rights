@@ -449,7 +449,7 @@ export default function HomePage() {
                     <span className="bt-row__credit">
                       Built under {editionName(record.editionId)}
                     </span>
-                    {record.source && (
+                    {record.source?.kind === "mordel" && (
                       <span className="bt-row__credit">
                         Designed by {record.source.designer || "an unnamed designer"} on mordel.net
                       </span>
