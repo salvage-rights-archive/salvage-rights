@@ -13,6 +13,7 @@ import { canMove, flipTop, mulberry32, nextAutomated, reveal, schedule } from ".
 import type { Activatable, DeckCard, Pick as NextUnit, ScheduleStep } from "./aces-deck";
 import { isEmplacement } from "./aces-game";
 import type { AcesGame, ForceName, GameLogLine, GameUnit, TurnState } from "./aces-game";
+import { objectiveStats } from "./aces-special";
 import { logText, step } from "./aces-resolve";
 import type { InitiativeContext, InitiativeDecision, LogLine, MoveContext, MoveDecision, Question, TableUnit } from "./aces-resolve";
 import { isImmobile, recordMove } from "./as-play";
@@ -44,7 +45,7 @@ export const forceOf = (game: AcesGame, id: string): ForceName | undefined => (g
 
 const inPlay = (u: GameUnit): boolean => !u.play.destroyed && !u.play.escaped;
 /** Can it make a move this turn: not destroyed or gone, not immobile or shut down, not an emplacement (p. 6). */
-export const unitCanMove = (u: GameUnit): boolean => inPlay(u) && canMove({ immobile: isImmobile(u.play, u.card, "aces"), shutDown: u.play.shutdown, emplacement: isEmplacement(u.card) });
+export const unitCanMove = (u: GameUnit): boolean => inPlay(u) && canMove({ immobile: isImmobile(u.play, u.card, "aces"), shutDown: u.play.shutdown, emplacement: isEmplacement(u.card), transported: u.flags.mountedIn !== undefined });
 /** An automated unit on the players' side: it moves when the players choose it (p. 38). */
 export const isAlly = (u: GameUnit): boolean => u.flags.automated === true;
 
@@ -69,6 +70,9 @@ export const toTable = (u: GameUnit): TableUnit => ({
   skill: u.skill,
   ...(u.flags.withdrawing ? { withdrawing: true as const } : {}),
   ...(u.flags.fleeing ? { fleeing: true as const } : {}),
+  ...(u.flags.mountedIn ? { mounted: true as const } : {}),
+  ...(u.flags.destroyObjective ? { destroyObjective: true as const } : {}),
+  ...(objectiveStats(u) ? { stats: objectiveStats(u) } : {}),
 });
 
 const tableOf = (units: readonly GameUnit[]): TableUnit[] => units.map(toTable);
@@ -97,6 +101,7 @@ export function moveContext(game: AcesGame, unit: GameUnit, records: TurnRecords
     specialOrders: [...records.orders],
     ...(unit.flags.withdrawing ? { withdrawing: true } : {}),
     ...(unit.flags.fleeing ? { fleeing: true } : {}),
+    ...(unit.flags.moveObjective && !unit.flags.withdrawing && !unit.flags.fleeing ? { moveObjective: true } : {}),
     allies: tableOf(game.sides[mine].units.filter((u) => u.id !== unit.id)),
     enemies: tableOf(game.sides[enemySide].units),
     ...(game.rules.bigTable48 ? { bigTable48: true } : {}),

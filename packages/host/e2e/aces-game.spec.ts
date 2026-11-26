@@ -225,6 +225,13 @@ test("the units list: damage entered by hand is staged, and a unit that left the
   await fitsPhone(page, "the units list with a hand entry open");
   await noViolations(page, "the units list with a hand entry open");
 
+  await page.getByText("Objectives and transports").click();
+  await page.getByRole("group", { name: "Pursues the movement objective" }).getByLabel("Theirs A").check();
+  await page.getByRole("group", { name: "Is the destroy objective" }).getByLabel("Mine A").check();
+  await expect(page.getByRole("group", { name: "Is the destroy objective" }).getByLabel("Mine A")).toBeChecked();
+  await fitsPhone(page, "the objectives panel open");
+  await noViolations(page, "the objectives panel open");
+
   await page.getByText("Damage by hand or left the table: Theirs A").click();
   await page.getByRole("button", { name: "Theirs A left the table" }).click();
   await expect(page.getByText("Escaped")).toBeVisible();

@@ -236,7 +236,7 @@ export function ManualAttack({ game, attacker, apply, onCancel }: { game: AcesGa
   const physicals = physicalOptions(attacker.card);
   const canIndirect = attacker.card.specials.some((s) => s.code === "IF");
   const side = forceOf(game, attacker.id);
-  const spotters = (side ? game.sides[side].units : []).filter((u) => u.id !== attacker.id && !u.play.destroyed && !u.play.escaped);
+  const spotters = (side ? game.sides[side].units : []).filter((u) => u.id !== attacker.id && !u.play.destroyed && !u.play.escaped && !u.flags.mountedIn);
   const [targetId, setTargetId] = useState(enemies[0]?.id ?? "");
   const [kind, setKind] = useState<"weapon" | "indirect" | AsPhysicalType>("weapon");
   const [distanceText, setDistanceText] = useState("");

@@ -16,6 +16,7 @@ import ActivationCard from "./ActivationCard";
 import type { Apply } from "./ActivationCard";
 import CombatPanel from "./AttackPanel";
 import EndPhasePanel, { GameOverPanel } from "./EndPhasePanel";
+import ObjectivesPanel from "./ObjectivesPanel";
 import UnitsDrawer from "./UnitsDrawer";
 import { openGameStorage } from "./game-storage";
 import type { GameStorage } from "./game-storage";
@@ -249,6 +250,7 @@ export default function GamePage() {
             </button>
           </div>
           {view === "now" ? <Phase game={game} records={records} apply={apply} touched={touched} /> : <Log game={game} headingRef={logHeading} />}
+          {view === "now" && game.phase !== "over" && <ObjectivesPanel game={game} apply={apply} />}
         </div>
         <UnitsDrawer units={units} phase={game.phase} apply={apply} />
       </div>

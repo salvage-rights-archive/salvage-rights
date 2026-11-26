@@ -59,7 +59,17 @@ export interface GameUnit {
   /** The key of the deck it plays by; absent for a unit without one (an emplacement, a unit on the player's side, a deck not chosen yet). */
   deck?: string;
   play: PlayState;
-  flags: { withdrawing?: true; fleeing?: true; automated?: true };
+  flags: {
+    withdrawing?: true;
+    fleeing?: true;
+    automated?: true;
+    /** The sortie names this automated unit as pursuing its movement objective (Aces p. 17). */
+    moveObjective?: true;
+    /** The sortie names this unit or building as the destroy objective (Aces p. 17). */
+    destroyObjective?: true;
+    /** Mounted on this transport (game-unit id): out of Initiative, movement and combat until it dismounts (Aces p. 5). */
+    mountedIn?: string;
+  };
 }
 
 export interface GameSide {
