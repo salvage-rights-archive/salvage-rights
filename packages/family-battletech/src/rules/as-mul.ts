@@ -234,11 +234,17 @@ function convert(html: string, now: string, newId: () => string): AsMulImport {
   return { ok: true, unit };
 }
 
-/** Whether the OFFICIAL mark still holds: the unit is marked from the list and its card is still the one we read. An edited card reads as changed. */
-export function mulOfficial(unit: AsUnit): { official: boolean; changed: boolean } {
+/**
+ * The one rule for the OFFICIAL mark on an Alpha Strike unit: it depends only on the Master Unit List. A unit imported from the list is
+ * OFFICIAL while its card still equals the values we read; every other unit (edited, typed in, converted, scanned, from Mordel) is NOT
+ * OFFICIAL. The player cannot state it. Every place that shows the mark reads this.
+ */
+export function asOfficialMark(unit: AsUnit): { official: boolean; changed: boolean; text: string } {
   const { source } = unit;
-  if (source.official === undefined || source.values === undefined) return { official: false, changed: false };
+  if (source.kind !== "mul-export" || source.values === undefined) return { official: false, changed: false, text: `NOT OFFICIAL: not from the ${MUL_OFFICIAL_BOOK}` };
   const shape = (card: AsCard) => canon({ ...card, specials: formatSpecials(card.specials) });
   const same = shape(unit.card) === shape(source.values);
-  return { official: same, changed: !same };
+  return same
+    ? { official: true, changed: false, text: `OFFICIAL, ${MUL_OFFICIAL_BOOK}` }
+    : { official: false, changed: true, text: `NOT OFFICIAL: changed from the published design in the ${MUL_OFFICIAL_BOOK}` };
 }

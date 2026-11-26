@@ -3,6 +3,7 @@ import { Link, useNavigate, useSearchParams } from "react-router";
 import { AS_FORCE_CITES, AS_SKILL_NAMES, SKILLS } from "../../data/alpha-strike";
 import { clampSkill, duplicateForce, forceTotals } from "../../rules/as-force";
 import type { AsForce } from "../../rules/as-force";
+import { asOfficialMark } from "../../rules/as-mul";
 import { unitTitle } from "../../rules/as-unit";
 import type { AsUnit } from "../../rules/as-unit";
 import { STORAGE_READ_FAILED, STORAGE_WRITE_FAILED } from "../storage";
@@ -240,6 +241,7 @@ function ForceEditor({ initial, roster, storage }: { initial: AsForce; roster: A
                       <span className="bt-row__text as-member__name">
                         <strong>{name}</strong>
                         {` ${line.unit.card.type}, base PV ${String(line.base)}`}
+                        <span className="bt-row__credit">{asOfficialMark(line.unit).text}</span>
                       </span>
                       <span className="as-member__pv">{`PV ${String(line.adjusted)}`}</span>
                       <div className="bt-field">

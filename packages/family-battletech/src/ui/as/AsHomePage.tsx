@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type { ChangeEvent } from "react";
 import { Link } from "react-router";
 import { AS_EDITION } from "../../data/alpha-strike";
+import { asOfficialMark } from "../../rules/as-mul";
 import { unitTitle } from "../../rules/as-unit";
 import { STORAGE_READ_FAILED, STORAGE_WRITE_FAILED, downloadJson } from "../storage";
 import { downloadUnit, fromUnitFile, openAsStorage } from "./storage";
@@ -186,6 +187,7 @@ export default function AsHomePage() {
                     <strong>{name}</strong>
                     {` ${unit.card.type}, size ${String(unit.card.size)}, PV ${String(unit.card.pv)}`}
                     {unit.source.kind !== "manual" && unit.source.credit && <span className="bt-row__credit">{unit.source.credit}</span>}
+                    <span className="bt-row__credit">{asOfficialMark(unit).text}</span>
                   </span>
                   <span className="bt-row__actions">
                     <Link className="bt-button" aria-label={`Open ${name}`} to={unitHref(unit.id)}>

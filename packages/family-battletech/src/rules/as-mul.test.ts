@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { MUL_CREDIT, fromMulPage, mulOfficial } from "./as-mul";
-import { formatSpecials } from "./as-unit";
+import { MUL_CREDIT, asOfficialMark, fromMulPage } from "./as-mul";
+import { formatSpecials, newAsUnit } from "./as-unit";
 
 const NOW = "2026-11-25T10:00:00.000Z";
 const bytes = (text: string): Uint8Array => new TextEncoder().encode(text);
@@ -50,12 +50,22 @@ describe("a saved Master Unit List page", () => {
     expect(JSON.stringify(unit)).not.toContain("words we do not read");
   });
 
-  it("marks the unit OFFICIAL with the list as its source, until the card is edited", () => {
+  it("marks a Master Unit List import OFFICIAL", () => {
     const result = run(page());
     if (!result.ok) throw new Error(result.message);
-    expect(result.unit.source.official).toEqual({ book: "Master Unit List" });
-    expect(mulOfficial(result.unit)).toEqual({ official: true, changed: false });
-    expect(mulOfficial({ ...result.unit, card: { ...result.unit.card, pv: 29 } })).toEqual({ official: false, changed: true });
+    expect(asOfficialMark(result.unit)).toMatchObject({ official: true, text: "OFFICIAL, Master Unit List" });
+  });
+
+  it("makes the unit NOT OFFICIAL once its card is edited", () => {
+    const result = run(page());
+    if (!result.ok) throw new Error(result.message);
+    expect(asOfficialMark({ ...result.unit, card: { ...result.unit.card, pv: 29 } })).toMatchObject({ official: false, changed: true });
+  });
+
+  it("shows NOT OFFICIAL, and says why, for a unit from another source, even one claiming the flag", () => {
+    const unit = newAsUnit("x");
+    const mark = asOfficialMark({ ...unit, source: { kind: "mordel", values: unit.card, official: { book: "Master Unit List" } } });
+    expect(mark).toMatchObject({ official: false, text: "NOT OFFICIAL: not from the Master Unit List" });
   });
 
   it.each(["quoted-printable", "base64"] as const)("unpacks a web archive with the page encoded as %s, accents included", (encoding) => {

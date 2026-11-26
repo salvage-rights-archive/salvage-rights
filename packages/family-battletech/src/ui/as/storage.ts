@@ -124,7 +124,10 @@ export function isAsUnit(value: unknown): value is AsUnit {
 const migrated = (unit: AsUnit): AsUnit => {
   const editionId = currentEditionId(unit.editionId);
   const source = (unit.source as AsUnit["source"] | undefined) ?? { kind: "manual" };
-  return editionId === unit.editionId && unit.source === source ? unit : { ...unit, editionId, source };
+  // Only a Master Unit List import can carry the OFFICIAL flag; a file from any other source loses it.
+  const { official, ...rest } = source;
+  const clean = source.kind === "mul-export" || official === undefined ? source : rest;
+  return editionId === unit.editionId && unit.source === clean ? unit : { ...unit, editionId, source: clean };
 };
 
 export function toUnitFile(unit: AsUnit): AsUnitFile {
