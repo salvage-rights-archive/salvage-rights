@@ -308,11 +308,11 @@ export const SPECIAL_MUNITIONS: Sourced & { stems: string[]; why: string } = {
     "ammo-thunder-augmented", "ammo-thunder-inferno", "ammo-thunder-vibrabomb", "ammo-thunder-active", "ammo-narc-explosive",
     "ammo-improved-narc-ecm", "ammo-improved-narc-explosive", "ammo-improved-narc-haywire", "ammo-improved-narc-nemesis",
     // TO:AUE pp. 226-229 and IO:AE p. 213. IO:AE p. 190 prints an ammunition BV for Retro-Streak and a multiplier for the improved ATM munitions, left to the
-    // Battle Value work with the rest. The Dead-Fire stems stay here for a unit whose launcher size cannot be told (DEAD_FIRE_AMMO_BV below).
+    // Battle Value work with the rest. Dead-Fire has its own table (DEAD_FIRE_AMMO_BV below).
     "ammo-acid-srm", "ammo-anti-radiation-srm", "ammo-anti-radiation-lrm", "ammo-bola-narc-pods", "ammo-follow-the-leader-lrm",
     "ammo-heat-seeking-srm", "ammo-heat-seeking-lrm", "ammo-incendiary-lrm", "ammo-magnetic-pulse-srm", "ammo-magnetic-pulse-lrm",
     "ammo-mine-clearance-srm", "ammo-mine-clearance-lrm", "ammo-smoke-srm", "ammo-smoke-lrm", "ammo-tandem-charge-srm",
-    "ammo-anti-tsm-lrm", "ammo-anti-tsm-srm", "ammo-listen-kill-lrm", "ammo-listen-kill-srm", "ammo-dead-fire-lrm", "ammo-dead-fire-srm",
+    "ammo-anti-tsm-lrm", "ammo-anti-tsm-srm", "ammo-listen-kill-lrm", "ammo-listen-kill-srm",
     "ammo-retro-streak-srm", "ammo-shoot-and-sit-narc", "ammo-improved-magnetic-pulse-atm", "ammo-improved-inferno-atm",
     // TO:AUE pp. 164-175 and 225-227: autocannon, artillery and flamer/fluid gun munitions. The Alternative Munitions Table (p. 198) prints a modifier for caseless (1.0),
     // tracer (0.25), corrosive (2.0), inferno fuel (2.0) and Thunder/FASCAM (mine points per ton); the rest print none. Same reason as the missile munitions.
@@ -326,7 +326,8 @@ export const SPECIAL_MUNITIONS: Sourced & { stems: string[]; why: string } = {
 };
 /** Dead-Fire ammunition: BV a ton by the size of the launcher that fires it (IO:AE printed p. 190, the Alternate Era Weapons and Equipment Battle Value Table, which errata
  * v3.01 repeats). The row is one per launcher family, so the size comes from the launcher on the unit that the bin feeds. An MML has a figure for each of its two ammunition
- * modes, the table's SRM line and LRM line, which the errata lists as "SRM/LRM" in that order. `family` maps a catalog stem to the key of the launcher family it fires from. */
+ * modes, the table's SRM line and LRM line. The errata prints unlabelled pairs ("8/9"); they are read SRM then LRM, the order of the printed table's lines, which
+ * also keeps each MML figure in step with the SRM and LRM sizes near it. `family` maps a catalog stem to the key of the launcher family it fires from. */
 export const DEAD_FIRE_AMMO_BV: Sourced & { family: Record<string, "lrm" | "srm">; perTon: Record<string, Record<number, number>> } = {
   cite: { book: IO, page: 190 },
   checked: "page",

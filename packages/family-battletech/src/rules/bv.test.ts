@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { BATTLE_ARMOR_BV, CASE_ROWS, EQUIPMENT_BV, LAM_BV, LAUNCHER_MUNITIONS, SPECIAL_MUNITIONS, UNFIXED, UNLISTED_IS_ZERO, WEAPON_BV } from "../data/bv";
+import { BATTLE_ARMOR_BV, CASE_ROWS, DEAD_FIRE_AMMO_BV, EQUIPMENT_BV, LAM_BV, LAUNCHER_MUNITIONS, SPECIAL_MUNITIONS, UNFIXED, UNLISTED_IS_ZERO, WEAPON_BV } from "../data/bv";
 import { AMMUNITION } from "../data/equipment/ammunition";
 import { GOTHIC_EQUIPMENT } from "../data/equipment/gothic";
 import { OTHER } from "../data/equipment/other";
@@ -194,9 +194,9 @@ describe("the method's rules", () => {
       expect(bv.complete, `${launcher} ${family}`).toBe(true);
     }
     const two = battleValue(biped([m("lrm-5-is", "RA"), m("lrm-10-is", "LA"), m("ammo-dead-fire-lrm-is", "RT")]), catalog);
-    expect(two.unvalued.map((u) => u.name)).toEqual(["ammo-dead-fire-lrm-is"]);
+    expect(two.unvalued.map((u) => u.why)).toEqual([expect.stringContaining("different sizes")]);
     const none = battleValue(biped([m("srm-4-is", "RA"), m("ammo-dead-fire-lrm-is", "RT")]), catalog);
-    expect(none.unvalued.map((u) => u.name)).toEqual(["ammo-dead-fire-lrm-is"]);
+    expect(none.unvalued.map((u) => u.why)).toEqual([expect.stringContaining("no launcher")]);
   });
 
   it("stealth armor adds 10 to movement heat and 2 to the target modifier", () => {
@@ -278,7 +278,7 @@ describe("Tactical Operations equipment", () => {
     const zero = (r: EquipmentRow) => r.kind !== "ammunition" && UNLISTED_IS_ZERO.books.includes(r.cite.book);
     // Alternative munitions added from TO:AUE p. 229 (mortar, remote sensor dispenser and Copperhead rounds): their Battle Value is the Battle Value work's to settle.
     const newMunitions = (r: EquipmentRow) => /^ammo-(mortar|copperhead|remote-sensor-dispenser)-/.test(r.id);
-    const leftOpen = (r: EquipmentRow) => r.id in UNFIXED || SPECIAL_MUNITIONS.stems.includes(stemOf(r.id)) || LAUNCHER_MUNITIONS.stems.includes(stemOf(r.id)) || newMunitions(r);
+    const leftOpen = (r: EquipmentRow) => r.id in UNFIXED || SPECIAL_MUNITIONS.stems.includes(stemOf(r.id)) || LAUNCHER_MUNITIONS.stems.includes(stemOf(r.id)) || stemOf(r.id) in DEAD_FIRE_AMMO_BV.family || newMunitions(r);
     // Abomination-only rows (Gothic) have no Battle Value: Abominations carry none.
     const abominationOnly = (r: EquipmentRow) => r.units?.length === 1 && r.units[0] === "abomination";
     const open = catalog.all().filter((r) => !abominationOnly(r) && !known.has(r.id) && !zero(r) && !leftOpen(r) && !["heat-sink", "jump-jet"].includes(r.kind) && !LAM_BV.fuelSlotIds.includes(r.id) && !(r.id in CASE_ROWS));
