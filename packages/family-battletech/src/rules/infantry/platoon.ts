@@ -158,6 +158,8 @@ export interface Platoon {
   fieldGuns: number;
   /** Troopers one field gun, or the field artillery piece, needs to operate. */
   gunCrew: number;
+  /** Troopers the field artillery piece needs (its tons, rounded up); the platoon must keep the guns' crews and this one manned together. */
+  artilleryCrew: number;
   fieldArtillery: EquipmentRow | undefined;
   /** The damage divisor on what the platoon takes: the armor kit's times the creature's. */
   divisor: number;
@@ -227,8 +229,10 @@ export function platoonOf(record: InfantryRecord, catalog: Catalog): Platoon {
   const troopers = record.squads * record.perSquad;
   // Paramedics and TAG troopers each take one of a squad's two secondary slots (TO:AUE p. 153); medics first.
   const slot = SECONDARY_SLOT_TROOPS.perSquad;
-  const medicsPerSquad = Math.min(slot, record.paramedics);
-  const tagPerSquad = Math.min(slot - medicsPerSquad, record.tagTroops);
+  // A specialty that carries no Secondary Weapons (combat engineers, standard SCUBA) leaves no slot for a medic or TAG trooper, so none are built (TO:AUE p. 153).
+  const noSecondary = specs.some((s) => s.maxSecondary === 0);
+  const medicsPerSquad = noSecondary ? 0 : Math.min(slot, record.paramedics);
+  const tagPerSquad = noSecondary ? 0 : Math.min(slot - medicsPerSquad, record.tagTroops);
   const medics = Math.min(troopers, medicsPerSquad * record.squads);
   const tagTroopers = Math.min(troopers, tagPerSquad * record.squads);
   // A specialty's platoon ceiling holds the whole platoon to one line of that size (the most restrictive wins).
@@ -275,7 +279,7 @@ export function platoonOf(record: InfantryRecord, catalog: Catalog): Platoon {
     if (beast.divisor > 1) specials.push(`Damage divisor ${String(beast.divisor)} (creatures)`);
   }
   if (tagTroopers > 0) specials.push(`TAG troops: TAG attacks at ${SECONDARY_SLOT_TROOPS.tag.range.join("/")} hexes`);
-  if (medics > 0) specials.push(`Paramedics: ${String(medics)} (tend up to 5 wounded each, TO:AUE p. 153)`);
+  if (medics > 0) specials.push(`Paramedics: ${String(medics)} (each tends up to 5 wounded, TO:AUE p. 153)`);
   if (xct) specials.push(`Condition-trained: ${xct.label.toLowerCase()}`);
 
   // Movement
@@ -308,13 +312,17 @@ export function platoonOf(record: InfantryRecord, catalog: Catalog): Platoon {
     perTroop = base + specs.reduce((sum, s) => sum + s.addedTons, 0);
   } else perTroop = (motive?.weight ?? 0) + (record.antiMech && !mechanized ? ANTI_MECH.kitTons : 0);
   const tonsOf = (row: EquipmentRow | undefined): number => (typeof row?.tons === "number" ? row.tons : 0);
-  const gunCrew = Math.max(FIELD_GUN_RULES.minCrew, Math.ceil(tonsOf(fieldGun)), fieldGun ? 0 : Math.ceil(tonsOf(fieldArtillery)));
+  const gunCrew = fieldGun ? Math.max(FIELD_GUN_RULES.minCrew, Math.ceil(tonsOf(fieldGun))) : 0;
+  const artilleryCrew = fieldArtillery ? Math.ceil(tonsOf(fieldArtillery)) : 0;
   const fieldGuns = fieldGun ? record.fieldGun.count : 0;
   // A beast adds its own weight to each rider's 0.2 t; a medic carries 0.05 t of gear; each field gun, and the artillery piece, brings its own tons and one ton of ammunition (TO:AUE pp. 107, 123, 153).
   const creatures = beast ? Math.ceil(troopers / CREATURE_SIZES[beast.size].troops) : 0;
-  const extra = creatures * (beast?.weight ?? 0) + medics * SECONDARY_SLOT_TROOPS.paramedic.addedTons + fieldGuns * (tonsOf(fieldGun) + FIELD_GUN_RULES.ammoTons) + (fieldArtillery ? tonsOf(fieldArtillery) + FIELD_GUN_RULES.ammoTons : 0);
+  const extra = creatures * (beast?.weight ?? 0) + (medics > 0 ? troopers : 0) * SECONDARY_SLOT_TROOPS.paramedic.addedTons + fieldGuns * (tonsOf(fieldGun) + FIELD_GUN_RULES.ammoTons) + (fieldArtillery ? tonsOf(fieldArtillery) + FIELD_GUN_RULES.ammoTons : 0);
+  // The paramedic gear's 0.05 t is a per-trooper figure, so it weighs on every trooper of a platoon that has medics (TO:AUE pp. 152-153, 225), like any specialty's added tons.
   const weight = halfTon(troopers * perTroop + extra);
-  const linesWeight = lines.map((n) => (troopers === 0 ? 0 : tidy(weight * (n / troopers))));
+  // A platoon is not broken down for transport below the weight of a gun and its ammunition (TO:AUE pp. 122-123), so all the field equipment travels with the first line and the rest is shared by troopers.
+  const fieldTons = fieldGuns * (tonsOf(fieldGun) + FIELD_GUN_RULES.ammoTons) + (fieldArtillery ? tonsOf(fieldArtillery) + FIELD_GUN_RULES.ammoTons : 0);
+  const linesWeight = lines.map((n, i) => (troopers === 0 ? 0 : tidy((weight - fieldTons) * (n / troopers) + (i === 0 ? fieldTons : 0))));
   return {
     motive,
     specializations: specs,
@@ -327,6 +335,7 @@ export function platoonOf(record: InfantryRecord, catalog: Catalog): Platoon {
     fieldGun,
     fieldGuns,
     gunCrew,
+    artilleryCrew,
     fieldArtillery,
     divisor: (armor?.divisor ?? 1) * (beast?.divisor ?? 1),
     sneakSystems: sneakSystemsOf(armor, record.sneakSystems),
@@ -336,7 +345,7 @@ export function platoonOf(record: InfantryRecord, catalog: Catalog): Platoon {
     lines,
     secondaryTroopers,
     primaryTroopers,
-    secondaryLimit: secondary ? Math.min(WEAPON_RULES.maxSecondaryPerSquad, Math.floor(record.perSquad / crewNumber(secondary))) : 0,
+    secondaryLimit: secondary ? Math.min(WEAPON_RULES.maxSecondaryPerSquad, Math.floor(record.perSquad / (beast && beast.size !== "Large" && secondary.infantry?.mode === "Support" ? Math.ceil(crewNumber(secondary) / 2) : crewNumber(secondary)))) : 0,
     primaryDamage,
     capped,
     totalDamage,
@@ -386,7 +395,8 @@ export function infantryCost(record: InfantryRecord, catalog: Catalog): Infantry
   let total = (p.primaryTroopers * trooper(primaryPrice) + p.secondaryTroopers * trooper(secondaryPrice)) * factor;
   // The kit is priced for each trooper and sits inside the total the specialty factors (the "TC" of TO:AUE p. 225) multiply.
   if (p.armor) total += p.armor.cost * p.troopers;
-  // Beast-mounted infantry: 5,000 C-bills a ton of the unit (TO:AUE p. 225, "5,000xTT"), counted in the unit cost the factors below multiply.
+  // Beast-mounted infantry: 5,000 C-bills for each ton of the unit (TO:AUE p. 225, where TT is the total unit tonnage). That is the platoon's weight rounded up to the half ton (TM p. 155): the creatures, 0.2 t a
+  // rider and any specialty's added tons. It is part of the unit cost, so the specialty factors below multiply it.
   if (p.beast) {
     total += BEAST_COST.perTon * p.weight;
     notes.push("Beast-mounted infantry add 5,000 C-bills a ton of the whole unit, riders and creatures; the page prints no other cost for them.");
@@ -396,7 +406,7 @@ export function infantryCost(record: InfantryRecord, catalog: Catalog): Infantry
   if (p.armor) notes.push("The armor kit's price is added for each trooper before the specialty factors; the books do not say so in words (owner question).");
   if (p.specializations.some((s) => s.id === "scuba-mechanized")) notes.push("Mechanized SCUBA has no cost factor in the book, so it is priced at the base.");
   if (p.tagTroopers > 0) notes.push("TAG troops have no cost factor in the book, so they are priced at the base.");
-  // Field guns and field artillery are "as weapon" (TO:AUE p. 225): the weapon's price and a ton of its ammunition, added after the platoon's cost; the page gives no multiplier.
+  // Field guns and field artillery cost what the weapon does (TO:AUE p. 225): its price and a ton of its ammunition, added after the platoon's cost; the page gives no multiplier.
   const ammoPrice = (row: EquipmentRow): number | undefined => priceNumber(catalog.byId(bvEntryOf(row.id)?.options.ammo?.[0] ?? `ammo-${row.id}`));
   for (const [row, count] of [[p.fieldGun, p.fieldGuns], [p.fieldArtillery, p.fieldArtillery ? 1 : 0]] as const) {
     if (!row || count === 0) continue;
@@ -406,9 +416,10 @@ export function infantryCost(record: InfantryRecord, catalog: Catalog): Infantry
     if (ammo === undefined) unpriced.push(`${row.name} ammunition`);
     total += count * ((gun ?? 0) + (ammo ?? 0));
   }
-  // Paramedics: TC x 0.375 for each medic, added after everything else is final (TO:AUE p. 225). The page says "TC" is the total unit cost; the medics' own cost is read that way, not as a share of one trooper's (owner question).
+  // Paramedics: each medic adds 0.375 of the unit's finished cost (TO:AUE p. 225, ruled by the book panel); the weapons the medics replace are already out of that cost.
   if (p.medics > 0) {
-    total += p.medics * SECONDARY_SLOT_TROOPS.paramedic.costFactor * total;
+    const finished = Math.floor(total); // the unit's finished cost, rounded down to a whole C-bill (TM p. 281)
+    total = Math.floor(finished + p.medics * SECONDARY_SLOT_TROOPS.paramedic.costFactor * finished); // summed on that one figure, not compounded, and no specialty factor multiplies it
     notes.push("Each paramedic adds 0.375 of the platoon's total cost, as the table prints it.");
   }
   return { total: roundUpCents(total), perTrooper: p.troopers === 0 ? 0 : roundUpCents(total / p.troopers), notes, unpriced };
@@ -441,13 +452,17 @@ export function infantryBv(record: InfantryRecord, catalog: Catalog): InfantryBv
   const targetModifier = (band?.[1] ?? 0) + (jumper ? TARGET_MODIFIER.jumpBonus : 0);
   const mechanized = p.motive?.mechanized ?? false;
   // With an armor kit or a specialty the Advanced infantry rules apply (TO:AUE pp. 191, 193); a platoon is not worked out only when a weapon has no Battle Value in our table.
-  const advanced = p.armor !== undefined || p.specializations.length > 0 || p.beast !== undefined || p.xct !== undefined;
+  // The Advanced rules (defense line by damage divisor, stealth bonus, Unit Type Modifier by motive) apply whenever the platoon carries any option at Advanced level or above: an armor kit, a specialty,
+  // paramedics or TAG troops, XCT training, a beast mount, a microlite or micro-copter type. A platoon of Standard options only keeps the TechManual Battle Value; field guns are TechManual
+  // equipment, so they alone do not switch it.
+  const advanced = p.armor !== undefined || p.specializations.length > 0 || p.beast !== undefined || p.xct !== undefined || p.medics > 0 || p.tagTroopers > 0 || (p.motive !== undefined && p.motive.level !== "standard");
   const divisor = advanced ? p.divisor : 1;
   // A sneak suit adds each chosen system's bonus (TO:AUE p. 191, cumulative); the DEST suit has its own.
   const stealth = p.armor?.systems ? p.sneakSystems.reduce((sum, id) => sum + (STEALTH_MODIFIERS.find((m) => m.id === id)?.bv ?? 0), 0) : (p.armor?.bvStealth ?? 0);
   const defensive = p.troopers * divisor * INFANTRY_BV.perTrooper * (1 + targetModifier / 10 + stealth);
   const single = p.primaryTroopers * (bvOf(p.primary) ?? 0) + p.secondaryTroopers * (bvOf(p.secondary) ?? 0);
-  // A platoon with field guns cannot make anti-'Mech attacks (TO:AUE p. 123), nor can a Monstrous creature's riders (p. 108), so they are treated as the mechanized are.
+  // A platoon with field guns cannot make anti-'Mech attacks (TO:AUE p. 123), nor can the riders of Monstrous creatures (p. 108), so they are treated as the mechanized are. Riders of Very Large creatures
+  // lose one kind of anti-'Mech attack (the size table says Swarm, the text says Leg) but keep the other, so their weapons still count again.
   const noAntiMech = mechanized || p.fieldGuns > 0 || p.beast?.size === "Monstrous";
   // The books print no Battle Value for a field gun or artillery piece: it counts as the vehicle weapon it is (the weapon's BV and a ton of its ammunition), at the platoon's speed factor.
   let field = 0;

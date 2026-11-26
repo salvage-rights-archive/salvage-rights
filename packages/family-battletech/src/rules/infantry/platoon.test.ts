@@ -2,6 +2,7 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { loadCatalog } from "../catalog";
 import type { Catalog } from "../catalog";
+import { FIELD_GUN_ID } from "../../data/infantry-tables";
 import { checkInfantry } from "./checks";
 import { infantryBv, infantryCost, newInfantryRecord, offered, platoonOf, splitLines, withDefaults } from "./platoon";
 import type { InfantryRecord } from "./platoon";
@@ -78,6 +79,9 @@ describe("platoon build (the book's examples)", () => {
     expect([p.troopers, p.mp, bv.targetModifier, bv.bv]).toEqual([20, 5, 2, 47]);
     const row = (motive: string) => infantryBv(make({ primary: "inf-auto-rifle-is", armor: "flak-standard" }, { motive }), catalog).unitType;
     expect(["hover", "wheeled", "tracked", "microlite", "microcopter", "motorized", "foot", "jump"].map(row)).toEqual([0.7, 0.8, 0.9, 0.7, 0.7, 1, 1, 1]);
+    // Only Standard options: the TechManual Battle Value, so no motive row; any Advanced option (a medic here) switches to the Advanced rules.
+    const plain = make({ primary: "inf-auto-rifle-is" }, { motive: "hover" });
+    expect([infantryBv(plain, catalog).unitType, infantryBv({ ...plain, paramedics: 1 }, catalog).unitType]).toEqual([1, 0.7]);
   });
 
   it("splits a platoon into the fewest even lines, odd troopers to the first", () => {
@@ -92,11 +96,14 @@ describe("the remaining canon infantry options (TO:AUE pp. 106-108, 122-123, 153
     const medics = foot({ paramedics: 1 }); // 4 squads of 7: 4 medics, 24 shooters
     const same = foot({ perSquad: 6 }); // 24 troopers, no medics
     const p = platoonOf(medics, catalog);
-    expect([p.medics, p.primaryTroopers, p.weight]).toEqual([4, 24, 3]); // 28 x 0.085 + 4 x 0.05 = 2.58 t, to the half ton
-    expect(infantryCost(medics, catalog).total).toBeCloseTo(infantryCost(same, catalog).total * (1 + 4 * 0.375), 1);
+    expect([p.medics, p.primaryTroopers, p.weight]).toEqual([4, 24, 4]); // 28 x (0.085 + 0.05) = 3.78 t on every trooper, to the half ton
+    expect(infantryCost(medics, catalog).total).toBe(Math.floor(Math.floor(infantryCost(same, catalog).total) * (1 + 4 * 0.375))); // finished cost rounded down, then 4 x 0.375 of it
     const tag = platoonOf(foot({ tagTroops: 2, secondary: { weapon: "inf-machine-gun-support-is", perSquad: 2 } }), catalog);
     expect([tag.tagTroopers, tag.secondaryTroopers, tag.primaryTroopers, tag.specials.some((s) => /TAG attacks at 3\/6\/9/.test(s))]).toEqual([8, 0, 28, true]);
     expect(infantryCost(foot({ tagTroops: 2 }), catalog).total).toBe(infantryCost(foot(), catalog).total);
+    // A specialty with no Secondary Weapons leaves no slot: no medics are built, and the check says so.
+    const engineers = foot({ paramedics: 1, specializations: ["scuba-standard"] });
+    expect([platoonOf(engineers, catalog).medics, checkInfantry({ ...engineers, rulesLevel: "advanced" }, catalog).map((f) => f.check).includes("medic-no-secondary")]).toEqual([0, true]);
   });
 
   it("mechanized SCUBA moves 3 Sub MP and weighs 1.0 t a trooper, at the base price; XCT troops cost 1.5 times and add 0.1 to the Unit Type Modifier", () => {
@@ -121,17 +128,27 @@ describe("the remaining canon infantry options (TO:AUE pp. 106-108, 122-123, 153
     expect(checks({ ...base, fieldGun: { weapon: "heavy-gauss-rifle-is", count: 1 } })).toContain("field-gun-type");
     const art = platoonOf(foot({ fieldArtillery: "thumper-artillery-is" }, { motive: "motorized" }), catalog);
     expect([art.mp, art.mpType]).toEqual([1, "Ground"]);
+    // Both crews are counted: 3 AC/5 guns (24 troopers) and a 15 t piece (15) need 39 of 28. Light and medium N-Gauss may be guns.
+    const both = { ...base, fieldArtillery: "thumper-artillery-is" };
+    expect([platoonOf(both, catalog).artilleryCrew, checks(both)]).toEqual([15, expect.arrayContaining(["field-crew", "field-artillery-crew"])]);
+    expect(FIELD_GUN_ID.test("medium-n-gauss-is") && FIELD_GUN_ID.test("light-n-gauss-clan") && !FIELD_GUN_ID.test("heavy-n-gauss-is")).toBe(true);
+    // The first line carries the guns when the platoon is split.
+    expect(platoonOf({ ...base, squads: 10, perSquad: 10 }, catalog).linesWeight[0]).toBeGreaterThan(27);
   });
 
   it("beast-mounted infantry: the creature sets weight, movement and divisor, cost adds 5,000 a ton, and a Large creature may not carry support weapons", () => {
     const horse = foot({ beast: "horse", squads: 3, perSquad: 7 }, { motive: "beast" });
     const p = platoonOf(horse, catalog);
     expect([p.creatures, p.weight, p.mp, p.mpType]).toEqual([21, 15, 3, "Ground"]); // 21 x 0.2 + 21 x 0.5 = 14.7 t
-    expect(infantryCost(horse, catalog).total).toBeCloseTo(infantryCost({ ...horse, motive: "foot" }, catalog).total + 5000 * 15, 1);
+    expect(infantryCost(horse, catalog).total).toBeCloseTo(infantryCost({ ...horse, motive: "foot" }, catalog).total + 5000 * 15, 1); // 14.7 t, rounded up to the half ton
     const elephant = foot({ beast: "elephant", squads: 7, perSquad: 2 }, { motive: "beast" });
     expect([platoonOf(elephant, catalog).creatures, platoonOf(elephant, catalog).divisor, infantryBv(elephant, catalog).defensive]).toEqual([7, 2, 42]); // 14 x 2 x 1.5 x (1 + 0 at 2 MP)
     const support = { ...horse, secondary: { weapon: "inf-machine-gun-support-is", perSquad: 1 }, rulesLevel: "advanced" as const };
     expect(checkInfantry(support, catalog).map((f) => f.check)).toContain("beast-support");
+    // XCT for vacuum bars a beast mount; for toxic air it does not. A Very Large creature halves a support weapon's crew (the 3-crew heavy mortar becomes 2, so a squad of 2 carries 1, not 0).
+    const trained = (xct: string) => checkInfantry({ ...elephant, rulesLevel: "advanced", xct }, catalog).map((f) => f.check);
+    expect([trained("vacuum").includes("xct-beast"), trained("toxic").includes("xct-beast")]).toEqual([true, false]);
+    expect(platoonOf({ ...elephant, secondary: { weapon: "inf-mortar-heavy-is", perSquad: 2 } }, catalog).secondaryLimit).toBe(1);
   });
 
   it("an Advanced option is hidden below the Advanced rules level and before its year, unless the platoon already holds it", () => {

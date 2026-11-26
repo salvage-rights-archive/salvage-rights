@@ -37,12 +37,13 @@ test("build an infantry platoon at 320 px, save it, open its record sheet and fi
   await page.getByLabel("Paramedics a squad").fill("1");
   await page.getByLabel("Condition-trained for").selectOption({ label: "Extreme cold" });
   await expect(page.getByText(/XCT troops for extreme cold must wear/)).toBeVisible();
-  await page.getByLabel("Type", { exact: true }).selectOption({ label: "Beast-mounted" });
-  await page.getByLabel("Creature").selectOption({ label: "Elephant (Very Large, 2 Ground MP, 6 t)" });
-  await expect(page.getByLabel("Troopers a squad")).toHaveValue("2");
   await page.getByLabel("Type", { exact: true }).selectOption({ label: "Motorized" });
   await page.getByLabel("Field gun", { exact: true }).selectOption({ label: "Autocannon/5" });
   await expect(page.getByText("Each needs 8 troopers.")).toBeVisible();
+  // The record ends as a beast-mounted platoon that still holds its gun, so the saved editor shows every new field when axe scans it.
+  await page.getByLabel("Type", { exact: true }).selectOption({ label: "Beast-mounted" });
+  await page.getByLabel("Creature").selectOption({ label: "Elephant (Very Large, 2 Ground MP, 6 t)" });
+  await expect(page.getByLabel("Troopers a squad")).toHaveValue("2");
   await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.getByText("Saved.")).toBeVisible();
   const widths = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, client: document.documentElement.clientWidth }));
@@ -63,6 +64,7 @@ test("build an infantry platoon at 320 px, save it, open its record sheet and fi
     for (const url of [editor, sheet]) {
       await page.goto(`${DEV}${url.pathname.replace(/^\/salvage-rights/, "")}${url.search}`);
       await expectPage(page.getByRole("heading", { level: 1 })).toBeVisible();
+      if (url === editor) for (const label of ["Paramedics a squad", "TAG troops a squad", "Condition-trained for", "Field gun", "Field artillery", "Creature"]) await expect(page.getByLabel(label, { exact: true })).toBeVisible();
       const results = await new AxeBuilder({ page }).analyze();
       expect(results.violations, `${theme} theme, ${url.pathname}`).toEqual([]);
     }

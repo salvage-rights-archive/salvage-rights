@@ -49,7 +49,7 @@ export function checkInfantry(record: InfantryRecord, catalog: Catalog): Infantr
       const support = p.secondary?.infantry?.mode === "Support";
       if (support && record.secondary.perSquad > size.supportPerCreature) add("error", "beast-support", size.supportPerCreature === 0 ? "Troopers on Large creatures may not carry support weapons." : `A ${b.size} creature carries at most ${String(size.supportPerCreature)} support weapons.`, at("Tactical Operations: Advanced Units and Equipment", 106), "secondary");
       if (record.antiMech && b.size === "Monstrous") add("warning", "beast-anti-mech", "Riders of Monstrous creatures may not make anti-'Mech attacks, so the kit does nothing.", at("Tactical Operations: Advanced Units and Equipment", 108), "antiMech");
-      if (p.xct?.id === "vacuum" || p.xct?.id === "toxic") add("error", "xct-beast", "XCT troops may not be beast-mounted if they are to operate in vacuum or trace atmospheres.", at("Tactical Operations: Advanced Units and Equipment", 162), "xct");
+      if (p.xct?.id === "vacuum") add("error", "xct-beast", "Beast-mounted troops cannot be trained for vacuum or trace atmospheres.", at("Tactical Operations: Advanced Units and Equipment", 162), "xct");
     }
   }
 
@@ -105,6 +105,8 @@ export function checkInfantry(record: InfantryRecord, catalog: Catalog): Infantr
   const medicTags = record.paramedics > 0 || record.tagTroops > 0;
   if (medicTags) {
     if (!levelAtLeast(level, "advanced")) add("error", "medic-level", "Paramedics and TAG troops are an Advanced option.", at(TO, 153), "paramedics");
+    const none = p.specializations.find((x) => x.maxSecondary === 0);
+    if (none) add("error", "medic-no-secondary", `${none.name} carry no Secondary Weapons, so a squad has no place for paramedics or TAG troops; none are built.`, at(TO, 153), "paramedics");
     if (record.paramedics + record.tagTroops > SECONDARY_SLOT_TROOPS.perSquad) add("warning", "medic-squad", `A squad has at most ${String(SECONDARY_SLOT_TROOPS.perSquad)} paramedics and TAG troops together; the extra are left out.`, at(TO, 153), "paramedics");
     else if (p.secondary && record.secondary.perSquad + record.paramedics + record.tagTroops > SECONDARY_SLOT_TROOPS.perSquad) add("warning", "medic-secondary", "Paramedics and TAG troops each replace a Secondary Weapon trooper, so the squad's Secondary Weapons are cut to fit.", at(TO, 153), "secondary");
     if (record.tagTroops > 0 && record.tagTroops < SECONDARY_SLOT_TROOPS.tag.minPerSquad) add("warning", "tag-minimum", `TAG troops only function when ${String(SECONDARY_SLOT_TROOPS.tag.minPerSquad)} are assigned to a squad.`, at(TO, 153), "tagTroops");
@@ -116,7 +118,7 @@ export function checkInfantry(record: InfantryRecord, catalog: Catalog): Infantr
     if (!env) add("warning", "xct-unknown", "The XCT environment is not in our table.", at(TO, 162), "xct");
     else {
       if (record.armor === null || !env.armor.includes(record.armor)) add("error", "xct-armor", `XCT troops for ${env.label.toLowerCase()} must wear one of: ${env.armor.map((id) => armorKitOf(id)?.name ?? id).join(", ")}.`, at(TO, 162), "armor");
-      if ((env.id === "vacuum" || env.id === "toxic") && (record.motive === "microlite" || record.motive === "microcopter")) add("error", "xct-vtol", "XCT troops may not be mechanized VTOL infantry if they are to operate in vacuum or trace atmospheres.", at(TO, 162), "xct");
+      if (env.id === "vacuum" && (record.motive === "microlite" || record.motive === "microcopter")) add("error", "xct-vtol", "Mechanized VTOL troops cannot be trained for vacuum or trace atmospheres.", at(TO, 162), "xct");
     }
   }
   const gunRow = p.fieldGun;
@@ -130,7 +132,7 @@ export function checkInfantry(record: InfantryRecord, catalog: Catalog): Infantr
       else {
         if (!FIELD_GUN_ID.test(gunRow.id)) add("error", "field-gun-type", `${gunRow.name} cannot be a field gun: only autocannons and Gauss weapons (not Heavy or Hyper-Assault) can.`, at(FP.book, 122), "fieldGun");
         if (p.fieldGuns < 1) add("warning", "field-count", "A field gun is chosen but the platoon has none.", at(FP.book, FP.page), "fieldGun");
-        if (p.fieldGuns > Math.floor(p.troopers / p.gunCrew)) add("error", "field-crew", `Each ${gunRow.name} needs ${String(p.gunCrew)} troopers to operate; ${String(p.troopers)} troopers crew ${String(Math.floor(p.troopers / p.gunCrew))}.`, at(FP.book, FP.page), "fieldGun");
+        if (p.fieldGuns * p.gunCrew + p.artilleryCrew > p.troopers) add("error", "field-crew", `Each ${gunRow.name} needs ${String(p.gunCrew)} troopers to operate${p.artilleryCrew > 0 ? `, and the artillery piece ${String(p.artilleryCrew)} more` : ""}; ${String(p.troopers)} troopers crew ${String(Math.max(0, Math.floor((p.troopers - p.artilleryCrew) / p.gunCrew)))}.`, at(FP.book, FP.page), "fieldGun");
         if (record.antiMech) add("warning", "field-anti-mech", "A platoon with field guns cannot make anti-'Mech attacks, so the kit does nothing.", at(FP.book, FP.page), "antiMech");
       }
     }
@@ -139,7 +141,7 @@ export function checkInfantry(record: InfantryRecord, catalog: Catalog): Infantr
       else {
         if (!FIELD_ARTILLERY_ID.test(artRow.id)) add("error", "field-artillery-type", `${artRow.name} cannot be field artillery: only Sniper, Thumper, Long Tom, Arrow IV and the artillery cannons can.`, at(FP.book, 122), "fieldArtillery");
         const tons = typeof artRow.tons === "number" ? artRow.tons : 0;
-        if (p.troopers < tons) add("error", "field-artillery-crew", `${artRow.name} needs a platoon of at least ${String(tons)} troopers (its weight in tons).`, at(FP.book, 122), "fieldArtillery");
+        if (p.troopers < tons || p.fieldGuns * p.gunCrew + p.artilleryCrew > p.troopers) add("error", "field-artillery-crew", `${artRow.name} needs ${String(p.artilleryCrew)} troopers (its weight in tons) beside any gun crews, and a platoon at least that large.`, at(FP.book, 122), "fieldArtillery");
       }
     }
     for (const [row, field] of [[gunRow, "fieldGun"], [artRow, "fieldArtillery"]] as const) {

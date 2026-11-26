@@ -203,17 +203,17 @@ export const SPECIALIZATIONS: Specialization[] = [
   { id: "scuba-standard", name: "SCUBA (standard)", maxSquad: 10, maxPlatoon: [30, 4], maxSecondary: 0, mp: 1, mpType: "Sub", addedTons: 0.05, costFactor: 2, motives: ["foot"], prohibited: "Water (depth 3+)", bvModifier: 0.1, year: 1950, cite: S, checked: "page" },
   { id: "scuba-motorized", name: "SCUBA (motorized)", maxSquad: 6, maxPlatoon: [12, 2], maxSecondary: 1, mp: 2, mpType: "Sub", addedTons: 0.1, costFactor: 2.5, motives: ["motorized"], prohibited: "Water (depth 3+)", bvModifier: 0.1, year: 1950, cite: S, checked: "page" },
   // SCUBA (Mechanized), p. 153: 5 a squad, 20 troopers in 4 squads, 2 Secondary Weapons a squad, 3 Sub MP, 0.9 t added, Depth 0 / non-water terrain. The p. 225 cost table has no row for it
-  // and the p. 153 table prints no date, so it is priced at the base (factor 1) and has no year; the Unit Type Modifiers Table's one SCUBA row (+0.1) is applied. The book says only that it works "using the rules governing submarine vehicles".
+  // and the p. 153 table prints no date, so it is priced at the base (factor 1) and has no year; the Unit Type Modifiers Table's one SCUBA row (+0.1) is applied. The book says only that it follows the submarine vehicle rules.
   { id: "scuba-mechanized", name: "SCUBA (mechanized)", maxSquad: 5, maxPlatoon: [20, 4], maxSecondary: 2, mp: 3, mpType: "Sub", addedTons: 0.9, costFactor: 1, motives: ["hover", "tracked", "wheeled"], prohibited: "Depth 0 / non-water", bvModifier: 0.1, cite: S, checked: "page" },
 ];
 export const specializationOf = (id: string): Specialization | undefined => SPECIALIZATIONS.find((s) => s.id === id);
 /** Weight of a specialized trooper before the added tons: Combat engineers and Marines use the motive's own figure (with the anti-'Mech kit included), the others 0.1 (TO:AUE p. 152). */
 export const SPECIALIST_BASE_TONS: Record<MotiveId, number> = { foot: 0.1, motorized: 0.21, jump: 0.18, hover: 1, tracked: 1, wheeled: 1, microlite: 1.5, microcopter: 2, beast: 0.2 };
 
-/** Paramedics and TAG troops (TO:AUE p. 153 and its footnote): not whole-platoon specialties but troopers who each replace one Secondary Weapon trooper, at most 2 of the two kinds together
- * a squad. They do not slow the platoon. Paramedics: 0.05 t added a medic (p. 225: "+0.05/trooper"; we count it on the medics only, as the page is silent), and a cost of TC x 0.375 a medic
- * "added to the total platoon cost after finalizing calculations". TAG troops: no added weight, and neither p. 153 nor p. 225 prints a cost factor or a date for them, so they are priced at
- * the base. A TAG trooper "only functions if assigned to a minimum of 2 troopers per squad", and the TAG has a range of 3/6/9 hexes whatever the platoon's other weapons are. Advanced. */
+/** Paramedics and TAG troops (TO:AUE p. 153 and its footnote): not whole-platoon specialties but troopers who each take the place of one Secondary Weapon trooper, two of the pair a squad at most,
+ * and only on a platoon that may carry Secondary Weapons. They do not slow the platoon. The gear adds 0.05 t to every trooper of the platoon and each medic costs 0.375 of the
+ * platoon's finished cost, added once everything else is final (p. 225). TAG troops add no weight; neither page prints a cost factor or a date for them, so they are priced at the base. A TAG trooper works
+ * only with 2 assigned to the squad, and the TAG reaches 3/6/9 hexes whatever else the platoon carries. Advanced. */
 export const SECONDARY_SLOT_TROOPS = {
   perSquad: 2,
   paramedic: { addedTons: 0.05, costFactor: 0.375, cite: { book: TO, page: 153 }, checked: "page" },
@@ -230,8 +230,8 @@ export interface XctRow extends Cited {
 const ENV_HOSTILE = ["environment-hostile", "environment-marine"];
 const SPACESUITS = ["spacesuit", "spacesuit-combat"];
 const XC = { book: TO, page: 162 };
-/** Xenoplanetary Condition-Trained troops (TO:AUE pp. 162-163, Advanced, introduced in early spaceflight): the platoon must wear one of the armor kits its environment names. Cost TC x 1.5 (p. 225), no added weight, and the Unit Type Modifiers
- * Table (p. 193, special cases) adds 0.1. "Cooling Suit (any type)" is taken as both the MechWarrior cooling suit and the cooling vest. Beast-mounted and mechanized VTOL platoons may not be trained for vacuum or trace atmospheres. */
+/** Xenoplanetary Condition-Trained troops (TO:AUE pp. 162-163, Advanced, early spaceflight): the platoon wears one of the armor kits its environment names. Cost x1.5 (p. 225), no added weight, and the Unit Type
+ * Modifiers Table (p. 193, special cases) adds 0.1. Where the page names cooling suits of any type, both our cooling suit and cooling vest count. Beast-mounted and mechanized VTOL platoons cannot be trained for vacuum or trace atmospheres (not toxic ones). */
 export const XCT = { costFactor: 1.5, bvModifier: 0.1, year: 2200, cite: { book: TO, page: 163 }, checked: "page" } as const;
 export const XCT_ENVIRONMENTS: XctRow[] = [
   { id: "cold", label: "Extreme cold", armor: ["snowsuit", ...ENV_HOSTILE, ...SPACESUITS], cite: XC, checked: "page" },
@@ -247,7 +247,7 @@ export type CreatureSize = "Large" | "Very Large" | "Monstrous";
 /** Creature Size Table (TO:AUE p. 106): troopers a creature carries, creatures a platoon may have, the to-hit modifier against the platoon, and the Support Weapons a creature carries. A Very Large or Monstrous beast is a squad of its own. */
 export const CREATURE_SIZES: Record<CreatureSize, { troops: number; creatures: number; attackerToHit: number; supportPerCreature: number; antiMech: string; buildingMp: number }> = {
   Large: { troops: 1, creatures: 21, attackerToHit: 0, supportPerCreature: 0, antiMech: "any", buildingMp: 0 },
-  "Very Large": { troops: 2, creatures: 7, attackerToHit: -1, supportPerCreature: 2, antiMech: "no Leg attacks", buildingMp: 1 },
+  "Very Large": { troops: 2, creatures: 7, attackerToHit: -1, supportPerCreature: 2, antiMech: "one kind barred (the table says Swarm, the text Leg)", buildingMp: 1 },
   Monstrous: { troops: 4, creatures: 2, attackerToHit: -2, supportPerCreature: 3, antiMech: "none", buildingMp: 2 },
 };
 export const CREATURE_SIZE_CITE: Cited = { cite: { book: TO, page: 106 }, checked: "page" };
@@ -282,7 +282,7 @@ export const BEASTS: Beast[] = [
   { id: "hipposaur", name: "Hipposaur", size: "Monstrous", weight: 35.5, mp: 2, mpType: "Submarine", bonusInfantry: 10, bonusOther: 4, divisor: 4, prohibited: "1 Ground MP on land; riders need SCUBA gear and the hipposaur surfaces once every 2 turns", cite: BT, checked: "page" },
 ];
 export const beastOf = (id: string): Beast | undefined => BEASTS.find((b) => b.id === id);
-/** Beast-mounted infantry cost 5,000 C-bills for each ton of the unit (p. 225: "5,000xTT", TT the total unit tonnage), and the p. 225 row sets no cost for riders or weapons beyond the standard rules. */
+/** Beast-mounted infantry cost 5,000 C-bills for each ton of the whole unit, the platoon's tonnage rounded up to the half ton (p. 225, TM p. 155); that row sets no other cost for riders or weapons. */
 export const BEAST_COST = { perTon: 5000, cite: { book: TO, page: 225 }, checked: "page" } as const;
 
 /** Field guns and field artillery (TO:AUE p. 122-123; Advanced; only motorized platoons and wheeled or tracked mechanized platoons may tow them). The weapons are rows of the one catalog. */
@@ -297,8 +297,9 @@ export const FIELD_GUN_RULES = {
   cite: { book: TO, page: 123 },
   checked: "page" as const,
 };
-/** Catalog ids a field gun may be: vehicular-scale autocannons (light, standard, Ultra, LB-X, rotary, HVAC, ProtoMech) and Gauss weapons except Heavy and Hyper-Assault (p. 122). Prototype, primitive and capital rows are not offered. */
-export const FIELD_GUN_ID = /^(ac-\d+|light-ac-\d+|ultra-ac-\d+|lb-\d+-x-ac|rotary-ac-\d+|hyper-velocity-ac-\d+|protomech-ac-\d+|improved-ac-\d+|gauss-rifle|light-gauss-rifle|improved-gauss-rifle|ap-gauss-rifle|silver-bullet-gauss|magshot)-(is|clan)$/;
+/** Catalog ids a field gun may be: vehicular-scale autocannons (light, standard, Ultra, LB-X, rotary, HVAC, ProtoMech) and every Gauss weapon but the Heavy and Hyper-Assault kinds (p. 122), so the light and medium N-Gauss too.
+ * Prototype and primitive rows are not offered. The cannon rifles the page also allows have no catalog row yet. */
+export const FIELD_GUN_ID = /^(ac-\d+|light-ac-\d+|ultra-ac-\d+|lb-\d+-x-ac|rotary-ac-\d+|hyper-velocity-ac-\d+|protomech-ac-\d+|improved-ac-\d+|gauss-rifle|light-gauss-rifle|improved-gauss-rifle|ap-gauss-rifle|silver-bullet-gauss|magshot|light-n-gauss|medium-n-gauss)-(is|clan)$/;
 /** Catalog ids a field artillery piece may be: Sniper, Thumper and Long Tom artillery, Arrow IV, and the artillery cannons (p. 122; the cannons are the Artillery Cannon of p. 97). */
 export const FIELD_ARTILLERY_ID = /^(arrow-iv|thumper-artillery|sniper-artillery|long-tom-artillery|thumper-cannon|sniper-cannon|long-tom-cannon)-(is|clan)$/;
 
