@@ -243,7 +243,9 @@ describe("Tactical Operations equipment", () => {
     // Alternative munitions added from TO:AUE p. 229 (mortar, remote sensor dispenser and Copperhead rounds): their Battle Value is the Battle Value work's to settle.
     const newMunitions = (r: EquipmentRow) => /^ammo-(mortar|copperhead|remote-sensor-dispenser)-/.test(r.id);
     const leftOpen = (r: EquipmentRow) => r.id in UNFIXED || SPECIAL_MUNITIONS.stems.includes(stemOf(r.id)) || newMunitions(r);
-    const open = catalog.all().filter((r) => !known.has(r.id) && !zero(r) && !leftOpen(r) && !["heat-sink", "jump-jet"].includes(r.kind) && !LAM_BV.fuelSlotIds.includes(r.id) && !(r.id in CASE_ROWS));
+    // Abomination-only rows (Gothic) have no Battle Value: Abominations carry none.
+    const abominationOnly = (r: EquipmentRow) => r.units?.length === 1 && r.units[0] === "abomination";
+    const open = catalog.all().filter((r) => !abominationOnly(r) && !known.has(r.id) && !zero(r) && !leftOpen(r) && !["heat-sink", "jump-jet"].includes(r.kind) && !LAM_BV.fuelSlotIds.includes(r.id) && !(r.id in CASE_ROWS));
     expect(open.map((r) => r.id)).toEqual([]);
   });
 });
