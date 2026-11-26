@@ -329,7 +329,8 @@ export function infantryBv(record: InfantryRecord, catalog: Catalog): InfantryBv
   const weaponBv = mechanized ? single : single * 2; // all non-mechanized infantry can make anti-'Mech attacks: the weapons count again
   const speed = speedFactor(p.mp);
   const offensive = weaponBv * speed;
-  const antiMechSkill = mechanized || !record.antiMech ? ANTI_MECH.defaultSkill : record.skills.antiMech;
+  // Mechanized infantry use the 5 column and change only Gunnery (BV v4.1 p. 314; errata v8.0 for TM p. 155 drops the fixed 8 for them); other platoons without the kit are fixed at 8.
+  const antiMechSkill = mechanized ? 5 : record.antiMech ? record.skills.antiMech : ANTI_MECH.defaultSkill;
   const skill = skillMultiplier({ gunnery: record.skills.gunnery, piloting: antiMechSkill });
   const unitType = advanced ? 1 + p.specializations.reduce((sum, s) => sum + s.bvModifier, 0) : 1;
   const worked = unvalued.length === 0 && p.primary !== undefined && reason === undefined;

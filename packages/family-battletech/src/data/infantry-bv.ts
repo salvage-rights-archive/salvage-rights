@@ -1,4 +1,4 @@
-// Conventional Infantry Weapons BV Table (TechManual Infantry Tables v4.1, replacement pages 4-8, read against the page images), keyed by catalog id without its tech-base suffix; the second table is the Inferno-ammunition line where the table prints one. Figures only.
+// Conventional Infantry Weapons BV Table (TechManual Infantry Tables v4.1, replacement pages 4-8, read against the page images), keyed by catalog id without its tech-base suffix. Figures only.
 export const INFANTRY_WEAPON_BV: Record<string, number> = {
   "inf-bow-compound": 0.01,
   "inf-bow-daikyu": 0.01,
@@ -187,23 +187,4 @@ export const INFANTRY_WEAPON_BV: Record<string, number> = {
   "inf-support-laser-heavy-semi-portable": 7.53,
   "inf-support-laser-ultra-heavy": 20.31,
   "inf-support-pulse-laser-semi-portable": 2.81,
-};
-export const INFANTRY_INFERNO_BV: Record<string, number> = {
-  "inf-grenade": 0.17,
-  "inf-grenade-mini": 0.1,
-  "inf-grenade-launcher": 1.04,
-  "inf-grenade-launcher-automatic": 1.25,
-  "inf-grenade-launcher-heavy": 2.11,
-  "inf-lrm-launcher-corean-farshot": 1.36,
-  "inf-mortar-heavy": 2.44,
-  "inf-mortar-light": 0.79,
-  "inf-mrm-launcher": 1.33,
-  "inf-recoilless-rifle-heavy": 1.74,
-  "inf-recoilless-rifle-light": 0.97,
-  "inf-recoilless-rifle-medium": 1.33,
-  "inf-srm-launcher-standard-two-shot": 3.48,
-  "inf-srm-launcher-heavy": 1.74,
-  "inf-srm-launcher-light": 1.74,
-  "inf-laser-rifle-mauser-iic": 6.45,
-  "inf-grenade-launcher-heavy-auto": 2.93,
 };
