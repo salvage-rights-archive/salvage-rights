@@ -1,7 +1,7 @@
 // The Alpha Strike unit as a card shows it, plus the player's own additions. Plain data; nothing here throws on text it does not
 // understand: an unknown special is kept as typed (`raw`) and reported by `unitFindings`, never dropped.
 import type { RulesLevel } from "../data/chassis";
-import { AS_AEROSPACE_ROLES, AS_CITES, AS_EDITION, AS_GROUND_ROLES, AS_MOVE_MODES, AS_SPECIAL_CODES, AS_UNIT_TYPES, ARTX_FAMILY, DEFAULT_SKILL } from "../data/alpha-strike";
+import { AS_AEROSPACE_ROLES, AS_CITES, AS_EDITION, AS_GROUND_ROLES, AS_MOVE_MODES, AS_PLAY_SPECIAL_CODES, AS_SPECIAL_CODES, AS_UNIT_TYPES, ARTX_FAMILY, DEFAULT_SKILL } from "../data/alpha-strike";
 
 /** 8" ground; 6" with mode "j" jump; vehicles carry their motive letter. */
 export interface AsMove {
@@ -145,10 +145,10 @@ function splitTop(text: string): string[] {
 }
 
 /** A code is known if it is on the Appendix list or is an artillery code. */
-export const knownSpecial = (code: string): boolean => AS_SPECIAL_CODES.includes(code) || ARTX_FAMILY.test(code);
+export const knownSpecial = (code: string): boolean => AS_SPECIAL_CODES.includes(code) || AS_PLAY_SPECIAL_CODES.includes(code) || ARTX_FAMILY.test(code);
 
 // Longest code first, so BHJ2 wins over BHJ; the value marks that may follow a code start with a digit, a slash, a dash or a star.
-const BY_LENGTH = [...AS_SPECIAL_CODES].sort((a, b) => b.length - a.length);
+const BY_LENGTH = [...AS_SPECIAL_CODES, ...AS_PLAY_SPECIAL_CODES].sort((a, b) => b.length - a.length);
 
 /** Splits the head of a special into its code and the value text after it. */
 function splitCode(head: string): { code: string; rest: string } {
