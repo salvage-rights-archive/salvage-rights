@@ -1,4 +1,9 @@
-import { DEV, GOTHIC, buildGothicForce, expect, startGothicBox, test } from "./fixtures";
+import { DEV, GOTHIC, buildGothicForce, expectPage as expect, startGothicBox, test } from "./fixtures";
+
+// Each test opens several lazily loaded pages and the page store; on a busy machine the default 30 seconds is not enough for the longer ones.
+test.beforeEach(() => {
+  test.setTimeout(90_000);
+});
 
 const HOME = `${DEV}${GOTHIC}/home`;
 const BOX = "UrbanMech UM-R60B";

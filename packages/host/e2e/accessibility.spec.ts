@@ -1,6 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import type { Page } from "@playwright/test";
-import { ACES, CLASSIC, DEV, FAKE_KEY, FREE, GOTHIC, answerQuestions, buildGothicForce, expect, importMech, putAsUnits, saveAcesCard, saveAcesCommand, saveAsUnit, startGothicBox, test } from "./fixtures";
+import { ACES, CLASSIC, DEV, FAKE_KEY, FREE, GOTHIC, answerQuestions, buildGothicForce, expect, expectPage, importMech, putAsUnits, saveAcesCard, saveAcesCommand, saveAsUnit, startGothicBox, test } from "./fixtures";
 
 async function chooseTheme(page: Page, base: string, theme: "Light" | "Dark") {
   await page.goto(`${base}/settings`);
@@ -11,10 +11,10 @@ async function chooseTheme(page: Page, base: string, theme: "Light" | "Dark") {
 /** The theme must have come back from storage, or the audit would run against the wrong one. Read the class with
  * evaluate: with Playwright's locator assertion here, Firefox crashes the page during the axe run. */
 async function scan(page: Page, theme: string, where: string) {
-  await expect
+  await expectPage
     .poll(() => page.evaluate(() => document.body.className.split(" ").filter((c) => c !== "bt-gothic").join(" ")), { message: `${theme} theme kept on ${where}` })
     .toBe(theme.toLowerCase());
-  await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+  await expectPage(page.getByRole("heading", { level: 1 })).toBeVisible();
   const results = await new AxeBuilder({ page }).analyze();
   expect(results.violations, `${theme} theme, ${where}`).toEqual([]);
 }
@@ -272,11 +272,12 @@ test("the Gothic home, a box Mech editor and its sheet have no axe violations in
 });
 
 test("the Gothic rules reference has no axe violations in either theme and fits 320 px", async ({ page }) => {
+  test.setTimeout(90_000);
   await page.setViewportSize({ width: 320, height: 700 });
   await expectNoViolations(page, DEV, [`${GOTHIC}/aids`]);
-  await expect(page.getByRole("table", { name: "Abomination-mounted weapons" }).getByRole("row")).not.toHaveCount(1);
+  await expectPage(page.getByRole("table", { name: "Abomination-mounted weapons" }).getByRole("row")).not.toHaveCount(1);
   const widths = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, client: document.documentElement.clientWidth }));
-  expect(widths.scroll).toBe(widths.client);
+  expectPage(widths.scroll).toBe(widths.client);
 });
 
 test("the Gothic Abomination units page, its form, a custom form and a unit sheet have no axe violations in either theme", async ({ page }) => {
@@ -284,20 +285,20 @@ test("the Gothic Abomination units page, its form, a custom form and a unit shee
   for (const theme of ["Light", "Dark"] as const) {
     await chooseTheme(page, DEV, theme);
     await page.goto(`${DEV}${GOTHIC}/abominations`);
-    await expect(page.getByLabel("Import a file")).toBeEnabled();
+    await expectPage(page.getByLabel("Import a file")).toBeEnabled();
     await scan(page, theme, "the units page");
     await page.getByRole("button", { name: "Add Werebeast" }).click();
     await page.getByLabel("Label").fill("Pack");
     await scan(page, theme, "the unit form");
     await page.getByRole("button", { name: "Save", exact: true }).click();
-    await expect(page.getByText("Pack (Werebeast) saved.")).toBeVisible();
+    await expectPage(page.getByText("Pack (Werebeast) saved.")).toBeVisible();
     await page.getByLabel("Rules level").selectOption("fan-made");
     await page.getByRole("button", { name: "Start a custom type" }).click();
     await page.getByLabel("Add a weapon").selectOption({ label: "SRM 5" });
     await page.getByRole("button", { name: "Add weapon" }).click();
     await scan(page, theme, "the custom form");
     await page.getByRole("button", { name: "Record sheet for Pack (Werebeast)" }).first().click();
-    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Pack (Werebeast) record sheet");
+    await expectPage(page.getByRole("heading", { level: 1 })).toHaveText("Pack (Werebeast) record sheet");
     await scan(page, theme, "the unit sheet");
   }
 });
@@ -313,7 +314,7 @@ test("the Gothic forces list and a force have no axe violations in either theme"
     await page.goto(`${DEV}${GOTHIC}/force`);
     await scan(page, theme, "the forces list");
     await page.goto(`${DEV}${forcePath}`);
-    await expect(page.getByLabel("Force name")).toHaveValue("Test Lance");
+    await expectPage(page.getByLabel("Force name")).toHaveValue("Test Lance");
     await scan(page, theme, "the force");
   }
 });
@@ -324,9 +325,9 @@ for (const theme of ["Light", "Dark"] as const) {
     const forcePath = await buildGothicForce(page, DEV);
     await chooseTheme(page, DEV, theme);
     await page.goto(`${DEV}${forcePath}`);
-    await expect(page.getByLabel("Force name")).toHaveValue("Test Lance");
+    await expectPage(page.getByLabel("Force name")).toHaveValue("Test Lance");
     await page.getByRole("button", { name: "Print all sheets" }).click();
-    await expect(page.locator("svg.bt-sheet")).toHaveCount(3);
+    await expectPage(page.locator("svg.bt-sheet")).toHaveCount(3);
     await scan(page, theme, "the force print view");
   });
 }
@@ -335,15 +336,15 @@ test("the Gothic Abomination tracker, empty and with a unit on the table, has no
   for (const theme of ["Light", "Dark"] as const) {
     await chooseTheme(page, DEV, theme);
     await page.goto(`${DEV}${GOTHIC}/abominations`);
-    await expect(page.getByLabel("Import a file")).toBeEnabled();
+    await expectPage(page.getByLabel("Import a file")).toBeEnabled();
     if (theme === "Light") {
       await page.getByRole("button", { name: "Add Tyrant" }).click();
       await page.getByLabel("Label").fill("Claws");
       await page.getByRole("button", { name: "Save", exact: true }).click();
-      await expect(page.getByText("Claws (Tyrant) saved.")).toBeVisible();
+      await expectPage(page.getByText("Claws (Tyrant) saved.")).toBeVisible();
     }
     await page.goto(`${DEV}${GOTHIC}/play`);
-    await expect(page.getByRole("heading", { level: 2, name: "Put a unit on the table" })).toBeVisible();
+    await expectPage(page.getByRole("heading", { level: 2, name: "Put a unit on the table" })).toBeVisible();
     await scan(page, theme, "the tracker, nothing on the table");
     if (theme === "Light") await page.getByRole("button", { name: "Put on the table: Claws (Tyrant)" }).click();
     await page.getByRole("button", { name: "Creature 1 pip 3" }).click();

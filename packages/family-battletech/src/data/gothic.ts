@@ -39,8 +39,16 @@ export interface AbomClass {
   checked: Checked;
 }
 
-/** The most stack weight one hex holds (rulebook p. 69). A BattleMech in the hex (conflict 36) is not built. */
+/** The most stack weight one hex holds (rulebook p. 69). */
 export const HEX_STACK_WEIGHT = 6;
+
+/**
+ * What a BattleMech in the hex takes off every class's stack limit and off the hex's stack weight (p. 64 footnote, p. 69). The book
+ * prints 2 for a friendly 'Mech, and p. 69 says "friendly or otherwise". The 4 for an enemy 'Mech is the owner's ruling (2026-11-26,
+ * conflict 36), the one figure here the book does not print.
+ */
+export const MECH_STACK_REDUCTION = { friendly: 2, enemy: 4 } as const;
+export type MechInHex = "none" | keyof typeof MECH_STACK_REDUCTION;
 
 const P64 = { book: GOTHIC_BOOK, page: 64 };
 export const ABOM_CLASSES: readonly AbomClass[] = [

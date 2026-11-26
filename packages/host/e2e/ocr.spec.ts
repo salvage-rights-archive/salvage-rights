@@ -1,6 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import type { Page } from "@playwright/test";
-import { DEV, FREE, expect, test } from "./fixtures";
+import { DEV, FREE, expect, expectPage, test } from "./fixtures";
 
 // The card reader runs in Chromium here; the worker and offline cache are checked in that browser only.
 test.beforeEach(({ browserName }) => {
@@ -35,7 +35,7 @@ test("nothing of the card reader loads until Read is pressed, then a drawn card 
     if (!request.url().startsWith(DEV) && !request.url().startsWith("data:") && !request.url().startsWith("blob:")) outside.push(request.url());
   });
   await page.goto(PAGE);
-  await expect(page.getByRole("button", { name: "Keep the card reader on this device" })).toBeEnabled();
+  await expectPage(page.getByRole("button", { name: "Keep the card reader on this device" })).toBeEnabled();
   await page.getByRole("button", { name: "Draw a test card" }).click();
   expect(readerFiles).toEqual([]);
 
@@ -52,7 +52,7 @@ test("the reader read page passes the axe scan in both themes", async ({ page })
     await page.goto(`${DEV}/settings`);
     await page.getByRole("radio", { name: theme }).check();
     await page.goto(PAGE);
-    await expect(page.getByRole("button", { name: "Keep the card reader on this device" })).toBeVisible();
+    await expectPage(page.getByRole("button", { name: "Keep the card reader on this device" })).toBeVisible();
     await page.getByRole("button", { name: "Draw a test card" }).click();
     await page.getByRole("button", { name: "Read", exact: true }).click();
     await expect(page.getByRole("heading", { name: "What was read" })).toBeVisible({ timeout: 90_000 });
@@ -70,7 +70,7 @@ test("a kept card reader works with no connection", async ({ page, context }) =>
 
   await context.setOffline(true);
   await page.goto(PAGE);
-  await expect(page.getByText("The card reader works without a connection.")).toBeVisible();
+  await expectPage(page.getByText("The card reader works without a connection.")).toBeVisible();
   await readTestCard(page);
   await context.setOffline(false);
 });

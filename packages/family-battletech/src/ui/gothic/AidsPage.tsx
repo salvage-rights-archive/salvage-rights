@@ -1,11 +1,12 @@
 // The Gothic rules reference: the figures of the optional rules, the scenario conditions and the Abomination play tables, each with
 // its pages. Figures and short headings only; every table is built from data/gothic.ts and the catalog (aidTables.ts).
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { Link } from "react-router";
 import { GOTHIC_BASE } from "../../data/rulesets";
 import { loadCatalog } from "../../rules/catalog";
 import type { Catalog } from "../../rules/catalog";
 import { aidTables, citeText } from "./aidTables";
+import StackingAid from "./StackingAid";
 import { useGothicTheme } from "./theme";
 
 export default function AidsPage() {
@@ -41,7 +42,8 @@ export default function AidsPage() {
         </p>
       )}
       {aidTables(catalog).map((table) => (
-        <section key={table.id} className="bt-section" data-testid="aid-table" data-table={table.id}>
+        <Fragment key={table.id}>
+        <section className="bt-section" data-testid="aid-table" data-table={table.id}>
           <h2 id={`aid-${table.id}`}>{table.title}</h2>
           {table.purpose !== undefined && <p className="bt-hint">{table.purpose}</p>}
           {/* The wrapper scrolls on its own when a table is wider than a phone, so the page never does. */}
@@ -69,6 +71,8 @@ export default function AidsPage() {
             {citeText(table.cites)}
           </p>
         </section>
+        {table.id === "classes" && <StackingAid />}
+        </Fragment>
       ))}
     </div>
   );

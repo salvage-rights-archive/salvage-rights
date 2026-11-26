@@ -68,6 +68,21 @@ describe("The Abomination tracker", () => {
     expect(fact("Damage this phase")).toBe("0");
   });
 
+  it("shows the class height and facing, and the picked planetary condition's figures after ultraviolet sensitivity", async () => {
+    const user = userEvent.setup();
+    await play("colossus", user);
+    expect(fact("Standing height")).toBe("2 levels (p. 64)");
+    expect(fact("Facing")).toMatch(/^Declared/);
+    await user.selectOptions(screen.getByLabelText("Planetary condition"), "Glaring Sun");
+    expect(fact("Glaring Sun: extra MP per hex")).toBe("+2");
+    expect(fact("Weapon attack modifier")).toBe("+3");
+    expect(screen.getByText("Against a 'Mech: 1 less for every 20 heat on its scale (p. 90)")).toBeTruthy();
+    expect(screen.getAllByText(/^Against a .Mech: 1 less for every 20 heat on its scale/)).toHaveLength(2);
+    expect(fact("Physical attack modifier")).toBe("+1 (p. 90)");
+    await user.selectOptions(screen.getByLabelText("Planetary condition"), "None");
+    expect(screen.queryByText("Weapon attack modifier")).toBeNull();
+  });
+
   it("takes a creature out when its last pip is marked and raises the attack modifier", async () => {
     const user = userEvent.setup();
     await play("tyrant", user);

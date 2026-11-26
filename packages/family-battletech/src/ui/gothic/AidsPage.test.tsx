@@ -1,4 +1,5 @@
 import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
 import { afterEach, describe, expect, it } from "vitest";
 import { ABOM_CLASSES, HOBBLE_LOCATIONS, MOB_LOCATIONS, PLANETARY_CONDITIONS, RANDOM_CREATURE } from "../../data/gothic";
@@ -35,6 +36,17 @@ describe("Gothic rules reference", () => {
   it("names its pages under every table", async () => {
     const sections = await page();
     for (const section of sections) expect(within(section).getByTestId("aid-cite").textContent, section.dataset["table"]).toMatch(/\(Catalyst Game Labs\), pp?\. \d/);
+  });
+
+  it("the stacking aid says what is legal with an enemy 'Mech and how much room is left", async () => {
+    const user = userEvent.setup();
+    await page();
+    const result = screen.getByTestId("stack-result");
+    await user.click(screen.getByLabelText(/An enemy 'Mech/));
+    expect(result.textContent).toBe("Legal: 0 of 2 Swarmer equivalents used.Room left: Swarmer 2.");
+    await user.clear(screen.getByLabelText("Swarmer units on the ground"));
+    await user.type(screen.getByLabelText("Swarmer units on the ground"), "3");
+    expect(result.textContent).toBe("Not legal: Swarmer is over its limit of 2 and the units use 3 of 2 Swarmer equivalents.No room left.");
   });
 
   it("keeps prose out: outside the tables each block is at most one sentence", async () => {

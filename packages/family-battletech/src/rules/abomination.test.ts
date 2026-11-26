@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { ABOM_TYPES } from "../data/gothic";
 import { loadCatalog, mountableOn, type Catalog } from "./catalog";
-import { checkAbomination, checkForce, clusterColumn, creatureFor, damageModifier, initiativeModifiers, launcherTubes, mobHobbleModifier, newAbominationUnit, newForceMech, newForceUnit, stumbleTarget, unitStats, withDefaults } from "./abomination";
+import { checkAbomination, checkForce, clusterColumn, conditionEffect, creatureFor, damageModifier, initiativeModifiers, launcherTubes, mobHobbleModifier, newAbominationUnit, newForceMech, newForceUnit, stackCheck, stumbleTarget, unitStats, withDefaults } from "./abomination";
 
 let catalog: Catalog;
 beforeAll(async () => {
@@ -118,5 +118,44 @@ describe("forces", () => {
     { name: "a Frayed pilot who is not the leader", mechs: [mech("m"), mech("n", { frayed: true })], units: [], expected: [] },
   ])("Initiative: $name", ({ mechs, units, expected }) => {
     expect(initiativeModifiers({ mechs, units }).map((m) => m.value)).toEqual(expected);
+  });
+});
+describe("stacking (rulebook pp. 64 and 69, with the owner's ruling for an enemy 'Mech)", () => {
+  const ids = ["swarmer", "hulk", "giant", "titan"] as const;
+  it.each([
+    ["none", [6, 3, 2, 1]],
+    ["friendly", [4, 1, 0, 0]],
+    ["enemy", [2, 0, 0, 0]],
+  ] as const)("limits with %s 'Mech in the hex", (mech, limits) => {
+    expect(ids.map((id) => stackCheck([], mech).limits[id])).toEqual(limits);
+  });
+
+  it("mixed classes count by Swarmer equivalents: a Titan and a Hulk fill the hex, a Titan and a Giant do not", () => {
+    expect(stackCheck([{ classId: "titan" }, { classId: "hulk" }]).legal).toBe(true);
+    const over = stackCheck([{ classId: "titan" }, { classId: "giant" }]);
+    expect(over).toMatchObject({ legal: false, overWeight: true, used: 7 });
+  });
+
+  it("reports the room left, and the class that is over its limit", () => {
+    expect(stackCheck([{ classId: "giant" }], "none").room).toEqual({ swarmer: 3, hulk: 1, giant: 1, titan: 0 });
+    expect(stackCheck([{ classId: "hulk" }, { classId: "hulk" }], "friendly")).toMatchObject({ legal: false, overLimit: ["hulk"] });
+  });
+
+  it("a flier is ignored unless another unit is at its height", () => {
+    const hulk = { classId: "hulk" as const, height: 3 };
+    expect(stackCheck([{ classId: "titan" }, hulk]).used).toBe(4);
+    expect(stackCheck([{ classId: "titan" }, hulk, { ...hulk }]).used).toBe(8);
+  });
+});
+
+describe("planetary conditions for a unit with ultraviolet sensitivity (p. 90)", () => {
+  it.each([
+    ["full-moon-night", "abomination", { mp: 0, weapon: 0, physical: 0 }],
+    ["moonless-night", "abomination", { mp: 0, weapon: 1, physical: 0 }],
+    ["pitch-black", "frayed", { mp: 1, weapon: 2, physical: 0 }],
+    ["glaring-sun", "abomination", { mp: 2, weapon: 3, physical: 1 }],
+    ["glaring-sun", "frayed", { mp: 1, weapon: 2, physical: 0 }],
+  ] as const)("%s for %s", (id, who, effect) => {
+    expect(conditionEffect(id, who)).toEqual(effect);
   });
 });
