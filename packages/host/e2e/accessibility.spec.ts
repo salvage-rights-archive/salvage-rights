@@ -263,3 +263,24 @@ test("the Gothic Abomination units page, its form, a custom form and a unit shee
     await scan(page, theme, "the unit sheet");
   }
 });
+
+test("the Gothic Abomination tracker, empty and with a unit on the table, has no axe violations in either theme", async ({ page }) => {
+  test.setTimeout(120_000);
+  for (const theme of ["Light", "Dark"] as const) {
+    await chooseTheme(page, DEV, theme);
+    await page.goto(`${DEV}${GOTHIC}/abominations`);
+    await expect(page.getByLabel("Import a file")).toBeEnabled();
+    if (theme === "Light") {
+      await page.getByRole("button", { name: "Add Tyrant" }).click();
+      await page.getByLabel("Label").fill("Claws");
+      await page.getByRole("button", { name: "Save", exact: true }).click();
+      await expect(page.getByText("Claws (Tyrant) saved.")).toBeVisible();
+    }
+    await page.goto(`${DEV}${GOTHIC}/play`);
+    await expect(page.getByRole("heading", { level: 2, name: "Put a unit on the table" })).toBeVisible();
+    await scan(page, theme, "the tracker, nothing on the table");
+    if (theme === "Light") await page.getByRole("button", { name: "Put on the table: Claws (Tyrant)" }).click();
+    await page.getByRole("button", { name: "Creature 1 pip 3" }).click();
+    await scan(page, theme, "the tracker with a unit");
+  }
+});

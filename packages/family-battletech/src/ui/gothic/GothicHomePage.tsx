@@ -480,6 +480,9 @@ export default function GothicHomePage() {
         <p>
           <Link className="bt-button" to={`${GOTHIC_BASE}/abominations`}>
             Abomination units
+          </Link>{" "}
+          <Link className="bt-button bt-button--secondary" to={`${GOTHIC_BASE}/play`}>
+            Abomination tracker
           </Link>
         </p>
       </section>
