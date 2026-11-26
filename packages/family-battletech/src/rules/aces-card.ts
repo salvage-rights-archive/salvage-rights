@@ -488,7 +488,7 @@ export interface CommandCompleteness {
 export function commandCompleteness(cards: readonly CommandCard[]): CommandCompleteness[] {
   const byKey = new Map<string, Set<string>>();
   for (const c of cards) {
-    const key = `${c.commander.trim()} (${c.faction.trim()})`;
+    const key = c.faction.trim() === "" ? c.commander.trim() : `${c.commander.trim()} (${c.faction.trim()})`;
     byKey.set(key, (byKey.get(key) ?? new Set()).add(c.letter));
   }
   return [...byKey.entries()]

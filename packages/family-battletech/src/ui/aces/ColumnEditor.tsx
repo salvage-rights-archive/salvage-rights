@@ -1,7 +1,7 @@
 // The editors for one behaviour column: its condition, target rule, movement mode and ordered filters, and the preview that
 // shows it the way the game will. The same pieces serve the special order cards later.
 import { ACES_VALUES, ACES_ZONE_KEYWORDS, tokenById } from "../../data/aces-vocab";
-import type { CardSide, Colour, MoveMode } from "../../data/aces-vocab";
+import type { CardSide, Colour, MoveMode, Slot } from "../../data/aces-vocab";
 import { render } from "../../rules/aces-card";
 import type { Column, Condition, Filter, MoveSpec, TargetRule, TokenUse } from "../../rules/aces-card";
 import { IconLabel } from "./icons";
@@ -12,7 +12,7 @@ export const emptyColumn = (): Column => ({ target: { zone: null, flags: [] }, m
 const modeIcon = (mode: MoveMode) => ACES_VALUES.mode.find((m) => m.id === mode)?.icon;
 
 /** A list of conditions joined by "all" or "any". An empty list is no condition at all. */
-export function ConditionBuilder({ idBase, heading, value, side, onChange, empty }: { idBase: string; heading: string; value: Condition | undefined; side: CardSide; onChange: (c: Condition | undefined) => void; empty: string }) {
+export function ConditionBuilder({ idBase, heading, value, side, onChange, empty, slot = "condition" }: { idBase: string; heading: string; value: Condition | undefined; side: CardSide; onChange: (c: Condition | undefined) => void; empty: string; slot?: Slot }) {
   const clauses = value?.clauses ?? [];
   const join = value?.join ?? "all";
   return (
@@ -20,7 +20,7 @@ export function ConditionBuilder({ idBase, heading, value, side, onChange, empty
       <TokenList
         idBase={idBase}
         heading={heading}
-        slot="condition"
+        slot={slot}
         side={side}
         items={clauses}
         addLabel={`Add a test to: ${heading}`}
@@ -107,7 +107,7 @@ export function TargetEditor({ idBase, side, value, onChange }: { idBase: string
           ))}
         </fieldset>
       )}
-      {side === "movement" && (
+      {(side === "movement" || side === "special") && (
         <div className="bt-field">
           <label htmlFor={`${idBase}-pick`}>Break ties with</label>
           <select
@@ -202,35 +202,42 @@ export function ColumnEditor({ idBase, name, column, hasWhen, side = "movement",
       <TargetEditor idBase={`${idBase}-target`} side={side} value={column.target} onChange={(target) => { onChange({ ...column, target }); }} />
       <h3>Movement</h3>
       <MoveEditor idBase={`${idBase}-move`} value={column.move} onChange={(move) => { onChange({ ...column, move }); }} />
-      <TokenList
-        idBase={`${idBase}-filters`}
-        heading="Where to stand, in order"
-        slot="filter"
-        side={side}
-        items={column.filters}
-        addLabel={`Add a filter to the ${name} column`}
-        empty="No filters recorded yet."
-        onChange={(items) => { onChange({ ...column, filters: items as Filter[] }); }}
-        extra={(item, set, id) => {
-          const filter = item as Filter;
-          return (
-            <ConditionBuilder
-              idBase={`${id}-when`}
-              heading="Only if"
-              side={side}
-              value={filter.when}
-              empty="It always applies."
-              onChange={(c) => {
-                const { when: _drop, ...rest } = filter;
-                void _drop;
-                const next: Filter = c ? { ...rest, when: c } : rest;
-                set(next);
-              }}
-            />
-          );
-        }}
-      />
+      <FilterList idBase={`${idBase}-filters`} heading="Where to stand, in order" side={side} filters={column.filters} addLabel={`Add a filter to the ${name} column`} empty="No filters recorded yet." onChange={(filters) => { onChange({ ...column, filters }); }} />
     </div>
+  );
+}
+
+/** An ordered list of movement filters, each with its own "only if" test. */
+export function FilterList({ idBase, heading, side, filters, addLabel, empty, onChange }: { idBase: string; heading: string; side: CardSide; filters: Filter[]; addLabel: string; empty: string; onChange: (f: Filter[]) => void }) {
+  return (
+    <TokenList
+      idBase={idBase}
+      heading={heading}
+      slot="filter"
+      side={side}
+      items={filters}
+      addLabel={addLabel}
+      empty={empty}
+      onChange={(items) => { onChange(items as Filter[]); }}
+      extra={(item, set, id) => {
+        const filter = item as Filter;
+        return (
+          <ConditionBuilder
+            idBase={`${id}-when`}
+            heading="Only if"
+            side={side}
+            value={filter.when}
+            empty="It always applies."
+            onChange={(c) => {
+              const { when: _drop, ...rest } = filter;
+              void _drop;
+              const next: Filter = c ? { ...rest, when: c } : rest;
+              set(next);
+            }}
+          />
+        );
+      }}
+    />
   );
 }
 
