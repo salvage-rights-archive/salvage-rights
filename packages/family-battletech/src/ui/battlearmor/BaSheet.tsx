@@ -69,10 +69,10 @@ export default function BaSheet({ record, catalog }: { record: BaRecord; catalog
     armor?.invisibleToProbes && "Not seen by active probes",
     armor?.ignoresHeat && "Ignores damage from heat-causing weapons",
   ].filter(Boolean) as string[];
-  const rowHeight = 112;
+  const troopersH = Math.ceil(Math.max(1, Math.min(6, record.troopers)) / 3) * 300;
   const unitTop = 240;
   const troopersTop = unitTop + 760;
-  const height = troopersTop + Math.max(1, record.troopers) * rowHeight + 150 - unitTop;
+  const height = troopersTop + troopersH + 150 - unitTop;
   const x = 60;
   const cols = [560, 760, 860, 960, 1060];
   return (
@@ -119,11 +119,11 @@ export default function BaSheet({ record, catalog }: { record: BaRecord; catalog
             <text x={x + i * 300 + 48} y={unitTop + 678} fontSize={26} fill={INK}>{`${label}: ${on ? "yes" : "no"}`}</text>
           </g>
         ))}
-        <BaSheetTroopers record={record} x={x} top={troopersTop} rowHeight={rowHeight} />
-        <text x={x} y={troopersTop + Math.max(1, record.troopers) * rowHeight + 50} fontSize={26} fill={INK} {...squeeze(`Armor: ${armor?.label ?? record.armor.type}${mods.length ? `. ${mods.join(". ")}` : ""}`, 26, 1040)}>
+        <BaSheetTroopers record={record} rect={{ x, y: troopersTop, w: 1010, h: troopersH }} />
+        <text x={x} y={troopersTop + troopersH + 50} fontSize={26} fill={INK} {...squeeze(`Armor: ${armor?.label ?? record.armor.type}${mods.length ? `. ${mods.join(". ")}` : ""}`, 26, 1040)}>
           {`Armor: ${armor?.label ?? record.armor.type}${mods.length ? `. ${mods.join(". ")}` : ""}`}
         </text>
-        <text x={x} y={troopersTop + Math.max(1, record.troopers) * rowHeight + 96} fontSize={24} fill={INK}>
+        <text x={x} y={troopersTop + troopersH + 96} fontSize={24} fill={INK}>
           {`Weight ${String(tidy(b.totalKg))} kg of ${String(cls?.maxKg ?? 0)}. Each suit has ${String(record.armor.points)} armor points and the trooper.`}
         </text>
       </Frame>

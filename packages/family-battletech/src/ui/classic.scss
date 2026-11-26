@@ -71,6 +71,15 @@ a.bt-button {
   display: inline-flex;
   align-items: center;
   text-decoration: none;
+
+  // The site's a:hover link colour must not reach a link drawn as a button: its text keeps the button's own colour.
+  &:hover {
+    color: var(--sr-on-accent);
+  }
+
+  &.bt-button--secondary:hover {
+    color: var(--sr-on-secondary);
+  }
 }
 
 .bt-back {

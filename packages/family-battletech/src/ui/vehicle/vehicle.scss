@@ -20,15 +20,6 @@
   display: block;
   width: 100%;
   height: auto;
-
-  &__box--button {
-    cursor: pointer;
-
-    // Focus shows as a heavier dashed stroke on the box (VehicleDiagram), not as an outline on the group.
-    &:focus {
-      outline: none;
-    }
-  }
 }
 
 .bt-vehicle-mount {

@@ -155,6 +155,16 @@ test("the Aces home, library and card editor (each step and the picker) have no 
   }
 });
 
+test("the Aces library with the sample offer and with the sample cards added has no axe violations in either theme at 320 px", async ({ page }) => {
+  test.setTimeout(150_000);
+  await page.setViewportSize({ width: 320, height: 800 });
+  await expectNoViolations(page, DEV, [`${ACES}/cards`]);
+  await page.goto(`${DEV}${ACES}/cards`);
+  await page.getByRole("button", { name: "Add the sample cards" }).click();
+  await expectPage(page.getByText("Added the sample cards and the sample lance.")).toBeVisible();
+  await expectNoViolations(page, DEV, [`${ACES}/cards`]);
+});
+
 test("the Classic home with Export all has no axe violations in either theme, fits 320 px, and its file imports back", async ({ page }) => {
   test.setTimeout(120_000);
   await importMech(page, DEV);
@@ -212,7 +222,7 @@ test("the Aces game setup, every phase of the game page and the home with a game
     await page.getByRole("button", { name: "Add to automated force", exact: true }).click();
     await scan(page, theme, "the new game form");
     await page.getByRole("button", { name: "Start the game" }).click();
-    await expect(page.getByRole("heading", { level: 2, name: "Turn 1: Initiative" })).toBeVisible();
+    await expectPage(page.getByRole("heading", { level: 2, name: "Turn 1: Initiative" })).toBeVisible();
     await scan(page, theme, "the game page at Initiative");
     await page.getByLabel("Your force: 2D6 roll, 2 to 12").fill("5");
     await page.getByLabel("Automated force: 2D6 roll, 2 to 12").fill("9");

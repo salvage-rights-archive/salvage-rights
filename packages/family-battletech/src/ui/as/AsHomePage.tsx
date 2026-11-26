@@ -189,6 +189,7 @@ export default function AsHomePage() {
                     {` ${unit.card.type}, size ${String(unit.card.size)}, PV ${String(unit.card.pv)}`}
                     {typeof unit.year === "number" && <span className="bt-row__credit">{`${String(unit.year)}${eraOfYear(unit.year) ? `, ${eraOfYear(unit.year)?.name ?? ""}` : ""}`}</span>}
                     {unit.source.kind !== "manual" && unit.source.credit && <span className="bt-row__credit">{unit.source.credit}</span>}
+                    {unit.sample === true && <span className="bt-row__credit">Sample</span>}
                     <span className="bt-row__credit">{asOfficialMark(unit).text}</span>
                   </span>
                   <span className="bt-row__actions">

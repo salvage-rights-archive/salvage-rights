@@ -3,7 +3,7 @@
 // listed, unless the platoon already holds it (it then stays listed and the rules check reports it).
 import { useEffect, useMemo, useState } from "react";
 import { Link, useBlocker, useSearchParams } from "react-router";
-import { ARMOR_KITS, FORMATIONS, MOTIVES, SPECIALIZATIONS, armorKitOf } from "../../data/infantry-tables";
+import { ARMOR_KITS, FORMATIONS, MOTIVES, SPECIALIZATIONS, armorKitOf, motiveOf } from "../../data/infantry-tables";
 import { eraLabel } from "../../data/editions";
 import { setEra, setYear } from "../../rules/availability";
 import { loadCatalog } from "../../rules/catalog";
@@ -242,7 +242,7 @@ function Editor({ initial, catalog, storage }: { initial: InfantryRecord; catalo
             <li>{bv.bv === undefined ? `Battle Value: not worked out${bv.reason ? `. ${bv.reason}` : " yet."}` : `Battle Value ${String(bv.bv)}`}</li>
             <li>{`Cost ${money(cost.total)} C-bills`}</li>
           </ul>
-          <InfantryDiagram locations={platoon.lines.map((n, i) => ({ code: lineCode(i, platoon.lines.length), name: platoon.lines.length === 1 ? "Platoon" : `Sub-platoon ${String(i + 1)}`, armor: n }))} use="armor" />
+          <InfantryDiagram kind={motiveOf(record.motive)?.mechanized ? "mechanized" : record.motive} locations={platoon.lines.map((n, i) => ({ code: lineCode(i, platoon.lines.length), name: platoon.lines.length === 1 ? "Platoon" : `Sub-platoon ${String(i + 1)}`, armor: n }))} use="armor" />
         </section>
       </div>
 

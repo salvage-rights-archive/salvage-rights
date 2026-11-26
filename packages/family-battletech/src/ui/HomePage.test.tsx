@@ -11,13 +11,14 @@ import { AERO_HOME } from "./aero/routes";
 import { openAeroStorage } from "./aero/storage";
 import { openFamilyStorage, toMechFile } from "./storage";
 
-const control = vi.hoisted(() => ({ persistent: true, failSave: false }));
+const control = vi.hoisted(() => ({ persistent: true, failSave: false, opening: null as Promise<void> | null }));
 
 vi.mock("./storage", async (importOriginal) => {
   const original = await importOriginal<typeof import("./storage")>();
   return {
     ...original,
     openFamilyStorage: async () => {
+      if (control.opening) await control.opening;
       const real = await original.openFamilyStorage();
       return {
         ...real,
@@ -33,6 +34,7 @@ beforeEach(() => {
   globalThis.indexedDB = new IDBFactory();
   control.persistent = true;
   control.failSave = false;
+  control.opening = null;
 });
 afterEach(() => {
   cleanup();
@@ -73,6 +75,20 @@ describe("Classic BattleTech home", () => {
     await waitFor(async () => {
       expect(await rawEdition()).toBe("bcr-tm");
     });
+  });
+
+  it("keeps and stores an edition chosen while storage is still opening", async () => {
+    let open = (): void => undefined;
+    control.opening = new Promise<void>((resolve) => (open = resolve));
+    const user = userEvent.setup();
+    renderHome();
+    const select = await screen.findByLabelText<HTMLSelectElement>("Edition");
+    await user.selectOptions(select, "bcr-tm");
+    open();
+    await waitFor(async () => {
+      expect(await rawEdition()).toBe("bcr-tm");
+    });
+    expect(select.value).toBe("bcr-tm");
   });
 
   it("builds a new 'Mech from a name, tonnage and walking speed, offering only speeds an engine exists for", async () => {

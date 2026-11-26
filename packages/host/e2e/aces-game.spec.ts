@@ -1,6 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import type { Page } from "@playwright/test";
-import { ACES, DEV, answerQuestions, expect, putAsUnits, saveAcesCard, saveAcesCommand, test } from "./fixtures";
+import { ACES, DEV, answerQuestions, expect, expectPage, putAsUnits, saveAcesCard, saveAcesCommand, test } from "./fixtures";
 
 // A whole invented two-turn game on a phone-sized screen: two invented units, one invented behaviour card and one invented command card.
 // No printed card, photo or scan is used.
@@ -88,13 +88,13 @@ test("play an invented two-turn game at 320 px: Initiative, Movement, Combat and
   await page.getByRole("button", { name: "Add to automated force", exact: true }).click();
   await page.getByLabel("Last turn of the sortie (leave empty for no limit)").fill("2");
   await page.getByRole("button", { name: "Start the game" }).click();
-  await expect(page.getByRole("heading", { level: 2, name: "Turn 1: Initiative" })).toBeVisible();
+  await expectPage(page.getByRole("heading", { level: 2, name: "Turn 1: Initiative" })).toBeVisible();
   await givePilotEdge(page);
   await page.reload();
 
   // Turn 1. The automated force wins Initiative, so you move and attack first.
   const orders = page.getByRole("button", { name: "Apply the orders" });
-  await expect(page.getByRole("heading", { level: 2, name: "Turn 1: Initiative" })).toBeVisible();
+  await expectPage(page.getByRole("heading", { level: 2, name: "Turn 1: Initiative" })).toBeVisible();
   await answerQuestions(page, /^Orders applied|No order applies|Apply the orders/);
   if (await orders.isVisible()) await orders.click();
   await page.getByLabel("Your force: 2D6 roll, 2 to 12").fill("2");

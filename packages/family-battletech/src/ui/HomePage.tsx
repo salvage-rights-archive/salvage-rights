@@ -98,6 +98,7 @@ export default function HomePage() {
   const [storage, setStorage] = useState<FamilyStorage>();
   const [entries, setEntries] = useState<SavedEntry[]>([]);
   const [edition, setEdition] = useState(DEFAULT_EDITION);
+  const chosenEdition = useRef<string | null>(null);
   const [confirming, setConfirming] = useState<{ id: string; name: string }>();
   /** The chassis rows opened to show their configurations; the catalog they are valued with loads when the first one opens. */
   const [open, setOpen] = useState<Set<string>>(new Set());
@@ -171,7 +172,10 @@ export default function HomePage() {
       try {
         const s = await openFamilyStorage();
         setStorage(s);
-        setEdition(await s.getEdition());
+        const saved = await s.getEdition();
+        // A choice made while storage was still opening wins over the saved one, and is saved now.
+        if (chosenEdition.current === null) setEdition(saved);
+        else if (chosenEdition.current !== saved) await s.setEdition(chosenEdition.current);
         setEntries(classicOnly(await s.list()));
       } catch {
         setProblem(STORAGE_READ_FAILED);
@@ -200,6 +204,7 @@ export default function HomePage() {
     .join(" ");
 
   const chooseEdition = async (id: string) => {
+    chosenEdition.current = id;
     setEdition(id);
     if (storage) await attempt(STORAGE_WRITE_FAILED, () => storage.setEdition(id));
   };
