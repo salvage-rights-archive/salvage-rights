@@ -1143,11 +1143,17 @@ a.bt-button {
 // Printed, only the sheet: the bar, the page heading and the text copy go, and the sheet fills the width of the page without
 // being taller than the page (Letter proportions, so it fits Letter and A4 alike). The shell's own print rule (the host's
 // shell.scss) takes away its header, navigation, footer and page padding.
-@page {
+// A named page for the record sheet pages (Classic, AeroTech and Gothic), so the margin stays theirs and no other game's print rule
+// changes it.
+@page bt-sheet {
   margin: 0.35in;
 }
 
 @media print {
+  .bt-sheetpage {
+    page: bt-sheet;
+  }
+
   .bt-sheetpage__bar,
   .bt-sheet-text {
     display: none;
