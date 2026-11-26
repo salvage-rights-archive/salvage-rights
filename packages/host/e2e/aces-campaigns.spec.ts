@@ -1,4 +1,5 @@
 import { readFile } from "node:fs/promises";
+import { join } from "node:path";
 import AxeBuilder from "@axe-core/playwright";
 import type { Page } from "@playwright/test";
 import { ACES, DEV, expect, test } from "./fixtures";
@@ -145,6 +146,41 @@ test("create a campaign, export it, delete it, import it back, and read a Battle
   await expect(page.getByRole("heading", { name: "What we could not carry over" })).toBeVisible();
   await expect(page.getByText(/card values/)).toBeVisible();
   await expect(page.getByRole("link", { name: "Open Imported run" })).toBeVisible();
+
+  // The file the old Aces pages download (AcesExport.json) comes in through the same control: campaigns, cards, the game in progress and
+  // the units they use. Its other entries (a token-looking one among them) are never stored.
+  const exported = join(process.cwd(), "packages/family-battletech/src/rules/testdata/AcesExport.json");
+  await page.getByLabel("Import a campaign file or a BattleTech Tools backup").setInputFiles(exported);
+  await expect(page.getByText(/Added 1 campaign, 6 cards, 1 game in progress from a BattleTech Tools Aces export/)).toBeVisible();
+  await expect(page.getByText(/other entries \(settings and other saves\) were not read/)).toBeVisible();
+  await expect(page.getByRole("heading", { name: "The rest of the export file" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Open Invented run" })).toBeVisible();
+  await page.getByLabel("Import a campaign file or a BattleTech Tools backup").setInputFiles(exported);
+  await expect(page.getByText(/6 cards and 1 game already here, unchanged/)).toBeVisible();
+  await page.goto(`${DEV}${ACES}/home`);
+  await expect(page.getByText("Invented skirmish").first()).toBeVisible();
+  const kept = await page.evaluate(async () => {
+    const db = await new Promise<IDBDatabase>((resolve, reject) => {
+      const request = indexedDB.open("salvage-rights:battletech");
+      request.onsuccess = () => {
+        resolve(request.result);
+      };
+      request.onerror = () => {
+        reject(new Error("open failed"));
+      };
+    });
+    const all = await new Promise<unknown[]>((resolve) => {
+      const request = db.transaction("kv").objectStore("kv").getAll();
+      request.onsuccess = () => {
+        resolve(request.result);
+      };
+    });
+    db.close();
+    return JSON.stringify([all, Object.entries(localStorage)]);
+  });
+  expect(kept).toContain("Invented skirmish");
+  expect(kept).not.toMatch(/ghp_INVENTED|customMULGithubToken|uiTheme|an unrelated entry/);
+  await page.goto(`${DEV}${ACES}/campaigns`);
 
   // A wrong file is answered, not thrown.
   const wrong = testInfo.outputPath("wrong.json");

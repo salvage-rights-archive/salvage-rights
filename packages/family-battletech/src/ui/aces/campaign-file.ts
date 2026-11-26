@@ -4,7 +4,10 @@
 import { DIFFICULTY, PILOT_TYPES } from "../../data/aces";
 import { isAcesCampaign } from "../../rules/aces-campaign";
 import type { AcesCampaign } from "../../rules/aces-campaign";
+import type { AcesRecord } from "../../rules/aces-card";
+import type { AcesGame } from "../../rules/aces-game";
 import { JBT_LIBRARY_NOTE, convertJbtBackup, looksLikeJbtBackup } from "../../rules/aces-jbt";
+import { looksLikeAcesExport, readAcesExportFile } from "../../rules/aces-jbt-export";
 import type { AsUnit } from "../../rules/as-unit";
 import { isAsUnit, migrated } from "../as/storage";
 import { downloadJson } from "../storage";
@@ -107,11 +110,17 @@ export function toCampaignFile(campaigns: readonly AcesCampaign[], have: readonl
   return { app: "salvage-rights", kind: CAMPAIGN_FILE_KIND, version: 1, campaigns: structuredClone([...campaigns]), units: structuredClone(unitsFor(campaigns, have)) };
 }
 
+/** Said after an Aces export is read: the file holds every entry of the old app, and we take only the Aces ones. */
+export const EXPORT_PRIVACY_NOTE = "Only the Aces campaigns, cards, game and units were read from the file. Its other entries (settings and other saves) were not read and nothing of them was kept.";
+
 /** What a read of a file gives: the campaigns and units to offer, and what to tell the player. */
 export interface ImportRead {
-  source: "salvage-rights" | "jbt";
+  source: "salvage-rights" | "jbt" | "jbt-export";
   campaigns: AcesCampaign[];
   units: AsUnit[];
+  /** The player's own cards and the game in progress, from an Aces export file only. */
+  cards: AcesRecord[];
+  games: AcesGame[];
   /** Per campaign id, what could not be carried over (a BattleTech Tools backup only). */
   left: { name: string; lines: string[] }[];
   /** Sentences for the player: things skipped or left out. */
@@ -128,25 +137,29 @@ function withoutGames(c: AcesCampaign): { campaign: AcesCampaign; changed: boole
   return { campaign: copy, changed: true };
 }
 
-export function readImport(file: unknown, haveUnits: readonly AsUnit[]): { ok: true; read: ImportRead } | { ok: false; message: string } {
+export function readImport(file: unknown, haveUnits: readonly AsUnit[], at: string = new Date().toISOString()): { ok: true; read: ImportRead } | { ok: false; message: string } {
   if (!isObject(file)) return { ok: false, message: "This is not a campaign file." };
   const big = capsProblem(file);
   if (big) return { ok: false, message: big };
   if (looksLikeJbtBackup(file)) {
-    const result = convertJbtBackup(file, haveUnits);
-    if (result.campaigns.length === 0) {
-      return { ok: false, message: ["This backup holds no Aces campaigns we could read.", ...result.skipped, ...(result.hasCardLibrary ? [JBT_LIBRARY_NOTE] : [])].join(" ") };
+    const exported = looksLikeAcesExport(file);
+    const { campaigns: result, rest } = exported ? readAcesExportFile(file, haveUnits, at) : { campaigns: convertJbtBackup(file, haveUnits), rest: { units: [], cards: [], games: [], left: [] } };
+    if (result.campaigns.length === 0 && rest.cards.length === 0 && rest.games.length === 0) {
+      return { ok: false, message: [`This ${exported ? "export" : "backup"} holds no Aces campaigns, cards or game we could read.`, ...result.skipped, ...(result.hasCardLibrary && !exported ? [JBT_LIBRARY_NOTE] : [])].join(" ") };
     }
     const dedup = new Map<string, AsUnit>();
     for (const c of result.campaigns) for (const u of c.units) dedup.set(u.id, u);
+    for (const u of rest.units) dedup.set(u.id, u);
     return {
       ok: true,
       read: {
-        source: "jbt",
+        source: exported ? "jbt-export" : "jbt",
         campaigns: result.campaigns.map((c) => c.campaign),
         units: [...dedup.values()],
-        left: result.campaigns.map((c) => ({ name: c.campaign.name, lines: c.left })),
-        notes: [...result.skipped, ...(result.hasCardLibrary ? [JBT_LIBRARY_NOTE] : [])],
+        cards: rest.cards,
+        games: rest.games,
+        left: [...result.campaigns.map((c) => ({ name: c.campaign.name, lines: c.left })), ...(rest.left.length > 0 ? [{ name: "The rest of the export file", lines: rest.left }] : [])],
+        notes: [...result.skipped, ...(result.hasCardLibrary && !exported ? [JBT_LIBRARY_NOTE] : []), ...(exported ? [EXPORT_PRIVACY_NOTE] : [])],
       },
     };
   }
@@ -166,6 +179,8 @@ export function readImport(file: unknown, haveUnits: readonly AsUnit[]): { ok: t
       source: "salvage-rights",
       campaigns: cleaned.map((c) => c.campaign),
       units: (file.units as AsUnit[]).map(migrated),
+      cards: [],
+      games: [],
       left: [],
       notes: cleaned.some((c) => c.changed) ? ["A sortie that was started but not recorded is not carried over; start it again from the campaign."] : [],
     },
@@ -219,3 +234,44 @@ export function downloadCampaigns(campaigns: readonly AcesCampaign[], have: read
   const base = single && first ? first.name.replace(/[^A-Za-z0-9]+/g, "-").replace(/^-+|-+$/g, "") : "";
   downloadJson(`${base || "my-campaigns"}.aces-campaigns.json`, toCampaignFile(campaigns, have));
 }
+
+export interface ExtrasPlan {
+  addCards: AcesRecord[];
+  conflictCards: AcesRecord[];
+  sameCards: number;
+  addGames: AcesGame[];
+  conflictGames: AcesGame[];
+  sameGames: number;
+}
+
+/** The cards and games of an Aces export against what is here, by kind and id: new ones are added, the same left, others asked about. */
+// The time a card or game was read from the file differs on every import, so it is left out of the comparison.
+const withoutStamp = (v: AcesRecord | AcesGame): unknown => {
+  const { createdAt: _created, source: _source, ...rest } = v as unknown as Record<string, unknown>;
+  void _created;
+  void _source;
+  return rest;
+};
+const sameRecord = (a: AcesRecord | AcesGame, b: AcesRecord | AcesGame): boolean => canonical(withoutStamp(a)) === canonical(withoutStamp(b));
+
+export function planExtras(incoming: { cards: readonly AcesRecord[]; games: readonly AcesGame[] }, have: { cards: readonly AcesRecord[]; games: readonly AcesGame[] }): ExtrasPlan {
+  const cards = new Map(have.cards.map((r) => [`${r.kind}:${r.id}`, r]));
+  const games = new Map(have.games.map((g) => [g.id, g]));
+  const plan: ExtrasPlan = { addCards: [], conflictCards: [], sameCards: 0, addGames: [], conflictGames: [], sameGames: 0 };
+  for (const r of incoming.cards) {
+    const old = cards.get(`${r.kind}:${r.id}`);
+    if (!old) plan.addCards.push(r);
+    else if (sameRecord(old, r)) plan.sameCards += 1;
+    else plan.conflictCards.push(r);
+  }
+  for (const g of incoming.games) {
+    const old = games.get(g.id);
+    if (!old) plan.addGames.push(g);
+    else if (sameRecord(old, g)) plan.sameGames += 1;
+    else plan.conflictGames.push(g);
+  }
+  return plan;
+}
+
+/** The incoming game saved beside the one that is here. */
+export const keepBothGame = (g: AcesGame, id: string): AcesGame => ({ ...g, id, name: `${g.name} (imported copy)` });
