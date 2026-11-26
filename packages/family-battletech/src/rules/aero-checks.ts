@@ -422,7 +422,7 @@ export function aeroLevelItems(record: AeroRecord, catalog: Catalog): AeroLevelI
     });
   }
   // A ship system with dates (the docking hardpoint, which comes with the K-F boom) is Experimental in its prototype years and at its own level after.
-  if (capitalKind(record) !== undefined) {
+  if (capitalKind(record) !== undefined || record.unitType === "dropship") {
     for (const [kind, count] of Object.entries(record.systems ?? {})) {
       const figure = capitalSystemFigure(kind, record.editionId);
       const dates = figure?.dates;
@@ -438,6 +438,25 @@ export function aeroLevelItems(record: AeroRecord, catalog: Catalog): AeroLevelI
     }
   }
   return items;
+}
+
+/**
+ * Whether the editor offers a ship system to a unit: hide, do not mark. Not offered when the unit's tech base is not the system's, its year is before the system's prototype year or
+ * (an Inner Sphere unit) in the years the Inner Sphere lacked it, or the level the unit is set to is below the system's (in its prototype years it is Experimental). A unit with no year
+ * or level asks for none. The rules check still reports a system the record already holds.
+ */
+export function aeroSystemOffered(record: AeroRecord, kind: string): boolean {
+  const figure = capitalSystemFigure(kind, record.editionId);
+  if (figure === undefined) return false;
+  if (figure.techBase !== undefined && record.techBase !== "mixed" && record.techBase !== figure.techBase) return false;
+  const { dates, lost } = figure;
+  if (dates !== undefined && record.year !== null && record.year < dates.prototype) return false;
+  if (lost !== undefined && record.year !== null && record.techBase === "inner-sphere" && record.year >= lost.from && record.year < lost.back) return false;
+  const own = record.editionId === DEFAULT_AERO_EDITION ? record.rulesLevel : undefined;
+  if (own === undefined || !LEVEL_ORDER.includes(own)) return true;
+  const phase = dates === undefined ? null : phaseIn([{ from: dates.production }], dates.prototype, windowOf({ era: record.era, year: record.year }));
+  const level = dates === undefined ? figure.level : levelIn(dates.level, phase);
+  return level === undefined || levelAtLeast(own, level);
 }
 
 /** The lowest level that accepts everything the unit uses in the current edition; undefined under an older edition (no levels). A bare unit is Introductory. */

@@ -5,7 +5,7 @@
 // not understand gets none from here.
 import { CAPITAL_FIGURES, CAPITAL_SYSTEMS, CRAFT_FIGURES, capitalSystemFigure, DEFAULT_AERO_EDITION, FIGHTER_ARMOR_TYPES, FIGHTER_EDITIONS, FIGHTER_PATCHWORK_TYPES, aeroEditionName } from "../data/aero";
 import type { FigureGroup } from "../data/aero";
-import { aeroLocationName, armorTypeAt, fighterPatchworkActive, capitalKind, capitalSystems, craftAmmoShortfalls, craftKind, heatByArc, locationsOf, stationKeeping, towingShare, vessel } from "./aero";
+import { aeroLocationName, armorTypeAt, collarTotal, fighterPatchworkActive, capitalKind, capitalSystems, craftAmmoShortfalls, craftKind, heatByArc, locationsOf, stationKeeping, towingShare, vessel } from "./aero";
 import type { AeroRecord } from "./aero";
 import type { AeroCheck, AeroFinding } from "./aero-checks";
 import { tidy } from "./walk";
@@ -236,7 +236,7 @@ const hottestBayCheck: AeroCheck = {
 const systemsCheck: AeroCheck = {
   id: "systems",
   run({ record }) {
-    if (capitalKind(record) === undefined) return [];
+    if (capitalKind(record) === undefined && record.unitType !== "dropship") return [];
     const systems = capitalSystems(record);
     const out: AeroFinding[] = [];
     const page = (kind: string) => {
@@ -276,7 +276,11 @@ const systemsCheck: AeroCheck = {
         if ((record.systems?.[other] ?? 0) > 0) out.push(at(`${label} cannot be carried with ${(CAPITAL_SYSTEMS.find((r) => r.kind === other)?.label ?? other).toLowerCase()}.`));
       }
       if (!line.allowed) out.push({ check: "systems", level: "error", message: `A ${kindName(record)} does not carry ${label.toLowerCase()} in ${aeroEditionName(record.editionId)}.`, where: { field: "systems" }, ...cite });
-      else if (line.limit !== undefined && line.count > line.limit) out.push({ check: "systems", level: "error", message: `${plural(line.count, label.toLowerCase())} are over the ${num(line.limit)} a ${num(record.tons)}-ton ${kindName(record)} may carry.`, where: { field: "systems" }, ...cite });
+      else if (line.limit !== undefined && (line.kind === "docking-hardpoint" ? collarTotal(record) : line.count) > line.limit) {
+        // Each naval repair facility and DropShuttle bay counts two collars against the hardpoint limit (TO:AUE p. 146, IO:AE p. 113).
+        const held = line.kind === "docking-hardpoint" ? collarTotal(record) : line.count;
+        out.push({ check: "systems", level: "error", message: `${plural(held, line.kind === "docking-hardpoint" ? "docking collar" : label.toLowerCase())} are over the ${num(line.limit)} a ${num(record.tons)}-ton ${kindName(record)} may carry.`, where: { field: "systems" }, ...cite });
+      }
     }
     if (systems.unknown.length > 0) out.push({ check: "systems", level: "note", message: `${systems.unknown.join(", ")} ${systems.unknown.length === 1 ? "is" : "are"} not a ship system ${aeroEditionName(record.editionId)} prints, so ${systems.unknown.length === 1 ? "it was" : "they were"} not weighed.`, where: { field: "systems" } });
     return out;

@@ -982,7 +982,8 @@ export function capitalArmorPointsPerTon(typeId: string, editionId: string, tons
 export interface CapitalSystemFigure {
   tons?: number;
   share?: number;
-  types: CapitalKind[];
+  /** The unit types that may carry it: a capital ship kind, or a DropShip. */
+  types: (CapitalKind | "dropship")[];
   max?: number;
   perTons?: number;
   round?: "down" | "up";
@@ -999,6 +1000,10 @@ export interface CapitalSystemFigure {
   unitTons?: { min?: number; max?: number; over?: number; step?: number };
   /** Kinds of system it cannot be carried with. */
   excludes?: string[];
+  /** The weight is rounded up to a whole ton (a naval repair facility). */
+  wholeTons?: true;
+  /** Docking collars each of it incorporates, counted against the unit's most (a naval repair facility has two). */
+  collars?: number;
   /** A sentence for the rules check when the unit is built before its prototype year (our words). */
   beforeNote?: string;
 }
@@ -1035,7 +1040,7 @@ export const CAPITAL_SYSTEMS: CapitalSystemRow[] = [
   SYSTEM("lithium-fusion-battery", "Lithium-fusion battery", [
     capShare({ [E.at2]: "47" }, { share: 0.01, types: ALL_CAPITAL, max: 1 }),
     capShare({ [E.at2r]: "65" }, { share: 0.01, types: ["jumpship", "warship"], max: 1 }),
-    // Prototype ~2520, production 2529, lost to the Inner Sphere 2819 and back in 3043 (IO:AE printed p. 36 table); Advanced (TO:AUE p. 135, table p. 220).
+    // Dates by the later printing at each stage: TO:AUE (7th, 2024) p. 135 prints production 2529, extinct 2819, recovered 3043 and omits the prototype, which IO:AE (printed p. 36 table) fills: ~2520. Advanced (TO:AUE p. 135, table p. 220).
     capShare(
       { [E.current]: [`${TOAUE}, p. 135, 220-221; ${IOAE}`, "36"] },
       { share: 0.01, types: ["jumpship", "warship"], max: 1, dates: { prototype: 2520, production: 2529, level: "advanced" }, lost: { from: 2819, back: 3043 } },
@@ -1046,19 +1051,22 @@ export const CAPITAL_SYSTEMS: CapitalSystemRow[] = [
     capShare({ [E.at2]: "47", [E.at2r]: "65" }, { tons: 100000, types: ["space-station"] }),
     capShare({ [E.current]: [TOAUE, "218-219"] }, { tons: 100000, types: ["space-station"], level: "advanced" }),
   ]),
-  SYSTEM("towing-adapter", "Towing adapter", [capShare({ [E.at2]: "47" }, { tons: 100, types: ALL_CAPITAL }, "a vessel built to tow weighs 10 percent of its mass in structural reinforcement besides (the footnote on p. 47)")]),
+  SYSTEM("towing-adapter", "Towing adapter", [capShare({ [E.at2]: "47" }, { tons: 100, types: [...ALL_CAPITAL, "dropship"] }, "a vessel built to tow weighs 10 percent of its mass in structural reinforcement besides (the footnote on p. 47)")]),
   SYSTEM("hpg", "HPG", [capShare({ [E.at2]: "47", [E.at2r]: "65" }, { tons: 50, types: ALL_CAPITAL }, "ComStar and Clan vessels only")]),
   SYSTEM("jump-sail", "Energy collection sail", [capShare({ [E.at2]: "44; errata v1.2", [E.at2r]: "61", [E.current]: "136" }, { types: ["space-station"], max: 1 }, "weighs what a JumpShip's sail of the same tons does")]),
   // Standard repair facilities: Advanced, Both (C/C-E-D), early spaceflight; the reinforced kind is Experimental, Inner Sphere, prototype 3065 with no production year printed (TO:AUE pp. 147, 220-221).
   // A count is the capacity in tons; the weight is a share of each ton of capacity (0.025 unpressurized, 0.075 pressurized, 0.010 reinforced).
-  SYSTEM("repair-unpressurized", "Naval repair facilities, unpressurized (tons of capacity)", [capShare({ [E.current]: [TOAUE, "147, 220-221"] }, { tons: 0.025, types: ["jumpship", "space-station", "warship"], level: "advanced" })]),
-  SYSTEM("repair-pressurized", "Naval repair facilities, pressurized (tons of capacity)", [capShare({ [E.current]: [TOAUE, "147, 220-221"] }, { tons: 0.075, types: ["jumpship", "space-station", "warship"], level: "advanced" })]),
+  // The construction text (p. 146) gives the weights as 2.5, 7.5 and 10 percent of capacity, rounded up to a whole ton, and says each facility incorporates two docking collars that count against the unit's most;
+  // the table (p. 221) prints 0.010 x C for the reinforced kind, a misprint of the text's 10 percent (owner ruling, 2026-11-27). A unit mounts one facility of each kind here.
+  SYSTEM("repair-unpressurized", "Naval repair facilities, unpressurized (tons of capacity)", [capShare({ [E.current]: [TOAUE, "146-147, 220-221"] }, { tons: 0.025, wholeTons: true, collars: 2, types: ["jumpship", "space-station", "warship"], level: "advanced" })]),
+  SYSTEM("repair-pressurized", "Naval repair facilities, pressurized (tons of capacity)", [capShare({ [E.current]: [TOAUE, "146-147, 220-221"] }, { tons: 0.075, wholeTons: true, collars: 2, types: ["jumpship", "space-station", "warship"], level: "advanced" })]),
   SYSTEM("repair-reinforced", "Naval repair facilities, reinforced (tons of capacity)", [
-    capShare({ [E.current]: [TOAUE, "147, 220-221"] }, { tons: 0.01, types: ["jumpship", "warship"], techBase: "inner-sphere", dates: { prototype: 3065, production: 3065, level: "experimental" } }, "the book prints 3065P: prototype production only"),
+    // Prototype design and production circa 2750 (Terran Hegemony) and circa 3065 (Word of Blake); the table prints 3065P for the Inner Sphere (TO:AUE p. 146 entry, p. 221).
+    capShare({ [E.current]: [TOAUE, "146-147, 220-221"] }, { tons: 0.1, wholeTons: true, collars: 2, types: ["jumpship", "warship"], techBase: "inner-sphere", dates: { prototype: 2750, production: 3065, level: "experimental" } }, "the table prints 0.010 x C, a misprint of the text's 10 percent"),
   ]),
   // Naval C3: Experimental, Inner Sphere (F/X-X-F), 3065 prototype production only (TO:AUE pp. 144, 221). One percent of the unit's tons; it doubles the weight of the fire control (see `capitalTally`).
   SYSTEM("naval-c3", "Naval C3", [
-    capShare({ [E.current]: [TOAUE, "144, 221"] }, { share: 0.01, types: ALL_CAPITAL, max: 1, techBase: "inner-sphere", dates: { prototype: 3065, production: 3065, level: "experimental" } }, "the book prints 3065P: prototype production only"),
+    capShare({ [E.current]: [TOAUE, "144, 221"] }, { share: 0.01, types: [...ALL_CAPITAL, "dropship"], max: 1, techBase: "inner-sphere", dates: { prototype: 3065, production: 3065, level: "experimental" } }, "the book prints 3065P: prototype production only"),
   ]),
   // Power collector and microwave transmitter, low density: Advanced, Both (C/C-C-C), for stations (and satellite support vehicles, which the editor does not build). A count is its tons (TO:AUE pp. 148-149, 223).
   SYSTEM("pcmt-low-density", "Power collector and microwave transmitter, low density (tons)", [

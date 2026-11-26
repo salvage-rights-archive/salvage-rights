@@ -159,12 +159,19 @@ test("a DropShip and a WarShip are built, checked and printed: editor and sheet 
     await page.getByRole("button", { name: "Add equipment to Nose" }).click();
     await page.getByLabel("Search by name").fill(weapon);
     await page.getByRole("button", { name: new RegExp(`^${weapon}`, "i") }).first().click();
+    if (type === "warship") {
+      // A ship system (hidden below Advanced) and the cost it adds: the editor shows the cost, and the sheet prints it with its unit.
+      await page.getByLabel("Rules level").selectOption("advanced");
+      await page.getByLabel("Grav deck (100 to 250 m)").fill("1");
+      await expect(page.getByTestId("cost-total")).toHaveText(/^\d[\d,.]* C-bills$/);
+    }
     await page.getByRole("button", { name: "Save", exact: true }).click();
     await expect(page.getByText("Saved.")).toBeVisible();
     await expect(page.getByRole("heading", { name: "Rules check" })).toBeVisible();
     await page.getByRole("link", { name: "Record sheet" }).click();
     await expect(page.getByRole("heading", { level: 1 })).toHaveText(`${name} record sheet`);
     await expect(page.getByRole("img", { name: sheetName })).toBeVisible();
+    if (type === "warship") await expect(page.getByRole("img", { name: sheetName }).locator("text", { hasText: /C-bills$/ })).toBeVisible();
     paths.push(editor, new URL(page.url()).pathname.replace(/^\/salvage-rights/, "") + new URL(page.url()).search);
   }
   // Print: only the sheet, on one Letter page.

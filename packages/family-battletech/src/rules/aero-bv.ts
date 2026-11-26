@@ -1,14 +1,14 @@
 // Battle Value and C-bill cost of an aerospace unit, edition by edition (figures in data/aero-bv.ts, data/bv.ts and data/cost.ts). AeroTech (1986)
 // and BattleSpace print neither, so both functions give null there. Nothing here throws: an item no table values or prices is left out and listed,
 // and the total then says "at least". Where the book leaves a choice to the table (two sides that tie), the breakdown notes the one we took.
-import { AERO_BAY_PRICES, AERO_BV_METHOD, AERO_BV_OVERLAYS, AERO_CAPITAL_COST, AERO_COST, AERO_PRICE_OVERLAYS, AT2_BV_RULES, STATION_MULTIPLIERS, STATION_MULTIPLIER_CITE, TM_AERO_BV_RULES } from "../data/aero-bv";
+import { AERO_BAY_PRICES, DROPSHIP_COLLAR_BY_YEAR, AERO_BV_METHOD, AERO_BV_OVERLAYS, AERO_CAPITAL_COST, AERO_COST, AERO_PRICE_OVERLAYS, AT2_BV_RULES, STATION_MULTIPLIERS, STATION_MULTIPLIER_CITE, TM_AERO_BV_RULES } from "../data/aero-bv";
 import type { AeroBvMethod, AeroCostFigures, CapitalCostFigures } from "../data/aero-bv";
 import { CAPITAL_FIGURES, CAPITAL_SYSTEMS, craftBaysFor, capitalSystemFigure, fighterPatchworkTypes, figureOf } from "../data/aero";
 import { HEAT_MULTIPLIER } from "../data/bv";
 import type { BvOptions } from "../data/bv";
 import { ARMOR_COST, ENGINE_COST } from "../data/cost";
 import { aeroCatalogFigures, aeroWeaponFigures } from "../data/aero-weapons";
-import { armorTypeAt, capitalKind, capitalSystems, engineRating, fighterHeat, fighterKind, fighterPatchworkActive, fighterSI, fighterTally, jumpSail, kfDrive, locationsOf, maxThrust, patchworkTonsAt, stationKeeping, subCompact, vessel } from "./aero";
+import { armorTypeAt, capitalKind, capitalSystems, engineRating, fighterHeat, fighterKind, fighterPatchworkActive, fighterSI, fighterTally, collarTotal, jumpSail, kfDrive, locationsOf, maxThrust, patchworkTonsAt, stationKeeping, subCompact, vessel } from "./aero";
 import type { AeroMount, AeroRecord } from "./aero";
 import { ammoBvEntryOf, bvEntryOf, speedFactor } from "./bv";
 import type { Catalog, EquipmentRow } from "./catalog";
@@ -503,7 +503,11 @@ export function aeroCost(record: AeroRecord, catalog: Catalog): AeroCost | null 
   add("Structural Integrity", siEach * si, `${n(siEach)} x ${n(si)}`);
   add("Attitude thrusters", costs.attitudeThruster, n(costs.attitudeThruster));
   if (kind === undefined) add("Landing gear", costs.landingGearPerTon * t, `${n(costs.landingGearPerTon)} x ${n(t)}`);
-  if (record.unitType === "dropship") add("Docking collar", costs.dockingCollar, n(costs.dockingCollar));
+  if (record.unitType === "dropship") {
+    // Current rules: the collar's price follows the year (the pre-boom collar, the prototype boom, then 100,000); no year reads 100,000.
+    const era = record.editionId === "tw-tm-so" && record.year !== null ? DROPSHIP_COLLAR_BY_YEAR.find((row) => record.year !== null && record.year < row.before) : undefined;
+    add(era === undefined ? "Docking collar" : `Docking collar (${era.what})`, era?.price ?? costs.dockingCollar, n(era?.price ?? costs.dockingCollar));
+  }
   if (fighter) {
     const rating = engineRating(record) ?? 0;
     const perRating = Object.hasOwn(ENGINE_COST.rows, record.engine.type) ? ENGINE_COST.rows[record.engine.type]?.perRating : undefined;
@@ -548,6 +552,7 @@ export function aeroCost(record: AeroRecord, catalog: Catalog): AeroCost | null 
   const adapters = record.unitType === "dropship" ? (record.systems?.["towing-adapter"] ?? 0) : 0;
   const adapterPrice = big?.systems["towing-adapter"];
   if (adapters > 0 && adapterPrice !== undefined && "each" in adapterPrice) add("Towing adapter", adapterPrice.each * adapters, `${n(adapterPrice.each)} x ${n(adapters)}`);
+  if (kind === undefined && record.unitType === "dropship" && big !== undefined) systemLines(record, big, add, unpriced);
   if (!fighter) bayLines(record, add, unpriced);
   const ammoClasses = new Set<string>();
   for (const mount of record.mounts) {
@@ -632,8 +637,10 @@ const NO_OWN_LINE = ["docking-hardpoint", "lithium-fusion-battery", "jump-sail",
 function largeCraftLines(record: AeroRecord, kind: string, big: CapitalCostFigures, add: AddLine, unpriced: Unpriced): void {
   const systems = record.systems ?? {};
   const has = (system: string) => capitalSystemFigure(system, record.editionId) !== undefined && (systems[system] ?? 0) > 0;
-  const collars = has("docking-hardpoint") ? (systems["docking-hardpoint"] ?? 0) : 0;
-  if (collars > 0) add("Docking collars", big.collar * collars, `${n(big.collar)} x ${n(collars)}`);
+  const hardpoints = has("docking-hardpoint") ? (systems["docking-hardpoint"] ?? 0) : 0;
+  if (hardpoints > 0) add("Docking collars", big.collar * hardpoints, `${n(big.collar)} x ${n(hardpoints)}`);
+  // The K-F parts are priced by every collar the vessel carries, the two each naval repair facility and DropShuttle bay incorporates among them.
+  const collars = collarTotal(record);
   const { kf } = big;
   const drive = kfDrive(record);
   const sail = jumpSail(record);
@@ -650,7 +657,8 @@ function largeCraftLines(record: AeroRecord, kind: string, big: CapitalCostFigur
     const sum = parts.reduce((total, [, cost]) => total + cost, 0);
     const battery = has("lithium-fusion-battery");
     const sub = subCompact(record) && kf.subCompact !== undefined;
-    const factor = sub ? (kf.subCompact ?? 1) : kind === "warship" ? (battery ? kf.compactBattery : kf.compact) : battery ? kf.battery : 1;
+    // The sub-compact core is x16; with a lithium-fusion battery x16 times the battery's x3 = 48, the pattern of the compact core's x5 and x15 (owner ruling, 2026-11-27; the tables print no combined figure).
+    const factor = sub ? (kf.subCompact ?? 1) * (battery ? kf.battery : 1) : kind === "warship" ? (battery ? kf.compactBattery : kf.compact) : battery ? kf.battery : 1;
     const core = sub ? "sub-compact core" : kind === "warship" ? (battery ? "compact core with a lithium-fusion battery" : "compact core") : battery ? "standard core with a lithium-fusion battery" : "standard core";
     if (factor !== 1) add(`K-F drive core (${core})`, sum * (factor - 1), `x ${n(factor)} on the drive parts above`);
   } else if (sail) {
@@ -660,8 +668,13 @@ function largeCraftLines(record: AeroRecord, kind: string, big: CapitalCostFigur
   const support = big.support;
   if (support && kind === "jumpship") add("K-F drive support systems", support.jumpship.rate * (record.tons / support.jumpship.perTons), `${n(support.jumpship.rate)} x (${n(record.tons)} / ${n(support.jumpship.perTons)})`);
   if (support && kind === "warship") add("K-F drive support systems", support.warship.rate * (support.warship.base + record.tons / support.warship.perTons), `${n(support.warship.rate)} x (${n(support.warship.base)} + ${n(record.tons)} / ${n(support.warship.perTons)})`);
+  systemLines(record, big, add, unpriced);
+}
+
+/** The price of each ship system the record holds that has a line of its own (not the towing adapter, which a DropShip's cost adds itself). */
+function systemLines(record: AeroRecord, big: CapitalCostFigures, add: AddLine, unpriced: Unpriced): void {
   for (const line of capitalSystems(record).lines) {
-    if (NO_OWN_LINE.includes(line.kind) || line.count <= 0) continue;
+    if (NO_OWN_LINE.includes(line.kind) || (line.kind === "towing-adapter" && record.unitType === "dropship") || line.count <= 0 || !line.allowed) continue;
     const label = CAPITAL_SYSTEMS.find((r) => r.kind === line.kind)?.label ?? line.kind;
     const price = Object.hasOwn(big.systems, line.kind) ? big.systems[line.kind] : undefined;
     if (price === undefined) unpriced.push({ id: null, name: label, why: "no price in the cost tables" });

@@ -378,6 +378,15 @@ export const AERO_CAPITAL_COST: FigureGroup<CapitalCostFigures> = [
   },
 ];
 
+/**
+ * A DropShip's docking collar by the year of the ship (current rules; Interstellar Operations: Alternate Eras p. 113 and table p. 211): the pre-boom collar before 2458, the collar with the
+ * prototype K-F boom in 2458-2469, and 100,000 from 2470 (owner ruling, 2026-11-27; the book's text says 10,000 for new construction). No year reads 100,000.
+ */
+export const DROPSHIP_COLLAR_BY_YEAR: { before: number; price: number; what: string }[] = [
+  { before: 2458, price: 500_000, what: "pre-boom collar" },
+  { before: 2470, price: 1_010_000, what: "collar with the prototype K-F boom" },
+];
+
 /** The final multipliers that replace a space station's (IO:AE p. 180): the K-F adapter and the modular station, which fold their adapters' cost in. */
 export const STATION_MULTIPLIERS: Record<string, number> = { "space-station-kf-adapter": 20, "modular-space-station": 50 };
 export const STATION_MULTIPLIER_CITE = "Interstellar Operations: Alternate Eras p. 180, Strategic Operations: Advanced Aerospace Rules errata v5.0 (p. 139)";
@@ -395,6 +404,7 @@ export interface BayPrices {
   /** The kinds that cost nothing. */
   free: string[];
 }
+// Infantry and battle armor bays cost nothing in the current rules (TechManual p. 277, SO:AA p. 148); the AeroTech 2 books print no such exemption and no price for them, so they are listed as unpriced there.
 const FREE_BAYS = ["cargo", "infantry-foot", "infantry-jump", "infantry-motorized", "infantry-mechanized", "battle-armor", "battle-armor-is", "battle-armor-clan", "battle-armor-6"];
 export const AERO_BAY_PRICES: FigureGroup<BayPrices> = [
   {
@@ -402,7 +412,7 @@ export const AERO_BAY_PRICES: FigureGroup<BayPrices> = [
     value: {
       cubicle: { mech: 20_000, fighter: 20_000, "small-craft": 20_000, "vehicle-light": 10_000, "vehicle-heavy": 10_000, "vehicle-superheavy": 10_000 },
       door: 1_000,
-      free: FREE_BAYS,
+      free: ["cargo"],
     },
     cite: { [AT2]: "AeroTech 2 pp. 51-52", [AT2R]: "AeroTech 2: Revised Edition pp. 77-78" },
     checked: "page",
