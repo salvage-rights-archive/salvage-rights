@@ -60,6 +60,8 @@ test("a unit's specials link to the aids page, the notes switch adds our line, a
     }
     await page.goto(`${DEV}${ALPHA}/home`);
     await page.getByRole("link", { name: /^Open Special Walker/ }).click();
+    // The home page's heading is still up for a moment after the click; wait for the unit's own.
+    await expectPage(page.getByRole("heading", { level: 1, name: /Special Walker/ })).toBeVisible();
     await clean(page, `${theme} unit`);
   }
 });
