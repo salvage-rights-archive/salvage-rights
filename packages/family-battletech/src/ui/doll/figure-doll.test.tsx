@@ -3,6 +3,7 @@ import React from "react";
 import { cleanup, fireEvent, render } from "@testing-library/react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it } from "vitest";
+import BattleArmorDoll, { battleArmorLayout } from "./battle-armor-doll";
 import { figurePlates, type FigureUse, type IFigureLayout, type IFigureUnit, type IFigureUnitLocation } from "./figure-doll";
 import type { IDollFrame } from "./geometry";
 import ProtoDoll, { protoLayout } from "./proto-doll";
@@ -121,6 +122,26 @@ describe("the ProtoMech doll", () => {
   });
 });
 
+describe("the battle armor doll", () => {
+  // An assault suit carries 18 points of armor at the most (TechManual, Battle Armor Protection Table, p. 169), and a
+  // record sheet numbers its troopers 1 to 6 (Total Warfare p. 226).
+  it.each(["humanoid", "quad", "humanoid-row"])("gives each of six %s troopers 18 armor bubbles on the suit and one for the trooper", (layout) => {
+    const unit: IFigureUnit = { layout, locations: Array.from({ length: 6 }, (_, i) => ({ code: `t${i + 1}`, name: `Trooper ${i + 1}`, armor: 18 })) };
+    const rings = ringsOf(<BattleArmorDoll unit={unit} use="armor" frame={FRAME} suffix="t" />);
+    const figure = battleArmorLayout(unit);
+    expect(Object.keys(rings)).toEqual(["t1", "t2", "t3", "t4", "t5", "t6"]);
+    for (const location of figure.locations) {
+      const own = rings[location.code] ?? [];
+      const plates = figurePlates(location, FRAME);
+      const onPlate = own.filter((ring) => plates.some((plate) => insideShape(plate, [ring.x, ring.y]) && edgeDistance(plate, [ring.x, ring.y]) >= ring.outer - 0.5));
+      expect([location.code, own.length, onPlate.length]).toEqual([location.code, 19, 18]);
+      for (const [i, ring] of own.entries()) {
+        for (const other of own.slice(i + 1)) expect(Math.hypot(ring.x - other.x, ring.y - other.y)).toBeGreaterThanOrEqual(Math.min(18, ring.outer + other.outer));
+      }
+    }
+  });
+});
+
 describe("a figure doll's locations", () => {
   it("are buttons named by the location and its points when they can be chosen, and one labelled image when they cannot", () => {
     const unit: IFigureUnit = { layout: "tracked", locations: [{ code: "f", name: "Front", armor: 30, structure: 5 }, { code: "t", name: "Turret", armor: 20, structure: 5 }] };
@@ -139,5 +160,9 @@ describe("a figure doll's locations", () => {
     rerender(<svg><VehicleDoll unit={unit} use="structure" frame={FRAME} suffix="t" /></svg>);
     expect(queryAllByRole("button")).toEqual([]);
     expect(getByRole("img").getAttribute("aria-label")).toBe("Vehicle structure diagram");
+
+    // A suit is named by its armor in either use.
+    rerender(<svg><BattleArmorDoll unit={{ layout: "humanoid", locations: [{ code: "t1", name: "Trooper 1", armor: 10 }] }} use="structure" frame={FRAME} suffix="t" onSelect={() => undefined} /></svg>);
+    expect(getByRole("button").getAttribute("aria-label")).toBe("Trooper 1, 10 armor");
   });
 });
