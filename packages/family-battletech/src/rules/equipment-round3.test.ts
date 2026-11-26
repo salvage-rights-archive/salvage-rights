@@ -4,6 +4,23 @@ import { COCKPIT_COST } from "../data/cost";
 import { loadCatalog } from "./catalog";
 
 // Items added in round 3 (IO:AE and TO:AUE tables): id, tech base, tons, slots, availability, prototype year.
+describe("TO:AUE sub-capital weapons, cruise missiles and heavy equipment (pp. 216-223)", () => {
+  it.each([
+    ["light-scc-is", 200, 3073, { slots: 30 }],
+    ["scl-3-is", 250, 3073, { slots: 32 }],
+    ["piranha-is", 100, 3072, { slots: 18 }],
+    ["manta-ray-clan", 160, 3073, { slots: 38 }],
+    ["cruise-missile-90-is", 100, 3065, { slots: 1, note: "Support vehicle: 45 slots" }],
+    ["mobile-hpg-is", 50, 2655, { slots: 50 }],
+    ["vtol-jet-booster-clan", "supercharger", 2839, undefined],
+  ])("%s has its printed weight, year and support vehicle slots", async (id, tons, from, vehicle) => {
+    const row = (await loadCatalog()).byId(id);
+    expect(row?.tons).toBe(tons);
+    expect(row?.availability[0]?.from).toBe(from);
+    expect(row?.by?.vehicle).toMatchObject(vehicle ?? {});
+  });
+});
+
 describe("IO:AE large-craft items (pp. 210-215)", () => {
   it.each([
     ["dropshuttle-bay-is", 11000, [{ from: 2120, to: 2500 }], "advanced"],

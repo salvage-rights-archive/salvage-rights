@@ -314,6 +314,36 @@ export const OTHER: EquipmentGroup[] = [
     ],
   },
   {
+    // More TO:AUE heavy equipment (printed p. 221 construction data, p. 220 play table, rules pp. 138, 142-143, 145, 147, 162, read against the page images). Slots are the
+    // table's column for each unit type; an asterisk ("1*", "0*") is a rule the entry gives, and the number is kept. A support vehicle's count is a note where it
+    // differs from the combat vehicle's. "PS" and "ES" dates are written as 1950 and 2200 and marked inferred (weapons.ts); IS and Clan print the same date for the
+    // HPGs, the field base is 3059 and 3060, the VTOL booster 3009 (Inner Sphere) and 2839 (Clan, the entry, p. 162, where the table prints "ES"). Not added: the light sail,
+    // batteries, repair facilities, Naval C3, docking hardpoint and thrusters, flight deck, helipad, landing deck, handheld weapon, drone carrier control system, improved
+    // one-shot launcher and sub-compact K-F drive (weights or prices that are formulas of the unit or its parts, or modifiers), left for a design decision.
+    defaults: { kind: "other", cite: { book: TO, page: 221 }, playCite: { book: TO, page: 220 }, checked: "page", rulesLevel: "advanced", type: "PE" },
+    items: [
+      { id: "minesweeper-is", name: "Minesweeper", techBase: "inner-sphere", tons: 3, slots: 1, heat: 0, availability: [{ from: 1950 }], yearsInferred: true, units: ["vehicle", "building"] },
+      { id: "minesweeper-clan", name: "Minesweeper", techBase: "clan", tons: 3, slots: 1, heat: 0, availability: [{ from: 1950 }], yearsInferred: true, units: ["vehicle", "building"] },
+      { id: "mobile-field-base-is", name: "Mobile Field Base", techBase: "inner-sphere", tons: 20, slots: 1, availability: [{ from: 3059 }], units: ["vehicle", "building"] },
+      { id: "mobile-field-base-clan", name: "Mobile Field Base", techBase: "clan", tons: 20, slots: 1, availability: [{ from: 3060 }], units: ["vehicle", "building"] },
+      { id: "mobile-hpg-is", name: "Mobile HPG", techBase: "inner-sphere", tons: 50, slots: 1, heat: 40, availability: [{ from: 2655 }], units: ["vehicle", "smallcraft", "dropship", "ship", "building"], by: { vehicle: { slots: 50, note: "Support vehicle only: 50 slots" } } },
+      { id: "mobile-hpg-clan", name: "Mobile HPG", techBase: "clan", tons: 50, slots: 1, heat: 40, availability: [{ from: 2655 }], units: ["vehicle", "smallcraft", "dropship", "ship", "building"], by: { vehicle: { slots: 50, note: "Support vehicle only: 50 slots" } } },
+      { id: "ground-mobile-hpg-is", name: "Ground-Mobile HPG", techBase: "inner-sphere", tons: 12, slots: 12, heat: 20, availability: [{ from: 2751 }], units: ["mech", "industrialmech", "vehicle", "aero", "smallcraft", "dropship", "ship", "building"], by: { vehicle: { slots: 1, note: "Support vehicle: 12 slots" }, aero: { slots: 1 }, smallcraft: { slots: 1 }, dropship: { slots: 1 }, ship: { slots: 1 }, building: { slots: 1 } } },
+      { id: "ground-mobile-hpg-clan", name: "Ground-Mobile HPG", techBase: "clan", tons: 12, slots: 12, heat: 20, availability: [{ from: 2751 }], units: ["mech", "industrialmech", "vehicle", "aero", "smallcraft", "dropship", "ship", "building"], by: { vehicle: { slots: 1, note: "Support vehicle: 12 slots" }, aero: { slots: 1 }, smallcraft: { slots: 1 }, dropship: { slots: 1 }, ship: { slots: 1 }, building: { slots: 1 } } },
+      { id: "small-ncss-is", name: "Small NCSS", aliases: ["Small Naval Comm-Scanner Suite"], techBase: "inner-sphere", tons: 100, slots: 0, type: "CAP, E", availability: [{ from: 2200 }], units: ["vehicle", "smallcraft", "dropship", "ship"], by: { vehicle: { slots: 1, note: "Support vehicle only" } } },
+      { id: "small-ncss-clan", name: "Small NCSS", aliases: ["Small Naval Comm-Scanner Suite"], techBase: "clan", tons: 100, slots: 0, type: "CAP, E", availability: [{ from: 2200 }], units: ["vehicle", "smallcraft", "dropship", "ship"], by: { vehicle: { slots: 1, note: "Support vehicle only" } } },
+      { id: "large-ncss-is", name: "Large NCSS", aliases: ["Large Naval Comm-Scanner Suite"], techBase: "inner-sphere", tons: 500, slots: 0, type: "CAP, E", availability: [{ from: 2200 }], units: ["vehicle", "smallcraft", "dropship", "ship"], by: { vehicle: { slots: 1, note: "Support vehicle only" } } },
+      { id: "large-ncss-clan", name: "Large NCSS", aliases: ["Large Naval Comm-Scanner Suite"], techBase: "clan", tons: 500, slots: 0, type: "CAP, E", availability: [{ from: 2200 }], units: ["vehicle", "smallcraft", "dropship", "ship"], by: { vehicle: { slots: 1, note: "Support vehicle only" } } },
+      { id: "naval-tug-adaptor-is", name: "Naval Tug Adaptor", techBase: "inner-sphere", tons: 100, slots: 0, availability: [{ from: 2200 }], yearsInferred: true, units: ["smallcraft", "dropship", "ship"] },
+      { id: "naval-tug-adaptor-clan", name: "Naval Tug Adaptor", techBase: "clan", tons: 100, slots: 0, availability: [{ from: 2200 }], yearsInferred: true, units: ["smallcraft", "dropship", "ship"] },
+      { id: "space-mine-dispenser-is", name: "Mine Dispenser (Space)", techBase: "inner-sphere", tons: 10, slots: 1, heat: 0, damage: "Special", availability: [{ from: 2200 }], yearsInferred: true, units: ["vehicle", "aero", "smallcraft", "dropship", "ship"], by: { vehicle: { slots: 1, note: "Support vehicle only" } } },
+      { id: "space-mine-dispenser-clan", name: "Mine Dispenser (Space)", techBase: "clan", tons: 10, slots: 1, heat: 0, damage: "Special", availability: [{ from: 2200 }], yearsInferred: true, units: ["vehicle", "aero", "smallcraft", "dropship", "ship"], by: { vehicle: { slots: 1, note: "Support vehicle only" } } },
+      // The VTOL jet booster weighs an engine's tenth (as the supercharger does) and costs 10,000 for each point of engine rating; VTOLs only (the vehicle check).
+      { id: "vtol-jet-booster-is", name: "VTOL Jet Booster", techBase: "inner-sphere", tons: "supercharger", slots: 1, availability: [{ from: 3009 }], rulesLevel: "experimental", units: ["vehicle"], playCite: { book: TO, page: 162 } },
+      { id: "vtol-jet-booster-clan", name: "VTOL Jet Booster", techBase: "clan", tons: "supercharger", slots: 1, availability: [{ from: 2839 }], rulesLevel: "experimental", units: ["vehicle"], playCite: { book: TO, page: 162 } },
+    ],
+  },
+  {
     // Large-craft systems of the Additional Alternate Era table (IO:AE printed p. 211 construction data, p. 210 play table for the Age of War rows; pp. 212-213
     // and 214-215 for the rest; entries pp. 113-114, 142-144, read against the page images). Every cost is the table's per item. Dates: the table's Latest
     // Intro Date (the entries agree for the bay, 2120 extinct 2500, and the post-boom collar, 2470). A "P" date is prototype-only, with the entry's extinction.

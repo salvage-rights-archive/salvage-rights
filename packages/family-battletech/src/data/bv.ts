@@ -574,6 +574,11 @@ export const WEAPON_BV: BvGroup[] = [
         [`nl-35-${tech}`, 830], [`nl-45-${tech}`, 1134], [`nl-55-${tech}`, 1386],
         [`light-n-ppc-${tech}`, 1659], [`medium-n-ppc-${tech}`, 2268], [`heavy-n-ppc-${tech}`, 3780],
       ]),
+      // The sub-capital weapons (the same page; the missiles' ammunition figure is per shot) and the cruise missiles and minesweeper (printed p. 195)
+      ["light-scc-is", 379, 47], ["medium-scc-is", 708, 89], ["heavy-scc-is", 991, 124],
+      ["scl-1-is", 237], ["scl-2-is", 354], ["scl-3-is", 531],
+      ...(["is", "clan"] as const).flatMap((tech): BvRow[] => [[`piranha-${tech}`, 589, 71], [`stingray-${tech}`, 496, 62], [`swordfish-${tech}`, 317, 40], [`manta-ray-${tech}`, 396, 50], [`minesweeper-${tech}`, 30, undefined, { defensive: true }]]),
+      ["cruise-missile-50-is", 601, 75], ["cruise-missile-70-is", 1031, 129], ["cruise-missile-90-is", 1530, 191], ["cruise-missile-120-is", 2281, 285],
       ["light-mass-driver-is", 7056, 882], ["medium-mass-driver-is", 11760, 1470], ["heavy-mass-driver-is", 16464, 2058],
     ],
   },

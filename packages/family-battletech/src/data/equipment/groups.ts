@@ -17,13 +17,13 @@ const words = (list: string): RegExp => new RegExp(`(^|-)(${list})(-|$)`);
 export const EQUIPMENT_GROUPS: GroupRule[] = [
   { id: "infantry", label: "Conventional infantry weapons", match: words("inf") },
   { id: "mech-turret", label: "BattleMech turrets", match: words("battlemech-turret-shoulder|battlemech-turret-head|battlemech-turret-quad") },
-  { id: "vehicle", label: "Vehicle equipment", match: words("turret|mast-mount") },
-  { id: "capital", label: "Capital weapons", match: words("nac|nl|n-ppc|n-gauss|mass-driver|killer-whale|killer-whale-t|white-shark|white-shark-t|barracuda|barracuda-t|ar-10-launcher|kraken-t|screen-launcher") },
+  { id: "vehicle", label: "Vehicle equipment", match: words("turret|mast-mount|vtol-jet-booster|mobile-field-base|minesweeper") },
+  { id: "capital", label: "Capital weapons", match: words("nac|nl|n-ppc|n-gauss|mass-driver|killer-whale|killer-whale-t|white-shark|white-shark-t|barracuda|barracuda-t|ar-10-launcher|kraken-t|screen-launcher|light-scc|medium-scc|heavy-scc|scl-1|scl-2|scl-3|piranha|stingray|swordfish|manta-ray") },
   { id: "battlearmor", label: "Battle armor equipment", match: words("ba") },
-  { id: "artillery", label: "Artillery", match: words("arrow-iv|thumper|sniper|long-tom") },
+  { id: "artillery", label: "Artillery", match: words("arrow-iv|thumper|sniper|long-tom|cruise-missile-50|cruise-missile-70|cruise-missile-90|cruise-missile-120") },
   { id: "industrial", label: "Industrial equipment", match: words("backhoe|chainsaw|combine|dual-saw|pile-driver|mining-drill|rock-cutter|spot-welder|nail-rivet|wrecking-ball|salvage-arm|sprayer|fluid-suction|lift-hoist|ladder|bridgelayer|remote-sensor-dispenser|searchlight|ejection-seat|tracks|environmental-sealing|bulldozer|field-kitchen|mash|dumper|paramedic-equipment|quarters|seating|lifeboat|escape-pod|extended-fuel-tank|communications-equipment|cargo") },
   { id: "pilot-interface", label: "Cockpit and pilot interfaces", match: words("damage-interrupt-circuit|direct-neural-interface-modification|sldf-advanced-neurohelmet-mech|sldf-advanced-neurohelmet-fighter|enhanced-imaging-interface|battlemech-neural-interface-unit") },
-  { id: "large-craft", label: "Large-craft systems", match: words("dropshuttle-bay|docking-collar-post-boom|sldf-sds-jammer-system|wob-super-jump-drive|dragons-breath-launch-system") },
+  { id: "large-craft", label: "Large-craft systems", match: words("dropshuttle-bay|docking-collar-post-boom|sldf-sds-jammer-system|wob-super-jump-drive|dragons-breath-launch-system|mobile-hpg|ground-mobile-hpg|small-ncss|large-ncss|naval-tug-adaptor") },
   { id: "carrying", label: "Carrying and transport equipment", match: words("magnetic-clamp|vdc") },
   { id: "actuators", label: "Actuator enhancement", match: words("aes-arm|aes-leg") },
   { id: "stealth", label: "Stealth and signature systems", match: words("chameleon-lps|null-signature-system|void-signature-system") },
@@ -43,7 +43,7 @@ export const OTHER_GROUP = { id: "other", label: "Other equipment" };
 /** Ammunition, by the weapon family it feeds. The stem is the id without `ammo-`. */
 export const AMMO_GROUPS: GroupRule[] = [
   { id: "ammo-other", label: "Ammunition: machine guns, flamers and other", match: words("plasma|chemical|flamer|machine-gun|nail-rivet|fluid-gun|taser|ams|c3-remote-sensor-launcher|pds|tear-gas|remote-sensor-dispenser") },
-  { id: "ammo-artillery", label: "Ammunition: artillery", match: words("arrow-iv|thumper|sniper|long-tom") },
+  { id: "ammo-artillery", label: "Ammunition: artillery", match: words("arrow-iv|thumper|sniper|long-tom|cruise-missile-50|cruise-missile-70|cruise-missile-90|cruise-missile-120") },
   { id: "ammo-missile", label: "Ammunition: missile", match: words("fusillade|lrm|srm|srt|lrt|mrm|mml|atm|narc|thunder|thunderbolt|inferno|swarm|swarm-i|semi-guided|harpoon|artemis|mortar|streak|rocket") },
   { id: "ammo-ballistic", label: "Ammunition: ballistic", match: words("ac|lb|gauss|rifle|rotary|ultra|magshot|armor-piercing|flechette|precision|fragmentation") },
 ];

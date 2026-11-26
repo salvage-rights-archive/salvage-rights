@@ -60,6 +60,7 @@ describe("the rules check", () => {
     ["a VTOL turret", build({ ...sound, motive: "vtol", turret: true, tons: 20 }), "type:error"],
     ["an armored motive system on a VTOL (TO:AUE p. 95)", build({ ...sound, motive: "vtol", tons: 20 }, [["body", "armored-motive-system-is"]]), "type:error"],
     ["a reusable drop chute on a VTOL (TO:AUE p. 160)", build({ ...sound, motive: "vtol", tons: 20 }, [["body", "reusable-vdc-standard-is"]]), "type:error"],
+    ["a VTOL jet booster on a tracked vehicle (TO:AUE p. 162)", build({ ...sound }, [["body", "vtol-jet-booster-is"]]), "type:error"],
     ["WiGE below 5 cruising MP", build({ motive: "wige", tons: 20, cruise: 4 }), "engine:error"],
     ["more armor than the tons give", build({ ...sound, armor: { type: "standard", tons: 1, points: { f: 40 } } }), "armor:error"],
     ["too few heat sinks for the lasers", build({ ...sound, heatSinks: { count: 2 } }, [["f", "large-laser-is"]]), "heat:error"],

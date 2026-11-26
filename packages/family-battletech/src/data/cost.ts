@@ -254,6 +254,13 @@ export const EQUIPMENT_COST: PriceGroup[] = [
       "battlemech-turret-shoulder": { perWeight: 10_000 }, "battlemech-turret-head": { perWeight: 10_000 }, "battlemech-turret-quad": { perWeight: 10_000 },
       "dual-turret": { perWeight: 5_000 }, "sponson-turret": { perWeight: 4_000 }, "vtol-chin-turret": { perWeight: 5_000 },
       "armored-component": { perWeight: 300_000 }, "armored-motive-system": { perWeight: 100_000 },
+      // p.221: sub-capital cannons, lasers and missiles (the ammunition price beside the cannons and missiles is not kept), cruise missiles (p.217), minesweeper,
+      // field base, hyperpulse generators, comm-scanner suites, tug adaptor, space mine dispenser, ProtoMech Streak tube; the VTOL jet booster is 10,000 an engine rating point
+      "light-scc": 330_000, "medium-scc": 780_000, "heavy-scc": 1_300_000, "scl-1": 220_000, "scl-2": 335_000, "scl-3": 450_000,
+      piranha: 75_000, stingray: 85_000, swordfish: 110_000, "manta-ray": 150_000,
+      "cruise-missile-50": 900_000, "cruise-missile-70": 1_250_000, "cruise-missile-90": 2_550_000, "cruise-missile-120": 3_000_000,
+      minesweeper: 40_000, "mobile-field-base": 150_000, "mobile-hpg": 1_000_000_000, "ground-mobile-hpg": 4_000_000_000, "small-ncss": 50_000_000, "large-ncss": 250_000_000,
+      "naval-tug-adaptor": 100_000, "space-mine-dispenser": 15_000, "streak-lrm-protomech-tube": 15_000, "vtol-jet-booster": { perRating: 10_000 },
       // p.223: the satellite imagers and the VTOL mast mount
       "hi-res-imager": 150_000, "hyperspectral-imager": 550_000, "infrared-imager": 250_000, "vtol-mast-mount": 50_000,
       // p.223: a reusable drop chute costs twice the chute it is made from (1,000, 3,000 and 5,000)

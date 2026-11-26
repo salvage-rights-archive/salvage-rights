@@ -723,4 +723,53 @@ export const WEAPONS: EquipmentGroup[] = [
       { id: "lrt-20-clan", name: "LRT 20", aliases: ["LRT-20", "Long-Range Torpedo 20"], tons: 5, slots: 4, type: "C, M, S", heat: 6, damage: "1/Msl", range: [0, 7, 14, 21], by: { vehicle: { slots: 1, note: "Support vehicle: 4 slots" } } },
     ],
   },
+  // Sub-capital weapons and cruise missile artillery (TO:AUE printed p. 223 construction data, p. 222 play table for the sub-capital weapons; p. 217 and p. 216 for the
+  // cruise missiles; rules pp. 95-97 and 155-156; read against the page images of the corrected seventh printing). Heat and damage are the Aero columns ("-C" capital damage),
+  // as the naval weapons above have them; the range class is the table's bracket. `tonsPerShot` is the Ammo column read as the capital missiles' is ("1/10" is ten tons a
+  // shot; "2" a ton is two shots, half a ton a shot). A support vehicle mounts them in the slot count the SV column prints (a note; the combat vehicle column is NA for the
+  // sub-capital weapons); a DropShip, JumpShip, WarShip, space station or mobile structure takes one slot ("1-C*", "1"). Sub-capital cannons and lasers are Inner Sphere only
+  // (3073); the missiles 3072 (Inner Sphere) and 3073 (Clan). Advanced; the cruise missiles Experimental and prototype-only (3065, "3065P"). The sub-compact K-F drive
+  // is a drive, not a mount (not added). Ammunition rows are not added (as for the naval weapons).
+  {
+    defaults: { kind: "weapon", techBase: "inner-sphere", cite: { book: TO, page: 223 }, playCite: { book: TO, page: 222 }, checked: "page", slots: 1, type: "CAP, AE", rulesLevel: "advanced", units: ["vehicle", "dropship", "ship", "building"] },
+    items: [
+      { id: "light-scc-is", bayClass: "Sub-Capital Cannon", tonsPerShot: 0.5, name: "Light SCC", aliases: ["Light Sub-Capital Cannon"], tons: 200, availability: [{ from: 3073 }], heat: 12, damage: "2-C", by: { vehicle: { slots: 30, note: "Support vehicle only: 30 slots" }, dropship: { rangeClass: "Long" }, ship: { rangeClass: "Long" } } },
+      { id: "medium-scc-is", bayClass: "Sub-Capital Cannon", tonsPerShot: 1, name: "Medium SCC", aliases: ["Medium Sub-Capital Cannon"], tons: 500, availability: [{ from: 3073 }], heat: 30, damage: "5-C", by: { vehicle: { slots: 50, note: "Support vehicle only: 50 slots" }, dropship: { rangeClass: "Medium" }, ship: { rangeClass: "Medium" } } },
+      { id: "heavy-scc-is", bayClass: "Sub-Capital Cannon", tonsPerShot: 2, name: "Heavy SCC", aliases: ["Heavy Sub-Capital Cannon"], tons: 700, availability: [{ from: 3073 }], heat: 42, damage: "7-C", by: { vehicle: { slots: 60, note: "Support vehicle only: 60 slots" }, dropship: { rangeClass: "Medium" }, ship: { rangeClass: "Medium" } } },
+      { id: "scl-1-is", bayClass: "Sub-Capital Laser", name: "SCL/1", aliases: ["Sub-Capital Laser 1"], tons: 150, availability: [{ from: 3073 }], heat: 24, damage: "1-C", by: { vehicle: { slots: 20, note: "Support vehicle only: 20 slots" }, dropship: { rangeClass: "Long" }, ship: { rangeClass: "Long" } } },
+      { id: "scl-2-is", bayClass: "Sub-Capital Laser", name: "SCL/2", aliases: ["Sub-Capital Laser 2"], tons: 200, availability: [{ from: 3073 }], heat: 28, damage: "2-C", by: { vehicle: { slots: 26, note: "Support vehicle only: 26 slots" }, dropship: { rangeClass: "Medium" }, ship: { rangeClass: "Medium" } } },
+      { id: "scl-3-is", bayClass: "Sub-Capital Laser", name: "SCL/3", aliases: ["Sub-Capital Laser 3"], tons: 250, availability: [{ from: 3073 }], heat: 32, damage: "3-C", by: { vehicle: { slots: 32, note: "Support vehicle only: 32 slots" }, dropship: { rangeClass: "Medium" }, ship: { rangeClass: "Medium" } } },
+      { id: "piranha-is", bayClass: "Sub-Capital Missile", tonsPerShot: 10, name: "Piranha", tons: 100, availability: [{ from: 3072 }], heat: 9, damage: "3-C", by: { vehicle: { slots: 18, note: "Support vehicle only: 18 slots" }, dropship: { rangeClass: "Long" }, ship: { rangeClass: "Long" } } },
+      { id: "stingray-is", bayClass: "Sub-Capital Missile", tonsPerShot: 12, name: "Stingray", tons: 120, availability: [{ from: 3072 }], heat: 12, damage: "3.5-C", by: { vehicle: { slots: 25, note: "Support vehicle only: 25 slots" }, dropship: { rangeClass: "Medium" }, ship: { rangeClass: "Medium" } } },
+      { id: "swordfish-is", bayClass: "Sub-Capital Missile", tonsPerShot: 15, name: "Swordfish", tons: 140, availability: [{ from: 3072 }], heat: 15, damage: "4-C", by: { vehicle: { slots: 30, note: "Support vehicle only: 30 slots" }, dropship: { rangeClass: "Short" }, ship: { rangeClass: "Short" } } },
+      { id: "manta-ray-is", bayClass: "Sub-Capital Missile", tonsPerShot: 18, name: "Manta Ray", tons: 160, availability: [{ from: 3072 }], heat: 21, damage: "5-C", by: { vehicle: { slots: 38, note: "Support vehicle only: 38 slots" }, dropship: { rangeClass: "Short" }, ship: { rangeClass: "Short" } } },
+    ],
+  },
+  {
+    defaults: { kind: "weapon", techBase: "clan", cite: { book: TO, page: 223 }, playCite: { book: TO, page: 222 }, checked: "page", slots: 1, type: "CAP, AE", rulesLevel: "advanced", availability: [{ from: 3073 }], units: ["vehicle", "dropship", "ship", "building"] },
+    items: [
+      { id: "piranha-clan", bayClass: "Sub-Capital Missile", tonsPerShot: 10, name: "Piranha", tons: 100, heat: 9, damage: "3-C", by: { vehicle: { slots: 18, note: "Support vehicle only: 18 slots" }, dropship: { rangeClass: "Long" }, ship: { rangeClass: "Long" } } },
+      { id: "stingray-clan", bayClass: "Sub-Capital Missile", tonsPerShot: 12, name: "Stingray", tons: 120, heat: 12, damage: "3.5-C", by: { vehicle: { slots: 25, note: "Support vehicle only: 25 slots" }, dropship: { rangeClass: "Medium" }, ship: { rangeClass: "Medium" } } },
+      { id: "swordfish-clan", bayClass: "Sub-Capital Missile", tonsPerShot: 15, name: "Swordfish", tons: 140, heat: 15, damage: "4-C", by: { vehicle: { slots: 30, note: "Support vehicle only: 30 slots" }, dropship: { rangeClass: "Short" }, ship: { rangeClass: "Short" } } },
+      { id: "manta-ray-clan", bayClass: "Sub-Capital Missile", tonsPerShot: 18, name: "Manta Ray", tons: 160, heat: 21, damage: "5-C", by: { vehicle: { slots: 38, note: "Support vehicle only: 38 slots" }, dropship: { rangeClass: "Short" }, ship: { rangeClass: "Short" } } },
+    ],
+  },
+  {
+    // Cruise missile artillery (TO:AUE pp. 95-97): the table's slots are CV 1, SV 25/35/45/60, SC 1, DS 1, MS 1. Experimental. Ranges are boards (50, 90, 120, 150).
+    defaults: { kind: "weapon", techBase: "inner-sphere", cite: { book: TO, page: 217 }, playCite: { book: TO, page: 216 }, checked: "page", slots: 1, type: "AE", rulesLevel: "experimental", availability: [{ from: 3065 }], units: ["vehicle", "smallcraft", "dropship", "building"] },
+    items: [
+      { id: "cruise-missile-50-is", name: "Cruise Missile/50", tons: 55, heat: 50, damage: "50A", tonsPerShot: 25, by: { vehicle: { slots: 1, note: "Support vehicle: 25 slots" } } },
+      { id: "cruise-missile-70-is", name: "Cruise Missile/70", tons: 80, heat: 70, damage: "70A", tonsPerShot: 35, by: { vehicle: { slots: 1, note: "Support vehicle: 35 slots" } } },
+      { id: "cruise-missile-90-is", name: "Cruise Missile/90", tons: 100, heat: 90, damage: "90A", tonsPerShot: 45, by: { vehicle: { slots: 1, note: "Support vehicle: 45 slots" } } },
+      { id: "cruise-missile-120-is", name: "Cruise Missile/120", tons: 135, heat: 120, damage: "120A", tonsPerShot: 60, by: { vehicle: { slots: 1, note: "Support vehicle: 60 slots" } } },
+    ],
+  },
+  {
+    // ProtoMech Streak LRM, priced per tube (TO:AUE printed p. 221 and p. 220; rules p. 139): 0.4 tons and one slot a tube, prototype-only from 3065. Experimental. The
+    // damage is the table's cluster of 5 per tube.
+    defaults: { kind: "weapon", techBase: "clan", cite: { book: TO, page: 221 }, playCite: { book: TO, page: 220 }, checked: "page", slots: 1, type: "M, C*", rulesLevel: "experimental", units: ["protomech"] },
+    items: [
+      { id: "streak-lrm-protomech-tube-clan", name: "Streak LRM (ProtoMech, per tube)", tons: 0.4, availability: [{ from: 3065 }], heat: 1, damage: "C5/1", range: [0, 7, 14, 21] },
+    ],
+  },
 ];

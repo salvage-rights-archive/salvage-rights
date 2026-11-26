@@ -45,6 +45,8 @@ const typeCheck: VehicleCheck = {
     if (record.motive === "vtol" && record.mounts.some((m) => (m.equipmentId ?? "").startsWith("armored-motive-system-"))) out.push(finding("type", "error", "A VTOL may not carry an armored motive system.", { where: { field: "mounts" }, cite: { book: "Tactical Operations: Advanced Units and Equipment", page: 95 } }));
     // A reusable drop chute: wheeled, tracked, hover or WiGE vehicles only, none over 100 tons (TO:AUE p. 160).
     if (record.mounts.some((m) => (m.equipmentId ?? "").startsWith("reusable-vdc-")) && (!["tracked", "wheeled", "hover", "wige"].includes(record.motive) || record.tons > 100)) out.push(finding("type", "error", "A drop chute is for wheeled, tracked, hover and WiGE vehicles of 100 tons or less.", { where: { field: "mounts" }, cite: { book: "Tactical Operations: Advanced Units and Equipment", page: 160 } }));
+    // The VTOL jet booster is for VTOLs only (TO:AUE p. 162: it doubles a VTOL's cruising speed for flanking).
+    if (record.motive !== "vtol" && record.mounts.some((m) => (m.equipmentId ?? "").startsWith("vtol-jet-booster-"))) out.push(finding("type", "error", "A VTOL jet booster is for VTOLs only.", { where: { field: "mounts" }, cite: { book: "Tactical Operations: Advanced Units and Equipment", page: 162 } }));
     return out;
   },
 };
