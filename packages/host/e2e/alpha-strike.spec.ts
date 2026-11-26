@@ -50,7 +50,7 @@ test("the home and unit pages do not scroll sideways at 320 px, and their button
   await page.setViewportSize({ width: 320, height: 700 });
   for (const address of [`${DEV}${ALPHA}/home`, `${DEV}${ALPHA}/unit`]) {
     await page.goto(address);
-    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    await expectPage(page.getByRole("heading", { level: 1 })).toBeVisible();
     const widths = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, client: document.documentElement.clientWidth }));
     expect(widths.scroll, `scroll width on ${address}`).toBe(widths.client);
     for (const control of await page.locator("button, a.bt-button, input:not([type=file]), select").all()) {
@@ -150,7 +150,7 @@ test("the play aids and the table work at 320 px: the calculator answers, a stag
   await expect(page.getByRole("status").first()).toContainText("Target Number 8");
   for (const address of [`${DEV}${ALPHA}/aids`, `${DEV}${ALPHA}/home`]) {
     await page.goto(address);
-    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    await expectPage(page.getByRole("heading", { level: 1 })).toBeVisible();
     const widths = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, client: document.documentElement.clientWidth }));
     expect(widths.scroll, address).toBe(widths.client);
   }

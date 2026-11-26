@@ -1,6 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import type { Page } from "@playwright/test";
-import { DEV, expect, test } from "./fixtures";
+import { DEV, expect, expectPage, test } from "./fixtures";
 
 const HOME = `${DEV}/battletech/classic/home`;
 
@@ -41,7 +41,7 @@ test("build an infantry platoon at 320 px, save it, open its record sheet and fi
     await chooseTheme(page, theme);
     for (const url of [editor, sheet]) {
       await page.goto(`${DEV}${url.pathname.replace(/^\/salvage-rights/, "")}${url.search}`);
-      await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+      await expectPage(page.getByRole("heading", { level: 1 })).toBeVisible();
       const results = await new AxeBuilder({ page }).analyze();
       expect(results.violations, `${theme} theme, ${url.pathname}`).toEqual([]);
     }

@@ -1,6 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import type { Page } from "@playwright/test";
-import { ACES, DEV, expect, test } from "./fixtures";
+import { ACES, DEV, expect, expectPage, test } from "./fixtures";
 
 // The campaign is invented for the test: three units and three pilots, no printed card.
 
@@ -143,7 +143,7 @@ test("run the after-sortie steps for an invented sortie at 320 px, in both theme
   await page.goto(`${DEV}/settings`);
   await page.getByRole("radio", { name: "Dark" }).check();
   await page.goto(url);
-  await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+  await expectPage(page.getByRole("heading", { level: 1 })).toBeVisible();
   await noViolations(page, "recorded, dark");
   await page.getByRole("button", { name: "5. Named Pilots" }).click();
   await noViolations(page, "pilots, dark");

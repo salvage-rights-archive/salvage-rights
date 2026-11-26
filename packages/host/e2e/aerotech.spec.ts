@@ -56,7 +56,7 @@ test("the AeroTech home and editor have no axe violations in either theme and fi
     await chooseTheme(page, theme);
     for (const path of [`${AERO}/home`, editor]) {
       await page.goto(`${DEV}${path}`);
-      await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+      await expectPage(page.getByRole("heading", { level: 1 })).toBeVisible();
       const results = await new AxeBuilder({ page }).analyze();
       expect(results.violations, `${theme} theme, ${path}`).toEqual([]);
     }
@@ -69,7 +69,7 @@ test("the AeroTech home and editor have no axe violations in either theme and fi
   await page.setViewportSize({ width: 320, height: 700 });
   for (const path of [`${AERO}/home`, editor]) {
     await page.goto(`${DEV}${path}`);
-    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    await expectPage(page.getByRole("heading", { level: 1 })).toBeVisible();
     const widths = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, client: document.documentElement.clientWidth }));
     expect(widths.scroll, path).toBe(widths.client);
     for (const control of await page.locator("button, select, input:not([type=file]):not([type=checkbox]), a.bt-button").all()) {
@@ -137,13 +137,13 @@ test("a fighter's sheet opens from the editor, prints as one page, has no axe vi
   for (const theme of ["Light", "Dark"] as const) {
     await chooseTheme(page, theme);
     await page.goto(`${DEV}${path}`);
-    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    await expectPage(page.getByRole("heading", { level: 1 })).toBeVisible();
     const results = await new AxeBuilder({ page }).analyze();
     expect(results.violations, `${theme} theme, the sheet`).toEqual([]);
   }
   await page.setViewportSize({ width: 320, height: 700 });
   await page.goto(`${DEV}${path}`);
-  await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+  await expectPage(page.getByRole("heading", { level: 1 })).toBeVisible();
   const widths = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, client: document.documentElement.clientWidth }));
   expect(widths.scroll).toBe(widths.client);
 });
@@ -175,7 +175,7 @@ test("a DropShip and a WarShip are built, checked and printed: editor and sheet 
     await chooseTheme(page, theme);
     for (const path of paths) {
       await page.goto(`${DEV}${path}`);
-      await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+      await expectPage(page.getByRole("heading", { level: 1 })).toBeVisible();
       const results = await new AxeBuilder({ page }).analyze();
       expect(results.violations, `${theme} theme, ${path}`).toEqual([]);
     }
@@ -183,7 +183,7 @@ test("a DropShip and a WarShip are built, checked and printed: editor and sheet 
   await page.setViewportSize({ width: 320, height: 700 });
   for (const path of paths) {
     await page.goto(`${DEV}${path}`);
-    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    await expectPage(page.getByRole("heading", { level: 1 })).toBeVisible();
     const widths = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, client: document.documentElement.clientWidth }));
     expect(widths.scroll, path).toBe(widths.client);
   }

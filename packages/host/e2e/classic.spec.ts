@@ -1,5 +1,5 @@
 import { readFile } from "node:fs/promises";
-import { CLASSIC, DEV, FAKE_KEY, MECH_NAME, expect, importMech, test } from "./fixtures";
+import { CLASSIC, DEV, FAKE_KEY, MECH_NAME, expect, expectPage, importMech, test } from "./fixtures";
 
 const HOME = `${DEV}${CLASSIC}/home`;
 
@@ -152,7 +152,7 @@ test("the home, import and editor pages do not scroll sideways at 320 px wide", 
   const editor = page.url();
   for (const address of [HOME, `${DEV}${CLASSIC}/import`, editor]) {
     await page.goto(address);
-    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    await expectPage(page.getByRole("heading", { level: 1 })).toBeVisible();
     // Leaving the import page while its designs request is in flight shows up as a page error in WebKit.
     if (address.endsWith("/import")) await expect(page.getByText("You have no designs on mordel.net yet.")).toBeVisible();
     const widths = await page.evaluate(() => ({

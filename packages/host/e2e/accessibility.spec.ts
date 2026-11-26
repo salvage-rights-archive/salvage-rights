@@ -53,7 +53,7 @@ test("the editor's picker and Actions row have no axe violations in either theme
   for (const theme of ["Light", "Dark"] as const) {
     await chooseTheme(page, DEV, theme);
     await page.goto(`${DEV}${editorPath}`);
-    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    await expectPage(page.getByRole("heading", { level: 1 })).toBeVisible();
 
     // The picker, open.
     await page.getByRole("button", { name: "Add equipment" }).click();
@@ -404,7 +404,7 @@ test("patchwork armor in the editor and on the record sheet: axe clean in both t
   await page.setViewportSize({ width: 320, height: 700 });
   for (const address of [path, sheetPath]) {
     await page.goto(`${DEV}${address}`);
-    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    await expectPage(page.getByRole("heading", { level: 1 })).toBeVisible();
     const widths = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, client: document.documentElement.clientWidth }));
     expect(widths.scroll, `scroll width on ${address}`).toBe(widths.client);
   }

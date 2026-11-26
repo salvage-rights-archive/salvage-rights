@@ -1,5 +1,5 @@
 import { readFile } from "node:fs/promises";
-import { DEV, FREE, expect, tabTo, test } from "./fixtures";
+import { DEV, FREE, expect, expectPage, tabTo, test } from "./fixtures";
 
 test.describe("dev edition", () => {
   test("the landing page shows two tiles and the first link of the one with several games opens that game's page", async ({ page }) => {
@@ -80,7 +80,7 @@ test.describe("dev edition", () => {
     await page.setViewportSize({ width: 320, height: 700 });
     for (const path of ["/", "/about", "/settings"]) {
       await page.goto(`${DEV}${path}`);
-      await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+      await expectPage(page.getByRole("heading", { level: 1 })).toBeVisible();
       const widths = await page.evaluate(() => ({
         scroll: document.documentElement.scrollWidth,
         client: document.documentElement.clientWidth,

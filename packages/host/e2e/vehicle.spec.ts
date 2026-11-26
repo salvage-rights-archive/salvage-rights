@@ -1,6 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import type { Page } from "@playwright/test";
-import { DEV, expect, test } from "./fixtures";
+import { DEV, expect, expectPage, test } from "./fixtures";
 
 const CLASSIC = "/battletech/classic";
 
@@ -69,7 +69,7 @@ test("the vehicle editor, picker and record sheet have no axe violations in eith
     await chooseTheme(page, theme);
     for (const path of [editor, sheet]) {
       await page.goto(`${DEV}${path}`);
-      await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+      await expectPage(page.getByRole("heading", { level: 1 })).toBeVisible();
       const results = await new AxeBuilder({ page }).analyze();
       expect(results.violations, `${theme} theme, ${path}`).toEqual([]);
     }
