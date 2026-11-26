@@ -18,6 +18,7 @@ import { LeaveGuard } from "../editor/LeaveConfirm";
 import GamePicture from "../GamePicture";
 import { MAX_LIBRARY_BYTES, STORAGE_READ_FAILED, STORAGE_WRITE_FAILED } from "../storage";
 import { AbominationSheets } from "./AbominationSheet";
+import Silhouette from "./Silhouette";
 import { downloadUnits, fromAbomFile, openGothicStorage } from "./storage";
 import type { AbomEntry, GothicStorage } from "./storage";
 import "../classic.scss";
@@ -302,14 +303,17 @@ export default function AbominationsPage() {
               const s = unitStats(unit);
               return (
                 <li key={entry.id} className="bt-row">
-                  <span className="bt-row__text">
-                    <strong>{name}</strong>
-                    {s && <span className="bt-row__credit">{`${s.size?.label ?? s.classId}, ${String(s.creatures)} ${s.creatures === 1 ? "creature" : "creatures"} of ${String(s.pipsEach)} pips. Gunnery ${String(unit.gunnery)}, AniMelee ${String(unit.animelee)}.`}</span>}
-                    {found.map((f) => (
-                      <span key={f.check + f.message} className="bt-row__credit bt-problem">
-                        {f.message}
-                      </span>
-                    ))}
+                  <span className="bt-row__text bt-silhouetted">
+                    {s && <Silhouette typeId={unit.typeId} classId={s.classId} size={40} />}
+                    <span>
+                      <strong>{name}</strong>
+                      {s && <span className="bt-row__credit">{`${s.size?.label ?? s.classId}, ${String(s.creatures)} ${s.creatures === 1 ? "creature" : "creatures"} of ${String(s.pipsEach)} pips. Gunnery ${String(unit.gunnery)}, AniMelee ${String(unit.animelee)}.`}</span>}
+                      {found.map((f) => (
+                        <span key={f.check + f.message} className="bt-row__credit bt-problem">
+                          {f.message}
+                        </span>
+                      ))}
+                    </span>
                   </span>
                   <span className="bt-row__actions">
                     <button type="button" className="bt-button" aria-label={`Open ${name}`} onClick={() => { setLevel(unit.rulesLevel ?? DEFAULT_LEVEL); startDraft(structuredClone(unit)); }}>
@@ -472,9 +476,12 @@ export default function AbominationsPage() {
             <ul className="bt-list">
               {ABOM_TYPES.filter((t) => t.classId === size.id).map((type) => (
                 <li key={type.id} className="bt-row">
-                  <span className="bt-row__text">
-                    <strong>{type.name}</strong>
-                    <span className="bt-row__credit">{`${String(type.creatures)} creatures of ${String(size.rows * type.pipsPerRow)} pips. ${moveText(type)}. ${weaponsText(type.weapons, catalog)}.`}</span>
+                  <span className="bt-row__text bt-silhouetted">
+                    <Silhouette typeId={type.id} classId={type.classId} size={40} />
+                    <span>
+                      <strong>{type.name}</strong>
+                      <span className="bt-row__credit">{`${String(type.creatures)} creatures of ${String(size.rows * type.pipsPerRow)} pips. ${moveText(type)}. ${weaponsText(type.weapons, catalog)}.`}</span>
+                    </span>
                   </span>
                   <span className="bt-row__actions">
                     <button type="button" className="bt-button" aria-label={`Add ${type.name}`} onClick={() => { startDraft(newAbominationUnit(type.id)); }}>
