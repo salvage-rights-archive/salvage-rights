@@ -556,6 +556,7 @@ export function conditionEffect(id: ConditionId, who: "abomination" | "frayed" =
   const base = PLANETARY_CONDITIONS.find((c) => c.ids.includes(id));
   if (!base) return undefined;
   const uv = ULTRAVIOLET.find((u) => u.ids.includes(id))?.[who] ?? 0;
+  // p. 90: the ultraviolet +1 applies to physical attacks too, even where the condition prints no physical modifier (panel reading, CONFLICTS 77)
   const adjust = (n: number) => (uv === "ignore" ? 0 : Math.max(0, n + uv));
   return { mp: adjust(base.mp), weapon: adjust(base.weapon), physical: adjust(base.physical) };
 }
