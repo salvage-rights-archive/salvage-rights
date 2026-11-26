@@ -117,6 +117,34 @@ describe("Aces game page: Initiative and Movement", () => {
     expect(await screen.findByText(/2 staged/)).toBeTruthy();
   });
 
+  it.each([
+    ["a failed 0* roll still delivers the OV", "3", 2],
+    ["a 0* roll of 4 delivers the OV and 1 more", "4", 3],
+  ])("a 0* hit with OV 2 still rolls the 1D6: %s (ASCE pp. 48, 53)", async (_name, die, staged) => {
+    const aces = await openAcesStorage();
+    for (const c of brawlers) await aces.save(c);
+    const minimal: AsCard = { ...card, ov: 2, damage: { s: { value: 0, minimal: true }, m: { value: 0 }, l: { value: 0 } } };
+    const game = newAcesGame({
+      id: "g",
+      name: "Table test",
+      seed: 4,
+      at: AT,
+      player: { units: [{ unitId: "ma", name: "Mine A", card: minimal, skill: 4, pv: 20 }] },
+      automated: { units: [{ unitId: "ta", name: "Theirs A", card, skill: 4, pv: 20 }] },
+      cards: brawlers,
+    });
+    await (await openGameStorage()).save({ ...game, phase: "combat", initiative: { player: 5, automated: 9, winner: "automated", turn: 1 } });
+    const user = userEvent.setup();
+    open();
+    await user.click(await screen.findByRole("button", { name: "Attack with Mine A" }));
+    await user.type(screen.getByLabelText(/Distance to the target/), "3");
+    await user.selectOptions(screen.getByLabelText("Overheat to use"), "2");
+    await user.type(screen.getByLabelText(/2D6 attack roll/), "12");
+    await user.type(await screen.findByLabelText(/Minimal damage \(0\*\)/), die);
+    await user.click(screen.getByRole("button", { name: "Record the attack" }));
+    expect(await screen.findByText(new RegExp(`${String(staged)} staged`))).toBeTruthy();
+  });
+
   it("asks for the screen to stay on, and lets it go when the switch is turned off", async () => {
     await saveGame();
     const release = vi.fn(() => Promise.resolve());

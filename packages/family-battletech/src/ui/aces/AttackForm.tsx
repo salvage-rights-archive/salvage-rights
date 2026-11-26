@@ -69,13 +69,15 @@ interface RollBlockProps {
   minimal?: boolean;
   /** The Overheat points used, which heat the unit in the End Phase. */
   ov: number;
+  /** The OV points that add damage at this range; a failed 0* roll leaves these standing. */
+  ovAdds?: number;
   attackerOnHit?: number;
   attackerOnMiss?: number;
   apply: Apply;
 }
 
 /** The roll and its result, then Record: the damage is staged on the target and the attacker is done. */
-export function RollBlock({ game, attacker, targetId, kind, physical, tn, damage, minimal = false, ov, attackerOnHit = 0, attackerOnMiss = 0, apply }: RollBlockProps) {
+export function RollBlock({ game, attacker, targetId, kind, physical, tn, damage, minimal = false, ov, ovAdds = 0, attackerOnHit = 0, attackerOnMiss = 0, apply }: RollBlockProps) {
   const multi = game.rules.multipleAttackRolls && kind !== "physical";
   const rolls = Math.max(1, Math.ceil(damage));
   const target = unitById(game, targetId);
@@ -98,10 +100,11 @@ export function RollBlock({ game, attacker, targetId, kind, physical, tn, damage
   const natural12 = multi ? twelve : roll === 12;
   const needsDie = minimal && hit;
   const dieOk = validDie(die);
-  // A 0* hit that rolls under 4 delivers nothing (and no critical check); a rear hit adds its point to what is delivered.
-  const cardDamage = minimal ? (dieOk && !minimalDelivers(die) ? 0 : damage) : damage;
+  // A 0* hit that rolls under 4 loses its own point but keeps any OV (ASCE pp. 48, 53, 174). In Multiple Attack Rolls the OV points count
+  // before the rolls (p. 175), so we add them to the 0* die's result. A rear hit adds 1 even when the 0* roll fails (ASCE p. 48, 7th printing).
+  const cardDamage = minimal ? (dieOk && !minimalDelivers(die) ? ovAdds : damage) : damage;
   const typed = Number.parseInt(damageText, 10);
-  const baseDamage = multi ? (minimal ? (dieOk && minimalDelivers(die) ? 1 : 0) : successes) : damageText === "" ? cardDamage : Number.isFinite(typed) ? typed : cardDamage;
+  const baseDamage = multi ? (minimal ? ovAdds + (dieOk && minimalDelivers(die) ? 1 : 0) : successes) : damageText === "" ? cardDamage : Number.isFinite(typed) ? typed : cardDamage;
   const dealt = hit ? Math.max(0, baseDamage) + (rear && rearPossible ? 1 : 0) : 0;
   const ready = (multi ? successOk : rollOk) && (!needsDie || dieOk);
   const damageEnded = hit && dealt === 0;
@@ -182,7 +185,7 @@ export function RollBlock({ game, attacker, targetId, kind, physical, tn, damage
         {multi && successOk && <p>{`${String(successes)} of ${String(rolls)} succeeded.`}</p>}
         {hit && natural12 && !damageEnded && <p>A natural 12 calls for a critical hit roll in the End Phase.</p>}
         {kind === "physical" && physical === "anti-mech" && hit && <p>An Anti-&apos;Mech hit calls for a critical hit roll in the End Phase.</p>}
-        {damageEnded && minimal && <p>The hit delivers no damage, so there is no critical hit check.</p>}
+        {damageEnded && <p>The hit delivers no damage, so there is no critical hit check.</p>}
       </div>
       {needsDie && (
         <div className="bt-field">
@@ -196,7 +199,7 @@ export function RollBlock({ game, attacker, targetId, kind, physical, tn, damage
       {hit && rearPossible && (
         <label className="bt-check" htmlFor="atk-rear">
           <input id="atk-rear" type="checkbox" checked={rear} onChange={(e) => { setRear(e.target.checked); }} />
-          The hit struck the target&apos;s rear (1 more damage)
+          The hit struck the target&apos;s rear (1 more damage, even when a 0* roll fails; ASCE p. 48, 7th printing)
         </label>
       )}
       {!multi && hit && (
@@ -327,6 +330,7 @@ export function ManualAttack({ game, attacker, apply, onCancel }: { game: AcesGa
                 damage={damage}
                 minimal={wd?.rollsMinimal === true || ind?.rollsMinimal === true}
                 ov={used}
+                ovAdds={wd?.ovAdds ?? 0}
                 attackerOnHit={costs?.toAttackerOnHit ?? 0}
                 attackerOnMiss={costs?.toAttackerOnMiss ?? 0}
                 apply={apply}
