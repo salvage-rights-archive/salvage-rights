@@ -80,7 +80,7 @@ const LIMBS: { arms: string[]; legs: string[] } = {
 };
 
 /** The price of a catalog row: its own id first, then its id without the tech base ending. */
-function priceOf(row: EquipmentRow): { price: Price; cite: Cite; checked: Checked } | undefined {
+export function priceOf(row: EquipmentRow): { price: Price; cite: Cite; checked: Checked } | undefined {
   for (const key of [row.id, stemOf(row.id)]) {
     for (const group of EQUIPMENT_COST) {
       const price = own(group.prices, key);
