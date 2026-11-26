@@ -85,3 +85,40 @@ test("the Gothic sheet's Dazzle switch adds the Dazzle lines and fits a phone", 
   const widths = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, client: document.documentElement.clientWidth }));
   expect(widths.scroll).toBe(widths.client);
 });
+
+test("play a Tyrant through two phases on a phone: 44 px pips, nothing scrolls sideways, and the table survives a reload", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 700 });
+  await page.goto(HOME);
+  await page.getByRole("link", { name: "Abomination units" }).click();
+  await expect(page.getByLabel("Import a file")).toBeEnabled();
+  await page.getByRole("button", { name: "Add Tyrant" }).click();
+  await page.getByLabel("Label").fill("Claws");
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(page.getByText("Claws (Tyrant) saved.")).toBeVisible();
+  await page.goto(HOME);
+  await page.getByRole("link", { name: "Abomination tracker" }).click();
+  await page.getByRole("button", { name: "Put on the table: Claws (Tyrant)" }).click();
+  const fact = (name: string) => page.locator("dt", { hasText: name }).locator("xpath=following-sibling::dd");
+  // Phase one: 21 damage on creature 1 and a launcher shot spent.
+  await page.getByRole("button", { name: "Creature 1 pip 21" }).click();
+  await page.getByRole("button", { name: "Spend a shot: SRM 5 1" }).click();
+  await expect(fact("Damage this phase")).toHaveText("21");
+  await expect(fact("Stumble target")).toHaveText("5");
+  await page.getByRole("button", { name: "End phase: Claws (Tyrant)" }).click();
+  // Phase two: the creature is finished, so the unit has lost one and attacks at +1.
+  await page.getByRole("button", { name: "Creature 1 pip 26" }).click();
+  await expect(fact("Active creatures")).toHaveText("2 of 3");
+  await expect(fact("Attack modifier")).toHaveText("+1");
+  await expect(fact("Damage this phase")).toHaveText("5");
+  await expect(fact("Stumble target")).toHaveText("5");
+  await page.reload();
+  await expect(fact("Active creatures")).toHaveText("2 of 3");
+  await expect(page.getByText("SRM 5 1: 0 shots left")).toBeVisible();
+  const widths = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, client: document.documentElement.clientWidth }));
+  expect(widths.scroll).toBe(widths.client);
+  for (const control of await page.locator("button, select, input").all()) {
+    const box = await control.boundingBox();
+    if (box) expect(box.height, (await control.getAttribute("aria-label")) ?? "").toBeGreaterThanOrEqual(43.5);
+    if (box) expect(box.width, (await control.getAttribute("aria-label")) ?? "").toBeGreaterThanOrEqual(43.5);
+  }
+});

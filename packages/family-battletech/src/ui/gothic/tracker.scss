@@ -1,0 +1,99 @@
+// The Abomination tracker (play page): the facts grid, and pips that are real 44 px buttons wrapping onto as many lines as they need.
+.bt-track {
+  &__facts {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+    gap: var(--sr-space-2);
+    margin: 0 0 var(--sr-space-3);
+
+    div {
+      padding: var(--sr-space-2);
+      background: var(--sr-surface-alt);
+      border: var(--sr-border) solid var(--sr-line);
+      border-radius: var(--sr-radius);
+    }
+
+    dt {
+      color: var(--sr-ink-muted);
+      font-size: .875rem;
+    }
+
+    dd {
+      margin: 0;
+      font-size: 1.5rem;
+      font-weight: 700;
+    }
+  }
+
+  &__shots {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--sr-space-2);
+  }
+
+  &__creature {
+    margin-bottom: var(--sr-space-3);
+
+    h4 {
+      margin: 0 0 var(--sr-space-1);
+    }
+
+    &--out h4 {
+      text-decoration: line-through;
+    }
+  }
+
+  &__count {
+    color: var(--sr-ink-muted);
+    font-weight: 400;
+  }
+
+  &__pips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  &__pip {
+    box-sizing: border-box;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    background: var(--sr-field-bg);
+    border: 2px solid var(--sr-line-strong);
+    border-radius: 50%;
+    cursor: pointer;
+
+    &[aria-pressed="true"] {
+      background: var(--sr-ink);
+      border-color: var(--sr-ink);
+    }
+
+    &:focus-visible {
+      outline: 3px solid var(--sr-focus);
+      outline-offset: 2px;
+    }
+  }
+
+  &__dice {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sr-space-2);
+
+    .bt-button {
+      min-width: 44px;
+    }
+
+    .bt-button[aria-pressed="true"] {
+      outline: 3px solid var(--sr-focus);
+    }
+  }
+
+  &__result {
+    min-height: 2rem;
+    margin: var(--sr-space-2) 0;
+    font-size: 1.25rem;
+    font-weight: 700;
+  }
+}
