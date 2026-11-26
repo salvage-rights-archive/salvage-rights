@@ -844,9 +844,13 @@ export const OTHER: EquipmentGroup[] = [
     // of the weapons are the 'Mech weapon's, p. 218, which the battle armor rules take over unchanged: heavy flamer p. 124, ER pulse lasers p. 132, variable
     // speed pulse lasers p. 133, Taser p. 158, Angel ECM p. 91, BC3 and BC3i p. 109). A date printed with a P is the prototype year of an item never produced, so
     // it is the item's first year (the catalog's rule for prototype-only items). The single date of the heavy flamer and the Taser is printed once for both tech
-    // bases; the Clan heavy flamer carries it marked inferred. Not rows: the mine dispenser (a mine type is chosen), the myomer booster (price and effect follow
-    // the Ground MP), the mechanical jump booster (weight and price follow the jump jets), the detachable weapon pack (a modifier), the BA LB-X autocannon and
-    // the BA tube artillery (their play figures were not read), the disposable weapon (as its weapon) and the battle armor drop chutes (reusable only, a design decision).
+    // bases; the Clan heavy flamer carries it marked inferred. Later rows of this group (TO:AUE printed pp. 98-99, 137, 161 rules, p. 224 play data, p. 225 construction data, read
+    // against the page images): the mine dispenser (50 kg, two slots; its mine type is chosen, see rules/munitions.ts); the BA LB-X autocannon (Clan; four 1-point cluster hits,
+    // to-hit -1); the BA tube artillery (Advanced, p. 224 and the entry p. 97; body only; prototype ~3070 and production 3075 from IO:AE printed p. 53, TO:AUE prints 3075P, so the prototype
+    // years read Experimental; its ammunition is treated as missile ammunition, one slot for each four two-round clips (p. 96), so a "shot" here is one clip of 15 kg); the myomer booster (Clan, Experimental; its price is 75,000 for each Ground MP it gives, which depends on the weight class) and
+    // the mechanical jump booster (Inner Sphere, Experimental; its weight is twice a jump jet of the suit and its price a jump jet's, both from the weight class); and the four
+    // drop chutes (standard, camouflage, stealth, and the reusable one, which adds 50 kg and a slot and costs twice the chute it is fitted to). The ammunition prices beside the
+    // items are not kept (TechManual p. 282). Not rows: the detachable weapon pack and the disposable weapon, which change another weapon (a later piece).
     defaults: { kind: "weapon", checked: "page", units: ["battlearmor"], cite: { book: TO, page: 225 } },
     items: [
       { id: "ba-heavy-flamer-is", techBase: "inner-sphere", name: "Heavy Flamer (Battle Armor)", tons: 0.35, slots: 2, type: "DE, H, AI", damage: "4", range: [0, 2, 3, 4], availability: [{ from: 3073 }], rulesLevel: "advanced" },
@@ -860,6 +864,20 @@ export const OTHER: EquipmentGroup[] = [
       { id: "ba-angel-ecm-clan", techBase: "clan", name: "Angel ECM Suite (Battle Armor)", kind: "other", tons: 0.15, slots: 3, availability: [{ from: 3059 }], rulesLevel: "experimental" },
       { id: "ba-c3-is", techBase: "inner-sphere", name: "BC3 System (Battle Armor)", kind: "other", tons: 0.25, slots: 1, availability: [{ from: 3073 }], rulesLevel: "experimental" },
       { id: "ba-c3i-is", techBase: "inner-sphere", name: "BC3i System (Battle Armor)", kind: "other", tons: 0.35, slots: 1, availability: [{ from: 3063 }], rulesLevel: "experimental" },
+      { id: "ba-mine-dispenser-is", techBase: "inner-sphere", name: "Mine Dispenser (Battle Armor)", kind: "other", tons: 0.05, slots: 2, availability: [{ from: 3050 }], rulesLevel: "advanced", levelCite: { book: TO, page: 137 }, playCite: { book: TO, page: 224 } },
+      { id: "ba-mine-dispenser-clan", techBase: "clan", name: "Mine Dispenser (Battle Armor)", kind: "other", tons: 0.05, slots: 2, availability: [{ from: 3058 }], rulesLevel: "advanced", levelCite: { book: TO, page: 137 }, playCite: { book: TO, page: 224 } },
+      { id: "ba-lb-x-ac-clan", techBase: "clan", name: "LB-X AC (Battle Armor)", tons: 0.4, slots: 2, type: "DB, C, F", damage: "4", range: [0, 2, 5, 8], availability: [{ from: 3075 }], rulesLevel: "advanced", playCite: { book: TO, page: 224 } },
+      { id: "ba-tube-artillery-is", techBase: "inner-sphere", name: "Tube Artillery (Battle Armor)", tons: 0.5, slots: 4, type: "AE, S", damage: "3/1", ammoKgPerShot: 15, availability: [{ from: 3075 }], prototypeYear: 3070, rulesLevel: "advanced", playCite: { book: TO, page: 224 } },
+      { id: "ba-myomer-booster-clan", techBase: "clan", name: "Myomer Booster (Battle Armor)", kind: "other", tons: 0.25, slots: 3, availability: [{ from: 3072 }], rulesLevel: "experimental", playCite: { book: TO, page: 224 }, levelCite: { book: TO, page: 99 } },
+      { id: "ba-mechanical-jump-booster-is", techBase: "inner-sphere", name: "Mechanical Jump Booster (Battle Armor)", kind: "other", tons: 0, slots: 0, availability: [{ from: 3070 }], rulesLevel: "experimental", playCite: { book: TO, page: 224 }, levelCite: { book: TO, page: 99 } },
+      { id: "ba-drop-chute-standard-is", techBase: "inner-sphere", name: "Drop Chute, Standard (Battle Armor)", kind: "other", tons: 0.2, slots: 0, availability: [{ from: 3051 }], rulesLevel: "advanced", playCite: { book: TO, page: 224 }, levelCite: { book: TO, page: 161 } },
+      { id: "ba-drop-chute-standard-clan", techBase: "clan", name: "Drop Chute, Standard (Battle Armor)", kind: "other", tons: 0.2, slots: 0, availability: [{ from: 2875 }], rulesLevel: "advanced", playCite: { book: TO, page: 224 }, levelCite: { book: TO, page: 161 } },
+      { id: "ba-drop-chute-camouflage-is", techBase: "inner-sphere", name: "Drop Chute, Camouflage (Battle Armor)", kind: "other", tons: 0.2, slots: 0, availability: [{ from: 3051 }], rulesLevel: "advanced", playCite: { book: TO, page: 224 }, levelCite: { book: TO, page: 161 } },
+      { id: "ba-drop-chute-camouflage-clan", techBase: "clan", name: "Drop Chute, Camouflage (Battle Armor)", kind: "other", tons: 0.2, slots: 0, availability: [{ from: 2875 }], rulesLevel: "advanced", playCite: { book: TO, page: 224 }, levelCite: { book: TO, page: 161 } },
+      { id: "ba-drop-chute-stealth-is", techBase: "inner-sphere", name: "Drop Chute, Stealth (Battle Armor)", kind: "other", tons: 0.225, slots: 0, availability: [{ from: 3054 }], rulesLevel: "advanced", playCite: { book: TO, page: 224 }, levelCite: { book: TO, page: 161 } },
+      { id: "ba-drop-chute-stealth-clan", techBase: "clan", name: "Drop Chute, Stealth (Battle Armor)", kind: "other", tons: 0.225, slots: 0, availability: [{ from: 2880 }], rulesLevel: "advanced", playCite: { book: TO, page: 224 }, levelCite: { book: TO, page: 161 } },
+      { id: "ba-drop-chute-reusable-is", techBase: "inner-sphere", name: "Drop Chute, Reusable (Battle Armor)", kind: "other", tons: 0.05, slots: 1, availability: [{ from: 3053 }], rulesLevel: "advanced", playCite: { book: TO, page: 224 }, levelCite: { book: TO, page: 161 } },
+      { id: "ba-drop-chute-reusable-clan", techBase: "clan", name: "Drop Chute, Reusable (Battle Armor)", kind: "other", tons: 0.05, slots: 1, availability: [{ from: 2876 }], rulesLevel: "advanced", playCite: { book: TO, page: 224 }, levelCite: { book: TO, page: 161 } },
     ],
   },
   // Conventional infantry weapons (TechManual, Conventional Infantry Weapons Table printed pp. 349-352, read against the page images;

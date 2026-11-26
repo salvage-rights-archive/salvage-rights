@@ -4,6 +4,9 @@ import { weightClassOf } from "../../data/battlearmor";
 import { locationsOf } from "../../rules/battlearmor/construct";
 import type { BaFinding } from "../../rules/battlearmor/checks";
 import type { BaRecord } from "../../rules/battlearmor/record";
+import { itemOffered } from "../../rules/battlearmor/availability";
+import type { Catalog, EquipmentRow } from "../../rules/catalog";
+import { asEquipment, offeredChoices } from "../../rules/munitions";
 import type { DiagramLocation } from "./BattleArmorDiagram";
 
 export type BaChange = (draft: BaRecord) => void;
@@ -42,3 +45,7 @@ export function targetFor(where: BaFinding["where"], record: BaRecord): string |
   if (field === "manipulators") return fieldId(locationsOf(record.body).includes("la") ? "manip-ra" : "ground");
   return fieldId(field);
 }
+
+/** The mine types a suit is offered for a dispenser: those at its rules level, tech base and time, and the one it holds. Empty for an item with no choice. */
+export const munitionChoices = (record: BaRecord, catalog: Catalog, row: EquipmentRow, current: string | undefined): EquipmentRow[] =>
+  offeredChoices(row, catalog, record.editionId, current, (choice) => itemOffered(asEquipment(choice, "battlearmor"), record, catalog));

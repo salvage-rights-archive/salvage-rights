@@ -32,7 +32,7 @@ export const EQUIPMENT_GROUPS: GroupRule[] = [
   { id: "heat", label: "Heat and movement equipment", match: words("heat-sink|jump-jet|jump-pack|mechanical-jump-booster|partial-wing|umu|supercharger|masc|tsm|triple-strength|super-cooled|coolant|laser-insulator|lam") },
   { id: "electronics", label: "Electronics and targeting", match: words("c3|ecm|probe|imager|tag|cews|electronic-warfare|recon-camera|remote-sensor|remote-sensors|apollo|targeting-computer|artemis|viral-jammer|chaff|drone-operating-system") },
   { id: "aerospace", label: "Bombs and aerospace equipment", match: words("bomb|bay-door|look-down-radar") },
-  { id: "special", label: "Anti-personnel and special weapons", match: words("booby-trap|machine-gun|machine-gun-array|a-pods|b-pods|grenade|mine-dispenser|taser|fluid-gun|m-pod") },
+  { id: "special", label: "Anti-personnel and special weapons", match: words("booby-trap|machine-gun|machine-gun-array|a-pods|b-pods|grenade|mine|mine-dispenser|taser|fluid-gun|m-pod") },
   { id: "physical", label: "Physical weapons", match: words("melee|claws|mace|lance|talons|hatchet|sword|retractable-blade|chain-whip|flail|spikes|vibroblade") },
   { id: "missile", label: "Missile weapons", match: words("fusillade|lrm|srm|srt|lrt|mrm|mml|atm|rocket-launcher|narc|thunderbolt|mortar") },
   { id: "energy", label: "Energy weapons", match: words("laser|ppc|plasma|flamer|tsemp|binary|blazer|bombast|centurion|capacitor|chemical") },

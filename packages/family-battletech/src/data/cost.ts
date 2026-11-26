@@ -547,7 +547,7 @@ export const EQUIPMENT_COST: PriceGroup[] = [
     // TO:AUE p.225 (Battle Armor Construction Data): the battle armor versions; the ammunition price beside the item price is not kept. Per suit, per trooper for the BC3 systems.
     cite: { book: TO, page: 225 },
     checked: "page",
-    prices: { "ba-heavy-flamer": 11_250, "ba-er-pulse-laser-small": 30_000, "ba-er-pulse-laser-medium": 150_000, "ba-variable-speed-laser-small": 60_000, "ba-variable-speed-laser-medium": 200_000, "ba-taser": 10_000, "ba-angel-ecm": 750_000, "ba-c3": 62_500, "ba-c3i": 125_000 },
+    prices: { "ba-mine-dispenser": 20_000, "ba-lb-x-ac": 70_000, "ba-tube-artillery": 200_000, "ba-myomer-booster": { perAmount: 75_000 }, "ba-drop-chute-standard": 1_000, "ba-drop-chute-camouflage": 3_000, "ba-drop-chute-stealth": 5_000, "ba-heavy-flamer": 11_250, "ba-er-pulse-laser-small": 30_000, "ba-er-pulse-laser-medium": 150_000, "ba-variable-speed-laser-small": 60_000, "ba-variable-speed-laser-medium": 200_000, "ba-taser": 10_000, "ba-angel-ecm": 750_000, "ba-c3": 62_500, "ba-c3i": 125_000 },
   },
   {
     // TO:AUE p.221 (Heavy Weapons and Equipment Construction Data: the weapon price of the naval weapons and mass drivers; the ammunition price beside it is not kept)
@@ -601,6 +601,12 @@ export const EQUIPMENT_COST: PriceGroup[] = [
       "bomb-thunder-vibrabomb": 24_000, "bomb-torpedo": 7_000,
     },
   },
+  {
+    // IO:AE p.217 (Additional Alternate Era Weapons and Equipment, Thermobaric Weapons): a fuel-air bomb is a flat price each, small 18,000 and large 35,000
+    cite: { book: IO, page: 217 },
+    checked: "page",
+    prices: { "bomb-fuel-air-small": 18_000, "bomb-fuel-air-large": 35_000 },
+  },
 ];
 
 /**
@@ -622,6 +628,23 @@ export const MUNITION_PRICE: Sourced & { rows: Record<string, { perTon: number }
     "ammo-thunder-fascam-artillery": { times: 1.5 }, "ammo-arrow-iv-illumination": { times: 0.5 }, "ammo-illumination-artillery": { times: 0.5 },
     "ammo-arrow-iv-smoke": { times: 0.5 }, "ammo-smoke-artillery": { times: 0.5 }, "ammo-arrow-iv-laser-inhibiting": { times: 4 }, "ammo-inferno-iv": { times: 1 },
     "ammo-thunder-active-iv": { times: 3 }, "ammo-thunder-vibrabomb-iv": { times: 2 },
+    // Fuel-air shells (IO:AE printed p. 217, Additional Alternate Era Weapons and Equipment, Thermobaric Weapons): three times the standard shell of the weapon.
+    "ammo-fuel-air-arrow-iv": { times: 3 }, "ammo-fuel-air-thumper": { times: 3 }, "ammo-fuel-air-sniper": { times: 3 }, "ammo-fuel-air-long-tom": { times: 3 },
+    "ammo-fuel-air-thumper-cannon": { times: 3 }, "ammo-fuel-air-sniper-cannon": { times: 3 }, "ammo-fuel-air-long-tom-cannon": { times: 3 },
+  },
+};
+
+/**
+ * Mine types (TO:AUE printed p. 227, Heavy Weapons Ammunition Construction Data, Mines; read against the page image): C-bills for each 5 points of minefield. A mine dispenser
+ * holds two shots of 10 points (rules/munitions.ts), so the two shots cost four times the figure; for the standard mine that is 5,000, the ammunition price the battle armor
+ * table (p. 225) prints beside the dispenser. Ammunition is not added to a unit's cost (TechManual p. 282), so this is what a reload costs, not part of the unit's cost.
+ * Keys are the id stems of the catalog rows. */
+export const MINE_PRICE: Sourced & { per5Points: Record<string, number> } = {
+  cite: { book: TO, page: 227 },
+  checked: "page",
+  per5Points: {
+    "mine-active": 5_000, "mine-command-detonated": 1_875, "mine-emp-command-detonated": 18_000, "mine-emp-vibrabomb": 25_000, "mine-inferno": 1_250,
+    "mine-space": 375, "mine-standard": 1_250, "mine-vibrabomb": 2_500,
   },
 };
 

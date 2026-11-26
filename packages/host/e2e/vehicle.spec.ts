@@ -81,3 +81,23 @@ test("the vehicle editor, picker and record sheet have no axe violations in eith
     await page.keyboard.press("Escape");
   }
 });
+
+test("a mine dispenser takes a mine type chosen on its row, names it on the record sheet, and the row has no axe violations", async ({ page }) => {
+  test.setTimeout(120_000);
+  const editor = await startVehicle(page, "Mine Tank");
+  await page.getByLabel("Rules level").selectOption("advanced");
+  await page.getByRole("button", { name: "Add equipment" }).click();
+  await page.getByLabel("Search by name").fill("mine dispenser");
+  await page.getByRole("button", { name: /^Mine Dispenser/ }).first().click();
+  const type = page.getByLabel(/^Mine type of Mine Dispenser/);
+  await expect(type).toHaveValue("mine-standard-is");
+  await type.selectOption({ label: "Active" });
+  await expect(page.getByText(/Active: two shots cost 20,000 C-bills to replace/)).toBeVisible();
+  const results = await new AxeBuilder({ page }).analyze();
+  expect(results.violations).toEqual([]);
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(page.getByText("Saved.")).toBeVisible();
+  await page.goto(`${DEV}${editor.replace("vehicle-editor", "vehicle-sheet")}`);
+  await expectPage(page.getByRole("heading", { level: 1 })).toBeVisible();
+  await expect(page.getByText("Mine Dispenser (Vehicular), Active").first()).toBeAttached();
+});

@@ -22,6 +22,10 @@ test("build an infantry platoon at 320 px, save it, open its record sheet and fi
   await expect(page.getByRole("heading", { level: 1, name: "Rifle Platoon" })).toBeVisible();
   await page.getByLabel("Primary weapon").selectOption({ label: "Auto-Rifle: 0.52 damage, range 1, crew 1" });
   await expect(page.getByText(/Damage \d+ at full strength/)).toBeVisible();
+  // Hide, do not mark: the Advanced options are not offered at the standard level.
+  await expect(page.getByLabel("Condition-trained for")).toHaveCount(0);
+  await expect(page.getByLabel("Field gun")).toHaveCount(0);
+  await expect(page.getByLabel("Type", { exact: true }).locator("option", { hasText: "Beast-mounted" })).toHaveCount(0);
   // A sneak suit: its one system is chosen from a radio group, reachable by keyboard.
   await page.getByLabel("Rules level").selectOption("advanced");
   await page.getByLabel("Armor kit").selectOption({ label: "Sneak suit (one system) (divisor 1)" });
@@ -29,6 +33,17 @@ test("build an infantry platoon at 320 px, save it, open its record sheet and fi
   await page.keyboard.press("Space");
   await expect(page.getByRole("radio", { name: "camo" })).toBeChecked();
   await expect(page.getByRole("radio", { name: "IR" })).not.toBeChecked();
+  // Paramedics, condition-trained troops (a sneak suit is no cold-weather kit, so the rules check says so), a beast mount and a field gun.
+  await page.getByLabel("Paramedics a squad").fill("1");
+  await page.getByLabel("Condition-trained for").selectOption({ label: "Extreme cold" });
+  await expect(page.getByText(/XCT troops for extreme cold must wear/)).toBeVisible();
+  await page.getByLabel("Type", { exact: true }).selectOption({ label: "Motorized" });
+  await page.getByLabel("Field gun", { exact: true }).selectOption({ label: "Autocannon/5" });
+  await expect(page.getByText("Each needs 8 troopers.")).toBeVisible();
+  // The record ends as a beast-mounted platoon that still holds its gun, so the saved editor shows every new field when axe scans it.
+  await page.getByLabel("Type", { exact: true }).selectOption({ label: "Beast-mounted" });
+  await page.getByLabel("Creature").selectOption({ label: "Elephant (Very Large, 2 Ground MP, 6 t)" });
+  await expect(page.getByLabel("Troopers a squad")).toHaveValue("2");
   await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.getByText("Saved.")).toBeVisible();
   const widths = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, client: document.documentElement.clientWidth }));
@@ -49,6 +64,7 @@ test("build an infantry platoon at 320 px, save it, open its record sheet and fi
     for (const url of [editor, sheet]) {
       await page.goto(`${DEV}${url.pathname.replace(/^\/salvage-rights/, "")}${url.search}`);
       await expectPage(page.getByRole("heading", { level: 1 })).toBeVisible();
+      if (url === editor) for (const label of ["Paramedics a squad", "TAG troops a squad", "Condition-trained for", "Field gun", "Field artillery", "Creature"]) await expect(page.getByLabel(label, { exact: true })).toBeVisible();
       const results = await new AxeBuilder({ page }).analyze();
       expect(results.violations, `${theme} theme, ${url.pathname}`).toEqual([]);
     }

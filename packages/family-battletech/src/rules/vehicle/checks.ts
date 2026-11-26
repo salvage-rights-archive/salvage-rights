@@ -3,8 +3,9 @@
 // `Finding` shape, so the same panel shows them. Messages are our own words and state the numbers.
 import { ARMOR, ENGINE_TYPES } from "../../data/chassis";
 import { VEHICLE_ARMOR, VEHICLE_CLASS_DATES, VEHICLE_ENGINES, VEHICLE_RULES, ENGINE_SLOTS_CITE, ARMOR_CITE, MOTIVE_CITE, SUSPENSION_CITE } from "../../data/vehicle";
-import type { Catalog } from "../catalog";
+import type { Catalog, EquipmentRow } from "../catalog";
 import { mountableOn } from "../catalog";
+import { asEquipment, chosenMunition, choicesFor } from "../munitions";
 import { DEFAULT_LEVEL, equipmentLevel, levelAtLeast, levelIn, levelRow } from "../levels";
 import { equipmentPhase, eraNeedsPick } from "../availability";
 import type { Finding } from "../checks";
@@ -150,6 +151,14 @@ const heatCheck: VehicleCheck = {
 
 const BAD_PLACE: Record<string, string> = { rot: "The rotor carries no equipment." };
 
+/** Why a row the vehicle may not have is not offered: the rules level it needs, or its tech base, year or era. */
+function unavailableReason(row: EquipmentRow, record: VehicleRecord, catalog: Catalog): string {
+  const level = equipmentLevel(row);
+  const phase = equipmentPhase(row, { ...record, unitType: "mech" }, catalog);
+  const needs = levelIn(level, phase, row.prototypeLevel);
+  return !levelAtLeast(record.rulesLevel ?? DEFAULT_LEVEL, needs) ? `needs ${levelRow(needs).label} rules` : "is not available to this unit's tech base, year or era";
+}
+
 const equipmentCheck: VehicleCheck = {
   id: "equipment",
   run({ record, catalog }) {
@@ -168,12 +177,13 @@ const equipmentCheck: VehicleCheck = {
         out.push(finding("equipment", "warning", `${name} is not in our equipment table, so its weight, slots and rules are not checked.`, { where: at }));
       } else {
         if (!mountableOn(row, "vehicle")) out.push(finding("equipment", "error", `${row.name} is not printed for vehicles.`, { where: at, cite: row.cite }));
-        else if (!equipmentOffered(row, record, catalog)) {
-          const level = equipmentLevel(row);
-          const phase = equipmentPhase(row, { ...record, unitType: "mech" }, catalog);
-          const needs = levelIn(level, phase, row.prototypeLevel);
-          const reason = !levelAtLeast(record.rulesLevel ?? DEFAULT_LEVEL, needs) ? `needs ${levelRow(needs).label} rules` : "is not available to this unit's tech base, year or era";
-          out.push(finding("equipment", "warning", `${row.name} ${reason}.`, { where: at, cite: row.cite }));
+        else if (!equipmentOffered(row, record, catalog)) out.push(finding("equipment", "warning", `${row.name} ${unavailableReason(row, record, catalog)}.`, { where: at, cite: row.cite }));
+        // The munition chosen for a mine dispenser or grenade launcher: one the item does not take reads as the default; one the unit may not have is advice, as any item is.
+        const choices = choicesFor(row, catalog, record.editionId);
+        if (choices.length > 0) {
+          const chosen = chosenMunition(row, m.munition, catalog, record.editionId);
+          if (m.munition !== undefined && !choices.some((c) => c.id === m.munition)) out.push(finding("equipment", "note", `${name} names the munition ${quoted(m.munition)}, which it does not take; it counts as ${chosen?.name ?? "the standard type"}.`, { where: at, cite: row.cite }));
+          else if (chosen !== undefined && !equipmentOffered(asEquipment(chosen, "vehicle"), record, catalog)) out.push(finding("equipment", "warning", `${chosen.name} ${unavailableReason(chosen, record, catalog)}.`, { where: at, cite: chosen.cite }));
         }
         const facts = itemFacts(m, record, catalog);
         if (facts.ammo) {

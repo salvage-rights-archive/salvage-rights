@@ -778,6 +778,7 @@ export const CAPITAL_KINDS: readonly CapitalKind[] = ["jumpship", "warship", "sp
 type ByKind<T> = Partial<Record<CapitalKind, T>>;
 
 const TOAUE = "Tactical Operations: Advanced Units and Equipment";
+const IOAE = "Interstellar Operations: Alternate Eras";
 const CAPITAL_BOOK: Record<string, string> = { [E.at2]: AT2, [E.at2r]: AT2R, [E.current]: SOAA };
 /** Cites for capital ship figures: a page string is in the edition's capital ship book (Strategic Operations: Advanced Aerospace Rules for the current rules); a
  * [book, pages] pair names another book. */
@@ -842,6 +843,8 @@ export interface CapitalFigures {
   /** Max Thrust is Safe Thrust times this, rounded up (WarShips; a station-keeping drive has no Max Thrust). Fallback: the fighter row. */
   maxThrustFactor: FigureGroup<number>;
   kfDrive: FigureGroup<Record<"jumpship" | "warship", KfDriveFigure>>;
+  /** A WarShip with a sub-compact K-F drive: the drive takes this share of the tons in place of the compact drive's. Current rules only. */
+  subCompactShare: FigureGroup<number>;
   sailIntegrity: FigureGroup<SailIntegrityFigure>;
   /** When a space station carries a jump (energy collection) sail: whenever it has energy storage batteries, or at the designer's choice. */
   stationSail: FigureGroup<"with-batteries" | "optional">;
@@ -893,6 +896,7 @@ export const CAPITAL_FIGURES: CapitalFigures = {
   stationKeepingThrust: [capShare(SO_ONLY("135"), 0.2)],
   maxThrustFactor: [capShare(SO_ONLY("135"), 1.5)],
   kfDrive: [capShare(CAP3("44", "61", "137"), KF)],
+  subCompactShare: [capShare({ [E.current]: [TOAUE, "156"] }, 0.5)],
   sailIntegrity: [capShare(CAP3("44", "61", "137"), { base: 1, per: 20 })],
   stationSail: [capShare({ [E.at2]: "44; errata v1.2", [E.at2r]: "61" }, "with-batteries"), capShare(SO_ONLY("136"), "optional")],
   fixedSi: [capShare(CAP3("44", "62", "134"), 1)],
@@ -978,13 +982,30 @@ export function capitalArmorPointsPerTon(typeId: string, editionId: string, tons
 export interface CapitalSystemFigure {
   tons?: number;
   share?: number;
-  types: CapitalKind[];
+  /** The unit types that may carry it: a capital ship kind, or a DropShip. */
+  types: (CapitalKind | "dropship")[];
   max?: number;
   perTons?: number;
   round?: "down" | "up";
   minTons?: number;
   /** The years the system exists and the level it is in production (the Universal Technology Advancement Table); in its prototype years it is Experimental. */
   dates?: { prototype: number; production: number; level: RulesLevel };
+  /** The rules level of a system that prints no dates (it comes from the early spaceflight era or before). */
+  level?: RulesLevel;
+  /** The tech base it is for; absent means both. */
+  techBase?: "inner-sphere" | "clan";
+  /** The years the Inner Sphere lost it (the first year without it) and had it back. */
+  lost?: { from: number; back: number };
+  /** The unit tons it may be mounted at: at least `min`, at most `max`, more than `over`, on steps of `step` from `min`. */
+  unitTons?: { min?: number; max?: number; over?: number; step?: number };
+  /** Kinds of system it cannot be carried with. */
+  excludes?: string[];
+  /** The weight is rounded up to a whole ton (a naval repair facility). */
+  wholeTons?: true;
+  /** Docking collars each of it incorporates, counted against the unit's most (a naval repair facility has two). */
+  collars?: number;
+  /** A sentence for the rules check when the unit is built before its prototype year (our words). */
+  beforeNote?: string;
 }
 export interface CapitalSystemRow {
   kind: string;
@@ -1002,20 +1023,77 @@ export const CAPITAL_SYSTEMS: CapitalSystemRow[] = [
     capShare({ [E.at2]: "47", [E.at2r]: "65" }, { tons: 1000, types: ALL_CAPITAL, perTons: 50000, round: "down" }, "the books print one per 50,000 tons with no rounding: whole hardpoints within the limit"),
     // The modern hardpoint mates with a DropShip's K-F boom, so it comes with the boom: prototype 2458, production 2470 (IO:AE printed p. 36 table, entry p. 113; owner, 2026-11-27).
     // Before 2458 a ship uses the pre-boom docking collar (prototype 2304, production 2350, extinct 2520; the catalog's "docking-collar-pre-boom-is").
-    capShare({ [E.current]: [`${TOAUE}, p. 219; ${SOAA}`, "142; errata v5.0"] }, { tons: 1000, types: ALL_CAPITAL, perTons: 50000, round: "up", minTons: 50000, dates: { prototype: 2458, production: 2470, level: "advanced" } }),
+    capShare({ [E.current]: [`${TOAUE}, p. 219; ${SOAA}`, "142; errata v5.0"] }, { tons: 1000, types: ALL_CAPITAL, perTons: 50000, round: "up", minTons: 50000, dates: { prototype: 2458, production: 2470, level: "advanced" }, beforeNote: "a ship of that time mounts the pre-boom docking collar instead (Interstellar Operations: Alternate Eras, p. 113)" }),
   ]),
-  SYSTEM("grav-deck-small", "Grav deck (under 100 m)", [capShare({ [E.at2]: "47", [E.at2r]: "65", [E.current]: [TOAUE, "219"] }, { tons: 50, types: ALL_CAPITAL })]),
-  SYSTEM("grav-deck-medium", "Grav deck (100 to 250 m)", [capShare({ [E.at2]: "47", [E.at2r]: "65", [E.current]: [TOAUE, "219"] }, { tons: 100, types: ALL_CAPITAL })]),
-  SYSTEM("grav-deck-large", "Grav deck (over 250 m)", [capShare({ [E.at2]: "47", [E.at2r]: "65", [E.current]: [TOAUE, "219"] }, { tons: 500, types: ["space-station"] })]),
+  SYSTEM("grav-deck-small", "Grav deck (under 100 m)", [
+    capShare({ [E.at2]: "47", [E.at2r]: "65" }, { tons: 50, types: ALL_CAPITAL }),
+    capShare({ [E.current]: [TOAUE, "218-219"] }, { tons: 50, types: ALL_CAPITAL, level: "advanced" }),
+  ]),
+  SYSTEM("grav-deck-medium", "Grav deck (100 to 250 m)", [
+    capShare({ [E.at2]: "47", [E.at2r]: "65" }, { tons: 100, types: ALL_CAPITAL }),
+    capShare({ [E.current]: [TOAUE, "218-219"] }, { tons: 100, types: ALL_CAPITAL, level: "advanced" }),
+  ]),
+  SYSTEM("grav-deck-large", "Grav deck (over 250 m)", [
+    capShare({ [E.at2]: "47", [E.at2r]: "65" }, { tons: 500, types: ["space-station"] }),
+    capShare({ [E.current]: [TOAUE, "218-219"] }, { tons: 500, types: ["space-station"], level: "advanced" }),
+  ]),
   SYSTEM("lithium-fusion-battery", "Lithium-fusion battery", [
     capShare({ [E.at2]: "47" }, { share: 0.01, types: ALL_CAPITAL, max: 1 }),
     capShare({ [E.at2r]: "65" }, { share: 0.01, types: ["jumpship", "warship"], max: 1 }),
-    capShare({ [E.current]: [TOAUE, "221"] }, { share: 0.01, types: ["jumpship", "warship"] }),
+    // Dates by the later printing at each stage: TO:AUE (7th, 2024) p. 135 prints production 2529, extinct 2819, recovered 3043 and omits the prototype, which IO:AE (printed p. 36 table) fills: ~2520. Advanced (TO:AUE p. 135, table p. 220).
+    capShare(
+      { [E.current]: [`${TOAUE}, p. 135, 220-221; ${IOAE}`, "36"] },
+      { share: 0.01, types: ["jumpship", "warship"], max: 1, dates: { prototype: 2520, production: 2529, level: "advanced" }, lost: { from: 2819, back: 3043 } },
+      "the tables add its cost as a multiplier on the whole K-F drive (3, or 15 on a compact core), not as a price of its own",
+    ),
   ]),
-  SYSTEM("energy-storage-battery", "Energy storage battery", [capShare({ [E.at2]: "47", [E.at2r]: "65", [E.current]: [TOAUE, "219"] }, { tons: 100000, types: ["space-station"] })]),
-  SYSTEM("towing-adapter", "Towing adapter", [capShare({ [E.at2]: "47" }, { tons: 100, types: ALL_CAPITAL }, "a vessel built to tow weighs 10 percent of its mass in structural reinforcement besides (the footnote on p. 47)")]),
+  SYSTEM("energy-storage-battery", "Energy storage battery", [
+    capShare({ [E.at2]: "47", [E.at2r]: "65" }, { tons: 100000, types: ["space-station"] }),
+    capShare({ [E.current]: [TOAUE, "218-219"] }, { tons: 100000, types: ["space-station"], level: "advanced" }),
+  ]),
+  SYSTEM("towing-adapter", "Towing adapter", [capShare({ [E.at2]: "47" }, { tons: 100, types: [...ALL_CAPITAL, "dropship"] }, "a vessel built to tow weighs 10 percent of its mass in structural reinforcement besides (the footnote on p. 47)")]),
   SYSTEM("hpg", "HPG", [capShare({ [E.at2]: "47", [E.at2r]: "65" }, { tons: 50, types: ALL_CAPITAL }, "ComStar and Clan vessels only")]),
   SYSTEM("jump-sail", "Energy collection sail", [capShare({ [E.at2]: "44; errata v1.2", [E.at2r]: "61", [E.current]: "136" }, { types: ["space-station"], max: 1 }, "weighs what a JumpShip's sail of the same tons does")]),
+  // Standard repair facilities: Advanced, Both (C/C-E-D), early spaceflight; the reinforced kind is Experimental, Inner Sphere, prototype 3065 with no production year printed (TO:AUE pp. 147, 220-221).
+  // A count is the capacity in tons; the weight is a share of each ton of capacity (0.025 unpressurized, 0.075 pressurized, 0.010 reinforced).
+  // The construction text (p. 146) gives the weights as 2.5, 7.5 and 10 percent of capacity, rounded up to a whole ton, and says each facility incorporates two docking collars that count against the unit's most;
+  // the table (p. 221) prints 0.010 x C for the reinforced kind, a misprint of the text's 10 percent (owner ruling, 2026-11-27). A unit mounts one facility of each kind here.
+  SYSTEM("repair-unpressurized", "Naval repair facilities, unpressurized (tons of capacity)", [capShare({ [E.current]: [TOAUE, "146-147, 220-221"] }, { tons: 0.025, wholeTons: true, collars: 2, types: ["jumpship", "space-station", "warship"], level: "advanced" })]),
+  SYSTEM("repair-pressurized", "Naval repair facilities, pressurized (tons of capacity)", [capShare({ [E.current]: [TOAUE, "146-147, 220-221"] }, { tons: 0.075, wholeTons: true, collars: 2, types: ["jumpship", "space-station", "warship"], level: "advanced" })]),
+  SYSTEM("repair-reinforced", "Naval repair facilities, reinforced (tons of capacity)", [
+    // Prototype design and production circa 2750 (Terran Hegemony) and circa 3065 (Word of Blake); the table prints 3065P for the Inner Sphere (TO:AUE p. 146 entry, p. 221).
+    capShare({ [E.current]: [TOAUE, "146-147, 220-221"] }, { tons: 0.1, wholeTons: true, collars: 2, types: ["jumpship", "warship"], techBase: "inner-sphere", dates: { prototype: 2750, production: 3065, level: "experimental" } }, "the table prints 0.010 x C, a misprint of the text's 10 percent"),
+  ]),
+  // Naval C3: Experimental, Inner Sphere (F/X-X-F), 3065 prototype production only (TO:AUE pp. 144, 221). One percent of the unit's tons; it doubles the weight of the fire control (see `capitalTally`).
+  SYSTEM("naval-c3", "Naval C3", [
+    capShare({ [E.current]: [TOAUE, "144, 221"] }, { share: 0.01, types: [...ALL_CAPITAL, "dropship"], max: 1, techBase: "inner-sphere", dates: { prototype: 3065, production: 3065, level: "experimental" } }, "the book prints 3065P: prototype production only"),
+  ]),
+  // Power collector and microwave transmitter, low density: Advanced, Both (C/C-C-C), for stations (and satellite support vehicles, which the editor does not build). A count is its tons (TO:AUE pp. 148-149, 223).
+  SYSTEM("pcmt-low-density", "Power collector and microwave transmitter, low density (tons)", [
+    capShare({ [E.current]: [TOAUE, "148-149, 223"] }, { tons: 1, types: ["space-station"], level: "advanced" }, "ten tons power five average buildings; the receiving facility is outside these rules"),
+  ]),
+  // Sub-compact K-F drive: Experimental, Both (F/F-X-F), 2320, WarShips only; the drive takes half the vessel mass, the vessel is 5,000 to 25,000 tons in steps of 100, and carries no docking collar (TO:AUE p. 156, table p. 223).
+  SYSTEM("sub-compact-kf-drive", "Sub-compact K-F drive", [
+    capShare(
+      { [E.current]: [TOAUE, "156, 223"] },
+      { tons: 0, types: ["warship"], max: 1, unitTons: { min: 5000, max: 25000, step: 100 }, excludes: ["docking-hardpoint"], dates: { prototype: 2320, production: 2320, level: "experimental" } },
+      "the drive's own mass is the K-F drive line; a ship with one cannot take DropShips through hyperspace",
+    ),
+  ]),
+  // Space station K-F adapter (IO:AE p. 99, table p. 211): Advanced, Both (C/DFDD), introduced 2350, production 2375, extinct 2850 in the Inner Sphere, back 3048; stations of 100,000 tons or less; the adapter has no weight; its cost is a final multiplier.
+  SYSTEM("space-station-kf-adapter", "Space station K-F adapter", [
+    capShare(
+      { [E.current]: [IOAE, "36, 99, 211"] },
+      { tons: 0, types: ["space-station"], max: 1, unitTons: { max: 100000 }, excludes: ["modular-space-station"], dates: { prototype: 2350, production: 2375, level: "advanced" }, lost: { from: 2850, back: 3048 } },
+    ),
+  ]),
+  // Modular space station (IO:AE pp. 111, 180, table p. 211): Advanced, introduced 2565, production 2585, extinct 2790 in the Inner Sphere, recovered 3090; stations of more than 100,000 tons; the adapters are built in, a final multiplier.
+  SYSTEM("modular-space-station", "Modular space station", [
+    capShare(
+      { [E.current]: [IOAE, "111, 180, 211"] },
+      { tons: 0, types: ["space-station"], max: 1, unitTons: { over: 100000 }, excludes: ["space-station-kf-adapter"], dates: { prototype: 2565, production: 2585, level: "advanced" }, lost: { from: 2790, back: 3090 } },
+    ),
+  ]),
 ];
 
 /** What one ship system weighs and who may carry it in an edition; undefined for a kind the edition does not print. */

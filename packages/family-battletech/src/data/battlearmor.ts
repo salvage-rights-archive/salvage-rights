@@ -94,6 +94,17 @@ export const WEIGHT_CLASSES: WeightClassRow[] = [
   },
 ].map((row) => ({ ...row, cite: WEIGHT_CITE })) as WeightClassRow[];
 
+/** The battle armor boosters of TO:AUE printed pp. 98-99 and p. 225: the myomer booster raises the most Ground MP of a PA(L), light or medium suit by 2 and of a heavy or assault suit
+ * by 1, and costs 75,000 for each; the mechanical jump booster weighs twice a jump jet of the suit's class (a jump jet's kilograms for one MP) and costs what a jump jet does. */
+export const BA_BOOSTERS: { cite: Cite; myomerGroundBonus: Record<string, number>; mechanicalJumpWeightFactor: number; dwp: { weightFactor: number; roundKg: number; extraCost: number; classes: string[] } } = {
+  cite: { book: "Tactical Operations: Advanced Units and Equipment", page: 99 },
+  myomerGroundBonus: { pal: 2, light: 2, medium: 2, heavy: 1, assault: 1 },
+  mechanicalJumpWeightFactor: 2,
+  // The detachable weapon pack (printed p. 99, price p. 225): the weapon and its ammunition weigh 75 percent, rounded up to 5 kg, the weapon takes no slot of its own (the pack takes one),
+  // the pack adds 18,000 to the weapon's price, and only medium, heavy and assault suits may mount one.
+  dwp: { weightFactor: 0.75, roundKg: 5, extraCost: 18_000, classes: ["medium", "heavy", "assault"] },
+};
+
 /** A ground MP added above the free ones costs this much (printed p. 281). */
 export const GROUND_MP_COST = 25_000;
 

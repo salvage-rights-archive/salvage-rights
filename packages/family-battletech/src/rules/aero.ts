@@ -970,6 +970,8 @@ export function craftTally(record: AeroRecord, catalog?: Catalog): CraftTally {
   unknown.push(...bays.unknown, ...quarters.unknown);
   // A towing adapter (AeroTech 2 p. 47: 100 tons) the record says the vessel carries.
   const adapters = (record.systems?.["towing-adapter"] ?? 0) * (capitalSystemFigure("towing-adapter", record.editionId)?.tons ?? 0);
+  const others = capitalSystems(record).lines.filter((l) => l.kind !== "towing-adapter" && l.allowed).reduce((sum, l) => sum + l.tons, 0);
+  const c3 = (record.systems?.["naval-c3"] ?? 0) > 0 && capitalSystemFigure("naval-c3", record.editionId) !== undefined;
   const lines = [
     { label: "Engine", tons: engine ?? 0 },
     { label: "Fuel", tons: record.fuelTons },
@@ -979,11 +981,12 @@ export function craftTally(record: AeroRecord, catalog?: Catalog): CraftTally {
     { label: "Armor", tons: record.armor.tons },
     { label: "Heat sinks", tons: record.heatSinks.count },
     { label: "Weapons and equipment", tons: weapons },
-    { label: "Fire control", tons: craftArcs(record, catalog).reduce((sum, a) => sum + a.fireControlTons, 0) },
+    { label: "Fire control", tons: craftArcs(record, catalog).reduce((sum, a) => sum + a.fireControlTons, 0) * (c3 ? 2 : 1) },
     { label: "Ammunition", tons: ammunition },
     { label: "Transport bays", tons: bays.tons },
     { label: "Quarters", tons: quarters.tons },
     ...(adapters > 0 ? [{ label: "Towing adapter", tons: adapters }] : []),
+    ...(others > 0 ? [{ label: "Ship systems", tons: others }] : []),
   ].map((line) => ({ ...line, tons: tidy(line.tons) }));
   const total = tidy(lines.reduce((sum, line) => sum + line.tons, 0));
   return { lines, total, remaining: tidy(record.tons - total), unknown };
@@ -1070,13 +1073,18 @@ export interface CapitalDrive {
   tons: number;
   integrity: number;
 }
-/** The K-F drive: a JumpShip's standard drive (95 percent of the tons) or a WarShip's compact one (45.25 percent), and its integrity. null for a station or any other unit. */
+/** Whether a WarShip mounts the sub-compact K-F drive (its record lists one in `systems`, and the edition prints it). */
+export function subCompact(record: Pick<AeroRecord, "systems" | "editionId" | "unitType">): boolean {
+  return record.unitType === "warship" && (record.systems?.["sub-compact-kf-drive"] ?? 0) > 0 && capitalSystemFigure("sub-compact-kf-drive", record.editionId) !== undefined;
+}
+
+/** The K-F drive: a JumpShip's standard drive (95 percent of the tons) or a WarShip's compact one (45.25 percent, or half the tons with the sub-compact drive), and its integrity. null for a station or any other unit. */
 export function kfDrive(record: AeroRecord): CapitalDrive | null {
   const kind = capitalKind(record);
   const kf = figureOf(CAPITAL_FIGURES.kfDrive, record.editionId);
   const rounding = capitalRounding(record);
   if (!kf || !rounding || (kind !== "jumpship" && kind !== "warship")) return null;
-  const figure = kf[kind];
+  const figure = kind === "warship" && subCompact(record) ? { ...kf.warship, share: figureOf(CAPITAL_FIGURES.subCompactShare, record.editionId) ?? kf.warship.share } : kf[kind];
   const tons = roundMass(record.tons * figure.share, rounding.drive);
   return { tons, integrity: roundMass(figure.integrityBase + tons / figure.integrityPer, rounding.integrity) };
 }
@@ -1218,7 +1226,8 @@ export interface CapitalSystemLine {
 }
 /** The ship systems in `systems`: each one's mass (a share of the unit's tons for a lithium-fusion battery; a station's sail is weighed by `jumpSail`), limit and whether the type may carry it. A kind the edition does not print is in `unknown`. */
 export function capitalSystems(record: AeroRecord): { lines: CapitalSystemLine[]; tons: number; unknown: string[] } {
-  const kind = capitalKind(record);
+  // A DropShip may carry the few systems the book lists it for (a Naval C3, the AeroTech 2 towing adapter).
+  const kind = capitalKind(record) ?? (record.unitType === "dropship" ? "dropship" : undefined);
   const lines: CapitalSystemLine[] = [];
   const unknown: string[] = [];
   for (const [system, count] of Object.entries(record.systems ?? {})) {
@@ -1228,9 +1237,23 @@ export function capitalSystems(record: AeroRecord): { lines: CapitalSystemLine[]
       continue;
     }
     const each = figure.tons ?? (figure.share === undefined ? 0 : record.tons * figure.share);
-    lines.push({ kind: system, count, tons: tidy(count * each), limit: capitalSystemLimit(system, record), allowed: figure.types.includes(kind) });
+    const tons = figure.wholeTons === true ? Math.ceil(tidy(count * each)) : tidy(count * each);
+    lines.push({ kind: system, count, tons, limit: capitalSystemLimit(system, record), allowed: figure.types.includes(kind) });
   }
   return { lines, tons: tidy(lines.reduce((sum, l) => sum + l.tons, 0)), unknown };
+}
+
+/**
+ * The docking collars a unit counts against its most: its hardpoints, two for each naval repair facility it mounts (one of each kind; TO:AUE p. 146) and two for each DropShuttle bay
+ * (IO:AE p. 113).
+ */
+export function collarTotal(record: AeroRecord): number {
+  let total = record.systems?.["docking-hardpoint"] ?? 0;
+  for (const [system, count] of Object.entries(record.systems ?? {})) {
+    const collars = capitalSystemFigure(system, record.editionId)?.collars;
+    if (collars !== undefined && count > 0) total += collars;
+  }
+  return total + 2 * record.mounts.filter((m) => m.equipmentId === "dropshuttle-bay-is").length;
 }
 
 /** Bay doors against the edition's most (by type in the current rules; AeroTech 2 Revised's 8 launch doors; AeroTech 2 prints none) and the launch rate. In the current rules a unit with a transport bay needs a door; `withoutDoor` then lists its bays. */
@@ -1282,7 +1305,8 @@ export function capitalTally(record: AeroRecord, catalog?: Catalog): CraftTally 
     { label: "Armor", tons: record.armor.tons },
     { label: "Heat sinks", tons: record.heatSinks.count },
     { label: "Weapons and equipment", tons: weapons },
-    { label: "Fire control", tons: capitalArcs(record, catalog).reduce((sum, a) => sum + a.fireControlTons, 0) },
+    // A Naval C3 network doubles the weight of the fire control (TO:AUE p. 144).
+    { label: "Fire control", tons: capitalArcs(record, catalog).reduce((sum, a) => sum + a.fireControlTons, 0) * ((record.systems?.["naval-c3"] ?? 0) > 0 && capitalSystemFigure("naval-c3", record.editionId) !== undefined ? 2 : 1) },
     { label: "Ammunition", tons: ammunition },
     { label: "Transport bays", tons: bays.tons },
     { label: "Quarters", tons: quarters.tons },

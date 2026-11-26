@@ -3,7 +3,7 @@
 // listed, unless the platoon already holds it (it then stays listed and the rules check reports it).
 import { useEffect, useMemo, useState } from "react";
 import { Link, useBlocker, useSearchParams } from "react-router";
-import { ARMOR_KITS, FORMATIONS, MOTIVES, SPECIALIZATIONS, armorKitOf, motiveOf } from "../../data/infantry-tables";
+import { ARMOR_KITS, BEASTS, FIELD_ARTILLERY_ID, FIELD_GUN_ID, FIELD_GUN_RULES, FORMATIONS, MOTIVES, SECONDARY_SLOT_TROOPS, SPECIALIZATIONS, XCT, XCT_ENVIRONMENTS, armorKitOf, beastOf, motiveOf } from "../../data/infantry-tables";
 import { eraLabel } from "../../data/editions";
 import { setEra, setYear } from "../../rules/availability";
 import { loadCatalog } from "../../rules/catalog";
@@ -12,7 +12,7 @@ import { DEFAULT_LEVEL, levelAtLeast, techBaseChoices } from "../../rules/levels
 import { eraNeedsPick, erasOfYear } from "../../rules/time";
 import { checkInfantry } from "../../rules/infantry/checks";
 import type { InfantryFinding } from "../../rules/infantry/checks";
-import { infantryBv, infantryCost, lineCode, platoonOf, standardSize } from "../../rules/infantry/platoon";
+import { beastSize, infantryBv, infantryCost, lineCode, offered as optionOffered, platoonOf, standardSize } from "../../rules/infantry/platoon";
 import type { InfantryRecord } from "../../rules/infantry/platoon";
 import SneakSystemsField from "./SneakSystemsField";
 import LeaveConfirm from "../editor/LeaveConfirm";
@@ -157,11 +157,20 @@ function Editor({ initial, catalog, storage }: { initial: InfantryRecord; catalo
   };
   const primaries = withCurrent(offered.filter((r) => r.infantry?.mode !== "Support"), record.primary);
   const secondaries = withCurrent(offered.filter((r) => r.infantry !== undefined), record.secondary.weapon);
-  const motives = MOTIVES.filter((m) => m.id === record.motive || levelAtLeast(level, m.level));
+  const motives = MOTIVES.filter((m) => m.id === record.motive || (levelAtLeast(level, m.level) && (record.year === null || m.year === undefined || m.year <= record.year)));
   const sneakKit = record.armor ? armorKitOf(record.armor) : undefined;
   const kitsOffered = ARMOR_KITS.filter((k) => k.id === record.armor || (levelAtLeast(level, "advanced") && (k.techBase === "both" || k.techBase === record.techBase) && (record.year === null || k.year <= record.year)));
   // Hide, do not mark: a specialty the platoon type rules out is not listed (one already held stays). Combat engineers wait until their sub-types can be chosen.
-  const specsOffered = SPECIALIZATIONS.filter((s) => record.specializations.includes(s.id) || (levelAtLeast(level, "advanced") && s.id !== "combat-engineers" && (s.motives === undefined || s.motives.includes(platoon.motive?.id ?? "foot"))));
+  const specsOffered = SPECIALIZATIONS.filter((s) => optionOffered(level, record.year, s, record.specializations.includes(s.id)) && (record.specializations.includes(s.id) || (s.id !== "combat-engineers" && (s.motives === undefined || s.motives.includes(platoon.motive?.id ?? "foot")))));
+  // Field guns and artillery come from the catalog's autocannons, Gauss weapons and artillery; the motive must be one that tows them (TO:AUE p. 122).
+  const towing = FIELD_GUN_RULES.motives.includes(platoon.motive?.id ?? "foot");
+  const heavy = useMemo(() => catalog.offered(record.editionId, { techBase: record.techBase, year: record.year, level }), [catalog, record.editionId, record.techBase, record.year, level]);
+  const gunsOffered = withCurrent(heavy.filter((r) => FIELD_GUN_ID.test(r.id)), record.fieldGun.weapon);
+  const artilleryOffered = withCurrent(heavy.filter((r) => FIELD_ARTILLERY_ID.test(r.id)), record.fieldArtillery);
+  const showGuns = optionOffered(level, record.year, {}, record.fieldGun.weapon !== null || record.fieldArtillery !== null) && (towing || record.fieldGun.weapon !== null || record.fieldArtillery !== null);
+  const showMedics = optionOffered(level, record.year, {}, record.paramedics > 0 || record.tagTroops > 0);
+  const showXct = optionOffered(level, record.year, XCT, record.xct !== null);
+  const advancedHeld = record.armor !== null || record.specializations.length > 0 || record.paramedics > 0 || record.tagTroops > 0 || record.xct !== null || record.fieldGun.weapon !== null || record.fieldArtillery !== null;
   const when = { year: record.year, era: record.era, editionId: record.editionId };
   const yearEras = erasOfYear(record.year);
   const bases = techBaseChoices(level, record.techBase, when).filter(([value]) => value !== "mixed");
@@ -271,7 +280,8 @@ function Editor({ initial, catalog, storage }: { initial: InfantryRecord; catalo
           <section className="bt-panel" aria-labelledby="inf-platoon">
             <h2 id="inf-platoon">Platoon</h2>
             <div className="bt-grid">
-              <SelectField id="field-motive" label="Type" hint="Motive type (TechManual, p. 145)." value={record.motive} options={motives.map((m) => ({ value: m.id, label: m.label }))} onChange={(v) => { edit((d) => { d.motive = v; resize(d); if (platoonOf(d, catalog).motive?.mechanized) d.antiMech = false; }); }} />
+              <SelectField id="field-motive" label="Type" hint="Motive type (TechManual, p. 145)." value={record.motive} options={motives.map((m) => ({ value: m.id, label: m.label }))} onChange={(v) => { edit((d) => { d.motive = v; resize(d); if (v === "beast") { d.beast = d.beast ?? "horse"; [d.perSquad, d.squads] = beastSize(beastOf(d.beast)); } if (platoonOf(d, catalog).motive?.mechanized) d.antiMech = false; }); }} />
+              {record.motive === "beast" && <SelectField id="field-beast" label="Creature" hint="Beast-Mounted Infantry Sample Types Table (Tactical Operations: Advanced Units and Equipment, p. 106)." value={record.beast ?? ""} options={[{ value: "", label: "Choose a creature" }, ...BEASTS.map((b) => ({ value: b.id, label: `${b.name} (${b.size}, ${String(b.mp)} ${b.mpType} MP, ${String(b.weight)} t)` }))]} onChange={(v) => { edit((d) => { d.beast = v === "" ? null : v; [d.perSquad, d.squads] = beastSize(beastOf(v)); }); }} />}
               <NumberField id="field-squads" label="Squads" value={record.squads} min={1} onValid={(v) => { edit((d) => void (d.squads = Math.floor(v ?? d.squads)), "squads"); }} />
               <NumberField id="field-perSquad" label="Troopers a squad" value={record.perSquad} min={1} hint={platoon.motive ? `At most ${String(platoon.motive.maxSquad)} for this type.` : undefined} onValid={(v) => { edit((d) => void (d.perSquad = Math.floor(v ?? d.perSquad)), "perSquad"); }} />
               {!mechanized && (
@@ -294,9 +304,9 @@ function Editor({ initial, catalog, storage }: { initial: InfantryRecord; catalo
             </div>
           </section>
 
-          {(levelAtLeast(level, "advanced") || record.armor !== null || record.specializations.length > 0) && (
+          {(levelAtLeast(level, "advanced") || advancedHeld) && (
             <section className="bt-panel" aria-labelledby="inf-advanced">
-              <h2 id="inf-advanced">Armor and specialties</h2>
+              <h2 id="inf-advanced">Armor, specialties and equipment</h2>
               <div className="bt-grid">
                 <SelectField id="field-armor" label="Armor kit" hint={record.armor ? `Damage divisor ${String(armorKitOf(record.armor)?.divisor ?? 1)}.` : "Tactical Operations: Advanced Units and Equipment, p. 129."} value={record.armor ?? ""} options={[{ value: "", label: "No armor kit" }, ...kitsOffered.map((k) => ({ value: k.id, label: `${k.name} (divisor ${String(k.divisor)}${k.encumbering ? ", encumbering" : ""})` }))]} onChange={(v) => { edit((d) => void (d.armor = v === "" ? null : v)); }} />
               </div>
@@ -310,6 +320,22 @@ function Editor({ initial, catalog, storage }: { initial: InfantryRecord; catalo
                   </label>
                 ))}
               </fieldset>
+              <div className="bt-grid">
+                {showMedics && (
+                  <>
+                    <NumberField id="field-paramedics" label="Paramedics a squad" value={record.paramedics} min={0} hint={`Each replaces a Secondary Weapon trooper; ${String(SECONDARY_SLOT_TROOPS.perSquad)} a squad with TAG troops at most (Tactical Operations: Advanced Units and Equipment, p. 153).`} onValid={(v) => { edit((d) => void (d.paramedics = Math.floor(v ?? 0)), "paramedics"); }} />
+                    <NumberField id="field-tagTroops" label="TAG troops a squad" value={record.tagTroops} min={0} hint="TAG troops work only with 2 in a squad; the TAG reaches 3, 6 and 9 hexes." onValid={(v) => { edit((d) => void (d.tagTroops = Math.floor(v ?? 0)), "tagTroops"); }} />
+                  </>
+                )}
+                {showXct && <SelectField id="field-xct" label="Condition-trained for" hint="Needs an armor kit made for the environment (Tactical Operations: Advanced Units and Equipment, p. 162)." value={record.xct ?? ""} options={[{ value: "", label: "Not condition-trained" }, ...XCT_ENVIRONMENTS.map((x) => ({ value: x.id, label: x.label }))]} onChange={(v) => { edit((d) => void (d.xct = v === "" ? null : v)); }} />}
+              </div>
+              {showGuns && (
+                <div className="bt-grid">
+                  <SelectField id="field-fieldGun" label="Field gun" hint={platoon.fieldGun ? `Each needs ${String(platoon.gunCrew)} troopers.` : "An autocannon or Gauss weapon, towed (Tactical Operations: Advanced Units and Equipment, p. 122)."} value={record.fieldGun.weapon ?? ""} options={[{ value: "", label: "No field gun" }, ...gunsOffered.map((r) => ({ value: r.id, label: `${r.name}${r.techBase === "clan" ? " (Clan)" : ""}` }))]} onChange={(v) => { edit((d) => { d.fieldGun.weapon = v === "" ? null : v; if (v === "") d.fieldGun.count = 0; else if (d.fieldGun.count === 0) d.fieldGun.count = 1; }); }} />
+                  <NumberField id="field-fieldGun-count" label="Field guns" value={record.fieldGun.count} min={0} onValid={(v) => { edit((d) => void (d.fieldGun.count = Math.floor(v ?? 0)), "fieldGunCount"); }} />
+                  <SelectField id="field-fieldArtillery" label="Field artillery" hint="One piece; the platoon then moves 1 MP (p. 123)." value={record.fieldArtillery ?? ""} options={[{ value: "", label: "No field artillery" }, ...artilleryOffered.map((r) => ({ value: r.id, label: `${r.name}${r.techBase === "clan" ? " (Clan)" : ""}` }))]} onChange={(v) => { edit((d) => void (d.fieldArtillery = v === "" ? null : v)); }} />
+                </div>
+              )}
             </section>
           )}
         </div>

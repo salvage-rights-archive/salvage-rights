@@ -4,6 +4,7 @@ import type { Catalog, EquipmentRow } from "../../rules/catalog";
 import { SMALL_BIN, armorLocations } from "../../rules/vehicle/vehicle";
 import type { VehicleMount, VehicleRecord } from "../../rules/vehicle/vehicle";
 import { equipmentOffered } from "../../rules/vehicle/availability";
+import { asEquipment, defaultMunitionId, offeredChoices } from "../../rules/munitions";
 import { motiveOf } from "../../data/vehicle";
 
 /** An edit to a record, and the callback the page hands each panel: edits with the same `field` in a row (one visit to a field) are one Undo step. */
@@ -26,9 +27,11 @@ export function freshMountId(record: Pick<VehicleRecord, "mounts">): string {
 }
 
 /** The mount for an item put in a location: ammunition starts at its least bin. Items with no firing arc (ammunition and the rest) default to the body. */
-export function mountFor(record: Pick<VehicleRecord, "mounts">, row: EquipmentRow, location: string): VehicleMount {
+export function mountFor(record: Pick<VehicleRecord, "mounts" | "editionId">, row: EquipmentRow, location: string, catalog?: Catalog): VehicleMount {
   const small = SMALL_BIN.test(row.id.replace(/^ammo-/, ""));
-  return { id: freshMountId(record), equipmentId: row.id, name: row.name, location, ...(row.kind === "ammunition" ? { amount: small ? 0.5 : 1 } : {}) };
+  // A mine dispenser or grenade launcher starts with its default munition: a standard mine, a fragmentation grenade (rules/munitions.ts).
+  const munition = catalog === undefined ? undefined : defaultMunitionId(row, catalog, record.editionId);
+  return { id: freshMountId(record), equipmentId: row.id, name: row.name, location, ...(row.kind === "ammunition" ? { amount: small ? 0.5 : 1 } : {}), ...(munition === undefined ? {} : { munition }) };
 }
 
 /** The locations mounts sit in that the vehicle does not have, in the order first met: they stay visible and can be moved. */
@@ -47,3 +50,7 @@ export function offeredEquipment(record: VehicleRecord, catalog: Catalog, everyt
   return out;
 }
 
+
+/** The munitions a vehicle is offered for an item: those printed for vehicles at its level, tech base and time, and the one it holds. Empty for an item with no choice. */
+export const munitionChoices = (record: VehicleRecord, catalog: Catalog, row: EquipmentRow, current: string | undefined): EquipmentRow[] =>
+  offeredChoices(row, catalog, record.editionId, current, (choice) => equipmentOffered(asEquipment(choice, "vehicle"), record, catalog));

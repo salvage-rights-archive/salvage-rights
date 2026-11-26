@@ -3,6 +3,7 @@
 // does not understand: an unknown weight class, armor type, manipulator or item is counted as nothing and reported in `unknown`, so the rules
 // check can say so. Weights are kilograms.
 import {
+  BA_BOOSTERS,
   MOTIVE,
   isMotive,
   SHOTS_PER_SLOT,
@@ -26,6 +27,13 @@ export const carriesShots = (row: EquipmentRow | undefined): boolean => row?.amm
 export const isBooster = (row: EquipmentRow | undefined): boolean => row?.id.startsWith("ba-jump-booster") === true;
 export const isWing = (row: EquipmentRow | undefined): boolean => row?.id.startsWith("ba-partial-wing") === true;
 export const isClamps = (row: EquipmentRow | undefined): boolean => row?.id.startsWith("ba-magnetic-clamps") === true;
+export const isMechanicalBooster = (row: EquipmentRow | undefined): boolean => row?.id.startsWith("ba-mechanical-jump-booster") === true;
+export const isMyomerBooster = (row: EquipmentRow | undefined): boolean => row?.id.startsWith("ba-myomer-booster") === true;
+export const isTubeArtillery = (row: EquipmentRow | undefined): boolean => row?.id.startsWith("ba-tube-artillery") === true;
+/** A missile launcher or Narc, which a detachable weapon pack may not carry (TO:AUE p. 99). */
+export const isMissileWeapon = (row: EquipmentRow | undefined): boolean => row !== undefined && /^ba-(lrm|srm|mrm|advanced-srm|rocket-launcher)-|narc/.test(row.id);
+/** The Ground MP a myomer booster gives a suit of the weight class (0 for a class the book does not name). */
+export const myomerBonus = (weightClass: string): number => (Object.hasOwn(BA_BOOSTERS.myomerGroundBonus, weightClass) ? (BA_BOOSTERS.myomerGroundBonus[weightClass] ?? 0) : 0);
 
 /** Kilograms, with float noise off (the catalog stores tons). */
 const kgOfTons = (tons: number): number => tidy(tons * 1000);
@@ -36,16 +44,24 @@ export const ammoSlots = (shots: number): number => Math.ceil(shots / SHOTS_PER_
 
 export interface MountFigures {
   row: EquipmentRow;
-  /** The item's own weight and ammunition weight, in kilograms, and its slots including ammunition. */
+  /** The item's own weight and ammunition weight, in kilograms, and its slots including ammunition (`baseSlots` without it). */
   itemKg: number;
   ammoKg: number;
   slots: number;
+  baseSlots: number;
 }
-export function figuresOf(mount: BaMount, catalog: Catalog, editionId: string): MountFigures | undefined {
+/** `weightClass` is the suit's, for the one item whose weight follows it: the mechanical jump booster weighs twice a jump jet of the class (TO:AUE p. 225). */
+export function figuresOf(mount: BaMount, catalog: Catalog, editionId: string, weightClass?: string): MountFigures | undefined {
   const row = mount.equipmentId === null ? undefined : catalog.rowFor(mount.equipmentId, editionId);
   if (!row || typeof row.tons !== "number" || typeof row.slots !== "number") return undefined;
+  // A "shot" of ammunition is what the book weighs per shot: for a missile launcher one missile, for the tube artillery one two-round clip (TO:AUE p. 96).
   const shots = carriesShots(row) ? shotsOf(mount) : 0;
-  return { row, itemKg: kgOfTons(row.tons), ammoKg: tidy(shots * (row.ammoKgPerShot ?? 0)), slots: row.slots + (shots > 0 ? ammoSlots(shots) : 0) };
+  const cls = isMechanicalBooster(row) && weightClass !== undefined ? weightClassOf(weightClass) : undefined;
+  const whole = cls ? tidy(BA_BOOSTERS.mechanicalJumpWeightFactor * cls.jump.kgPerMp) : kgOfTons(row.tons);
+  const ammoKg = tidy(shots * (row.ammoKgPerShot ?? 0));
+  // A weapon in a detachable weapon pack: three quarters of its weight, to the next 5 kg; the pack takes the one slot (TO:AUE p. 99).
+  if (mount.pack === true && row.kind === "weapon" && !isMissileWeapon(row)) return { row, itemKg: Math.ceil(tidy((whole + ammoKg) * BA_BOOSTERS.dwp.weightFactor) / BA_BOOSTERS.dwp.roundKg) * BA_BOOSTERS.dwp.roundKg, ammoKg: 0, slots: 1 + (shots > 0 ? ammoSlots(shots) : 0), baseSlots: 1 };
+  return { row, itemKg: whole, ammoKg, slots: row.slots + (shots > 0 ? ammoSlots(shots) : 0), baseSlots: row.slots };
 }
 
 export interface SlotUse {
@@ -154,7 +170,7 @@ export function build(record: BaRecord, catalog: Catalog): BaBuild {
 
   const used: { mount: BaMount; figures: MountFigures }[] = [];
   for (const mount of record.mounts) {
-    const figures = figuresOf(mount, catalog, record.editionId);
+    const figures = figuresOf(mount, catalog, record.editionId, record.weightClass);
     if (!figures) {
       unknown.push(mount.name || mount.equipmentId || "an item");
       continue;
@@ -185,13 +201,14 @@ export function build(record: BaRecord, catalog: Catalog): BaBuild {
   const weapons: Partial<Record<BaLocation, number>> = {};
   for (const { mount, figures } of used) {
     const use = slots[mount.location as BaLocation];
-    const base = figures.row.slots as number;
+    const base = figures.baseSlots;
     const ammo = figures.slots - base;
     if (use) {
       use.items += base;
       use.ammo += ammo;
     }
-    if (figures.row.kind === "weapon" && use) weapons[mount.location as BaLocation] = (weapons[mount.location as BaLocation] ?? 0) + 1;
+    // A mine dispenser counts as an anti-'Mech weapon in its location: its standard weapon-mounting rules apply (TO:AUE p. 136, TM p. 170; book panel).
+    if ((figures.row.kind === "weapon" || figures.row.id.startsWith("ba-mine-dispenser")) && use) weapons[mount.location as BaLocation] = (weapons[mount.location as BaLocation] ?? 0) + 1;
   }
   for (const loc of here) {
     const use = slots[loc];
@@ -203,9 +220,12 @@ export function build(record: BaRecord, catalog: Catalog): BaBuild {
   // The partial wing adds a Jumping MP in atmosphere (TechManual printed p. 266); the figure shown is the atmospheric one.
   // The wing's Jumping MP may exceed the class maximum (TechManual printed p. 166, as for the jump booster): do not cap it.
   const wings = Math.min(1, used.filter((u) => isWing(u.figures.row)).length);
+  // A mechanical jump booster is a jump system of 1 Jumping MP; it does not add to jump jets (TO:AUE p. 99), and a partial wing adds to either.
+  const mechanical = used.some((u) => isMechanicalBooster(u.figures.row));
+  const jets = kind === "jump" ? motiveMp + boosters : 0;
   const moves: Moves = {
     ground: record.ground,
-    jump: kind === "jump" ? motiveMp + boosters + wings : 0,
+    jump: kind === "jump" || mechanical ? Math.max(jets, mechanical ? 1 : 0) + wings : 0,
     vtol: kind === "vtol" ? motiveMp : 0,
     umu: kind === "umu" ? motiveMp : 0,
   };

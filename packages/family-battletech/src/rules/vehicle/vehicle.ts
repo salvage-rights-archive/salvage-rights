@@ -25,6 +25,8 @@ export interface VehicleMount {
   location: string;
   /** The tons of an ammunition bin, or the size the player chose for an item sold by size. */
   amount?: number;
+  /** The munition chosen for a mine dispenser or a grenade launcher: a catalog row id (rules/munitions.ts). Absent reads as the default type. */
+  munition?: string;
 }
 
 export interface VehicleRecord {
@@ -131,10 +133,11 @@ function part<T>(v: unknown, known: readonly (keyof T & string)[], fill: (o: Rec
   return { ...unknownKeys(o, known), ...fill(o) };
 }
 
-const MOUNT_KEYS = ["id", "equipmentId", "name", "location", "amount"] as const;
+const MOUNT_KEYS = ["id", "equipmentId", "name", "location", "amount", "munition"] as const;
 function mountOf(v: Record<string, unknown>, index: number): VehicleMount {
   const mount: VehicleMount = { ...unknownKeys(v, MOUNT_KEYS), id: str(v.id, `mount-${String(index + 1)}`), equipmentId: isString(v.equipmentId) ? v.equipmentId : null, name: str(v.name, ""), location: str(v.location, "body") };
   if (isNumber(v.amount)) mount.amount = v.amount;
+  if (isString(v.munition)) mount.munition = v.munition;
   return mount;
 }
 
