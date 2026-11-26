@@ -1,7 +1,8 @@
 // The Gothic look is a body class. A Gothic page calls this while it is mounted; leaving the page (in the app, with no reload)
-// takes the class off again, so Classic and the other games never see it. The colours are in gothic-theme.scss.
+// takes the class off again, so Classic and the other games never see it. The colours are in gothic-theme.scss and the ornaments in ornaments.scss.
 import { useEffect } from "react";
 import "./gothic-theme.scss";
+import "./ornaments.scss";
 
 export const GOTHIC_CLASS = "bt-gothic";
 
