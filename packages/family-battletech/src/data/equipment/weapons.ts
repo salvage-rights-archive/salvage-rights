@@ -45,6 +45,10 @@
 //
 // Placement limits (`locations`) and splitting follow the item entries on pp. 204-238 and the ranged-weapon rule on p. 57:
 // a ranged weapon of 8 or more slots may be split between two adjacent locations other than the legs.
+// Autocannon rows: p. 208 names only the AC/20, LB 20-X AC and Ultra AC/20 of the autocannons its own table lists, which are the only
+// ones of 8 or more slots there. The later books send the others to the same slot rule: IO:AE pp. 90-92 for the improved, LB-X-CP and
+// UAC-CP autocannons (8 or more slots may divide) and TO:AUE p. 96 for the Clan rotary autocannon (standard construction rules), so the
+// Clan Rotary AC/5 and the prototype Ultra AC/10 (8 slots each) keep `splittable`. Checked against the page images.
 // `directFire` marks the weapons whose weight counts toward a targeting computer (p. 238): non-missile pulse and
 // direct-fire heavy weapons, not machine guns, flamers or TAG. TechManual's own tables have no Type column; the Type
 // comes from Total Warfare's weapons tables, which print the plasma rifle and plasma cannon as DE (direct-fire energy,
