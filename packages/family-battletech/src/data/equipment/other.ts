@@ -314,6 +314,23 @@ export const OTHER: EquipmentGroup[] = [
     ],
   },
   {
+    // Large-craft systems of the Additional Alternate Era table (IO:AE printed p. 211 construction data, p. 210 play table for the Age of War rows; pp. 212-213
+    // and 214-215 for the rest; entries pp. 113-114, 142-144, read against the page images). Every cost is the table's per item. Dates: the table's Latest
+    // Intro Date (the entries agree for the bay, 2120 extinct 2500, and the post-boom collar, 2470). A "P" date is prototype-only, with the entry's extinction.
+    // The DropShuttle bay is 11,000 tons, counts as two docking collars, one per 100,000 tons of the ship (rules p. 114). Not added: the primitive K-F boom
+    // and the pre-boom docking collar (the table dates them 2342P and 2350 where the boom's entry prints 2304 and 2350, a doubt for the book panel), the
+    // space station K-F adapter and modular space stations (their price is a final-cost multiplier of x20 and x50 over the station, p. 180, which a catalog
+    // item cannot carry), and the robotic and drone control systems (their weights are percentages of the drone unit, by unit type).
+    defaults: { kind: "other", techBase: "inner-sphere", cite: { book: IO, page: 211 }, playCite: { book: IO, page: 210 }, checked: "page", slots: 0, units: ["ship"], rulesLevel: "advanced" },
+    items: [
+      { id: "dropshuttle-bay-is", name: "DropShuttle Bay", tons: 11000, availability: [{ from: 2120, to: 2500 }], type: "PE" },
+      { id: "docking-collar-post-boom-is", name: "DropShip Docking Collar (post-Boom)", tons: 1000, availability: [{ from: 2470 }], units: ["dropship", "ship"], type: "PE", prototypeYear: 2458 },
+      { id: "sldf-sds-jammer-system-is", name: "SLDF SDS Jammer System", tons: 30000, availability: [{ from: 2776, to: 2780 }], type: "E", rulesLevel: "experimental", cite: { book: IO, page: 215 }, playCite: { book: IO, page: 214 } },
+      { id: "wob-super-jump-drive-is", name: "Word of Blake Super-Jump Drive", tons: 0, availability: [{ from: 3059 }], type: "PE", rulesLevel: "experimental", cite: { book: IO, page: 213 }, playCite: { book: IO, page: 212 } },
+      { id: "dragons-breath-launch-system-is", name: "Word of Blake Dragon's Breath MCM Launch System", aliases: ["Dragon's Breath"], tons: 5000, availability: [{ from: 3077, to: 3078 }], type: "CAP, AE", damage: "Special", rulesLevel: "experimental", cite: { book: IO, page: 215 }, playCite: { book: IO, page: 214 } },
+    ],
+  },
+  {
     defaults: { kind: "other", techBase: "inner-sphere", cite: { book: IO, page: 215 }, playCite: { book: IO, page: 214 }, checked: "page", rulesLevel: "experimental" },
     items: [
       // RISC and Dark Age electronics and equipment

@@ -273,6 +273,8 @@ const TORPEDO_UNFIXED: Record<string, string> = Object.fromEntries(
 );
 export const UNFIXED: Record<string, string> = {
   ...TORPEDO_UNFIXED,
+  "dropshuttle-bay-is": "a large-craft item: neither Alternate Eras Battle Value table (IO:AE pp. 189-191) prints a line for it",
+  "docking-collar-post-boom-is": "a large-craft item: neither Alternate Eras Battle Value table (IO:AE pp. 189-191) prints a line for it",
   "radical-heat-sink-is": "the book prints two rules that disagree: its table adds the unit's heat sink count x 0.4 to Heat Efficiency, its text multiplies the capacity by 1.4, and the worked example gives both 42 and 36 (IO:AE pp.185, 190)",
   // Items whose BV is a modifier or a figure that depends on the unit, which the BV rules here do not compute (TO:AUE pp.192-197).
   "blue-shield-is": "it adds 0.2 to the armor type modifier and counts as a Gauss weapon for the defensive rating (TO:AUE pp.192, 194)",
@@ -643,6 +645,7 @@ export const EQUIPMENT_BV: BvGroup[] = [
       // Printed p. 190: no BV of their own; they enable BV skill modifiers the editor does not apply (the neurohelmet: -1 Piloting, p. 189)
       ["damage-interrupt-circuit-is", 0], ["direct-neural-interface-modification-is", 0], ["enhanced-imaging-interface-clan", 0],
       ["battlemech-neural-interface-unit-is", 0], ["battlemech-neural-interface-unit-clan", 0],
+      ["sldf-sds-jammer-system-is", 0], ["wob-super-jump-drive-is", 0], ["dragons-breath-launch-system-is", 1076],
       ["sldf-advanced-neurohelmet-mech-is", 0, undefined, { none: true }], ["sldf-advanced-neurohelmet-fighter-is", 0, undefined, { none: true }],
     ],
   },

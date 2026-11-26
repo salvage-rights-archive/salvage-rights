@@ -4,6 +4,17 @@ import { COCKPIT_COST } from "../data/cost";
 import { loadCatalog } from "./catalog";
 
 // Items added in round 3 (IO:AE and TO:AUE tables): id, tech base, tons, slots, availability, prototype year.
+describe("IO:AE large-craft items (pp. 210-215)", () => {
+  it.each([
+    ["dropshuttle-bay-is", 11000, [{ from: 2120, to: 2500 }], "advanced"],
+    ["docking-collar-post-boom-is", 1000, [{ from: 2470 }], "advanced"],
+    ["sldf-sds-jammer-system-is", 30000, [{ from: 2776, to: 2780 }], "experimental"],
+    ["dragons-breath-launch-system-is", 5000, [{ from: 3077, to: 3078 }], "experimental"],
+  ])("%s has its printed weight, years and level", async (id, tons, availability, rulesLevel) => {
+    expect((await loadCatalog()).byId(id)).toMatchObject({ tons, availability, rulesLevel, slots: 0 });
+  });
+});
+
 describe("IO:AE cockpit and pilot-interface items (pp. 62-64, 110, 212-213)", () => {
   it.each([
     ["damage-interrupt-circuit-is", "inner-sphere", 0, 0, [{ from: 3055, to: 3060 }], undefined],
