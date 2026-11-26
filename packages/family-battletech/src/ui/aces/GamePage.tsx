@@ -17,6 +17,7 @@ import { supportPending } from "../../rules/aces-support";
 import ActivationCard from "./ActivationCard";
 import type { Apply } from "./ActivationCard";
 import CombatPanel from "./AttackPanel";
+import EdgePanel from "./EdgePanel";
 import EndPhasePanel, { GameOverPanel } from "./EndPhasePanel";
 import ObjectivesPanel from "./ObjectivesPanel";
 import UnitsDrawer from "./UnitsDrawer";
@@ -56,6 +57,13 @@ function Phase(props: { game: AcesGame; records: TurnRecords; apply: Apply; touc
       return <EndPhasePanel {...props} />;
     case "over":
       return <GameOverPanel game={props.game} />;
+    case "movement":
+      return (
+        <>
+          <ActivationCard {...props} />
+          <EdgePanel game={props.game} apply={props.apply} />
+        </>
+      );
     default:
       return <ActivationCard {...props} />;
   }

@@ -10,6 +10,7 @@
 import type { AcesCard, AcesRecord, Clause, Column, CommandCard, Condition, Filter, Key, Order, OvRow, SpecialOrderCard, TargetRule, TokenUse } from "./aces-card";
 import { isAcesRecord, isCommandCard, toDeckCard } from "./aces-card";
 import { buildDecks } from "./aces-deck";
+import { findEdgeAbility } from "./aces-edge";
 import type { UnitDeck } from "./aces-deck";
 import { ACES_LETTERS } from "../data/aces-vocab";
 import type { ColumnId, CommandLetter, OrderPhase, SpecialOrderKind } from "../data/aces-vocab";
@@ -283,7 +284,7 @@ function convertOrder(o: Obj, at: string): SpecialOrderCard | undefined {
   };
 }
 
-/** The player's cards in the old card library as ours. Sample cards the old app shipped, Edge cards and sorties are left, and said so. */
+/** The player's cards in the old card library as ours. Sample cards the old app shipped and sorties are left, and said so; Edge cards are matched by name to our Edge table and the ones that match nothing are listed. */
 export function convertJbtLibrary(library: unknown, at: string, left: Set<string>): AcesRecord[] {
   if (!isObject(library)) return [];
   const mine = (v: unknown): Obj[] => rows(v, EXPORT_CAPS.cards).filter((c) => c.sample !== true);
@@ -308,8 +309,11 @@ export function convertJbtLibrary(library: unknown, at: string, left: Set<string
   }
   const unread = skipped.behaviour + skipped.command + skipped.order;
   if (unread > 0) left.add(`${words(unread, "card")} had no id, no deck name, or a special order of a kind we do not use, and could not be read.`);
-  const edge = rows(library.edgeCards, EXPORT_CAPS.cards).filter((c) => c.sample !== true).length;
-  if (edge > 0) left.add(`${words(edge, "Edge card")}: we do not keep Edge cards yet (the Edge a pilot holds is kept in the campaign).`);
+  const edgeCards = rows(library.edgeCards, EXPORT_CAPS.cards).filter((c) => c.sample !== true);
+  const matched = edgeCards.filter((c) => findEdgeAbility(text(c.name)) !== undefined);
+  const unmatched = edgeCards.filter((c) => findEdgeAbility(text(c.name)) === undefined).map((c) => text(c.name).trim().slice(0, 60) || "(no name)");
+  if (matched.length > 0) left.add(`${words(matched.length, "Edge card")} matched an ability in our Edge table by name, so nothing needed bringing over: they are on the Edge panel and in the pilots' ability lists.`);
+  if (unmatched.length > 0) left.add(`${words(unmatched.length, "Edge card")} matched nothing in our Edge table and were not imported: ${unmatched.join(", ")}. A pilot can still list such an ability as Other.`);
   const sorties = rows(library.scenarios, EXPORT_CAPS.cards).filter((c) => c.sample !== true).length;
   if (sorties > 0) left.add(`${words(sorties, "sortie record")} in the card library: our sorties belong to a campaign, so they were not imported.`);
   if (made.some((r) => r.kind === "aces-card" && r.combat.target?.keys.some((k) => k.token === "other"))) {

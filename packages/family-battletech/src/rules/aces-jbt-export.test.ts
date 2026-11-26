@@ -74,6 +74,9 @@ describe("Aces export file from the old project", () => {
     const left = rest.left.join(" ");
     for (const part of ["sample card", "Edge card", "sortie record", "Battlefield Support", "Who won Initiative", "game and its campaign"]) expect(left).toContain(part);
     expect(rest.left.join(" ")).toContain("could not be read");
+    // Edge cards go by name to our Edge table: "nimble" matches, the invented one is listed.
+    expect(left).toMatch(/1 Edge card matched an ability in our Edge table/);
+    expect(left).toMatch(/matched nothing in our Edge table and were not imported: Invented edge/);
   });
 
   it("reads only the Aces keys: a token-looking entry and every other localStorage entry or stray key never reaches the result", () => {
