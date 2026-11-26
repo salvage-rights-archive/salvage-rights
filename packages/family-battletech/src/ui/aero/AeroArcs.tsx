@@ -6,6 +6,7 @@ import { CAPITAL_FIGURES, CRAFT_FIGURES, capitalSystemFigure, FIGHTER_FIGURES, c
 import { aeroLocationName, capitalKind, capitalSystems, capitalSystemsFor, craftAmmoShortfalls, craftKind, craftQuarters, fighterArcs, fighterKind, locationsOf, vessel, vesselGroup } from "../../rules/aero";
 import type { AeroMount, AeroRecord } from "../../rules/aero";
 import type { Catalog, EquipmentRow } from "../../rules/catalog";
+import { aeroSystemOffered } from "../../rules/aero-checks";
 import { tidy } from "../../rules/walk";
 import AeroPicker from "./AeroPicker";
 import { mountFor, strayArcs } from "./edit";
@@ -196,8 +197,8 @@ const QUARTERS: [string, string][] = [
 /** The ship systems of a capital ship (docking hardpoints, grav decks, batteries and the like): how many of each, with the edition's most and what the type may carry. */
 function ShipSystems({ record, onEdit }: { record: AeroRecord; onEdit: AeroOnEdit }) {
   // Hide, do not mark: a system the unit type may not carry is listed only when the unit already holds some.
-  const type = capitalKind(record);
-  const kinds = capitalSystemsFor(record.editionId).filter(({ kind }) => (record.systems?.[kind] ?? 0) > 0 || (type !== undefined && capitalSystemFigure(kind, record.editionId)?.types.includes(type) === true));
+  const type = capitalKind(record) ?? (record.unitType === "dropship" ? "dropship" : undefined);
+  const kinds = capitalSystemsFor(record.editionId).filter(({ kind }) => (record.systems?.[kind] ?? 0) > 0 || (type !== undefined && capitalSystemFigure(kind, record.editionId)?.types.includes(type) === true && aeroSystemOffered(record, kind)));
   const lines = capitalSystems(record).lines;
   if (kinds.length === 0) return null;
   return (
@@ -350,7 +351,7 @@ export function CraftPanel({ record, catalog, onEdit }: { record: AeroRecord; ca
           />
         </div>
       </fieldset>
-      {capitalKind(record) !== undefined && <ShipSystems record={record} onEdit={onEdit} />}
+      {(capitalKind(record) !== undefined || record.unitType === "dropship") && <ShipSystems record={record} onEdit={onEdit} />}
       <ul className="bt-list bt-readout">
         {quarters.tons > 0 && <li className="bt-hint">{`Quarters ${plural(quarters.tons, "ton")}`}</li>}
         {doors && (

@@ -68,3 +68,39 @@ test("the battle armor editor and sheet have no axe violations in either theme",
     }
   }
 });
+
+test("a battle armor mine dispenser takes a mine type chosen on its row, and the row has no axe violations", async ({ page }) => {
+  test.setTimeout(120_000);
+  const { editor } = await buildSuit(page, "Mine Suit");
+  await page.getByLabel("Rules level").selectOption("advanced");
+  await page.getByLabel("Item", { exact: true }).selectOption({ label: "Mine Dispenser (50 kg, 2 slots)" });
+  await page.getByRole("button", { name: "Add", exact: true }).click();
+  const type = page.getByLabel("Mine type");
+  await expect(type).toHaveValue("mine-standard-is");
+  await expect(type.locator("option", { hasText: "EMP" })).toHaveCount(0);
+  await type.selectOption({ label: "Vibrabomb" });
+  await expect(page.getByText(/Vibrabomb: two shots cost 10,000 C-bills to replace/)).toBeVisible();
+  const results = await new AxeBuilder({ page }).analyze();
+  expect(results.violations).toEqual([]);
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(page.getByText("Saved.")).toBeVisible();
+  await page.goto(`${DEV}${editor.replace("battlearmor-editor", "battlearmor-sheet")}`);
+  await expectPage(page.getByRole("heading", { level: 1 })).toBeVisible();
+  await expect(page.getByText("Mine Dispenser, Vibrabomb").first()).toBeAttached();
+});
+
+test("a weapon in a battle armor suit can go in a detachable weapon pack, and the checkbox has no axe violations", async ({ page }) => {
+  test.setTimeout(120_000);
+  await buildSuit(page, "Pack Suit");
+  await page.getByLabel("Weight class").selectOption("medium");
+  const pack = page.getByLabel("Small Laser in a detachable weapon pack");
+  await pack.check();
+  await expect(pack).toBeChecked();
+  const results = await new AxeBuilder({ page }).analyze();
+  expect(results.violations).toEqual([]);
+  // A light suit keeps the box while the record holds it, so it can be unticked.
+  await page.getByLabel("Weight class").selectOption("light");
+  await expect(pack).toBeChecked();
+  await pack.click();
+  await expect(pack).toHaveCount(0);
+});

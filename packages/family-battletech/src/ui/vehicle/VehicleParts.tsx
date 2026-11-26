@@ -17,7 +17,8 @@ import { armorChoices, engineChoices, motiveChoices } from "../../rules/vehicle/
 import { tidy } from "../../rules/walk";
 import LevelSelect from "../editor/LevelSelect";
 import { NumberField, SelectField, TextField } from "../aero/fields";
-import { mountFor, strayLocations, syncArmorLocations } from "./edit";
+import { chosenMunition, munitionShort, reloadCost } from "../../rules/munitions";
+import { mountFor, munitionChoices, strayLocations, syncArmorLocations } from "./edit";
 import type { VehicleOnEdit } from "./edit";
 import VehicleDiagram from "./VehicleDiagram";
 import VehiclePicker from "./VehiclePicker";
@@ -236,10 +237,10 @@ export function EquipmentPanel({ record, catalog, onEdit }: PartProps & { catalo
       if (target?.replace !== undefined) {
         const at = d.mounts.find((m) => m.id === target.replace);
         if (at) {
-          const next = mountFor(d, row, at.location);
+          const next = mountFor(d, row, at.location, catalog);
           d.mounts[d.mounts.indexOf(at)] = { ...next, id: at.id };
         }
-      } else d.mounts.push(mountFor(d, row, row.kind === "weapon" ? "f" : "body"));
+      } else d.mounts.push(mountFor(d, row, row.kind === "weapon" ? "f" : "body", catalog));
     });
   };
   return (
@@ -250,11 +251,15 @@ export function EquipmentPanel({ record, catalog, onEdit }: PartProps & { catalo
         <ul className="bt-list bt-mounts">
           {record.mounts.map((m) => {
             const facts = itemFacts(m, record, catalog);
+            const choices = facts.row === undefined ? [] : munitionChoices(record, catalog, facts.row, m.munition);
+            const chosen = chosenMunition(facts.row, m.munition, catalog, record.editionId);
+            const reload = reloadCost(chosen);
             return (
               <li key={m.id} id={mountDomId(m.id)} tabIndex={-1} className="bt-row">
                 <span className="bt-row__text">
                   <strong>{m.name || "Unnamed item"}</strong>
                   <span className="bt-row__credit">{facts.tons === null ? "weight not known" : plural(facts.tons, "ton")}{facts.heat > 0 ? `, heat ${String(facts.heat)}` : ""}</span>
+                  {chosen !== undefined && <span className="bt-row__credit">{`${munitionShort(chosen)}${reload === undefined ? "" : `: two shots cost ${reload.toLocaleString("en-US")} C-bills to replace, not counted in the unit's cost`}.`}</span>}
                 </span>
                 <span className="bt-row__actions bt-vehicle-mount">
                   <SelectField
@@ -264,6 +269,15 @@ export function EquipmentPanel({ record, catalog, onEdit }: PartProps & { catalo
                     options={[...places, ...strays].map((code) => ({ value: code, label: vehicleLocationName(code) }))}
                     onChange={(v) => { onEdit((d) => void (d.mounts.find((x) => x.id === m.id)!.location = v)); }}
                   />
+                  {choices.length > 0 && (
+                    <SelectField
+                      id={`${mountDomId(m.id)}-munition`}
+                      label={`${facts.row?.id.startsWith("vehicular-mine") === true ? "Mine type" : "Grenade type"} of ${m.name || "item"}`}
+                      value={chosen?.id ?? ""}
+                      options={choices.map((c) => ({ value: c.id, label: munitionShort(c) }))}
+                      onChange={(v) => { onEdit((d) => { const at = d.mounts.find((x) => x.id === m.id); if (at) at.munition = v; }); }}
+                    />
+                  )}
                   {facts.ammo && (
                     <NumberField id={`${mountDomId(m.id)}-tons`} label={`Tons of ${m.name || "ammunition"}`} value={m.amount ?? 1} min={0} onValid={(v) => { onEdit((d) => void (d.mounts.find((x) => x.id === m.id)!.amount = v ?? 1), `amount-${m.id}`); }} />
                   )}

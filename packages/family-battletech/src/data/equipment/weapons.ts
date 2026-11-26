@@ -540,7 +540,7 @@ export const WEAPONS: EquipmentGroup[] = [
       { id: "mech-mortar-2-is", name: "'Mech Mortar/2", aliases: ["Mech Mortar/2"], tons: 5, slots: 2, type: "M, C, S", heat: 2, damage: "Special", range: [6, 7, 14, 21], availability: [{ from: 1950 }], rulesLevel: "advanced", units: ["mech", "industrialmech", "vehicle", "building"], by: { vehicle: { slots: 1, note: "Support vehicle: 2 slots" }, building: { slots: 1 } } },
       { id: "mech-mortar-4-is", name: "'Mech Mortar/4", aliases: ["Mech Mortar/4"], tons: 7, slots: 3, type: "M, C, S", heat: 5, damage: "Special", range: [6, 7, 14, 21], availability: [{ from: 1950 }], rulesLevel: "advanced", units: ["mech", "industrialmech", "vehicle", "building"], by: { vehicle: { slots: 1, note: "Support vehicle: 3 slots" }, building: { slots: 1 } } },
       { id: "mech-mortar-8-is", name: "'Mech Mortar/8", aliases: ["Mech Mortar/8"], tons: 10, slots: 5, type: "M, C, S", heat: 10, damage: "Special", range: [6, 7, 14, 21], availability: [{ from: 1950 }], rulesLevel: "advanced", units: ["mech", "industrialmech", "vehicle", "building"], by: { vehicle: { slots: 1, note: "Support vehicle: 5 slots" }, building: { slots: 1 } } },
-      { id: "vehicular-mine-dispenser-is", name: "Mine Dispenser (Vehicular)", tons: 0.5, slots: 1, type: "PE", heat: 0, damage: "Special", range: [0, 0, 0, 0], availability: [{ from: 1950 }], rulesLevel: "advanced" },
+      { id: "vehicular-mine-dispenser-is", name: "Mine Dispenser (Vehicular)", tons: 0.5, slots: 1, type: "PE", heat: 0, damage: "Special", range: [0, 0, 0, 0], availability: [{ from: 1950 }], rulesLevel: "advanced", units: ["mech", "industrialmech", "vehicle"] },
       { id: "enhanced-lrm-5-is", name: "Enhanced LRM 5", aliases: ["NLRM 5","Enhanced LRM-5"], tons: 3, slots: 2, type: "M, C, S", heat: 2, damage: "1/Msl", range: [3, 7, 14, 21], availability: [{ from: 3058 }], rulesLevel: "experimental" },
       { id: "enhanced-lrm-10-is", name: "Enhanced LRM 10", aliases: ["NLRM 10","Enhanced LRM-10"], tons: 6, slots: 4, type: "M, C, S", heat: 4, damage: "1/Msl", range: [3, 7, 14, 21], availability: [{ from: 3058 }], rulesLevel: "experimental" },
       { id: "enhanced-lrm-15-is", name: "Enhanced LRM 15", aliases: ["NLRM 15","Enhanced LRM-15"], tons: 9, slots: 6, type: "M, C, S", heat: 5, damage: "1/Msl", range: [3, 7, 14, 21], availability: [{ from: 3058 }], rulesLevel: "experimental" },
@@ -561,7 +561,7 @@ export const WEAPONS: EquipmentGroup[] = [
       { id: "mech-mortar-2-clan", name: "'Mech Mortar/2", aliases: ["Mech Mortar/2"], tons: 2.5, slots: 1, type: "M, C, S", heat: 2, damage: "Special", range: [6, 7, 14, 21], availability: [{ from: 1950 }], rulesLevel: "advanced", units: ["mech", "industrialmech", "vehicle", "building"] },
       { id: "mech-mortar-4-clan", name: "'Mech Mortar/4", aliases: ["Mech Mortar/4"], tons: 3.5, slots: 2, type: "M, C, S", heat: 5, damage: "Special", range: [6, 7, 14, 21], availability: [{ from: 1950 }], rulesLevel: "advanced", units: ["mech", "industrialmech", "vehicle", "building"], by: { vehicle: { slots: 1, note: "Support vehicle: 2 slots" }, building: { slots: 1 } } },
       { id: "mech-mortar-8-clan", name: "'Mech Mortar/8", aliases: ["Mech Mortar/8"], tons: 5, slots: 3, type: "M, C, S", heat: 10, damage: "Special", range: [6, 7, 14, 21], availability: [{ from: 1950 }], rulesLevel: "advanced", units: ["mech", "industrialmech", "vehicle", "building"], by: { vehicle: { slots: 1, note: "Support vehicle: 3 slots" }, building: { slots: 1 } } },
-      { id: "vehicular-mine-dispenser-clan", name: "Mine Dispenser (Vehicular)", tons: 0.5, slots: 1, type: "PE", heat: 0, damage: "Special", range: [0, 0, 0, 0], availability: [{ from: 1950 }], rulesLevel: "advanced" },
+      { id: "vehicular-mine-dispenser-clan", name: "Mine Dispenser (Vehicular)", tons: 0.5, slots: 1, type: "PE", heat: 0, damage: "Special", range: [0, 0, 0, 0], availability: [{ from: 1950 }], rulesLevel: "advanced", units: ["mech", "industrialmech", "vehicle"] },
       { id: "streak-lrm-5-clan", name: "Streak LRM 5", aliases: ["Streak LRM-5"], tons: 2, slots: 1, type: "M, C*", heat: 2, damage: "C5/5", range: [0, 7, 14, 21], availability: [{ from: 3079 }], prototypeYear: 3057, rulesLevel: "experimental", units: ["mech", "industrialmech", "vehicle", "aero", "smallcraft", "dropship", "ship", "building"] },
       { id: "streak-lrm-10-clan", name: "Streak LRM 10", aliases: ["Streak LRM-10"], tons: 5, slots: 2, type: "M, C*", heat: 4, damage: "C5/10", range: [0, 7, 14, 21], availability: [{ from: 3079 }], prototypeYear: 3057, rulesLevel: "experimental", units: ["mech", "industrialmech", "vehicle", "aero", "smallcraft", "dropship", "ship", "building"], by: { vehicle: { slots: 1, note: "Support vehicle: 2 slots" }, aero: { slots: 1 }, smallcraft: { slots: 1 }, dropship: { slots: 1 }, ship: { slots: 1 }, building: { slots: 1 } } },
       { id: "streak-lrm-15-clan", name: "Streak LRM 15", aliases: ["Streak LRM-15"], tons: 7, slots: 3, type: "M, C*", heat: 5, damage: "C5/15", range: [0, 7, 14, 21], availability: [{ from: 3079 }], prototypeYear: 3057, rulesLevel: "experimental", units: ["mech", "industrialmech", "vehicle", "aero", "smallcraft", "dropship", "ship", "building"], by: { vehicle: { slots: 1, note: "Support vehicle: 3 slots" }, aero: { slots: 1 }, smallcraft: { slots: 1 }, dropship: { slots: 1 }, ship: { slots: 1 }, building: { slots: 1 } } },
@@ -709,6 +709,18 @@ export const WEAPONS: EquipmentGroup[] = [
       { id: "bomb-light-air-to-air-clan", name: "Light Air-to-Air (LAA) Missile", techBase: "clan", tons: 0.5, damage: "6", availability: [{ from: 3074 }] },
       { id: "bomb-thunder-fascam-clan", name: "Thunder (FASCAM) Bomb", techBase: "clan", damage: "Special", availability: [{ from: 2623 }] },
       { id: "bomb-torpedo-clan", name: "Torpedo Bomb", techBase: "clan", damage: "10", availability: [{ from: 1950 }] },
+    ],
+  },
+  // Fuel-air bombs (IO:AE printed pp. 159-161 rules, p. 217 construction data and price, p. 216 play table and rules level, p. 54 dates, p. 190 Battle Value; read against the
+  // page images): small half a ton and large a ton, for 18,000 and 35,000 C-bills each, Advanced, from before spaceflight for both tech bases (the table prints PS / PS). The
+  // damage is the aero figure (20 and 30). A small bomb takes one external stores hardpoint and a large one two (p. 159); the hardpoints are not modelled, as with the bombs above.
+  {
+    defaults: { kind: "weapon", cite: { book: IO, page: 217 }, playCite: { book: IO, page: 216 }, checked: "page", slots: 0, heat: 0, units: ["aero"], rulesLevel: "advanced", availability: [{ from: 1950 }], yearsInferred: true },
+    items: [
+      { id: "bomb-fuel-air-small-is", name: "Fuel-Air Bomb (Small)", techBase: "inner-sphere", tons: 0.5, damage: "20" },
+      { id: "bomb-fuel-air-large-is", name: "Fuel-Air Bomb (Large)", techBase: "inner-sphere", tons: 1, damage: "30" },
+      { id: "bomb-fuel-air-small-clan", name: "Fuel-Air Bomb (Small)", techBase: "clan", tons: 0.5, damage: "20" },
+      { id: "bomb-fuel-air-large-clan", name: "Fuel-Air Bomb (Large)", techBase: "clan", tons: 1, damage: "30" },
     ],
   },
   // Abomination-mounted weapons the catalog lacked (BattleTech: Gothic, printed p. 92, read against the page image). Abominations have no

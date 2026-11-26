@@ -35,6 +35,9 @@ export function sheetFacts(record: InfantryRecord, catalog: Catalog): string[] {
     ...(p.specials.length > 0 ? [`Special: ${p.specials.join("; ")}`] : []),
     ...(p.armor ? [`Armor kit ${p.armor.name}${p.sneakSystems.length > 0 ? ` (${p.sneakSystems.map((id) => STEALTH_MODIFIERS.find((m) => m.id === id)?.name.replace(/^Sneak, /, "") ?? id).join("; ")})` : ""}, damage divisor ${String(p.armor.divisor)}`] : []),
     ...(p.specializations.length > 0 ? [`Specialties: ${p.specializations.map((s) => s.name).join(", ")}`] : []),
+    ...(p.beast ? [`Mounts: ${String(p.creatures)} ${p.beast.name} (${p.beast.size}), ${String(p.beast.weight)} t each; terrain: ${p.beast.prohibited}`] : []),
+    ...(p.fieldGun && p.fieldGuns > 0 ? [`Field guns: ${String(p.fieldGuns)} x ${p.fieldGun.name}, ${String(p.gunCrew)} troopers each, 1 ton of ammunition a gun`] : []),
+    ...(p.fieldArtillery ? [`Field artillery: ${p.fieldArtillery.name}, 1 ton of ammunition; the platoon moves 1 MP`] : []),
     `Weight ${num(p.weight)} tons; cost ${cost.total.toLocaleString("en-US")} C-bills; Battle Value ${bv.bv === undefined ? "not worked out" : String(bv.bv)}`,
   ];
 }
@@ -112,9 +115,9 @@ export default function InfantrySheet({ record, catalog }: { record: InfantryRec
 
       <g>
         <text x={40} y={rangeTop + 260} fontSize={30} fontWeight="bold" fill={INK}>Damage divisor</text>
-        <text x={330} y={rangeTop + 260} fontSize={30} fill={INK}>{kit ? `${String(kit.divisor)} (${kit.name})` : "1 (no armor kit)"}</text>
+        <text x={330} y={rangeTop + 260} fontSize={30} fill={INK}>{kit || p.beast ? `${String(p.divisor)} (${[kit?.name, p.beast ? `${p.beast.name} mounts` : ""].filter(Boolean).join(", ")})` : "1 (no armor kit)"}</text>
         <text x={40} y={rangeTop + 310} fontSize={30} fontWeight="bold" fill={INK}>Notes</text>
-        {facts.slice(1).map((line, i) => (
+        {facts.slice(1).filter((line) => !line.startsWith("Special:")).map((line, i) => (
           <text key={i} x={40} y={rangeTop + 350 + i * 36} fontSize={24} fill={INK}>{line}</text>
         ))}
       </g>
