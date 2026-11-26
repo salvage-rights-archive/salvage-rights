@@ -3,9 +3,9 @@
 // the WarShip's drive. These join the fighter checks in `AERO_CHECKS` (rules/aero-checks.ts). Every figure and page comes from data/aero.ts; a
 // message states the numbers and names the deciding page through its cite. Findings are advice, never refusals, and a unit this version does
 // not understand gets none from here.
-import { CAPITAL_FIGURES, CAPITAL_SYSTEMS, CRAFT_FIGURES, FIGHTER_ARMOR_TYPES, aeroEditionName } from "../data/aero";
+import { CAPITAL_FIGURES, CAPITAL_SYSTEMS, CRAFT_FIGURES, DEFAULT_AERO_EDITION, FIGHTER_ARMOR_TYPES, FIGHTER_EDITIONS, aeroEditionName } from "../data/aero";
 import type { FigureGroup } from "../data/aero";
-import { aeroLocationName, capitalKind, capitalSystems, craftAmmoShortfalls, craftKind, locationsOf, stationKeeping, towingShare, vessel } from "./aero";
+import { aeroLocationName, capitalKind, capitalSystems, craftAmmoShortfalls, craftKind, heatByArc, locationsOf, stationKeeping, towingShare, vessel } from "./aero";
 import type { AeroRecord } from "./aero";
 import type { AeroCheck, AeroFinding } from "./aero-checks";
 import { tidy } from "./walk";
@@ -21,8 +21,14 @@ const arcNames = (pair: string): string => pair.split("|").map(aeroLocationName)
 const kindName = (record: AeroRecord): string => (record.unitType === "space-station" ? "space station" : record.unitType === "dropship" ? "DropShip" : record.unitType === "small-craft" ? "small craft" : record.unitType === "jumpship" ? "JumpShip" : "WarShip");
 
 const AT2 = "aerotech2";
-const SO = "tw-tm-so";
-const PAGE_ZERO_HEAT = "TechManual, p. 193";
+// The zero-net-heat rule of large craft, by edition: AeroTech 2 p. 12, AeroTech 2 Revised p. 22 (an arc over the sinks may fire alone, with a control roll),
+// Strategic Operations: Advanced Aerospace Rules pp. 11 and 139 (such an arc may not fire).
+const ZERO_HEAT: Record<string, { cite: string; rule: string }> = {
+  [FIGHTER_EDITIONS.at2]: { cite: "AeroTech 2, p. 12", rule: "a large craft may not make more heat than its sinks remove" },
+  [FIGHTER_EDITIONS.at2r]: { cite: "AeroTech 2: Revised Edition, p. 22", rule: "it may fire that arc only on its own and must make a control roll" },
+  [FIGHTER_EDITIONS.current]: { cite: "Strategic Operations: Advanced Aerospace Rules, pp. 11, 139", rule: "it may not fire that arc" },
+};
+// Armor of the other tech base: TechManual p. 191 is the current edition's rule; the older books' pages are not read, so they are not checked.
 const PAGE_TECH_ARMOR = "TechManual, p. 191";
 
 /** Structural Integrity against the range the edition allows, and the WarShip's drive (a station-keeping drive, or Safe Thrust under 1). */
@@ -42,7 +48,7 @@ const siCheck: AeroCheck = {
       const drivePage = pageOf(CAPITAL_FIGURES.engine, record.editionId);
       const kept = stationKeeping(record);
       if (kept) {
-        out.push({ check: "si", level: "note", message: `A WarShip on a station-keeping drive has a Max Thrust of 1 (0.2 times 1.5, rounded up). The book prints no Structural Integrity range for it, so we use the WarShip's own, 1 to 30.`, where: { field: "si" }, ...withCite(pageOf(CAPITAL_FIGURES.stationKeepingThrust, record.editionId)) });
+        out.push({ check: "si", level: "note", message: "The book gives this drive no Max Thrust; we use 1 (0.2 x 1.5, rounded up), so its Structural Integrity runs 1 to 30.", where: { field: "si" }, ...withCite(pageOf(CAPITAL_FIGURES.stationKeepingThrust, record.editionId)) });
       } else if (record.thrust.safe < 1) {
         const allowed = pageOf(CAPITAL_FIGURES.warshipStationKeeping, record.editionId) !== undefined;
         out.push({
@@ -87,7 +93,7 @@ const vesselArmorCheck: AeroCheck = {
 const armorTechBaseCheck: AeroCheck = {
   id: "armor-tech",
   run({ record }) {
-    if (record.techBase === "mixed" || record.armor.tons <= 0) return [];
+    if (record.editionId !== DEFAULT_AERO_EDITION || record.techBase === "mixed" || record.armor.tons <= 0) return [];
     const type = FIGHTER_ARMOR_TYPES.find((t) => t.id === record.armor.type);
     if (!type || type.techBase === "both" || type.techBase === record.techBase) return [];
     const side = (base: string) => (base === "clan" ? "Clan" : "Inner Sphere");
@@ -128,7 +134,6 @@ const bayCheck: AeroCheck = {
     const out: AeroFinding[] = [];
     const limitPage = pageFor(record, CRAFT_FIGURES.bayLimit, CAPITAL_FIGURES.bayLimit);
     const mixedPage = pageFor(record, CRAFT_FIGURES.mixedSizes, CAPITAL_FIGURES.mixedSizes);
-    const unit = v.group === "capital" ? "capital " : "";
     for (const bay of v.bays) {
       const own = bay.bay.startsWith("arc:");
       const name = own ? `of the ${aeroLocationName(bay.arc)}` : bay.bay;
@@ -138,7 +143,7 @@ const bayCheck: AeroCheck = {
         out.push({
           check: "bays",
           level: own ? "note" : "error",
-          message: own ? `The weapons of the ${aeroLocationName(bay.arc)} come to an attack of ${num(bay.attack)}; the book splits them into bays of at most ${num(bay.limit)}.` : `Weapon bay ${name} has an attack of ${num(bay.attack)}; ${aeroEditionName(record.editionId)} allows ${num(bay.limit)} (${num(limit)} ${unit}points).`,
+          message: own ? `The weapons of the ${aeroLocationName(bay.arc)} come to an attack of ${num(bay.attack)}; the book splits them into bays of at most ${num(bay.limit)}.` : `Weapon bay ${name} has an attack of ${num(bay.attack)}; ${aeroEditionName(record.editionId)} allows ${num(bay.limit)}${v.group === "capital" ? ` (${num(limit)} capital points)` : ""}.`,
           where,
           ...withCite(limitPage),
         });
@@ -194,15 +199,17 @@ const doorCheck: AeroCheck = {
   },
 };
 
-/** The DropShip zero-heat rule (TechManual): a DropShip has no heat scale and may not make more heat than its sinks take away, so no bay may. */
+/** The zero-net-heat rule of large craft (DropShips and capital ships): the heat of an arc's weapons all firing, against what the sinks take away. An arc over it can never fire whole, which is advice, not a refusal. */
 const zeroHeatCheck: AeroCheck = {
   id: "zero-heat",
   run({ record, catalog }) {
-    if (record.unitType !== "dropship" || record.editionId !== SO) return [];
+    const rule = ZERO_HEAT[record.editionId];
     const v = vessel(record, catalog);
-    if (!v?.heat) return [];
+    if (rule === undefined || !v?.heat || (record.unitType !== "dropship" && capitalKind(record) === undefined)) return [];
     const capacity = v.heat.capacity;
-    return v.bays.filter((bay) => bay.heat > capacity).map((bay) => ({ check: "zero-heat", level: "error" as const, message: `Firing ${bay.bay.startsWith("arc:") ? `the ${aeroLocationName(bay.arc)} weapons` : `bay ${bay.bay}`} makes ${num(bay.heat)} heat and the sinks take away ${num(capacity)}; a DropShip may not make more heat than its sinks remove.`, where: { field: "heatSinks", arc: bay.arc }, cite: PAGE_ZERO_HEAT }));
+    return heatByArc(record, catalog)
+      .filter((arc) => arc.heat > capacity)
+      .map((arc) => ({ check: "zero-heat", level: "warning" as const, message: `The ${arc.name} arc makes ${num(arc.heat)} heat when all its weapons fire and the sinks take away ${num(capacity)}; ${rule.rule}.`, where: { field: "heatSinks", arc: arc.arc }, cite: rule.cite }));
   },
 };
 
@@ -233,7 +240,7 @@ const towingCheck: AeroCheck = {
   run({ record }) {
     if (record.towing !== true || record.editionId !== AT2) return [];
     return towingShare(record) > 0
-      ? [{ check: "towing", level: "note", message: "A vessel built to tow adds a tenth to its structure's mass here (the book's structure step); its equipment table's footnote asks a tenth of the whole mass instead, so check which your table uses.", where: { field: "si" }, cite: pageOf(CRAFT_FIGURES.towingSiShare, record.editionId) ?? "AeroTech 2, p. 44" }]
+      ? [{ check: "towing", level: "note", message: "A vessel built to tow adds a tenth to its structure's mass here (the book's structure step); the footnote of its equipment table (p. 47) asks a tenth of the whole mass instead, so check which your table uses.", where: { field: "si" }, cite: pageOf(CRAFT_FIGURES.towingSiShare, record.editionId) ?? "AeroTech 2, p. 44" }]
       : [];
   },
 };

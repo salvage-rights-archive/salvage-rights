@@ -969,6 +969,7 @@ export const CAPITAL_SYSTEMS: CapitalSystemRow[] = [
     capShare({ [E.current]: [TOAUE, "221"] }, { share: 0.01, types: ["jumpship", "warship"] }),
   ]),
   SYSTEM("energy-storage-battery", "Energy storage battery", [capShare({ [E.at2]: "47", [E.at2r]: "65", [E.current]: [TOAUE, "219"] }, { tons: 100000, types: ["space-station"] })]),
+  SYSTEM("towing-adapter", "Towing adapter", [capShare({ [E.at2]: "47" }, { tons: 100, types: ALL_CAPITAL }, "a vessel built to tow weighs 10 percent of its mass in structural reinforcement besides (the footnote on p. 47)")]),
   SYSTEM("hpg", "HPG", [capShare({ [E.at2]: "47", [E.at2r]: "65" }, { tons: 50, types: ALL_CAPITAL }, "ComStar and Clan vessels only")]),
   SYSTEM("jump-sail", "Energy collection sail", [capShare({ [E.at2]: "44; errata v1.2", [E.at2r]: "61", [E.current]: "136" }, { types: ["space-station"], max: 1 }, "weighs what a JumpShip's sail of the same tons does")]),
 ];

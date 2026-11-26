@@ -193,7 +193,7 @@ describe("AeroTech pages", () => {
     // The drive gives no Safe Thrust to choose, and the check says what the book leaves out.
     expect(screen.queryByLabelText("Safe Thrust")).toBeNull();
     expect(screen.getByText("Max Thrust 1")).toBeTruthy();
-    expect(await screen.findByText(/prints no Structural Integrity range/)).toBeTruthy();
+    expect(await screen.findByText(/gives this drive no Max Thrust/)).toBeTruthy();
     cleanup();
     openEditor("w2");
     await screen.findByRole("heading", { level: 1, name: "Old Mjolnir" });

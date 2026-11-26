@@ -215,7 +215,7 @@ function officialOf(v: unknown): OfficialMark | undefined {
 
 const RECORD_KEYS = [
   "schema", "id", "editionId", "name", "unitType", "shape", "use", "techBase", "year", "era", "rulesLevel", "tons", "thrust", "engine", "si", "fuelTons",
-  "armor", "heatSinks", "mounts", "bays", "quarters", "systems", "crew", "fighterUnit", "omni", "official", "notes", "picture",
+  "armor", "heatSinks", "mounts", "bays", "quarters", "systems", "crew", "towing", "fighterUnit", "omni", "official", "notes", "picture",
 ] as const;
 
 /**
@@ -254,6 +254,7 @@ export function withDefaults(value: unknown, fallbackId = ""): AeroRecord | unde
   if (isObject(v.quarters)) record.quarters = numbers(v.quarters);
   if (isObject(v.systems)) record.systems = numbers(v.systems);
   if (isNumber(v.crew)) record.crew = v.crew;
+  if (v.towing === true) record.towing = true;
   if (isObject(v.fighterUnit)) {
     const fighters = Array.isArray(v.fighterUnit.fighters) ? v.fighterUnit.fighters.filter(isString) : [];
     record.fighterUnit = { ...unknownKeys(v.fighterUnit, ["fighters"]), fighters };
@@ -760,6 +761,22 @@ function baysOf(record: AeroRecord, catalog: Catalog | undefined, limit: number,
     return { bay, arc: weapons[0]?.mount.arc ?? "", weapons: weapons.length, classes: [...classes], sizes: [...sizes], attack, heat: tidy(heat), limit, over: attack > limit, mixedSizesAllowed: mixedAllowed, unknown };
   });
 }
+/** The heat each arc of the unit's edition makes when all its weapons fire (the figure a large craft's sheet lists for each arc, and the zero-heat rule weighs against the sinks). */
+export function heatByArc(record: AeroRecord, catalog?: Catalog): { arc: string; name: string; heat: number }[] {
+  return locationsOf(record).arcs.map((arc) => ({
+    arc,
+    name: aeroLocationName(arc),
+    heat: tidy(
+      record.mounts
+        .filter((m) => m.arc === arc && m.equipmentId !== null)
+        .reduce((sum, m) => {
+          const id = m.equipmentId ?? "";
+          const figures = catalog ? (aeroWeaponFigures(catalog, id, record.editionId) ?? aeroCatalogFigures(catalog, id)) : undefined;
+          return sum + (figures?.heat ?? 0);
+        }, 0),
+    ),
+  }));
+}
 /** The weapon bays: the weapons that share a `bay` id (on a mount without one, the arc), with their classes, sizes, attack and heat against the bay limit. */
 export function craftWeaponBays(record: AeroRecord, catalog?: Catalog): CraftWeaponBay[] {
   const limit = figureOf(CRAFT_FIGURES.bayLimit, record.editionId);
@@ -907,6 +924,8 @@ export function craftTally(record: AeroRecord, catalog?: Catalog): CraftTally {
   const bays = craftBayTons(record);
   const quarters = craftQuarters(record, catalog);
   unknown.push(...bays.unknown, ...quarters.unknown);
+  // A towing adapter (AeroTech 2 p. 47: 100 tons) the record says the vessel carries.
+  const adapters = (record.systems?.["towing-adapter"] ?? 0) * (capitalSystemFigure("towing-adapter", record.editionId)?.tons ?? 0);
   const lines = [
     { label: "Engine", tons: engine ?? 0 },
     { label: "Fuel", tons: record.fuelTons },
@@ -920,6 +939,7 @@ export function craftTally(record: AeroRecord, catalog?: Catalog): CraftTally {
     { label: "Ammunition", tons: ammunition },
     { label: "Transport bays", tons: bays.tons },
     { label: "Quarters", tons: quarters.tons },
+    ...(adapters > 0 ? [{ label: "Towing adapter", tons: adapters }] : []),
   ].map((line) => ({ ...line, tons: tidy(line.tons) }));
   const total = tidy(lines.reduce((sum, line) => sum + line.tons, 0));
   return { lines, total, remaining: tidy(record.tons - total), unknown };

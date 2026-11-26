@@ -1,9 +1,10 @@
 // What a small craft, DropShip or capital ship record sheet prints, worked out once from the record: the data block, the weapon bays by arc with the
 // attack value at each range bracket, the armor of each facing with its Damage Threshold, the heat of each arc, the crew and the transport figures.
 // Pure; a figure we cannot work out is an empty string, never a made-up one, and nothing throws on a record it does not understand.
-import { aeroLocationName, isCapitalRow, jumpSail, kfDrive, locationsOf, vessel } from "../../../rules/aero";
+import { aeroLocationName, capitalScale, heatByArc, isCapitalRow, jumpSail, kfDrive, locationsOf, stationKeeping, vessel } from "../../../rules/aero";
 import type { AeroMount, AeroRecord } from "../../../rules/aero";
 import { aeroCatalogFigures, aeroWeaponFigures } from "../../../data/aero-weapons";
+import { VESSEL_LABELS } from "../../../data/aero-sheet";
 import type { SheetProfile } from "../../../data/aero-sheet";
 import type { Catalog } from "../../../rules/catalog";
 import { tidy } from "../../../rules/walk";
@@ -28,6 +29,8 @@ export interface VesselFacts extends FighterFacts {
   passengers: string;
   /** Escape pods and lifeboats on the unit. */
   pods: string;
+  /** The unit moves by a station-keeping drive: its Safe Thrust line reads "Station-keeping only". */
+  stationKeeping: boolean;
   /** Whether the diagram is capital scale. */
   scale: "Standard Scale" | "Capital Scale";
 }
@@ -52,15 +55,20 @@ export function bayLines(record: AeroRecord, catalog: Catalog): WeaponLine[] {
     groups.set(key, group);
   }
   return [...groups.values()].map((group) => {
-    const lines = group.mounts.map((m) => ({ line: lineOf(m, record, catalog, 1), capital: isCapitalRow(m.equipmentId === null ? undefined : catalog.byId(m.equipmentId)) }));
-    const capitalBay = lines.every((l) => l.capital);
+    // Each weapon's own scale decides (the "-C" mark): a figure the catalog prints at capital scale counts tenfold in standard points, a capital missile's
+    // (stored at standard scale, "40" for a Killer Whale) as it is. A bay of capital weapons prints in capital points with a C.
+    const lines = group.mounts.map((m) => {
+      const row = m.equipmentId === null ? undefined : catalog.byId(m.equipmentId);
+      return { line: lineOf(m, record, catalog, 1), capitalFigure: capitalScale(row), capitalWeapon: isCapitalRow(row) };
+    });
+    const capitalBay = lines.every((l) => l.capitalWeapon);
     const totals = [0, 1, 2, 3].map((band) => {
-      let sum = 0;
-      for (const { line, capital } of lines) {
+      let standard = 0;
+      for (const { line, capitalFigure } of lines) {
         const value = Number(line.av[band]);
-        if (Number.isFinite(value) && line.av[band] !== "") sum += capital && !capitalBay ? value * 10 : value;
+        if (Number.isFinite(value) && line.av[band] !== "") standard += capitalFigure ? value * 10 : value;
       }
-      return sum;
+      return capitalBay ? standard / 10 : standard;
     });
     const shown = totals.map((n, band) => (lines.some((l) => l.line.av[band] !== "") ? `${text(n)}${capitalBay ? "C" : ""}` : "")) as WeaponLine["av"];
     const names = [...new Set(group.mounts.map((m) => m.name))];
@@ -81,6 +89,7 @@ export function vesselFacts(record: AeroRecord, catalog: Catalog, profile: Sheet
   const v = vessel(record, catalog);
   const known = locationsOf(record).armor;
   const capital = v?.group === "capital";
+  const kept = stationKeeping(record);
   const armor: ArmorArea[] = known.map((code) => {
     const points = record.armor.points[code] ?? 0;
     return { code, name: aeroLocationName(code), points, threshold: Math.ceil(points / 10) };
@@ -91,18 +100,6 @@ export function vesselFacts(record: AeroRecord, catalog: Catalog, profile: Sheet
   const kf = kfDrive(record);
   const sail = jumpSail(record);
   const collars = record.systems?.["docking-hardpoint"] ?? 0;
-  const heatByArc = locationsOf(record).arcs.map((arc) => ({
-    arc,
-    name: aeroLocationName(arc),
-    heat: tidy(
-      record.mounts
-        .filter((m) => m.arc === arc && m.equipmentId !== null)
-        .reduce((sum, m) => {
-          const figures = aeroWeaponFigures(catalog, m.equipmentId ?? "", record.editionId) ?? aeroCatalogFigures(catalog, m.equipmentId ?? "");
-          return sum + (figures?.heat ?? 0);
-        }, 0),
-    ),
-  }));
   const people = Object.entries(record.quarters ?? {}).reduce((sum, [, n]) => sum + n, 0);
   const pods = record.mounts.filter((m) => /escape-pod|lifeboat/.test(m.equipmentId ?? "")).length;
   const shape = record.unitType === "small-craft" || record.unitType === "dropship" ? (record.shape === "spheroid" ? "Spheroid" : "Aerodyne") : "";
@@ -119,8 +116,8 @@ export function vesselFacts(record: AeroRecord, catalog: Catalog, profile: Sheet
   const crew = v?.crew;
   return {
     ...base,
-    typeLabel: profile.title.replace(" record sheet", ""),
-    safe: text(record.thrust.safe),
+    typeLabel: VESSEL_LABELS[record.unitType] ?? profile.title.replace(" record sheet", ""),
+    safe: kept ? "Station-keeping only" : text(record.thrust.safe),
     max: text(v?.maxThrust),
     si: text(v?.si),
     fuel: text(v?.fuelPoints),
@@ -139,7 +136,8 @@ export function vesselFacts(record: AeroRecord, catalog: Catalog, profile: Sheet
     use,
     capital,
     data,
-    heatByArc,
+    heatByArc: heatByArc(record, catalog),
+    stationKeeping: kept,
     crew: { have: record.crew === undefined ? "" : text(record.crew), least: crew ? text(crew.minimum) : "" },
     passengers: people > 0 ? text(people) : "",
     pods: pods > 0 ? text(pods) : "",

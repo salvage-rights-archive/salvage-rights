@@ -382,24 +382,33 @@ export function PilotBlock({ rect, profile }: { rect: Rect; profile: SheetProfil
 export function CriticalBlock({ rect, profile }: { rect: Rect; profile: SheetProfile }) {
   const { x, y, h } = rect;
   const pitch = Math.min(46, (h - 80) / Math.max(profile.critical.length, 1));
-  const labelW = 210;
+  const labelW = 190;
+  const left = x + 24 + labelW;
+  // Six boxes fit the block; an open field is as wide as six, as the forms draw Cargo and Doors.
+  const open = Math.min(6 * 56 - 6, rect.w - 48 - labelW);
   return (
     <Frame rect={rect} title="CRITICAL DAMAGE">
-      {profile.critical.map((row, r) => (
-        <g key={row.label} data-critical={row.label}>
-          <text x={x + 24} y={y + 84 + r * pitch} fontSize={21} fill={INK} {...squeeze(row.label, 21, labelW - 10)}>
-            {row.label}
-          </text>
-          {row.boxes.map((box, c) => (
-            <g key={c}>
-              <rect x={x + 24 + labelW + c * 62} y={y + 62 + r * pitch} width={54} height={34} rx={7} fill="#fff" stroke={INK} strokeWidth={2.5} />
-              <text x={x + 24 + labelW + c * 62 + 27} y={y + 86 + r * pitch} fontSize={20} textAnchor="middle" fill={INK}>
-                {box}
-              </text>
-            </g>
-          ))}
-        </g>
-      ))}
+      {profile.critical.map((row, r) => {
+        const small = row.small === true;
+        const step = small ? 30 : 56;
+        const size = small ? 26 : 50;
+        return (
+          <g key={row.label} data-critical={row.label}>
+            <text x={x + 24} y={y + 84 + r * pitch} fontSize={21} fill={INK} {...squeeze(row.label, 21, labelW - 10)}>
+              {row.label}
+            </text>
+            {row.open === true && <rect data-open="" x={left} y={y + 62 + r * pitch} width={open} height={34} rx={7} fill="#fff" stroke={INK} strokeWidth={2.5} />}
+            {row.boxes.map((box, c) => (
+              <g key={c}>
+                <rect x={left + c * step} y={y + (small ? 66 : 62) + r * pitch} width={size} height={small ? 26 : 34} rx={small ? 4 : 7} fill="#fff" stroke={INK} strokeWidth={2.5} />
+                <text x={left + c * step + size / 2} y={y + 86 + r * pitch} fontSize={20} textAnchor="middle" fill={INK}>
+                  {box}
+                </text>
+              </g>
+            ))}
+          </g>
+        );
+      })}
     </Frame>
   );
 }

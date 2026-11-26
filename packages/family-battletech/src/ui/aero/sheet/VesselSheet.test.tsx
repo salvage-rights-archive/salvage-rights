@@ -2,7 +2,7 @@ import { cleanup, render } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { VESSEL_SHEET_PROFILES, sheetProfileFor } from "../../../data/aero-sheet";
 import type { SheetProfile } from "../../../data/aero-sheet";
-import { newAeroRecord } from "../../../rules/aero";
+import { locationsOf, newAeroRecord, stationKeeping } from "../../../rules/aero";
 import type { AeroRecord } from "../../../rules/aero";
 import { loadCatalog } from "../../../rules/catalog";
 import { MAX_SINKS_DRAWN } from "../../sheet/HeatData";
@@ -39,7 +39,8 @@ describe("The small craft, DropShip and capital ship record sheets", () => {
     for (const profile of VESSEL_SHEET_PROFILES) {
       const record = vesselFor(profile);
       const { svg, lines } = drawn(record, profile);
-      expect(lines, profile.id).toEqual(expect.arrayContaining(["Leopard CV", String(record.tons), "4", "NOT OFFICIAL", "Not an official record sheet. Made with Salvage Rights, an unofficial fan project."]));
+      // A station-keeping drive has no Safe Thrust to print.
+      expect(lines, profile.id).toEqual(expect.arrayContaining(["Leopard CV", String(record.tons), stationKeeping(record) ? "Station-keeping only" : "4", "NOT OFFICIAL", "Not an official record sheet. Made with Salvage Rights, an unofficial fan project."]));
       // The nose: its threshold (a tenth of the points, rounded up) with the points in brackets.
       expect([...svg.querySelectorAll('[data-area="NO"] text')].map((t) => t.textContent), profile.id).toContain("2 (20)");
       // Weapons in one arc are split by class: the lasers in the nose are one bay line, the autocannon in the aft another.
@@ -66,8 +67,87 @@ describe("The small craft, DropShip and capital ship record sheets", () => {
     expect(bays[0]?.av[0]).toBe("20C");
   });
 
+  it("draws every facing of every type, shape and edition inside the page, strays included", () => {
+    for (const profile of VESSEL_SHEET_PROFILES) {
+      for (const shape of ["aerodyne", "spheroid"] as const) {
+        const record = vesselFor(profile, { shape });
+        record.armor.points = { ...Object.fromEntries(locationsOf(record).armor.map((loc) => [loc, 30])), X1: 5, X2: 6, X3: 7 };
+        const { svg } = drawn(record, profile);
+        const areas = [...svg.querySelectorAll("[data-area]")];
+        expect(areas.length, `${profile.id} ${shape}`).toBe(locationsOf(record).armor.length);
+        for (const area of areas) {
+          const box = area.querySelector("rect");
+          const [x, y, w, h] = ["x", "y", "width", "height"].map((a) => Number(box?.getAttribute(a)));
+          expect(x, `${profile.id} ${shape} ${area.getAttribute("data-area") ?? ""}`).toBeGreaterThanOrEqual(0);
+          expect((x ?? 0) + (w ?? 0)).toBeLessThanOrEqual(1700);
+          expect((y ?? 0) + (h ?? 0)).toBeLessThanOrEqual(2200);
+        }
+        cleanup();
+      }
+    }
+  });
+
+  it("prints a standard-scale capital missile at a tenth with C, as the bay rules count it", () => {
+    const ship = sheetProfileFor("tw-tm-so", "warship");
+    if (!ship) throw new Error("no sheet");
+    const whale = (n: number): AeroRecord => ({ ...vesselFor(ship), mounts: Array.from({ length: n }, (_, i) => ({ id: `w${String(i)}`, equipmentId: "killer-whale-is", name: "Killer Whale", arc: "AF" })) });
+    expect([1, 2].map((n) => bayLines(whale(n), catalog)[0]?.av.find((v) => v !== ""))).toEqual(["4C", "8C"]);
+  });
+
+  it("gives a large craft the crew's own track and no heat circles, and a small craft its pilot's and the Heat Scale, on every form", () => {
+    for (const profile of VESSEL_SHEET_PROFILES) {
+      const { svg, lines } = drawn(vesselFor(profile), profile);
+      const small = profile.kind === "small-craft";
+      expect(lines.includes("Consciousness #"), profile.id).toBe(profile.crew?.track === "pilot");
+      expect(lines.includes(profile.crew?.incap ?? ""), profile.id).toBe(true);
+      expect(svg.querySelectorAll("[data-sinks] circle").length > 0, profile.id).toBe(profile.heatScale === true);
+      expect(profile.heatScale === true, profile.id).toBe(small && profile.editionId !== "aerotech2");
+      cleanup();
+    }
+    // AeroTech 2 prints a small craft on its DropShip form, which the heat scale and the unit's own name still reach.
+    const standIn = sheetProfileFor("aerotech2", "small-craft");
+    if (!standIn) throw new Error("no sheet");
+    const { svg, lines } = drawn(vesselFor(standIn, { unitType: "small-craft" }), standIn);
+    expect(svg.querySelectorAll('[data-heat-source="flagged"] [data-heat]').length).toBeGreaterThan(0);
+    expect(lines).toContain("Spheroid Small craft record sheet");
+    expect(lines).toContain("SMALL CRAFT DATA");
+  });
+
+  it("draws the critical boxes each form does: open fields, six blank boxes, a row of ten, and no Engine row on the current station", () => {
+    const rows = (edition: string, type: string) => {
+      const profile = sheetProfileFor(edition, type);
+      if (!profile) throw new Error("no sheet");
+      const { svg } = drawn(vesselFor(profile), profile);
+      const row = (label: string) => svg.querySelector(`[data-critical="${label}"]`);
+      return { svg, row };
+    };
+    const at2 = rows("aerotech2", "warship");
+    expect([at2.row("Cargo")?.querySelectorAll("[data-open]").length, at2.row("Docking Collars")?.querySelectorAll("rect").length, at2.row("Grav Decks")?.querySelectorAll("rect").length]).toEqual([1, 6, 6]);
+    expect(rows("aerotech2", "dropship").row("Doors")?.querySelectorAll("[data-open]").length).toBe(1);
+    expect([rows("aerotech2-revised", "jumpship").row("Docking Collars")?.querySelectorAll("rect").length, rows("aerotech2-revised", "dropship").row("Doors")?.querySelectorAll("rect").length]).toEqual([10, 3]);
+    const station = rows("tw-tm-so", "space-station");
+    expect(station.row("Engine")).toBeNull();
+    expect(station.svg.querySelector('[data-critical="Avionics"]')).not.toBeNull();
+    expect(station.svg.querySelectorAll("[data-turn]").length).toBe(0);
+  });
+
+  it("lays six heat arcs and the scale of a spheroid small craft out above the sinks, inside the block", () => {
+    const profile = sheetProfileFor("tw-tm-so", "small-craft");
+    if (!profile) throw new Error("no sheet");
+    const record = vesselFor(profile, { shape: "spheroid", unitType: "dropship" });
+    record.mounts = ["NO", "FL", "FR", "AL", "AR", "AF"].map((arc, i) => ({ id: `m${String(i)}`, equipmentId: "medium-laser-is", name: "Medium Laser", arc }));
+    const { svg } = drawn(record, { ...profile, kind: "dropship" });
+    const arcs = [...svg.querySelectorAll("[data-heat-arcs] text")];
+    expect(arcs).toHaveLength(6);
+    const scaleBottom = Math.max(...[...svg.querySelectorAll("[data-heat]")].map((t) => Number(t.getAttribute("y"))));
+    const circlesTop = Math.min(...[...svg.querySelectorAll("[data-sinks] circle")].map((c) => Number(c.getAttribute("cy")) - Number(c.getAttribute("r"))));
+    expect(scaleBottom).toBeLessThan(circlesTop);
+    const arcRight = Math.max(...arcs.map((t) => Number(t.getAttribute("x")) + Number(t.getAttribute("textLength") ?? 0)));
+    expect(arcRight).toBeLessThanOrEqual(1325 + 345);
+  });
+
   it("stays quick and bounded with absurd counts of points, sinks and weapons", () => {
-    const profile = sheetProfileFor("tw-tm-so", "dropship");
+    const profile = sheetProfileFor("tw-tm-so", "small-craft");
     if (!profile) throw new Error("no current sheet");
     const huge = vesselFor(profile, { si: 5_000_000 });
     huge.armor.points = { NO: 1e9, FL: 1e9, FR: 1e9, AL: 1e9, AR: 1e9, AF: 1e9 };

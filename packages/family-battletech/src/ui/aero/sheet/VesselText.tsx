@@ -78,7 +78,7 @@ export default function VesselText({ facts, record, profile }: { facts: VesselFa
       <h3>Critical damage</h3>
       <ul>
         {profile.critical.map((row) => (
-          <li key={row.label}>{`${row.label}: ${row.boxes.filter((box) => box !== "").join(", ") || "one box"}`}</li>
+          <li key={row.label}>{`${row.label}: ${row.open === true ? "an open field" : row.boxes.some((box) => box !== "") ? row.boxes.filter((box) => box !== "").join(", ") : `${String(row.boxes.length)} blank boxes`}`}</li>
         ))}
       </ul>
       {profile.heatScale === true && (

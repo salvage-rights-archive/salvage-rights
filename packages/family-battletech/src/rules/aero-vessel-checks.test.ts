@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { capitalMaxThrust, capitalSI, capitalSiRange, craftSiTons, newAeroRecord } from "./aero";
+import { capitalMaxThrust, capitalSI, capitalSiRange, craftSiTons, craftTally, newAeroRecord, withDefaults } from "./aero";
 import type { AeroRecord } from "./aero";
 import type { AeroType } from "../data/aero";
 import { checkAero } from "./aero-checks";
@@ -33,7 +33,7 @@ describe("small craft and DropShip rules check", () => {
     ["not enough ammunition", "tw-tm-so", { unitType: "dropship", tons: 3000 }, [["NO", "ac-10-is", "b1"], ["NO", "ac-10-is", "b1"], ["NO", "ammo-ac-10-is", "b1"]], "ammo:warning"],
     ["a crew under the least", "tw-tm-so", { unitType: "dropship", tons: 3000, crew: 1 }, [], "crew:error"],
     ["more doors than the edition allows", "aerotech2-revised", { unitType: "dropship", tons: 3000, bays: [{ kind: "fighter", capacity: 6, doors: 9 }] }, [], "doors:error"],
-    ["a bay that makes more heat than the sinks take away", "tw-tm-so", { unitType: "dropship", tons: 3000 }, Array.from({ length: 12 }, () => ["NO", "large-laser-is", "b1"]), "zero-heat:error"],
+    ["an arc that makes more heat than the sinks take away", "tw-tm-so", { unitType: "dropship", tons: 3000 }, Array.from({ length: 12 }, () => ["NO", "large-laser-is", "b1"]), "zero-heat:warning"],
     ["Clan armor on an Inner Sphere unit", "tw-tm-so", { unitType: "dropship", tons: 3000, armor: { type: "ferro-aluminum-clan", tons: 5, points: {} } }, [], "armor-tech:warning"],
     ["ship systems over the most the unit may carry", "tw-tm-so", { unitType: "warship", tons: 100000, systems: { "docking-hardpoint": 50 } }, [], "systems:error"],
     ["capital armor tons over the limit", "aerotech2-revised", { unitType: "warship", tons: 100000, thrust: { safe: 3 }, armor: { type: "standard", tons: 90000, points: {} } }, [], "vessel-armor:error"],
@@ -53,6 +53,28 @@ describe("small craft and DropShip rules check", () => {
     expect([cite("aerotech2"), cite("aerotech2-revised"), cite("tw-tm-so")]).toEqual(["AeroTech 2, p. 44", "AeroTech 2: Revised Edition, p. 62", "TechManual, p. 187"]);
   });
 
+  it("holds every large craft in every edition to its sinks arc by arc, a warning with that edition's page", () => {
+    const lasers = (arc: string, n: number): Mounts => Array.from({ length: n }, () => [arc, "large-laser-is"]);
+    const cites = [
+      ["aerotech2", "AeroTech 2, p. 12"],
+      ["aerotech2-revised", "AeroTech 2: Revised Edition, p. 22"],
+      ["tw-tm-so", "Strategic Operations: Advanced Aerospace Rules, pp. 11, 139"],
+    ];
+    for (const [edition, cite] of cites) {
+      for (const [unitType, tons] of [["dropship", 3000], ["warship", 500000]] as const) {
+        const found = checkAero(unit(edition ?? "", { unitType, tons }, lasers("NO", 600)), catalog).filter((f) => f.check === "zero-heat");
+        expect(found, `${edition ?? ""} ${unitType}`).toMatchObject([{ level: "warning", cite }]);
+      }
+    }
+    expect(checkAero(unit("tw-tm-so", { unitType: "dropship", tons: 3000 }, lasers("NO", 2)), catalog).filter((f) => f.check === "zero-heat")).toEqual([]);
+  });
+
+  it("checks the other tech base's armor only where we have the page, the current edition's TechManual", () => {
+    const clanArmor = (edition: string) => unit(edition, { unitType: "dropship", tons: 3000, armor: { type: "ferro-aluminum-clan", tons: 5, points: {} } });
+    expect(checkAero(clanArmor("tw-tm-so"), catalog).find((f) => f.check === "armor-tech")).toMatchObject({ cite: "TechManual, p. 191" });
+    expect(checkAero(clanArmor("aerotech2"), catalog).map((f) => f.check)).not.toContain("armor-tech");
+  });
+
   it("the Inner Sphere weapons of AeroTech 2 are not for a Clan unit, but its capital weapons serve both", () => {
     const clan = (mounts: Mounts) => unit("aerotech2", { unitType: "dropship", tons: 3000, techBase: "clan" }, mounts);
     expect(checkAero(clan([["NO", "medium-laser-is"]]), catalog).map((f) => f.check)).toContain("equipment");
@@ -66,6 +88,13 @@ describe("a vessel built to tow", () => {
     expect([craftSiTons(tow("aerotech2")), craftSiTons(tow("tw-tm-so")), craftSiTons({ ...tow("aerotech2"), towing: false })]).toEqual([165, 150, 150]);
     expect(checkAero(tow("aerotech2"), catalog).map((f) => f.check)).toContain("towing");
     expect(checkAero(tow("tw-tm-so"), catalog).map((f) => f.check)).not.toContain("towing");
+  });
+
+  it("weighs the 100-ton towing adapter the record carries, names the footnote's page, and keeps the flag through a save", () => {
+    const tug = { ...unit("aerotech2", { unitType: "dropship", tons: 3000, towing: true }), systems: { "towing-adapter": 1 } };
+    expect(craftTally(tug).lines).toContainEqual({ label: "Towing adapter", tons: 100 });
+    expect(checkAero(tug, catalog).find((f) => f.check === "towing")?.message).toContain("p. 47");
+    expect(withDefaults(JSON.parse(JSON.stringify(tug)) as unknown)?.towing).toBe(true);
   });
 });
 
