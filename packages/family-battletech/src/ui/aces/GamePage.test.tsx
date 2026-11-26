@@ -118,10 +118,11 @@ describe("Aces game page: Initiative and Movement", () => {
   });
 
   it.each([
-    ["a failed 0* roll still delivers the OV", "3", false, 2],
-    ["a 0* roll of 4 delivers the OV and 1 more", "4", false, 3],
-    ["Multiple Attack Rolls: 2 of 3 rolls succeed, one OV point lands and the 0* point comes on a 4", "4", true, 2],
-  ])("a 0* hit with OV 2 still rolls the 1D6: %s (ASCE pp. 48, 53, 175)", async (_name, die, multi, staged) => {
+    ["a failed 0* roll still delivers the OV", "3", false, 0, true, 2],
+    ["a 0* roll of 4 delivers the OV and 1 more", "4", false, 0, true, 3],
+    ["Multiple Attack Rolls: the 0* roll hits with a die of 4 and 1 of 2 OV rolls hit", "4", true, 1, true, 2],
+    ["Multiple Attack Rolls: the 0* roll misses and both OV rolls hit, so the OV alone lands", "", true, 2, false, 2],
+  ])("a 0* hit with OV 2 still rolls the 1D6: %s (ASCE pp. 48, 53, 175)", async (_name, die, multi, ovHits, zeroHit, staged) => {
     const aces = await openAcesStorage();
     for (const c of brawlers) await aces.save(c);
     const minimal: AsCard = { ...card, ov: 2, damage: { s: { value: 0, minimal: true }, m: { value: 0 }, l: { value: 0 } } };
@@ -140,8 +141,11 @@ describe("Aces game page: Initiative and Movement", () => {
     await user.click(await screen.findByRole("button", { name: "Attack with Mine A" }));
     await user.type(screen.getByLabelText(/Distance to the target/), "3");
     await user.selectOptions(screen.getByLabelText("Overheat to use"), "2");
-    await user.type(screen.getByLabelText(multi ? /Rolls that succeeded/ : /2D6 attack roll/), multi ? "2" : "12");
-    await user.type(await screen.findByLabelText(/Minimal damage \(0\*\)/), die);
+    if (multi) {
+      if (zeroHit) await user.click(screen.getByLabelText(/0\* point's own attack roll/));
+      await user.type(screen.getByLabelText(/Overheat rolls that succeeded/), String(ovHits));
+    } else await user.type(screen.getByLabelText(/2D6 attack roll/), "12");
+    if (die !== "") await user.type(await screen.findByLabelText(/Minimal damage \(0\*\)/), die);
     await user.click(screen.getByRole("button", { name: "Record the attack" }));
     expect(await screen.findByText(new RegExp(`${String(staged)} staged`))).toBeTruthy();
   });
