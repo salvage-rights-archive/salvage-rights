@@ -334,8 +334,8 @@ export interface EndPhaseInput {
 
 /**
  * The End Phase for one unit: stun ends, staged damage is applied in order (armor first, then structure), then heat in the order
- * of ASCE p. 53, then the turn's move is cleared. Heat dealt to a unit that does not track heat is damage, 1 per point, for a
- * vehicle (Aces p. 4).
+ * of ASCE p. 53, then the turn's move is cleared. Outside heat (HT) dealt to a unit that does not track heat is damage, 1 per point,
+ * with no cap and the usual critical and motive rolls (ASCE p. 52).
  */
 export function applyEndPhase(state: PlayState, card: AsCard, input: EndPhaseInput): { state: PlayState; events: PlayEvent[] } {
   const events: PlayEvent[] = [];
@@ -349,13 +349,12 @@ export function applyEndPhase(state: PlayState, card: AsCard, input: EndPhaseInp
     applyDamage(w, hit.damage, true, hit.critCheck === true);
     external += hit.heat ?? 0;
   }
-  external = Math.min(external, AS_HEAT.externalCap);
-  if (s.destroyed) return { state: s, events };
-
   if (!tracksHeat(card)) {
-    if (isVehicle(card) && external > 0) applyDamage(w, external, false);
+    if (external > 0 && !s.destroyed) applyDamage(w, external, true);
     return { state: s, events };
   }
+  external = Math.min(external, AS_HEAT.externalCap);
+  if (s.destroyed) return { state: s, events };
 
   const began = s.shutdown;
   let h = s.heat;
