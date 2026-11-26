@@ -65,6 +65,10 @@ export const OTHER: EquipmentGroup[] = [
       // Heat sinks (Inner Sphere)
       { id: "heat-sink-is", games: ["classic", "gothic"], name: "Heat Sink", aliases: ["Single Heat Sink", "Standard Heat Sink"], slots: 1, availability: [{ from: 2022 }] },
       { id: "double-heat-sink-is", name: "Double Heat Sink", aliases: ["Double Heat Sinks"], slots: 3, availability: [{ from: 2567, to: 2865 }, { from: 3040 }], prototypeYear: 2559 },
+      // Prototype double heat sink (IO:AE printed p. 211 construction data, p. 210 play table, entry p. 65; the Late Succession Wars table, pp. 213 and 212,
+      // prints it again, 3022P, 30,000 C-bills, after the extinction): the same weight and slots as a production double (3 slots, 2 heat each, tons counted from the
+      // chassis), Experimental, never mounted inside an engine; 18,000 C-bills at 2559P (p. 211) and 30,000 at 3022P (p. 213). NOT a row yet: a heat sink is a chassis type, whose cost
+      // and capacity the record cannot carry for the prototype, so a row would be offered in the mount picker with no price. Add the chassis type, then the row (spans 2559-2566 and 3022-3039).
     ],
   },
   {
@@ -489,7 +493,7 @@ export const OTHER: EquipmentGroup[] = [
       // Dumper (p. 243): 5 percent of the cargo it empties, so a formula that reads the cargo mount it is linked to; paramedic equipment (p. 233): a quarter ton; container bay (p. 239): one 10-ton container to a slot, IndustrialMechs only.
       { id: "dumper-is", name: "Dumper", tons: "dumper-tons", slots: 1, availability: [{ from: 1950 }], units: ["industrialmech", "vehicle"] },
       { id: "paramedic-equipment-is", name: "Paramedic Equipment", tons: 0.25, slots: 1, availability: [{ from: 1950 }], units: ["industrialmech", "vehicle"] },
-      { id: "cargo-container-is", name: "Cargo Container", aliases: ["Cargo, Container"], tons: 10, slots: 1, availability: [{ from: 1950 }], units: ["industrialmech", "vehicle"] },
+      { id: "cargo-container-is", name: "Cargo Container", aliases: ["Cargo, Container"], tons: 10, slots: 1, availability: [{ from: 1950 }], units: ["industrialmech", "vehicle", "aero", "smallcraft", "dropship"], by: { aero: { slots: 0 }, smallcraft: { slots: 0 }, dropship: { slots: 0 } } },
       { id: "ladder-is", name: "Ladder", tons: "ladder-tons", slots: 1, availability: [{ from: 1950 }], locations: ["CT", "LT", "RT"], amount: { unit: "meters", min: 1, max: 100, step: 1 }, cite: { book: "TechManual", page: 245 }, units: ["mech", "industrialmech", "vehicle"] },
     ],
   },
@@ -506,7 +510,7 @@ export const OTHER: EquipmentGroup[] = [
       // Dumper (p. 243): 5 percent of the cargo it empties, so a formula that reads the cargo mount it is linked to; paramedic equipment (p. 233): a quarter ton; container bay (p. 239): one 10-ton container to a slot, IndustrialMechs only.
       { id: "dumper-clan", name: "Dumper", tons: "dumper-tons", slots: 1, availability: [{ from: 1950 }], units: ["industrialmech", "vehicle"] },
       { id: "paramedic-equipment-clan", name: "Paramedic Equipment", tons: 0.25, slots: 1, availability: [{ from: 1950 }], units: ["industrialmech", "vehicle"] },
-      { id: "cargo-container-clan", name: "Cargo Container", aliases: ["Cargo, Container"], tons: 10, slots: 1, availability: [{ from: 1950 }], units: ["industrialmech", "vehicle"] },
+      { id: "cargo-container-clan", name: "Cargo Container", aliases: ["Cargo, Container"], tons: 10, slots: 1, availability: [{ from: 1950 }], units: ["industrialmech", "vehicle", "aero", "smallcraft", "dropship"], by: { aero: { slots: 0 }, smallcraft: { slots: 0 }, dropship: { slots: 0 } } },
       { id: "ladder-clan", name: "Ladder", tons: "ladder-tons", slots: 1, availability: [{ from: 1950 }], locations: ["CT", "LT", "RT"], amount: { unit: "meters", min: 1, max: 100, step: 1 }, cite: { book: "TechManual", page: 245 }, units: ["mech", "industrialmech", "vehicle"] },
     ],
   },
@@ -1084,6 +1088,72 @@ export const OTHER: EquipmentGroup[] = [
       { id: "turret-clan", pod: false, podCite: { book: TO, page: 87 }, name: "Turret", techBase: "clan" },
     ],
   },
+  {
+    // The other turrets (TO:AUE printed p. 223 construction data, rules p. 159 and 160, read against the page images): weight is the turret equipment
+    // tonnage over 10 ("TE / 10"), which is the vehicle turret's rule, so the rows use the same formula and the same `linkedTo` mechanism; the book
+    // prints no rounding for these, so the half-ton rounding of the combat vehicle turret (TechManual p. 98) is taken (a doubt for the book panel).
+    // The BattleMech turrets take 1 slot, the one for the turret mechanism (p. 159); vehicle turrets none ("0*"). The sponson turret's weight and cost
+    // are for the two sponsons together. Prototype ("P") years only: nothing later is printed, so the span starts there. Experimental (pp. 159, 160).
+    defaults: { kind: "other", cite: { book: TO, page: 223 }, playCite: { book: TO, page: 159 }, checked: "page", tons: "turret-tons", slots: 0, rulesLevel: "experimental" },
+    items: [
+      { id: "battlemech-turret-shoulder-is", name: "BattleMech Turret (Shoulder)", techBase: "inner-sphere", slots: 1, availability: [{ from: 2450 }], units: ["mech", "industrialmech"] },
+      { id: "battlemech-turret-shoulder-clan", name: "BattleMech Turret (Shoulder)", techBase: "clan", slots: 1, availability: [{ from: 2450 }], units: ["mech", "industrialmech"] },
+      { id: "battlemech-turret-head-is", name: "BattleMech Turret (Head)", techBase: "inner-sphere", slots: 1, availability: [{ from: 3055 }], locations: ["HD"], units: ["mech", "industrialmech"] },
+      { id: "battlemech-turret-quad-is", name: "BattleMech Turret (Quad)", techBase: "inner-sphere", slots: 1, availability: [{ from: 2320 }], units: ["mech", "industrialmech"] },
+      { id: "battlemech-turret-quad-clan", name: "BattleMech Turret (Quad)", techBase: "clan", slots: 1, availability: [{ from: 2320 }], units: ["mech", "industrialmech"] },
+      { id: "dual-turret-is", name: "Dual Turret (Vehicular)", techBase: "inner-sphere", availability: [{ from: 1950 }], playCite: { book: TO, page: 159 }, yearsInferred: true, units: ["vehicle"] },
+      { id: "dual-turret-clan", name: "Dual Turret (Vehicular)", techBase: "clan", availability: [{ from: 1950 }], yearsInferred: true, units: ["vehicle"] },
+      { id: "sponson-turret-is", name: "Sponson Turret (Vehicular)", techBase: "inner-sphere", availability: [{ from: 1950 }], playCite: { book: TO, page: 160 }, yearsInferred: true, units: ["vehicle"] },
+      { id: "sponson-turret-clan", name: "Sponson Turret (Vehicular)", techBase: "clan", availability: [{ from: 1950 }], playCite: { book: TO, page: 160 }, yearsInferred: true, units: ["vehicle"] },
+      { id: "vtol-chin-turret-is", name: "VTOL Chin Turret", techBase: "inner-sphere", availability: [{ from: 1950 }], playCite: { book: TO, page: 160 }, yearsInferred: true, units: ["vehicle"] },
+      { id: "vtol-chin-turret-clan", name: "VTOL Chin Turret", techBase: "clan", availability: [{ from: 1950 }], playCite: { book: TO, page: 160 }, yearsInferred: true, units: ["vehicle"] },
+    ],
+  },
+  {
+    // Armored components and the armored motive system (TO:AUE printed p. 95 rules, p. 217 construction data, read against the page images). An armored
+    // component is one mount linked to the item it armors: half a ton for each of that item's slots, at least half a ton (the cockpit's own extra ton
+    // is the chassis', not this row's), no slot of its own, 150,000 C-bills for each slot armored. Prototype ("P") years only (3061 for both tech
+    // bases; the motive system 3071 Inner Sphere and 3057 Clan). Experimental. Ammunition bins, CASE and "roll again" items cannot be armored (p. 95).
+    defaults: { kind: "other", cite: { book: TO, page: 217 }, playCite: { book: TO, page: 95 }, checked: "page", slots: 0, rulesLevel: "experimental" },
+    items: [
+      { id: "armored-component-is", name: "Armored Component", techBase: "inner-sphere", tons: "armored-component-tons", availability: [{ from: 3061 }], units: ["mech", "industrialmech"] },
+      { id: "armored-component-clan", name: "Armored Component", techBase: "clan", tons: "armored-component-tons", availability: [{ from: 3061 }], units: ["mech", "industrialmech"] },
+      { id: "armored-motive-system-is", name: "Armored Motive System", techBase: "inner-sphere", tons: "armored-motive-is", availability: [{ from: 3071 }], units: ["vehicle"] },
+      { id: "armored-motive-system-clan", name: "Armored Motive System", techBase: "clan", tons: "armored-motive-clan", availability: [{ from: 3057 }], units: ["vehicle"] },
+    ],
+  },
+  {
+    // Satellite imagers and the VTOL mast mount (TO:AUE printed p. 223 construction data, p. 222 play table, rules pp. 151 and 162, read against the
+    // page images). Imagers: type E, Advanced, one slot on a combat vehicle, fighter, small craft, DropShip, ship or building (the hyperspectral
+    // imager's support vehicle column prints 2, a note); a footprint of 1* on vehicles and buildings means the rules decide (p. 151). "ES" dates are
+    // written as 2200 and marked inferred (weapons.ts); the hyperspectral's 3055 is a prototype year only. The mast mount takes no slot (0*).
+    defaults: { kind: "other", cite: { book: TO, page: 223 }, playCite: { book: TO, page: 222 }, checked: "page", slots: 1, rulesLevel: "advanced", type: "E" },
+    items: [
+      { id: "hi-res-imager-is", name: "Hi-Res Imager", techBase: "inner-sphere", tons: 2.5, availability: [{ from: 2200 }], yearsInferred: true, units: ["vehicle", "aero", "smallcraft", "dropship", "ship", "building"] },
+      { id: "hi-res-imager-clan", name: "Hi-Res Imager", techBase: "clan", tons: 2.5, availability: [{ from: 2200 }], yearsInferred: true, units: ["vehicle", "aero", "smallcraft", "dropship", "ship", "building"] },
+      { id: "hyperspectral-imager-is", name: "Hyperspectral Imager", techBase: "inner-sphere", tons: 7.5, availability: [{ from: 3055 }], units: ["vehicle", "aero", "smallcraft", "dropship", "ship", "building"], by: { vehicle: { slots: 1, note: "Support vehicle: 2 slots" } } },
+      { id: "infrared-imager-is", name: "Infrared Imager", techBase: "inner-sphere", tons: 5, availability: [{ from: 2200 }], yearsInferred: true, units: ["vehicle", "aero", "smallcraft", "dropship", "ship", "building"] },
+      { id: "infrared-imager-clan", name: "Infrared Imager", techBase: "clan", tons: 5, availability: [{ from: 2200 }], yearsInferred: true, units: ["vehicle", "aero", "smallcraft", "dropship", "ship", "building"] },
+      { id: "vtol-mast-mount-is", name: "VTOL Mast Mount", techBase: "inner-sphere", tons: 0.5, slots: 0, type: "PE", availability: [{ from: 1950 }], playCite: { book: TO, page: 222 }, yearsInferred: true, units: ["vehicle"] },
+      { id: "vtol-mast-mount-clan", name: "VTOL Mast Mount", techBase: "clan", tons: 0.5, slots: 0, type: "PE", availability: [{ from: 1950 }], yearsInferred: true, units: ["vehicle"] },
+    ],
+  },
+  {
+    // Reusable vehicular drop chutes (TO:AUE printed p. 223 construction data, p. 222 play table, rules pp. 160-161, read against the page images; book panel
+    // ruling). A chute that is not reusable adds no tonnage and no slot to the unit (p. 160: it rides as strapped-on cargo), so it has no row. A reusable one is mounted
+    // equipment: the chosen chute's own weight (2, 2 or 2.2 tons) plus half a ton, up to the half ton, so 2.5, 2.5 and 3 tons, and twice its price (2,000, 6,000 and
+    // 10,000); 2 slots on a 'Mech (torsos), 1 on a ProtoMech (body) and combat vehicle (rear), 2 on a support vehicle; introduced 2353; Advanced (p. 161). Only wheeled,
+    // tracked, hover and WiGE vehicles may use one, none over 100 tons (p. 160); the vehicle check says so. Battle armor chutes are not catalog items.
+    defaults: { kind: "other", cite: { book: TO, page: 223 }, playCite: { book: TO, page: 222 }, checked: "page", slots: 2, availability: [{ from: 2353 }], rulesLevel: "advanced", units: ["mech", "industrialmech", "protomech", "vehicle"], locations: ["CT", "LT", "RT"], by: { protomech: { slots: 1 }, vehicle: { slots: 1, note: "Support vehicle: 2 slots" } } },
+    items: [
+      { id: "reusable-vdc-standard-is", name: "Reusable VDC (Standard)", aliases: ["Reusable Vehicular DropChute"], techBase: "inner-sphere", tons: 2.5 },
+      { id: "reusable-vdc-standard-clan", name: "Reusable VDC (Standard)", aliases: ["Reusable Vehicular DropChute"], techBase: "clan", tons: 2.5 },
+      { id: "reusable-vdc-camouflage-is", name: "Reusable VDC (Camouflage)", techBase: "inner-sphere", tons: 2.5 },
+      { id: "reusable-vdc-camouflage-clan", name: "Reusable VDC (Camouflage)", techBase: "clan", tons: 2.5 },
+      { id: "reusable-vdc-stealth-is", name: "Reusable VDC (Stealth)", techBase: "inner-sphere", tons: 3, availability: [{ from: 2355 }] },
+      { id: "reusable-vdc-stealth-clan", name: "Reusable VDC (Stealth)", techBase: "clan", tons: 3, availability: [{ from: 2355 }] },
+    ],
+  },
   // Aerospace and ship items from the Industrial Equipment table (TechManual, printed p. 344, read against the page image; item entries on pp. 209
   // and 227; dates from the Industrial Equipment cost table, printed p. 293: both "PS / -", so the Clan rows take the Inner Sphere year and are
   // marked inferred). The bay door weighs nothing and takes no space on a small craft or DropShip ("0*": the construction rules, p. 209, say how
@@ -1091,8 +1161,8 @@ export const OTHER: EquipmentGroup[] = [
   {
     defaults: { kind: "other", cite: { book: "TechManual", page: 344 }, checked: "page", slots: 0, availability: [{ from: 1950 }] },
     items: [
-      { id: "bay-door-is", name: "Bay Door", techBase: "inner-sphere", tons: 0, units: ["smallcraft", "dropship"] },
-      { id: "bay-door-clan", name: "Bay Door", techBase: "clan", tons: 0, units: ["smallcraft", "dropship"], yearsInferred: true },
+      { id: "bay-door-is", name: "Bay Door", techBase: "inner-sphere", tons: 0, units: ["vehicle", "smallcraft", "dropship"] },
+      { id: "bay-door-clan", name: "Bay Door", techBase: "clan", tons: 0, units: ["vehicle", "smallcraft", "dropship"], yearsInferred: true },
       { id: "look-down-radar-is", name: "Look-Down Radar", techBase: "inner-sphere", tons: 5, units: ["vehicle", "aero", "smallcraft", "dropship", "ship", "building"], by: { vehicle: { slots: 1 }, aero: { slots: 1 }, smallcraft: { slots: 1 }, dropship: { slots: 1 }, ship: { slots: 1 }, building: { slots: 1 } } },
       { id: "look-down-radar-clan", name: "Look-Down Radar", techBase: "clan", tons: 5, yearsInferred: true, units: ["vehicle", "aero", "smallcraft", "dropship", "ship", "building"], by: { vehicle: { slots: 1 }, aero: { slots: 1 }, smallcraft: { slots: 1 }, dropship: { slots: 1 }, ship: { slots: 1 }, building: { slots: 1 } } },
     ],

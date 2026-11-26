@@ -105,6 +105,8 @@ export interface EquipmentRow {
    * ammunition does (Total Warfare p. 140: all of the slot's shots go to the special munition, except the half-count ones, which are
    * autocannon rounds), so it has no `shotsPerTon` of its own; see `ammoLines`. */
   feeds?: ("lrm" | "srm" | "mml" | "atm")[];
+  /** Special munitions only: the share of the launcher's standard shots a ton carries, where the alternative munitions tables of TO:AUE (pp. 226-229) print an Ammo (per Ton) multiplier of x0.5. Absent: x1. */
+  shotsFactor?: number;
   /** A multi-mode launcher (MML) only: what each mode fires, as its own line under the weapon on the record sheet. `range` is as above. */
   modes?: { name: string; damage: string; range: [min: number, short: number, medium: number, long: number] }[];
   /** The weapon bay class an aerospace unit groups the item under, where the books name one (TechManual's Aerospace Weapon Classes, printed p.352; capital laser, PPC, autocannon and Gauss as AeroTech 2 p.101 and AeroTech 2 Revised p.75 print them). Absent: no book read names a class. An older edition that prints a different class holds it in data/aero-weapons.ts. */
@@ -435,7 +437,7 @@ export function ammoLines(record: MechRecord, catalog: Catalog): AmmoLine[] {
   return [...totals.entries()].map(([id, { tons, ...line }]): AmmoLine => {
     const feeds = catalog.byId(id)?.feeds;
     if (!feeds) return line;
-    const choices = launcherShots(record, catalog, feeds).map((c) => ({ launcher: c.launcher, shots: c.perTon * tons }));
+    const choices = launcherShots(record, catalog, feeds).map((c) => ({ launcher: c.launcher, shots: c.perTon * tons * (catalog.byId(id)?.shotsFactor ?? 1) }));
     const distinct = new Set(choices.map((c) => c.shots));
     if (distinct.size === 0) return line;
     return { ...line, shots: distinct.size === 1 ? (choices[0]?.shots ?? null) : null, choices, short: shortMunition(line.name) };
@@ -473,7 +475,7 @@ export function ammoSlotLabels(record: MechRecord, catalog: Catalog): Map<string
     const tons = typeof row.tons === "number" ? row.tons : 1;
     const launchers = row.feeds ? launcherShots(record, catalog, row.feeds) : [];
     const only = launchers.length === 1 ? launchers[0] : undefined;
-    const shots = only ? only.perTon * tons : (row.shots ?? (row.shotsPerTon === undefined ? undefined : row.shotsPerTon * tons));
+    const shots = only ? only.perTon * tons * (row.shotsFactor ?? 1) : (row.shots ?? (row.shotsPerTon === undefined ? undefined : row.shotsPerTon * tons));
     const inner = only ? `${only.launcher} ${shortMunition(row.name)}` : row.name.replace(/ Ammo\b/, "");
     const known = shots !== undefined && (!row.feeds || only !== undefined);
     labels.set(mount.id, known ? `Ammo (${inner}) ${String(Math.round((shots / slots) * 100) / 100)}` : `Ammo (${inner})`);

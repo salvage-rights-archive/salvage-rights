@@ -41,6 +41,10 @@ const typeCheck: VehicleCheck = {
     if (!Number.isInteger(record.tons) || record.tons < 1) out.push(finding("type", "error", `A vehicle weighs a whole number of tons from 1; this one is ${num(record.tons)}.`, { where: { field: "tons" }, cite: tm(98) }));
     else if (record.tons > row.maxTons) out.push(finding("type", "error", `A ${row.label} vehicle weighs at most ${tons(row.maxTons)}; this one is ${tons(record.tons)}.`, { where: { field: "tons" }, cite: MOTIVE_CITE }));
     if (record.turret && record.motive === "vtol") out.push(finding("type", "error", "A VTOL may not carry a turret.", { where: { field: "turret" }, cite: tm(98) }));
+    // Armored motive systems are for tracked, wheeled, hover, hydrofoil, naval and WiGE vehicles only; of the types built here that leaves out the VTOL (TO:AUE p. 95).
+    if (record.motive === "vtol" && record.mounts.some((m) => (m.equipmentId ?? "").startsWith("armored-motive-system-"))) out.push(finding("type", "error", "A VTOL may not carry an armored motive system.", { where: { field: "mounts" }, cite: { book: "Tactical Operations: Advanced Units and Equipment", page: 95 } }));
+    // A reusable drop chute: wheeled, tracked, hover or WiGE vehicles only, none over 100 tons (TO:AUE p. 160).
+    if (record.mounts.some((m) => (m.equipmentId ?? "").startsWith("reusable-vdc-")) && (!["tracked", "wheeled", "hover", "wige"].includes(record.motive) || record.tons > 100)) out.push(finding("type", "error", "A drop chute is for wheeled, tracked, hover and WiGE vehicles of 100 tons or less.", { where: { field: "mounts" }, cite: { book: "Tactical Operations: Advanced Units and Equipment", page: 160 } }));
     return out;
   },
 };

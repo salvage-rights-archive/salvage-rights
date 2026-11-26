@@ -77,6 +77,9 @@ const SCALED: Record<string, Scaled> = {
   "drone-os-tons": { of: "tons", divide: 10, round: "ceil-half", add: 0.5 },
   // Supercharger (p. 156): a tenth of the engine's weight, up to the half ton.
   supercharger: { of: "engine", divide: 10, round: "ceil-half" },
+  // Armored motive system (TO:AUE p. 95): 15 percent (Inner Sphere) or 10 percent (Clan) of the vehicle, quarter tons rounded up to the half ton.
+  "armored-motive-is": { of: "tons", times: 0.15, round: "ceil-half" },
+  "armored-motive-clan": { of: "tons", times: 0.1, round: "ceil-half" },
 };
 
 export const FORMULAS: Record<string, Formula> = {
@@ -108,6 +111,13 @@ export const FORMULAS: Record<string, Formula> = {
       held += catalog.factsOf(other, record)?.tons ?? 0;
     }
     return ceilHalf(held / 10) || 0; // an empty turret is 0, not -0
+  },
+  // Armored component (TO:AUE p. 95, Armored Components): half a ton for every slot of the component it armors, at least half a ton. The component is the
+  // mount it is linked to; with none linked the item is the minimum.
+  "armored-component-tons": (_row, record, catalog, mount) => {
+    const armored = record.mounts.find((m) => m.id === mount?.linkedTo);
+    const slots = armored ? (catalog.factsOf(armored, record)?.slots ?? 0) : 0;
+    return Math.max(0.5, slots * 0.5);
   },
   // Dumper (TechManual p. 243): 5 percent of the cargo it is assigned to, up to the half ton. The cargo is the mount it is linked to.
   "dumper-tons": (_row, record, catalog, mount) => {

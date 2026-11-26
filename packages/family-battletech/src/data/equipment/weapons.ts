@@ -695,4 +695,32 @@ export const WEAPONS: EquipmentGroup[] = [
       { id: "rocket-launcher-5-gothic", name: "Rocket Launcher 5", type: "C, M, OS", damage: "1/Msl", range: [0, 3, 7, 12] },
     ],
   },
+  // Torpedo launchers (TechManual printed p. 230, rules; p. 291, dates; p. 346, ammunition): a standard LRM or SRM launcher fitted as a torpedo
+  // launcher, so weight, slots, heat, damage and range are the launcher's ("as launcher" in the cost table, x1). Introduced 2380 (Terran
+  // Hegemony), Clan 2824; the Clan figures are the Clan launcher's. Fired underwater only (Total Warfare p. 98), which the row does not model.
+  // Only standard launchers may be fitted, so there is no Artemis, Streak or other variant. The BV tables print no torpedo line (see data/bv.ts).
+  {
+    defaults: { kind: "weapon", techBase: "inner-sphere", cite: { book: "TechManual", page: 230 }, playCite: { book: "TechManual", page: 291 }, checked: "page", availability: [{ from: 2380 }], units: ["mech", "industrialmech", "vehicle"] },
+    items: [
+      { id: "srt-2-is", name: "SRT 2", aliases: ["SRT-2", "Short-Range Torpedo 2"], tons: 1, slots: 1, type: "C, M, S", heat: 2, damage: "2/Msl", range: [0, 3, 6, 9] },
+      { id: "srt-4-is", name: "SRT 4", aliases: ["SRT-4", "Short-Range Torpedo 4"], tons: 2, slots: 1, type: "C, M, S", heat: 3, damage: "2/Msl", range: [0, 3, 6, 9] },
+      { id: "srt-6-is", name: "SRT 6", aliases: ["SRT-6", "Short-Range Torpedo 6"], tons: 3, slots: 2, type: "C, M, S", heat: 4, damage: "2/Msl", range: [0, 3, 6, 9], by: { vehicle: { slots: 1, note: "Support vehicle: 2 slots" } } },
+      { id: "lrt-5-is", name: "LRT 5", aliases: ["LRT-5", "Long-Range Torpedo 5"], tons: 2, slots: 1, type: "C, M, S", heat: 2, damage: "1/Msl", range: [6, 7, 14, 21] },
+      { id: "lrt-10-is", name: "LRT 10", aliases: ["LRT-10", "Long-Range Torpedo 10"], tons: 5, slots: 2, type: "C, M, S", heat: 4, damage: "1/Msl", range: [6, 7, 14, 21], by: { vehicle: { slots: 1, note: "Support vehicle: 2 slots" } } },
+      { id: "lrt-15-is", name: "LRT 15", aliases: ["LRT-15", "Long-Range Torpedo 15"], tons: 7, slots: 3, type: "C, M, S", heat: 5, damage: "1/Msl", range: [6, 7, 14, 21], by: { vehicle: { slots: 1, note: "Support vehicle: 3 slots" } } },
+      { id: "lrt-20-is", name: "LRT 20", aliases: ["LRT-20", "Long-Range Torpedo 20"], tons: 10, slots: 5, type: "C, M, S", heat: 6, damage: "1/Msl", range: [6, 7, 14, 21], by: { vehicle: { slots: 1, note: "Support vehicle: 5 slots" } } },
+    ],
+  },
+  {
+    defaults: { kind: "weapon", techBase: "clan", cite: { book: "TechManual", page: 230 }, playCite: { book: "TechManual", page: 291 }, checked: "page", availability: [{ from: 2824 }], units: ["mech", "industrialmech", "vehicle"] },
+    items: [
+      { id: "srt-2-clan", name: "SRT 2", aliases: ["SRT-2", "Short-Range Torpedo 2"], tons: 0.5, slots: 1, type: "C, M, S", heat: 2, damage: "2/Msl", range: [0, 3, 6, 9] },
+      { id: "srt-4-clan", name: "SRT 4", aliases: ["SRT-4", "Short-Range Torpedo 4"], tons: 1, slots: 1, type: "C, M, S", heat: 3, damage: "2/Msl", range: [0, 3, 6, 9] },
+      { id: "srt-6-clan", name: "SRT 6", aliases: ["SRT-6", "Short-Range Torpedo 6"], tons: 1.5, slots: 1, type: "C, M, S", heat: 4, damage: "2/Msl", range: [0, 3, 6, 9] },
+      { id: "lrt-5-clan", name: "LRT 5", aliases: ["LRT-5", "Long-Range Torpedo 5"], tons: 1, slots: 1, type: "C, M, S", heat: 2, damage: "1/Msl", range: [0, 7, 14, 21] },
+      { id: "lrt-10-clan", name: "LRT 10", aliases: ["LRT-10", "Long-Range Torpedo 10"], tons: 2.5, slots: 1, type: "C, M, S", heat: 4, damage: "1/Msl", range: [0, 7, 14, 21] },
+      { id: "lrt-15-clan", name: "LRT 15", aliases: ["LRT-15", "Long-Range Torpedo 15"], tons: 3.5, slots: 2, type: "C, M, S", heat: 5, damage: "1/Msl", range: [0, 7, 14, 21], by: { vehicle: { slots: 1, note: "Support vehicle: 2 slots" } } },
+      { id: "lrt-20-clan", name: "LRT 20", aliases: ["LRT-20", "Long-Range Torpedo 20"], tons: 5, slots: 4, type: "C, M, S", heat: 6, damage: "1/Msl", range: [0, 7, 14, 21], by: { vehicle: { slots: 1, note: "Support vehicle: 4 slots" } } },
+    ],
+  },
 ];

@@ -239,6 +239,27 @@ interface PriceGroup extends Sourced {
 }
 export const EQUIPMENT_COST: PriceGroup[] = [
   {
+    // p.291: a torpedo launcher costs what its LRM or SRM does (x1, "as launcher"); the figures are the launchers' on the same page
+    cite: { book: TM, page: 291 },
+    checked: "page",
+    prices: { "srt-2": 10_000, "srt-4": 60_000, "srt-6": 80_000, "lrt-5": 30_000, "lrt-10": 100_000, "lrt-15": 175_000, "lrt-20": 250_000 },
+  },
+  {
+    // TO:AUE p.223 and p.217: the turrets cost a rate for each ton of the turret itself (xIT; the sponson pair's is for both sponsons); an armored
+    // component 150,000 for each slot it armors (xCS), and the row weighs half a ton a slot, so 300,000 a ton; the armored motive system 100,000 xIT
+    cite: { book: TO, page: 223 },
+    checked: "page",
+    prices: {
+      "battlemech-turret-shoulder": { perWeight: 10_000 }, "battlemech-turret-head": { perWeight: 10_000 }, "battlemech-turret-quad": { perWeight: 10_000 },
+      "dual-turret": { perWeight: 5_000 }, "sponson-turret": { perWeight: 4_000 }, "vtol-chin-turret": { perWeight: 5_000 },
+      "armored-component": { perWeight: 300_000 }, "armored-motive-system": { perWeight: 100_000 },
+      // p.223: the satellite imagers and the VTOL mast mount
+      "hi-res-imager": 150_000, "hyperspectral-imager": 550_000, "infrared-imager": 250_000, "vtol-mast-mount": 50_000,
+      // p.223: a reusable drop chute costs twice the chute it is made from (1,000, 3,000 and 5,000)
+      "reusable-vdc-standard": 2_000, "reusable-vdc-camouflage": 6_000, "reusable-vdc-stealth": 10_000,
+    },
+  },
+  {
     // IO:AE p.215 (Dark Age Equipment)
     cite: { book: IO, page: 215 },
     checked: "page",

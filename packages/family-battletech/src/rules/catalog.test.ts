@@ -298,6 +298,8 @@ describe("TechManual weapons table: the other unit types' columns (printed pp. 3
     ["lrm-5-is", ["mech", "industrialmech", "vehicle", "aero", "smallcraft", "dropship", "abomination"], { aero: { damage: "3", rangeClass: "Long" } }],
     ["ultra-ac-5-is", ["mech", "industrialmech", "vehicle", "aero", "smallcraft", "dropship"], { vehicle: { slots: 1 }, aero: { slots: 1, heat: 2, damage: "7", rangeClass: "Long" } }],
     ["lb-2-x-ac-clan", ["mech", "industrialmech", "vehicle", "protomech", "aero", "smallcraft", "dropship"], { protomech: { slots: 1 } }],
+    ["bay-door-is", ["vehicle", "smallcraft", "dropship"], {}], // Industrial Equipment table, printed p. 344: CV, SV, SC and DS columns
+    ["cargo-container-is", ["industrialmech", "vehicle", "aero", "smallcraft", "dropship"], { aero: { slots: 0 }, dropship: { slots: 0 } }], // the table's F, SC and DS columns print 0
   ])("%s", async (id, units, by) => {
     const row = (await loadCatalog()).byId(id);
     expect(row?.units).toEqual(units);
@@ -318,12 +320,67 @@ describe("Interstellar Operations: Alternate Eras unit-type columns", () => {
   });
 });
 
+describe("missile munitions from TO:AUE pp. 226-229 and IO:AE p. 213", () => {
+  // id, tech base, first year, rules level, launcher families, the Ammo (per Ton) multiplier
+  it.each([
+    ["ammo-heat-seeking-lrm-is", "inner-sphere", 2340, "advanced", ["lrm", "mml"], 0.5],
+    ["ammo-smoke-lrm-clan", "clan", 2825, "advanced", ["lrm", "mml"], undefined],
+    ["ammo-tandem-charge-srm-is", "inner-sphere", 3062, "experimental", ["srm", "mml"], 0.5],
+    ["ammo-dead-fire-srm-is", "inner-sphere", 3052, "experimental", ["srm", "mml"], undefined],
+  ])("%s is a one-ton bin of the launcher's ammunition at the printed date and level", async (id, techBase, from, rulesLevel, feeds, shotsFactor) => {
+    const row = (await loadCatalog()).byId(id);
+    expect(row).toMatchObject({ kind: "ammunition", techBase, rulesLevel, feeds, tons: 1, slots: 1 });
+    expect(row?.availability[0]?.from).toBe(from);
+    expect(row?.shotsFactor).toBe(shotsFactor);
+  });
+
+  // The book panel's staged years (TO:AUE entries pp. 180-184 over the merged table, IO:AE pp. 55-56 for stages TO:AUE leaves out): id, spans, prototype year
+  it.each([
+    ["ammo-heat-seeking-srm-is", [{ from: 2370 }], 2365],
+    ["ammo-heat-seeking-srm-clan", [{ from: 2370 }], undefined],
+    ["ammo-smoke-srm-clan", [{ from: 2370 }], undefined],
+    ["ammo-tandem-charge-srm-is", [{ from: 3062 }], 2757],
+    ["ammo-follow-the-leader-lrm-is", [{ from: 2755, to: 2770 }, { from: 3053 }], undefined],
+    ["ammo-swarm-is", [{ from: 2621, to: 2833 }, { from: 3053 }], 2615],
+    ["ammo-mortar-armor-piercing-shaped-charge-is", [{ from: 2531, to: 2819 }, { from: 3043 }], 2526],
+  ])("%s has the ruled years", async (id, availability, prototypeYear) => {
+    const row = (await loadCatalog()).byId(id);
+    expect(row?.availability).toEqual(availability);
+    expect(row?.prototypeYear).toBe(prototypeYear);
+  });
+
+  it("a reusable drop chute weighs its chute plus half a ton and takes the slots of the unit type (TO:AUE p. 223)", async () => {
+    const row = (await loadCatalog()).byId("reusable-vdc-stealth-is");
+    expect(row).toMatchObject({ tons: 3, slots: 2, rulesLevel: "advanced", availability: [{ from: 2355 }], by: { protomech: { slots: 1 }, vehicle: { slots: 1 } } });
+  });
+
+  it.each([
+    ["srt-6-is", "srm-6-is", "ammo-srt-6-is", 2380],
+    ["lrt-20-clan", "lrm-20-clan", "ammo-lrt-20-clan", 2824],
+  ])("%s is the launcher %s fitted as a torpedo launcher, with its own ammunition (TechManual p. 230)", async (id, launcher, ammo, from) => {
+    const real = await loadCatalog();
+    const row = real.byId(id);
+    const base = real.byId(launcher);
+    expect({ tons: row?.tons, slots: row?.slots, heat: row?.heat, damage: row?.damage, range: row?.range, vehicle: row?.by?.vehicle }).toEqual({ tons: base?.tons, slots: base?.slots, heat: base?.heat, damage: base?.damage, range: base?.range, vehicle: base?.by?.vehicle });
+    expect(row?.availability[0]?.from).toBe(from);
+    expect(real.byId(ammo)?.shotsPerTon).toBe(real.byId(launcher.replace(/^/, "ammo-"))?.shotsPerTon);
+  });
+
+  it("a bin of a half-count munition carries half the launcher's shots on the record", async () => {
+    const real = await loadCatalog();
+    const record = bipedRecord({ mounts: [mount("l", "lrm-10-is", "RT", 0), mount("a", "ammo-heat-seeking-lrm-is", "LT", 0), mount("s", "ammo-smoke-lrm-is", "CT", 0)] });
+    expect(ammoLines(record, real).map((l) => [l.name, l.shots])).toEqual([["Heat-Seeking LRM Ammo", 6], ["Smoke LRM Ammo", 12]]); // LRM 10 carries 12 a ton
+  });
+});
+
 describe("Tactical Operations: Advanced Units and Equipment unit-type columns (printed pp. 217, 219, 221, 223)", () => {
   // The Space columns of the Heavy Weapons and Equipment Construction Data: NA leaves the unit type out; a number that differs from the Mech column is the slots there.
   it.each([
     ["rotary-ac-5-clan", ["mech", "industrialmech", "vehicle", "aero", "smallcraft", "dropship", "ship", "building"], { vehicle: { slots: 1, note: "Support vehicle: 8 slots" }, aero: { slots: 1 } }],
     ["heavy-flamer-clan", ["mech", "industrialmech", "vehicle", "protomech", "building"], {}],
     ["light-mass-driver-is", ["ship"], {}],
+    ["hyperspectral-imager-is", ["vehicle", "aero", "smallcraft", "dropship", "ship", "building"], { vehicle: { note: "Support vehicle: 2 slots" } }],
+    ["vtol-mast-mount-clan", ["vehicle"], {}],
   ])("%s may be mounted only on the unit types whose column is not NA", async (id, units, by) => {
     const row = (await loadCatalog()).byId(id);
     expect(row?.units).toEqual(units);

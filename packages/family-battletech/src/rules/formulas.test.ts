@@ -75,6 +75,19 @@ describe("a turret holding other mounts", () => {
   });
 });
 
+describe("TO:AUE turrets and armored components (pp. 95, 159, 217, 223)", () => {
+  it("a BattleMech shoulder turret weighs a tenth of what is linked to it and takes its one mechanism slot; priced 10,000 a ton", () => {
+    const r = { ...bipedRecord(), mounts: [mount("t", "battlemech-turret-shoulder-is", "RT", null), { ...mount("w", "ac-10-is", "RT", null), linkedTo: "t" }, { ...mount("x", "ac-5-is", "RT", null), linkedTo: "t" }] };
+    expect(catalog.factsOf(r.mounts[0] as Mount, r)).toEqual({ tons: 2, slots: 1 });
+    expect(unitCost(r, catalog).equipment).toBe(200_000 + 125_000 + 10_000 * 2);
+  });
+  it("an armored component weighs half a ton a slot of the item it armors, 150,000 a slot", () => {
+    const r = { ...bipedRecord(), mounts: [mount("w", "ac-10-is", "RT", null), { ...mount("a", "armored-component-is", "RT", null), linkedTo: "w" }] };
+    expect(catalog.factsOf(r.mounts[1] as Mount, r)).toEqual({ tons: 3.5, slots: 0 }); // an AC/10 takes 7 slots
+    expect(unitCost(r, catalog).equipment).toBe(200_000 + 7 * 150_000);
+  });
+});
+
 describe("sheet names", () => {
   const names: [string, string, string][] = [
     ["Imp. Heavy Medium Laser [Clan]", "clan", "improved-heavy-laser-medium-clan"],
