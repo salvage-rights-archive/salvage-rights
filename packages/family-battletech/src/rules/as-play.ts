@@ -183,8 +183,11 @@ export function motiveResult(mode: string, roll: number): MotiveResult {
 
 // ---- Applying damage and critical hits -----------------------------------------------------------------------------------
 
-/** A source of 2D6 results: the app's dice, or what the player rolled and typed. */
-export type Roll2d6 = () => number;
+/** What a 2D6 roll is for: a critical hit roll or a Motive Systems Damage roll. */
+export type RollKind = "crit" | "motive";
+
+/** A source of 2D6 results: the app's dice, or what the player rolled and typed. It is told what each roll is for, in the order they are asked. */
+export type Roll2d6 = (kind?: RollKind) => number;
 
 interface Work {
   s: PlayState;
@@ -291,9 +294,9 @@ function applyDamage(w: Work, points: number, follow: boolean, forced = false): 
     return;
   }
   const rolls = critRolls(card, points > 0, structureHit, forced);
-  for (let i = 0; i < rolls && !s.destroyed; i += 1) critEffect(w, critKind(card.type, w.variant, w.roll()));
+  for (let i = 0; i < rolls && !s.destroyed; i += 1) critEffect(w, critKind(card.type, w.variant, w.roll("crit")));
   if (follow && isVehicle(card) && points > 0 && !s.destroyed) {
-    const result = motiveResult(card.move[0]?.mode ?? "", w.roll());
+    const result = motiveResult(card.move[0]?.mode ?? "", w.roll("motive"));
     if (result === "minus") s.moveHits.push("motive-2");
     else if (result === "half") s.moveHits.push("motive-half");
     else if (result === "immobile") s.moveHits.push("immobile");

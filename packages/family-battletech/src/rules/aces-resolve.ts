@@ -377,7 +377,7 @@ function choose(run: Run, units: TableUnit[], text: string): TableUnit {
 const damageValue = (d: AsDamage): number => (d === null ? 0 : d.minimal ? 0.5 : d.value);
 
 /** A unit's damage at the range bracket of a distance; 0 beyond Long. */
-function damageAt(u: TableUnit, distance: number): number {
+export function damageAt(u: TableUnit, distance: number): number {
   const bracket = rangeBracket(distance);
   if (bracket === null || bracket === "E") return 0;
   const d = currentDamage(u.play, u.card);
@@ -843,17 +843,17 @@ const stagedDamage = (u: TableUnit): number => u.play.staged.reduce((sum, h) => 
 const stagedDestroyed = (u: TableUnit): boolean => u.play.destroyed || stagedDamage(u) >= u.play.armor + u.play.structure;
 const armorLeft = (u: TableUnit, extra = 0): number => u.play.armor - stagedDamage(u) - extra;
 
-const attackerMoveOf = (u: TableUnit): AttackerMove => (isImmobile(u.play, u.card, "aces") ? "immobile" : (u.play.moved?.mode ?? "ground"));
+export const attackerMoveOf = (u: TableUnit): AttackerMove => (isImmobile(u.play, u.card, "aces") ? "immobile" : (u.play.moved?.mode ?? "ground"));
 
 /** How a target moved, for the Target Number: standing still or unmoved is 0, immobile -4; a jump's own +1 is added by the attack. */
-function targetMoveOf(u: TableUnit): { move: TargetMove; tmm: number } {
+export function targetMoveOf(u: TableUnit): { move: TargetMove; tmm: number } {
   if (isImmobile(u.play, u.card, "aces")) return { move: "immobile", tmm: -4 };
   const m = u.play.moved;
   if (!m || m.mode === "standstill") return { move: "standstill", tmm: 0 };
   return m.mode === "jump" ? { move: "jump", tmm: m.tmm - 1 } : { move: "ground", tmm: m.tmm };
 }
 
-const specialValue = (card: AsCard, code: string): number => card.specials.filter((s) => s.code === code).reduce((sum, s) => sum + (Number.parseInt(s.values[0] ?? "0", 10) || 0), 0);
+export const specialValue = (card: AsCard, code: string): number => card.specials.filter((s) => s.code === code).reduce((sum, s) => sum + (Number.parseInt(s.values[0] ?? "0", 10) || 0), 0);
 /**
  * How far its physical attack reaches (Aces p. 20 with ASCE p. 46): 1", 2" with MEL, base contact only for infantry (Anti-'Mech,
  * Aces p. 5), and only with the AM special; null for vehicles, whose only option is a Charge that a card must ask for (Aces p. 4),
@@ -861,7 +861,7 @@ const specialValue = (card: AsCard, code: string): number => card.specials.filte
  */
 const isInfantry = (c: AsCard): boolean => c.type === "CI" || c.type === "BA";
 const physicalRange = (c: AsCard): number | null => (c.type === "CV" || c.type === "SV" ? null : isInfantry(c) ? (has(c, "AM") ? 0 : null) : has(c, "MEL") ? 2 : 1);
-const physicalKind = (c: AsCard): AsPhysicalType => (c.type === "CI" || c.type === "BA" ? "anti-mech" : has(c, "MEL") ? "melee" : "standard");
+export const physicalKind = (c: AsCard): AsPhysicalType => (c.type === "CI" || c.type === "BA" ? "anti-mech" : has(c, "MEL") ? "melee" : "standard");
 
 /** The Target Number for this unit attacking `target`; `spotter` is the unit that spots an indirect attack (p. 3). */
 function attackTn(run: Run, target: TableUnit, kind: "weapon" | "physical" | "indirect", spotter?: TableUnit): AttackResult {
