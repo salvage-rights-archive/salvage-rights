@@ -2,7 +2,7 @@
 // `slots` (a string); `resolveFormula` evaluates it. Most are one line of the SCALED table: a share of the unit's tonnage
 // (or of its engine's weight, or of a size the player chose), a rounding rule and optional extras, so a new ratio item is
 // a table entry, not a function. The few that read other mounts or a printed band are plain functions. Pure; nothing throws.
-import { engineTons } from "./mech";
+import { bodyOf, engineRatingOf, engineTons } from "./mech";
 import type { Catalog, EquipmentRow } from "./catalog";
 import type { MechRecord, Mount } from "./mech";
 
@@ -25,8 +25,8 @@ const ROUND: Record<Rounding, (x: number) => number> = { ceil: (x) => Math.ceil(
 
 function scaled(spec: Scaled): Formula {
   return (_row, record, _catalog, mount) => {
-    const base = spec.of === "tons" ? record.tons : (engineTons(record.chassis.engine.type, record.chassis.engine.rating) ?? 0);
-    const divisor = record.configuration === "quad" && spec.quad !== undefined ? spec.quad : spec.divide;
+    const base = spec.of === "tons" ? record.tons : (engineTons(record.chassis.engine.type, engineRatingOf(record)) ?? 0);
+    const divisor = bodyOf(record.configuration) === "quad" && spec.quad !== undefined ? spec.quad : spec.divide;
     const raw = divisor !== undefined ? base / divisor : base * (spec.times ?? 1);
     return ROUND[spec.round](raw * (spec.perAmount ? (mount?.amount ?? 1) : 1)) + (spec.add ?? 0);
   };
@@ -68,6 +68,8 @@ const SCALED: Record<string, Scaled> = {
   "jump-booster": { of: "tons", times: 0.05, round: "ceil-half", perAmount: true },
   // Tracks and environmental sealing (TechManual pp. 213, 249): a tenth of the unit, up to the half ton. Extended fuel tank (p. 244): a tenth of the engine.
   "tenth-tons": { of: "tons", divide: 10, round: "ceil-half" },
+  // A QuadVee's wheels: 15 percent of the unit, rounded up to the half ton (IO:AE printed p.128).
+  "wheels-tons": { of: "tons", times: 0.15, round: "ceil-half" },
   // IndustrialMech environmental sealing (TechManual printed p.70, Enviro-Sealing table): 10 percent, rounded up to the full ton.
   "ceil-tenth-tons": { of: "tons", divide: 10, round: "ceil" },
   "fuel-tank-tons": { of: "engine", divide: 10, round: "ceil-half" },

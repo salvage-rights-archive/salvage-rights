@@ -17,7 +17,8 @@ import { CLAN_CASE_IDS, clanCaseAllowed } from "./case";
 import { mountableOn } from "./catalog";
 import type { Catalog, EquipmentRow } from "./catalog";
 import { DEFAULT_LEVEL, equipmentLevel, levelAtLeast, levelIn, partLevel } from "./levels";
-import { industrialRulesOf, mechTypeOf } from "./mech";
+import { SUPERHEAVY } from "../data/chassis";
+import { industrialRulesOf, mechTypeOf, primitiveRulesOf, requiredCockpit, superheavyOf } from "./mech";
 import type { MechRecord } from "./mech";
 import { datesText, eraOfRecord, erasOfYear, partPrototype, partSpans, phaseIn, rowPhase, windowOf } from "./time";
 import type { Phase, When } from "./time";
@@ -59,7 +60,7 @@ export function setEra(draft: When, id: string): void {
 // ---------------------------------------------------------------------------------------------------------------
 
 // `editionId` names the game whose lists, levels and dates apply (data/rulesets.ts); a subject without one is Classic.
-type Subject = Pick<MechRecord, "techBase" | "year" | "era" | "rulesLevel" | "unitType" | "frankenmech"> & { configuration?: string; chassis?: Pick<MechRecord["chassis"], "structure">; editionId?: string };
+type Subject = Pick<MechRecord, "techBase" | "year" | "era" | "rulesLevel" | "unitType" | "frankenmech"> & { tons?: number; configuration?: string; chassis?: Pick<MechRecord["chassis"], "structure">; editionId?: string };
 // `everything`, where a function takes it, lifts the tech base and time limits (the picker's "Show everything") and never the rules level.
 const recordLevel = (record: Subject): RulesLevel => record.rulesLevel ?? DEFAULT_LEVEL;
 
@@ -89,8 +90,21 @@ export function equipmentPhase(row: EquipmentRow, record: Subject & Pick<MechRec
 
 /** An equipment row: on the record's game's list, at or below the level, the record's tech base, and in the record's time (read through
  * the record's edition, so a game's own level for the row counts). */
+/** Whether the unit's own construction rules shut an item out: a superheavy 'Mech's jump and speed equipment (IO:AE printed p.156), a Primitive 'Mech's improved
+ * jets, boosters and enhancements and anything introduced after 2500 (p.118), and a QuadVee's wheels for any other unit (p.128). Hidden, even with Show everything. */
+export function equipmentBarredFor(row: EquipmentRow, record: Subject): boolean {
+  const stem = row.id.replace(/-(is|clan)$/, "");
+  if (stem === "wheels" && record.configuration !== "quadvee") return true;
+  if (record.tons !== undefined && superheavyOf({ tons: record.tons }) && SUPERHEAVY.barred.some((b) => b.stems.includes(stem))) return true;
+  const primitive = primitiveRulesOf(record);
+  if (!primitive) return false;
+  const first = row.availability.length === 0 ? undefined : Math.min(...row.availability.map((s) => s.from));
+  return primitive.barredStems.includes(stem) || (first !== undefined && first > primitive.equipmentUntil);
+}
+
 export function equipmentAvailable(row: EquipmentRow, record: Subject & Pick<MechRecord, "editionId">, catalog: Catalog, everything = false): boolean {
-  if (!mountableOn(row, mechTypeOf(record).unit)) return false; // a row whose `units` leaves out the unit's type is never offered to it, not even with Show everything
+  if (!mountableOn(row, mechTypeOf(record).unit)) return false;
+  if (equipmentBarredFor(row, record)) return false; // the unit's own rules bar it: hidden, never marked (the Picker keeps the item a mount already is) // a row whose `units` leaves out the unit's type is never offered to it, not even with Show everything
   if (CLAN_CASE_IDS.includes(row.id) && !clanCaseAllowed(record)) return false; // Clan CASE is for a Clan structure (TM p.210); hidden, never marked, even with Show everything
   if (!inGame(row.games, rulesetOf(record.editionId), record.rulesLevel)) return false; // another game's row: hidden, never marked, even with Show everything
   const level = equipmentLevel(catalog.rowFor(row.id, record.editionId) ?? row);
@@ -127,7 +141,24 @@ export function partAvailable(kind: PartKind, key: string, record: Subject, ever
   if (!part) return true;
   // The type decides first: an IndustrialMech takes the parts its rules name, and any other 'Mech none printed for IndustrialMechs.
   const industrial = industrialRulesOf(record);
-  if (industrial ? !industrial.parts[kind].includes(key) : part.industrial) return false;
+  // A superheavy 'Mech (more than 100 tons) takes the parts its own rules name: its gyro and cockpit, and a shorter list of structure, engine and
+  // myomer (IO:AE printed pp.156-157). A part printed for a tonnage range is for 'Mechs in it only. A record with no tonnage yet is read as a standard one.
+  const heavy = record.tons === undefined ? undefined : superheavyOf({ tons: record.tons });
+  if (part.tonnage && record.tons !== undefined && (record.tons < part.tonnage.min || record.tons > part.tonnage.max)) return false;
+  // A Primitive 'Mech takes the parts its own rules list (IO:AE printed pp.116-118), which include the engines printed for IndustrialMechs; a part printed
+  // for the Primitive 'Mechs belongs to them alone.
+  const primitive = primitiveRulesOf(record);
+  if (primitive) {
+    if (!primitive.parts[kind].includes(key)) return false;
+  } else if (part.primitive) return false;
+  else if (!heavy || (kind !== "cockpit" && kind !== "gyro")) {
+    if (industrial ? !industrial.parts[kind].includes(key) : part.industrial) return false;
+  }
+  if (heavy) {
+    const allowed = (heavy.parts[industrial ? "industrialmech" : "mech"] as Partial<Record<PartKind, string[]>>)[kind];
+    if (allowed && !allowed.includes(key)) return false;
+    if (kind === "cockpit" && key !== requiredCockpit({ tons: record.tons ?? 0, configuration: record.configuration ?? "biped", unitType: record.unitType })) return false;
+  }
   if (!inGame(part.games, rulesetOf(record.editionId), record.rulesLevel)) return false; // another game's part: hidden, even with Show everything
   const level = partLevel(kind, key, part);
   if (!levelAtLeast(recordLevel(record), level)) return false;
@@ -142,14 +173,16 @@ export function partAvailable(kind: PartKind, key: string, record: Subject, ever
 const configurationRow = (key: string): ConfigurationRow | undefined => (Object.hasOwn(SHEET.configurations, key) ? (SHEET.configurations as Record<string, ConfigurationRow>)[key] : undefined);
 
 /** A body configuration's phase for a record: production, prototype or neither. A key we do not know is in production. */
-export function configurationPhase(key: string, record: Pick<Subject, "techBase" | "year" | "era" | "editionId">): Phase | null {
+export function configurationPhase(key: string, record: Pick<Subject, "techBase" | "year" | "era" | "editionId" | "unitType">): Phase | null {
   const row = configurationRow(key);
   if (!row) return "production";
+  // The biped and quad of a Primitive 'Mech are the type's own and have its years (IO:AE printed p.44, "Primitive BattleMechs (Biped and Quad)"), not the standard body's.
+  if (primitiveRulesOf(record)?.configurations.includes(key)) return "production";
   return baseFits(row.techBase, record.techBase, row.availability) ? rowPhase({ ...row, availability: ownSpans(record, row.techBase, row.availability) ?? row.availability }, record.techBase, windowOf(record)) : null;
 }
 
 /** A body configuration's tech base and years against the record (not its level, which the level check reports); its prototype years count. */
-export function configurationInTime(key: string, record: Pick<Subject, "techBase" | "year" | "era" | "editionId">): boolean {
+export function configurationInTime(key: string, record: Pick<Subject, "techBase" | "year" | "era" | "editionId" | "unitType">): boolean {
   return configurationPhase(key, record) !== null;
 }
 

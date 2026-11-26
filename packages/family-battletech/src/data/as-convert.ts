@@ -42,6 +42,8 @@ export const TYPE_OF_MECH: { unitType: string; type: "BM" | "IM"; cite: AscCite;
   { unitType: "mech", type: "BM", cite: ASC_PAGES.types, checked: "page" },
   { unitType: "omnimech", type: "BM", cite: ASC_PAGES.types, checked: "page" },
   { unitType: "industrialmech", type: "IM", cite: ASC_PAGES.types, checked: "page" },
+  { unitType: "primitive-mech", type: "BM", cite: ASC_PAGES.types, checked: "page" },
+  { unitType: "primitive-industrialmech", type: "IM", cite: ASC_PAGES.types, checked: "page" },
 ];
 
 // ---- Size class (p. 92, the 'Mechs, ProtoMechs and Combat Vehicles section) ----------------------------------------------------

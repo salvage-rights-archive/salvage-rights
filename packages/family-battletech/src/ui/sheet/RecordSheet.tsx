@@ -20,6 +20,8 @@ import { INK, squeeze } from "./text";
 export const SHEET_WIDTH = 1700;
 export const SHEET_HEIGHT = 2200;
 
+/** A QuadVee's crew is two warriors, so the warrior block is taller and the picture shorter. */
+const QUADVEE_RECTS = { warrior: { x: 700, y: 215, w: 390, h: 470 }, picture: { x: 700, y: 705, w: 390, h: 405 } };
 const RECTS = {
   mech: { x: 30, y: 215, w: 640, h: 895 },
   warrior: { x: 700, y: 215, w: 390, h: 360 },
@@ -44,6 +46,7 @@ export default function RecordSheet({ record, catalog, checkedOn, dazzle = false
   // The Gothic books name no Official mark and no tournament check, so a Gothic sheet carries neither.
   const gothic = facts.gothic !== undefined;
   const mark = gothic ? "" : official.badge === "OFFICIAL" ? `OFFICIAL: ${official.detail}` : official.badge;
+  const quadvee = record.configuration === "quadvee";
   const compliance = standardCompliance(record, catalog);
   const verified = !gothic && compliance.verified ? verifiedLine(compliance.edition, checkedOn ?? new Date().toLocaleDateString("en-CA")) : undefined;
   const credit = facts.designer === undefined ? "" : ` Designed by ${facts.designer} on mordel.net.`;
@@ -82,8 +85,8 @@ export default function RecordSheet({ record, catalog, checkedOn, dazzle = false
         </text>
 
         <MechData rect={RECTS.mech} facts={facts} />
-        <WarriorData rect={RECTS.warrior} {...(facts.gothic ? { gothic: facts.gothic } : {})} {...(pilot ? { pilot } : {})} />
-        <UnitPicture rect={RECTS.picture} record={record} label={`${name}, unit picture`} />
+        <WarriorData rect={quadvee ? QUADVEE_RECTS.warrior : RECTS.warrior} {...(quadvee ? { gunner: true } : {})} {...(facts.gothic ? { gothic: facts.gothic } : {})} {...(pilot ? { pilot } : {})} />
+        <UnitPicture rect={quadvee ? QUADVEE_RECTS.picture : RECTS.picture} record={record} label={`${name}, unit picture`} />
         <ArmorDiagram rect={RECTS.armor} record={record} catalog={catalog} points={facts.points} />
         <CriticalTable rect={RECTS.critical} record={record} layout={facts.layout} labels={facts.ammoSlots} fixed={facts.fixedMounts} />
         <StructureDiagram rect={RECTS.structure} record={record} catalog={catalog} points={facts.points} />

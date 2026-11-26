@@ -435,3 +435,14 @@ describe("an OmniMech set (omni, omni_base_id, omni_variants; without a fixed fl
 });
 
 const isOmniShaped = (c: { base: { mounts: unknown[] }; configurations: unknown[]; primaryId: string }) => c.base.mounts.length > 0 && c.configurations.length > 0 && c.primaryId !== "";
+
+describe("Mordel's words for the superheavy, Primitive and QuadVee parts", () => {
+  const part = (type: string, technology: string, extra: Record<string, unknown> = {}) => ({ type, technology, ...extra });
+  it("maps a Primitive 'Mech's parts and tech base to the Primitive type, drops a QuadVee's conversion gear, and knows the superheavy gyro and cockpit", () => {
+    const primitive = imported(mordelWith(mordelBiped(), { tech_base: "Primitive", year: 2445, engine: part("Primitive Fusion", "Primitive", { rating: 200 }), gyro: part("Primitive", "Primitive"), cockpit: part("Primitive", "Primitive"), structure: part("Primitive", "Primitive"), armor: part("Primitive", "Primitive"), myomer: part("Primitive", "Primitive") })).record;
+    expect([primitive.unitType, primitive.techBase, primitive.chassis.engine.type, primitive.chassis.gyro, primitive.chassis.cockpit, primitive.chassis.structure, primitive.chassis.armorType]).toEqual(["primitive-mech", "inner-sphere", "standard", "standard", "primitive", "standard", "primitive"]);
+    const quadvee = imported(mordelWith(mordelQuad(), { configuration: "QuadVee", tech_base: "Clan", cockpit: part("QuadVee", "Clan"), equipment: [entry(1, "Conversion Gear", "FLL"), entry(2, "Conversion Gear", "FRL")] })).record;
+    expect([quadvee.configuration, quadvee.chassis.cockpit, quadvee.mounts.filter((m) => m.name === "Conversion Gear")]).toEqual(["quadvee", "quadvee", []]);
+    expect(imported(mordelWith(mordelBiped(), { gyro: part("Superheavy", "Inner Sphere"), cockpit: part("Superheavy", "Inner Sphere") })).record.chassis).toMatchObject({ gyro: "superheavy", cockpit: "superheavy" });
+  });
+});

@@ -468,7 +468,7 @@ export const dollLocationName = (loc: string, arms?: 2 | 4): string => {
 };
 
 /** The layout each configuration draws with; none is drawn for the rest yet. */
-const LAYOUT_OF_CONFIGURATION: Record<string, DollLayoutId> = { biped: "biped", quad: "quad", tripod: "tripod", lam: "biped", "bimodal-lam": "biped" };
+const LAYOUT_OF_CONFIGURATION: Record<string, DollLayoutId> = { biped: "biped", quad: "quad", quadvee: "quad", tripod: "tripod", lam: "biped", "bimodal-lam": "biped" };
 
 /** The Land-Air 'Mech picture (canopy head, folded wings, fighter-mode inset) for the configurations that are one. */
 const LAM_VARIANT: Record<string, IDollVariant["lam"]> = { lam: "lam", "bimodal-lam": "bimodal" };
@@ -484,7 +484,7 @@ export const dollUnitFromRecord = (record: MechRecord, shields: IDollShields = {
     const max = maxArmor(record), structure = structurePoints(record);
     return {
         layoutId,
-        variant: { armless: false, superheavy: record.tons > 100, ...(Object.hasOwn(LAM_VARIANT, record.configuration) ? { lam: LAM_VARIANT[record.configuration] } : {}),
+        variant: { armless: false, superheavy: record.tons > 100, ...(record.configuration === "quadvee" ? { pods: record.mounts.some((m) => m.equipmentId === "wheels-clan") ? ("wheels" as const) : ("tracks" as const) } : {}), ...(Object.hasOwn(LAM_VARIANT, record.configuration) ? { lam: LAM_VARIANT[record.configuration] } : {}),
             ...(shields.left || shields.right ? { shields: { left: Boolean(shields.left), right: Boolean(shields.right) } } : {}),
         },
         armor: (loc) => {

@@ -157,8 +157,8 @@ describe("Classic BattleTech home", () => {
     expect(texts(config)).toEqual(["Biped", "Quad", "Tripod", "Land-Air 'Mech", "Bimodal Land-Air 'Mech"]);
     await user.selectOptions(config, "tripod");
     await user.selectOptions(type, "industrialmech");
-    expect(texts(config)).toEqual(["Biped", "Quad"]); // the tripod is no IndustrialMech's body, so the choice gave way to the first that fits
-    expect(config.value).toBe("biped");
+    expect(texts(config)).toEqual(["Biped", "Quad", "Tripod"]); // a Land-Air 'Mech is no IndustrialMech's body (the tripod is: IO:AE p.158 says Available to BM, IM)
+    expect(config.value).toBe("tripod");
     await user.selectOptions(within(form).getByLabelText("Rules level"), "standard");
     const tons = within(form).getByLabelText<HTMLSelectElement>("Tonnage");
     expect(tons.options[0]?.value).toBe("10");
@@ -169,6 +169,29 @@ describe("Classic BattleTech home", () => {
     await waitFor(async () => {
       const [entry] = await (await openFamilyStorage()).list();
       expect(entry?.record).toMatchObject({ unitType: "industrialmech", tons: 10, configuration: "biped", chassis: { structure: "industrial", cockpit: "industrial" } });
+    });
+  });
+
+  it("offers superheavy weights and the Primitive types only where the level and year allow, and builds a Primitive BattleMech and a superheavy 'Mech", async () => {
+    const user = userEvent.setup();
+    renderHome();
+    const form = await screen.findByRole("form", { name: "Build a new one" });
+    const tons = within(form).getByLabelText<HTMLSelectElement>("Tonnage");
+    expect([...tons.options].some((o) => o.value === "150")).toBe(false);
+    await user.selectOptions(within(form).getByLabelText("Rules level"), "advanced");
+    await user.type(within(form).getByLabelText("Year"), "2445");
+    expect([...tons.options].some((o) => o.value === "150")).toBe(false); // superheavy 'Mechs are 3076 and later
+    await user.selectOptions(within(form).getByLabelText("Era"), "age-of-war"); // 2445 is in two eras
+    await user.selectOptions(within(form).getByLabelText("Type"), "primitive-mech");
+    await user.type(within(form).getByLabelText("Name"), "Mackie");
+    await user.selectOptions(tons, "100");
+    const start = within(form).getByRole("button", { name: "Start building" });
+    expect(document.getElementById("bt-new-missing")?.textContent ?? "").toBe("");
+    expect((start as HTMLButtonElement).disabled).toBe(false);
+    await user.click(start);
+    await waitFor(async () => {
+      const [entry] = await (await openFamilyStorage()).list();
+      expect(entry?.record).toMatchObject({ unitType: "primitive-mech", tons: 100, chassis: { cockpit: "primitive", armorType: "primitive" } });
     });
   });
 
