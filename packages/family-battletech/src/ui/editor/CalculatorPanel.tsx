@@ -303,7 +303,7 @@ export default function CalculatorPanel({ record, catalog }: { record: MechRecor
       )}
 
       <p className="bt-calc__cite">
-        {`Battle Value: ${bookName("TechManual")}, Battle Value v4.1 (replaces pp. 302-314), tables pp. 315-317. ${ruleset.cost ? `Cost: ${bookName("TechManual")}, p. 285, errata v8.0. ` : ""}Pilot skill${ruleset.cost ? " and OmniMech" : ""} are not saved with the 'Mech. Play rules it counts, from the play book of this 'Mech's edition: ${playCites(record.editionId)}`}
+        {`Battle Value: ${bookName("TechManual")}, Battle Value v4.1 (replaces pp. 302-314), tables pp. 315-317. ${ruleset.cost ? `Cost: ${bookName("TechManual")}, p. 285, errata v8.0. ` : ""}Pilot skill${ruleset.cost && record.omni === undefined ? " and the OmniMech choice" : ""} ${ruleset.cost && record.omni === undefined ? "are" : "is"} not saved with the 'Mech. Play rules it counts, from the play book of this 'Mech's edition: ${playCites(record.editionId)}`}
       </p>
     </section>
   );

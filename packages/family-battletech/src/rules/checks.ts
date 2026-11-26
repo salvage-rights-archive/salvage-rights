@@ -68,6 +68,8 @@ const IO_UTA = { book: "Interstellar Operations: Alternate Eras", page: 27 };
 const TECH_BASE_NAMES: Record<string, string> = { "inner-sphere": "Inner Sphere", clan: "Clan", mixed: "Mixed" };
 
 const own = (table: object, key: string | number) => Object.hasOwn(table, key);
+/** The name with its article: A BattleMech, An OmniMech. */
+const aOrAn = (name: string): string => `${/^[AEIOU]/i.test(name) ? "An" : "A"} ${name}`;
 const quoted = (key: unknown) => `"${String(key)}"`;
 const techBaseName = (key: string) => (own(TECH_BASE_NAMES, key) ? (TECH_BASE_NAMES[key] ?? quoted(key)) : quoted(key));
 /** A chassis part's display name from its table; an unknown key prints as itself in quotes. */
@@ -576,11 +578,11 @@ function eraCheck({ record }: CheckInput): Finding[] {
   const bodyInTime = !row || configurationInTime(record.configuration, record);
   if (bodyInTime && !typeInTime(type, record)) {
     const when = record.year !== null ? String(record.year) : `the ${eraOfRecord(record)?.name ?? "chosen"} era`;
-    out.push(finding("availability", "error", `A ${type.label} is not available to ${record.techBase === "clan" ? "a Clan" : record.techBase === "mixed" ? "a mixed technology" : "an Inner Sphere"} 'Mech in ${when}; ${spansText(record.techBase === "clan" ? (type.clanAvailability ?? type.availability) : type.availability, prototypeOf(record.techBase === "clan" ? (type.clanPrototypeYear ?? type.prototypeYear) : type.prototypeYear))}.`, { where: { field: "unitType" }, cite: type.availabilityCite }));
+    out.push(finding("availability", "error", `${aOrAn(type.label)} is not available to ${record.techBase === "clan" ? "a Clan" : record.techBase === "mixed" ? "a mixed technology" : "an Inner Sphere"} 'Mech in ${when}; ${spansText(record.techBase === "clan" ? (type.clanAvailability ?? type.availability) : type.availability, prototypeOf(record.techBase === "clan" ? (type.clanPrototypeYear ?? type.prototypeYear) : type.prototypeYear))}.`, { where: { field: "unitType" }, cite: type.availabilityCite }));
   }
   if (row && !bodyInTime) {
     const when = record.year !== null ? String(record.year) : `the ${eraOfRecord(record)?.name ?? "chosen"} era`;
-    out.push(finding("availability", "error", `A ${row.name} is not available to ${record.techBase === "clan" ? "a Clan" : record.techBase === "mixed" ? "a mixed technology" : "an Inner Sphere"} 'Mech in ${when}; ${spansText(record.techBase === "clan" ? (row.clanAvailability ?? row.availability) : row.availability, prototypeOf(record.techBase === "clan" ? (row.clanPrototypeYear ?? row.prototypeYear) : row.prototypeYear))}.`, { where: { field: "configuration" }, cite: { book: "Interstellar Operations: Alternate Eras", page: 44 } }));
+    out.push(finding("availability", "error", `${aOrAn(row.name)} is not available to ${record.techBase === "clan" ? "a Clan" : record.techBase === "mixed" ? "a mixed technology" : "an Inner Sphere"} 'Mech in ${when}; ${spansText(record.techBase === "clan" ? (row.clanAvailability ?? row.availability) : row.availability, prototypeOf(record.techBase === "clan" ? (row.clanPrototypeYear ?? row.prototypeYear) : row.prototypeYear))}.`, { where: { field: "configuration" }, cite: { book: "Interstellar Operations: Alternate Eras", page: 44 } }));
   }
   if (record.techBase === "mixed" && mixedPhase(record) === null) {
     const when = record.year !== null ? String(record.year) : `the ${eraOfRecord(record)?.name ?? "chosen"} era`;
