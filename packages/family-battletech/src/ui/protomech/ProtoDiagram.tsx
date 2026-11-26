@@ -2,7 +2,7 @@
 // named by its name and points; without it the whole figure is one labelled image.
 import FigureDiagram from "../doll/figure-diagram";
 import type { IFigureKind } from "../doll/figure-diagram";
-import ProtoDoll, { fitProtoDoll } from "../doll/proto-doll";
+import ProtoDoll, { fitProtoDoll, protoLayout } from "../doll/proto-doll";
 
 export interface ProtoDiagramLocation {
   code: string;
@@ -24,7 +24,7 @@ export interface ProtoDiagramProps {
   ink?: string;
 }
 
-const KIND: IFigureKind = { Doll: ProtoDoll, fit: fitProtoDoll };
+const KIND: IFigureKind = { Doll: ProtoDoll, layout: protoLayout, fit: fitProtoDoll };
 
 export default function ProtoDiagram({ locations, use, body = "biped", onSelect, selected, inError, frame, ink }: ProtoDiagramProps) {
   const total = locations.reduce((sum, l) => sum + Math.max(0, (use === "armor" ? l.armor : (l.structure ?? 0)) || 0), 0);

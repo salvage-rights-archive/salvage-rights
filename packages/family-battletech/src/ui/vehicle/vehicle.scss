@@ -20,11 +20,6 @@
   display: block;
   width: 100%;
   height: auto;
-
-  [role="button"]:focus-visible {
-    outline: 3px solid var(--sr-focus);
-    outline-offset: 2px;
-  }
 }
 
 .bt-vehicle-mount {

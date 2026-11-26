@@ -3,7 +3,7 @@
 // drawn as that and its pick is reported under the line's own code. With `onSelect` each line is a button named by its name and troopers.
 import FigureDiagram from "../doll/figure-diagram";
 import type { IFigureKind } from "../doll/figure-diagram";
-import InfantryDoll, { fitInfantryDoll } from "../doll/infantry-doll";
+import InfantryDoll, { fitInfantryDoll, infantryLayout } from "../doll/infantry-doll";
 
 export interface DiagramLocation {
   code: string;
@@ -22,7 +22,7 @@ export interface InfantryDiagramProps {
   inError?: string[];
 }
 
-const KIND: IFigureKind = { Doll: InfantryDoll, fit: fitInfantryDoll };
+const KIND: IFigureKind = { Doll: InfantryDoll, layout: infantryLayout, fit: fitInfantryDoll };
 
 export default function InfantryDiagram({ locations, use, kind = "foot", onSelect, selected, inError = [] }: InfantryDiagramProps) {
   return (
@@ -31,7 +31,7 @@ export default function InfantryDiagram({ locations, use, kind = "foot", onSelec
         <FigureDiagram
           key={l.code}
           kind={KIND} unit={{ layout: kind, locations: [{ code: "pl", name: l.name, armor: l.armor, ...(l.structure === undefined ? {} : { structure: l.structure }) }] }}
-          use={use} suffix={`inf-${use}-${l.code}`} labelSize={24} room={{ width: 760, height: 600 }}
+          label={onSelect ? l.name : `${l.name}, ${String(l.armor)} troopers`} use={use} suffix={`inf-${use}-${l.code}`} labelSize={24} room={{ width: 760, height: 600 }}
           {...(onSelect ? { onSelect: () => { onSelect(l.code); } } : {})} {...(selected === l.code ? { selected: "pl" } : {})} {...(inError.includes(l.code) ? { inError: ["pl"] } : {})}
         />
       ))}

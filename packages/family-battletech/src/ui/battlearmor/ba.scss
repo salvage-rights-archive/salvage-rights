@@ -1,12 +1,7 @@
-// The battle armor pages own styles, after the Classic ones they share.
+// The battle armor pages' own styles, after the Classic ones they share.
 .ba-diagram {
   display: block;
   width: 100%;
   max-width: 36rem;
   height: auto;
-
-  [role="button"]:focus-visible {
-    outline: 3px solid var(--sr-focus);
-    outline-offset: 2px;
-  }
 }

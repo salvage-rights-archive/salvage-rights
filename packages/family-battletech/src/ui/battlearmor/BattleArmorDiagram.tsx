@@ -2,7 +2,7 @@
 // the trooper's own bubble. It takes the trooper list and reports a pick; nothing else about a suit reaches it.
 import FigureDiagram from "../doll/figure-diagram";
 import type { IFigureKind } from "../doll/figure-diagram";
-import BattleArmorDoll, { fitBattleArmorDoll } from "../doll/battle-armor-doll";
+import BattleArmorDoll, { battleArmorLayout, fitBattleArmorDoll } from "../doll/battle-armor-doll";
 
 export interface DiagramLocation {
   code: string;
@@ -20,7 +20,7 @@ export interface BattleArmorDiagramProps {
   inError?: string[];
 }
 
-const KIND: IFigureKind = { Doll: BattleArmorDoll, fit: fitBattleArmorDoll };
+const KIND: IFigureKind = { Doll: BattleArmorDoll, layout: battleArmorLayout, fit: fitBattleArmorDoll };
 
 export default function BattleArmorDiagram({ locations, use, body = "humanoid", onSelect, selected, inError }: BattleArmorDiagramProps) {
   return (

@@ -159,13 +159,13 @@ const present = (layout: IFigureLayout, unit: IFigureUnit): { location: IFigureL
     });
 
 /** An invisible rectangle around a part that is smaller than the least target, so that its button is as large as that. */
-const hitArea = (plates: Shape[], least: number | undefined): JSX.Element | null => {
+const hitArea = (plates: Shape[], least: number | undefined, click?: () => void): JSX.Element | null => {
     if (!least || plates.length === 0) return null;
     const xs = plates.flatMap((plate) => plate.map(([x]) => x)), ys = plates.flatMap((plate) => plate.map(([, y]) => y));
     const [left, right, top, bottom] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
     const width = Math.max(right - left, least), height = Math.max(bottom - top, least);
     if (width === right - left && height === bottom - top) return null;
-    return <rect data-hit="" x={round((left + right) / 2 - width / 2)} y={round((top + bottom) / 2 - height / 2)} width={round(width)} height={round(height)} fill="transparent" aria-hidden="true" />;
+    return <rect data-hit="" x={round((left + right) / 2 - width / 2)} y={round((top + bottom) / 2 - height / 2)} width={round(width)} height={round(height)} fill="transparent" aria-hidden="true" {...(click ? { onClick: click, style: { cursor: "pointer" } } : { pointerEvents: "none" as const })} />;
 };
 
 export function FigureDoll(props: IFigureDollProps & { layout: IFigureLayout; testId: string }): JSX.Element {
@@ -224,6 +224,11 @@ export function FigureDoll(props: IFigureDollProps & { layout: IFigureLayout; te
                 </g>
             ) : null}
             {(layout.extras ?? []).filter((extra) => extra.behind).map(drawExtra)}
+            {/* The padded hit areas of small parts all lie under every part drawn, so a real shape always wins over a neighbour's padding. The
+                copy inside each button (which does not take clicks) gives the button its size. */}
+            {interactive && props.minTarget ? (
+                <g data-hits="">{drawn.map(({ location }) => <React.Fragment key={location.code}>{hitArea(figurePlates(location, frame), props.minTarget, () => onSelect?.(location.code))}</React.Fragment>)}</g>
+            ) : null}
             {drawn.map(({ location, at }) => {
                 const chosen = props.selected === location.code;
                 const choose = () => onSelect?.(location.code);

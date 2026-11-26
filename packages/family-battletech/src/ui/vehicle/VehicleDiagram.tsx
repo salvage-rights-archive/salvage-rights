@@ -2,7 +2,7 @@
 // locations. With `onSelect` each location is a button named by its name and points; without it the whole drawing is one labelled image.
 import FigureDiagram from "../doll/figure-diagram";
 import type { IFigureKind } from "../doll/figure-diagram";
-import VehicleDoll, { fitVehicleDoll } from "../doll/vehicle-doll";
+import VehicleDoll, { fitVehicleDoll, vehicleLayout } from "../doll/vehicle-doll";
 
 export interface DiagramLocation {
   code: string;
@@ -26,7 +26,7 @@ export interface VehicleDiagramProps {
   rect?: { x: number; y: number; w: number; h: number };
 }
 
-const KIND: IFigureKind = { Doll: VehicleDoll, fit: fitVehicleDoll };
+const KIND: IFigureKind = { Doll: VehicleDoll, layout: vehicleLayout, fit: fitVehicleDoll };
 
 export default function VehicleDiagram({ locations, use, motive = "tracked", onSelect, selected, inError, label, ink, rect }: VehicleDiagramProps) {
   return (
