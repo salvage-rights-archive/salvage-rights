@@ -92,6 +92,8 @@ export const FORMULAS: Record<string, Formula> = {
   // Targeting computer (p. 238): the weight of the record's direct-fire weapons over 4 (Inner Sphere) or 5 (Clan), rounded up.
   "targeting-computer-is": (_row, record, catalog) => Math.ceil(directFireTons(record, catalog) / 4),
   "targeting-computer-clan": (_row, record, catalog) => Math.ceil(directFireTons(record, catalog) / 5),
+  // Ladder (TechManual p. 245): 100 kg for each 20 meters of length, or part of 20, to a longest of 100 meters.
+  "ladder-tons": (row, _record, _catalog, mount) => Math.ceil((mount?.amount ?? row.amount?.min ?? 0) / 20) / 10,
   // A fuel tank takes a slot for each ton of its weight, or part of one (TechManual p. 244).
   "fuel-tank-slots": (row, record, catalog, mount) => Math.ceil(FORMULAS["fuel-tank-tons"]?.(row, record, catalog, mount) ?? 0),
   // Turret (TechManual p. 98, Combat Vehicle construction): a tenth of the weight of everything mounted in it, up to the half ton. What is

@@ -39,6 +39,7 @@ describe("formula rows", () => {
     ["cargo-liquid-is", 50, { amount: 2.5 }, 2.5, 3], // a slot for each ton or part of one
     ["communications-equipment-is", 50, { amount: 3 }, 3, 3],
     ["extended-fuel-tank-is", 50, { engine: 400 }, 5.5, 6], // a tenth of a 400 engine (52.5 tons), up to 5.5, and a slot for each ton or part of one
+    ["ladder-is", 50, { amount: 30 }, 0.2, 1], // 100 kg for each 20 meters or part of 20; one slot whatever the length
   ];
   it.each(cases)("%s on a %d-ton 'Mech", (id, tons, options, expectedTons, expectedSlots) => {
     expect(facts(id, tons, options)).toEqual({ tons: expectedTons, slots: expectedSlots });

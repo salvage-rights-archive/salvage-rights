@@ -232,7 +232,7 @@ export const CONFIGURATION_COST: Record<string, { structureFactor?: number; conv
 // (printed p.282). A catalog row with no key here is reported as unpriced, never guessed.
 // ---------------------------------------------------------------------------------------------------------------
 /** C-bills each; or per whole ton of the item's weight; or per ton of the 'Mech (the book's "xTT" formulas: spikes are 50 x tonnage). */
-export type Price = number | { perTon: number } | { perUnitTon: number } | { perRating: number } | { perWeight: number; base?: number };
+export type Price = number | { perAmount: number } | { perTon: number } | { perUnitTon: number } | { perRating: number } | { perWeight: number; base?: number };
 // `perWeight` is C-bills for each ton of the item's own weight, not rounded to whole tons (a turret: 5,000 x the turret's tonnage), plus `base` where the table prints one (the drone operating system).
 interface PriceGroup extends Sourced {
   prices: Record<string, Price>;
@@ -456,7 +456,7 @@ export const EQUIPMENT_COST: PriceGroup[] = [
     prices: {
       "searchlight": 2_000, "ejection-seat": 25_000, "extended-fuel-tank": { perTon: 500 }, "communications-equipment": { perTon: 10_000 },
       "cargo-standard": 0, "cargo-liquid": { perTon: 100 }, "cargo-insulated": { perTon: 250 },
-      "cargo-container": 0, "dumper": 5_000, "paramedic-equipment": 7_500,
+      "ladder": { perAmount: 5 }, "cargo-container": 0, "dumper": 5_000, "paramedic-equipment": 7_500,
     },
   },
   {

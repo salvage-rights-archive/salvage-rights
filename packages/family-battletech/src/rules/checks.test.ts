@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { OTHER } from "../data/equipment/other";
+import { WEAPONS } from "../data/equipment/weapons";
 import { createCatalog, expand, type EquipmentGroup } from "./catalog";
 import { CHECKS, runChecks, type Finding } from "./checks";
 import { bipedRecord, lamRecord, mount, quadRecord, tripodRecord } from "./fixtures";
@@ -57,7 +58,7 @@ describe("the shared fixtures", () => {
     ["tripod", tripodRecord()],
   ])("the %s is legal: no error findings, and the checks run in order", (_name, record) => {
     expect(errors(runChecks(record, catalog))).toEqual([]);
-    expect(CHECKS.map((c) => c.id)).toEqual(["weight", "slots", "armor", "engine", "heat-sinks", "jump", "placement", "availability", "level", "configuration", "unit-type", "unmatched", "parts", "era", "shields", "lam", "unsupported", "omni", "frankenmech"]);
+    expect(CHECKS.map((c) => c.id)).toEqual(["weight", "slots", "armor", "engine", "heat-sinks", "jump", "placement", "availability", "level", "configuration", "unit-type", "unmatched", "parts", "era", "shields", "lam", "unsupported", "omni", "frankenmech", "arms", "pairing"]);
   });
 
   it("starts a new tripod with a level error at Standard, citing the page that makes it Advanced, and none at Advanced", () => {
@@ -329,5 +330,47 @@ describe("runChecks", () => {
     expectFinding(findings.filter((f) => f.check === id), { level: "note", text });
     expect(findings.some((f) => f.message.includes("boom"))).toBe(false);
     expect(findings.some((f) => f.check === "engine" || f.check === "armor")).toBe(true);
+  });
+});
+
+describe("arm, tool and pairing checks", () => {
+  const withMounts = (...items: [id: string, equipmentId: string, location: LocationCode][]) => (d: MechRecord) => void d.mounts.push(...items.map(([id, equipmentId, location], i) => mount(id, equipmentId, location, 6 + i)));
+  const noHand = { lowerArm: true, hand: false };
+  const real = createCatalog(expand([...OTHER, ...WEAPONS]));
+  const arms = (check: string, edit: Edit) => runChecks(editRecord(bipedRecord(), edit), real).filter((f) => f.check === check);
+
+  it("a hatchet needs the hand actuator, and an arm holds only one", () => {
+    expectFinding(arms("arms", (d) => (withMounts(["h", "hatchet-is", "LA"])(d), (d.arms = { LA: noHand }))), { level: "error", text: "needs the full set of arm actuators", where: { location: "LA", mountId: "h" }, page: 220 });
+    expect(arms("arms", withMounts(["h", "hatchet-is", "LA"]))).toEqual([]);
+  });
+  it("two hatchets in one arm are one too many", () => {
+    expectFinding(arms("arms", withMounts(["h1", "hatchet-is", "RA"], ["h2", "hatchet-is", "RA"])), { level: "error", text: "more than one Hatchet", where: { mountId: "h2" }, page: 220 });
+  });
+  it("a tool wants the hand removed, and the pile driver the lower arm too", () => {
+    expectFinding(arms("arms", withMounts(["b", "backhoe-is", "LA"])), { level: "error", text: "remove the hand actuator", where: { mountId: "b" }, page: 241 });
+    expect(arms("arms", (d) => (withMounts(["b", "backhoe-is", "LA"])(d), (d.arms = { LA: noHand })))).toEqual([]);
+    expectFinding(arms("arms", (d) => (withMounts(["p", "heavy-duty-pile-driver-is", "LA"])(d), (d.arms = { LA: noHand }))), { level: "error", text: "remove both actuators", page: 244 });
+  });
+  it("two different tools in one arm are refused, and the salvage arm excludes the rest", () => {
+    const off = { LA: { lowerArm: true, hand: false } };
+    expectFinding(arms("arms", (d) => (withMounts(["b", "backhoe-is", "LA"], ["c", "chainsaw-is", "LA"])(d), (d.arms = off))), { level: "error", text: "only one kind of industrial tool", where: { location: "LA", mountId: "c" } });
+    expectFinding(arms("arms", (d) => (withMounts(["s", "salvage-arm-is", "LA"], ["r", "rock-cutter-is", "LA"])(d), (d.arms = off))), { level: "error", text: "salvage arm excludes all the others" });
+  });
+  it("a third lift hoist is refused", () => {
+    expectFinding(arms("pairing", withMounts(["a", "lift-hoist-is", "LA"], ["b", "lift-hoist-is", "RA"], ["c", "lift-hoist-is", "LT"])), { level: "error", text: "3 lift hoists", where: { mountId: "c" }, page: 245 });
+    expect(arms("pairing", withMounts(["a", "lift-hoist-is", "LA"], ["b", "lift-hoist-is", "RA"]))).toEqual([]);
+  });
+  it("an extended fuel tank outside the torso and an ejection seat outside the head are refused", () => {
+    const placed = arms("placement", withMounts(["t", "extended-fuel-tank-is", "LA"], ["e", "ejection-seat-is", "CT"]));
+    expectFinding(placed, { level: "error", text: "t cannot go in the Left Arm", where: { mountId: "t" } });
+    expectFinding(placed, { level: "error", text: "e cannot go in the Center Torso", where: { mountId: "e" } });
+  });
+  it("C3 together with C3i is refused", () => {
+    expectFinding(arms("pairing", withMounts(["m", "c3-computer-master-is", "LT"], ["i", "improved-c3-computer-is", "RT"])), { level: "error", text: "C3 and C3i are incompatible", where: { mountId: "i" }, page: 209 });
+  });
+  it("a heavy Gauss rifle needs a fusion or fission engine", () => {
+    const gauss = withMounts(["g", "heavy-gauss-rifle-is", "LT"]);
+    expectFinding(arms("pairing", (d) => (gauss(d), (d.chassis.engine.type = "ice"))), { level: "error", text: "needs a fusion or fission engine", page: 219 });
+    expect(arms("pairing", gauss)).toEqual([]);
   });
 });
