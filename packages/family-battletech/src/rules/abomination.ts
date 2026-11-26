@@ -285,6 +285,21 @@ export interface GothicForce {
 
 export const newForce = (id: string = crypto.randomUUID()): GothicForce => ({ schema: 1, id, name: "", mechs: [], units: [] });
 
+/**
+ * A copy of the force under a new id: every entry has a new id too (so the copy's tracker state starts clean), a Handler link follows
+ * the copied 'Mech entry, and the copy points at the same saved 'Mechs and units as the original.
+ */
+export function duplicateForce(force: GothicForce, id: string = crypto.randomUUID()): GothicForce {
+  const entryIds = new Map<string, string>();
+  const mechs = force.mechs.map((m) => {
+    const next = crypto.randomUUID();
+    entryIds.set(m.id, next);
+    return { ...structuredClone(m), id: next };
+  });
+  const units = force.units.map((u) => ({ ...structuredClone(u), id: crypto.randomUUID(), ...(u.handlerOf === undefined ? {} : { handlerOf: entryIds.get(u.handlerOf) ?? u.handlerOf }) }));
+  return { ...structuredClone(force), id, name: `${force.name.trim() || "Unnamed force"} (copy)`, mechs, units };
+}
+
 export const newForceMech = (recordId: string, id: string = crypto.randomUUID()): ForceMech => ({
   id,
   recordId,

@@ -246,7 +246,7 @@ export function isOmniChassis(value: unknown): value is OmniChassis {
 }
 
 /** A record saved under an edition id an earlier version used is read as the edition that id means now. */
-function migrated<T extends { editionId: string }>(record: T): T {
+export function migrated<T extends { editionId: string }>(record: T): T {
   const editionId = currentEditionId(record.editionId);
   return editionId === record.editionId ? record : { ...record, editionId };
 }

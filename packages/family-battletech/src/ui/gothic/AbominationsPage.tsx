@@ -166,7 +166,7 @@ export default function AbominationsPage() {
   const remove = async (id: string) => {
     if (!storage) return;
     setConfirming(undefined);
-    if (!(await attempt(STORAGE_WRITE_FAILED, () => storage.remove(id)))) return;
+    if (!(await attempt(STORAGE_WRITE_FAILED, async () => { await storage.remove(id); await storage.removePlay(id); }))) return;
     if (draft?.id === id) setDraft(undefined);
     focusSaved.current = true;
     if (await reload(storage)) say("Deleted.");
