@@ -44,7 +44,7 @@ export type PartUnit = "mech" | "vehicle" | "aero";
 export interface PartFacts {
   techBase?: "inner-sphere" | "clan" | "both";
   rulesLevel?: "standard" | "advanced" | "experimental";
-  /** The unit tonnages the part is for, where the book limits it (a superheavy 'Mech's parts: 101 to 200 tons). */
+  /** The unit tonnages the part is for, where the book limits it (a superheavy 'Mech's parts: 105 to 200 tons; the tripod's standard cockpit, up to 100). */
   tonnage?: { min: number; max: number };
   introduced?: { is?: number; clan?: number; prototype?: ("is" | "clan")[] };
   /** The year the part's prototype appears, before its production year (`introduced`, or the first span of `availability`), from the
@@ -448,8 +448,8 @@ export const GYROS: Sourced & { types: Record<string, GyroType> } = {
     xl: { name: "XL", label: "XL Gyro", multiplier: 0.5, slots: 6, techBase: "inner-sphere", availability: [{ from: 3067 }], prototypeYear: 3055, availabilityCite: UTA(42) },
     // The superheavy gyro (Interstellar Operations: Alternate Eras, rules printed p.156 Add Gyroscope; table p.217, date and Advanced level): the
     // only gyro a superheavy 'Mech may use, weighing as much as a heavy-duty gyro (the engine rating over 100, rounded up, times 2) in two
-    // center torso slots. Data only: `only` names the body the editor does not offer yet.
-    superheavy: { name: "Superheavy", label: "Superheavy Gyro", multiplier: 2.0, slots: 2, only: "superheavy", tonnage: { min: 101, max: 200 }, techBase: "inner-sphere", rulesLevel: "advanced", availability: [{ from: 2940 }], prototypeYear: 2905, cite: { book: IO, page: 217 }, checked: "page" },
+    // center torso slots; `tonnage` keeps it to a superheavy 'Mech and the superheavy rules (SUPERHEAVY) allow no other.
+    superheavy: { name: "Superheavy", label: "Superheavy Gyro", multiplier: 2.0, slots: 2, tonnage: { min: 105, max: 200 }, techBase: "inner-sphere", rulesLevel: "advanced", availability: [{ from: 2940 }], prototypeYear: 2905, cite: { book: IO, page: 217 }, checked: "page" },
   },
 };
 
@@ -469,6 +469,8 @@ export interface CockpitType extends PartFacts {
   cockpit: number[];
   sensors: number[];
   lifeSupport: number[];
+  /** The label of each cockpit slot where it is not "Cockpit" (the QuadVee's pilot and gunner). */
+  cockpitLabels?: string[];
   /** Parts the cockpit puts outside the head, one label per slot, in the first free slots of each location (the book gives no places). */
   elsewhere?: Partial<Record<LocationCode, string[]>>;
 }
@@ -480,8 +482,8 @@ export const COCKPITS: Sourced & { types: Record<string, CockpitType> } = {
     // The Small Cockpit row prints 3067 (Federated Suns) for the Inner Sphere and "Clan Intro: 3080".
     small: { name: "Small", tons: 2, cockpit: [3], sensors: [2, 4], lifeSupport: [1], techBase: "both", introduced: { is: 3067, clan: 3080 }, prototypeYear: { is: 3060 }, availabilityCite: UTA(33) },
     // The tripod's special cockpit weighs 4 tons up to 100 tons and takes the same slots as the standard one (Interstellar
-    // Operations: Alternate Eras, Tripod 'Mech Construction Rules, printed p.159). Its 5-ton superheavy version is out of scope.
-    tripod: { name: "Tripod", tons: 4, only: "tripod", cite: IO_TRIPOD_CONSTRUCTION, cockpit: [3], sensors: [2, 5], lifeSupport: [1, 6] },
+    // Operations: Alternate Eras, Tripod 'Mech Construction Rules, printed p.159); a superheavy tripod's is the 5-ton one below.
+    tripod: { name: "Tripod", tons: 4, only: "tripod", tonnage: { min: 10, max: 100 }, cite: IO_TRIPOD_CONSTRUCTION, cockpit: [3], sensors: [2, 5], lifeSupport: [1, 6] },
     // Torso-mounted cockpit (Tactical Operations: Advanced Units and Equipment, construction rules printed p.112, rules box p.113,
     // cost table p.219; all read against the page image): 4 tons, 2 slots in the center torso (the cockpit and its added sensors),
     // a Life Support slot moved to each side torso, and the head keeps the two default sensor slots.
@@ -544,14 +546,47 @@ export const COCKPITS: Sourced & { types: Record<string, CockpitType> } = {
       lifeSupport: [1, 6],
       rules: "Slots as a standard cockpit. Printed for Primitive BattleMechs, which have their own construction rules.",
     },
+    // The Primitive IndustrialMech's cockpit (IO:AE printed p.117, cost table p.215, table of dates p.44): 5 tons, the slots of a standard cockpit, no fire control and no ejection.
+    "primitive-industrial": {
+      name: "Primitive Industrial",
+      tons: 5,
+      techBase: "inner-sphere",
+      primitive: true,
+      industrial: true,
+      availability: [{ from: 2350, to: 2520 }],
+      prototypeYear: 2300,
+      cite: { book: IO, page: 117 },
+      checked: "page",
+      cockpit: [3],
+      sensors: [2, 5],
+      lifeSupport: [1, 6],
+      rules: "No targeting systems and no ejection; every attack takes +1 to hit besides the industrial fire control modifiers, unless the cockpit is upgraded (TechManual p.69).",
+    },
+    // The QuadVee's cockpit (IO:AE printed pp.127-128, cost table p.215): 4 tons, two cockpit slots in the head, the pilot's and the gunner's (the record sheet, p.226).
+    quadvee: {
+      name: "QuadVee",
+      tons: 4,
+      only: "quadvee",
+      techBase: "clan",
+      rulesLevel: "advanced",
+      availability: [{ from: 3135 }],
+      prototypeYear: 3130,
+      cite: { book: IO, page: 128 },
+      checked: "page",
+      cockpit: [3, 4],
+      cockpitLabels: ["Cockpit (Pilot)", "Cockpit (Gunner)"],
+      sensors: [2, 5],
+      lifeSupport: [1, 6],
+      rules: "Seats a pilot and a gunner.",
+    },
     // Superheavy 'Mech cockpits (Interstellar Operations: Alternate Eras, rules printed p.156, Add Cockpit; costs and dates the Additional Alternate
     // Era table, printed p.215 for the first two and p.217 for the tripod's; Advanced rules level, the table's Rules Level column). A superheavy
-    // 'Mech is 101 to 200 tons and its cockpit weighs 4 tons (5 for the tripod's) and keeps the standard head slots. The app builds no superheavy
-    // 'Mech yet: `only` names a body the editor does not offer, so no picker shows these and the rows are data only. The dates are the table's Latest
+    // 'Mech is 105 to 200 tons and its cockpit weighs 4 tons (5 for the tripod's) and keeps the standard head slots. `tonnage` keeps each to a superheavy
+    // 'Mech (the rules in SUPERHEAVY pick which one a body takes). The dates are the table's Latest
     // Intro Date; the Universal Technology Advancement Table prints 3135 (not 2940) for the tripod cockpit, a conflict the book leaves: one book and printing, so undated, the cost table's 2940 kept (CONFLICTS.md).
-    superheavy: { name: "Superheavy", tons: 4, only: "superheavy", tonnage: { min: 101, max: 200 }, techBase: "inner-sphere", rulesLevel: "advanced", availability: [{ from: 3076 }], prototypeYear: 3060, cite: { book: IO, page: 215 }, checked: "page", cockpit: [3], sensors: [2, 5], lifeSupport: [1, 6], rules: "The reinforced cockpit gives the head 4 points of structure and room for 12 armor points. A biped or quad superheavy may add a Command Console; no other cockpit type fits." },
-    "superheavy-industrial": { name: "Superheavy Industrial", tons: 4, only: "superheavy", tonnage: { min: 101, max: 200 }, techBase: "inner-sphere", rulesLevel: "advanced", industrial: true, availability: [{ from: 2940 }], prototypeYear: 2905, cite: { book: IO, page: 215 }, checked: "page", cockpit: [3], sensors: [2, 5], lifeSupport: [1, 6], rules: "For superheavy IndustrialMechs." },
-    "superheavy-tripod": { name: "Superheavy Tripod", tons: 5, only: "superheavy-tripod", tonnage: { min: 101, max: 200 }, techBase: "inner-sphere", rulesLevel: "advanced", availability: [{ from: 2940 }], cite: { book: IO, page: 217 }, checked: "page", cockpit: [3], sensors: [2, 5], lifeSupport: [1, 6], rules: "Takes the place of the superheavy cockpit and duplicates a Command Console, so a superheavy tripod mounts no separate one." },
+    superheavy: { name: "Superheavy", tons: 4, tonnage: { min: 105, max: 200 }, techBase: "inner-sphere", rulesLevel: "advanced", availability: [{ from: 3076 }], prototypeYear: 3060, cite: { book: IO, page: 215 }, checked: "page", cockpit: [3], sensors: [2, 5], lifeSupport: [1, 6], rules: "The reinforced cockpit gives the head 4 points of structure and room for 12 armor points. A biped or quad superheavy may add a Command Console; no other cockpit type fits." },
+    "superheavy-industrial": { name: "Superheavy Industrial", tons: 4, tonnage: { min: 105, max: 200 }, techBase: "inner-sphere", rulesLevel: "advanced", industrial: true, availability: [{ from: 2940 }], prototypeYear: 2905, cite: { book: IO, page: 215 }, checked: "page", cockpit: [3], sensors: [2, 5], lifeSupport: [1, 6], rules: "For superheavy IndustrialMechs." },
+    "superheavy-tripod": { name: "Superheavy Tripod", tons: 5, only: "tripod", tonnage: { min: 105, max: 200 }, techBase: "inner-sphere", rulesLevel: "advanced", availability: [{ from: 2940 }], cite: { book: IO, page: 217 }, checked: "page", cockpit: [3], sensors: [2, 5], lifeSupport: [1, 6], rules: "Takes the place of the superheavy cockpit and duplicates a Command Console, so a superheavy tripod mounts no separate one." },
   },
 };
 
@@ -1102,8 +1137,10 @@ export interface ConfigurationRow {
   /** The year its prototype appears (the Construction Options table's Prototype column), before the production year; `clanPrototypeYear` for a Clan 'Mech. */
   prototypeYear?: number;
   clanPrototypeYear?: number;
-  /** Set when the table gives the body type to the Inner Sphere only. */
-  techBase?: "inner-sphere";
+  /** Set when the table gives the body type to one tech base only (the tripod: Inner Sphere; the QuadVee: Clan). */
+  techBase?: "inner-sphere" | "clan";
+  /** Conversion equipment, as a percentage of the unit's tonnage rounded up to a whole ton (a QuadVee's; the Land-Air 'Mech's are in LAM). */
+  conversionPercent?: number;
   levelCite?: Cite; // the page that states a rules level other than standard
   construction?: Sourced; // the page that states this body type's construction changes
   structureExtra?: number;
@@ -1115,6 +1152,8 @@ export interface ConfigurationRow {
 }
 const BIPED_SIZE = { HD: 6, CT: 12, LT: 12, RT: 12, LA: 12, RA: 12, LL: 6, RL: 6 } as const;
 const LEG = ["Hip", "Upper Leg Actuator", "Lower Leg Actuator", "Foot Actuator"];
+// A QuadVee's legs carry the conversion gear in the fifth slot and the tracks or wheels in the sixth (the record sheet, IO:AE printed p.226).
+const QUADVEE_LEG = [...LEG, "Conversion Gear"];
 const ARM = ["Shoulder", "Upper Arm Actuator", "Lower Arm Actuator", "Hand Actuator"];
 // A Land-Air 'Mech is built on a biped's body; both kinds are experimental rules (IO:AE printed p.100).
 const LAM_ROW = {
@@ -1161,6 +1200,22 @@ export const SHEET = {
       size: { ...BIPED_SIZE, CL: 6 },
       fixed: { LA: ARM, RA: ARM, LL: LEG, RL: LEG, CL: LEG },
     },
+    // The QuadVee (IO:AE printed pp.127-128; years from the Construction Options table, p.44: prototype ~3130, production 3135, Clan Hell's Horses). Advanced
+    // rules, Clan technology only, a four-legged BattleMech of 20 to 100 tons that may be an OmniMech. Conversion equipment is 10 percent of the tonnage.
+    quadvee: {
+      name: "QuadVee",
+      body: "quad",
+      rulesLevel: "advanced",
+      techBase: "clan",
+      availability: [{ from: 3135 }],
+      prototypeYear: 3130,
+      levelCite: { book: IO_AE, page: 127 },
+      construction: { cite: { book: IO_AE, page: 128 }, checked: "page" },
+      conversionPercent: 10,
+      cockpit: "quadvee",
+      size: { HD: 6, CT: 12, LT: 12, RT: 12, FLL: 6, FRL: 6, RLL: 6, RRL: 6 },
+      fixed: { FLL: QUADVEE_LEG, FRL: QUADVEE_LEG, RLL: QUADVEE_LEG, RRL: QUADVEE_LEG },
+    },
     lam: { ...LAM_ROW, name: "Land-Air 'Mech", availability: [{ from: 2688, to: 3085 }], clanAvailability: [{ from: 2688, to: 2825 }], prototypeYear: 2683 },
     "bimodal-lam": { ...LAM_ROW, name: "Bimodal Land-Air 'Mech", availability: [{ from: 2684, to: 2781 }], clanAvailability: [{ from: 2684, to: 2801 }], prototypeYear: 2680 },
   } satisfies Record<string, ConfigurationRow>,
@@ -1175,7 +1230,7 @@ export const SHEET = {
 // Primitive kinds, 2443 and 2350, have their own construction rules, IO:AE p.116, which this tool does not build); Omni Technology
 // 2856 for the Clans and 3052 for the Inner Sphere (p.45: "IS Intro: 3052").
 // ---------------------------------------------------------------------------------------------------------------
-export type MechType = "mech" | "industrialmech" | "omnimech";
+export type MechType = "mech" | "industrialmech" | "omnimech" | "primitive-mech" | "primitive-industrialmech";
 export interface IndustrialRules {
   /** The page each rule is read from: TechManual's IndustrialMech Construction chapter (printed pp.64-75). */
   cites: Record<"techBase" | "configuration" | "structure" | "engine" | "heatSinks" | "jump" | "cockpit" | "gyro" | "myomer" | "armor" | "powerAmplifier" | "fireControl", Cite>;
@@ -1195,6 +1250,33 @@ export interface IndustrialRules {
   powerAmplifier: { engines: string[]; share: number };
   /** Catalog rows barred unless the cockpit has Advanced Fire Control (Artemis IV, Beagle Active Probe or its Clan equivalent, C3 and C3i units, targeting computers). */
   needsFireControl: string[];
+}
+/**
+ * The Primitive 'Mech construction rules (Interstellar Operations: Alternate Eras, game rules printed pp.114-116, construction rules pp.116-118, read
+ * against the page images): a BattleMech or IndustrialMech of the Age of War, built by the TechManual rules with these changes. Inner Sphere only; a biped
+ * or quad of 10 to 100 tons; the structure, armor, cockpit, gyro, engines and heat sinks its row lists; the engine rating times 1.2, rounded up to the
+ * Master Engine Table, is what the engine and gyro weigh and what the free heat sinks are counted from; jump jets only from the year the prototype
+ * appears and only on a fusion or fission engine; no speed or strength enhancements; equipment only if it was introduced by 2500.
+ */
+export interface PrimitiveRules {
+  cite: Cite;
+  /** The page of the Restricted Technologies the rules above quote, and of the equipment limit. */
+  restrictedCite: Cite;
+  equipmentCite: Cite;
+  ratingFactor: number;
+  /** The Master Engine Table's step: the modified rating is rounded up to a multiple of it. */
+  ratingStep: number;
+  /** The last year of introduction an item may have: "an introduction date of 2500 or earlier". */
+  equipmentUntil: number;
+  /** The part keys the type may use, by table, the way an IndustrialMech's rules list them. */
+  parts: Record<"structure" | "engine" | "gyro" | "cockpit" | "heatSink" | "myomer" | "armor", string[]>;
+  /** The first year a primitive 'Mech may jump (the prototype jump jets, IO:AE p.114: introduced 2464) and the engines that may power jump jets. */
+  jumpFrom: number;
+  jumpEngines: string[];
+  /** Catalog id stems a primitive 'Mech may not mount: improved jump jets and jump boosters, speed and strength enhancements. */
+  barredStems: string[];
+  configurations: string[];
+  techBases: ("inner-sphere" | "clan" | "mixed")[];
 }
 export interface MechTypeRow {
   id: MechType;
@@ -1217,7 +1299,11 @@ export interface MechTypeRow {
   prototypeYear?: number;
   clanPrototypeYear?: number;
   tonnage: { min: number; max: number; step: number; cite: Cite };
+  /** The type may also be superheavy, above `tonnage.max` (SUPERHEAVY): a BattleMech, an IndustrialMech and an OmniMech, not a primitive one. */
+  superheavy?: true;
   industrial?: IndustrialRules;
+  /** Present on a Primitive BattleMech or IndustrialMech: the rules above, which replace the type's part lists. */
+  primitive?: PrimitiveRules;
   omni?: OmniRules;
 }
 /** What the books say about an OmniMech (TechManual pp.19-20, 44-58, read against the page image except where `checked` says text). */
@@ -1304,6 +1390,116 @@ export const FRANKENMECH: {
   locationCount: 8,
   legPiloting: { notOneMech: 1, differentTonnage: 2 },
 };
+/**
+ * Superheavy 'Mechs: a BattleMech or IndustrialMech of 105 to 200 tons (Interstellar Operations: Alternate Eras, game rules printed p.153,
+ * construction rules pp.154-157, read against the page images; the corrected second printing). Not a body type of its own: a biped, quad or
+ * tripod is superheavy by its tonnage. Advanced rules, Inner Sphere only, and no OmniMech if an IndustrialMech. The construction changes,
+ * each a rule the code reads from here: the structure table and the weights of the four structure types (twice the standard figure for the
+ * type), a head of 4 structure points that may carry 12 armor, half the critical slots (rounded up) for every engine, armor and equipment
+ * cell (the structure types and the gyro print their own counts), more than one heat sink or round of ammunition to a cell, no jump
+ * equipment, no speed or strength enhancements, and cockpits of their own.
+ */
+export interface SuperheavyRules {
+  rulesLevel: RulesLevel;
+  /** The page of the game rules (the level, the tech base, the dates) and of the construction rules. */
+  levelCite: Cite;
+  cite: Cite;
+  checked: Checked;
+  minTons: number;
+  maxTons: number;
+  step: number;
+  /** The most a standard 'Mech weighs; a 'Mech above it is a superheavy one. */
+  standardMaxTons: number;
+  structure: {
+    cite: Cite;
+    /** Points per location by tonnage (the Superheavy 'Mech Structure Table, printed p.155). */
+    rows: Record<number, StructureRow>;
+    headPoints: number;
+    headMaxArmor: number;
+    /** What a standard 'Mech's weight factor for the type is multiplied by (standard 20 percent, endo steel 10, endo composite 15, industrial 40). */
+    weightMultiplier: number;
+    /** The critical slots of the types that take any; the others take none. */
+    slots: Record<string, number>;
+  };
+  /** The part keys a superheavy 'Mech may use, by 'Mech type; a table not listed takes what its type's rules allow. */
+  parts: Record<"mech" | "industrialmech", Partial<Record<"structure" | "engine" | "gyro" | "myomer", string[]>>>;
+  /** The cockpit keys: the tripod's own for every tripod, else the type's. A superheavy BattleMech that is not a tripod may add a command console. */
+  cockpits: { tripod: string; mech: string; industrialmech: string };
+  /** The share of a standard slot count a superheavy 'Mech's engine, armor and equipment take, rounded up. */
+  slotFactor: number;
+  /** Heat sinks in one cell, by heat sink type key; a type not listed holds one. `ammoPerCell`: rounds of one kind of ammunition in one cell. */
+  heatSinksPerCell: Record<string, number>;
+  ammoPerCell: number;
+  /** Catalog id stems no superheavy 'Mech may mount, and the stealth items that do nothing on one. */
+  barred: { stems: string[]; why: string }[];
+  noEffect: { stems: string[]; why: string };
+  /** Production and prototype years by 'Mech type and body: the Word of Blake's BattleMech (the entry, p.153), the Free Worlds League's IndustrialMech, and the tripods (p.157, p.42). */
+  dates: Record<"mech" | "industrialmech" | "mechTripod" | "industrialTripod", { availability: Span[]; prototypeYear?: number }>;
+  datesCite: Cite;
+}
+export const SUPERHEAVY: SuperheavyRules = {
+  rulesLevel: "advanced",
+  levelCite: { book: IO, page: 153 },
+  cite: { book: IO, page: 154 },
+  checked: "page",
+  minTons: 105,
+  maxTons: 200,
+  step: 5,
+  standardMaxTons: 100,
+  structure: {
+    cite: { book: IO, page: 155 },
+    headPoints: 4,
+    headMaxArmor: 12,
+    weightMultiplier: 2,
+    slots: { "endo-steel": 7, "endo-composite": 4 },
+    rows: {
+      105: { ct: 32, side: 22, arm: 17, leg: 22 },
+      110: { ct: 33, side: 23, arm: 18, leg: 23 },
+      115: { ct: 35, side: 24, arm: 19, leg: 24 },
+      120: { ct: 36, side: 25, arm: 20, leg: 25 },
+      125: { ct: 38, side: 26, arm: 21, leg: 26 },
+      130: { ct: 39, side: 27, arm: 21, leg: 27 },
+      135: { ct: 41, side: 28, arm: 22, leg: 28 },
+      140: { ct: 42, side: 29, arm: 23, leg: 29 },
+      145: { ct: 44, side: 31, arm: 24, leg: 31 },
+      150: { ct: 45, side: 32, arm: 25, leg: 32 },
+      155: { ct: 47, side: 33, arm: 26, leg: 33 },
+      160: { ct: 48, side: 34, arm: 26, leg: 34 },
+      165: { ct: 50, side: 35, arm: 27, leg: 35 },
+      170: { ct: 51, side: 36, arm: 28, leg: 36 },
+      175: { ct: 53, side: 37, arm: 29, leg: 37 },
+      180: { ct: 54, side: 38, arm: 30, leg: 38 },
+      185: { ct: 56, side: 39, arm: 31, leg: 39 },
+      190: { ct: 57, side: 40, arm: 31, leg: 40 },
+      195: { ct: 59, side: 41, arm: 32, leg: 41 },
+      200: { ct: 60, side: 42, arm: 33, leg: 42 },
+    },
+  },
+  parts: {
+    mech: { structure: ["standard", "endo-steel", "endo-composite"], engine: ["standard", "light", "compact", "xl", "xxl"], gyro: ["superheavy"], myomer: ["standard"] },
+    industrialmech: { structure: ["industrial"], engine: ["standard"], gyro: ["superheavy"], myomer: ["standard"] },
+  },
+  cockpits: { tripod: "superheavy-tripod", mech: "superheavy", industrialmech: "superheavy-industrial" },
+  slotFactor: 0.5,
+  heatSinksPerCell: { single: 2, compact: 4, "double-clan": 1 },
+  ammoPerCell: 2,
+  barred: [
+    { stems: ["jump-jet", "improved-jump-jet", "mechanical-jump-booster", "partial-wing", "umu", "jump-pack"], why: "nothing has been built that can lift or drive a machine this heavy through the air or under water" },
+    { stems: ["masc", "supercharger", "aes-arm", "aes-leg"], why: "a machine this big cannot use a speed or strength booster" },
+    { stems: ["armored-component"], why: "the rules do not let a machine this size carry armored components" },
+  ],
+  noEffect: { stems: ["chameleon-lps", "null-signature-system", "void-signature-system"], why: "a machine this large is too big for the system to hide it" },
+  dates: {
+    // The book panel's ruling (2026-11-27): the entry's 3076 is the BattleMech's production year (the Construction Options row's 3077 and 3078 are dropped; the
+    // parts' own rows, pp.42 and 215, agree), with no prototype year; the IndustrialMech 2940; the tripods follow their own structure rows, ~3130 / 3135 and ~2930 / 2940.
+    mech: { availability: [{ from: 3076 }] },
+    industrialmech: { availability: [{ from: 2940 }] },
+    mechTripod: { availability: [{ from: 3135 }], prototypeYear: 3130 },
+    industrialTripod: { availability: [{ from: 2940 }], prototypeYear: 2930 },
+  },
+  datesCite: { book: IO, page: 153 },
+};
+
 const TM_P = (page: number): Cite => ({ book: "TechManual", page });
 export const MECH_TYPES: MechTypeRow[] = [
   {
@@ -1319,6 +1515,7 @@ export const MECH_TYPES: MechTypeRow[] = [
     availability: [{ from: 2470 }],
     prototypeYear: 2460,
     tonnage: { min: 20, max: 100, step: 5, cite: TM_P(46) },
+    superheavy: true,
   },
   {
     id: "industrialmech",
@@ -1333,6 +1530,7 @@ export const MECH_TYPES: MechTypeRow[] = [
     availability: [{ from: 2470 }],
     prototypeYear: 2460,
     tonnage: { min: 10, max: 100, step: 5, cite: TM_P(64) },
+    superheavy: true,
     industrial: {
       cites: {
         techBase: TM_P(64),
@@ -1349,12 +1547,13 @@ export const MECH_TYPES: MechTypeRow[] = [
         fireControl: TM_P(69),
       },
       techBases: ["inner-sphere", "clan", "mixed"],
-      configurations: ["biped", "quad"],
+      // A tripod IndustrialMech is the Tripod 'Mech rules' (IO:AE printed pp.158-159: available to BM and IM, its own 4-ton cockpit).
+      configurations: ["biped", "quad", "tripod"],
       parts: {
         structure: ["industrial"],
         engine: ["standard", "ice", "fuel-cell", "fission"],
         gyro: ["standard"],
-        cockpit: ["industrial", "industrial-afc"],
+        cockpit: ["industrial", "industrial-afc", "tripod"],
         heatSink: ["single"],
         myomer: ["standard", "industrial-tsm"],
         armor: ["standard", "industrial", "commercial"],
@@ -1398,8 +1597,9 @@ export const MECH_TYPES: MechTypeRow[] = [
     clanAvailability: [{ from: 2856 }],
     clanPrototypeYear: 2854,
     tonnage: { min: 20, max: 100, step: 5, cite: TM_P(46) },
+    superheavy: true,
     omni: {
-      bodies: ["biped", "quad", "tripod"],
+      bodies: ["biped", "quad", "tripod", "quadvee"],
       bodyCite: TM_P(44),
       checked: "page",
       fixed: [
@@ -1421,3 +1621,60 @@ export const MECH_TYPES: MechTypeRow[] = [
     },
   },
 ];
+
+const industrialRules = MECH_TYPES.find((row) => row.id === "industrialmech")?.industrial as IndustrialRules;
+const IO_PRIMITIVE = (page: number): Cite => ({ book: IO, page });
+const PRIMITIVE_COMMON = {
+  cite: IO_PRIMITIVE(116),
+  restrictedCite: IO_PRIMITIVE(115),
+  equipmentCite: IO_PRIMITIVE(118),
+  ratingFactor: 1.2,
+  ratingStep: 5,
+  equipmentUntil: 2500,
+  jumpFrom: 2464,
+  jumpEngines: ["standard", "fission"],
+  barredStems: ["improved-jump-jet", "mechanical-jump-booster", "partial-wing", "jump-pack", "masc", "supercharger", "aes-arm", "aes-leg"],
+  configurations: ["biped", "quad"],
+  techBases: ["inner-sphere" as const],
+};
+// Primitive BattleMechs and IndustrialMechs: the Construction Options table (IO:AE printed p.44, read against the page image) gives the Primitive BattleMech
+// (Biped and Quad) a prototype in 2439 and production from 2443, and the Primitive IndustrialMech a prototype in 2300 and production from 2350; both are
+// extinct in 2520 ("Ext: 2520"). The game rules (p.116) say Advanced. Both are 10 to 100 tons in steps of 5 (printed p.116, Choose Weight).
+MECH_TYPES.push(
+  {
+    id: "primitive-mech",
+    label: "Primitive BattleMech",
+    description: "An Age of War 'Mech: plain structure, a 5-ton cockpit with its own fire control, primitive armor and engines that must be rated a fifth higher for the same speed.",
+    unit: "mech",
+    rulesLevel: "advanced",
+    ready: true,
+    cite: IO_PRIMITIVE(116),
+    availabilityCite: IO_PRIMITIVE(44),
+    checked: "page",
+    availability: [{ from: 2443, to: 2520 }],
+    prototypeYear: 2439,
+    tonnage: { min: 10, max: 100, step: 5, cite: IO_PRIMITIVE(116) },
+    primitive: { ...PRIMITIVE_COMMON, parts: { structure: ["standard"], engine: ["standard", "ice", "fuel-cell", "fission"], gyro: ["standard"], cockpit: ["primitive"], heatSink: ["single"], myomer: ["standard"], armor: ["primitive"] } },
+  },
+  {
+    id: "primitive-industrialmech",
+    label: "Primitive IndustrialMech",
+    description: "An Age of War work 'Mech: industrial structure, a 5-ton cockpit with no fire control, commercial armor and engines that must be rated a fifth higher.",
+    unit: "industrialmech",
+    rulesLevel: "advanced",
+    ready: true,
+    cite: IO_PRIMITIVE(116),
+    availabilityCite: IO_PRIMITIVE(44),
+    checked: "page",
+    availability: [{ from: 2350, to: 2520 }],
+    prototypeYear: 2300,
+    tonnage: { min: 10, max: 100, step: 5, cite: IO_PRIMITIVE(116) },
+    primitive: { ...PRIMITIVE_COMMON, parts: { structure: ["industrial"], engine: ["standard", "ice", "fuel-cell", "fission"], gyro: ["standard"], cockpit: ["primitive-industrial"], heatSink: ["single"], myomer: ["standard"], armor: ["commercial"] } },
+    industrial: {
+      ...industrialRules,
+      techBases: ["inner-sphere"],
+      configurations: ["biped", "quad"],
+      parts: { structure: ["industrial"], engine: ["standard", "ice", "fuel-cell", "fission"], gyro: ["standard"], cockpit: ["primitive-industrial"], heatSink: ["single"], myomer: ["standard"], armor: ["commercial"] },
+    },
+  },
+);

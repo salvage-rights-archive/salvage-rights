@@ -127,7 +127,16 @@ export const ENGINE_BV_MODIFIER: Sourced & { values: Record<string, number> } = 
 export const GYRO_BV_MODIFIER: Sourced & { values: Record<string, number> } = {
   cite: { book: TM, page: 315 },
   checked: "page",
-  values: { standard: 0.5, compact: 0.5, xl: 0.5, "heavy-duty": 1.0 },
+  // The superheavy gyro counts as a standard one: IO:AE printed p.187 says "standard Gyro"; the summary table on p.190 says Heavy Duty. The
+  // rules text wins over a table's one-line summary of it (the ledger holds the conflict), so 0.5.
+  values: { standard: 0.5, compact: 0.5, xl: 0.5, "heavy-duty": 1.0, superheavy: 0.5 },
+};
+/** A superheavy 'Mech's engine modifiers, in place of the standard table (Superheavy Engine Type BV Modifier Table, IO:AE printed p.188, read against the
+ * page image). Keys are the chassis table's; the Large engines are not in the engine table yet. */
+export const SUPERHEAVY_ENGINE_BV_MODIFIER: Sourced & { values: Record<string, number> } = {
+  cite: { book: IO, page: 188 },
+  checked: "page",
+  values: { standard: 1.0, light: 0.825, compact: 1.0, xl: 0.75, "xl-clan": 0.825, xxl: 0.5, "xxl-clan": 0.75 },
 };
 
 /**
@@ -290,7 +299,7 @@ export const UNFIXED: Record<string, string> = {
   "mechanical-jump-booster-is": "it adds Jumping MP chosen by the designer, which the record does not hold (TO:AUE p.192)",
   "jump-pack-is": "it adds Jumping MP from the pack weight and the unit weight, not computed here (TO:AUE p.192)",
   "jump-pack-clan": "it adds Jumping MP from the pack weight and the unit weight, not computed here (TO:AUE p.192)",
-  "protomech-quad-melee-weapon-system-clan": "its BV is its damage (2 per 5 tons of a quadruped ProtoMech) times 1.25 (IO:AE p. 190), and the editor builds no quadruped yet",
+  "protomech-quad-melee-weapon-system-clan": "its BV is its damage (2 per 5 tons of a quadruped ProtoMech) times 1.25 (IO:AE p. 190); the ProtoMech editor works it out for a quad, and no other unit carries it",
   "vehicular-mine-dispenser-is": "its BV is that of a 10-point minefield of the mine it carries, which the row does not fix (TO:AUE p. 195)",
   "vehicular-mine-dispenser-clan": "its BV is that of a 10-point minefield of the mine it carries, which the row does not fix (TO:AUE p. 195)",
 };
@@ -675,6 +684,8 @@ export const WEAPON_BV: BvGroup[] = [
 ];
 /** "Other Equipment" and the physical and industrial items: BV added in full, never sorted by heat. */
 export const EQUIPMENT_BV: BvGroup[] = [
+  // A QuadVee's wheels add nothing: the unit is valued as a standard quad BattleMech with no further modifiers (IO:AE printed p.187).
+  { cite: { book: IO, page: 187 }, checked: "page", rows: [["wheels-clan", 0]] },
   {
     cite: { book: TM, page: 317 },
     checked: "page",

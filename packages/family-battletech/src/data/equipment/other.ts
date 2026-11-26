@@ -665,6 +665,8 @@ export const OTHER: EquipmentGroup[] = [
     // each leg; environmental sealing is a tenth of the IndustrialMech, one slot in each body location. The cost tables print no price for either.
     defaults: { kind: "other", techBase: "clan", cite: { book: "TechManual", page: 344 }, checked: "page", yearsInferred: true },
     items: [
+      // A QuadVee's wheels (IO:AE printed p.128, cost table p.215): 15 percent of the unit, one slot in each of the four legs; the cost table's date is 3150 (the game rules say 3148).
+      { id: "wheels-clan", name: "Wheels", tons: "wheels-tons", slots: 1, availability: [{ from: 3150 }], prototypeYear: 3148, cite: { book: "Interstellar Operations: Alternate Eras", page: 128 }, locations: ["FLL", "FRL", "RLL", "RRL"], perMech: 4, splitWeight: true, units: ["mech"] },
       { id: "tracks-clan", name: "Tracks", aliases: ["Track"], tons: "tenth-tons", slots: 1, availability: [{ from: 2440 }], locations: ["LL", "RL"], locationsQuad: ["FLL", "FRL", "RLL", "RRL"], perMech: 2, perMechQuad: 4, splitWeight: true, units: ["mech", "industrialmech"] },
       { id: "environmental-sealing-clan", name: "Environmental Sealing", aliases: ["Environmental Sealing (IndustrialMech)"], tons: "ceil-tenth-tons", slots: 1, availability: [{ from: 1950 }], perMech: 8, splitWeight: true, units: ["industrialmech"] },
     ],

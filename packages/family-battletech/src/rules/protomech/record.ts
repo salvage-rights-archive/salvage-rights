@@ -36,7 +36,11 @@ export interface ProtoRecord {
   era?: string;
   rulesLevel?: RulesLevel;
   tons: number;
+  /** The chassis: "biped" (absent), "quad" or "glider" (data/protomech.ts). A value we do not know is kept and reported. From 10 tons the unit is Ultraheavy, whatever its chassis. */
+  configuration?: string;
+  /** Walking MP; for a glider its WiGE Cruising MP (it moves only 1 MP on the ground). */
   walk: number;
+  /** Jumping MP; a glider has none. */
   jump: number;
   /** The ProtoMech Myomer Booster (a Running MP of twice the Walking MP). */
   booster: boolean;
@@ -56,6 +60,8 @@ export interface ProtoRecord {
   official?: OfficialMark;
   notes: Record<string, string>;
   picture?: { dataUrl: string };
+  /** Set when the unit came from mordel.net: which unit, when, and the values Mordel gave for it (to compare with ours). */
+  source?: { kind: "mordel"; unitType: string; id: number; designer: string; fetchedAt: string; values: { battleValue?: number; cost?: number; rulesLevel?: string; era?: string } };
 }
 
 export interface NewProtoFields {
@@ -63,6 +69,7 @@ export interface NewProtoFields {
   chassis?: string;
   model?: string;
   tons?: number;
+  configuration?: string;
   walk?: number;
   year?: number | null;
   era?: string;
@@ -90,6 +97,7 @@ export function newProtoRecord(fields: NewProtoFields = {}): ProtoRecord {
     mounts: [],
     notes: {},
   };
+  if (fields.configuration !== undefined && fields.configuration !== "biped") record.configuration = fields.configuration;
   if (fields.era !== undefined) record.era = fields.era;
   if (fields.rulesLevel !== undefined) record.rulesLevel = fields.rulesLevel;
   return record;
@@ -128,7 +136,7 @@ function officialOf(v: unknown): OfficialMark | undefined {
   return mark;
 }
 
-const RECORD_KEYS = ["schema", "id", "editionId", "name", "unitType", "techBase", "year", "era", "rulesLevel", "tons", "walk", "jump", "booster", "mainGun", "cockpit", "armorType", "jumpType", "partialWing", "heatSinks", "armor", "mounts", "official", "notes", "picture"] as const;
+const RECORD_KEYS = ["schema", "id", "editionId", "name", "unitType", "techBase", "year", "era", "rulesLevel", "tons", "configuration", "walk", "jump", "booster", "mainGun", "cockpit", "armorType", "jumpType", "partialWing", "heatSinks", "armor", "mounts", "official", "notes", "picture", "source"] as const;
 
 /**
  * Reads a record from storage, a file or an import. Every field this version knows is filled with its default where it is missing or not
@@ -162,6 +170,8 @@ export function withDefaults(value: unknown, fallbackId = ""): ProtoRecord | und
   if (isString(v.cockpit)) record.cockpit = v.cockpit;
   if (isString(v.armorType)) record.armorType = v.armorType;
   if (isString(v.jumpType)) record.jumpType = v.jumpType;
+  if (isString(v.configuration) && v.configuration !== "biped") record.configuration = v.configuration;
+  if (isObject(v.source) && v.source.kind === "mordel") record.source = v.source as unknown as NonNullable<ProtoRecord["source"]>;
   if (v.partialWing === true) record.partialWing = true;
   if (isString(v.era)) record.era = v.era;
   if (RULES_LEVELS.some((l) => l.id === v.rulesLevel)) record.rulesLevel = v.rulesLevel as RulesLevel;

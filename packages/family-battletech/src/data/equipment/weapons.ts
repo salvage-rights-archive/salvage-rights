@@ -419,7 +419,7 @@ export const WEAPONS: EquipmentGroup[] = [
     items: [
       { id: "fusillade-launcher-clan", name: "Fusillade Launcher", tons: 1.5, slots: 1, type: "M, C, S*", damage: "2/Msl", range: [4, 5, 10, 15], availability: [{ from: 3072, to: 3075 }], rulesLevel: "experimental" },
       { id: "magnetic-clamp-system-clan", name: "Magnetic Clamp System", aliases: ["MCS"], tons: 0.25, slots: 1, type: "PE", availability: [{ from: 3075 }], prototypeYear: 3070, rulesLevel: "advanced" },
-      { id: "protomech-quad-melee-weapon-system-clan", name: "ProtoMech Quad Melee Weapon System", aliases: ["ProtoMech Quad Melee System"], tons: 1, slots: 1, type: "ME", heat: 0, damage: "Special", availability: [{ from: 3072 }], prototypeYear: 3066, rulesLevel: "advanced" },
+      { id: "protomech-quad-melee-weapon-system-clan", name: "ProtoMech Quad Melee Weapon System", aliases: ["ProtoMech Quad Melee System", "ProtoMech Quad Melee Weapon"], tons: 1, slots: 1, type: "ME", heat: 0, damage: "Special", availability: [{ from: 3072 }], prototypeYear: 3066, rulesLevel: "advanced" },
       { id: "protomech-melee-weapon-clan", name: "ProtoMech Melee Weapon", tons: 0.5, slots: 1, type: "ME", heat: 0, damage: "Special", availability: [{ from: 3077 }], prototypeYear: 3067, rulesLevel: "experimental", cite: { book: TO, page: 223 }, playCite: { book: TO, page: 222 }, locations: ["LA", "RA"] },
     ],
   },

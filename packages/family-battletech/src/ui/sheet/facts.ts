@@ -160,7 +160,7 @@ export function sheetFacts(record: MechRecord, catalog: Catalog, options: { dazz
     walkBest: moved !== null && walkMost > moved.walk ? String(walkMost) : undefined,
     runBest: moved !== null && runMost > moved.run ? String(runMost) : undefined,
     jump: penalty.noJump ? "0" : taken(jumpJets, jumpJets > 0 ? penalty.jump : 0),
-    movementNote: penalty.short.length > 0 ? penalty.short.join("; ") : undefined,
+    movementNote: [...(moved === null || record.configuration !== "quadvee" ? [] : [quadveeVehicleMode(record, moved.walk, moved.run)]), ...penalty.short].join("; ") || undefined,
     tons: String(record.tons),
     frankenmech: record.frankenmech !== undefined,
     techBase: Object.hasOwn(TECH_BASE_NAMES, record.techBase) ? (TECH_BASE_NAMES[record.techBase] ?? record.techBase) : record.techBase,
@@ -189,6 +189,13 @@ export function sheetFacts(record: MechRecord, catalog: Catalog, options: { dazz
     })),
     designer: record.source?.kind === "mordel" ? record.source.designer || "an unnamed designer" : undefined,
   };
+}
+
+/** A QuadVee's vehicle mode movement (IO:AE printed p.127): tracks turn Walking and Running MP into Cruising and Flank, wheels add 1 Cruising MP and take Flank as normal. */
+function quadveeVehicleMode(record: MechRecord, walk: number, run: number): string {
+  const wheels = record.mounts.some((m) => m.equipmentId === "wheels-clan");
+  const cruise = wheels ? walk + 1 : walk;
+  return `Vehicle mode: Cruising ${cruise}, Flank ${wheels ? Math.ceil(cruise * 1.5) : run}`;
 }
 
 /** A movement figure with its best case in brackets, `8 [10]`, when the myomer gives one. */

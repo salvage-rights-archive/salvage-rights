@@ -16,7 +16,7 @@ export interface SheetPilot {
 }
 
 /** With `gothic`, Gothic's check boxes: Frayed always, Handler only where the unit may carry one. */
-export default function WarriorData({ rect, gothic, pilot }: { rect: Rect; gothic?: { handler: boolean }; pilot?: SheetPilot }) {
+export default function WarriorData({ rect, gothic, pilot, gunner }: { rect: Rect; gothic?: { handler: boolean }; pilot?: SheetPilot; /** A second warrior, the gunner (a QuadVee's crew): the block holds two compact ones. */ gunner?: boolean }) {
   const { x, y } = rect;
   const rule = (x1: number, x2: number, ry: number) => <line x1={x1} x2={x2} y1={ry} y2={ry} stroke={INK} strokeWidth={2} />;
   const cells = CONSCIOUSNESS.length;
@@ -54,6 +54,27 @@ export default function WarriorData({ rect, gothic, pilot }: { rect: Rect; gothi
       )}
     </g>
   );
+  if (gunner) {
+    const crew = (who: string, top: number, filled: SheetPilot | undefined) => (
+      <g data-warrior={who.toLowerCase()}>
+        <text x={x + 24} y={top} fontSize={22} fontWeight={700} fill={INK}>{`${who}:`}</text>
+        {rule(x + 112, x + rect.w - 24, top + 2)}
+        {filled && filled.name.trim() !== "" && <text x={x + 120} y={top - 4} fontSize={22} fill={INK} {...squeeze(filled.name.trim(), 22, rect.w - 150)}>{filled.name.trim()}</text>}
+        <text x={x + 24} y={top + 36} fontSize={20} fontWeight={700} fill={INK}>Gunnery:</text>
+        {rule(x + 118, x + 168, top + 38)}
+        <text x={x + 200} y={top + 36} fontSize={20} fontWeight={700} fill={INK}>Piloting:</text>
+        {rule(x + 292, x + 342, top + 38)}
+        {row("Hits Taken", ["1", "2", "3", "4", "5", "6"], top + 56)}
+        {row("Consciousness #", CONSCIOUSNESS, top + 108)}
+      </g>
+    );
+    return (
+      <Frame rect={rect} title="WARRIOR DATA">
+        {crew("Pilot", y + 84, pilot)}
+        {crew("Gunner", y + 84 + 190, undefined)}
+      </Frame>
+    );
+  }
   return (
     <Frame rect={rect} title="WARRIOR DATA">
       <text x={x + 24} y={y + 84} fontSize={24} fontWeight={700} fill={INK}>

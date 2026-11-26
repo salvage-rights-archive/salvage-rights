@@ -59,7 +59,7 @@ const forCheck = (record: MechRecord, id: string) => runChecks(record, catalog).
 
 describe("the 'Mech types", () => {
   it("are one table the edition's unit types come from; OmniMech is ready, with the Construction Options years and the Clan prototype year", () => {
-    expect(MECH_TYPES.map((t) => [t.id, t.label, t.ready])).toEqual([["mech", "BattleMech", true], ["industrialmech", "IndustrialMech", true], ["omnimech", "OmniMech", true]]);
+    expect(MECH_TYPES.map((t) => [t.id, t.label, t.ready])).toEqual([["mech", "BattleMech", true], ["industrialmech", "IndustrialMech", true], ["omnimech", "OmniMech", true], ["primitive-mech", "Primitive BattleMech", true], ["primitive-industrialmech", "Primitive IndustrialMech", true]]);
     expect(EDITIONS[0]?.unitTypes.slice(0, 3)).toEqual([
       { id: "mech", name: "BattleMech", ready: true },
       { id: "industrialmech", name: "IndustrialMech", ready: true },
@@ -97,7 +97,7 @@ describe("an IndustrialMech", () => {
 
   it.each<[string, (r: MechRecord) => MechRecord, string, number]>([
     ["a tonnage a BattleMech may have but not in steps of 5", (r) => editRecord(r, (d) => void (d.tons = 7)), "An IndustrialMech weighs 10 to 100 tons in steps of 5", 64],
-    ["a tripod", (r) => editRecord(r, (d) => void (d.configuration = "tripod")), "biped or a quad", 65],
+    ["a Land-Air 'Mech", (r) => editRecord(r, (d) => void (d.configuration = "lam")), "biped or a quad or a tripod", 65],
     ["standard structure", withChassis({ structure: "standard" }), "Standard structure is not allowed", 67],
     ["an XL engine", withChassis({ engine: { type: "xl", rating: 100 } }), "XL Fusion engine is not allowed", 68],
     ["a standard cockpit", withChassis({ cockpit: "standard" }), "Standard cockpit is not allowed", 69],
@@ -135,7 +135,7 @@ describe("an IndustrialMech", () => {
     const messages = runChecks(combat, catalog).filter((f) => f.level === "error").map((f) => f.message);
     expect(messages).toEqual(
       expect.arrayContaining([
-        "A BattleMech weighs 20 to 100 tons in steps of 5; 15 is not allowed.",
+        "A BattleMech weighs 20 to 100 tons in steps of 5, or 105 to 200 tons as a superheavy 'Mech; 15 is not allowed.",
         "Industrial structure is printed for IndustrialMechs; a BattleMech may not use it.",
         "Industrial (Advanced Fire Control) cockpit is printed for IndustrialMechs; a BattleMech may not use it.",
         "seal is not equipment a BattleMech may mount.",
@@ -151,7 +151,7 @@ describe("an IndustrialMech", () => {
     const combat = cattleMaster({ unitType: "mech" });
     expect([keys("structure", combat).includes("industrial"), keys("engine", combat).includes("ice"), keys("armor", combat).includes("commercial")]).toEqual([false, false, false]);
     const advanced = { ...record, rulesLevel: "advanced" as const };
-    expect([configurationChoices(advanced, "").map(([key]) => key), configurationChoices({ ...advanced, unitType: "mech" }, "").map(([key]) => key).includes("tripod")]).toEqual([["biped", "quad"], true]);
+    expect([configurationChoices(advanced, "").map(([key]) => key), configurationChoices({ ...advanced, unitType: "mech" }, "").map(([key]) => key).includes("tripod")]).toEqual([["biped", "quad", "tripod"], true]);
     const sealing = catalog.byId("environmental-sealing-is");
     const laser = catalog.byId("medium-laser-is");
     if (!sealing || !laser) throw new Error("rows missing");

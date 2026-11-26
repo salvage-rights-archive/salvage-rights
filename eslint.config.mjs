@@ -5,7 +5,7 @@ import tseslint from "typescript-eslint";
 import packageBoundaries from "./eslint-rules/package-boundaries.mjs";
 
 export default tseslint.config(
-  { ignores: ["**/dist/**", "node_modules/**", "test-results/**", "playwright-report/**"] },
+  { ignores: ["**/dist/**", "node_modules/**", "test-results/**", "playwright-report/**", ".superpowers/**", "docs/superpowers/**"] },
   js.configs.recommended,
   tseslint.configs.recommended,
   reactHooks.configs.flat.recommended,
