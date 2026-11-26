@@ -440,6 +440,8 @@ export const AS_LEVEL_CHANGES: { who: string; cost: string }[] = [
 ];
 /** The tallest step each may climb: 'Mechs 2 inches; infantry, ground vehicles, ProtoMechs and WiGEs 1 inch (p. 34; errata v7.02 for p. 35). */
 export const AS_LEVEL_LIMITS = { mech: 2, others: 1, cite: asceCite("34-35") } as const;
-export const AS_MOVE_CITE = "ASCE p. 34, 2024 printing; errata v7.02 replaces this table with a download we have not read";
+// Errata v7.02 replaces the p. 34 table with "the version available for download on the Errata page"; the only tables download there is the
+// Tables 7th printing (p. 199), and it matches the 2024 printing row for row and note for note (page images compared).
+export const AS_MOVE_CITE = "ASCE p. 34; Tables 7th printing p. 199 (errata v7.02)";
 /** Entering a terrain type (p. 32, errata v7.02). */
 export const AS_ENTER_TERRAIN = { cite: "ASCE p. 32, errata v7.02", text: "Entering a new terrain type costs one full inch; the unit may then move 1 more inch in it, and further inches may be paid in full or half inches." } as const;
