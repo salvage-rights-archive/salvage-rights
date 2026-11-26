@@ -1,6 +1,6 @@
 // The rules check for battle armor: findings with the printed page they rest on. Findings are advice, never refusals: nothing is removed from a
 // record and nothing throws on one this version does not understand. Messages are our own words and state the numbers.
-import { ARMOR_TYPES, MANIPULATORS, MOTIVE, SQUAD, WEIGHT_CLASSES, armorTypeOf, isMotive, manipulatorOf, weightClassOf } from "../../data/battlearmor";
+import { ARMOR_TYPES, BA_BOOSTERS, MANIPULATORS, MOTIVE, SQUAD, WEIGHT_CLASSES, armorTypeOf, isMotive, manipulatorOf, weightClassOf } from "../../data/battlearmor";
 import type { Cite, Dated } from "../../data/battlearmor";
 import type { RulesLevel } from "../../data/chassis";
 import type { Catalog } from "../catalog";
@@ -11,7 +11,8 @@ import { yearEraFindings } from "../checks";
 import { datesText } from "../time";
 import { tidy } from "../walk";
 import { baseFits, itemOffered, itemPhase, phaseOf, suitOffered } from "./availability";
-import { build, carriesShots, isBooster, isWing, locationName, locationsOf, shotsOf, weaponLimit } from "./construct";
+import { asEquipment, chosenMunition, choicesFor } from "../munitions";
+import { build, carriesShots, isBooster, isMissileWeapon, isMechanicalBooster, isMyomerBooster, isTubeArtillery, isWing, locationName, locationsOf, myomerBonus, shotsOf, weaponLimit } from "./construct";
 import type { BaRecord } from "./record";
 
 export interface BaFinding {
@@ -68,7 +69,12 @@ const motiveCheck: Check = (record, catalog) => {
   if (!cls) return out;
   const quad = record.body === "quad";
   const free = quad ? (cls.ground.free.quad ?? cls.ground.free.humanoid) : cls.ground.free.humanoid;
-  const max = quad ? cls.ground.max.quad : cls.ground.max.humanoid;
+  // A myomer booster raises the most Ground MP, beyond the normal limit (TO:AUE p. 99).
+  const has = (is: (r: ReturnType<Catalog["byId"]>) => boolean) => record.mounts.some((m) => is(m.equipmentId === null ? undefined : catalog.byId(m.equipmentId)));
+  // The mechanical jump booster adds 1 Ground MP even beyond the normal limit (TO:AUE p. 98); a myomer booster raises the limit (p. 99).
+  const boost = has(isMyomerBooster) ? myomerBonus(record.weightClass) : has(isMechanicalBooster) ? 1 : 0;
+  const normal = quad ? cls.ground.max.quad : cls.ground.max.humanoid;
+  const max = normal === undefined ? undefined : normal + boost;
   if (max !== undefined && record.ground > max) out.push({ check: "motive", level: "error", message: `Ground MP is ${num(record.ground)}; a ${cls.label} ${record.body} suit has at most ${num(max)}.`, where: { field: "ground" }, cite: TM(164) });
   if (record.ground < free) out.push({ check: "motive", level: "warning", message: `A ${cls.label} ${record.body} suit has ${num(free)} ground MP at no weight; this one has ${num(record.ground)}.`, where: { field: "ground" }, cite: TM(164) });
   const kind = record.motive.kind;
@@ -152,6 +158,24 @@ const equipmentCheck: Check = (record, catalog) => {
   if (outsideBody) out.push({ check: "equipment", level: "error", message: "A parafoil can only be mounted in the Body.", where: { mountId: outsideBody.id }, cite: TM(266) });
   const dispensers = record.mounts.filter((m) => m.equipmentId?.startsWith("ba-remote-sensor-dispenser"));
   if (dispensers.length > 1) out.push({ check: "equipment", level: "error", message: "A suit may mount only one remote sensor dispenser.", where: { mountId: dispensers[1]?.id }, cite: TM(268) });
+  // The boosters and the tube artillery of TO:AUE pp. 96 and 98-99: one of each booster, never both, no stealth or mimetic armor with a myomer booster, the artillery in the Body.
+  const rowOf = (m: BaRecord["mounts"][number]) => (m.equipmentId === null ? undefined : catalog.byId(m.equipmentId));
+  const toAue = (n: number): string => `Tactical Operations: Advanced Units and Equipment, p. ${String(n)}`;
+  const mechanical = record.mounts.filter((m) => isMechanicalBooster(rowOf(m)));
+  const myomer = record.mounts.filter((m) => isMyomerBooster(rowOf(m)));
+  if (mechanical.length > 1) out.push({ check: "equipment", level: "error", message: "A suit may mount only one mechanical jump booster.", where: { mountId: mechanical[1]?.id }, cite: toAue(98) });
+  if (myomer.length > 1) out.push({ check: "equipment", level: "error", message: "A suit may mount only one myomer booster.", where: { mountId: myomer[1]?.id }, cite: toAue(98) });
+  if (mechanical.length > 0 && myomer.length > 0) out.push({ check: "equipment", level: "error", message: "A mechanical jump booster and a myomer booster cannot be combined.", where: { mountId: myomer[0]?.id }, cite: toAue(98) });
+  if (myomer.length > 0 && (record.armor.type.startsWith("stealth") || record.armor.type === "mimetic")) out.push({ check: "equipment", level: "error", message: "A suit with a myomer booster may not wear stealth or mimetic armor.", where: { mountId: myomer[0]?.id }, cite: toAue(98) });
+  for (const m of record.mounts.filter((x) => x.pack === true)) {
+    const weapon = rowOf(m);
+    if (!BA_BOOSTERS.dwp.classes.includes(record.weightClass)) out.push({ check: "equipment", level: "error", message: "Only medium, heavy and assault suits may mount a detachable weapon pack.", where: { mountId: m.id }, cite: toAue(99) });
+    else if (weapon?.kind !== "weapon") out.push({ check: "equipment", level: "error", message: "A detachable weapon pack carries a weapon, and this item is not one.", where: { mountId: m.id }, cite: toAue(99) });
+    else if (isMissileWeapon(weapon)) out.push({ check: "equipment", level: "error", message: "A detachable weapon pack may carry any battle armor weapon except a missile launcher or a Narc.", where: { mountId: m.id }, cite: toAue(99) });
+    if (record.motive.kind === "jump" && record.motive.mp > 0) out.push({ check: "equipment", level: "note", message: "A suit carrying a detachable weapon pack cannot use its Jump MP until the pack is jettisoned.", where: { mountId: m.id }, cite: toAue(99) });
+  }
+  const tube = record.mounts.find((m) => isTubeArtillery(rowOf(m)) && m.location !== "body");
+  if (tube) out.push({ check: "equipment", level: "error", message: "Tube artillery can only be mounted in the Body.", where: { mountId: tube.id }, cite: toAue(96) });
   if (camo.length > 0 && record.armor.type === "mimetic") out.push({ check: "equipment", level: "error", message: "A suit may mount only one camo system, and mimetic armor is one.", where: { mountId: camo[0]?.id }, cite: TM(253) });
   for (const mount of record.mounts) {
     const row = mount.equipmentId === null ? undefined : catalog.rowFor(mount.equipmentId, record.editionId);
@@ -161,6 +185,13 @@ const equipmentCheck: Check = (record, catalog) => {
     }
     if (row.techBase !== record.techBase && !(record.techBase === "clan" && itemOffered(row, record, catalog))) out.push({ check: "equipment", level: "error", message: `${row.name} is ${row.techBase === "clan" ? "Clan" : "Inner Sphere"} equipment, on a ${record.techBase === "clan" ? "Clan" : "Inner Sphere"} suit.`, where: { mountId: mount.id }, cite: TM(170) });
     if (carriesShots(row) && shotsOf(mount) === 0) out.push({ check: "equipment", level: "note", message: `${row.name} carries no ammunition.`, where: { mountId: mount.id }, cite: TM(171) });
+    // The mine type chosen for a dispenser: one it does not take reads as the standard mine; one the suit may not have is advice, as any item is.
+    const choices = choicesFor(row, catalog, record.editionId);
+    if (choices.length > 0) {
+      const chosen = chosenMunition(row, mount.munition, catalog, record.editionId);
+      if (mount.munition !== undefined && !choices.some((c) => c.id === mount.munition)) out.push({ check: "equipment", level: "note", message: `${row.name} names the mine type "${mount.munition}", which it does not take; it counts as ${chosen?.name ?? "the standard mine"}.`, where: { mountId: mount.id }, cite: toAue(137) });
+      else if (chosen !== undefined && !itemOffered(asEquipment(chosen, "battlearmor"), record, catalog)) out.push({ check: "equipment", level: "warning", message: `${chosen.name} is not available to this suit's tech base, year or rules level.`, where: { mountId: mount.id }, cite: page(chosen.cite) });
+    }
   }
   return out;
 };

@@ -119,6 +119,9 @@ export interface EquipmentRow {
   infantry?: InfantryStats;
   /** A non-missile direct-fire or pulse weapon: its weight counts toward a targeting computer (TechManual p. 238). */
   directFire?: true;
+  /** A munition the player chooses for an item rather than mounts: the stems (ids without `-is` or `-clan`) of the items it may be chosen for, a mine
+   * type for a mine dispenser, a grenade type for a vehicular grenade launcher (TO:AUE pp. 137, 175-179). The row is never offered as equipment; see rules/munitions.ts. */
+  choiceFor?: string[];
   /** What differs under another edition: construction values, or play figures where the edition's play book prints them differently (the Core Rulebook's Type column). Shared values stay in the row. */
   editions?: Record<string, Partial<Pick<EquipmentRow, "tons" | "slots" | "availability" | "locations" | "locationsQuad" | "type" | "heat" | "damage" | "range" | "shotsPerTon">>>;
   /** False for an item an OmniMech cannot carry in a pod: it may only be fixed equipment of the base (or, for MASC and the like, part of the
@@ -137,7 +140,7 @@ export function mountsRequired(row: EquipmentRow, configuration: string): number
   return configuration === "quad" ? (row.perMechQuad ?? row.perMech) : row.perMech;
 }
 /** True when a row may be mounted on the unit type; a row with no `units` is for a BattleMech or IndustrialMech. */
-export const mountableOn = (row: EquipmentRow, unit: UnitId): boolean => (row.units ?? DEFAULT_UNITS).includes(unit);
+export const mountableOn = (row: EquipmentRow, unit: UnitId): boolean => row.choiceFor === undefined && (row.units ?? DEFAULT_UNITS).includes(unit);
 /** True unless the books say the item cannot be pod-mounted on an OmniMech (see `pod` on EquipmentRow). */
 export const podMountable = (row: Pick<EquipmentRow, "pod">): boolean => row.pod !== false;
 

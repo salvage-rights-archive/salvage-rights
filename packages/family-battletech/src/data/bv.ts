@@ -307,8 +307,8 @@ export const SPECIAL_MUNITIONS: Sourced & { stems: string[]; why: string } = {
     "ammo-harpoon", "ammo-inferno", "ammo-tear-gas", "ammo-semi-guided", "ammo-swarm", "ammo-swarm-i", "ammo-thunder",
     "ammo-thunder-augmented", "ammo-thunder-inferno", "ammo-thunder-vibrabomb", "ammo-thunder-active", "ammo-narc-explosive",
     "ammo-improved-narc-ecm", "ammo-improved-narc-explosive", "ammo-improved-narc-haywire", "ammo-improved-narc-nemesis",
-    // TO:AUE pp. 226-229 and IO:AE p. 213. IO:AE p. 190 prints an ammunition BV for Retro-Streak and a multiplier for the improved ATM munitions, left to the
-    // Battle Value work with the rest. Dead-Fire has its own table (DEAD_FIRE_AMMO_BV below).
+    // TO:AUE pp. 226-229 and IO:AE p. 213. Retro-Streak and the improved ATM munitions are valued by rule
+    // (DEFENSIVE_MUNITIONS, FACTORED_MUNITIONS below), Dead-Fire by its own table (DEAD_FIRE_AMMO_BV below).
     "ammo-acid-srm", "ammo-anti-radiation-srm", "ammo-anti-radiation-lrm", "ammo-bola-narc-pods", "ammo-follow-the-leader-lrm",
     "ammo-heat-seeking-srm", "ammo-heat-seeking-lrm", "ammo-incendiary-lrm", "ammo-magnetic-pulse-srm", "ammo-magnetic-pulse-lrm",
     "ammo-mine-clearance-srm", "ammo-mine-clearance-lrm", "ammo-smoke-srm", "ammo-smoke-lrm", "ammo-tandem-charge-srm",
@@ -338,6 +338,40 @@ export const DEAD_FIRE_AMMO_BV: Sourced & { family: Record<string, "lrm" | "srm"
     "mml-lrm": { 3: 6, 5: 9, 7: 12, 9: 17 },
     "mml-srm": { 3: 6, 5: 8, 7: 11, 9: 15 },
   },
+};
+/** Special munitions whose ammunition BV is the standard ammunition BV of the weapon that fires them times a factor (the Ammo BV column of IO:AE printed pp. 190-191, where
+ * it prints a multiplier). `launcher` is a pattern for the ids of the weapons that fire it; the row is for whichever of them is on the unit (the same figure whichever is meant).
+ * The improved ATM munitions are the Wars of Reaving lines "Imp. IMP iATMs" (x2.0) and "Imp. IIW iATMs" (x1.3), and the fuel-air shells the Thermobaric Weapons lines (x1.0
+ * for the Arrow IV missile, x1.4 for a Thumper, Sniper or Long Tom shell, artillery piece or cannon). A fuel-air bomb is a flat figure a bomb, a bomb row in the aero tables. */
+export const FACTORED_MUNITIONS: Sourced & { rows: Record<string, { launcher: string; factor: number }> } = {
+  cite: { book: IO, page: 190 },
+  checked: "page",
+  rows: {
+    "ammo-improved-magnetic-pulse-atm": { launcher: "^improved-atm-\\d+-clan$", factor: 2 },
+    "ammo-improved-inferno-atm": { launcher: "^improved-atm-\\d+-clan$", factor: 1.3 },
+    "ammo-fuel-air-arrow-iv": { launcher: "^arrow-iv-(is|clan)$", factor: 1 },
+    "ammo-fuel-air-thumper": { launcher: "^thumper-artillery-(is|clan)$", factor: 1.4 },
+    "ammo-fuel-air-sniper": { launcher: "^sniper-artillery-(is|clan)$", factor: 1.4 },
+    "ammo-fuel-air-long-tom": { launcher: "^long-tom-artillery-(is|clan)$", factor: 1.4 },
+    "ammo-fuel-air-thumper-cannon": { launcher: "^thumper-cannon-(is|clan)$", factor: 1.4 },
+    "ammo-fuel-air-sniper-cannon": { launcher: "^sniper-cannon-(is|clan)$", factor: 1.4 },
+    "ammo-fuel-air-long-tom-cannon": { launcher: "^long-tom-cannon-(is|clan)$", factor: 1.4 },
+  },
+};
+/** Retro-Streak ammunition adds its Ammo BV to the unit's Defensive Battle Value "regardless of the Streak SRM launcher used" (IO:AE printed pp. 187 and 190; the table's double
+ * star is "Defensive BV"). The figure is the table's Ammo BV, which the column gives for a ton, so a bin counts its tons; the text says only that the ammunition adds 15. */
+export const DEFENSIVE_MUNITIONS: Sourced & { rows: Record<string, number> } = { cite: { book: IO, page: 190 }, checked: "page", rows: { "ammo-retro-streak-srm": 15 } };
+/** Mines and grenade munitions chosen for a dispenser or launcher. A mine dispenser carries two shots of one mine type (TO:AUE printed p. 137); its Battle Value is that of a
+ * 10-point minefield of the type (p. 195, note P), read from the Minefield BV Table (p. 197): a value for each 5 points, and for an EMP mine a value for the hex. A grenade
+ * munition's modifier is applied to the launcher itself, not to ammunition, since a vehicular grenade launcher is a one-shot weapon (the Alternative Munitions Table, p. 198; the
+ * only grenade it prints is incendiary, 0.5, and that table adds the result to the unit's base BV). The keys are the id stems of the catalog rows (`mine-...`, `grenade-...`). */
+export const MINEFIELD_BV: Sourced & { dispenser: { shots: number; pointsPerShot: number }; perFivePoints: Record<string, number>; perHex: Record<string, number>; grenadeModifier: Record<string, number> } = {
+  cite: { book: TO, page: 197 },
+  checked: "page",
+  dispenser: { shots: 2, pointsPerShot: 10 },
+  perFivePoints: { "mine-active": 6, "mine-command-detonated": 6, "mine-inferno": 5, "mine-space": 5, "mine-standard": 4, "mine-vibrabomb": 5 },
+  perHex: { "mine-emp-command-detonated": 45, "mine-emp-vibrabomb": 45 },
+  grenadeModifier: { "grenade-incendiary": 0.5 },
 };
 /** Munitions the Battle Value rules give no figure of their own: a bin of one counts as a bin of the standard ammunition of the launcher it feeds.
  * Artemis-capable ammunition is standard ammunition: the Artemis IV increase of 20 percent is on the launcher and "does not apply to the launcher's
@@ -601,6 +635,13 @@ export const WEAPON_BV: BvGroup[] = [
     ],
   },
   {
+    // IO:AE, Alternate Era Weapons and Equipment Battle Value Table (cont.), Thermobaric Weapons, printed p. 190 (read against the page image): a fuel-air bomb is a flat figure each,
+    // 37 for the small and 63 for the large, given in the Ammo BV column; like the other bombs here the figure is the row's own. The other fuel-air munitions are FACTORED_MUNITIONS.
+    cite: { book: IO, page: 190 },
+    checked: "page",
+    rows: [["bomb-fuel-air-small-is", 37], ["bomb-fuel-air-large-is", 63], ["bomb-fuel-air-small-clan", 37], ["bomb-fuel-air-large-clan", 63]],
+  },
+  {
     // Tactical Operations: Advanced Units and Equipment, Inner Sphere and Clan Capital Scale Weapons and Equipment BV Tables [Addendum], printed p. 196
     // (read against the page image of the corrected seventh printing). Both tables print the same figures for the weapons both have; the mass drivers
     // are Inner Sphere only. The catalog has no naval ammunition rows yet, so the ammunition figures wait for them.
@@ -736,6 +777,13 @@ export const EQUIPMENT_BV: BvGroup[] = [
  * Rows with the `defensive` mark are the improved sensors, active probes and ECM: 1 point each in the suit's defensive rating.
  */
 export const BATTLE_ARMOR_BV: BvGroup[] = [
+  {
+    // TO:AUE Inner Sphere and Clan Weapons and Equipment BV Tables [Addendum], printed pp. 195-196 (read against the page images): the BA tube artillery is 27 with 4 for its ammunition,
+    // the BA LB-X autocannon 20. The mine dispenser is a minefield of its mine type (rules/munitions.ts); the boosters and drop chutes print no line.
+    cite: { book: TO, page: 195 },
+    checked: "page",
+    rows: [["ba-tube-artillery-is", 27, 4], ["ba-lb-x-ac-clan", 20]],
+  },
   {
     cite: { book: TM, page: 317 },
     checked: "page",
