@@ -582,7 +582,7 @@ export const WEAPON_BV: BvGroup[] = [
     rows: [
       ["bomb-air-to-air-arrow-is", 57], ["bomb-anti-ship-missile-is", 114], ["bomb-anti-ship-ew-missile-is", 75], ["bomb-arrow-iv-non-homing-is", 34],
       ["bomb-light-air-to-air-is", 17], ["bomb-torpedo-is", 10], ["bomb-thunder-active-is", 168], ["bomb-thunder-vibrabomb-is", 140],
-      ["bomb-air-to-air-arrow-clan", 57], ["bomb-arrow-iv-non-homing-clan", 34], ["bomb-light-air-to-air-clan", 17], ["bomb-torpedo-clan", 10],
+      ["bomb-air-to-air-arrow-clan", 57], ["bomb-anti-ship-missile-clan", 114], ["bomb-arrow-iv-non-homing-clan", 34], ["bomb-light-air-to-air-clan", 17], ["bomb-torpedo-clan", 10],
     ],
   },
   {

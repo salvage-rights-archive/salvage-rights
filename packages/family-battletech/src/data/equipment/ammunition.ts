@@ -408,12 +408,14 @@ export const AMMUNITION: EquipmentGroup[] = [
   // and the grenade-launcher munitions, which are not bins (a dispenser or one-shot launcher takes its type, TO:AUE pp. 137, 175-179), and Arrow IV Homing,
   // which is the standard Arrow IV ammunition above. The IS Copperhead years above follow the same entry (introduced 2645, extinct 2825, recovered 3051).
   // Two entries disagree with their table: Tracer (entry circa 2310, table 2300; IO:AE ~2300) and Smoke Arrow IV (entry circa 2620, table Clan 2600; IO:AE
-  // 2600). The entry is used for both, as the panel method for munitions says; both go to the next book panel.
-  // IO:AE prints Clan introductions (caseless 3109, anti-ship missile 3076, chaff 3063) where TO:AUE's table says "IS" or prints another year; none is used.
+  // 2600). The Inner Sphere rows take the entry (the panel method for munitions); the Clan rows take their own Clan column (2300, 2600). Both go to the next
+  // book panel. IO:AE fills a Clan introduction where TO:AUE gives none, as it does for the sub-capital weapons: Clan caseless 3109, Clan armor-piercing and
+  // flechette autocannon rounds 3105 (printed p. 53). The Clan chaff grenade (3063) and inferno mine (3066) have no row (grenade and mine types are not bins);
+  // the Clan anti-ship missile (3076) is in weapons.ts. Caseless carries twice, and laser-inhibiting half, the shots of the standard round (`shotsFactor`).
   {
     defaults: { kind: "ammunition", techBase: "inner-sphere", cite: { book: TO, page: 225 }, playCite: { book: TO, page: 224 }, checked: "page", tons: 1, slots: 1, rulesLevel: "advanced", units: ["mech", "industrialmech", "vehicle"] },
     items: [
-      { id: "ammo-caseless-ac-is", name: "Caseless Autocannon Ammo", availability: [{ from: 3079 }], prototypeYear: 3056, rulesLevel: "experimental" },
+      { id: "ammo-caseless-ac-is", name: "Caseless Autocannon Ammo", shotsFactor: 2, availability: [{ from: 3079 }], prototypeYear: 3056, rulesLevel: "experimental" },
       { id: "ammo-flak-ac-is", name: "Flak Autocannon Ammo", availability: [{ from: 2310 }] },
       { id: "ammo-tracer-ac-is", name: "Tracer Autocannon Ammo", availability: [{ from: 2310 }] },
       { id: "ammo-air-defense-arrow-is", name: "Air-Defense Arrow (ADA) Ammo", availability: [{ from: 3080 }], prototypeYear: 3068, rulesLevel: "experimental" },
@@ -424,7 +426,7 @@ export const AMMUNITION: EquipmentGroup[] = [
       { id: "ammo-flechette-artillery-is", name: "Flechette Artillery Ammo", availability: [{ from: 1950 }], cite: { book: TO, page: 227 }, playCite: { book: TO, page: 226 } },
       { id: "ammo-arrow-iv-illumination-is", name: "Arrow IV (Illumination) Ammo", availability: [{ from: 2621, to: 2831 }, { from: 3047 }], prototypeYear: 2615, cite: { book: TO, page: 227 }, playCite: { book: TO, page: 226 } },
       { id: "ammo-illumination-artillery-is", name: "Illumination Artillery Ammo", availability: [{ from: 1950 }], cite: { book: TO, page: 227 }, playCite: { book: TO, page: 226 } },
-      { id: "ammo-arrow-iv-laser-inhibiting-is", name: "Arrow IV (Laser-Inhibiting) Ammo", availability: [{ from: 3083 }], prototypeYear: 3053, rulesLevel: "experimental", cite: { book: TO, page: 227 }, playCite: { book: TO, page: 226 } },
+      { id: "ammo-arrow-iv-laser-inhibiting-is", name: "Arrow IV (Laser-Inhibiting) Ammo", shotsFactor: 0.5, availability: [{ from: 3083 }], prototypeYear: 3053, rulesLevel: "experimental", cite: { book: TO, page: 227 }, playCite: { book: TO, page: 226 } },
       { id: "ammo-inferno-iv-is", name: "Inferno-IV Ammo", availability: [{ from: 3055 }], prototypeYear: 3053, cite: { book: TO, page: 227 }, playCite: { book: TO, page: 226 } },
       { id: "ammo-arrow-iv-smoke-is", name: "Arrow IV (Smoke) Ammo", availability: [{ from: 2620, to: 2840 }, { from: 3044 }], prototypeYear: 2595, cite: { book: TO, page: 227 }, playCite: { book: TO, page: 226 } },
       { id: "ammo-smoke-artillery-is", name: "Smoke Artillery Ammo", availability: [{ from: 1950 }], cite: { book: TO, page: 227 }, playCite: { book: TO, page: 226 } },
@@ -444,7 +446,10 @@ export const AMMUNITION: EquipmentGroup[] = [
     defaults: { kind: "ammunition", techBase: "clan", cite: { book: TO, page: 225 }, playCite: { book: TO, page: 224 }, checked: "page", tons: 1, slots: 1, rulesLevel: "advanced", units: ["mech", "industrialmech", "vehicle"] },
     items: [
       { id: "ammo-flak-ac-clan", name: "Flak Autocannon Ammo", availability: [{ from: 2310 }] },
-      { id: "ammo-tracer-ac-clan", name: "Tracer Autocannon Ammo", availability: [{ from: 2310 }] },
+      { id: "ammo-caseless-ac-clan", name: "Caseless Autocannon Ammo", shotsFactor: 2, availability: [{ from: 3109 }], rulesLevel: "experimental", cite: { book: IO, page: 53 }, playCite: { book: TO, page: 224 } },
+      { id: "ammo-armor-piercing-clan", name: "Armor-Piercing Autocannon Ammo", availability: [{ from: 3105 }], cite: { book: IO, page: 53 } },
+      { id: "ammo-flechette-clan", name: "Flechette Autocannon Ammo", availability: [{ from: 3105 }], cite: { book: IO, page: 53 } },
+      { id: "ammo-tracer-ac-clan", name: "Tracer Autocannon Ammo", availability: [{ from: 2300 }] },
       { id: "ammo-arrow-iv-cluster-clan", name: "Arrow IV (Cluster) Ammo", availability: [{ from: 2620 }] },
       { id: "ammo-cluster-long-tom-clan", name: "Cluster (Long Tom) Ammo", availability: [{ from: 1950 }] },
       { id: "ammo-cluster-sniper-clan", name: "Cluster (Sniper) Ammo", availability: [{ from: 1950 }] },
@@ -452,7 +457,7 @@ export const AMMUNITION: EquipmentGroup[] = [
       { id: "ammo-flechette-artillery-clan", name: "Flechette Artillery Ammo", availability: [{ from: 1950 }], cite: { book: TO, page: 227 }, playCite: { book: TO, page: 226 } },
       { id: "ammo-arrow-iv-illumination-clan", name: "Arrow IV (Illumination) Ammo", availability: [{ from: 2621 }], cite: { book: TO, page: 227 }, playCite: { book: TO, page: 226 } },
       { id: "ammo-illumination-artillery-clan", name: "Illumination Artillery Ammo", availability: [{ from: 1950 }], cite: { book: TO, page: 227 }, playCite: { book: TO, page: 226 } },
-      { id: "ammo-arrow-iv-smoke-clan", name: "Arrow IV (Smoke) Ammo", availability: [{ from: 2620 }], cite: { book: TO, page: 227 }, playCite: { book: TO, page: 226 } },
+      { id: "ammo-arrow-iv-smoke-clan", name: "Arrow IV (Smoke) Ammo", availability: [{ from: 2600 }], cite: { book: TO, page: 227 }, playCite: { book: TO, page: 226 } },
       { id: "ammo-smoke-artillery-clan", name: "Smoke Artillery Ammo", availability: [{ from: 1950 }], cite: { book: TO, page: 227 }, playCite: { book: TO, page: 226 } },
       { id: "ammo-thunder-fascam-artillery-clan", name: "Thunder (FASCAM) Artillery Ammo", availability: [{ from: 2621 }], cite: { book: TO, page: 227 }, playCite: { book: TO, page: 226 } },
       { id: "ammo-flamer-coolant-clan", name: "Coolant Ammo (Flamer/Fluid Gun/Sprayer)", availability: [{ from: 2200 }], cite: { book: TO, page: 227 }, playCite: { book: TO, page: 226 }, yearsInferred: true },

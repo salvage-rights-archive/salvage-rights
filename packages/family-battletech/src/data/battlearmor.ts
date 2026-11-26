@@ -212,7 +212,7 @@ export const ARMOR_TYPES: ArmorRow[] = [
     availability: [{ from: 3061 }], prototypeYear: 3058, datesCite: ARMOR_DATES,
   },
   // Laser-reflective and reactive armor for battle armor (TO:AUE printed p. 92, Advanced Armor Table: 7 slots, 55 / 30 kg and 60 / 35 kg a point, Inner
-  // Sphere / Clan; price p. 225, 37,000 for each, taken as a price per point like the other rows; Experimental, rules pp. 93-94; read against the page
+  // Sphere / Clan; price p. 225, 37,000 for each: the table does not say per what, and the reading kept is per point, like every other row here (TM p. 281); Experimental, rules pp. 93-94; read against the page
   // images). TO:AUE prints only a prototype year (3074P, 3075P), so the production year is IO:AE printed p. 30's (circa 3089 and 3093, Inner Sphere and
   // Clan alike). Battle Value is that of fire resistant armor (TO:AUE p. 192: 3.5 a point, no defensive factor).
   {

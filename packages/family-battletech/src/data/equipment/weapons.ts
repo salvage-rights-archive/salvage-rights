@@ -687,7 +687,7 @@ export const WEAPONS: EquipmentGroup[] = [
   // are the rules' own and are not modelled, as with the bombs above. Years are the item entries' staged years (introduced, extinct, recovered);
   // the prototype year is IO:AE's (printed p. 53), and for the items the table prints with a "P" (anti-ship 3071, anti-ship EW 3067) the production
   // year is IO:AE's too (~3075, 3073). Clan columns: the light air-to-air missile is 3074 (table and IO:AE agree), the others the IS introduction year.
-  // IO:AE prints a Clan anti-ship missile from 3076; TO:AUE's table says "IS" only, so none is added (book panel). Damage is the aero figure of the
+  // IO:AE prints a Clan anti-ship missile from 3076 where TO:AUE's table says "IS" only; IO:AE fills the stage TO:AUE leaves out, so the Clan row is 3076. Damage is the aero figure of the
   // table; "Special" where it prints rules only. Prices are per bomb. The Inferno and Torpedo bombs date from before spaceflight (the Torpedo is new here).
   {
     defaults: { kind: "weapon", cite: { book: TO, page: 227 }, playCite: { book: TO, page: 226 }, checked: "page", tons: 1, slots: 0, heat: 0, units: ["aero"], rulesLevel: "advanced" },
@@ -703,6 +703,7 @@ export const WEAPONS: EquipmentGroup[] = [
       { id: "bomb-thunder-vibrabomb-is", name: "Thunder Vibrabomb", techBase: "inner-sphere", damage: "Special", availability: [{ from: 3065 }], prototypeYear: 3060 },
       { id: "bomb-torpedo-is", name: "Torpedo Bomb", techBase: "inner-sphere", damage: "10", availability: [{ from: 1950 }] },
       { id: "bomb-air-to-air-arrow-clan", name: "Air-to-Air Arrow (AAA) Missile", techBase: "clan", damage: "20", availability: [{ from: 3072 }] },
+      { id: "bomb-anti-ship-missile-clan", name: "Anti-Ship (AS) Missile", techBase: "clan", tons: 2, damage: "30", availability: [{ from: 3076 }], rulesLevel: "experimental", cite: { book: IO, page: 53 } },
       { id: "bomb-arrow-iv-homing-clan", name: "Arrow IV Homing Missile (Air-Launched)", techBase: "clan", damage: "Special", availability: [{ from: 2600 }] },
       { id: "bomb-arrow-iv-non-homing-clan", name: "Arrow IV Non-Homing Missile (Air-Launched)", techBase: "clan", damage: "Special", availability: [{ from: 2623 }] },
       { id: "bomb-light-air-to-air-clan", name: "Light Air-to-Air (LAA) Missile", techBase: "clan", tons: 0.5, damage: "6", availability: [{ from: 3074 }] },

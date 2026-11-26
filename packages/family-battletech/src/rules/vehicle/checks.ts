@@ -111,6 +111,8 @@ const armorCheck: VehicleCheck = {
     }
     // Hardened armor may not be carried by VTOL, WiGE or hover vehicles (TO:AUE p. 92).
     if (type === "hardened" && ["vtol", "wige", "hover"].includes(record.motive)) out.push(finding("armor", "error", "Hardened armor may not be carried by VTOL, WiGE or hover vehicles.", { where: { field: "armor.type" }, cite: { book: "Tactical Operations: Advanced Units and Equipment", page: 92 } }));
+    // ... and only on standard units, never on an OmniVehicle (TO:AUE p. 92).
+    if (type === "hardened" && record.omni !== undefined) out.push(finding("armor", "error", "Hardened armor is for standard units, not OmniVehicles.", { where: { field: "armor.type" }, cite: { book: "Tactical Operations: Advanced Units and Equipment", page: 92 } }));
     if (record.armor.tons < 0 || !Number.isInteger(tidy(record.armor.tons * 2))) out.push(finding("armor", "error", "Armor comes in lots of a half ton or a whole ton.", { where: { field: "armor.tons" }, cite: ARMOR_CITE }));
     const available = armorPointsFor(type, record.armor.tons);
     const assigned = assignedArmor(record);

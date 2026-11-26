@@ -103,6 +103,7 @@ describe("advanced armor on a combat vehicle (TO:AUE p. 92, IO:AE p. 82)", () =>
     expect(vehicleBv(hardened, catalog).total).toBeGreaterThan(vehicleBv(plain, catalog).total);
     expect(checks(hardened)).not.toContain("armor:error");
     expect(checks(build({ ...base, motive: "hover", armor: { ...base.armor, type: "hardened" } }))).toContain("armor:error");
+    expect(checks(build({ ...base, omni: {}, armor: { ...base.armor, type: "hardened" } }))).toContain("armor:error");
   });
 });
 
