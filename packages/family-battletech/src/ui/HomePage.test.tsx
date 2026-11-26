@@ -207,8 +207,9 @@ describe("Classic BattleTech home", () => {
     await user.click(screen.getByRole("button", { name: "Delete" }));
     await waitFor(async () => {
       expect(await storage.list()).toHaveLength(2);
+      // The store answers before the page has said so; wait for the message too.
+      expect(screen.getByRole("status").textContent).toBe("Deleted.");
     });
-    expect(screen.getByRole("status").textContent).toBe("Deleted.");
     expect(document.activeElement).toBe(screen.getByRole("heading", { name: "Your 'Mechs" }));
   });
 
