@@ -303,8 +303,8 @@ export async function saveAcesCard(page: Page, base: string): Promise<string> {
   await page.getByRole("button", { name: "2. Movement side" }).click();
   await page.getByLabel("Movement priority").fill("47");
   await page.getByRole("button", { name: "Record the three columns" }).click();
-  await pickToken(page, "Add a test to: When the Aggressive column applies", "has moved", "the ideal â€¦ has moved");
-  await pickToken(page, "Add a filter to the Aggressive column", "keep", "keep â€¦ from â€¦");
+  await pickToken(page, "Add a test to: When the Aggressive column applies", "has moved", "the ideal … has moved");
+  await pickToken(page, "Add a filter to the Aggressive column", "keep", "keep … from …");
   await page.getByRole("button", { name: "3. Combat side" }).click();
   await page.getByLabel("Combat priority").fill("112");
   await page.getByRole("button", { name: "Record the combat rules" }).click();
@@ -326,7 +326,7 @@ export async function saveAcesCommand(page: Page, base: string): Promise<string>
   await page.getByLabel("Commander").fill("Invented Marshal");
   await page.getByLabel("Faction").fill("Invented House");
   await page.getByRole("button", { name: "2. Orders" }).click();
-  await pickToken(page, "Add an order", "initiative", "Initiative roll â€¦");
+  await pickToken(page, "Add an order", "initiative", "Initiative roll …");
   await page.getByRole("button", { name: "3. Colour lists" }).click();
   await pickToken(page, "Add a key to the RED list", "no armor", "no Armor left");
   await page.getByRole("button", { name: "4. Support side" }).click();
