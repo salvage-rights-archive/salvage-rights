@@ -416,7 +416,7 @@ export default function CardLibraryPage() {
         </p>
         <div className="bt-field">
           <label htmlFor="aces-file-in">Import a library file</label>
-          <input id="aces-file-in" type="file" accept="application/json,.json" onChange={(event) => void upload(event)} />
+          <input id="aces-file-in" type="file" accept="application/json,.json" disabled={!storage} onChange={(event) => void upload(event)} />
         </div>
       </section>
     </div>

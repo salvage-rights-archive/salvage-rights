@@ -88,15 +88,23 @@ describe("BattleTech: Gothic home", () => {
   it("refuses a Classic file here and a Gothic file on the Classic page, each with a pointer to the other", async () => {
     const user = userEvent.setup();
     const file = (record: ReturnType<typeof classic>) => new File([JSON.stringify(toMechFile(record))], "x.json", { type: "application/json" });
+    // The file input stays disabled until the page's storage is open, as a player would see it.
+    const input = async () => {
+      const found = await screen.findByLabelText<HTMLInputElement>("Import a file");
+      await waitFor(() => {
+        expect(found.disabled).toBe(false);
+      }, { timeout: 10_000 });
+      return found;
+    };
     open(GOTHIC_HOME, [GOTHIC_HOME, <GothicHomePage />]);
-    await user.upload(await screen.findByLabelText("Import a file"), file(classic("c1", "CL-1")));
+    await user.upload(await input(), file(classic("c1", "CL-1")));
     await waitFor(() => {
       expect(screen.getByRole("alert").textContent).toBe("That is a Classic file. Import it on the Classic page.");
     }, { timeout: 5000 });
     expect(screen.getByRole("link", { name: "Go to the Classic home" }).getAttribute("href")).toBe("/battletech/classic/home");
     cleanup();
     open("/battletech/classic/home", ["/battletech/classic/home", <HomePage />]);
-    await user.upload(await screen.findByLabelText("Import a file"), file(await boxCopy("g1")));
+    await user.upload(await input(), file(await boxCopy("g1")));
     await waitFor(() => {
       expect(screen.getByRole("alert").textContent).toBe("That is a Gothic file. Import it on the Gothic page.");
     }, { timeout: 5000 });

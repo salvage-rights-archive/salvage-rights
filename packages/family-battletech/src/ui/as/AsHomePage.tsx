@@ -236,7 +236,7 @@ export default function AsHomePage() {
         </p>
         <div className="bt-field">
           <label htmlFor="as-file">Import a unit file</label>
-          <input id="as-file" type="file" accept="application/json,.json" onChange={(event) => void upload(event)} />
+          <input id="as-file" type="file" accept="application/json,.json" disabled={!storage} onChange={(event) => void upload(event)} />
         </div>
       </section>
 

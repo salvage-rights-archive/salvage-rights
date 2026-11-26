@@ -275,7 +275,7 @@ export default function AsForces() {
       </p>
       <div className="bt-field">
         <label htmlFor="as-force-file">Import a force file</label>
-        <input id="as-force-file" type="file" accept="application/json,.json" onChange={(event) => void upload(event)} />
+        <input id="as-force-file" type="file" accept="application/json,.json" disabled={!storage} onChange={(event) => void upload(event)} />
       </div>
     </section>
   );

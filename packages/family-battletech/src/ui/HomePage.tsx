@@ -678,6 +678,7 @@ export default function HomePage() {
             type="file"
             accept="application/json,.json"
             aria-describedby="bt-file-hint"
+            disabled={!storage}
             onChange={(event) => {
               void upload(event);
             }}

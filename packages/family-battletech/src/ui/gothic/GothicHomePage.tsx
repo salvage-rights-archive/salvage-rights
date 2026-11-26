@@ -464,6 +464,7 @@ export default function GothicHomePage() {
             type="file"
             accept="application/json,.json"
             aria-describedby="bt-file-hint"
+            disabled={!storage}
             onChange={(event) => {
               void upload(event);
             }}
