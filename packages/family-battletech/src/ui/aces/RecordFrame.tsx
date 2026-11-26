@@ -1,6 +1,7 @@
 // The page around one saved Aces record that is not a behaviour card: load it by its id (or start a new one), the heading with Save
 // and Delete, the unsaved-changes guard, and the two columns of form and preview. The command card, special order and support
 // card pages each give it their own form. Nothing is saved until Save.
+import { withoutSample } from "../../rules/aces-samples";
 import { useEffect, useId, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { Link, useBlocker, useNavigate, useSearchParams } from "react-router";
@@ -127,7 +128,7 @@ function Form<R extends AcesRecord>({ initial, isNew, storage, ...spec }: FrameP
   const save = async () => {
     if (invalid) return;
     try {
-      await storage.save(record);
+      await storage.save(withoutSample(record));
     } catch {
       setStatus("");
       setProblem(STORAGE_WRITE_FAILED);

@@ -1,5 +1,6 @@
 // The player's Aces campaigns: the list, a new campaign, export and import of campaign files (our own, or the Aces campaigns of a
 // BattleTech Tools backup), and delete with a confirm. A saved campaign the app cannot read is listed with Export raw and Delete.
+import { withoutSample } from "../../rules/aces-samples";
 import { useEffect, useRef, useState } from "react";
 import type { ChangeEvent } from "react";
 import { Link } from "react-router";
@@ -123,11 +124,11 @@ export default function CampaignsPage() {
   const save = async (campaigns: AcesCampaign[], newUnits: AsUnit[], cards: AcesRecord[] = [], games: AcesGame[] = []) => {
     if (!storage || !asStorage) return false;
     try {
-      for (const u of newUnits) await asStorage.save(u);
+      for (const u of newUnits) await asStorage.save(withoutSample(u));
       for (const c of campaigns) await storage.save(c);
       if (cards.length > 0) {
         const cardStore = await openAcesStorage();
-        for (const r of cards) await cardStore.save(r);
+        for (const r of cards) await cardStore.save(withoutSample(r));
       }
       if (games.length > 0) {
         const gameStore = await openGameStorage();

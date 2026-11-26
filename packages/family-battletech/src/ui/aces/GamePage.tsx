@@ -107,8 +107,7 @@ export default function GamePage() {
         const [entry, entries] = await Promise.all([s.get(id), openAcesStorage().then((a) => a.list())]);
         if (!live) return;
         const lib = libraryOf(entries.flatMap((e) => (e.record ? [e.record] : [])));
-        lib.orders = withoutShadowedSamples(lib.orders);
-        setRecords({ cards: lib.cards, commands: lib.commands, orders: lib.orders, supports: lib.supports });
+        setRecords({ cards: withoutShadowedSamples(lib.cards), commands: withoutShadowedSamples(lib.commands), orders: withoutShadowedSamples(lib.orders), supports: withoutShadowedSamples(lib.supports) });
         if (!entry) setLoaded({ state: "missing" });
         else if (!entry.game) setLoaded({ state: "unreadable", message: entry.unreadable ?? "" });
         else {

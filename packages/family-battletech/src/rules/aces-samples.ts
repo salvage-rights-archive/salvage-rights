@@ -214,6 +214,14 @@ export function sampleUnits(): AsUnit[] {
   });
 }
 
+/** The record as the player owns it: the sample flag cleared. Used wherever a player saves, edits or imports a card or unit. */
+export function withoutSample<T extends { sample?: true }>(record: T): T {
+  if (record.sample === undefined) return record;
+  const own = { ...record };
+  delete own.sample;
+  return own;
+}
+
 /** Roster units to offer: a sample unit steps aside where the player saved one under the same name. */
 export function withoutShadowedSampleUnits(units: readonly AsUnit[]): AsUnit[] {
   const name = (u: AsUnit): string => `${u.name.chassis} ${u.name.model}`.trim().toLowerCase();

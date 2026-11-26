@@ -7,6 +7,7 @@ import { AS_SOURCE_KINDS } from "../../rules/as-unit";
 import type { AsDamage, AsSpecial, AsUnit } from "../../rules/as-unit";
 import type { AsForce, PlayFilter } from "../../rules/as-force";
 import { readFilter } from "../../rules/as-force";
+import { withoutSample } from "../../rules/aces-samples";
 import { downloadJson, isPicture } from "../storage";
 
 export interface AsEntry {
@@ -145,7 +146,7 @@ export function fromUnitFile(file: unknown): { ok: true; unit: AsUnit } | { ok: 
   if (file.kind !== "as-unit") return { ok: false, message: "This file does not hold an Alpha Strike unit." };
   if (file.version !== 1) return { ok: false, message: "This file is from a version this app cannot read." };
   if (!isAsUnit(file.unit)) return { ok: false, message: "The unit in this file is incomplete or damaged." };
-  return { ok: true, unit: migrated(file.unit) };
+  return { ok: true, unit: migrated(withoutSample(file.unit)) };
 }
 
 /** Hands the unit to the browser as a file. */
@@ -200,7 +201,7 @@ export function fromForceFile(file: unknown): { ok: true; force: AsForce; units:
   if (file.version !== 1) return { ok: false, message: "This file is from a version this app cannot read." };
   if (!isAsForce(file.force)) return { ok: false, message: "The force in this file is incomplete or damaged." };
   if (!Array.isArray(file.units) || !file.units.every(isAsUnit)) return { ok: false, message: "A unit in this file is incomplete or damaged." };
-  return { ok: true, force: migratedForce(file.force), units: file.units.map(migrated) };
+  return { ok: true, force: migratedForce(file.force), units: file.units.map((u) => migrated(withoutSample(u))) };
 }
 
 /** Hands the force, with its units, to the browser as a file. */

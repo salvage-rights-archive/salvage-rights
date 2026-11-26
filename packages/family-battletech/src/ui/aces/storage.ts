@@ -4,7 +4,7 @@ import { openStore } from "@salvage-rights/shared";
 import type { Store } from "@salvage-rights/shared";
 import { ACES_KINDS, isAcesRecord, isSample } from "../../rules/aces-card";
 import type { AcesCard, AcesKind, AcesRecord, CommandCard, SpecialOrderCard, SupportCard } from "../../rules/aces-card";
-import { acesSamples, sampleUnits } from "../../rules/aces-samples";
+import { acesSamples, sampleUnits, withoutSample } from "../../rules/aces-samples";
 import { openAsStorage } from "../as/storage";
 import { downloadJson, isPicture } from "../storage";
 
@@ -108,7 +108,7 @@ export function fromLibraryFile(file: unknown): { ok: true; library: AcesLibrary
   if (!Array.isArray(photos) || !photos.every((ph) => isObject(ph) && typeof ph.cardId === "string" && ph.dataUrl !== undefined && isPicture(ph))) {
     return { ok: false, message: "A picture in this file is damaged." };
   }
-  return { ok: true, library: libraryOf(lists.flatMap(([list]) => list as AcesRecord[])), photos: photos as AcesPhoto[] };
+  return { ok: true, library: libraryOf(lists.flatMap(([list]) => (list as AcesRecord[]).map(withoutSample))), photos: photos as AcesPhoto[] };
 }
 
 /** Hands the library to the browser as a file. */
@@ -173,7 +173,16 @@ function wrap(store: Store): AcesStorage {
     removeSamples: async () => {
       for (const e of await api.list()) if (e.record && isSample(e.record)) await api.remove(e.kind, e.id);
       const roster = await openAsStorage();
-      for (const e of await roster.list()) if (e.unit?.sample === true) await roster.remove(e.id);
+      const gone = new Set<string>();
+      for (const e of await roster.list()) {
+        if (e.unit?.sample !== true) continue;
+        await roster.remove(e.id);
+        gone.add(e.id);
+      }
+      // A saved force that named a removed sample unit loses that member rather than keeping a name with nothing behind it.
+      for (const f of await roster.listForces()) {
+        if (f.force?.members.some((m) => gone.has(m.unitId))) await roster.saveForce({ ...f.force, members: f.force.members.filter((m) => !gone.has(m.unitId)) });
+      }
       await api.declineSamples();
     },
     samplesDeclined: async () => (await store.get<boolean>(SAMPLES_DECLINED)) === true,
