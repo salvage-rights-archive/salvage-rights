@@ -150,6 +150,13 @@ export function onlyCreatureLeft(fullStrength: number, eliminated: readonly numb
   return left.length === 1 ? left[0] : undefined;
 }
 
+/** Packs units into pages of five, in order (the sheet has five unit blocks); the last page holds what is left. */
+export function paginate<T>(units: readonly T[], perPage = 5): T[][] {
+  const pages: T[][] = [];
+  for (let i = 0; i < units.length; i += perPage) pages.push(units.slice(i, i + perPage));
+  return pages;
+}
+
 // ---- Reading a record from storage, a file or an import ---------------------------------------------------------------------------
 
 const isObject = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);

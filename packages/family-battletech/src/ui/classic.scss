@@ -1128,6 +1128,15 @@ a.bt-button {
     print-color-adjust: exact;
     -webkit-print-color-adjust: exact;
   }
+
+  // Abomination sheets: one page each.
+  .bt-abom-page {
+    break-after: page;
+
+    &:last-child {
+      break-after: auto;
+    }
+  }
 }
 
 // Battle Value and cost
