@@ -239,6 +239,8 @@ export const PRIMITIVE_COST: Sourced & { musculaturePerTon: number } = { cite: {
 
 export const CONFIGURATION_COST: Record<string, { structureFactor?: number; conversion?: number; cite: Cite; checked: Checked }> = {
   tripod: { structureFactor: 1.2, cite: { book: IO, page: 183 }, checked: "page" },
+  // The QuadVee: the conversion equipment costs half the structural, weapon and equipment cost, added before the final multiplier (IO:AE printed p.181, table p.215).
+  quadvee: { conversion: 0.5, cite: { book: IO, page: 181 }, checked: "page" },
   lam: { conversion: 0.75, cite: { book: IO, page: 181 }, checked: "page" },
   "bimodal-lam": { conversion: 0.65, cite: { book: IO, page: 181 }, checked: "page" },
 };

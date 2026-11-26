@@ -258,6 +258,12 @@ export function unitCost(record: MechRecord, catalog: Catalog, options: CostOpti
       else add(structural, "Environmental sealing", INDUSTRIAL_COST.sealingPerTon * tons, `${money(INDUSTRIAL_COST.sealingPerTon)} x ${tons}`, INDUSTRIAL_COST);
       continue;
     }
+    // A QuadVee's wheels: 750 x engine rating x tonnage over 75 (IO:AE printed p.181).
+    if (stemOf(row.id) === "wheels") {
+      if (!tonsKnown || !Number.isFinite(chassis.engine.rating)) skip(mount.name, "the tonnage or engine rating is not a number", row.id);
+      else add(equipment, "Wheels", engineCost(750, chassis.engine.rating, tons), `${money(750)} x ${chassis.engine.rating} x ${tons} / ${ENGINE_COST.divisor}`, { cite: { book: "Interstellar Operations: Alternate Eras", page: 181 }, checked: "page" });
+      continue;
+    }
     if (stemOf(row.id) === "tracks") {
       if (!tonsKnown || !Number.isFinite(chassis.engine.rating)) skip(mount.name, "the tonnage or engine rating is not a number", row.id);
       else add(equipment, "Tracks", engineCost(INDUSTRIAL_COST.tracksPerRating, chassis.engine.rating, tons), `${money(INDUSTRIAL_COST.tracksPerRating)} x ${chassis.engine.rating} x ${tons} / ${ENGINE_COST.divisor}`, INDUSTRIAL_COST);

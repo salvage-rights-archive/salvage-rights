@@ -387,7 +387,7 @@ export function setConfiguration(draft: MechRecord, configuration: string): void
 
 /** Conversion equipment of a Land-Air 'Mech, a percentage of its tonnage rounded up to a whole ton (IO:AE p.108); null for any other configuration. */
 export function conversionTons(record: MechRecord): number | null {
-  const percent = own(LAM.conversionPercent, record.configuration);
+  const percent = own(LAM.conversionPercent, record.configuration) ?? configurationOf(record.configuration)?.conversionPercent;
   return percent === undefined || !(record.tons > 0) ? null : Math.ceil(Math.round(record.tons * percent * 1e4) / 1e6);
 }
 
@@ -454,7 +454,7 @@ function fixedLabels(record: MechRecord, config: NonNullable<ReturnType<typeof c
 
   const cockpit = own(COCKPITS.types, record.chassis.cockpit);
   if (cockpit) {
-    for (const n of cockpit.cockpit) set("HD", n - 1, "Cockpit");
+    cockpit.cockpit.forEach((n, i) => set("HD", n - 1, cockpit.cockpitLabels?.[i] ?? "Cockpit"));
     for (const n of cockpit.sensors) set("HD", n - 1, "Sensors");
     for (const n of cockpit.lifeSupport) set("HD", n - 1, "Life Support");
   }
@@ -804,6 +804,10 @@ export function newRecord(options: NewMechOptions, editionId: string, id: string
       location: null,
       slot: null,
     });
+  }
+  // A QuadVee has tracks in all four legs to start (IO:AE printed p.128); they wait unplaced, and the player may swap them for wheels.
+  if (record.configuration === "quadvee") {
+    for (let n = 1; n <= 4; n += 1) record.mounts.push({ id: `tracks-${n}`, equipmentId: "tracks-clan", name: "Tracks", techBase: "clan", location: null, slot: null });
   }
   // A Land-Air 'Mech needs at least LAM.minJumpMP jump jets (IO:AE p.108); they wait unplaced like the heat sinks.
   if (own(LAM.conversionPercent, record.configuration) !== undefined) {

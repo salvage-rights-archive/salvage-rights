@@ -642,6 +642,8 @@ export const WEAPON_BV: BvGroup[] = [
 ];
 /** "Other Equipment" and the physical and industrial items: BV added in full, never sorted by heat. */
 export const EQUIPMENT_BV: BvGroup[] = [
+  // A QuadVee's wheels add nothing: the unit is valued as a standard quad BattleMech with no further modifiers (IO:AE printed p.187).
+  { cite: { book: IO, page: 187 }, checked: "page", rows: [["wheels-clan", 0]] },
   {
     cite: { book: TM, page: 317 },
     checked: "page",

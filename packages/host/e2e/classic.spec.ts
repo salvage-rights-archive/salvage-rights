@@ -355,3 +355,58 @@ test("build an OmniMech, add a configuration, compare them and reach a configura
   await page.goto(HOME);
   await expectPage(page.getByRole("link", { name: "Open Falcon" })).toBeVisible();
 });
+
+/** Builds a unit through the Classic form and submits it with the keyboard's Enter on the button, the way a keyboard user does. */
+async function buildThrough(page: import("@playwright/test").Page, fill: (form: import("@playwright/test").Locator) => Promise<void>) {
+  await page.goto(HOME);
+  const form = page.getByRole("form", { name: "Build a new one" });
+  await fill(form);
+  const start = form.getByRole("button", { name: "Start building" });
+  await start.focus();
+  await page.keyboard.press("Enter");
+}
+
+test("build a QuadVee by keyboard, see its crew, conversion and weight, and reach a sheet with a gunner, in a 320 px window", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 700 });
+  await buildThrough(page, async (form) => {
+    await form.getByLabel("Name").fill("Horse");
+    await form.getByLabel("Rules level").selectOption("advanced");
+    await form.getByLabel("Year").fill("3140");
+    await form.getByLabel("Era").selectOption("dark-ages"); // 3140 is in two eras; the Clan Post-Reaving one stops Clan items at 3085
+    await form.getByLabel("Tech base").selectOption("clan");
+    await form.getByLabel("Configuration").selectOption({ label: "QuadVee" });
+    await form.getByLabel("Tonnage").selectOption("50");
+  });
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Horse");
+  await expect(page.getByLabel("Configuration")).toHaveValue("quadvee");
+  await expect(page.getByRole("list", { name: "Head slots" }).getByText("Cockpit (Gunner)")).toBeVisible();
+  await expect(page.getByRole("list", { name: "Front Left Leg slots" }).getByText("Conversion Gear")).toBeVisible();
+  const widths = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, client: document.documentElement.clientWidth }));
+  expect(widths.scroll).toBe(widths.client);
+  await page.getByRole("link", { name: "Record sheet" }).click();
+  const sheet = page.getByRole("img", { name: /record sheet$/ });
+  await expect(sheet.locator("[data-warrior='gunner']")).toBeVisible();
+  await expect(sheet.locator("text", { hasText: /Vehicle mode: Cruising 4, Flank 6/ })).toBeVisible();
+});
+
+test("build a 150-ton superheavy 'Mech and a Primitive BattleMech through the form", async ({ page }) => {
+  await buildThrough(page, async (form) => {
+    await form.getByLabel("Name").fill("Omega");
+    await form.getByLabel("Rules level").selectOption("advanced");
+    await form.getByLabel("Year").fill("3080");
+    await form.getByLabel("Tonnage").selectOption("150");
+  });
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Omega");
+  await expect(page.locator(".bt-weight__toggle")).toHaveText(/of 150 tons/);
+  await buildThrough(page, async (form) => {
+    await form.getByLabel("Name").fill("Mackie");
+    await form.getByLabel("Rules level").selectOption("advanced");
+    await form.getByLabel("Year").fill("2445");
+    await form.getByLabel("Era").selectOption("age-of-war"); // 2445 is in two eras
+    await form.getByLabel("Type", { exact: true }).selectOption({ label: "Primitive BattleMech" });
+    await form.getByLabel("Tonnage").selectOption("100");
+  });
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Mackie");
+  await expect(page.getByLabel("Type", { exact: true })).toHaveValue("primitive-mech");
+  await expect(page.getByRole("region", { name: "Rules check" }).getByText(/built as a 360/)).toBeVisible();
+});

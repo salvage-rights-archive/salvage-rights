@@ -1441,6 +1441,35 @@ function primitiveCheck({ record, catalog }: CheckInput): Finding[] {
 }
 const IO_PRIMITIVE_JUMP: Cite = { book: "Interstellar Operations: Alternate Eras", page: 114 };
 
+/**
+ * The QuadVee construction rules (Interstellar Operations: Alternate Eras, printed p.128): Clan technology only, and tracks or wheels (one kind) in each of
+ * the four legs, the unit's way of moving in vehicle mode. The conversion equipment's weight and slots are in weights() and the configuration's fixed
+ * layout; the 4-ton cockpit is the configuration check's. Wheels are for a QuadVee alone.
+ */
+function quadveeCheck({ record, catalog }: CheckInput): Finding[] {
+  const out: Finding[] = [];
+  const cite = { book: "Interstellar Operations: Alternate Eras", page: 128 };
+  const add = (message: string, where?: Finding["where"]) => out.push(finding("quadvee", "error", message, { where, cite }));
+  const movers = record.mounts.flatMap((m) => {
+    const stem = stemOf(rowOf(catalog, record, m)?.id ?? "");
+    return stem === "tracks" || stem === "wheels" ? [{ mount: m, stem }] : [];
+  });
+  if (record.configuration !== "quadvee") {
+    for (const { mount, stem } of movers) if (stem === "wheels") add(`${mount.name} are for a QuadVee; this is not one.`, { mountId: mount.id });
+    return out;
+  }
+  if (record.techBase !== "clan") add("A QuadVee uses Clan technology only.", { field: "techBase" });
+  const kinds = new Set(movers.map((m) => m.stem));
+  if (kinds.size > 1) add("A QuadVee has tracks or wheels, not both.", { field: "configuration" });
+  const legs: LocationCode[] = ["FLL", "FRL", "RLL", "RRL"];
+  const missing = legs.filter((leg) => !movers.some((m) => m.mount.location === leg));
+  if (movers.length !== 4 || missing.length > 0) {
+    const placed = movers.length > 0 && movers.every((m) => m.mount.location !== null);
+    if (movers.length === 0 || placed || movers.length < 4) add(`A QuadVee needs tracks or wheels in each of its four legs; this one has ${movers.length}${placed && missing.length > 0 ? `, and none in the ${missing.map((l) => locationName(l)).join(", ")}` : ""}.`, { field: "configuration" });
+  }
+  return out;
+}
+
 export const CHECKS: Check[] = [
   { id: "weight", editions: "all", run: weightCheck },
   { id: "slots", editions: "all", run: slotsCheck },
@@ -1460,6 +1489,7 @@ export const CHECKS: Check[] = [
   { id: "lam", editions: "all", run: lamCheck },
   { id: "superheavy", editions: "all", run: superheavyCheck },
   { id: "primitive", editions: "all", run: primitiveCheck },
+  { id: "quadvee", editions: "all", run: quadveeCheck },
   { id: "unsupported", editions: "all", run: unsupportedCheck },
   { id: "omni", editions: "all", run: omniCheck },
   { id: "frankenmech", editions: "all", run: frankenCheck },

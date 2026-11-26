@@ -172,6 +172,29 @@ describe("Classic BattleTech home", () => {
     });
   });
 
+  it("offers superheavy weights and the Primitive types only where the level and year allow, and builds a Primitive BattleMech and a superheavy 'Mech", async () => {
+    const user = userEvent.setup();
+    renderHome();
+    const form = await screen.findByRole("form", { name: "Build a new one" });
+    const tons = within(form).getByLabelText<HTMLSelectElement>("Tonnage");
+    expect([...tons.options].some((o) => o.value === "150")).toBe(false);
+    await user.selectOptions(within(form).getByLabelText("Rules level"), "advanced");
+    await user.type(within(form).getByLabelText("Year"), "2445");
+    expect([...tons.options].some((o) => o.value === "150")).toBe(false); // superheavy 'Mechs are 3078 and later
+    await user.selectOptions(within(form).getByLabelText("Era"), "age-of-war"); // 2445 is in two eras
+    await user.selectOptions(within(form).getByLabelText("Type"), "primitive-mech");
+    await user.type(within(form).getByLabelText("Name"), "Mackie");
+    await user.selectOptions(tons, "100");
+    const start = within(form).getByRole("button", { name: "Start building" });
+    expect(document.getElementById("bt-new-missing")?.textContent ?? "").toBe("");
+    expect((start as HTMLButtonElement).disabled).toBe(false);
+    await user.click(start);
+    await waitFor(async () => {
+      const [entry] = await (await openFamilyStorage()).list();
+      expect(entry?.record).toMatchObject({ unitType: "primitive-mech", tons: 100, chassis: { cockpit: "primitive", armorType: "primitive" } });
+    });
+  });
+
   it("offers the aerospace units in the new-unit list and builds one in the AeroTech editor's store, with a link to the AeroTech home", async () => {
     const user = userEvent.setup();
     renderHome();

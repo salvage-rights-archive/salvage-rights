@@ -466,6 +466,8 @@ export interface CockpitType extends PartFacts {
   cockpit: number[];
   sensors: number[];
   lifeSupport: number[];
+  /** The label of each cockpit slot where it is not "Cockpit" (the QuadVee's pilot and gunner). */
+  cockpitLabels?: string[];
   /** Parts the cockpit puts outside the head, one label per slot, in the first free slots of each location (the book gives no places). */
   elsewhere?: Partial<Record<LocationCode, string[]>>;
 }
@@ -556,6 +558,23 @@ export const COCKPITS: Sourced & { types: Record<string, CockpitType> } = {
       sensors: [2, 5],
       lifeSupport: [1, 6],
       rules: "No targeting systems and no ejection; every attack takes +1 to hit besides the industrial fire control modifiers, unless the cockpit is upgraded (TechManual p.69).",
+    },
+    // The QuadVee's cockpit (IO:AE printed pp.127-128, cost table p.215): 4 tons, two cockpit slots in the head, the pilot's and the gunner's (the record sheet, p.226).
+    quadvee: {
+      name: "QuadVee",
+      tons: 4,
+      only: "quadvee",
+      techBase: "clan",
+      rulesLevel: "advanced",
+      availability: [{ from: 3135 }],
+      prototypeYear: 3130,
+      cite: { book: IO, page: 128 },
+      checked: "page",
+      cockpit: [3, 4],
+      cockpitLabels: ["Cockpit (Pilot)", "Cockpit (Gunner)"],
+      sensors: [2, 5],
+      lifeSupport: [1, 6],
+      rules: "Seats a pilot and a gunner.",
     },
     // Superheavy 'Mech cockpits (Interstellar Operations: Alternate Eras, rules printed p.156, Add Cockpit; costs and dates the Additional Alternate
     // Era table, printed p.215 for the first two and p.217 for the tripod's; Advanced rules level, the table's Rules Level column). A superheavy
@@ -1072,8 +1091,10 @@ export interface ConfigurationRow {
   /** The year its prototype appears (the Construction Options table's Prototype column), before the production year; `clanPrototypeYear` for a Clan 'Mech. */
   prototypeYear?: number;
   clanPrototypeYear?: number;
-  /** Set when the table gives the body type to the Inner Sphere only. */
-  techBase?: "inner-sphere";
+  /** Set when the table gives the body type to one tech base only (the tripod: Inner Sphere; the QuadVee: Clan). */
+  techBase?: "inner-sphere" | "clan";
+  /** Conversion equipment, as a percentage of the unit's tonnage rounded up to a whole ton (a QuadVee's; the Land-Air 'Mech's are in LAM). */
+  conversionPercent?: number;
   levelCite?: Cite; // the page that states a rules level other than standard
   construction?: Sourced; // the page that states this body type's construction changes
   structureExtra?: number;
@@ -1085,6 +1106,8 @@ export interface ConfigurationRow {
 }
 const BIPED_SIZE = { HD: 6, CT: 12, LT: 12, RT: 12, LA: 12, RA: 12, LL: 6, RL: 6 } as const;
 const LEG = ["Hip", "Upper Leg Actuator", "Lower Leg Actuator", "Foot Actuator"];
+// A QuadVee's legs carry the conversion gear in the fifth slot and the tracks or wheels in the sixth (the record sheet, IO:AE printed p.226).
+const QUADVEE_LEG = [...LEG, "Conversion Gear"];
 const ARM = ["Shoulder", "Upper Arm Actuator", "Lower Arm Actuator", "Hand Actuator"];
 // A Land-Air 'Mech is built on a biped's body; both kinds are experimental rules (IO:AE printed p.100).
 const LAM_ROW = {
@@ -1130,6 +1153,22 @@ export const SHEET = {
       cockpit: "tripod",
       size: { ...BIPED_SIZE, CL: 6 },
       fixed: { LA: ARM, RA: ARM, LL: LEG, RL: LEG, CL: LEG },
+    },
+    // The QuadVee (IO:AE printed pp.127-128; years from the Construction Options table, p.44: prototype ~3130, production 3135, Clan Hell's Horses). Advanced
+    // rules, Clan technology only, a four-legged BattleMech of 20 to 100 tons that may be an OmniMech. Conversion equipment is 10 percent of the tonnage.
+    quadvee: {
+      name: "QuadVee",
+      body: "quad",
+      rulesLevel: "advanced",
+      techBase: "clan",
+      availability: [{ from: 3135 }],
+      prototypeYear: 3130,
+      levelCite: { book: IO_AE, page: 127 },
+      construction: { cite: { book: IO_AE, page: 128 }, checked: "page" },
+      conversionPercent: 10,
+      cockpit: "quadvee",
+      size: { HD: 6, CT: 12, LT: 12, RT: 12, FLL: 6, FRL: 6, RLL: 6, RRL: 6 },
+      fixed: { FLL: QUADVEE_LEG, FRL: QUADVEE_LEG, RLL: QUADVEE_LEG, RRL: QUADVEE_LEG },
     },
     lam: { ...LAM_ROW, name: "Land-Air 'Mech", availability: [{ from: 2688, to: 3085 }], clanAvailability: [{ from: 2688, to: 2825 }], prototypeYear: 2683 },
     "bimodal-lam": { ...LAM_ROW, name: "Bimodal Land-Air 'Mech", availability: [{ from: 2684, to: 2781 }], clanAvailability: [{ from: 2684, to: 2801 }], prototypeYear: 2680 },
@@ -1512,7 +1551,7 @@ export const MECH_TYPES: MechTypeRow[] = [
     tonnage: { min: 20, max: 100, step: 5, cite: TM_P(46) },
     superheavy: true,
     omni: {
-      bodies: ["biped", "quad", "tripod"],
+      bodies: ["biped", "quad", "tripod", "quadvee"],
       bodyCite: TM_P(44),
       checked: "page",
       fixed: [

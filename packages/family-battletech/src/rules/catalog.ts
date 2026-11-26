@@ -135,7 +135,7 @@ export interface EquipmentRow {
 }
 /** How many separate mounts the book requires of the row on a configuration, or undefined when it is not a fixed-count item. */
 export function mountsRequired(row: EquipmentRow, configuration: string): number | undefined {
-  return configuration === "quad" ? (row.perMechQuad ?? row.perMech) : row.perMech;
+  return configuration === "quad" || configuration === "quadvee" ? (row.perMechQuad ?? row.perMech) : row.perMech;
 }
 /** True when a row may be mounted on the unit type; a row with no `units` is for a BattleMech or IndustrialMech. */
 export const mountableOn = (row: EquipmentRow, unit: UnitId): boolean => (row.units ?? DEFAULT_UNITS).includes(unit);
@@ -145,7 +145,7 @@ export const podMountable = (row: Pick<EquipmentRow, "pod">): boolean => row.pod
 /** Where the book lets a row go on a configuration; undefined means anywhere. A quad has its own rule where it differs. A tripod
  * mounts equipment as a 'Mech of equal weight does (IO:AE printed p.159), so its center leg is allowed wherever the side legs both are. */
 export function locationsFor(row: EquipmentRow, configuration: string): LocationCode[] | undefined {
-  if (configuration === "quad") return row.locationsQuad ?? row.locations;
+  if (configuration === "quad" || configuration === "quadvee") return row.locationsQuad ?? row.locations;
   const listed = row.locations;
   return configuration === "tripod" && listed?.includes("LL") && listed.includes("RL") ? [...listed, "CL"] : listed;
 }
