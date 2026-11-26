@@ -20,6 +20,7 @@ import { cycle, mulberry32, nextCombat, reveal } from "./aces-deck";
 import type { Activatable, Pick as NextUnit } from "./aces-deck";
 import type { AcesGame, CombatState, EndState, ForceName, GameLogLine, GameUnit } from "./aces-game";
 import { isEmplacement } from "./aces-game";
+import { releaseFromDestroyed } from "./aces-special";
 import { attackerMoveOf, damageAt, emptySheet, specialValue, targetMoveOf } from "./aces-resolve";
 import type { CombatContext, StrategyContext, StrategyDecision, TableUnit } from "./aces-resolve";
 import { addLog, deckCards, forceOf, isAlly, logLine, otherForce, toTable, topCard, turnStateOf, withTurnState, currentCommand } from "./aces-turn";
@@ -61,6 +62,7 @@ export function combatSides(game: AcesGame): { first: ForceName; second: ForceNa
 
 /** Why a unit cannot attack this turn, in our words; null when it can. */
 export function attackBlock(u: GameUnit): string | null {
+  if (u.flags.mountedIn) return "it is mounted in a transport";
   if (u.play.shutdown) return "shut down";
   if (u.play.stunned) return "its crew is stunned";
   if (u.play.moved?.mode === "sprint") return "it sprinted";
@@ -75,7 +77,7 @@ export const manualAttackers = (game: AcesGame, force: ForceName): GameUnit[] =>
   game.sides[force].units.filter((u) => inPlay(u) && !hasDeck(game, u) && notDone(game, u) && attackBlock(u) === null && !(force === "automated" && isEmplacement(u.card)));
 
 /** Units of a force an Aces card resolves, not yet done: the automated force's, and the players' automated allies (p. 38). */
-export const cardAttackers = (game: AcesGame, force: ForceName): GameUnit[] => game.sides[force].units.filter((u) => inPlay(u) && hasDeck(game, u) && notDone(game, u) && (force === "automated" || isAlly(u)));
+export const cardAttackers = (game: AcesGame, force: ForceName): GameUnit[] => game.sides[force].units.filter((u) => inPlay(u) && !u.flags.mountedIn && hasDeck(game, u) && notDone(game, u) && (force === "automated" || isAlly(u)));
 
 /** The players' units that cannot attack this turn and why, for a line of explanation. */
 export const cannotAttack = (game: AcesGame, force: ForceName): { unit: GameUnit; why: string }[] =>
@@ -104,7 +106,7 @@ export const whoAttacksNext = (game: AcesGame, force: ForceName, records: TurnRe
 export function enemiesOf(game: AcesGame, u: GameUnit): GameUnit[] {
   const mine = forceOf(game, u.id) ?? "automated";
   const side = isAlly(u) ? "automated" : otherForce(mine);
-  return game.sides[side].units.filter(inPlay);
+  return game.sides[side].units.filter((x) => inPlay(x) && !x.flags.mountedIn);
 }
 
 /** Opens one automated unit's attack: a fresh sheet, no terrain set. */
@@ -514,7 +516,7 @@ export function applyEnd(game: AcesGame): AcesGame {
     if (r.withdraws) lines.push(logLine(game, `${r.name} is crippled and the game uses forced withdrawal, so it withdraws.`, COMBAT_CITE.end.cite));
   }
   const heat = reports.filter((r) => !r.after.destroyed).map((r) => ({ id: r.id, name: r.name, from: r.before.heat, to: r.after.heat, shutdown: r.after.shutdown, restarted: r.restarted }));
-  return addLog(withEnd({ ...game, sides }, (e) => ({ ...e, step: 3, heat })), ...lines);
+  return addLog(releaseFromDestroyed(withEnd({ ...game, sides }, (e) => ({ ...e, step: 3, heat }))), ...lines);
 }
 
 // ---- Step 4: objectives and game end -------------------------------------------------------------------------------------------

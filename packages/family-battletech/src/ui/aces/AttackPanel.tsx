@@ -4,7 +4,7 @@
 import { useState } from "react";
 import { AS_PHYSICAL_TYPES } from "../../data/alpha-strike";
 import type { AsAttackFlag } from "../../data/alpha-strike";
-import type { AcesGame, ForceName, GameUnit } from "../../rules/aces-game";
+import type { ForceName, GameUnit } from "../../rules/aces-game";
 import { answer, step } from "../../rules/aces-resolve";
 import type { AttackDecision, Reply } from "../../rules/aces-resolve";
 import { effectivePriority } from "../../rules/aces-deck";
@@ -15,6 +15,7 @@ import { useStepHeading } from "./ActivationCard";
 import { ManualAttack, RollBlock, TERRAIN, TargetNumber } from "./AttackForm";
 import EdgePanel from "./EdgePanel";
 import QuestionView from "./QuestionView";
+import SupportPanel from "./SupportPanel";
 import { chipOf, unitFacts } from "./UnitsDrawer";
 
 const NO_ATTACK_WORDS: Record<NonNullable<AttackDecision["reason"]>, string> = {
@@ -255,15 +256,10 @@ export default function CombatPanel({ game, records, apply, touched }: PanelProp
               )}
             </section>
           )}
-          {force === null && <EmplacementHint game={game} />}
+          {force === null && <SupportPanel game={game} records={records} apply={apply} />}
         </>
       )}
       <EdgePanel game={game} apply={apply} />
     </div>
   );
-}
-
-function EmplacementHint({ game }: { game: AcesGame }) {
-  const any = game.sides.automated.units.some((u) => !u.play.destroyed && !u.play.escaped && u.card.type === "BD") || game.supports.some((s) => !s.used);
-  return any ? <p className="bt-hint">{`The automated force has emplacements or support cards. They attack after the units (${COMBAT_CITE.support.cite}); we do not run them on this page yet. Enter the damage they deal with Damage by hand in the units list.`}</p> : null;
 }
