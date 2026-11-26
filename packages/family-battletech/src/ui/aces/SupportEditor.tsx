@@ -19,6 +19,7 @@ export function SupportSide({ idBase, support, onChange }: { idBase: string; sup
         <label htmlFor={`${idBase}-spend`}>Support cards are</label>
         <select
           id={`${idBase}-spend`}
+          aria-describedby={`${idBase}-spend-hint`}
           value={support.spend.token}
           onChange={(e) => {
             const tok = tokenById.get(e.target.value);
@@ -32,6 +33,9 @@ export function SupportSide({ idBase, support, onChange }: { idBase: string; sup
           ))}
           {!spends.some((t) => t.id === support.spend.token) && <option value={support.spend.token}>A step we do not know</option>}
         </select>
+        <p className="bt-hint" id={`${idBase}-spend-hint`}>
+          A new card starts on keeping its support cards. Check this against your card.
+        </p>
       </div>
       <UseFields idBase={`${idBase}-spend-params`} use={support.spend} onChange={(spend) => { onChange({ ...support, spend }); }} />
 

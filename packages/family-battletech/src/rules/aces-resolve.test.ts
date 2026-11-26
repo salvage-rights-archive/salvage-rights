@@ -447,21 +447,32 @@ describe("Aces combat and command resolver", () => {
     expect(play(fight(hold, [unit("mark")], { unit: unit("hound", { type: "CV" }) }), { inches: { mark: 10 } }).decision).toMatchObject({ attack: "weapon", ov: 0 });
   });
 
-  it("attacks physically only from base contact, when weapons cannot reach, physical damage is higher, or it has a Fire Control hit or heat (p. 20)", () => {
-    const sized = (size: number): TableUnit => {
+  it("attacks physically in base contact (no weapons there but for infantry), and within 1 inch (2 with MEL) when it deals more or has a Fire Control hit or heat (Aces pp. 5, 20; ASCE pp. 43, 46)", () => {
+    const mel = [{ code: "MEL", values: [], raw: "MEL" }];
+    const am = [{ code: "AM", values: [], raw: "AM" }];
+    const sized = (size: number, specials: AsCard["specials"] = []): TableUnit => {
       const u = unit("hound");
-      return { ...u, card: { ...u.card, size } };
+      return { ...u, card: { ...u.card, size, specials } };
     };
-    const noGuns = unit("hound", { damage: { s: { value: 0 }, m: { value: 0 }, l: { value: 0 } } });
-    const jammed = unit("hound");
-    jammed.play.crits.fireControl = 1;
+    const jammed = (o: UnitOptions = {}): TableUnit => {
+      const u = unit("hound", o);
+      u.play.crits.fireControl = 1;
+      return u;
+    };
     const rows: [string, TableUnit, number, Record<string, unknown>][] = [
-      ["weapons cannot reach", noGuns, 0, { attack: "physical", physical: "standard" }],
-      ["physical damage is higher", sized(4), 0, { attack: "physical" }],
-      ["Fire Control hit", jammed, 0, { attack: "physical" }],
-      ["heat", unit("hound", { heat: 1 }), 0, { attack: "physical" }],
-      ["nothing in favour", unit("hound"), 0, { attack: "weapon" }],
-      ["not in base contact", unit("hound", { heat: 1 }), 1, { attack: "weapon" }],
+      ["contact, with Short damage", unit("hound"), 0, { attack: "physical", physical: "standard" }],
+      ["contact with MEL is a melee attack", unit("hound", { specials: mel }), 0, { attack: "physical", physical: "melee" }],
+      ["vehicle in contact has no target", unit("hound", { type: "CV" }), 0, { attack: "none", reason: "no-target" }],
+      ["AM infantry in contact keeps its weapons", unit("hound", { type: "CI", specials: am }), 0, { attack: "weapon" }],
+      ["AM infantry in contact with a Fire Control hit", jammed({ type: "CI", specials: am }), 0, { attack: "physical", physical: "anti-mech" }],
+      ["infantry without AM never physical", jammed({ type: "CI" }), 0, { attack: "weapon" }],
+      ["1 inch, physical deals more", sized(4), 1, { attack: "physical" }],
+      ["1 inch with a Fire Control hit", jammed(), 1, { attack: "physical" }],
+      ["1 inch, nothing in favour", unit("hound"), 1, { attack: "weapon" }],
+      ["1 inch with heat", unit("hound", { heat: 1 }), 1, { attack: "physical", physical: "standard" }],
+      ["1.5 inches without MEL", unit("hound", { heat: 1 }), 1.5, { attack: "weapon" }],
+      ["2 inches with MEL and more damage", sized(3, mel), 2, { attack: "physical", physical: "melee" }],
+      ["3 inches with MEL", sized(3, mel), 3, { attack: "weapon" }],
     ];
     for (const [name, attacker, distance, expected] of rows) {
       expect(play(fight(combatCard(anyZone), [unit("mark")], { unit: attacker }), { inches: { mark: distance } }).decision, name).toMatchObject(expected);
