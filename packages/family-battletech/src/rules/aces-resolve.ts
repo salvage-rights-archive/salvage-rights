@@ -13,9 +13,9 @@
 //   it falls back to an indirect attack when it has IF# (pp. 18, 20), whether or not the card shows the flag.
 // - A target needing 13 or more is dropped and the choice repeats; one already destroyed by staged damage is ignored; a tie left
 //   after the keys goes to the closest, then to the players (p. 18).
-// - Physical attacks: from base contact when weapons cannot reach, and within the physical range (1", or 2" with MEL; Aces p. 20 with
-//   ASCE p. 46) when physical damage is higher, or it has a Fire Control hit or any heat. Infantry make only an Anti-'Mech attack in
-//   contact (p. 5) and vehicles none (p. 4). Limit: the table has no facing or elevation, so the firing arc is the players' call and
+// - Physical attacks: always from base contact for units other than infantry (no weapon attacks there, ASCE p. 43), and within the physical range (1", or 2" with MEL; Aces p. 20 with
+//   ASCE p. 46) when physical damage is higher, or it has a Fire Control hit or any heat. Infantry keep their weapons in contact and make
+//   only an Anti-'Mech attack, with AM (p. 5); vehicles make none and cannot fire in contact (p. 4). Limit: the table has no facing or elevation, so the firing arc is the players' call and
 //   a difference in elevation is not added to the distance. Overheat rows are for units that track heat; OV adds to Short and Medium damage, and Long with OVL.
 // - An emplacement's -1 to hit is counted once, as the immobile attacker's -1 (owner ruling; AS_EMPLACEMENT_ATTACKER).
 // - Support cards: the lowest Target Number first, the highest damage on a tie (p. 20); "hits Structure" means the card's damage
@@ -856,9 +856,11 @@ function targetMoveOf(u: TableUnit): { move: TargetMove; tmm: number } {
 const specialValue = (card: AsCard, code: string): number => card.specials.filter((s) => s.code === code).reduce((sum, s) => sum + (Number.parseInt(s.values[0] ?? "0", 10) || 0), 0);
 /**
  * How far its physical attack reaches (Aces p. 20 with ASCE p. 46): 1", 2" with MEL, base contact only for infantry (Anti-'Mech,
- * Aces p. 5); null for vehicles, whose only option is a Charge that a card must ask for (Aces p. 4).
+ * Aces p. 5), and only with the AM special; null for vehicles, whose only option is a Charge that a card must ask for (Aces p. 4),
+ * and for infantry without AM.
  */
-const physicalRange = (c: AsCard): number | null => (c.type === "CV" || c.type === "SV" ? null : c.type === "CI" || c.type === "BA" ? 0 : has(c, "MEL") ? 2 : 1);
+const isInfantry = (c: AsCard): boolean => c.type === "CI" || c.type === "BA";
+const physicalRange = (c: AsCard): number | null => (c.type === "CV" || c.type === "SV" ? null : isInfantry(c) ? (has(c, "AM") ? 0 : null) : has(c, "MEL") ? 2 : 1);
 const physicalKind = (c: AsCard): AsPhysicalType => (c.type === "CI" || c.type === "BA" ? "anti-mech" : has(c, "MEL") ? "melee" : "standard");
 
 /** The Target Number for this unit attacking `target`; `spotter` is the unit that spots an indirect attack (p. 3). */
@@ -893,11 +895,14 @@ function heatStopped(u: TableUnit): boolean {
   return now.length > 0 && now.every((m) => m.inches === 0) && cool.some((m) => m.inches > 0);
 }
 
-/** Enemies in its attack range: in sight and at a range where its damage is above 0 (p. 9; conflict 48); one in base contact, or within a physical range it can attack at, is always in reach (p. 20). */
+/** Enemies in its attack range: in sight and at a range where its damage is above 0 (p. 9; conflict 48); one it can attack physically is always in reach (p. 20). In base contact only infantry keep their weapons (Aces p. 5; ASCE p. 43), so for any other
+ * unit that cannot make a physical attack there (a vehicle) the target is out of its attack range. Emplacements make no physical attack and keep today's reading. */
 function inAttackRange(run: Run, units: TableUnit[]): TableUnit[] {
-  const contact = units.filter((u) => inches(run, u) <= 0 || physicalCase(run, u) !== null);
-  const seen = bySight(run, units.filter((u) => !contact.includes(u) && damageAt(run.unit, inches(run, u)) > 0), true);
-  return units.filter((u) => contact.includes(u) || seen.includes(u));
+  const self = run.unit.card;
+  const touching = (u: TableUnit): boolean => inches(run, u) <= 0;
+  const reach = units.filter((u) => (self.type === "BD" ? touching(u) : touching(u) ? isInfantry(self) || physicalCase(run, u) !== null : physicalCase(run, u) !== null));
+  const seen = bySight(run, units.filter((u) => !reach.includes(u) && !touching(u) && damageAt(run.unit, inches(run, u)) > 0), true);
+  return units.filter((u) => reach.includes(u) || seen.includes(u));
 }
 
 /** The target of a combat rule: nearest zone holding an enemy in range, flags, then the keys, then the closest (p. 18). */
@@ -934,7 +939,7 @@ function physicalCase(run: Run, target: TableUnit): string | null {
   if (range === null || distance > range) return null;
   const weapon = damageAt(u, distance);
   const hit = physicalDamage({ type: physicalKind(u.card), size: u.card.size, tmm: u.play.moved?.tmm ?? 0, targetSize: target.card.size, shortDamage: weapon }).toTarget;
-  if (distance <= 0 && range > 0 && weapon <= 0) return "its weapons cannot reach, so only a physical attack is left";
+  if (distance <= 0 && !isInfantry(u.card)) return "weapons cannot fire at a unit in base contact (ASCE p. 43), so only a physical attack is left";
   if (hit > weapon) return `it deals more (${String(hit)}) than a weapon attack (${String(weapon)})`;
   if (u.play.crits.fireControl > 0) return "it has a Fire Control hit";
   if (u.play.heat > 0) return "it has heat";
