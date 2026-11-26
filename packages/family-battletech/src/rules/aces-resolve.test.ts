@@ -423,6 +423,12 @@ describe("Aces combat and command resolver", () => {
       const ctx = fight(combatCard(anyZone, [], rowsOf), [unit("mark", target)], { unit: unit("hound", { ov: 2, ...attacker }) });
       expect(play(ctx, { inches: { mark: 10 } }).decision, name).toMatchObject(expected);
     }
+    // At Long, OV counts toward reaching Structure only with OVL (ASCE p. 53): Long damage 1 + OV 2 against Armor 2.
+    const ovl = [{ code: "OVL", values: [], raw: "OVL" }];
+    for (const [name, specials, expected] of [["no OVL holds fire at Long", [], { attack: "none", reason: "hold-fire" }], ["OVL reaches at Long", ovl, { attack: "weapon", ov: 1 }]] as const) {
+      const ctx = fight(combatCard(anyZone, [], rowsOf), [unit("mark", { moved: 0, armor: 2 })], { unit: unit("hound", { ov: 2, specials: [...specials] }) });
+      expect(play(ctx, { inches: { mark: 30 } }).decision, name).toMatchObject(expected);
+    }
   });
 
   it("never uses OV that would shut it down, makes no weapon attack at Move 0 from heat or when shut down, and ignores the rows for units without heat (p. 19)", () => {

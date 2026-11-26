@@ -14,7 +14,7 @@
 // - A target needing 13 or more is dropped and the choice repeats; one already destroyed by staged damage is ignored; a tie left
 //   after the keys goes to the closest, then to the players (p. 18).
 // - Physical attacks only from base contact (distance 0): when weapons cannot reach, or physical damage is higher, or it has a
-//   Fire Control hit or any heat (p. 20). Overheat rows are for units that track heat; OV adds to Short and Medium damage only.
+//   Fire Control hit or any heat (p. 20). Overheat rows are for units that track heat; OV adds to Short and Medium damage, and Long with OVL.
 // - An emplacement's -1 to hit is counted once, as the immobile attacker's -1 (owner ruling; AS_EMPLACEMENT_ATTACKER).
 // - Support cards: the lowest Target Number first, the highest damage on a tie (p. 20); "hits Structure" means the card's damage
 //   is above the Armor the target has left after staged damage and the cards already hit (p. 21).
@@ -972,7 +972,8 @@ function chooseOv(run: Run, rows: readonly OvRow[], tn: number, target: TableUni
   const room = Math.max(0, AS_HEAT.max - 1 - u.play.heat - external);
   const available = Math.min(currentOv(u.play, u.card), room);
   const bracket = rangeBracket(distance);
-  const reach = damageAt(u, distance) + (bracket === "S" || bracket === "M" ? available : 0);
+  // OV adds at Short and Medium, and at Long too with OVL (ASCE p. 53, Overheat Long).
+  const reach = damageAt(u, distance) + (bracket === "S" || bracket === "M" || (bracket === "L" && has(u.card, "OVL")) ? available : 0);
   const index = rows.findIndex((row) => ovRowApplies(run, row, tn, target, reach));
   const row = rows[index];
   if (!row) {
