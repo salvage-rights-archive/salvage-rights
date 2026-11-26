@@ -38,6 +38,7 @@ const gothicRoutes: FamilyRoute[] = [
   { path: "sheet", label: "Gothic record sheet", section: "workshop", load: () => import("./ui/SheetPage") },
   { path: "abominations", label: "Gothic Abomination units", section: "workshop", load: () => import("./ui/gothic/AbominationsPage") },
   { path: "play", label: "Gothic Abomination tracker", section: "play", load: () => import("./ui/gothic/TrackerPage") },
+  { path: "aids", label: "Gothic rules reference", section: "workshop", load: () => import("./ui/gothic/AidsPage") },
 ];
 const gothicPreviewRoutes: FamilyRoute[] = gothicRoutes.map((route) => ({ ...route, path: `gothic-preview/${route.path}` }));
 

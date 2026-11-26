@@ -519,6 +519,35 @@ a.bt-button {
   }
 }
 
+// The Gothic rules reference: each table scrolls inside its own region when it is wider than the screen.
+.bt-aids__scroll {
+  overflow-x: auto;
+  max-width: 100%;
+
+  &:focus-visible {
+    outline: 3px solid var(--sr-focus);
+    outline-offset: 2px;
+  }
+
+  table {
+    border-collapse: collapse;
+    min-width: 100%;
+    font-size: .9rem;
+  }
+
+  th,
+  td {
+    padding: var(--sr-space-2);
+    border: var(--sr-border) solid var(--sr-line-strong);
+    text-align: left;
+    vertical-align: top;
+  }
+
+  th[scope="row"] {
+    font-weight: 600;
+  }
+}
+
 // Identity and chassis side by side when there is room for both.
 .bt-editor__fields {
   display: grid;

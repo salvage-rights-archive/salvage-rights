@@ -270,6 +270,14 @@ test("the Gothic home, a box Mech editor and its sheet have no axe violations in
   await expectNoViolations(page, DEV, [`${GOTHIC}/home`, editorPath, editorPath.replace("/editor", "/sheet")]);
 });
 
+test("the Gothic rules reference has no axe violations in either theme and fits 320 px", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 700 });
+  await expectNoViolations(page, DEV, [`${GOTHIC}/aids`]);
+  await expect(page.getByRole("table", { name: "Abomination-mounted weapons" }).getByRole("row")).not.toHaveCount(1);
+  const widths = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, client: document.documentElement.clientWidth }));
+  expect(widths.scroll).toBe(widths.client);
+});
+
 test("the Gothic Abomination units page, its form, a custom form and a unit sheet have no axe violations in either theme", async ({ page }) => {
   test.setTimeout(120_000);
   for (const theme of ["Light", "Dark"] as const) {
