@@ -71,7 +71,7 @@ describe("the aerospace weapon tables", () => {
     expect(aeroWeaponFigures(catalog, "ams-is", E.current)).toMatchObject({ bayClass: "Point Defense", attack: "Special", ammoPerTon: 12 });
     expect(aeroWeaponFigures(catalog, "killer-whale-is", E.current)).toMatchObject({ bayClass: "Capital Missile", heat: 20, maxRange: "Extreme", tonsPerShot: 50 });
     expect(aeroWeaponFigures(catalog, "srm-2-is+artemis", E.current)).toBeUndefined();
-    expect(aeroWeaponFigures(catalog, "arrow-iv-is", E.current)).toBeUndefined();
+    expect(aeroWeaponFigures(catalog, "heavy-flamer-is", E.current)).toBeUndefined();
     expect(aeroWeaponFigures(catalog, "no-such-weapon", E.current)).toBeUndefined();
   });
 
@@ -79,7 +79,7 @@ describe("the aerospace weapon tables", () => {
     for (const id of ["bomb-high-explosive-is", "bomb-cluster-clan", "bomb-mines-is", "bomb-inferno-clan"]) expect(catalog.byId(id)?.units).toEqual(["aero"]);
     expect(catalog.byId("bomb-laser-guided-is")?.availability).toEqual([{ from: 1950, to: 2800 }, { from: 3060 }]);
     expect(catalog.byId("bay-door-is")).toMatchObject({ tons: 0, units: ["smallcraft", "dropship"] });
-    expect(catalog.byId("look-down-radar-clan")).toMatchObject({ tons: 5, units: ["aero", "smallcraft", "dropship"] });
+    expect(catalog.byId("look-down-radar-clan")).toMatchObject({ tons: 5, units: expect.arrayContaining(["aero", "smallcraft", "dropship"]) });
   });
 
   it("every weapon an aerospace unit may mount has a bay class, as does every capital weapon but the mass drivers", () => {

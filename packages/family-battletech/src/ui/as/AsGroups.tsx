@@ -7,7 +7,7 @@ import type { AsOrgFamily } from "../../data/as-formations";
 import { AS_FORMATION_GLOSSES } from "../../data/as-glosses";
 import { AS_EDITION } from "../../data/alpha-strike";
 import { bonusFigure, checkFormation, findFormation, findOrganisation, findOverlay, formationsMet, groupFindings, groupTotals, groupsOf, newGroup } from "../../rules/as-force";
-import { baseLines, checkComposition, checkOverlay, groupScale } from "../../rules/as-composition";
+import { baseLines, checkComposition, checkOverlay, commandOfficersOver, groupScale } from "../../rules/as-composition";
 import type { AsForce, AsGroup, ForceTotals, GroupTotals } from "../../rules/as-force";
 import { unitTitle } from "../../rules/as-unit";
 import { GlossSwitch } from "./AsSpecials";
@@ -65,7 +65,6 @@ export function GroupsSection({ force, totals, change, headingRef }: Props) {
       <button type="button" className="bt-button bt-button--secondary" onClick={add}>
         Add a group
       </button>
-      <p className="bt-hint">Not checked: the footnote that swaps vehicle and BattleMech lances when a company is built of vehicle lances (p. 124).</p>
     </section>
   );
 }
@@ -94,14 +93,15 @@ function GroupCard({ entry, all, glosses, setGroup, remove }: { entry: GroupTota
   const base = baseLines(overlay, lines);
   const count = base.filter((l) => l.unit).length;
   const scale = groupScale(org, type, base);
-  const check = type ? checkFormation(type, base, scale) : undefined;
+  const held = insideOf(all, n);
+  const extraOfficers = commandOfficersOver(org, type, scale, all.filter((e) => held.has(e.group.id)).flatMap((e) => (e.group.org ? [e.group.org] : [])));
+  const check = type ? checkFormation(type, base, scale, extraOfficers) : undefined;
   const met = formationsMet(base, scale);
   const notes = groupFindings(group, count);
   const gloss = type && glosses ? AS_FORMATION_GLOSSES[type.id] : undefined;
   const figure = type ? bonusFigure(type, count) : undefined;
   const overlayCheck = overlay ? checkOverlay(overlay, lines) : undefined;
   const composition = checkComposition(all.filter((e) => entry.childIds.includes(e.group.id)), group.org);
-  const held = insideOf(all, n);
   const unitCount = entry.count;
   const name = group.name.trim() || "this group";
   return (

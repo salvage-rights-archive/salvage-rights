@@ -42,7 +42,7 @@ export interface NamedPilot {
   /** Every SP this pilot has earned, the 150 start included. */
   totalSp: number;
   alloc: Record<PilotColumn, number>;
-  /** Edge ability names the player types from their own cards; the app never lists them. */
+  /** Edge ability names: rows of the Edge table by name (data/aces-edge.ts, any case) or names typed as Other. */
   abilities: string[];
   wounded: boolean;
   killed: boolean;

@@ -25,6 +25,8 @@ export interface AsCompositionRow {
   match: AsChildMatch;
   /** At most this many for every core row of another kind (the book's "only 1 Support Lance per 1 core non-Support Lance"). */
   perCore?: number;
+  /** The row also takes all-BattleMech groups when the core is vehicle groups (the footnotes of the company and battalion tables, p. 124). */
+  orMechs?: true;
 }
 
 export interface AsComposition {
@@ -59,7 +61,7 @@ export const AS_COMPOSITIONS: AsComposition[] = [
       row("lances", "Battle, Assault, Striker, Fire, Recon or Pursuit Lance", "core", 1, 4, { formations: BASIC }),
       row("inf", "Conventional Infantry Platoon", "detachment", 0, 6, { types: ["CI"] }),
       row("ba", "Battle Armor Squad", "detachment", 0, 4, { types: ["BA"] }),
-      row("vehicle", "Vehicle Lance", "detachment", 0, 3, { types: VEHICLES }),
+      { ...row("vehicle", "Vehicle Lance (a BattleMech Lance when the core is vehicle lances)", "detachment", 0, 3, { types: VEHICLES }), orMechs: true },
       row("aero", "Aerospace Squadron", "detachment", 0, 1, { types: FIGHTERS }),
     ],
   },
@@ -79,7 +81,7 @@ export const AS_COMPOSITIONS: AsComposition[] = [
     id: "battalion", name: "Battalion", orgs: ["is-battalion"], coreName: "companies", core: {},
     rows: [
       row("command", "Command Lance", "core", 0, 1, { formations: COMMAND }),
-      row("vehicle-co", "Vehicle Company", "detachment", 0, 3, { orgs: ["is-company"], types: VEHICLES }),
+      { ...row("vehicle-co", "Vehicle Company (a BattleMech Company when the core is vehicle companies)", "detachment", 0, 3, { orgs: ["is-company"], types: VEHICLES }), orMechs: true },
       row("companies", "Ground Force Company", "core", 3, 4, { orgs: ["is-company"] }),
       row("inf", "Conventional Infantry Company", "detachment", 0, 6, { types: ["CI"] }),
       row("ba", "Battle Armor Platoon", "detachment", 0, 4, { types: ["BA"] }),

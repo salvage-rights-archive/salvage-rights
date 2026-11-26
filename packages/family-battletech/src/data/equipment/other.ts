@@ -306,33 +306,33 @@ export const OTHER: EquipmentGroup[] = [
     defaults: { kind: "other", techBase: "inner-sphere", cite: { book: TO, page: 217 }, playCite: { book: TO, page: 216 }, checked: "page" },
     items: [
       // Electronics and other equipment, pp. 216-217
-      { id: "bloodhound-active-probe-is", name: "Bloodhound Active Probe", aliases: ["Bloodhound AP"], tons: 2, slots: 3, type: "E", heat: 0, damage: "0", range: [0, 0, 0, 8], availability: [{ from: 3082 }], prototypeYear: 3058, rulesLevel: "experimental" },
-      { id: "angel-ecm-is", name: "Angel ECM", tons: 2, slots: 2, type: "E", heat: 0, damage: "0", range: [0, 0, 0, 6], availability: [{ from: 3080 }], prototypeYear: 3057, rulesLevel: "experimental" },
-      { id: "c3-boosted-master-is", name: "C3 Boosted Master", aliases: ["C3BS Master"], tons: 6, slots: 6, type: "E, CE, T", heat: 0, availability: [{ from: 3100 }], prototypeYear: 3073, rulesLevel: "experimental" },
-      { id: "c3-boosted-slave-is", name: "C3 Boosted Slave", aliases: ["C3BS Slave"], tons: 3, slots: 2, type: "E, CE, T", heat: 0, availability: [{ from: 3100 }], prototypeYear: 3073, rulesLevel: "experimental" },
-      { id: "c3-emergency-master-is", name: "C3 Emergency Master", tons: 2, slots: 2, type: "E, T", heat: 0, availability: [{ from: 3099 }], prototypeYear: 3071, rulesLevel: "experimental" },
-      { id: "case-ii-is", name: "CASE II", tons: 1, slots: 1, type: "PE", availability: [{ from: 3082 }], prototypeYear: 3064, rulesLevel: "experimental" },
+      { id: "bloodhound-active-probe-is", name: "Bloodhound Active Probe", aliases: ["Bloodhound AP"], tons: 2, slots: 3, type: "E", heat: 0, damage: "0", range: [0, 0, 0, 8], availability: [{ from: 3082 }], prototypeYear: 3058, rulesLevel: "experimental", units: ["mech", "industrialmech", "vehicle", "aero", "smallcraft", "dropship", "building"], by: { vehicle: { slots: 1, note: "Support vehicle: 3 slots" }, aero: { slots: 1 }, smallcraft: { slots: 1 }, dropship: { slots: 0 }, building: { slots: 1 } } },
+      { id: "angel-ecm-is", name: "Angel ECM", tons: 2, slots: 2, type: "E", heat: 0, damage: "0", range: [0, 0, 0, 6], availability: [{ from: 3080 }], prototypeYear: 3057, rulesLevel: "experimental", units: ["mech", "industrialmech", "vehicle", "protomech", "aero", "smallcraft", "dropship", "building"], by: { vehicle: { slots: 1, note: "Support vehicle: 2 slots" }, protomech: { slots: 1 }, aero: { slots: 1 }, smallcraft: { slots: 1 }, dropship: { slots: 0 }, building: { slots: 1 } } },
+      { id: "c3-boosted-master-is", name: "C3 Boosted Master", aliases: ["C3BS Master"], tons: 6, slots: 6, type: "E, CE, T", heat: 0, availability: [{ from: 3100 }], prototypeYear: 3073, rulesLevel: "experimental", units: ["mech", "industrialmech", "vehicle", "building"], by: { vehicle: { slots: 1, note: "Support vehicle: 6* slots" }, building: { slots: 1 } } },
+      { id: "c3-boosted-slave-is", name: "C3 Boosted Slave", aliases: ["C3BS Slave"], tons: 3, slots: 2, type: "E, CE, T", heat: 0, availability: [{ from: 3100 }], prototypeYear: 3073, rulesLevel: "experimental", units: ["mech", "industrialmech", "vehicle", "building"], by: { vehicle: { slots: 1, note: "Support vehicle: 2* slots" }, building: { slots: 1 } } },
+      { id: "c3-emergency-master-is", name: "C3 Emergency Master", tons: 2, slots: 2, type: "E, T", heat: 0, availability: [{ from: 3099 }], prototypeYear: 3071, rulesLevel: "experimental", units: ["mech", "industrialmech", "vehicle", "building"], by: { vehicle: { slots: 1, note: "Support vehicle: 2* slots" }, building: { slots: 1 } } },
+      { id: "case-ii-is", name: "CASE II", tons: 1, slots: 1, type: "PE", availability: [{ from: 3082 }], prototypeYear: 3064, rulesLevel: "experimental", units: ["mech", "industrialmech", "aero"], by: { aero: { slots: 0 } } },
     ],
   },
   {
     defaults: { kind: "other", techBase: "clan", cite: { book: TO, page: 217 }, playCite: { book: TO, page: 216 }, checked: "page" },
     items: [
       // Electronics and other equipment, pp. 216-217
-      { id: "watchdog-cews-clan", name: "Watchdog CEWS", tons: 1.5, slots: 2, type: "E", heat: 0, damage: "0", range: [0, 0, 0, 3], availability: [{ from: 3080 }], prototypeYear: 3059, rulesLevel: "experimental" },
-      { id: "angel-ecm-clan", name: "Angel ECM", tons: 2, slots: 2, type: "E", heat: 0, damage: "0", range: [0, 0, 0, 6], availability: [{ from: 3058 }], rulesLevel: "experimental" },
-      { id: "artemis-v-clan", name: "Artemis V FCS", aliases: ["Artemis V"], tons: 1.5, slots: 2, type: "T", heat: 0, damage: "0", availability: [{ from: 3085 }], prototypeYear: 3061, rulesLevel: "experimental", needs: "launcher" },
-      { id: "case-ii-clan", name: "CASE II", tons: 0.5, slots: 1, type: "PE", availability: [{ from: 3082 }], prototypeYear: 3062, rulesLevel: "experimental" },
+      { id: "watchdog-cews-clan", name: "Watchdog CEWS", tons: 1.5, slots: 2, type: "E", heat: 0, damage: "0", range: [0, 0, 0, 3], availability: [{ from: 3080 }], prototypeYear: 3059, rulesLevel: "experimental", units: ["mech", "industrialmech", "vehicle", "protomech", "aero", "smallcraft", "dropship", "building"], by: { vehicle: { slots: 1, note: "Support vehicle: 2 slots" }, protomech: { slots: 1 }, aero: { slots: 1 }, smallcraft: { slots: 1 }, dropship: { slots: 0 }, building: { slots: 1 } } },
+      { id: "angel-ecm-clan", name: "Angel ECM", tons: 2, slots: 2, type: "E", heat: 0, damage: "0", range: [0, 0, 0, 6], availability: [{ from: 3058 }], rulesLevel: "experimental", units: ["mech", "industrialmech", "vehicle", "protomech", "aero", "smallcraft", "dropship", "building"], by: { vehicle: { slots: 1, note: "Support vehicle: 2 slots" }, protomech: { slots: 1 }, aero: { slots: 1 }, smallcraft: { slots: 1 }, dropship: { slots: 0 }, building: { slots: 1 } } },
+      { id: "artemis-v-clan", name: "Artemis V FCS", aliases: ["Artemis V"], tons: 1.5, slots: 2, type: "T", heat: 0, damage: "0", availability: [{ from: 3085 }], prototypeYear: 3061, rulesLevel: "experimental", needs: "launcher", units: ["mech", "industrialmech", "vehicle", "aero", "smallcraft", "dropship", "ship", "building"], by: { vehicle: { note: "Support vehicle: +2** slots" } } },
+      { id: "case-ii-clan", name: "CASE II", tons: 0.5, slots: 1, type: "PE", availability: [{ from: 3082 }], prototypeYear: 3062, rulesLevel: "experimental", units: ["mech", "industrialmech", "aero"], by: { aero: { slots: 0 } } },
     ],
   },
   {
     defaults: { kind: "other", techBase: "inner-sphere", cite: { book: TO, page: 219 }, playCite: { book: TO, page: 218 }, checked: "page" },
     items: [
       // Electronics and other equipment, pp. 218-219
-      { id: "chaff-pod-is", name: "Chaff Pod", tons: 1, slots: 1, type: "PB, E, OS, X", heat: 0, availability: [{ from: 3079 }], prototypeYear: 3069, rulesLevel: "experimental" },
-      { id: "coolant-pod-is", name: "Coolant Pod", tons: 1, slots: 1, type: "PE, OS, X", availability: [{ from: 3079 }], prototypeYear: 3049, rulesLevel: "experimental" },
+      { id: "chaff-pod-is", name: "Chaff Pod", tons: 1, slots: 1, type: "PB, E, OS, X", heat: 0, availability: [{ from: 3079 }], prototypeYear: 3069, rulesLevel: "experimental", units: ["mech", "industrialmech", "vehicle", "aero", "smallcraft", "dropship", "building"] },
+      { id: "coolant-pod-is", name: "Coolant Pod", tons: 1, slots: 1, type: "PE, OS, X", availability: [{ from: 3079 }], prototypeYear: 3049, rulesLevel: "experimental", units: ["mech", "industrialmech", "aero"] },
       // Drone Operating System (table p. 219, rules p. 118): a tenth of the drone unit's weight plus the half-ton sensor system the rules require with it (one item here), one slot, "ES" in both columns (written as 2200). Price: 5,000 plus 10,000 for each ton of the item.
       { id: "drone-operating-system-is", name: "Drone Operating System", aliases: ["Drone OS"], tons: "drone-os-tons", slots: 1, type: "E", availability: [{ from: 2200 }], rulesLevel: "advanced", units: ["mech", "industrialmech", "vehicle", "aero"] },
-      { id: "electronic-warfare-equipment-is", name: "Electronic Warfare Equipment", aliases: ["EW Equipment"], tons: 7.5, slots: 4, type: "E", range: [0, 0, 0, 3], availability: [{ from: 3025 }], prototypeYear: 3020, rulesLevel: "experimental" },
+      { id: "electronic-warfare-equipment-is", name: "Electronic Warfare Equipment", aliases: ["EW Equipment"], tons: 7.5, slots: 4, type: "E", range: [0, 0, 0, 3], availability: [{ from: 3025 }], prototypeYear: 3020, rulesLevel: "experimental", units: ["mech", "industrialmech", "vehicle", "aero", "smallcraft", "dropship", "building"], by: { vehicle: { slots: 1, note: "Support vehicle: 4 slots" }, aero: { slots: 1 }, smallcraft: { slots: 1 }, dropship: { slots: 0 }, building: { slots: 1 } } },
     ],
   },
   {
@@ -341,37 +341,37 @@ export const OTHER: EquipmentGroup[] = [
       // Electronics and other equipment, pp. 218-219
       // Drone Operating System (table p. 219, rules p. 118): a tenth of the drone unit's weight plus the half-ton sensor system the rules require with it (one item here), one slot, "ES" in both columns (written as 2200). Price: 5,000 plus 10,000 for each ton of the item.
       { id: "drone-operating-system-clan", name: "Drone Operating System", aliases: ["Drone OS"], tons: "drone-os-tons", slots: 1, type: "E", availability: [{ from: 2200 }], rulesLevel: "advanced", units: ["mech", "industrialmech", "vehicle", "aero"] },
-      { id: "coolant-pod-clan", name: "Coolant Pod", tons: 1, slots: 1, type: "PE, OS, X", availability: [{ from: 3079 }], prototypeYear: 3056, rulesLevel: "experimental" },
+      { id: "coolant-pod-clan", name: "Coolant Pod", tons: 1, slots: 1, type: "PE, OS, X", availability: [{ from: 3079 }], prototypeYear: 3056, rulesLevel: "experimental", units: ["mech", "industrialmech", "aero"] },
     ],
   },
   {
     defaults: { kind: "other", techBase: "inner-sphere", cite: { book: TO, page: 221 }, playCite: { book: TO, page: 220 }, checked: "page" },
     items: [
       // Electronics and other equipment, pp. 220-221
-      { id: "laser-insulator-is", name: "Laser Insulator", tons: 0.5, slots: 1, type: "PE", availability: [{ from: 2575 }], rulesLevel: "experimental", needs: "laser" },
-      { id: "mrm-apollo-fcs-is", name: "MRM Apollo FCS", aliases: ["Apollo FCS","MRM \"Apollo\" FCS"], tons: 1, slots: 1, type: "E", heat: 0, availability: [{ from: 3071 }], prototypeYear: 3065, rulesLevel: "advanced", needs: "mrm" },
+      { id: "laser-insulator-is", name: "Laser Insulator", tons: 0.5, slots: 1, type: "PE", availability: [{ from: 2575 }], rulesLevel: "experimental", needs: "laser", units: ["mech", "industrialmech", "vehicle", "aero", "smallcraft"], by: { vehicle: { slots: 0 }, aero: { slots: 0 }, smallcraft: { slots: 0 } } },
+      { id: "mrm-apollo-fcs-is", name: "MRM Apollo FCS", aliases: ["Apollo FCS","MRM \"Apollo\" FCS"], tons: 1, slots: 1, type: "E", heat: 0, availability: [{ from: 3071 }], prototypeYear: 3065, rulesLevel: "advanced", needs: "mrm", units: ["mech", "industrialmech", "vehicle", "aero", "smallcraft", "dropship", "ship", "building"], by: { vehicle: { note: "Support vehicle: +1** slots" } } },
     ],
   },
   {
     defaults: { kind: "other", techBase: "clan", cite: { book: TO, page: 221 }, playCite: { book: TO, page: 220 }, checked: "page" },
     items: [
       // Electronics and other equipment, pp. 220-221
-      { id: "laser-insulator-clan", name: "Laser Insulator", tons: 0.5, slots: 1, type: "PE", availability: [{ from: 2575 }], rulesLevel: "experimental", needs: "laser" },
+      { id: "laser-insulator-clan", name: "Laser Insulator", tons: 0.5, slots: 1, type: "PE", availability: [{ from: 2575 }], rulesLevel: "experimental", needs: "laser", units: ["mech", "industrialmech", "vehicle", "aero", "smallcraft"], by: { vehicle: { slots: 0 }, aero: { slots: 0 }, smallcraft: { slots: 0 } } },
     ],
   },
   {
     defaults: { kind: "other", techBase: "inner-sphere", cite: { book: TO, page: 223 }, playCite: { book: TO, page: 222 }, checked: "page" },
     items: [
       // Electronics and other equipment, pp. 222-223
-      { id: "ppc-capacitor-is", name: "PPC Capacitor", tons: 1, slots: 1, type: "X", availability: [{ from: 3081 }], prototypeYear: 3060, rulesLevel: "experimental", needs: "ppc" },
-      { id: "recon-camera-is", name: "Recon Camera", tons: 0.5, slots: 1, type: "E", availability: [{ from: 1950 }], rulesLevel: "advanced" },
+      { id: "ppc-capacitor-is", name: "PPC Capacitor", tons: 1, slots: 1, type: "X", availability: [{ from: 3081 }], prototypeYear: 3060, rulesLevel: "experimental", needs: "ppc", units: ["mech", "industrialmech", "vehicle", "aero", "smallcraft", "dropship", "ship", "building"], by: { vehicle: { note: "Support vehicle: +1** slots" } } },
+      { id: "recon-camera-is", name: "Recon Camera", tons: 0.5, slots: 1, type: "E", availability: [{ from: 1950 }], rulesLevel: "advanced", units: ["mech", "industrialmech", "vehicle", "protomech", "aero", "smallcraft"] },
     ],
   },
   {
     defaults: { kind: "other", techBase: "clan", cite: { book: TO, page: 223 }, playCite: { book: TO, page: 222 }, checked: "page" },
     items: [
       // Electronics and other equipment, pp. 222-223
-      { id: "recon-camera-clan", name: "Recon Camera", tons: 0.5, slots: 1, type: "E", availability: [{ from: 1950 }], rulesLevel: "advanced" },
+      { id: "recon-camera-clan", name: "Recon Camera", tons: 0.5, slots: 1, type: "E", availability: [{ from: 1950 }], rulesLevel: "advanced", units: ["mech", "industrialmech", "vehicle", "protomech", "aero", "smallcraft"] },
     ],
   },
   // -------------------------------------------------------------------------------------------------------------
@@ -392,9 +392,9 @@ export const OTHER: EquipmentGroup[] = [
       { id: "aes-arm-is", pod: false, podCite: { book: TO, page: 90 }, name: "Actuator Enhancement System (Arm)", aliases: ["AES", "Actuator Enhancement System", "AES (Arm)"], tons: "aes-tons", slots: "aes-slots", availability: [{ from: 3108 }], prototypeYear: 3070, locations: ["LA", "RA"], locationsQuad: [], cite: { book: TO, page: 217 } },
       { id: "aes-leg-is", pod: false, podCite: { book: TO, page: 90 }, name: "Actuator Enhancement System (Leg)", aliases: ["AES (Leg)"], tons: "aes-tons", slots: "aes-slots", availability: [{ from: 3108 }], prototypeYear: 3070, locations: ["LL", "RL"], locationsQuad: ["FLL", "FRL", "RLL", "RRL"], perMech: 2, perMechQuad: 4 },
       // Blue Shield (p. 108): 3 tons in all, one slot in every location but the head
-      { id: "blue-shield-is", pod: false, podCite: { book: TO, page: 108 }, name: "Blue Shield Particle Field Damper", aliases: ["Blue Shield", "Blue Shield PFD"], tons: 3, slots: 1, availability: [{ from: 3053 }], perMech: 7, splitWeight: true, locations: ["CT", "LT", "RT", "LA", "RA", "LL", "RL"], locationsQuad: ["CT", "LT", "RT", "FLL", "FRL", "RLL", "RRL"], units: ["mech", "industrialmech", "vehicle", "aero"] },
+      { id: "blue-shield-is", pod: false, podCite: { book: TO, page: 108 }, name: "Blue Shield Particle Field Damper", aliases: ["Blue Shield", "Blue Shield PFD"], tons: 3, slots: 1, availability: [{ from: 3053 }], perMech: 7, splitWeight: true, locations: ["CT", "LT", "RT", "LA", "RA", "LL", "RL"], locationsQuad: ["CT", "LT", "RT", "FLL", "FRL", "RLL", "RRL"], units: ["mech", "industrialmech", "vehicle", "aero"], by: { aero: { slots: 4 } } },
       // Booby Trap (p. 109): a tenth of the unit, in the engine's location
-      { id: "booby-trap-is", name: "Booby Trap", tons: "booby-trap", slots: 1, availability: [{ from: 1950 }], locations: ["CT"], units: ["mech", "industrialmech", "vehicle", "aero", "smallcraft", "dropship", "ship", "building"] },
+      { id: "booby-trap-is", name: "Booby Trap", tons: "booby-trap", slots: 1, availability: [{ from: 1950 }], locations: ["CT"], units: ["mech", "industrialmech", "vehicle", "aero", "smallcraft", "dropship", "ship", "building"], by: { dropship: { slots: 0 }, ship: { slots: 0 }, building: { slots: 0 } } },
       // Claws, lance, mace (pp. 99-102): a ton and a slot for every 15, 20 or 10 tons of the 'Mech
       { id: "claws-is", name: "Claws", aliases: ["Claw"], tons: "ceil-tons-15", slots: "ceil-tons-15", availability: [{ from: 3060 }], prototypeYear: 3050, locations: ["LA", "RA"], locationsQuad: [], rulesLevel: "advanced" },
       { id: "lance-is", name: "Lance", tons: "ceil-tons-20", slots: "ceil-tons-20", availability: [{ from: 3083 }], prototypeYear: 3064, locations: ["LA", "RA"], locationsQuad: [] },
@@ -435,26 +435,26 @@ export const OTHER: EquipmentGroup[] = [
       // BattleMech HarJel (p. 100): a ton and a slot in any location but the cockpit's; the table's 1* for both is read as per mount
       { id: "harjel-is", name: "BattleMech HarJel", aliases: ["HarJel", "HarJel Repair", "HarJel Repair System", "HarJel Repair Systems", "BattleMech HarJel System"], tons: 1, slots: 1, availability: [{ from: 3115 }], prototypeYear: 3067, rulesLevel: "experimental", checked: "text", locations: ["CT", "LT", "RT", "LA", "RA", "LL", "RL"], locationsQuad: ["CT", "LT", "RT", "FLL", "FRL", "RLL", "RRL"] },
       // Cockpit Command Console (p. 112), Collapsible Command Module (p. 114), Full-Head Ejection System (p. 122), Aquatic Survival System (p. 137)
-      { id: "cockpit-command-console-is", name: "Cockpit Command Console", aliases: ["Command Console"], tons: 3, slots: 1, availability: [{ from: 3030 }], rulesLevel: "advanced", locations: ["HD"], cite: { book: TO, page: 219 } },
+      { id: "cockpit-command-console-is", name: "Cockpit Command Console", aliases: ["Command Console"], tons: 3, slots: 1, availability: [{ from: 3030 }], rulesLevel: "advanced", locations: ["HD"], cite: { book: TO, page: 219 }, units: ["mech", "industrialmech", "vehicle", "aero"] },
       { id: "collapsible-command-module-is", name: "Collapsible Command Module", aliases: ["Collapsible Command Module (CCM)", "CCM"], tons: 16, slots: 12, availability: [{ from: 2710 }], prototypeYear: 2700, rulesLevel: "experimental", cite: { book: TO, page: 219 } },
       { id: "full-head-ejection-system-is", name: "Full-Head Ejection System", aliases: ["Full Head Ejection System", "Full-Head Ejection"], tons: 0, slots: 0, availability: [{ from: 3023 }], prototypeYear: 3020, rulesLevel: "advanced", locations: ["HD"], perMech: 1, cite: { book: TO, page: 219 } },
       { id: "aquatic-survival-system-is", name: "MechWarrior Aquatic Survival System", aliases: ["MASS", "Aquatic Survival System"], tons: 1.5, slots: 1, availability: [{ from: 3083 }], prototypeYear: 3048, rulesLevel: "experimental", locations: ["HD"], cite: { book: TO, page: 221 } },
       // Supercharger (p. 156): a tenth of the engine's weight, in a location with engine slots
-      { id: "supercharger-is", name: "Supercharger", tons: "supercharger", slots: 1, availability: [{ from: 2200 }], rulesLevel: "experimental", locations: ["CT", "LT", "RT"], cite: { book: TO, page: 223 } },
+      { id: "supercharger-is", name: "Supercharger", tons: "supercharger", slots: 1, availability: [{ from: 2200 }], rulesLevel: "experimental", locations: ["CT", "LT", "RT"], cite: { book: TO, page: 223 }, units: ["mech", "industrialmech", "vehicle"] },
       // Jump pack (p. 104): carried as cargo, of any weight to 20 tons
-      { id: "jump-pack-is", name: "Jump Pack", aliases: ["Drop Pack", "Jump Pack / Drop Pack", "Jump/Drop Pack"], tons: "chosen-tons", slots: 0, availability: [{ from: 2457 }], prototypeYear: 2430, rulesLevel: "advanced", amount: { unit: "tons", min: 0.5, max: 20, step: 0.5 } },
+      { id: "jump-pack-is", name: "Jump Pack", aliases: ["Drop Pack", "Jump Pack / Drop Pack", "Jump/Drop Pack"], tons: "chosen-tons", slots: 0, availability: [{ from: 2457 }], prototypeYear: 2430, rulesLevel: "advanced", amount: { unit: "tons", min: 0.5, max: 20, step: 0.5 }, units: ["mech", "industrialmech", "protomech"] },
     ],
   },
   {
     defaults: { kind: "other", techBase: "clan", cite: { book: TO, page: 217 }, checked: "page" },
     items: [
       { id: "harjel-clan", name: "BattleMech HarJel", aliases: ["HarJel", "HarJel Repair", "HarJel Repair System", "HarJel Repair Systems", "BattleMech HarJel System"], tons: 1, slots: 1, availability: [{ from: 3115 }], prototypeYear: 3059, rulesLevel: "experimental", checked: "text", locations: ["CT", "LT", "RT", "LA", "RA", "LL", "RL"], locationsQuad: ["CT", "LT", "RT", "FLL", "FRL", "RLL", "RRL"] },
-      { id: "cockpit-command-console-clan", name: "Cockpit Command Console", aliases: ["Command Console"], tons: 3, slots: 1, availability: [{ from: 2631 }], rulesLevel: "advanced", locations: ["HD"], cite: { book: TO, page: 219 } },
+      { id: "cockpit-command-console-clan", name: "Cockpit Command Console", aliases: ["Command Console"], tons: 3, slots: 1, availability: [{ from: 2631 }], rulesLevel: "advanced", locations: ["HD"], cite: { book: TO, page: 219 }, units: ["mech", "industrialmech", "vehicle", "aero"] },
       { id: "collapsible-command-module-clan", name: "Collapsible Command Module", aliases: ["Collapsible Command Module (CCM)", "CCM"], tons: 16, slots: 12, availability: [{ from: 2710 }], rulesLevel: "experimental", cite: { book: TO, page: 219 } },
       { id: "full-head-ejection-system-clan", name: "Full-Head Ejection System", aliases: ["Full Head Ejection System", "Full-Head Ejection"], tons: 0, slots: 0, availability: [{ from: 3052 }], rulesLevel: "advanced", locations: ["HD"], perMech: 1, cite: { book: TO, page: 219 } },
       { id: "aquatic-survival-system-clan", name: "MechWarrior Aquatic Survival System", aliases: ["MASS", "Aquatic Survival System"], tons: 1.5, slots: 1, availability: [{ from: 3062 }], rulesLevel: "experimental", locations: ["HD"], cite: { book: TO, page: 221 } },
-      { id: "supercharger-clan", name: "Supercharger", tons: "supercharger", slots: 1, availability: [{ from: 2200 }], rulesLevel: "experimental", locations: ["CT", "LT", "RT"], cite: { book: TO, page: 223 } },
-      { id: "jump-pack-clan", name: "Jump Pack", aliases: ["Drop Pack", "Jump Pack / Drop Pack", "Jump/Drop Pack"], tons: "chosen-tons", slots: 0, availability: [{ from: 2457 }], rulesLevel: "advanced", amount: { unit: "tons", min: 0.5, max: 20, step: 0.5 } },
+      { id: "supercharger-clan", name: "Supercharger", tons: "supercharger", slots: 1, availability: [{ from: 2200 }], rulesLevel: "experimental", locations: ["CT", "LT", "RT"], cite: { book: TO, page: 223 }, units: ["mech", "industrialmech", "vehicle"] },
+      { id: "jump-pack-clan", name: "Jump Pack", aliases: ["Drop Pack", "Jump Pack / Drop Pack", "Jump/Drop Pack"], tons: "chosen-tons", slots: 0, availability: [{ from: 2457 }], rulesLevel: "advanced", amount: { unit: "tons", min: 0.5, max: 20, step: 0.5 }, units: ["mech", "industrialmech", "protomech"] },
     ],
   },
   {
@@ -1093,8 +1093,8 @@ export const OTHER: EquipmentGroup[] = [
     items: [
       { id: "bay-door-is", name: "Bay Door", techBase: "inner-sphere", tons: 0, units: ["smallcraft", "dropship"] },
       { id: "bay-door-clan", name: "Bay Door", techBase: "clan", tons: 0, units: ["smallcraft", "dropship"], yearsInferred: true },
-      { id: "look-down-radar-is", name: "Look-Down Radar", techBase: "inner-sphere", tons: 5, units: ["aero", "smallcraft", "dropship"] },
-      { id: "look-down-radar-clan", name: "Look-Down Radar", techBase: "clan", tons: 5, units: ["aero", "smallcraft", "dropship"], yearsInferred: true },
+      { id: "look-down-radar-is", name: "Look-Down Radar", techBase: "inner-sphere", tons: 5, units: ["vehicle", "aero", "smallcraft", "dropship", "ship", "building"], by: { vehicle: { slots: 1 }, aero: { slots: 1 }, smallcraft: { slots: 1 }, dropship: { slots: 1 }, ship: { slots: 1 }, building: { slots: 1 } } },
+      { id: "look-down-radar-clan", name: "Look-Down Radar", techBase: "clan", tons: 5, yearsInferred: true, units: ["vehicle", "aero", "smallcraft", "dropship", "ship", "building"], by: { vehicle: { slots: 1 }, aero: { slots: 1 }, smallcraft: { slots: 1 }, dropship: { slots: 1 }, ship: { slots: 1 }, building: { slots: 1 } } },
     ],
   },
 ];

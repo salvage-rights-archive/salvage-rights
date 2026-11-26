@@ -4,6 +4,7 @@
 // plain-words list of what did not carry over, so the player knows before they save it.
 import { AFTER_SORTIE, CAMPAIGN_FIGURES, DIFFICULTY, PILOT_TYPES } from "../data/aces";
 import type { DifficultyId, PilotType } from "../data/aces";
+import { canonicalEdgeName } from "./aces-edge";
 import type { AcesCampaign, LedgerEntry, NamedPilot, RosterUnit, SortieRecord } from "./aces-campaign";
 import type { AsSpecial, AsUnit } from "./as-unit";
 import { newAsUnit } from "./as-unit";
@@ -98,7 +99,7 @@ function convertPilot(row: Obj, index: number, taken: Set<string>, left: Set<str
     type,
     totalSp,
     alloc,
-    abilities: list(row.edgeAbilities, JBT_CAPS.keywords).filter((a): a is string => typeof a === "string").map((a) => a.slice(0, JBT_CAPS.text)),
+    abilities: list(row.edgeAbilities, JBT_CAPS.keywords).filter((a): a is string => typeof a === "string").map((a) => canonicalEdgeName(a.slice(0, JBT_CAPS.text))),
     wounded: row.wounded === true,
     killed: row.killed === true,
     mvp: Math.max(0, whole(row.mvpCount)),

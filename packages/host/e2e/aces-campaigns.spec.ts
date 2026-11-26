@@ -189,6 +189,20 @@ test("create a campaign, export it, delete it, import it back, and read a Battle
   await expect(page.getByRole("alert").filter({ hasText: "not a campaign file" })).toBeVisible();
 });
 
+/** Hires an invented pilot (once per page) and picks an Edge ability from the table, so the ability list is scanned too. */
+async function hireWithEdgeAbility(page: Page): Promise<void> {
+  const nimble = page.getByLabel(/Nimble \(Movement\)/);
+  if (!(await nimble.first().isVisible())) {
+    await page.getByLabel("Call sign").fill("Ash");
+    await page.getByRole("button", { name: "Hire", exact: true }).click();
+  }
+  await nimble.first().check();
+  const save = page.getByRole("button", { name: "Save", exact: true });
+  if (await save.isEnabled()) await save.click();
+  await expect(page.getByText("You have changes that are not saved.")).toBeHidden();
+  await expect(page.getByRole("textbox", { name: "Other Edge ability names, separated by commas" }).first()).toBeVisible();
+}
+
 test("the campaign pages at 320 px, in both themes, without axe violations", async ({ page }) => {
   test.setTimeout(120_000);
   await page.setViewportSize({ width: 320, height: 800 });
@@ -204,6 +218,7 @@ test("the campaign pages at 320 px, in both themes, without axe violations", asy
   const url = page.url();
   for (const name of ["Overview", "Roster", "Named Pilots", "Sorties", "Keywords", "Memorial"]) {
     await page.getByRole("button", { name, exact: true }).click();
+    if (name === "Named Pilots") await hireWithEdgeAbility(page);
     await fitsPhone(page, `campaign ${name}, light`);
     await noViolations(page, `campaign ${name}, light`);
   }
@@ -227,6 +242,7 @@ test("the campaign pages at 320 px, in both themes, without axe violations", asy
   await page.goto(url);
   for (const name of ["Overview", "Roster", "Named Pilots"]) {
     await page.getByRole("button", { name, exact: true }).click();
+    if (name === "Named Pilots") await hireWithEdgeAbility(page);
     await noViolations(page, `campaign ${name}, dark`);
   }
   await page.goto(printUrl);

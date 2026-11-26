@@ -1,6 +1,7 @@
 // The two sections of the campaign page that edit the record: the roster (buy, sell, mark) and the Named Pilots (allocate SP, hire).
 // Both change the draft; the page saves it. Findings are advice.
 import { useId, useState } from "react";
+import { ACES_EDGE } from "../../data/aces-edge";
 import { CAMPAIGN_FIGURES, PILOT_COLUMNS, PILOT_TYPES, PRICES, type PilotColumn, type PilotType } from "../../data/aces";
 import {
   allocationFindings,
@@ -17,6 +18,7 @@ import {
   unallocated,
 } from "../../rules/aces-campaign";
 import type { AcesCampaign, NamedPilot } from "../../rules/aces-campaign";
+import { joinPilotAbilities, splitPilotAbilities } from "../../rules/aces-edge";
 import type { AsUnit } from "../../rules/as-unit";
 import { unitTitle } from "../../rules/as-unit";
 
@@ -101,6 +103,7 @@ function PilotCard({ pilot, onChange }: { pilot: NamedPilot; onChange: (next: Na
   const stats = pilotStats(pilot);
   const left = unallocated(pilot);
   const notes = allocationFindings(pilot);
+  const picked = splitPilotAbilities(pilot.abilities);
   const id = useId();
   const setAlloc = (column: PilotColumn, text: string) => { onChange({ ...pilot, alloc: { ...pilot.alloc, [column]: toNumber(text) } }); };
   return (
@@ -116,9 +119,27 @@ function PilotCard({ pilot, onChange }: { pilot: NamedPilot; onChange: (next: Na
           </div>
         );
       })}
+      <fieldset className="aces-fieldset">
+        <legend>Edge abilities from your Edge cards</legend>
+        {ACES_EDGE.map((a) => {
+          const held = picked.ids.includes(a.id);
+          const fits = a.types === undefined || a.types.includes(pilot.type);
+          return (
+            <label key={a.id} className="bt-check">
+              <input
+                type="checkbox"
+                checked={held}
+                disabled={!fits && !held}
+                onChange={(e) => { onChange({ ...pilot, abilities: joinPilotAbilities(e.target.checked ? [...picked.ids, a.id] : picked.ids.filter((x) => x !== a.id), picked.others) }); }}
+              />
+              {` ${a.name} (${a.category}${a.types ? `, ${a.types.join(" / ")} only` : ""})`}
+            </label>
+          );
+        })}
+      </fieldset>
       <div className="bt-field">
-        <label htmlFor={`${id}-abilities`}>Edge ability names, as you write them, separated by commas</label>
-        <input id={`${id}-abilities`} value={pilot.abilities.join(", ")} onChange={(e) => { onChange({ ...pilot, abilities: e.target.value.split(",").map((a) => a.trim()).filter((a) => a !== "") }); }} />
+        <label htmlFor={`${id}-ability-names`}>Other Edge ability names, separated by commas</label>
+        <input key={picked.others.join(", ")} id={`${id}-ability-names`} defaultValue={picked.others.join(", ")} onBlur={(e) => { onChange({ ...pilot, abilities: joinPilotAbilities(picked.ids, e.target.value.split(",").map((a) => a.trim()).filter((a) => a !== "")) }); }} />
       </div>
       <label className="bt-check">
         <input type="checkbox" checked={pilot.wounded} onChange={(e) => { onChange({ ...pilot, wounded: e.target.checked }); }} /> {`${pilot.callsign} is wounded`}

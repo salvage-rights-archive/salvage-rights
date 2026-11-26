@@ -108,6 +108,11 @@ test("play an invented two-turn game at 320 px: Initiative, Movement, Combat and
   await expect(page.getByRole("heading", { level: 2, name: /Turn 1: Combat. You attack/ })).toBeVisible();
   await fitsPhone(page, "combat, your attacks");
   await page.screenshot({ path: testInfo.outputPath("combat.png"), fullPage: true });
+  // The Edge panel lists the abilities for this phase and unit type.
+  await page.getByText("Edge tokens", { exact: true }).click();
+  await expect(page.getByLabel("Edge ability")).toContainText("Marksman");
+  await fitsPhone(page, "the Edge panel open");
+  await noViolations(page, "the Edge panel open");
   await page.getByRole("button", { name: "Attack with Mine A" }).click();
   await page.getByLabel("Distance to the target, in inches (base to base)").fill("10");
   await expect(page.getByText(/^Target Number \d+$/)).toBeVisible();

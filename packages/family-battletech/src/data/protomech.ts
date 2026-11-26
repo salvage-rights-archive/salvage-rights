@@ -27,6 +27,7 @@ interface Sourced {
 const TM = "TechManual";
 const TM_BV = "TechManual Battle Value v4.1";
 const IO = "Interstellar Operations: Alternate Eras";
+const TO = "Tactical Operations: Advanced Units and Equipment";
 
 // ---------------------------------------------------------------------------------------------------------------
 // Locations. The codes are the doll brief's (brief-classic-dolls.md): hd head, t torso, la and ra arms, lg legs (both legs are one location),
@@ -184,11 +185,42 @@ export const PROTO_AMMO_KG: Sourced & { rows: Record<string, number> } = {
     "hyper-assault-gauss-20-clan": 166.66,
     "vehicle-flamer-clan": 50,
     "plasma-cannon-clan": 100,
+    // The three ProtoMech autocannons are not on the p. 88 table: 1,000 kg / shots per ton (TO:AUE pp. 96 and 216).
+    "protomech-ac-2-clan": 25,
+    "protomech-ac-4-clan": 50,
+    "protomech-ac-8-clan": 100,
   },
 };
 /** Catalog ids a ProtoMech may not mount although the catalog lists others of their kind: ATMs, MMLs, MRMs, rockets and one-shot launchers (TechManual p. 231 as amended by errata v8.0),
- * and the Proto autocannons, which the ammunition table has no weight for. The catalog's own `units` list decides everything else. */
-export const PROTO_EXCLUDED = /^(atm|mml|mrm|rocket|protomech-ac)/;
+ * and the quad melee system, which only a quadruped's torso takes (IO:AE p. 61) while the editor builds bipeds.
+ * The catalog's own `units` list decides everything else. */
+export const PROTO_EXCLUDED = /^(atm|mml|mrm|rocket|protomech-quad)/;
+
+/** Items whose weight steps with the ProtoMech's tonnage: the Magnetic Clamp System weighs 250 kg under 6 tons, 500 kg from 6 to 9 and 1,000 kg from 10 (IO:AE p. 60). */
+export const PROTO_BANDED_KG: Sourced & { rows: Record<string, { fromTons: number; kg: number }[]> } = {
+  cite: { book: IO, page: 60 },
+  checked: "page",
+  rows: { "magnetic-clamp-system-clan": [{ fromTons: 0, kg: 250 }, { fromTons: 6, kg: 500 }, { fromTons: 10, kg: 1000 }] },
+};
+
+/** Where an item may go, where the book names the place (the clamp takes a weapon slot in the torso, IO:AE p. 60; the melee weapon one on an arm, TO:AUE p. 148), and the items of which a ProtoMech may carry one. */
+export const PROTO_PLACEMENT: Sourced & { only: Record<string, string[]>; one: string[]; cites: Record<string, ProtoCite> } = {
+  cite: { book: TO, page: 148 },
+  checked: "page",
+  only: { "magnetic-clamp-system-clan": ["t"], "protomech-melee-weapon-clan": ["la", "ra"] },
+  /** Items whose placement rule is in another book than the melee weapon's. */
+  cites: { "magnetic-clamp-system-clan": { book: IO, page: 60 } },
+  one: ["protomech-melee-weapon-clan"],
+};
+
+/** The melee weapon adds 1 damage per 5 tons of ProtoMech (rounded up) to a frenzy attack (TO:AUE p. 149) and its Battle Value is that damage x 1.25 (TO:AUE BV table addendum). */
+export const PROTO_MELEE: Sourced & { row: string; tonsPerDamage: number; bvFactor: number } = {
+  cite: { book: TO, page: 149 },
+  checked: "page",
+  row: "protomech-melee-weapon-clan",
+  tonsPerDamage: 5,
+  bvFactor: 1.25,
+};
 
 // ---------------------------------------------------------------------------------------------------------------
 // When ProtoMechs exist (Universal Technology Advancement Table, IO:AE printed p. 44: Clan, prototype about 3055, production 3059, common 3060)
