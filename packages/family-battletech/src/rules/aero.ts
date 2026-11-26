@@ -1070,13 +1070,18 @@ export interface CapitalDrive {
   tons: number;
   integrity: number;
 }
-/** The K-F drive: a JumpShip's standard drive (95 percent of the tons) or a WarShip's compact one (45.25 percent), and its integrity. null for a station or any other unit. */
+/** Whether a WarShip mounts the sub-compact K-F drive (its record lists one in `systems`, and the edition prints it). */
+export function subCompact(record: Pick<AeroRecord, "systems" | "editionId" | "unitType">): boolean {
+  return record.unitType === "warship" && (record.systems?.["sub-compact-kf-drive"] ?? 0) > 0 && capitalSystemFigure("sub-compact-kf-drive", record.editionId) !== undefined;
+}
+
+/** The K-F drive: a JumpShip's standard drive (95 percent of the tons) or a WarShip's compact one (45.25 percent, or half the tons with the sub-compact drive), and its integrity. null for a station or any other unit. */
 export function kfDrive(record: AeroRecord): CapitalDrive | null {
   const kind = capitalKind(record);
   const kf = figureOf(CAPITAL_FIGURES.kfDrive, record.editionId);
   const rounding = capitalRounding(record);
   if (!kf || !rounding || (kind !== "jumpship" && kind !== "warship")) return null;
-  const figure = kf[kind];
+  const figure = kind === "warship" && subCompact(record) ? { ...kf.warship, share: figureOf(CAPITAL_FIGURES.subCompactShare, record.editionId) ?? kf.warship.share } : kf[kind];
   const tons = roundMass(record.tons * figure.share, rounding.drive);
   return { tons, integrity: roundMass(figure.integrityBase + tons / figure.integrityPer, rounding.integrity) };
 }
@@ -1282,7 +1287,8 @@ export function capitalTally(record: AeroRecord, catalog?: Catalog): CraftTally 
     { label: "Armor", tons: record.armor.tons },
     { label: "Heat sinks", tons: record.heatSinks.count },
     { label: "Weapons and equipment", tons: weapons },
-    { label: "Fire control", tons: capitalArcs(record, catalog).reduce((sum, a) => sum + a.fireControlTons, 0) },
+    // A Naval C3 network doubles the weight of the fire control (TO:AUE p. 144).
+    { label: "Fire control", tons: capitalArcs(record, catalog).reduce((sum, a) => sum + a.fireControlTons, 0) * ((record.systems?.["naval-c3"] ?? 0) > 0 && capitalSystemFigure("naval-c3", record.editionId) !== undefined ? 2 : 1) },
     { label: "Ammunition", tons: ammunition },
     { label: "Transport bays", tons: bays.tons },
     { label: "Quarters", tons: quarters.tons },

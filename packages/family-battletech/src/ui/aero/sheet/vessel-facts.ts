@@ -113,6 +113,8 @@ export function vesselFacts(record: AeroRecord, catalog: Catalog, profile: Sheet
     ...(kf ? ([["K-F Drive Integrity", text(kf.integrity)]] as [string, string][]) : []),
     ...(sail ? ([["Sail Integrity", text(sail.integrity)]] as [string, string][]) : []),
     ...(collars > 0 ? ([["Docking collars", text(collars)]] as [string, string][]) : []),
+    // The cost in C-bills, once every item is priced (the sheet never prints a total that is short).
+    ...(base.cost === "" ? [] : ([["Cost", base.cost]] as [string, string][])),
   ];
   const crew = v?.crew;
   return {

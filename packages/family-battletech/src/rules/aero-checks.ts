@@ -9,7 +9,7 @@ import type { RulesLevel } from "../data/chassis";
 import { CAPITAL_FIGURES, CAPITAL_SYSTEMS, CRAFT_FIGURES, DEFAULT_AERO_EDITION, capitalSystemFigure, FIGHTER_ARMOR_TYPES, FIGHTER_FIGURES, fighterPatchworkTypes, aeroEditionName, aeroTypesFor, figureOf, kindFigureOf } from "../data/aero";
 import type { AeroTypeRow, FigureGroup, FighterKind, FighterPatchworkType } from "../data/aero";
 import { AERO_WEAPON_EDITIONS, aeroWeaponOffered } from "../data/aero-weapons";
-import { armorTypeAt, capitalKind, fighterArcs, fighterArmor, fighterArmorLimit, fighterArmorTons, fighterPatchworkActive, energyWeaponHeat, fighterHeat, fighterKind, fighterPartsNotOffered, fighterTally, engineRating, fuelPoints, locationsOf, vessel, wingsMatch, aeroLocationName } from "./aero";
+import { armorTypeAt, capitalKind, fighterArcs, fighterArmor, fighterArmorLimit, fighterArmorTons, fighterPatchworkActive, energyWeaponHeat, fighterHeat, fighterKind, fighterPartsNotOffered, fighterTally, engineRating, fuelPoints, locationsOf, subCompact, vessel, wingsMatch, aeroLocationName } from "./aero";
 import type { AeroRecord } from "./aero";
 import { baseFits, ownSpans, partPhase, pastEraCap } from "./availability";
 import type { Catalog } from "./catalog";
@@ -59,7 +59,8 @@ const typeCheck: AeroCheck = {
     const edition = aeroEditionName(record.editionId);
     const row = typeRow(record);
     if (!row) return [{ check: "type", level: "warning", message: `${edition} does not build a unit of the type "${record.unitType}".`, where: { field: "unitType" } }];
-    const { min, max, step } = row.weight;
+    // A WarShip with the sub-compact K-F drive is built to the drive's own range (TO:AUE p. 156), not the WarShip row's.
+    const { min, max, step } = subCompact(record) ? (capitalSystemFigure("sub-compact-kf-drive", record.editionId)?.unitTons ?? row.weight) : row.weight;
     const out: AeroFinding[] = [];
     const where = { field: "tons" };
     if (min !== undefined && record.tons < min) out.push({ check: "type", level: "error", message: `At ${num(record.tons)} tons the unit is under the ${num(min)} tons ${edition} allows a ${row.label.toLowerCase()}.`, where, cite: row.cite });
@@ -423,8 +424,15 @@ export function aeroLevelItems(record: AeroRecord, catalog: Catalog): AeroLevelI
   // A ship system with dates (the docking hardpoint, which comes with the K-F boom) is Experimental in its prototype years and at its own level after.
   if (capitalKind(record) !== undefined) {
     for (const [kind, count] of Object.entries(record.systems ?? {})) {
-      const dates = capitalSystemFigure(kind, record.editionId)?.dates;
-      if (dates === undefined || count <= 0) continue;
+      const figure = capitalSystemFigure(kind, record.editionId);
+      const dates = figure?.dates;
+      if (count <= 0) continue;
+      const name = CAPITAL_SYSTEMS.find((r) => r.kind === kind)?.label ?? kind;
+      // A system with no dates of its own (early spaceflight) has the level the book gives it.
+      if (dates === undefined) {
+        if (figure?.level !== undefined) items.push({ what: "equipment", name, level: figure.level, where: { field: "systems" } });
+        continue;
+      }
       const phase = phaseIn([{ from: dates.production }], dates.prototype, window);
       items.push({ what: "equipment", name: CAPITAL_SYSTEMS.find((r) => r.kind === kind)?.label ?? kind, level: levelIn(dates.level, phase), ...(phase === "prototype" ? { prototype: datesText(dates.prototype, dates.production) } : {}), where: { field: "systems" } });
     }
