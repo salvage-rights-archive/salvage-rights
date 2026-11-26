@@ -7,7 +7,11 @@ import { ENGINE_TYPES, RULES_LEVELS } from "../data/chassis";
 import type { RulesLevel } from "../data/chassis";
 import { AERO_LOCATION_NAMES, DEFAULT_AERO_EDITION, FIGHTER_ARMOR_TYPES, FIGHTER_FIGURES, aeroFigures, aeroTypesFor, fighterArmorPointsPerTon, fighterArmorTypes, figureOf, kindFigureOf } from "../data/aero";
 import type { AeroShape, AeroType, FighterKind } from "../data/aero";
+import { CRAFT_FIGURES, craftArmorPointsPerTon, craftBayFigure } from "../data/aero";
+import type { CraftKind, CraftRound, CraftUse } from "../data/aero";
 import { aeroCatalogFigures, aeroWeaponFigures } from "../data/aero-weapons";
+import { ammoRowOf } from "../data/aero-weapons";
+import type { EquipmentRow } from "./catalog";
 import { groupOf } from "./catalog";
 import type { Catalog } from "./catalog";
 import { engineTons } from "./mech";
@@ -474,6 +478,413 @@ export function fighterPartsNotOffered(record: AeroRecord): ("engine" | "armor" 
   if (!kindFigureOf(FIGHTER_FIGURES.engineTypes, kind, record.editionId)?.includes(record.engine.type)) out.push("engine");
   if (!fighterArmorTypes(record.editionId).some((t) => t.id === record.armor.type)) out.push("armor");
   const sinks = kindFigureOf(FIGHTER_FIGURES.heatSinkTypes, kind, record.editionId);
+  if (sinks !== undefined && !sinks.includes(record.heatSinks.type)) out.push("heat-sinks");
+  return out;
+}
+
+// ---- Small craft and DropShip construction ------------------------------------------------------------------------------------
+// Small craft and DropShips in the three editions that build them (AeroTech 2, AeroTech 2 Revised, the current rules). Every figure is read
+// from data/aero.ts (CRAFT_FIGURES and CRAFT_BAYS, one row per value, each edition named once); this block only does the arithmetic. A figure an
+// edition's book does not print, a unit that is not a small craft or DropShip and an edition we do not know give null or undefined, never a
+// throw, and nothing is removed from a record: a part the edition does not offer is still weighed and listed by `craftPartsNotOffered`. An
+// absent shape reads as aerodyne (as `locationsOf` does) and an absent use as civilian; a mixed tech base reads the Inner Sphere engine.
+
+/** The kind of a record that the edition builds as a small craft or DropShip, or undefined for any other unit or edition. */
+export function craftKind(record: Pick<AeroRecord, "unitType" | "editionId">): CraftKind | undefined {
+  const kind: CraftKind | undefined = record.unitType === "small-craft" ? "small-craft" : record.unitType === "dropship" ? "dropship" : undefined;
+  return kind !== undefined && figureOf(CRAFT_FIGURES.controlShare, record.editionId) !== undefined ? kind : undefined;
+}
+const craftShape = (record: Pick<AeroRecord, "shape">): AeroShape => (record.shape === "spheroid" ? "spheroid" : "aerodyne");
+const craftUse = (record: Pick<AeroRecord, "use">): CraftUse => (record.use === "military" ? "military" : "civilian");
+
+/** A mass rounded the way the edition's book rounds it (or not at all where it prints no rounding). */
+function roundMass(x: number, mode: CraftRound): number {
+  switch (mode) {
+    case "up-half":
+      return ceilHalf(x);
+    case "up-whole":
+      return Math.ceil(tidy(x));
+    case "down-half":
+      return floorHalf(x);
+    default:
+      return tidy(x);
+  }
+}
+const craftRounding = (record: Pick<AeroRecord, "editionId">) => figureOf(CRAFT_FIGURES.rounding, record.editionId);
+
+/** Max Thrust: Safe Thrust times 1.5, rounded up (the figure every aerospace unit shares). */
+export function craftMaxThrust(record: AeroRecord): number | null {
+  const factor = figureOf(FIGHTER_FIGURES.maxThrustFactor, record.editionId);
+  return factor === undefined || craftKind(record) === undefined ? null : Math.ceil(tidy(record.thrust.safe * factor));
+}
+
+/** Engine tons: tons times Safe Thrust (TechManual's Base Movement Factor) times 6.5 percent (Inner Sphere) or 6.1 percent (Clan); AeroTech 2 prints the same as a percentage of the vessel per Thrust Point, and its errata gives a small craft the DropShip rule. */
+export function craftEngineTons(record: AeroRecord): number | null {
+  const share = figureOf(CRAFT_FIGURES.engineShare, record.editionId);
+  const rounding = craftRounding(record);
+  if (!share || !rounding || craftKind(record) === undefined) return null;
+  return roundMass(record.tons * record.thrust.safe * share[record.techBase === "clan" ? "clan" : "inner-sphere"], rounding.engine);
+}
+
+/** The Structural Integrity a craft may choose: at least its Max Thrust, at most 30 times it. */
+export function craftSiRange(record: AeroRecord): { min: number; max: number } | null {
+  const maxThrust = craftMaxThrust(record);
+  const range = figureOf(CRAFT_FIGURES.siRange, record.editionId);
+  return maxThrust === null || !range ? null : { min: maxThrust * range.min, max: maxThrust * range.max };
+}
+/** The record's chosen SI; a craft that has none reads as the minimum. */
+export function craftSI(record: AeroRecord): number | null {
+  const range = craftSiRange(record);
+  return range === null ? null : typeof record.si === "number" ? record.si : range.min;
+}
+/** Structural mass: SI times tons over 200 (aerodyne) or 500 (spheroid). */
+export function craftSiTons(record: AeroRecord): number | null {
+  const divisors = figureOf(CRAFT_FIGURES.siMassDivisor, record.editionId);
+  const si = craftSI(record);
+  const rounding = craftRounding(record);
+  return !divisors || si === null || !rounding ? null : roundMass((si * record.tons) / divisors[craftShape(record)], rounding.si);
+}
+
+/** Control systems: 0.75 percent of the tons (a small craft's up to a half ton in TechManual, a DropShip's up to a whole ton). */
+export function craftControlTons(record: AeroRecord): number | null {
+  const share = figureOf(CRAFT_FIGURES.controlShare, record.editionId);
+  const rounding = craftRounding(record);
+  const kind = craftKind(record);
+  return share === undefined || !rounding || kind === undefined ? null : roundMass(record.tons * share, kind === "small-craft" ? rounding.controlsSmallCraft : rounding.controlsDropship);
+}
+
+/** Fuel points: the fuel tons times the points a ton gives at the craft's tons. */
+export function craftFuelPoints(record: AeroRecord): number | null {
+  const band = figureOf(CRAFT_FIGURES.fuelBands, record.editionId)?.filter(([from]) => record.tons >= from).at(-1);
+  return band === undefined || craftKind(record) === undefined ? null : tidy(record.fuelTons * band[1]);
+}
+/** Fuel pumps and tanks: 2 percent of the fuel's tons. */
+export function craftPumpTons(record: AeroRecord): number | null {
+  const share = figureOf(CRAFT_FIGURES.pumpShare, record.editionId);
+  const rounding = craftRounding(record);
+  return share === undefined || !rounding || craftKind(record) === undefined ? null : roundMass(record.fuelTons * share, rounding.pumps);
+}
+
+export interface CraftArmor {
+  /** Armor points a ton of the record's armor gives at the craft's tons and shape. */
+  perTon: number | null;
+  /** Points the armor tons give, by the edition's rounding. */
+  bought: number | null;
+  /** The free armor: the SI on each facing. */
+  free: number;
+  available: number | null;
+  /** The sum of the points set on the armor locations. */
+  allocated: number;
+  /** Points set beyond those available; zero or less when they fit. */
+  over: number | null;
+  /** The most armor tons the SI allows (the free armor is outside it). */
+  limitTons: number | null;
+  /** Armor tons beyond the limit; zero or less when they fit. */
+  tonsOver: number | null;
+}
+export function craftArmor(record: AeroRecord): CraftArmor | null {
+  const si = craftSI(record);
+  const rounding = craftRounding(record);
+  const limits = figureOf(CRAFT_FIGURES.armorLimit, record.editionId);
+  const freeShare = figureOf(CRAFT_FIGURES.freeArmor, record.editionId);
+  if (si === null || !rounding || !limits || freeShare === undefined) return null;
+  const perTon = craftArmorPointsPerTon(record.armor.type, record.editionId, craftShape(record), record.tons, record.techBase) ?? null;
+  const points = perTon === null ? null : tidy(record.armor.tons * perTon);
+  const bought = points === null ? null : figureOf(FIGHTER_FIGURES.armorRounding, record.editionId) === "nearest" ? roundHalfUp(points) : Math.floor(points);
+  const free = tidy(si * freeShare * locationsOf(record).armor.length);
+  const allocated = Object.values(record.armor.points).reduce((sum, n) => sum + n, 0);
+  const available = bought === null ? null : bought + free;
+  const limitTons = roundMass(si * limits[craftShape(record)], rounding.armorLimit);
+  return { perTon, bought, free, available, allocated, over: available === null ? null : allocated - available, limitTons, tonsOver: tidy(record.armor.tons - limitTons) };
+}
+
+/** Heat sinks: the free ones come from the engine's tons (rounded down) by shape and use, a small craft reading the civilian row; the added ones weigh a ton each, a double one dissipating two. */
+export function craftHeat(record: AeroRecord): FighterHeat | null {
+  const rules = figureOf(CRAFT_FIGURES.freeSinks, record.editionId);
+  const engine = craftEngineTons(record);
+  const kind = craftKind(record);
+  if (!rules || engine === null || kind === undefined) return null;
+  const rule = rules[craftShape(record)][kind === "small-craft" ? "civilian" : craftUse(record)];
+  const free = rule.divide !== undefined ? Math.floor(tidy(engine / rule.divide)) : rule.root !== undefined ? Math.floor(tidy(Math.sqrt(engine * rule.root))) : 0;
+  const total = free + record.heatSinks.count;
+  return { free, added: record.heatSinks.count, total, capacity: total * (record.heatSinks.type === "double" ? 2 : 1) };
+}
+
+/** The extra fire control mass of an arc over its weapon limit: each whole multiple of the limit adds 10 percent of the arc's weapon tons (ammunition not counted). Zero within the limit; null where the edition prints none. */
+export function expandedFireControlTons(weapons: number, weaponTons: number, editionId: string): number | null {
+  const limit = figureOf(CRAFT_FIGURES.arcLimit, editionId);
+  const share = figureOf(CRAFT_FIGURES.fireControlShare, editionId);
+  const rounding = figureOf(CRAFT_FIGURES.rounding, editionId);
+  if (limit === undefined || share === undefined || !rounding) return null;
+  return weapons <= limit ? 0 : roundMass(Math.floor(weapons / limit) * share * weaponTons, rounding.fireControl);
+}
+
+/** A capital weapon (the capital scale and its own ammunition rule), as the catalog marks one. */
+const isCapitalRow = (row: EquipmentRow | undefined): boolean => row !== undefined && (row.bayClass?.startsWith("Capital") === true || row.tonsPerShot !== undefined);
+
+interface CraftWeapon {
+  mount: AeroMount;
+  row: EquipmentRow | undefined;
+  capital: boolean;
+}
+/** The mounts that are weapons (anything not ammunition and not an item the catalog knows to be another kind, such as an escape pod). An item the catalog does not know counts as a standard weapon. */
+function craftWeapons(record: AeroRecord, catalog?: Catalog): CraftWeapon[] {
+  return record.mounts.flatMap((mount) => {
+    const row = mount.equipmentId === null ? undefined : catalog?.byId(mount.equipmentId);
+    return isAmmoMount(mount, catalog) || (row !== undefined && row.kind !== "weapon") ? [] : [{ mount, row, capital: isCapitalRow(row) }];
+  });
+}
+
+export interface CraftArc {
+  arc: string;
+  weapons: number;
+  /** Weapons the arc may hold before it needs more fire control. */
+  limit: number;
+  weaponTons: number;
+  /** The extra fire control mass the arc needs. */
+  fireControlTons: number;
+}
+/** Each arc's weapons against its limit, its weapon tons and the fire control it needs. Empty for a unit that is not a small craft or DropShip. */
+export function craftArcs(record: AeroRecord, catalog?: Catalog): CraftArc[] {
+  const limit = figureOf(CRAFT_FIGURES.arcLimit, record.editionId);
+  if (limit === undefined || craftKind(record) === undefined) return [];
+  const weapons = craftWeapons(record, catalog);
+  return locationsOf(record).arcs.map((arc) => {
+    const inArc = weapons.filter((w) => w.mount.arc === arc);
+    const weaponTons = tidy(inArc.reduce((sum, w) => sum + (mountFacts(w.mount, record.editionId, catalog)?.tons ?? 0), 0));
+    return { arc, weapons: inArc.length, limit, weaponTons, fireControlTons: expandedFireControlTons(inArc.length, weaponTons, record.editionId) ?? 0 };
+  });
+}
+
+/** The arc pairs that must hold the same weapons and do not (each as "FL|FR"); empty where they match or the edition names none. Ammunition is not compared. */
+export function craftArcsUnmatched(record: AeroRecord, catalog?: Catalog): string[] {
+  const pairs = figureOf(CRAFT_FIGURES.matchedArcs, record.editionId);
+  if (!pairs || craftKind(record) === undefined) return [];
+  const locations = locationsOf(record).arcs;
+  const side = (arc: string) =>
+    craftWeapons(record, catalog)
+      .filter((w) => w.mount.arc === arc)
+      .map((w) => `${w.mount.equipmentId ?? w.mount.name}|${w.mount.amount ?? ""}|${w.mount.aft === true ? "aft" : ""}`)
+      .sort()
+      .join(",");
+  return pairs.filter(([a, b]) => a !== undefined && b !== undefined && locations.includes(a) && locations.includes(b) && side(a) !== side(b)).map((pair) => pair.join("|"));
+}
+
+/** The size of a weapon for grouping in a bay: the number in its name (LRM 10, AC/20), else Small, Medium or Large, else Light or Heavy, else the name. */
+function weaponSize(name: string): string {
+  const number = /\d+/.exec(name)?.[0];
+  if (number !== undefined) return number;
+  return (/small|medium|large/i.exec(name) ?? /light|heavy/i.exec(name))?.[0].toLowerCase() ?? name.toLowerCase();
+}
+
+export interface CraftWeaponBay {
+  bay: string;
+  arc: string;
+  weapons: number;
+  /** The bay classes of the weapons in it (one when the bay is built as the books ask). */
+  classes: string[];
+  /** The sizes of the weapons (by `weaponSize`). */
+  sizes: string[];
+  /** The sum of the attack values in standard-scale points, a capital weapon's counted tenfold; weapons whose value is not a plain number are in `unknown`. */
+  attack: number;
+  limit: number;
+  over: boolean;
+  /** Whether the edition lets a bay mix sizes (AeroTech 2 with its errata does not). */
+  mixedSizesAllowed: boolean;
+  /** The ids of mounts whose attack value could not be read. */
+  unknown: string[];
+}
+/** The weapon bays: the weapons that share a `bay` id (on a mount without one, the arc), with their classes, sizes and attack against the bay limit. */
+export function craftWeaponBays(record: AeroRecord, catalog?: Catalog): CraftWeaponBay[] {
+  const limit = figureOf(CRAFT_FIGURES.bayLimit, record.editionId);
+  const mixedAllowed = figureOf(CRAFT_FIGURES.mixedSizes, record.editionId);
+  if (limit === undefined || mixedAllowed === undefined || craftKind(record) === undefined) return [];
+  const groups = new Map<string, CraftWeapon[]>();
+  for (const weapon of craftWeapons(record, catalog)) {
+    const key = weapon.mount.bay ?? `arc:${weapon.mount.arc}`;
+    groups.set(key, [...(groups.get(key) ?? []), weapon]);
+  }
+  return [...groups.entries()].map(([bay, weapons]) => {
+    const unknown: string[] = [];
+    let attack = 0;
+    const classes = new Set<string>();
+    const sizes = new Set<string>();
+    for (const { mount, row, capital } of weapons) {
+      const figures = mount.equipmentId === null || !catalog ? undefined : (aeroWeaponFigures(catalog, mount.equipmentId, record.editionId) ?? aeroCatalogFigures(catalog, mount.equipmentId));
+      const value = figures?.attack;
+      if (typeof value === "number") attack += capital ? value * 10 : value;
+      else unknown.push(mount.id);
+      const bayClass = figures?.bayClass ?? row?.bayClass;
+      if (bayClass !== undefined) classes.add(bayClass);
+      sizes.add(weaponSize(row?.name ?? mount.name));
+    }
+    attack = roundHalfUp(attack);
+    return { bay, arc: weapons[0]?.mount.arc ?? "", weapons: weapons.length, classes: [...classes], sizes: [...sizes], attack, limit, over: attack > limit, mixedSizesAllowed: mixedAllowed, unknown };
+  });
+}
+
+export interface CraftAmmoShortfall {
+  /** The bay the weapons are in (the arc where a mount has none). */
+  bay: string;
+  weaponId: string;
+  required: number;
+  have: number;
+}
+/** Weapons that use ammunition and do not have the shots the books ask for (10 for each weapon, 20 for an Ultra autocannon, 60 for a rotary one) in ammunition mounts of the same bay. Capital weapons and ATM special ammunition are not read. */
+export function craftAmmoShortfalls(record: AeroRecord, catalog?: Catalog): CraftAmmoShortfall[] {
+  const minimum = figureOf(CRAFT_FIGURES.minShots, record.editionId);
+  if (!minimum || !catalog || craftKind(record) === undefined) return [];
+  const out: CraftAmmoShortfall[] = [];
+  const bayOf = (m: AeroMount) => m.bay ?? `arc:${m.arc}`;
+  const need = new Map<string, { bay: string; weaponId: string; count: number; each: number; ammo: EquipmentRow }>();
+  for (const { mount, row, capital } of craftWeapons(record, catalog)) {
+    const ammo = mount.equipmentId === null || capital ? undefined : ammoRowOf(catalog, mount.equipmentId);
+    if (!ammo || !row || mount.equipmentId === null) continue;
+    const key = `${bayOf(mount)}|${mount.equipmentId}`;
+    const each = /rotary/.test(mount.equipmentId) ? minimum.rotary : /ultra/.test(mount.equipmentId) ? minimum.ultra : minimum.shots;
+    need.set(key, { bay: bayOf(mount), weaponId: mount.equipmentId, count: (need.get(key)?.count ?? 0) + 1, each, ammo });
+  }
+  for (const { bay, weaponId, count, each, ammo } of need.values()) {
+    const perTon = ammo.shotsPerTon ?? ammo.shots ?? 0;
+    const have = tidy(record.mounts.filter((m) => bayOf(m) === bay && m.equipmentId === ammo.id).reduce((sum, m) => sum + (m.amount ?? 1) * perTon, 0));
+    if (have < count * each) out.push({ bay, weaponId, required: count * each, have });
+  }
+  return out;
+}
+
+export interface CraftCrew {
+  /** The base crew of the craft's kind and use. */
+  base: number;
+  standardWeapons: number;
+  capitalWeapons: number;
+  gunners: number;
+  /** The base crew plus the gunners. */
+  minimum: number;
+}
+/** The minimum crew: the base (a small craft's own in TechManual, the civilian DropShip row in the AeroTech 2 books) plus a gunner for each six standard weapons (rounded up) and for each capital weapon. An anti-missile system needs no gunner. */
+export function craftCrew(record: AeroRecord, catalog?: Catalog): CraftCrew | null {
+  const kind = craftKind(record);
+  const rule = kind === "small-craft" ? figureOf(CRAFT_FIGURES.smallCraftCrew, record.editionId) : figureOf(CRAFT_FIGURES.crew, record.editionId)?.[craftUse(record)];
+  const gunners = figureOf(CRAFT_FIGURES.gunners, record.editionId);
+  if (!rule || !gunners) return null;
+  const base = rule.base + (rule.perTons === undefined ? 0 : Math.ceil(tidy(record.tons / rule.perTons)));
+  const weapons = craftWeapons(record, catalog).filter((w) => !/^ams-/.test(w.mount.equipmentId ?? ""));
+  const capitalWeapons = weapons.filter((w) => w.capital).length;
+  const standardWeapons = weapons.length - capitalWeapons;
+  const count = Math.ceil(tidy(standardWeapons / gunners.standardPer)) + capitalWeapons * gunners.capitalPer;
+  return { base, standardWeapons, capitalWeapons, gunners: count, minimum: base + count };
+}
+
+const QUARTERS_ROWS: Record<string, string> = { steerage: "quarters-steerage-is", "second-class": "quarters-second-class-is", "first-class": "quarters-first-class-is" };
+/** Quarters mass: each person in `quarters` (keys steerage, second-class, first-class) weighs what the catalog row for that class does (5, 7 and 10 tons, the same in all three editions). A key we do not know is returned in `unknown`. */
+export function craftQuarters(record: AeroRecord, catalog?: Catalog): { tons: number; unknown: string[] } {
+  const unknown: string[] = [];
+  let tons = 0;
+  for (const [kind, people] of Object.entries(record.quarters ?? {})) {
+    const row = Object.hasOwn(QUARTERS_ROWS, kind) ? catalog?.byId(QUARTERS_ROWS[kind] ?? "") : undefined;
+    if (row && typeof row.tons === "number") tons += people * row.tons;
+    else unknown.push(kind);
+  }
+  return { tons: tidy(tons), unknown };
+}
+
+/** Transport bay mass: each bay's cubicles (a cargo bay's tons) times what one weighs in the edition. A kind the edition does not print is in `unknown`. */
+export function craftBayTons(record: AeroRecord): { tons: number; unknown: string[] } {
+  const unknown: string[] = [];
+  let tons = 0;
+  for (const bay of record.bays ?? []) {
+    const figure = craftBayFigure(bay.kind, record.editionId);
+    if (figure) tons += bay.capacity * figure.tons;
+    else unknown.push(bay.kind);
+  }
+  return { tons: tidy(tons), unknown };
+}
+
+export interface CraftDoors {
+  doors: number;
+  /** The doors counted against the limit (AeroTech 2 Revised counts only those of bays for launching units). */
+  counted: number;
+  /** The most doors the edition allows; undefined where its book prints none. */
+  limit: number | undefined;
+  /** Units launched or landed a turn: two for each door of a bay for 'Mechs, fighters, small craft (and ProtoMechs in TechManual). */
+  launchRate: number;
+  /** Bay kinds with fewer doors than the edition asks (every bay but an infantry bay needs one in TechManual). */
+  withoutDoor: string[];
+}
+export function craftDoors(record: AeroRecord): CraftDoors | null {
+  const kind = craftKind(record);
+  const launch = figureOf(CRAFT_FIGURES.launch, record.editionId);
+  if (kind === undefined || !launch) return null;
+  const rule = figureOf(CRAFT_FIGURES.doors, record.editionId);
+  const bays = record.bays ?? [];
+  const doors = bays.reduce((sum, b) => sum + b.doors, 0);
+  const launching = bays.filter((b) => launch.kinds.includes(b.kind));
+  const limit = !rule
+    ? undefined
+    : rule.fixed !== undefined
+      ? rule.fixed
+      : kind === "small-craft" && rule.smallCraft
+        ? rule.smallCraft[craftShape(record)]
+        : (rule.base ?? 0) + (rule.perTons === undefined ? 0 : Math.ceil(tidy(record.tons / rule.perTons)));
+  const minimum = rule?.minPerBay;
+  return {
+    doors,
+    counted: rule?.launchCapableOnly === true ? launching.reduce((sum, b) => sum + b.doors, 0) : doors,
+    limit,
+    launchRate: launch.perDoor * launching.reduce((sum, b) => sum + b.doors, 0),
+    withoutDoor: minimum === undefined ? [] : bays.filter((b) => !b.kind.startsWith("infantry") && b.doors < minimum).map((b) => b.kind),
+  };
+}
+
+export interface CraftTally {
+  lines: { label: string; tons: number }[];
+  total: number;
+  /** The unit's tons less the total: what is left for cargo; negative when overweight. */
+  remaining: number;
+  /** What could not be weighed: "engine", a bay or quarters kind the edition does not print, or the id of a mount the catalog does not know. */
+  unknown: string[];
+}
+/** The weight of a small craft or DropShip by part: engine, fuel, pumps, structure, controls, armor, heat sinks, weapons and equipment (an escape pod or lifeboat mount weighs what its catalog row does), expanded fire control, ammunition, transport bays and quarters. */
+export function craftTally(record: AeroRecord, catalog?: Catalog): CraftTally {
+  const unknown: string[] = [];
+  const engine = craftEngineTons(record);
+  if (engine === null) unknown.push("engine");
+  let weapons = 0;
+  let ammunition = 0;
+  for (const m of record.mounts) {
+    const facts = mountFacts(m, record.editionId, catalog);
+    if (!facts) unknown.push(m.id);
+    else if (facts.ammunition) ammunition += facts.tons;
+    else weapons += facts.tons;
+  }
+  const bays = craftBayTons(record);
+  const quarters = craftQuarters(record, catalog);
+  unknown.push(...bays.unknown, ...quarters.unknown);
+  const lines = [
+    { label: "Engine", tons: engine ?? 0 },
+    { label: "Fuel", tons: record.fuelTons },
+    { label: "Fuel pumps", tons: craftPumpTons(record) ?? 0 },
+    { label: "Structure", tons: craftSiTons(record) ?? 0 },
+    { label: "Controls", tons: craftControlTons(record) ?? 0 },
+    { label: "Armor", tons: record.armor.tons },
+    { label: "Heat sinks", tons: record.heatSinks.count },
+    { label: "Weapons and equipment", tons: weapons },
+    { label: "Fire control", tons: craftArcs(record, catalog).reduce((sum, a) => sum + a.fireControlTons, 0) },
+    { label: "Ammunition", tons: ammunition },
+    { label: "Transport bays", tons: bays.tons },
+    { label: "Quarters", tons: quarters.tons },
+  ].map((line) => ({ ...line, tons: tidy(line.tons) }));
+  const total = tidy(lines.reduce((sum, line) => sum + line.tons, 0));
+  return { lines, total, remaining: tidy(record.tons - total), unknown };
+}
+
+/** The parts of the record the edition does not offer a small craft or DropShip, kept in the record: "engine" (only the standard engine is built by the Safe Thrust formula), "armor" or "heat-sinks". Empty for a unit that is not one. */
+export function craftPartsNotOffered(record: AeroRecord): ("engine" | "armor" | "heat-sinks")[] {
+  if (craftKind(record) === undefined) return [];
+  const out: ("engine" | "armor" | "heat-sinks")[] = [];
+  if (record.engine.type !== "standard") out.push("engine");
+  if (!fighterArmorTypes(record.editionId).some((t) => t.id === record.armor.type)) out.push("armor");
+  const sinks = kindFigureOf(FIGHTER_FIGURES.heatSinkTypes, "aerospace", record.editionId);
   if (sinks !== undefined && !sinks.includes(record.heatSinks.type)) out.push("heat-sinks");
   return out;
 }

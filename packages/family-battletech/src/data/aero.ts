@@ -510,3 +510,207 @@ export function fighterArmorPointsPerTon(typeId: string, editionId: string): num
   const multiplier = type && Object.hasOwn(ARMOR.types, type.like) ? ARMOR.types[type.like]?.multiplier : undefined;
   return base === undefined || multiplier === undefined ? undefined : Math.round(base * multiplier * 1e6) / 1e6;
 }
+
+// ---------------------------------------------------------------------------------------------------------------------------------
+// Small craft and DropShip construction figures (AeroTech 2, AeroTech 2 Revised and the current rules). Same shape as the fighter figures
+// above: one row per value, each edition named once with the page it prints it on, an edition holding a figure of its own only where its
+// book prints a different one. AeroTech (1986) and BattleSpace build none of these (BattleSpace has its own DropShip step, a later piece).
+// Each edition keeps its own book and that book's errata (AeroTech 2 with its errata v1.2; where a figure comes from the errata the cite
+// says so). The three books agree on nearly every figure; where they differ is the rounding of masses (TechManual rounds, neither
+// AeroTech 2 book prints a rounding), the small craft crew, the matched arcs, bay sizes, door limits and infantry bay capacities.
+// Page numbers are printed pages. The armor multipliers are read from the 'Mech armor table, as for fighters.
+// ---------------------------------------------------------------------------------------------------------------------------------
+
+export type CraftKind = "small-craft" | "dropship";
+export type CraftUse = "civilian" | "military";
+
+/** How a mass is rounded: not at all (the book prints no rounding), up to a half ton, up to a whole ton, or down to a half ton. */
+export type CraftRound = "exact" | "up-half" | "up-whole" | "down-half";
+export interface CraftRounding {
+  engine: CraftRound;
+  si: CraftRound;
+  /** Controls, by kind: TechManual rounds a small craft's up to a half ton and a DropShip's up to a whole ton. */
+  controlsSmallCraft: CraftRound;
+  controlsDropship: CraftRound;
+  pumps: CraftRound;
+  /** Expanded fire control (the extra mass for an arc over its weapon limit). */
+  fireControl: CraftRound;
+  /** The most armor tons the structural integrity allows. */
+  armorLimit: CraftRound;
+}
+/** Free heat sinks: the engine's tons over `divide`, or the square root of the engine's tons times `root`; rounded down. */
+export interface SinkRule {
+  divide?: number;
+  root?: number;
+}
+/** Minimum crew: a base number plus one more for each `perTons` of the unit (rounded up). */
+export interface CrewRule {
+  base: number;
+  perTons?: number;
+}
+/** How many bay doors a craft may have. `fixed` is the most doors of the launch-capable bays; otherwise `base` plus one for each `perTons` (rounded up), and `smallCraft` gives a small craft's own limit by shape. */
+export interface DoorRule {
+  fixed?: number;
+  base?: number;
+  perTons?: number;
+  smallCraft?: Record<AeroShape, number>;
+  /** The doors counted against the limit are those of bays for units that launch (the fixed limit's wording). */
+  launchCapableOnly?: true;
+  /** Every bay but an infantry bay has at least this many doors. */
+  minPerBay?: number;
+}
+/** Armor points a ton by mass: the lowest mass of the band, then the Clan and the Inner Sphere standard armor points. */
+export type ArmorBand = [from: number, clan: number, innerSphere: number];
+/** A transport bay: the tons one cubicle weighs and the units (troopers) it carries. A cargo bay's capacity is its tons. */
+export interface BayFigure {
+  tons: number;
+  carries: number;
+}
+export interface CraftBayRow {
+  kind: string;
+  label: string;
+  figures: FigureGroup<BayFigure>;
+}
+
+export interface CraftFigures {
+  /** Engine mass as a share of (tons x Safe Thrust): AeroTech 2 prints it as a percentage per Thrust Point, TechManual as the factor on the Base Movement Factor. */
+  engineShare: FigureGroup<{ "inner-sphere": number; clan: number }>;
+  /** The Structural Integrity range as multiples of Max Thrust. */
+  siRange: FigureGroup<{ min: number; max: number }>;
+  /** Structural mass is SI x tons over this, by hull shape. */
+  siMassDivisor: FigureGroup<Record<AeroShape, number>>;
+  /** Controls weigh this share of the tons. */
+  controlShare: FigureGroup<number>;
+  /** Fuel points a ton by the unit's tons: [lowest tons of the band, points]. */
+  fuelBands: FigureGroup<[number, number][]>;
+  /** Fuel pumps and tanks weigh this share of the fuel's tons. */
+  pumpShare: FigureGroup<number>;
+  armorBands: FigureGroup<Record<AeroShape, ArmorBand[]>>;
+  /** The most armor tons a ton of structural integrity allows, by hull shape. */
+  armorLimit: FigureGroup<Record<AeroShape, number>>;
+  /** Free armor on each facing, as a multiple of the unit's SI. */
+  freeArmor: FigureGroup<number>;
+  freeSinks: FigureGroup<Record<AeroShape, Record<CraftUse, SinkRule>>>;
+  /** Weapons an arc may hold before it needs more fire control. */
+  arcLimit: FigureGroup<number>;
+  /** Each whole multiple of the arc limit adds this share of the arc's weapon tons (not counting ammunition). */
+  fireControlShare: FigureGroup<number>;
+  /** The most attack value of a weapon bay, in standard-scale points (the capital scale is a tenth). */
+  bayLimit: FigureGroup<number>;
+  /** Whether one bay may hold weapons of different sizes of one class. */
+  mixedSizes: FigureGroup<boolean>;
+  /** The least shots of ammunition for each weapon that uses it; Ultra and rotary autocannon need more. */
+  minShots: FigureGroup<{ shots: number; ultra: number; rotary: number }>;
+  /** A DropShip's crew by use. */
+  crew: FigureGroup<Record<CraftUse, CrewRule>>;
+  smallCraftCrew: FigureGroup<CrewRule>;
+  /** One gunner for each this many standard weapons (rounded up), and for each capital weapon. */
+  gunners: FigureGroup<{ standardPer: number; capitalPer: number }>;
+  /** Arc pairs that must hold the same weapons. */
+  matchedArcs: FigureGroup<string[][]>;
+  rounding: FigureGroup<CraftRounding>;
+  doors: FigureGroup<DoorRule>;
+  /** Units launched or landed each turn through one door, and the bay kinds that count. */
+  launch: FigureGroup<{ perDoor: number; kinds: string[] }>;
+}
+
+const THREE = LATER;
+const AT2_AT2R = (at2: string, at2r: string) => ({ [E.at2]: at2, [E.at2r]: at2r });
+
+export const CRAFT_FIGURES: CraftFigures = {
+  engineShare: [share(THREE("44; errata v1.2", "61", "185"), { "inner-sphere": 0.065, clan: 0.061 })],
+  siRange: [share(THREE("44", "62", "187"), { min: 1, max: 30 })],
+  siMassDivisor: [share(THREE("44", "62", "187"), { aerodyne: 200, spheroid: 500 })],
+  controlShare: [share(THREE("44", "62", "189"), 0.0075)],
+  // Conflict 63 in the archive ledger (the 19,990 misprint).
+  fuelBands: [
+    share(
+      THREE("45", "63", "186"),
+      [[0, 80], [400, 70], [800, 60], [1200, 50], [1900, 40], [3000, 30], [20000, 20], [40000, 10]],
+      "the two AeroTech 2 books print the 3,000 band as ending at 19,990, a misprint for 19,999; TechManual prints 19,999",
+    ),
+  ],
+  pumpShare: [share(THREE("45", "62", "186"), 0.02)],
+  armorBands: [
+    share(THREE("46", "64", "192"), {
+      spheroid: [[0, 20, 16], [12500, 17, 14], [20000, 14, 12], [35000, 12, 10], [50000, 10, 8], [65000, 7, 6]],
+      aerodyne: [[0, 20, 16], [6000, 17, 14], [9500, 14, 12], [12500, 12, 10], [17500, 10, 8], [25000, 7, 6]],
+    }),
+  ],
+  armorLimit: [share(THREE("46", "63", "191"), { aerodyne: 4.5, spheroid: 3.6 })],
+  freeArmor: [share(THREE("46", "63-64", "191"), 1)],
+  freeSinks: [
+    share(
+      THREE("48", "67", "193"),
+      { aerodyne: { civilian: { divide: 60 }, military: { divide: 20 } }, spheroid: { civilian: { root: 1.6 }, military: { root: 6.8 } } },
+      "a small craft reads the civilian rows in all three books (they have no military row)",
+    ),
+  ],
+  arcLimit: [share(THREE("47", "66", "196"), 12)],
+  fireControlShare: [share(THREE("47", "66", "196"), 0.1)],
+  // Conflict 40 in the archive ledger: 70 printed, 70 capital (700 standard) by the errata.
+  bayLimit: [share(THREE("46-47; errata v1.2", "66", "195"), 700)],
+  // Conflict 42 in the archive ledger.
+  mixedSizes: [share({ [E.at2]: "46-47; errata v1.2" }, false), share({ [E.at2r]: "66", [E.current]: "195" }, true)],
+  minShots: [share(THREE("46; errata v1.2", "66", "194"), { shots: 10, ultra: 20, rotary: 60 })],
+  crew: [share(THREE("48", "68", "189"), { civilian: { base: 3, perTons: 5000 }, military: { base: 4, perTons: 5000 } })],
+  // Conflict 62 in the archive ledger: the AeroTech 2 books put a small craft with the civilian DropShip row, TechManual gives it a flat 3.
+  smallCraftCrew: [share(AT2_AT2R("48; errata v1.2", "68"), { base: 3, perTons: 5000 }), share({ [E.current]: "189" }, { base: 3 })],
+  gunners: [share(THREE("48", "68", "189"), { standardPer: 6, capitalPer: 1 })],
+  // The two AeroTech 2 books name the fore-sides, aft-sides and broadsides, and the wings of fighters only; TechManual names the sides and the wings of every craft.
+  matchedArcs: [share(AT2_AT2R("46", "66"), [["FL", "FR"], ["AL", "AR"]]), share({ [E.current]: "195" }, [["FL", "FR"], ["AL", "AR"], ["LW", "RW"]])],
+  rounding: [
+    share(AT2_AT2R("44-48", "61-68"), { engine: "exact", si: "exact", controlsSmallCraft: "exact", controlsDropship: "exact", pumps: "exact", fireControl: "exact", armorLimit: "exact" }, "neither AeroTech 2 book prints a rounding for these masses"),
+    share({ [E.current]: "185-196" }, { engine: "up-half", si: "up-half", controlsSmallCraft: "up-half", controlsDropship: "up-whole", pumps: "up-half", fireControl: "up-half", armorLimit: "down-half" }),
+  ],
+  doors: [share({ [E.at2r]: "69" }, { fixed: 8, launchCapableOnly: true }, "AeroTech 2 prints no limit"), share({ [E.current]: "196" }, { base: 7, perTons: 50000, smallCraft: { aerodyne: 2, spheroid: 4 }, minPerBay: 1 })],
+  launch: [
+    share(AT2_AT2R("39", "55"), { perDoor: 2, kinds: ["mech", "fighter", "small-craft"] }),
+    share({ [E.current]: "196" }, { perDoor: 2, kinds: ["mech", "fighter", "small-craft", "protomech"] }),
+  ],
+};
+
+const BAY = (kind: string, label: string, figures: FigureGroup<BayFigure>): CraftBayRow => ({ kind, label, figures });
+/** Transport bays (AeroTech 2 p. 47, AeroTech 2 Revised p. 65, TechManual p. 239). A bay's `capacity` in a record is its cubicles (a cargo bay's, its tons). TechManual's table prints the
+ * battle armor row for 6 troopers under the label "(IS)" a second time; we call it `battle-armor-6`. */
+// Conflict 64 in the archive ledger: the infantry bay capacities differ between the AeroTech 2 books and TechManual.
+export const CRAFT_BAYS: CraftBayRow[] = [
+  BAY("cargo", "Cargo bay", [share(THREE("47", "65", "239"), { tons: 1, carries: 1 })]),
+  BAY("mech", "'Mech cubicle", [share(THREE("47", "65", "239"), { tons: 150, carries: 1 })]),
+  BAY("fighter", "Fighter cubicle", [share(THREE("47", "65", "239"), { tons: 150, carries: 1 })]),
+  BAY("small-craft", "Small craft cubicle", [share(THREE("47", "65", "239"), { tons: 200, carries: 1 })]),
+  BAY("protomech", "ProtoMech cubicle", [share(THREE("47", "65", "239"), { tons: 50, carries: 5 })]),
+  BAY("vehicle-light", "Light vehicle cubicle", [share(THREE("47", "65", "239"), { tons: 50, carries: 1 })]),
+  BAY("vehicle-heavy", "Heavy vehicle cubicle", [share(THREE("47", "65", "239"), { tons: 100, carries: 1 })]),
+  BAY("vehicle-superheavy", "Super-heavy vehicle cubicle", [share({ [E.current]: "239" }, { tons: 200, carries: 1 })]),
+  BAY("infantry-foot", "Infantry bay, foot", [share(AT2_AT2R("47", "65"), { tons: 5, carries: 28 }), share({ [E.current]: "239" }, { tons: 5, carries: 30 })]),
+  BAY("infantry-jump", "Infantry bay, jump", [share(AT2_AT2R("47", "65"), { tons: 6, carries: 21 }), share({ [E.current]: "239" }, { tons: 6, carries: 30 })]),
+  BAY("infantry-motorized", "Infantry bay, motorized", [share(AT2_AT2R("47", "65"), { tons: 7, carries: 28 }), share({ [E.current]: "239" }, { tons: 7, carries: 30 })]),
+  BAY("infantry-mechanized", "Infantry bay, mechanized", [share({ [E.at2r]: "65", [E.current]: "239" }, { tons: 8, carries: 7 })]),
+  BAY("battle-armor", "Battle armor bay", [share(AT2_AT2R("47", "65"), { tons: 10, carries: 5 })]),
+  BAY("battle-armor-is", "Battle armor bay (Inner Sphere)", [share({ [E.current]: "239" }, { tons: 8, carries: 4 })]),
+  BAY("battle-armor-clan", "Battle armor bay (Clan)", [share({ [E.current]: "239" }, { tons: 10, carries: 5 })]),
+  BAY("battle-armor-6", "Battle armor bay (6 troopers)", [share({ [E.current]: "239" }, { tons: 12, carries: 6 })]),
+];
+
+/** The bay kinds an edition prints. */
+export function craftBaysFor(editionId: string): CraftBayRow[] {
+  return CRAFT_BAYS.filter((row) => figureOf(row.figures, editionId) !== undefined);
+}
+/** What one cubicle of a bay kind weighs and carries in an edition; undefined for a kind the edition does not print. */
+export function craftBayFigure(kind: string, editionId: string): BayFigure | undefined {
+  const row = CRAFT_BAYS.find((r) => r.kind === kind);
+  return row && figureOf(row.figures, editionId);
+}
+
+/** Armor points a ton of the type gives a small craft or DropShip: the standard points of the mass band (Clan or Inner Sphere column) times the type's multiplier, as the aerospace armor
+ * table prints it (TechManual p. 192: 14 x 1.12 = 15.68). A mixed unit reads the column of the armor's own tech base (standard reads Inner Sphere). Undefined for an unknown type, shape or edition. */
+export function craftArmorPointsPerTon(typeId: string, editionId: string, shape: AeroShape, tons: number, techBase: "inner-sphere" | "clan" | "mixed"): number | undefined {
+  const type = FIGHTER_ARMOR_TYPES.find((t) => t.id === typeId);
+  const bands = figureOf(CRAFT_FIGURES.armorBands, editionId)?.[shape];
+  const multiplier = type && Object.hasOwn(ARMOR.types, type.like) ? ARMOR.types[type.like]?.multiplier : undefined;
+  const band = bands?.filter(([from]) => tons >= from).at(-1);
+  if (!type || !band || multiplier === undefined) return undefined;
+  const clan = techBase === "clan" || (techBase === "mixed" && type.techBase === "clan");
+  return Math.round(band[clan ? 1 : 2] * multiplier * 1e6) / 1e6;
+}
