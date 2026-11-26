@@ -32,6 +32,15 @@ describe("aerospace rules check", () => {
     expect(kinds(checkAero(fighter(editionId, { ...sound, ...build }, mounts), catalog))).toContain(expected);
   });
 
+  it("the year rule: needed above Introductory in the current rules, never in the older books; no Clan unit before the Clan sub-eras in any edition; a saved unit that fails it keeps its record and the check reports it", () => {
+    const wants = (editionId: string, build: Partial<AeroRecord>) => checkAero(fighter(editionId, { ...sound, ...build }), catalog).filter((f) => f.check === "year");
+    expect(wants("tw-tm-so", { year: null, rulesLevel: "standard" })).toEqual([expect.objectContaining({ level: "error", where: { field: "year" } })]);
+    expect(wants("tw-tm-so", { year: null, rulesLevel: "introductory" })).toEqual([]);
+    expect(wants("aerotech2", { year: null })).toEqual([]);
+    for (const editionId of ["tw-tm-so", "aerotech2"]) expect(wants(editionId, { year: 2750, techBase: "clan", rulesLevel: "advanced" }), editionId).toEqual([expect.objectContaining({ level: "error", where: { field: "techBase" } })]);
+    expect(wants("tw-tm-so", { year: 3000, era: "succession-wars-era", techBase: "clan", rulesLevel: "advanced" })).toEqual([expect.objectContaining({ where: { field: "techBase" } })]);
+  });
+
   it("a conventional fighter must carry sinks for its energy weapons (not its cannon) in the three later editions", () => {
     for (const edition of ["aerotech2", "aerotech2-revised", "tw-tm-so"]) {
       const lasers = fighter(edition, { ...sound, unitType: "conventional-fighter" }, [["NO", "large-laser-is"], ["NO", "large-laser-is"], ["NO", "ac-5-is"]]);

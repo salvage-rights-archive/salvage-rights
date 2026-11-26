@@ -1,0 +1,139 @@
+{
+  "battleMechSaves": [{ "ignored": "a design this import does not read" }],
+  "currentASForce": {
+    "uuid": "force-1",
+    "turn": 3,
+    "phase": 0,
+    "groups": [
+      {
+        "name": "Test lance",
+        "uuid": "g-1",
+        "groupLabel": "Lance",
+        "formationBonus": "None",
+        "members": [
+          {
+            "uuid": "u-anvil", "mechCreatorUUID": "", "name": "Anvil AV-1", "variant": "AV-1", "mulID": 9001, "type": "BM", "size": 3, "tmm": 2, "role": "Brawler",
+            "basePoints": 40, "currentSkill": 4, "armor": 4, "structure": 4, "overheat": 1, "threshold": 0, "jumpMove": 6,
+            "move": [{ "move": 8, "currentMove": 8, "type": "" }, { "move": 6, "currentMove": 6, "type": "j" }],
+            "damage": { "short": 3, "medium": 3, "long": 1, "extreme": 0, "shortMinimal": false, "mediumMinimal": false, "longMinimal": false, "extremeMinimal": false },
+            "abilities": ["OMNI", "IF1"],
+            "currentArmor": [true, true, false, false], "currentStructure": [false, false, false, false], "currentHeat": 1,
+            "engineHits": [true], "fireControlHits": [], "mpControlHits": [true], "weaponHits": [],
+            "roundArmor": [false, false, true, false], "roundStructure": [false, false, false, false]
+          }
+        ]
+      }
+    ]
+  },
+  "favoriteASGroups": [
+    {
+      "name": "Saved lance",
+      "uuid": "g-2",
+      "members": [
+        {
+          "uuid": "u-cairn", "name": "Cairn CN-3", "variant": "CN-3", "mulID": 0, "type": "BM", "size": 1, "tmm": 3, "role": "Scout",
+          "basePoints": 20, "currentSkill": 5, "armor": 2, "structure": 2, "overheat": 0, "jumpMove": 0,
+          "move": [{ "move": 10, "currentMove": 10, "type": "" }],
+          "damage": { "short": 2, "medium": 1, "long": 0, "extreme": 0, "mediumMinimal": true },
+          "abilities": "ECM, LRM1/1/-"
+        }
+      ]
+    }
+  ],
+  "acesCampaigns": [
+    {
+      "version": 1, "id": "camp-x", "name": "Invented run", "campaignBook": "", "difficulty": "standard", "existingForce": true, "advancedForceCreation": false,
+      "startingWarchest": 300,
+      "roster": [
+        { "id": "r1", "chassis": "Anvil", "variant": "AV-1", "name": "Anvil AV-1", "type": "BM", "size": 3, "pv": 40, "omni": true, "enhancedNoAmmo": false, "status": "active", "mulID": 9001, "notes": "" },
+        { "id": "r2", "chassis": "Cairn", "variant": "CN-3", "name": "Cairn CN-3", "type": "BM", "size": 1, "pv": 20, "omni": false, "enhancedNoAmmo": false, "status": "active", "mulID": 0, "notes": "" },
+        { "id": "r3", "chassis": "Dune", "variant": "DN-4", "name": "Dune DN-4", "type": "CV", "size": 2, "pv": 25, "omni": false, "enhancedNoAmmo": false, "status": "active", "mulID": 0, "notes": "" }
+      ],
+      "pilots": [], "sorties": [], "memorial": [], "lastUpdated": "2026-11-01T00:00:00Z"
+    }
+  ],
+  "acesGame": {
+    "version": 2, "id": "game-x", "name": "Invented skirmish", "campaignId": "camp-x", "turn": 3, "phase": "movement",
+    "rng": { "seed": 4242, "calls": 5 },
+    "forcedWithdrawal": false, "hasScouringSands": false, "decksOwned": { "brawler": 1 },
+    "commandDeck": "Star Test", "commandCard": "B", "automatedCommanderUUID": "u-bolt",
+    "playerCommanderDestroyed": false, "automatedCommanderDestroyed": false, "playerUnitsAbleToMove": 1,
+    "initiativeWinner": "player", "lastInitiativeWinner": "automated",
+    "scenario": { "gameSize": "skirmish", "deploymentId": null, "scenarioId": null, "terrainId": null, "notes": "" },
+    "automatedForce": {
+      "uuid": "force-a", "turn": 3, "phase": 0,
+      "groups": [
+        {
+          "name": "Opposition", "uuid": "g-a", "groupLabel": "Lance", "formationBonus": "None",
+          "members": [
+            {
+              "uuid": "u-bolt", "name": "Bolt BT-2", "variant": "BT-2", "mulID": 9002, "type": "CV", "size": 2, "tmm": 1, "role": "Brawler",
+              "basePoints": 30, "currentSkill": 4, "armor": 3, "structure": 3, "overheat": 0, "jumpMove": 0,
+              "move": [{ "move": 6, "currentMove": 6, "type": "t" }],
+              "damage": { "short": 2, "medium": 2, "long": 0, "extreme": 0 }, "abilities": [],
+              "currentArmor": [true, false, false], "currentStructure": [false, false, false], "vehicleMotive910": [true], "currentHeat": 0
+            },
+            {
+              "uuid": "u-pill", "name": "Pillbox PB-1", "variant": "PB-1", "mulID": 0, "type": "BD", "size": 2, "tmm": 0, "role": "",
+              "basePoints": 15, "currentSkill": 4, "armor": 4, "structure": 4, "overheat": 0, "jumpMove": 0, "move": [],
+              "damage": { "short": 3, "medium": 2, "long": 1, "extreme": 0 }, "abilities": "IMMOBILE"
+            }
+          ]
+        }
+      ]
+    },
+    "unitStates": [
+      { "unitUUID": "u-bolt", "deckId": "brawler", "cardsInDeck": 3, "cardsCycled": 1, "token": "move-first", "forcedWithdrawal": false, "fleeing": false, "isEmplacement": false, "cardIds": ["card-1", "card-2", "card-3"], "transportedBy": "" },
+      { "unitUUID": "u-pill", "deckId": "", "cardsInDeck": 0, "cardsCycled": 0, "token": null, "forcedWithdrawal": false, "fleeing": false, "isEmplacement": true, "cardIds": [], "transportedBy": "" }
+    ],
+    "objectives": [{ "kind": "primary", "type": "movement", "text": "Reach the ridge", "sp": 100, "complete": false }, { "kind": "secondary", "type": "destroy", "text": "Pillbox", "sp": 50, "complete": false }],
+    "waypoints": [{ "turn": 4, "label": "A", "text": "", "resolved": false }],
+    "specialOrders": { "movementObjective": true, "destroyObjective": false, "indirectAttacks": false },
+    "supportCards": [{ "id": "s1", "name": "Invented strike", "spentTurn": null }],
+    "turnLimit": 6,
+    "log": ["Turn 3 began.", "Bolt BT-2 moved."],
+    "lastUpdated": "2026-11-26T09:00:00Z"
+  },
+  "acesCardLibrary": {
+    "version": 1,
+    "cards": [
+      {
+        "id": "card-1", "deck": "Brawler", "deckId": "brawler", "cardNumber": "1/6", "movePriority": 120, "combatPriority": 240, "sample": false, "notes": "my card",
+        "aggressive": { "condition": "an invented condition", "zoneRings": [12, 18], "zoneKeyword": "", "targetInAttackRange": true, "targetMoved": false, "targetInLOS": true, "targetNoLOS": false, "targetSelect": "red", "moveType": "ground", "altMoveType": "jump", "altMoveWhen": "if needed", "filters": ["0. cover from [highest] enemies"] },
+        "balanced": { "condition": "", "zoneRings": [], "zoneKeyword": "nearest", "targetInAttackRange": false, "targetMoved": false, "targetInLOS": false, "targetNoLOS": false, "targetSelect": "nearest", "moveType": "sprint", "altMoveType": null, "altMoveWhen": "", "filters": [] },
+        "cautious": { "condition": "", "zoneRings": [], "zoneKeyword": "nearest", "targetInAttackRange": false, "targetMoved": false, "targetInLOS": false, "targetNoLOS": false, "targetSelect": "", "moveType": "ground", "altMoveType": null, "altMoveWhen": "", "filters": [] },
+        "combat": {
+          "zoneRings": [], "zoneKeyword": "any", "indirectIfNoLOS": false,
+          "filters": [{ "text": "[lowest] armor", "stat": "armor", "direction": "lowest" }, { "text": "the red list", "color": "red" }, { "text": "an invented judgement", "judged": true }],
+          "overheat": [{ "text": "row", "tnAtMost": 6, "tnAtLeast": null, "join": "and", "also": "has-heat", "action": "up-to", "ovLimit": 2 }]
+        }
+      },
+      { "id": "card-2", "deck": "Brawler", "deckId": "brawler", "cardNumber": "2/6", "movePriority": 130, "combatPriority": 250, "sample": false, "notes": "", "combat": { "filters": [], "overheat": [] } },
+      { "id": "card-3", "deck": "Brawler", "deckId": "brawler", "cardNumber": "3/6", "movePriority": 140, "combatPriority": 260, "sample": false, "notes": "", "combat": { "filters": [], "overheat": [] } },
+      { "id": "card-sample", "deck": "Brawler", "cardNumber": "4/6", "sample": true }
+    ],
+    "commandCards": [
+      {
+        "id": "cmd-a", "deck": "Star Test", "faction": "Invented", "letter": "A", "cardNumber": "1/5", "sample": false,
+        "orders": [{ "phase": "initiative", "text": "give a token", "token": "move-first", "tokenRank": [{ "text": "[highest] pv", "stat": "pv", "direction": "highest" }], "behavior": null, "filter": "" }, { "phase": "movement", "text": "be bold", "token": null, "behavior": "aggressive", "filter": "" }],
+        "red": [{ "text": "[lowest] structure", "stat": "structure", "direction": "lowest" }], "yellow": [], "blue": [],
+        "supportOrders": "", "supportOnlyIfStructure": true, "emplacementZoneRings": [12], "emplacements": [], "artillery": [], "bsp": [],
+        "strategy": [{ "letter": "B", "text": "our objective is done", "auto": "objective-complete" }, { "letter": "", "text": "otherwise", "auto": "maintain" }]
+      },
+      { "id": "cmd-b", "deck": "Star Test", "faction": "Invented", "letter": "B", "cardNumber": "2/5", "sample": false, "orders": [], "red": [], "yellow": [], "blue": [], "supportOrders": "hold them", "strategy": [] }
+    ],
+    "specialOrders": [
+      { "id": "so-1", "kind": "forced-withdrawal", "name": "Withdraw", "rules": ["leave the table"], "column": null, "preFilters": [], "spotter": [], "sample": false, "notes": "" },
+      { "id": "so-2", "kind": "other", "name": "Odd", "rules": [], "sample": false }
+    ],
+    "edgeCards": [{ "id": "edge-1", "name": "Invented edge", "sample": false }],
+    "scenarios": [{ "id": "sc-1", "name": "Invented sortie", "sample": false }]
+  },
+  "exportedAt": "2026-11-26T12:00:00.000Z",
+  "localStorage": {
+    "acesGame": "{\"id\":\"game-x\"}",
+    "appSettings": "{\"uiTheme\":\"dark\"}",
+    "customMULGithubToken": "ghp_INVENTED_TOKEN_LOOKING_VALUE",
+    "someOtherAppSave": "an unrelated entry"
+  }
+}
