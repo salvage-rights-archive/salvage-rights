@@ -223,7 +223,7 @@ export async function saveAsUnit(page: Page, base: string, name: string, pv: num
   await expect(page.getByText("Saved.")).toBeVisible();
 }
 
-export const ACES = "/battletech/aces-preview";
+export const ACES = "/battletech/aces";
 /** Gothic's pages until the game turns ready (G-9); then "/battletech/gothic". */
 export const GOTHIC = "/battletech/gothic-preview";
 

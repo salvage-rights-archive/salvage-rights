@@ -1,9 +1,7 @@
-// Where the Aces pages live while the game is not ready. The host serves a game's own routes only when the game is ready, and the
-// manifest checks refuse a family route that starts with a game's id, so until Aces goes live these pages sit under a family
-// route of their own. When the manifest flips Aces to ready they move into the game's routes and these become `aces/...`.
-export const ACES_BASE = "/battletech/aces-preview";
-// The heading on the Alpha Strike page follows the base: when the base loses "-preview", the "(in progress)" goes with it.
-export const ACES_HEADING = ACES_BASE.endsWith("-preview") ? "Aces (in progress)" : "Aces";
+// Where the Aces pages live: the game's own routes (src/index.ts). Every Aces link is built from this base.
+export const ACES_BASE = "/battletech/aces";
+// The heading of the Aces section on the Alpha Strike page.
+export const ACES_HEADING = "Aces";
 export const ACES_HOME = `${ACES_BASE}/home`;
 export const ACES_CARDS = `${ACES_BASE}/cards`;
 export const ACES_CARD = `${ACES_BASE}/card`;

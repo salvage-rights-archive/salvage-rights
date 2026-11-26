@@ -1,4 +1,4 @@
-import type { FamilyManifest, FamilyRoute, GameManifest } from "@salvage-rights/shared";
+import type { FamilyManifest, FamilyRoute } from "@salvage-rights/shared";
 import { EDITIONS, ERAS } from "./data/editions";
 import { FAMILY_ART, GAME_ART } from "./artwork/games";
 
@@ -15,19 +15,18 @@ const alphaStrikeRoutes: FamilyRoute[] = [
   { path: "force", label: "Alpha Strike force", section: "workshop", load: () => import("./ui/as/AsForcePage") },
 ];
 
-// Aces is not ready, and the host serves only a ready game's own routes, so its pages sit under family routes of their own until
-// ACES-9 (see ui/aces/routes.ts). They are reachable by address and from the Alpha Strike home.
-const acesPreviewRoutes: FamilyRoute[] = [
-  { path: "aces-preview/home", label: "Aces", section: "workshop", load: () => import("./ui/aces/AcesHomePage") },
-  { path: "aces-preview/cards", label: "Aces cards", section: "workshop", load: () => import("./ui/aces/CardLibraryPage") },
-  { path: "aces-preview/card", label: "Aces card", section: "workshop", load: () => import("./ui/aces/CardEditorPage") },
-  { path: "aces-preview/command", label: "Aces command card", section: "workshop", load: () => import("./ui/aces/CommandEditorPage") },
-  { path: "aces-preview/order", label: "Aces special order", section: "workshop", load: () => import("./ui/aces/OrderEditor") },
-  { path: "aces-preview/support", label: "Aces support card", section: "workshop", load: () => import("./ui/aces/SupportEditor") },
-  { path: "aces-preview/new-game", label: "New Aces game", section: "workshop", load: () => import("./ui/aces/NewGamePage") },
-  { path: "aces-preview/game", label: "Aces game", section: "workshop", load: () => import("./ui/aces/GamePage") },
-  { path: "aces-preview/after", label: "Aces after-sortie steps", section: "workshop", load: () => import("./ui/aces/AfterSortiePage") },
-  { path: "aces-preview/sortie", label: "Aces sortie", section: "workshop", load: () => import("./ui/aces/SortiePage") },
+// Aces's own routes, under /battletech/aces (ui/aces/routes.ts builds every link from the same base).
+const acesRoutes: FamilyRoute[] = [
+  { path: "home", label: "Aces", section: "workshop", load: () => import("./ui/aces/AcesHomePage") },
+  { path: "cards", label: "Aces cards", section: "workshop", load: () => import("./ui/aces/CardLibraryPage") },
+  { path: "card", label: "Aces card", section: "workshop", load: () => import("./ui/aces/CardEditorPage") },
+  { path: "command", label: "Aces command card", section: "workshop", load: () => import("./ui/aces/CommandEditorPage") },
+  { path: "order", label: "Aces special order", section: "workshop", load: () => import("./ui/aces/OrderEditor") },
+  { path: "support", label: "Aces support card", section: "workshop", load: () => import("./ui/aces/SupportEditor") },
+  { path: "new-game", label: "New Aces game", section: "workshop", load: () => import("./ui/aces/NewGamePage") },
+  { path: "game", label: "Aces game", section: "workshop", load: () => import("./ui/aces/GamePage") },
+  { path: "after", label: "Aces after-sortie steps", section: "workshop", load: () => import("./ui/aces/AfterSortiePage") },
+  { path: "sortie", label: "Aces sortie", section: "workshop", load: () => import("./ui/aces/SortiePage") },
 ];
 
 // Gothic's pages are written as the game's own routes. The host serves them only once the game is ready (G-9), so until then they are
@@ -51,11 +50,6 @@ const aeroRoutes: FamilyRoute[] = [
 ];
 const aeroPreviewRoutes: FamilyRoute[] = aeroRoutes.map((route) => ({ ...route, path: `aerotech-preview/${route.path}` }));
 
-function comingSoon(
-id: string, shortName: string, fullName: string): GameManifest {
-  return { id, shortName, fullName, ready: false, routes: [], ...GAME_ART[id] };
-}
-
 const manifest: FamilyManifest = {
   id: "battletech",
   name: "BattleTech",
@@ -66,14 +60,14 @@ const manifest: FamilyManifest = {
   games: [
     { id: "classic", shortName: "Classic", fullName: "Classic BattleTech", ready: true, routes: classicRoutes, ...GAME_ART["classic"] },
     { id: "alpha-strike", shortName: "Alpha Strike", fullName: "BattleTech: Alpha Strike", ready: true, routes: alphaStrikeRoutes, ...GAME_ART["alpha-strike"] },
-    comingSoon("aces", "Aces", "BattleTech: Aces"),
+    { id: "aces", shortName: "Aces", fullName: "BattleTech: Aces", ready: true, routes: acesRoutes, ...GAME_ART["aces"] },
     { id: "aerotech", shortName: "AeroTech", fullName: "BattleTech: AeroTech", ready: false, routes: aeroRoutes, ...GAME_ART["aerotech"] },
     { id: "gothic", shortName: "Gothic", fullName: "BattleTech: Gothic", ready: false, routes: gothicRoutes, ...GAME_ART["gothic"] },
   ],
   unitTypes: (EDITIONS[0]?.unitTypes ?? []).filter((unit) => unit.ready), // the types the edition can build (data/editions.ts)
   eras: ERAS, // the Master Unit List's twelve (data/editions.ts)
   measures: ["hexes"],
-  routes: [...acesPreviewRoutes, ...aeroPreviewRoutes, ...gothicPreviewRoutes],
+  routes: [...aeroPreviewRoutes, ...gothicPreviewRoutes],
   credits: {
     owner:
       // The non-affiliation notice fan projects for this game commonly carry, word for word, then two lines of our own.
@@ -89,6 +83,7 @@ const manifest: FamilyManifest = {
       "Each imported design is credited to the mordel.net member who created it. The Alpha Strike values we read from mordel.net are shown as Mordel gives them, with the same credit.",
       "The Classic BattleTech section (the import, the editor and the rules checks) was made by the Salvage Rights team.",
       "The Alpha Strike roster (unit entry, saving and unit files) was made by the Salvage Rights team.",
+      "The Aces section (unit cards, command cards, automated units, games and campaigns) was made by the Salvage Rights team.",
       "\"Verified Standard Rules Compliant\" means only that our own rules check, against the rulebooks we cite, found nothing wrong with a Standard-level 'Mech; tournament organisers have the final word. \"OFFICIAL\" is what the player states about a Classic design, and it turns off when the design is changed. For Alpha Strike it depends only on the Master Unit List: a unit imported from the list and not changed is OFFICIAL, and every other unit is NOT OFFICIAL.",
       "The pictures on the BattleTech tile and for each game were generated with an AI image tool (DeviantArt DreamUp); the picture shown on the Classic BattleTech page when no 'Mech is saved was generated with another (Nano Banana 2). We would rather show work made by a person. If you are an artist, or hold the rights to a piece, and can let us use it legally, we will gladly replace any AI-generated art here and credit you. To offer a piece, start a thread in Discussions on our GitHub repository (https://github.com/salvage-rights-archive/salvage-rights/discussions), or open an issue there.",
     ],
