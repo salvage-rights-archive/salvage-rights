@@ -871,6 +871,7 @@ export function buildSortieGame(input: SortieGameInput): AcesGame {
     ...(input.startLetter ? { startLetter: input.startLetter } : {}),
     waypoints: input.waypoints ?? [],
     rules: input.rules ?? {},
+    ...(sortie?.turns ? { turnLimit: sortie.turns } : {}),
     campaign: { campaignId: campaign.id, sortie: String(input.number) },
   });
   // A waypoint on a numbered opposing unit follows that unit into the game.

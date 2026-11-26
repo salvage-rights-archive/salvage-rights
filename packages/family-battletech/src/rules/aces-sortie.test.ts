@@ -146,5 +146,7 @@ describe("Starting a sortie", () => {
     expect(game.command.current).toBe("cmd-A");
     expect(game.rules).toMatchObject({ forcedWithdrawal: "automated", multipleAttackRolls: true });
     expect(game.waypoints.find((w) => w.letter === "F")?.turn).toBe(4);
+    expect(sortie.turns).not.toBeNull();
+    expect(game.turnLimit).toBe(sortie.turns);
   });
 });

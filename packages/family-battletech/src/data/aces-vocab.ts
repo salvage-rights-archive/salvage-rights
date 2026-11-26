@@ -430,7 +430,7 @@ const w = (text: string, pages: string): ResolverWords => ({ text, cite: p(pages
 /** What the resolver asks the players during an activation. */
 export const ACES_PROMPTS = {
   distances: w("How far is each of these enemies from {unit}, in inches?", "12"),
-  sight: w("Which of these enemies can {unit} see from where it stands?", "9"),
+  sight: w("Which enemies can {unit} see from where it stands, inside its firing arc?", "9"),
   attackable: w("Which of these could {unit} attack after moving (in sight, at a range where its damage is above 0)?", "9, 12"),
   condition: w("For {unit}, is this so: {text}?", "11"),
   key: w("Which of these fit: {text}?", "12"),
@@ -474,6 +474,7 @@ export const ACES_LOG = {
   "no-jump": w("It cannot jump, so it moves by Ground.", "14"),
   // ---- Combat (pp. 18-20) ----
   "combat-shutdown": w("{unit} is shut down, so it does not attack.", "19"),
+  "combat-stunned": w("{unit} has a stunned crew, so it does not attack.", "4"),
   "combat-sprinted": w("{unit} sprinted, so it cannot attack.", "18"),
   "combat-heat-stopped": w("{unit}: heat has cut its Move to 0, so it makes no weapon attack.", "19"),
   "not-in-range": w("Left out: {units} (not in its attack range).", "9, 18"),
@@ -490,7 +491,7 @@ export const ACES_LOG = {
   "ov-row": w("Overheat row {row} applies: {action}.", "19"),
   "ov-none": w("No overheat row applies: it adds no OV.", "19"),
   "ov-ignored": w("{unit} does not track heat, so the overheat rows are ignored.", "19"),
-  "ov-destroyed": w("It has taken enough damage to be destroyed this phase: the rows are ignored and it uses all the OV it has.", "19"),
+  "ov-destroyed": w("Staged damage will destroy it this phase: the rows are ignored and it uses all the OV it has.", "19"),
   "ov-capped": w("OV is held to {ov} so it does not shut itself down.", "19"),
   "ov-indirect": w("No OV is added to an indirect attack.", "20"),
   "hold-fire": w("It holds fire.", "19"),
@@ -512,9 +513,9 @@ export type LogId = keyof typeof ACES_LOG;
 
 /** Shown with a movement decision. */
 export const ACES_REMINDERS = {
-  "no-standstill": w('Never stand still unless told: if it already stands within 1" of the best place, move it 1" to an equal place so it keeps its TMM.', "14"),
-  facing: w("Face it toward the target with the target in its firing arc; if it can, no enemy in its rear and none outside its arc.", "14"),
+  "no-standstill": w('No Standstill unless a card says so. Already at the best place: shift 1" to an equal one to keep its TMM.', "14"),
+  facing: w("Facing, in order: the target, the target in its arc, no enemy at its rear, none outside its arc.", "14"),
   "face-deployment": w("Face it toward where enemies may come on.", "16"),
-  flip: w("Mark how it moved and turn its top card to the combat side; a Move First or Move Last token is discarded.", "14"),
+  flip: w("Movement token beside it, top card flipped to its combat side, and a Move First/Move Last token dropped.", "14"),
 } as const satisfies Record<string, ResolverWords>;
 export type ReminderId = keyof typeof ACES_REMINDERS;

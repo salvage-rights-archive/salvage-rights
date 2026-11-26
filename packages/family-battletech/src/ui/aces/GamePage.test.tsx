@@ -89,6 +89,34 @@ describe("Aces game page: Initiative and Movement", () => {
     expect(await screen.findByText("Move Theirs A: Aggressive, target Mine A, Ground")).toBeTruthy();
   });
 
+  it("a 0* hit asks for its 1D6 and delivers nothing under 4, and a hit on the rear adds 1 (ASCE p. 48; Quick-Start p. 21)", async () => {
+    const aces = await openAcesStorage();
+    for (const c of brawlers) await aces.save(c);
+    const minimal: AsCard = { ...card, damage: { s: { value: 0, minimal: true }, m: { value: 0 }, l: { value: 0 } } };
+    const game = newAcesGame({
+      id: "g",
+      name: "Table test",
+      seed: 4,
+      at: AT,
+      player: { units: [{ unitId: "ma", name: "Mine A", card: minimal, skill: 4, pv: 20 }] },
+      automated: { units: [{ unitId: "ta", name: "Theirs A", card, skill: 4, pv: 20 }] },
+      cards: brawlers,
+    });
+    await (await openGameStorage()).save({ ...game, phase: "combat", initiative: { player: 5, automated: 9, winner: "automated", turn: 1 } });
+    const user = userEvent.setup();
+    open();
+    await user.click(await screen.findByRole("button", { name: "Attack with Mine A" }));
+    await user.type(screen.getByLabelText(/Distance to the target/), "3");
+    await user.type(screen.getByLabelText(/2D6 attack roll/), "12");
+    await user.type(await screen.findByLabelText(/Minimal damage \(0\*\)/), "3");
+    expect(screen.getByText("The hit delivers no damage, so there is no critical hit check.")).toBeTruthy();
+    await user.clear(screen.getByLabelText(/Minimal damage \(0\*\)/));
+    await user.type(screen.getByLabelText(/Minimal damage \(0\*\)/), "4");
+    await user.click(screen.getByLabelText(/struck the target/));
+    await user.click(screen.getByRole("button", { name: "Record the attack" }));
+    expect(await screen.findByText(/2 staged/)).toBeTruthy();
+  });
+
   it("asks for the screen to stay on, and lets it go when the switch is turned off", async () => {
     await saveGame();
     const release = vi.fn(() => Promise.resolve());

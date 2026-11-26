@@ -14,7 +14,7 @@
 //   is still settled by its card, which says why it does not fire, and its card is cycled (p. 19).
 // - Emplacements, artillery and Battlefield Support cards attack after the units (pp. 20-21); they are not run here.
 // - Heat is worked out with the damage: crippled never depends on heat, so the order of steps 2 and 3 changes nothing.
-import { AS_PHYSICAL_TYPES, AS_HIT_LIMITS } from "../data/alpha-strike";
+import { AS_PHYSICAL_TYPES, AS_HIT_LIMITS, AS_HEAT } from "../data/alpha-strike";
 import type { AsAttackFlag, AsPhysicalType } from "../data/alpha-strike";
 import { cycle, mulberry32, nextCombat, reveal } from "./aces-deck";
 import type { Activatable, Pick as NextUnit } from "./aces-deck";
@@ -24,7 +24,7 @@ import { attackerMoveOf, damageAt, emptySheet, specialValue, targetMoveOf } from
 import type { CombatContext, StrategyContext, StrategyDecision, TableUnit } from "./aces-resolve";
 import { addLog, deckCards, forceOf, isAlly, logLine, otherForce, toTable, topCard, turnStateOf, withTurnState, currentCommand } from "./aces-turn";
 import type { TurnRecords } from "./aces-turn";
-import { applyEndPhase, crippled, tracksHeat, withdraws } from "./as-play";
+import { applyEndPhase, crippled, currentIf, escape, stage, tracksHeat, withdraws } from "./as-play";
 import type { PlayEvent, RollKind } from "./as-play";
 import { physicalDamage, rangeBracket, targetNumber } from "./as-attack";
 import type { AttackResult, RangeId } from "./as-attack";
@@ -114,10 +114,10 @@ export const beginAttack = (game: AcesGame, unitId: string): AcesGame => withCom
 export const setTerrain = (game: AcesGame, enemyId: string, flags: AsAttackFlag[]): AcesGame =>
   withCombat(game, (c) => (c.active ? { ...c, active: { ...c.active, terrain: { ...c.active.terrain, [enemyId]: flags } } } : c));
 
-const toTableTerrain = (units: readonly GameUnit[], terrain: Record<string, string[]>): TableUnit[] =>
+const toTableTerrain = (units: readonly GameUnit[], terrain: Record<string, string[]>, attacked: ReadonlySet<string>): TableUnit[] =>
   units.map((u) => {
     const flags = terrain[u.id] as AsAttackFlag[] | undefined;
-    return flags?.length ? { ...toTable(u), attackFlags: flags } : toTable(u);
+    return { ...toTable(u), ...(flags?.length ? { attackFlags: flags } : {}), ...(attacked.has(u.id) ? { attackedByAlly: true as const } : {}) };
   });
 
 /** What the resolver reads for one automated unit's attack: its top card's combat side, the command card, the enemies with their terrain. */
@@ -127,6 +127,10 @@ export function combatContext(game: AcesGame, unit: GameUnit, records: TurnRecor
   const behaviour = topCard(game, unit.id, records);
   const command = currentCommand(game, records);
   const terrain = combatOf(game).active?.unitId === unit.id ? combatOf(game).active?.terrain ?? {} : {};
+  // Enemies an ally of this unit has already attacked this turn (Aces p. 18).
+  const attacked = new Set(
+    Object.entries(combatOf(game).done).flatMap(([id, d]) => (id !== unit.id && d.target !== undefined && game.sides[mine].units.some((u) => u.id === id) ? [d.target] : [])),
+  );
   return {
     phase: "combat",
     unit: toTable(unit),
@@ -134,7 +138,7 @@ export function combatContext(game: AcesGame, unit: GameUnit, records: TurnRecor
     ...(command ? { command } : {}),
     specialOrders: [...records.orders],
     allies: game.sides[mine].units.filter((u) => u.id !== unit.id).map(toTable),
-    enemies: toTableTerrain(game.sides[enemySide].units, terrain),
+    enemies: toTableTerrain(game.sides[enemySide].units, terrain, attacked),
     ...(game.rules.bigTable48 ? { bigTable48: true } : {}),
     lastDistances: turnStateOf(game).lastDistances,
   };
@@ -149,6 +153,13 @@ export function dice2d6(game: AcesGame, count: number, salt = 0): number {
   return 1 + Math.floor(rng() * 6) + 1 + Math.floor(rng() * 6);
 }
 
+/** 1D6 drawn the same way, for a minimal (0*) hit. */
+export function dice1d6(game: AcesGame, count: number): number {
+  const rng = mulberry32((game.seed ^ Math.imul(game.turn + 7, 0x9e3779b1) ^ Math.imul(count + 1, 0x85ebca6b) ^ Math.imul(99, 0xc2b2ae35)) >>> 0);
+  rng();
+  return 1 + Math.floor(rng() * 6);
+}
+
 /** Counts one more roll of ours this turn; the count is saved with the game so a reload does not roll the same dice twice. */
 export const bumpRollCount = (game: AcesGame, by = 1): AcesGame => withTurnState(game, (t) => ({ ...t, rollCount: t.rollCount + by }));
 
@@ -161,8 +172,10 @@ export interface WeaponDamage {
   minimal: boolean;
   /** Points an Overheat adds at this range: at Short and Medium, and Long with OVL (ASCE p. 53). */
   ovAdds: number;
-  /** What a hit deals; a minimal hit deals 1. */
+  /** What a hit deals; a minimal hit deals 1 once its 1D6 roll allows it. */
   total: number;
+  /** A hit with no Overheat to add still has to roll 1D6 for its one point (ASCE p. 48; Quick-Start p. 21). */
+  rollsMinimal: boolean;
 }
 
 /** The damage a weapon attack deals at a distance with an Overheat, from the unit's current values. */
@@ -173,14 +186,27 @@ export function weaponDamage(u: GameUnit, distance: number, ov: number): WeaponD
   const base = minimal ? 0 : raw;
   const ovAdds = bracket === "S" || bracket === "M" || (bracket === "L" && u.card.specials.some((s) => s.code === "OVL")) ? Math.max(0, ov) : 0;
   const sum = base + ovAdds;
-  return { bracket, base, minimal, ovAdds, total: sum === 0 && minimal ? 1 : sum };
+  return { bracket, base, minimal, ovAdds, total: sum === 0 && minimal ? 1 : sum, rollsMinimal: sum === 0 && minimal };
 }
+
+/** The Indirect Fire damage now, Weapon Hits taken off; 0* is minimal (Aces p. 3). */
+export function indirectDamage(u: GameUnit): { total: number; rollsMinimal: boolean } {
+  const d = currentIf(u.play, u.card);
+  return d?.minimal ? { total: 1, rollsMinimal: true } : { total: d?.value ?? 0, rollsMinimal: false };
+}
+
+/** The 1D6 of a minimal (0*) hit: 4 or higher delivers a single point, otherwise the hit delivers nothing (ASCE p. 48; Quick-Start p. 21). */
+export const minimalDelivers = (roll: number): boolean => roll >= 4;
+
+/** Heat a unit would carry after this attack, for the shutdown hint: current heat, the Overheat, an engine hit and the outside heat staged on it (ASCE p. 53; Aces p. 19). */
+export const heatAfterAttack = (u: GameUnit, ov: number): number =>
+  u.play.heat + ov + (u.play.crits.engine >= 1 ? 1 : 0) + Math.min(AS_HEAT.externalCap, u.play.staged.reduce((sum, h) => sum + (h.heat ?? 0), 0));
 
 /**
  * The Target Number for an attack the players make by hand, from the same parts the resolver uses for an automated unit: Skill, how
  * both units moved, the range from the inches measured, the target's TMM, heat, Fire Control hits, and the terrain the players set.
  */
-export function attackTn(attacker: GameUnit, target: GameUnit, kind: "weapon" | "physical" | "indirect", distance: number, flags: readonly AsAttackFlag[], physical?: AsPhysicalType): AttackResult {
+export function attackTn(attacker: GameUnit, target: GameUnit, kind: "weapon" | "physical" | "indirect", distance: number, flags: readonly AsAttackFlag[], physical?: AsPhysicalType, spotter?: GameUnit): AttackResult {
   const t = targetMoveOf(toTable(target));
   const jets = specialValue(target.card, "JMPS") - specialValue(target.card, "JMPW");
   return targetNumber({
@@ -196,6 +222,7 @@ export function attackTn(attacker: GameUnit, target: GameUnit, kind: "weapon" | 
     heat: tracksHeat(attacker.card) ? attacker.play.heat : 0,
     fireControlHits: attacker.play.crits.fireControl,
     flags: [...flags, ...(kind === "indirect" ? (["indirect"] as const) : [])],
+    ...(kind === "indirect" && spotter ? { spotterMove: attackerMoveOf(toTable(spotter)), spotterType: spotter.card.type } : {}),
     ...(kind === "physical" ? { physical: physical ?? "standard" } : {}),
   });
 }
@@ -227,8 +254,12 @@ export interface AttackRecord {
   roll?: number;
   pip?: boolean;
   hit?: boolean;
-  /** Damage a hit deals, after OV. */
+  /** Damage a hit deals, after OV, the 0* roll and a rear hit. */
   damage?: number;
+  /** The 1D6 of a minimal (0*) hit, when there was one. */
+  minimalRoll?: number;
+  /** The hit struck the target's rear: one more point (Quick-Start p. 21). */
+  rear?: boolean;
   ov?: number;
   /** Multiple attack rolls: rolls made, those that succeeded, and whether a natural 12 was among them. */
   rolls?: number;
@@ -250,9 +281,11 @@ export function attackLine(game: AcesGame, r: AttackRecord): string {
   const target = find(r.targetId)?.name ?? r.targetId;
   const heat = r.ov ? `, Overheat ${String(r.ov)}` : "";
   const head = `${who}: ${kindWords(r)} on ${target}, Target Number ${String(r.tn ?? 0)}${heat}`;
-  if (r.rolls !== undefined) return `${head}. ${String(r.successes ?? 0)} of ${String(r.rolls)} rolls succeeded${r.successes ? `: ${String(r.damage ?? 0)} damage, staged until the End Phase` : ""}.`;
+  if (r.rolls !== undefined) return `${head}${r.pip ? ", Edge pip" : ""}. ${String(r.successes ?? 0)} of ${String(r.rolls)} rolls succeeded${r.successes ? `${r.minimalRoll === undefined ? "" : `, 0* roll ${String(r.minimalRoll)}`}${r.rear ? ", rear hit" : ""}: ${String(r.damage ?? 0)} damage, staged until the End Phase` : ""}.`;
   const rolled = r.roll === undefined ? "" : `, rolled ${String(r.roll)}${r.pip ? " plus an Edge pip" : ""}`;
-  return `${head}${rolled}: ${r.hit ? `hit for ${String(r.damage ?? 0)}, staged until the End Phase` : "miss"}.`;
+  const minimal = r.minimalRoll === undefined ? "" : `, 0* roll ${String(r.minimalRoll)}`;
+  const rear = r.rear ? ", rear hit" : "";
+  return `${head}${rolled}${minimal}${rear}: ${r.hit ? ((r.damage ?? 0) > 0 ? `hit for ${String(r.damage)}, staged until the End Phase` : "hit, no damage") : "miss"}.`;
 }
 
 /**
@@ -260,7 +293,9 @@ export function attackLine(game: AcesGame, r: AttackRecord): string {
  * Phase, ASCE p. 50), the attacker is marked done, an Edge pip is counted, and an attacker with a deck cycles its card (p. 19).
  * A Charge or Death from Above stages its cost on the attacker too.
  */
-export function recordAttack(game: AcesGame, r: AttackRecord): AcesGame {
+export function recordAttack(start: AcesGame, r: AttackRecord): AcesGame {
+  // The Edge pip is spent now, with the attack, not before the roll (Aces p. 24).
+  const game = r.pip === true ? addPip(start, r.attackerId) : start;
   const delivered = r.rolls !== undefined ? (r.successes ?? 0) > 0 : r.hit === true;
   const damage = delivered ? Math.max(0, r.damage ?? 0) : 0;
   const critCheck = delivered && (r.natural12 === true || r.physical === "anti-mech");
@@ -275,7 +310,7 @@ export function recordAttack(game: AcesGame, r: AttackRecord): AcesGame {
   const lines: GameLogLine[] = [logLine(game, attackLine(game, r), COMBAT_CITE.steps.cite)];
   let decks = game.decks;
   if (attacker && game.decks.decks.some((d) => d.unitId === attacker.id)) {
-    const cycled = cycle(game.decks, attacker.id);
+    const cycled = cycle(game.decks, attacker.id, (id) => [...game.sides.player.units, ...game.sides.automated.units].some((u) => u.id === id && inPlay(u)));
     decks = cycled.state;
     if (cycled.reshuffled) lines.push(logLine(game, `${attacker.name}'s deck is reshuffled: every card back to its movement side.`, COMBAT_CITE.cycle.cite));
   }
@@ -283,12 +318,37 @@ export function recordAttack(game: AcesGame, r: AttackRecord): AcesGame {
   const next: AcesGame = { ...game, sides, decks };
   return addLog(
     withCombat({ ...next, sight: emptySheet() }, (c) => {
-      const rest = { ...c, done: { ...c.done, [r.attackerId]: { weapon, ov: r.ov ?? 0 } } };
+      const rest = { ...c, done: { ...c.done, [r.attackerId]: { weapon, ov: r.ov ?? 0, ...(r.targetId && r.kind !== "none" ? { target: r.targetId } : {}) } } };
       delete rest.active;
       return rest;
     }),
     ...lines,
   );
+}
+
+// ---- Damage by hand and leaving the table --------------------------------------------------------------------------------------
+
+/** Damage from something the page does not run (an emplacement, a support card, indirect fire): staged like any hit, applied in the End Phase (Aces p. 20). */
+export function damageByHand(game: AcesGame, unitId: string, amount: number, critCheck: boolean): AcesGame {
+  const u = [...game.sides.player.units, ...game.sides.automated.units].find((x) => x.id === unitId);
+  if (!u || !inPlay(u) || !Number.isInteger(amount) || amount < 1) return game;
+  const next = mapUnit(game, unitId, (x) => ({ ...x, play: stage(x.play, { damage: amount, ...(critCheck ? { critCheck: true } : {}) }) }));
+  return addLog(next, logLine(game, `${u.name} takes ${String(amount)} damage entered by hand${critCheck ? ", with a critical hit check" : ""}, staged until the End Phase.`, COMBAT_CITE.support.cite));
+}
+
+/** A unit leaves the table by an escape edge: it is out of play, no longer scheduled to move, no longer a target, and counts toward a side having no units left (Aces pp. 16, 32). */
+export function leaveTable(game: AcesGame, unitId: string): AcesGame {
+  const u = [...game.sides.player.units, ...game.sides.automated.units].find((x) => x.id === unitId);
+  const force = u ? forceOf(game, unitId) : undefined;
+  if (!u || !force || !inPlay(u) || isEmplacement(u.card)) return game;
+  const tokens = { ...game.tokens };
+  if (tokens.moveFirst === unitId) delete tokens.moveFirst;
+  if (tokens.moveLast === unitId) delete tokens.moveLast;
+  const next = mapUnit({ ...game, tokens }, unitId, (x) => ({ ...x, play: { ...escape(x.play), staged: [] } }));
+  // Mid Movement Phase, a unit that leaves before it moved counts as moved so the order of moving does not wait for it.
+  const withMoved = withTurnState(next, (t) => (t.moved[force].includes(unitId) ? t : { ...t, moved: { ...t.moved, [force]: [...t.moved[force], unitId] } }));
+  const cleared = combatOf(withMoved).active?.unitId === unitId ? withCombat(withMoved, (c) => { const rest = { ...c }; delete rest.active; return rest; }) : withMoved;
+  return addLog(cleared, logLine(game, `${u.name} leaves the table.`, "Aces pp. 16, 32"));
 }
 
 // ---- Edge (p. 24) --------------------------------------------------------------------------------------------------------------
@@ -312,13 +372,13 @@ export function spendEdge(game: AcesGame, unitId: string, count: number, purpose
   );
 }
 
-/** Add a pip to an attack roll: one Edge, once per Combat Phase for each pilot (p. 24). */
+/** Add a pip to an attack roll after it is made: one Edge, once per Combat Phase for each pilot (p. 24). recordAttack spends it with the attack. */
 export const canAddPip = (game: AcesGame, u: GameUnit): boolean => edgeLeft(u) >= 1 && !combatOf(game).pips.includes(u.id);
 
 export function addPip(game: AcesGame, unitId: string): AcesGame {
   const u = [...game.sides.player.units, ...game.sides.automated.units].find((x) => x.id === unitId);
   if (!u || !canAddPip(game, u)) return game;
-  return withCombat(spendEdge(game, unitId, 1, "add a pip to an attack roll (an 11 made a 12 is not a critical hit)"), (c) => ({ ...c, pips: [...c.pips, unitId] }));
+  return withCombat(spendEdge(game, unitId, 1, "an Edge pip on an attack roll"), (c) => ({ ...c, pips: [...c.pips, unitId] }));
 }
 
 // ---- The End Phase (p. 32) -----------------------------------------------------------------------------------------------------

@@ -116,7 +116,7 @@ export interface TurnState {
 /** The Combat Phase of one turn (Aces pp. 18-20). */
 export interface CombatState {
   /** Units that have made their attack, or been settled with none, by game-unit id: whether it was a weapon attack and the Overheat used (it cools in the End Phase unless it fired). */
-  done: Record<string, { weapon: boolean; ov: number }>;
+  done: Record<string, { weapon: boolean; ov: number; target?: string }>;
   /** The automated unit whose attack is open, and the terrain the players have set for attacks on each enemy. */
   active?: { unitId: string; terrain: Record<string, string[]> };
   /** Pilots who have added a pip to an attack roll this phase: once a Combat Phase (p. 24). */

@@ -250,7 +250,7 @@ export default function GamePage() {
           </div>
           {view === "now" ? <Phase game={game} records={records} apply={apply} touched={touched} /> : <Log game={game} headingRef={logHeading} />}
         </div>
-        <UnitsDrawer units={units} />
+        <UnitsDrawer units={units} phase={game.phase} apply={apply} />
       </div>
 
       <div className="aces-bar" role="region" aria-label="Turn bar">

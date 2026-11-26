@@ -112,8 +112,9 @@ test("play an invented two-turn game at 320 px: Initiative, Movement, Combat and
   await page.getByLabel("Distance to the target, in inches (base to base)").fill("10");
   await expect(page.getByText(/^Target Number \d+$/)).toBeVisible();
   await page.getByLabel(/^2D6 attack roll/).fill("8");
-  await page.getByRole("button", { name: /^Spend 1 Edge to add a pip/ }).click();
-  await expect(page.getByText("Edge pip added: 1 more on the roll.")).toBeVisible();
+  // The pip is ticked after the roll and spent when the attack is recorded.
+  await page.getByLabel(/^Spend 1 Edge to add a pip/).check();
+  await expect(page.getByText(/^8 plus a pip: a (hit|miss)\.$/)).toBeVisible();
   await fitsPhone(page, "an attack being recorded");
   await page.screenshot({ path: testInfo.outputPath("attack.png"), fullPage: true });
   await page.getByRole("button", { name: "Record the attack" }).click();

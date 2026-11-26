@@ -4,7 +4,7 @@ import type { AcesCard, CommandCard } from "./aces-card";
 import { newAcesGame } from "./aces-game";
 import type { AcesGame, SetupUnit } from "./aces-game";
 import { step } from "./aces-resolve";
-import { initiativeSummary, setRoll, startMovement } from "./aces-turn";
+import { initiativeSummary, setRoll, startMovement, unitCanMove } from "./aces-turn";
 import type { TurnRecords } from "./aces-turn";
 import {
   addPip,
@@ -15,7 +15,11 @@ import {
   combatContext,
   combatForce,
   combatOf,
+  damageByHand,
   endCheck,
+  enemiesOf,
+  leaveTable,
+  minimalDelivers,
   finishGame,
   nextTurn,
   previewEnd,
@@ -167,6 +171,36 @@ describe("Aces Combat and End Phases", () => {
     const next = nextTurn(game);
     expect([next.turn, next.phase, next.sides.player.units[0]?.play.moved]).toEqual([2, "initiative", null]);
     expect(initiativeSummary(setRoll(setRoll(next, "player", 7), "automated", 7)).automated.parts.map((p) => p.value)).toEqual([-2]);
+  });
+
+  it("damage entered by hand is staged for the End Phase, and a unit that left the table is out of play, not a target and counts toward a side being gone (Aces pp. 16, 20, 32)", () => {
+    let game = damageByHand(newGame(), "a1", 3, true);
+    expect(game.sides.automated.units[0]?.play.staged).toEqual([{ damage: 3, critCheck: true }]);
+    game = leaveTable(leaveTable(game, "a1"), "a2");
+    const gone = game.sides.automated.units;
+    expect(gone.map((u) => [u.play.escaped, u.play.staged])).toEqual([[true, []], [true, []]]);
+    expect(enemiesOf(game, game.sides.player.units[0]!)).toEqual([]);
+    expect(unitCanMove(gone[0]!)).toBe(false);
+    expect(endCheck(game).reasons.map((r) => r.id)).toEqual(["empty-side"]);
+  });
+
+  it("a 0* hit that rolls under 4 delivers nothing and stages no critical check, and the Edge pip is spent with the attack, not before (ASCE p. 48; Aces p. 24)", () => {
+    const zero = newGame({}, [unit("M1", "Brawler", 20, { edge: 2 }, { damage: { s: { value: 0, minimal: true }, m: { value: 0 }, l: { value: 0 } } })]);
+    expect(weaponDamage(zero.sides.player.units[0]!, 3, 0)).toMatchObject({ rollsMinimal: true, total: 1 });
+    expect([minimalDelivers(3), minimalDelivers(4)]).toEqual([false, true]);
+    const swing = { attackerId: "p1", targetId: "a1", kind: "weapon" as const, tn: 6, roll: 12, hit: true, natural12: true, minimalRoll: 3, damage: 0 };
+    const missed = recordAttack(zero, swing);
+    expect(missed.sides.automated.units[0]?.play.staged).toEqual([]);
+    expect(missed.sides.player.units[0]?.edge).toBe(2);
+    const pipped = recordAttack(zero, { ...swing, damage: 1, minimalRoll: 4, pip: true });
+    expect(pipped.sides.automated.units[0]?.play.staged).toEqual([{ damage: 1, critCheck: true }]);
+    expect(pipped.sides.player.units[0]?.edge).toBe(1);
+  });
+
+  it("the resolver is told which enemies an ally has already attacked this turn (Aces p. 18)", () => {
+    const game = recordAttack(newGame(), { attackerId: "a1", targetId: "p1", kind: "weapon", tn: 6, roll: 3, hit: false });
+    const seen = (id: string) => combatContext(game, game.sides.automated.units.find((u) => u.id === id)!, records).enemies[0]?.attackedByAlly;
+    expect([seen("a2"), seen("a1")]).toEqual([true, undefined]);
   });
 
   it("an attack by hand reads the Target Number from how both units moved, and the resolver reads the terrain the players set", () => {
