@@ -180,7 +180,7 @@ test("the Gothic look: heading font, Settings beating the device, plain print, a
   await page.emulateMedia({ media: "screen" });
 
   // Going to Classic in the app, with no reload, takes the look off.
-  await page.getByRole("link", { name: "Games" }).click();
+  await page.getByRole("link", { name: "Games", exact: true }).click();
   await page.getByRole("link", { name: "Classic, BattleTech" }).click();
   await expect(page.locator("body")).not.toHaveClass(/bt-gothic/);
 });
