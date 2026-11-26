@@ -6,7 +6,8 @@ import type { CSSProperties } from "react";
 import type { Catalog, EquipmentRow } from "../../rules/catalog";
 import { bodyOf, canFireRear, locationName, slotsTaken } from "../../rules/mech";
 import type { Layout, LocationCode, MechRecord, Mount, SlotCell } from "../../rules/mech";
-import { Changed, mountDomId } from "../EditorPage";
+import { Changed, NumberField, mountDomId } from "../EditorPage";
+import { hostRule } from "../../rules/checks";
 import type { OnEdit } from "../EditorPage";
 import Picker from "./Picker";
 
@@ -145,6 +146,61 @@ export default function SlotsPanel({
 
   const unmatched = (m: Mount) => !m.part && (m.equipmentId === null || !catalog.byId(m.equipmentId));
 
+  /** The size of an item sold by size (cargo, communications equipment, a ladder) and the launcher or machine guns an Artemis IV or a machine gun array is linked to. */
+  const sizeAndLink = (mount: Mount) => {
+    const row = catalog.byId(mount.equipmentId ?? "");
+    const size = row?.amount;
+    const rule = hostRule(row);
+    if (!size && !rule) return null;
+    const hosts = rule ? record.mounts.filter((m) => m.id !== mount.id && rule.host.test(m.equipmentId ?? "")) : [];
+    return (
+      <>
+        {size && (
+          <NumberField
+            id={`amount-${mount.id}`}
+            label={`Size of ${mount.name} (${size.unit})`}
+            className="bt-slot__field"
+            value={mount.amount ?? size.min}
+            after={<span className="bt-hint">{`${size.min} to ${size.max ?? "any"}, in steps of ${size.step}`}</span>}
+            onValid={(value) => {
+              const steps = value === null ? Number.NaN : value / size.step;
+              if (value === null || value < size.min || (size.max !== undefined && value > size.max) || Math.abs(steps - Math.round(steps)) > 1e-9) return;
+              onEdit((draft) => {
+                const target = draft.mounts.find((m) => m.id === mount.id);
+                if (target) target.amount = value;
+              }, `amount-${mount.id}`);
+            }}
+          />
+        )}
+        {rule && (
+          <span className="bt-field bt-slot__field">
+            <label htmlFor={`link-${mount.id}`}>{`${mount.name} is linked to`}</label>
+            <select
+              id={`link-${mount.id}`}
+              value={mount.linkedTo ?? ""}
+              onChange={(event) => {
+                const to = event.target.value;
+                onEdit((draft) => {
+                  const target = draft.mounts.find((m) => m.id === mount.id);
+                  if (!target) return;
+                  if (to === "") delete target.linkedTo;
+                  else target.linkedTo = to;
+                });
+              }}
+            >
+              <option value="">{`The first ${rule.what} in its location`}</option>
+              {hosts.map((host) => (
+                <option key={host.id} value={host.id}>
+                  {`${host.name}${host.location ? `, ${locationName(host.location)}` : ""}`}
+                </option>
+              ))}
+            </select>
+          </span>
+        )}
+      </>
+    );
+  };
+
   /** A mount's row: its slots, name and markers, the Actions button and, when open, the actions beneath. */
   const mountRow = (mount: Mount, slots: string | undefined, key: string | number, style?: CSSProperties, unplacedItem = false) => {
     const isOpen = open === mount.id;
@@ -236,6 +292,7 @@ export default function SlotsPanel({
                 <button type="button" className="bt-button bt-button--secondary" aria-label={`Remove ${mount.name}`} onClick={() => { remove(mount); }}>
                   Remove
                 </button>
+                {sizeAndLink(mount)}
               </>
             )}
           </span>

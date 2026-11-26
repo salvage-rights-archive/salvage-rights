@@ -1,8 +1,9 @@
 // Armor points per location, with the paper doll beside them: the armor diagram (front and rear) and the internal
 // structure at a smaller scale. Choosing a location anywhere selects it for the whole page.
+import { useState } from "react";
 import { ARMOR } from "../../data/chassis";
 import type { Catalog } from "../../rules/catalog";
-import { bodyOf, locationName, maxArmor } from "../../rules/mech";
+import { allocateArmor, armorPointsForTons, bodyOf, locationName, maxArmor } from "../../rules/mech";
 import type { Layout, LocationCode, MechRecord } from "../../rules/mech";
 import { dollBox } from "../doll/box";
 import MechDoll from "../doll/mech-doll";
@@ -49,6 +50,8 @@ export default function ArmorPanel({
   /** The armor is fixed in an OmniMech base: shown from a configuration, edited only on the base. */
   readOnly?: boolean;
 }) {
+  /** The tons typed into the armor-tons box; until one is typed it follows the armor weight of the record. */
+  const [tonsTyped, setTonsTyped] = useState<number>();
   const locations = (layout.supported ? layout.locations : Object.keys(record.armor)) as LocationCode[];
   const max = maxArmor(record);
   const points = Object.values(record.armor).reduce((sum, a) => sum + (a ? a.front + (a.rear ?? 0) : 0), 0);
@@ -70,6 +73,10 @@ export default function ArmorPanel({
     .map((item, index) => ({ item, index, at: cellOf(...item) }))
     .sort((a, b) => (a.at?.[0] ?? 99) - (b.at?.[0] ?? 99) || (a.at?.[1] ?? 99) - (b.at?.[1] ?? 99) || a.index - b.index)
     .map(({ item }) => item);
+
+  const tons = tonsTyped ?? armorTons ?? 0;
+  const buyable = armorPointsForTons(record, tons);
+  const totalMax = Object.values(max).reduce((sum, n) => sum + n, 0);
 
   const chooseOnDoll = (doll: string) => {
     const location = recordCodeOf(doll);
@@ -145,6 +152,48 @@ export default function ArmorPanel({
     <section className="bt-panel" aria-labelledby="bt-armor">
       <h2 id="bt-armor">Armor</h2>
       <p>{`${points} points, ${armorTons === null ? "weight unknown" : `${armorTons} tons`} of ${type}`}</p>
+      <div className="bt-armor__tools" role="group" aria-label="Armor helpers">
+        <NumberField
+          id="armor-tons"
+          label="Armor tons"
+          value={tons}
+          disabled={readOnly}
+          onValid={(value) => {
+            setTonsTyped(value ?? 0);
+          }}
+          after={<span className="bt-hint">{buyable === null ? "points unknown" : `= ${buyable} points`}</span>}
+        />
+        <button
+          type="button"
+          id="armor-allocate"
+          className="bt-button bt-button--secondary"
+          disabled={readOnly || buyable === null}
+          onClick={() => {
+            onEdit((draft) => {
+              draft.armor = allocateArmor(draft, buyable ?? 0);
+            });
+          }}
+        >
+          Allocate
+        </button>
+        <button
+          type="button"
+          id="armor-max"
+          className="bt-button bt-button--secondary"
+          disabled={readOnly}
+          onClick={() => {
+            setTonsTyped(undefined);
+            onEdit((draft) => {
+              draft.armor = allocateArmor(draft, totalMax);
+            });
+          }}
+        >
+          {`Max armor (${totalMax} points)`}
+        </button>
+        <p className="bt-hint">
+          Allocate spreads the points of the tons above over the locations: each in proportion to its maximum, the head near 9, the torsos about 3 front to 1 rear. This spread is our own helper, not a book rule. Every figure can be edited afterwards.
+        </p>
+      </div>
       <div className="bt-armor">
         {unit ? (
           <div className="bt-armor__doll">{doll("armor", 1)}</div>

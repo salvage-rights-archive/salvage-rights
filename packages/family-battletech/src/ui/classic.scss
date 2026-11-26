@@ -725,6 +725,23 @@ a.bt-button {
 }
 
 // Armor: the doll beside the fields, the fields laid out like the body.
+.bt-armor__tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: var(--sr-space-2);
+  margin-bottom: var(--sr-space-3);
+
+  .bt-field input {
+    max-width: 8rem;
+  }
+
+  > .bt-hint {
+    flex-basis: 100%;
+    margin: 0;
+  }
+}
+
 .bt-armor {
   display: grid;
   gap: var(--sr-space-3);
@@ -911,6 +928,12 @@ a.bt-button {
   &__place {
     padding: var(--sr-space-1) var(--sr-space-2);
     text-align: left;
+  }
+
+  // The size and link of a mount take a row of the open actions each.
+  &__field {
+    flex-basis: 100%;
+    min-width: 0;
   }
 }
 

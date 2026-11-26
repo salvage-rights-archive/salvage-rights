@@ -519,6 +519,55 @@ export function maxArmor(record: MechRecord): Partial<Record<LocationCode, numbe
   return max;
 }
 
+/** The armor points a number of tons buys: the armor type's points per ton (16 times its multiplier), a part point lost (TechManual pp.54-55). Null for an armor type we have no row for. */
+export function armorPointsForTons(record: MechRecord, tons: number): number | null {
+  const type = own(ARMOR.types, record.chassis.armorType);
+  return type && Number.isFinite(tons) && tons >= 0 ? Math.floor(tons * ARMOR.basePointsPerTon * type.multiplier + 1e-9) : null;
+}
+
+/**
+ * A starting spread of armor points over the locations. This is our own helper, not a book rule; the player edits every figure afterwards.
+ * Each location gets a share in proportion to its maximum (`maxArmor`); the head takes as near 9 as the total allows; a torso's share is
+ * split about 3:1 front to rear; points left over go one at a time to the center torso, then the side torsos, then the legs, then the arms
+ * and the head. No location passes its maximum, and the total is the points asked for, or every location's maximum if that is less.
+ */
+export function allocateArmor(record: MechRecord, points: number): MechRecord["armor"] {
+  const max = maxArmor(record);
+  const codes = Object.keys(max) as LocationCode[];
+  const cap = (loc: LocationCode) => max[loc] ?? 0;
+  const total = Math.max(0, Math.min(Math.floor(Number.isFinite(points) ? points : 0), codes.reduce((sum, loc) => sum + cap(loc), 0)));
+  const share: Partial<Record<LocationCode, number>> = {};
+  const head = codes.includes("HD") ? Math.min(cap("HD"), total) : 0;
+  if (head > 0) share.HD = head;
+  const rest = codes.filter((loc) => loc !== "HD");
+  const restMax = rest.reduce((sum, loc) => sum + cap(loc), 0);
+  const restPoints = Math.min(total - head, restMax);
+  for (const loc of rest) share[loc] = restMax > 0 ? Math.floor((restPoints * cap(loc)) / restMax) : 0;
+  let left = total - Object.values(share).reduce((sum, n) => sum + n, 0);
+  const isLeg = (loc: LocationCode) => !["HD", "CT", "LT", "RT", "LA", "RA"].includes(loc);
+  const order = [...(["CT", "LT", "RT"] as const), ...codes.filter(isLeg), "LA" as const, "RA" as const, "HD" as const].filter((loc) => codes.includes(loc));
+  while (left > 0) {
+    const open = order.filter((loc) => (share[loc] ?? 0) < cap(loc));
+    if (open.length === 0) break;
+    for (const loc of open) {
+      if (left === 0) break;
+      share[loc] = (share[loc] ?? 0) + 1;
+      left--;
+    }
+  }
+  const armor: MechRecord["armor"] = { ...record.armor };
+  for (const loc of codes) {
+    const n = share[loc] ?? 0;
+    if (loc === "CT" || loc === "LT" || loc === "RT") {
+      const rear = Math.floor((n + 1) / 4);
+      armor[loc] = { front: n - rear, rear };
+    } else {
+      armor[loc] = { front: n };
+    }
+  }
+  return armor;
+}
+
 export function walkMP(record: MechRecord): number | null {
   const { rating } = record.chassis.engine;
   if (!(record.tons > 0) || !Number.isFinite(rating)) return null;
