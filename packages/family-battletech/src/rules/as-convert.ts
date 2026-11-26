@@ -50,7 +50,7 @@ import type { Item } from "./walk";
 
 /** One line of how a value was reached: which rule, the figures it used, and the page. */
 export interface Working {
-  step: "type" | "size" | "movement" | "tmm" | "armor" | "structure" | "weapons" | "heat" | "damage" | "overheat";
+  step: "type" | "size" | "movement" | "tmm" | "armor" | "structure" | "weapons" | "heat" | "damage" | "overheat" | "special" | "role" | "points";
   rule: string;
   detail: string;
   cite: AscCite;
@@ -353,6 +353,10 @@ export interface WeaponLine {
   damage: RangeSet;
   /** The heat it adds to the unit's heat output: the table's heat, or 0 for a rocket launcher or a one-shot launcher (errata v1.3, p. 115). */
   heat: number;
+  /** The table row's Notes ("AC", "LRM", "Indirect Fire", "Heat" and the rest): which special abilities it feeds. */
+  notes: string[];
+  /** The damage with no Artemis or Apollo (the left-most value of a missile row), for the abilities that use it (pp. 125-126, 131). */
+  plain: RangeSet;
   cite: AscCite;
 }
 
@@ -570,7 +574,9 @@ export function convertWeapons(record: MechRecord, catalog: Catalog): Step<Weapo
     const rear = item.mount.rear === true && !AES_ARMS.includes(item.mount.location as string);
     const tableRow = `${row.tech === "clan" ? "Clan" : "Inner Sphere"}: ${row.name}`;
     const noHeat = /\bOS\b/.test(item.row.type ?? "") || row.name.includes("Rocket Launcher");
-    const line = { mountId: item.mount.id, name: item.mount.name, tableRow, rear, base, factors, damage, heat: noHeat ? 0 : row.heat, cite: row.cite };
+    const plain = zero();
+    for (const range of RANGES) plain[range] = tidy(factors.reduce((x, f) => x * f.factor, cell(row[range], 0) ?? base[range]));
+    const line = { mountId: item.mount.id, name: item.mount.name, tableRow, rear, base, factors, damage, heat: noHeat ? 0 : row.heat, notes: row.notes, plain, cite: row.cite };
     lines.push(line);
     const parts = [`${rangesText(base)}${c.fireControl ? ` with ${c.fireControl}` : ""}`];
     for (const f of factors) parts.push(`x ${String(f.factor)} ${f.label}`);
@@ -991,19 +997,21 @@ export function convertMech(record: MechRecord, catalog: Catalog): MechConversio
 }
 
 /**
- * The draft the unit page opens from a conversion: the figures parts one to three worked out, everything else as a blank card leaves it
- * (Point Value 0, no role, no abilities), so the player fills the rest and saves. Nothing is guessed to fill a gap.
+ * The draft the unit page opens from a conversion: whatever figures the conversion worked out (rules/as-convert-all.ts adds the abilities, role and
+ * Point Value), everything else as a blank card leaves it, so the player checks it and saves. Nothing is guessed to fill a gap. It is NOT OFFICIAL:
+ * the mark rests only on the Master Unit List (rules/as-mul.ts). `source.values` keeps the card as converted, to compare with later edits.
  */
 export function conversionDraft(record: MechRecord, conversion: MechConversion, id: string, now: string): AsUnit {
   const blank = newAsUnit(id);
   const { card, source, ...rest } = conversion.unit;
+  const whole: AsCard = { ...blank.card, ...card };
   return {
     ...blank,
     ...rest,
     id,
-    card: { ...blank.card, ...card },
+    card: whole,
     rulesLevel: record.rulesLevel,
     era: record.era,
-    source: { ...blank.source, ...source, kind: "converted", ref: record.id, at: now },
+    source: { ...blank.source, ...source, kind: "converted", ref: record.id, at: now, values: structuredClone(whole) },
   };
 }

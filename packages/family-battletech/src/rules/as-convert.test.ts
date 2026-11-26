@@ -332,6 +332,8 @@ describe("heat-modified damage, final damage and the Overheat Value (errata v1.3
       factors: [],
       damage: { short: 1, medium: 1, long: 1, extreme: 0 },
       heat,
+      notes: [],
+      plain: { short: 1, medium: 1, long: 1, extreme: 0 },
       cite,
     }));
     const [short, medium, long, extreme = 0] = subtotal;
