@@ -685,8 +685,9 @@ export function expandedFireControlTons(weapons: number, weaponTons: number, edi
   return weapons <= limit ? 0 : roundMass(Math.floor(weapons / limit) * share * weaponTons, rounding.fireControl);
 }
 
-/** A capital weapon (a gunner each and its own ammunition rule), as the catalog marks one. */
-export const isCapitalRow = (row: EquipmentRow | undefined): boolean => row !== undefined && (row.bayClass?.startsWith("Capital") === true || row.tonsPerShot !== undefined);
+/** A capital weapon (a gunner each and its own ammunition rule), as the catalog marks one: a capital bay class, or a sub-capital one, which TO:AUE p. 155 says follows
+ * the capital weapon rules. Cruise missiles are artillery at the standard scale (TO:AUE p. 97), so they are standard weapons whatever their shots a ton. */
+export const isCapitalRow = (row: EquipmentRow | undefined): boolean => row !== undefined && /^(Sub-)?Capital/.test(row.bayClass ?? "");
 /** Whether the catalog prints the weapon's damage at the capital scale (the "-C" mark: naval weapons). Capital missiles print their Aero damage at the standard scale
  * ("40" for a Killer Whale whose capital Attack Value is 4, AeroTech 2 p. 101), so only the marked figures count tenfold in a bay. */
 export const capitalScale = (row: EquipmentRow | undefined): boolean => {

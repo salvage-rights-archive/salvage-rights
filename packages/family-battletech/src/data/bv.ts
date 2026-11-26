@@ -273,6 +273,10 @@ const TORPEDO_UNFIXED: Record<string, string> = Object.fromEntries(
 );
 export const UNFIXED: Record<string, string> = {
   ...TORPEDO_UNFIXED,
+  ...Object.fromEntries(["light-scc", "medium-scc", "heavy-scc", "scl-1", "scl-2", "scl-3"].map((n) => [`${n}-clan`, "the Clan capital Battle Value table prints no sub-capital cannon or laser line (TO:AUE p. 196)"])),
+  "dropshuttle-bay-is": "a large-craft item: neither Alternate Eras Battle Value table (IO:AE pp. 189-191) prints a line for it",
+  "docking-collar-pre-boom-is": "a large-craft item: neither Alternate Eras Battle Value table (IO:AE pp. 189-191) prints a line for it",
+  "docking-collar-post-boom-is": "a large-craft item: neither Alternate Eras Battle Value table (IO:AE pp. 189-191) prints a line for it",
   "radical-heat-sink-is": "the book prints two rules that disagree: its table adds the unit's heat sink count x 0.4 to Heat Efficiency, its text multiplies the capacity by 1.4, and the worked example gives both 42 and 36 (IO:AE pp.185, 190)",
   // Items whose BV is a modifier or a figure that depends on the unit, which the BV rules here do not compute (TO:AUE pp.192-197).
   "blue-shield-is": "it adds 0.2 to the armor type modifier and counts as a Gauss weapon for the defensive rating (TO:AUE pp.192, 194)",
@@ -572,6 +576,11 @@ export const WEAPON_BV: BvGroup[] = [
         [`nl-35-${tech}`, 830], [`nl-45-${tech}`, 1134], [`nl-55-${tech}`, 1386],
         [`light-n-ppc-${tech}`, 1659], [`medium-n-ppc-${tech}`, 2268], [`heavy-n-ppc-${tech}`, 3780],
       ]),
+      // The sub-capital weapons (printed p. 196; the missiles ammunition figure is per shot); the cruise missiles and minesweeper are on p. 195
+      ["light-scc-is", 379, 47], ["medium-scc-is", 708, 89], ["heavy-scc-is", 991, 124],
+      ["scl-1-is", 237], ["scl-2-is", 354], ["scl-3-is", 531],
+      ...(["is", "clan"] as const).flatMap((tech): BvRow[] => [[`piranha-${tech}`, 589, 71], [`stingray-${tech}`, 496, 62], [`swordfish-${tech}`, 317, 40], [`manta-ray-${tech}`, 396, 50], [`minesweeper-${tech}`, 30, undefined, { defensive: true }]]),
+      ["cruise-missile-50-is", 601, 75], ["cruise-missile-70-is", 1031, 129], ["cruise-missile-90-is", 1530, 191], ["cruise-missile-120-is", 2281, 285],
       ["light-mass-driver-is", 7056, 882], ["medium-mass-driver-is", 11760, 1470], ["heavy-mass-driver-is", 16464, 2058],
     ],
   },
@@ -640,6 +649,11 @@ export const EQUIPMENT_BV: BvGroup[] = [
     rows: [
       ["nova-cews-clan", 68, undefined, { defensive: true }],
       ["fusillade-launcher-clan", 11], ["magnetic-clamp-system-clan", 1],
+      // Printed p. 190: no BV of their own; they enable BV skill modifiers the editor does not apply (the neurohelmet: -1 Piloting, p. 189)
+      ["damage-interrupt-circuit-is", 0], ["direct-neural-interface-modification-is", 0], ["enhanced-imaging-interface-clan", 0],
+      ["battlemech-neural-interface-unit-is", 0], ["battlemech-neural-interface-unit-clan", 0],
+      ["sldf-sds-jammer-system-is", 0], ["wob-super-jump-drive-is", 0], ["dragons-breath-launch-system-is", 1076],
+      ["sldf-advanced-neurohelmet-mech-is", 0, undefined, { none: true }], ["sldf-advanced-neurohelmet-fighter-is", 0, undefined, { none: true }],
     ],
   },
   {
@@ -735,3 +749,13 @@ export const BATTLE_ARMOR_BV: BvGroup[] = [
     ],
   },
 ];
+
+/** Pilot interfaces that improve the crew's skills for the BV Skill Multiplier lookup (IO:AE printed pp. 183, 189 and 190; the Technical Manual's multiplier table, p. 315
+ * for the lookup). Each is a number of steps taken off the Gunnery and Piloting skills before the lookup, never below 0. An item counts once per unit however many crew
+ * the cockpit seats; the pod's -2 Piloting and -1 Gunnery are the table's form of the text's flat 1.4 (conflict ruled by the book panel). */
+export const SKILL_MODIFIERS: Sourced & { items: Record<string, { gunnery: number; piloting: number }>; cockpits: Record<string, { gunnery: number; piloting: number }> } = {
+  cite: { book: IO, page: 190 },
+  checked: "page",
+  items: { "sldf-advanced-neurohelmet-mech-is": { gunnery: 0, piloting: 1 } },
+  cockpits: { vrpp: { gunnery: 1, piloting: 2 } },
+};

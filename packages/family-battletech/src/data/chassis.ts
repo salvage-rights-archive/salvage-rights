@@ -508,6 +508,24 @@ export const COCKPITS: Sourced & { types: Record<string, CockpitType> } = {
     // weighs 4 tons and takes one extra cockpit slot (the book does not say which slot; the free fourth is used).
     interface: { name: "Interface", tons: 4, cockpit: [3, 4], sensors: [2, 5], lifeSupport: [1, 6], techBase: "inner-sphere", rulesLevel: "experimental", introduced: { is: 3078, prototype: ["is"] }, cite: { book: IO, page: 213 }, checked: "text", rules: "Lets a MechWarrior in an interface suit control the 'Mech through a neural link." },
     "interface-clan": { name: "Interface (Clan)", tons: 4, cockpit: [3, 4], sensors: [2, 5], lifeSupport: [1, 6], techBase: "clan", rulesLevel: "experimental", introduced: { clan: 3083, prototype: ["clan"] }, cite: { book: IO, page: 213 }, checked: "text", rules: "Lets a MechWarrior in an interface suit control the 'Mech through a neural link." },
+    // Virtual reality piloting pod (IO:AE entry printed pp. 63-65, table p. 213, read against the page images): a torso-mounted cockpit of 3 tons; the head keeps its
+    // 2 sensor slots, each torso (center and sides) takes a Life Support slot and the center torso the Cockpit slot. Prototype-only: 3052, extinct 3055 (p. 33).
+    vrpp: {
+      name: "Virtual Reality Piloting Pod",
+      tons: 3,
+      techBase: "inner-sphere",
+      rulesLevel: "experimental",
+      availability: [{ from: 3052, to: 3055 }],
+      availabilityCite: UTA(33),
+      cite: { book: IO, page: 213 },
+      checked: "page",
+      cockpit: [],
+      sensors: [2, 5],
+      lifeSupport: [],
+      elsewhere: { CT: ["Cockpit", "Life Support"], LT: ["Life Support"], RT: ["Life Support"] },
+      rules: "A torso-mounted cockpit: no pilot damage from head hits. Gunnery -1 and Piloting -2, but hostile ECM or other electronic effects blind the unit.",
+      rulesCite: { book: IO, page: 63 },
+    },
     // Primitive BattleMechs mount only the primitive cockpit, 5 tons (Interstellar Operations: Alternate Eras printed p.117).
     primitive: {
       name: "Primitive",

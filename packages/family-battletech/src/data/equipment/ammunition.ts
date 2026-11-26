@@ -497,4 +497,16 @@ export const AMMUNITION: EquipmentGroup[] = [
       { id: "ammo-lrt-20-clan", name: "LRT 20 Ammo", shotsPerTon: 6, availability: [{ from: 2824 }] },
     ],
   },
+  // Cruise missile ammunition (TO:AUE printed p. 217 construction data, p. 216 play table, rules p. 96, book panel): a missile is 25, 35, 45 or 60 tons (the Ammo column "1/25"
+  // and so on, one missile per that many tons), bought whole. The ammunition price beside each launcher is per ton (20,000, 50,000, 90,000, 140,000), but ammunition is not
+  // priced in a unit's cost (TechManual p. 282). Battle Value is per ton (75, 129, 191, 285), and never more than the launcher's own (TechManual p. 312).
+  {
+    defaults: { kind: "ammunition", techBase: "inner-sphere", cite: { book: TO, page: 217 }, playCite: { book: TO, page: 216 }, checked: "page", slots: 1, rulesLevel: "experimental", availability: [{ from: 3065 }], units: ["vehicle", "smallcraft", "dropship", "building"] },
+    items: [
+      { id: "ammo-cruise-missile-50-is", name: "Cruise Missile/50 Ammo", tons: 25, tonsPerShot: 25, amount: { unit: "tons", min: 25, step: 25 } },
+      { id: "ammo-cruise-missile-70-is", name: "Cruise Missile/70 Ammo", tons: 35, tonsPerShot: 35, amount: { unit: "tons", min: 35, step: 35 } },
+      { id: "ammo-cruise-missile-90-is", name: "Cruise Missile/90 Ammo", tons: 45, tonsPerShot: 45, amount: { unit: "tons", min: 45, step: 45 } },
+      { id: "ammo-cruise-missile-120-is", name: "Cruise Missile/120 Ammo", tons: 60, tonsPerShot: 60, amount: { unit: "tons", min: 60, step: 60 } },
+    ],
+  },
 ];

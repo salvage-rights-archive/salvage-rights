@@ -348,3 +348,11 @@ describe("items an IndustrialMech check against mordel.net turned up", () => {
     expect(drone.baseBv).toBeLessThan(without.baseBv * 0.96);
   });
 });
+
+describe("pilot interfaces take steps off the skills for the BV lookup (IO:AE pp. 183, 190)", () => {
+  it("the virtual reality piloting pod makes a 4/5 crew count as 3/3, so the multiplier is 1.44", () => {
+    const plain = battleValue(bipedRecord(), catalog);
+    const pod = battleValue({ ...bipedRecord(), chassis: { ...bipedRecord().chassis, cockpit: "vrpp" } }, catalog);
+    expect([plain.skillMultiplier, pod.skillMultiplier, pod.baseBv]).toEqual([1, 1.44, plain.baseBv]);
+  });
+});

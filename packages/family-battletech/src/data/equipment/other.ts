@@ -290,6 +290,84 @@ export const OTHER: EquipmentGroup[] = [
     ],
   },
   {
+    // Cockpit and pilot-interface items (IO:AE printed p. 213 construction data, p. 212 play table, rules pp. 62-64 and 69-70 and 110-111, read against the page
+    // images). All weigh nothing and take no slot: each only raises the cockpit's price (the table's "0*"). Rules level is the play table's (Experimental); the entries
+    // print Advanced for the neural interface modification and the SLDF neurohelmet, which the book panel should settle. Dates: the Universal Technology
+    // Advancement Table (printed pp. 33-34) where it staged them. The damage interrupt circuit is prototype-only (3055, extinct 3060). The neurohelmet's
+    // price is its table's 5,000 for each pilot seat (the record has no crew count, so one seat is priced); the neural interface modification costs the table's 500,000 once per
+    // cockpit (the cost chapter, pp. 178-179, over the entry's 250,000: book panel, conflict logged).
+    // BattleMech Neural Interface Unit: a PA(L) battle armor part only (p. 110): 100 kg, 2 slots in the torso; "~3078P" and "3083P" are prototype-only years, so the row starts there with no production year.
+    // The neural interface modification offers only the unit types whose table columns are not NA (BattleMech, IndustrialMech, vehicle, fighter): the ProtoMech and small craft columns print NA on p. 213.
+    defaults: { kind: "other", techBase: "inner-sphere", cite: { book: IO, page: 213 }, playCite: { book: IO, page: 212 }, checked: "page", rulesLevel: "experimental", tons: 0, slots: 0, type: "PE" },
+    items: [
+      { id: "damage-interrupt-circuit-is", name: "Damage Interrupt Circuit", aliases: ["DIC"], availability: [{ from: 3055, to: 3060 }], playCite: { book: IO, page: 62 } },
+      { id: "direct-neural-interface-modification-is", name: "Direct Neural Interface Modification", aliases: ["DNI Cockpit Modification"], availability: [{ from: 3055 }], prototypeYear: 3052, rulesLevel: "advanced", levelCite: { book: IO, page: 62 }, units: ["mech", "industrialmech", "vehicle", "aero"] },
+      { id: "sldf-advanced-neurohelmet-mech-is", name: "SLDF Advanced Neurohelmet (MechWarrior)", availability: [{ from: 2759, to: 2770 }], prototypeYear: 2755, rulesLevel: "advanced", levelCite: { book: IO, page: 63 } },
+      { id: "sldf-advanced-neurohelmet-fighter-is", name: "SLDF Advanced Neurohelmet (Fighter Pilot)", availability: [{ from: 2761, to: 2770 }], prototypeYear: 2758, rulesLevel: "advanced", levelCite: { book: IO, page: 63 }, units: ["aero"] },
+      { id: "battlemech-neural-interface-unit-is", name: "BattleMech Neural Interface Unit", aliases: ["BattleMech NIU"], tons: 0.1, slots: 2, availability: [{ from: 3078 }], units: ["battlearmor"] },
+    ],
+  },
+  {
+    defaults: { kind: "other", techBase: "clan", cite: { book: IO, page: 213 }, playCite: { book: IO, page: 212 }, checked: "page", rulesLevel: "experimental", tons: 0, slots: 0, type: "PE" },
+    items: [
+      // Enhanced imaging interface: weightless, no slot on a Clan BattleMech (entry p. 69; the ProtoMech's is built in, at no price).
+      { id: "enhanced-imaging-interface-clan", name: "Enhanced Imaging Interface", aliases: ["EI Interface"], availability: [{ from: 3048 }] },
+      { id: "battlemech-neural-interface-unit-clan", name: "BattleMech Neural Interface Unit", aliases: ["BattleMech NIU"], tons: 0.1, slots: 2, availability: [{ from: 3083 }], units: ["battlearmor"] },
+    ],
+  },
+  {
+    // More TO:AUE heavy equipment (printed p. 221 construction data, p. 220 play table, rules pp. 138, 142-143, 145, 147, 162, read against the page images). Slots are the
+    // table's column for each unit type; an asterisk ("1*", "0*") is a rule the entry gives, and the number is kept. A support vehicle's count is a note where it
+    // differs from the combat vehicle's. "PS" and "ES" dates are written as 1950 and 2200 and marked inferred (weapons.ts); IS and Clan print the same date for the
+    // HPGs, the field base is 3059 and 3060, the VTOL booster 3009 (Inner Sphere) and 2839 (Clan, the entry, p. 162, where the table prints "ES"). Not added: the light sail,
+    // batteries, repair facilities, Naval C3, docking hardpoint and thrusters, flight deck, helipad, landing deck, handheld weapon, drone carrier control system, improved
+    // one-shot launcher and sub-compact K-F drive (weights or prices that are formulas of the unit or its parts, or modifiers), left for a design decision.
+    defaults: { kind: "other", cite: { book: TO, page: 221 }, playCite: { book: TO, page: 220 }, checked: "page", rulesLevel: "advanced", type: "PE" },
+    items: [
+      { id: "minesweeper-is", name: "Minesweeper", techBase: "inner-sphere", tons: 3, slots: 1, heat: 0, availability: [{ from: 1950 }], yearsInferred: true, units: ["vehicle", "building"] },
+      { id: "minesweeper-clan", name: "Minesweeper", techBase: "clan", tons: 3, slots: 1, heat: 0, availability: [{ from: 1950 }], yearsInferred: true, units: ["vehicle", "building"] },
+      { id: "mobile-field-base-is", name: "Mobile Field Base", techBase: "inner-sphere", tons: 20, slots: 1, availability: [{ from: 3059 }], units: ["vehicle", "building"] },
+      { id: "mobile-field-base-clan", name: "Mobile Field Base", techBase: "clan", tons: 20, slots: 1, availability: [{ from: 3060 }], units: ["vehicle", "building"] },
+      { id: "mobile-hpg-is", name: "Mobile HPG", techBase: "inner-sphere", tons: 50, slots: 1, heat: 40, availability: [{ from: 2655 }], units: ["smallcraft", "dropship", "ship", "building"], by: { vehicle: { slots: 50, note: "Support vehicle only: 50 slots" } } },
+      { id: "mobile-hpg-clan", name: "Mobile HPG", techBase: "clan", tons: 50, slots: 1, heat: 40, availability: [{ from: 2655 }], units: ["smallcraft", "dropship", "ship", "building"], by: { vehicle: { slots: 50, note: "Support vehicle only: 50 slots" } } },
+      { id: "ground-mobile-hpg-is", name: "Ground-Mobile HPG", techBase: "inner-sphere", tons: 12, slots: 12, heat: 20, availability: [{ from: 2751 }], units: ["mech", "industrialmech", "vehicle", "aero", "smallcraft", "dropship", "ship", "building"], by: { vehicle: { slots: 1, note: "Support vehicle: 12 slots" }, aero: { slots: 1 }, smallcraft: { slots: 1 }, dropship: { slots: 1 }, ship: { slots: 1 }, building: { slots: 1 } } },
+      { id: "ground-mobile-hpg-clan", name: "Ground-Mobile HPG", techBase: "clan", tons: 12, slots: 12, heat: 20, availability: [{ from: 2751 }], units: ["mech", "industrialmech", "vehicle", "aero", "smallcraft", "dropship", "ship", "building"], by: { vehicle: { slots: 1, note: "Support vehicle: 12 slots" }, aero: { slots: 1 }, smallcraft: { slots: 1 }, dropship: { slots: 1 }, ship: { slots: 1 }, building: { slots: 1 } } },
+      { id: "small-ncss-is", name: "Small NCSS", aliases: ["Small Naval Comm-Scanner Suite"], techBase: "inner-sphere", tons: 100, slots: 0, type: "CAP, E", availability: [{ from: 2200 }], units: ["smallcraft", "dropship", "ship"], by: { vehicle: { slots: 1, note: "Large support vehicle only" } } },
+      { id: "small-ncss-clan", name: "Small NCSS", aliases: ["Small Naval Comm-Scanner Suite"], techBase: "clan", tons: 100, slots: 0, type: "CAP, E", availability: [{ from: 2200 }], units: ["smallcraft", "dropship", "ship"], by: { vehicle: { slots: 1, note: "Large support vehicle only" } } },
+      { id: "large-ncss-is", name: "Large NCSS", aliases: ["Large Naval Comm-Scanner Suite"], techBase: "inner-sphere", tons: 500, slots: 0, type: "CAP, E", availability: [{ from: 2200 }], units: ["smallcraft", "dropship", "ship"], by: { vehicle: { slots: 1, note: "Large support vehicle only" } } },
+      { id: "large-ncss-clan", name: "Large NCSS", aliases: ["Large Naval Comm-Scanner Suite"], techBase: "clan", tons: 500, slots: 0, type: "CAP, E", availability: [{ from: 2200 }], units: ["smallcraft", "dropship", "ship"], by: { vehicle: { slots: 1, note: "Large support vehicle only" } } },
+      { id: "naval-tug-adaptor-is", name: "Naval Tug Adaptor", techBase: "inner-sphere", tons: 100, slots: 0, availability: [{ from: 2200 }], yearsInferred: true, units: ["smallcraft", "dropship", "ship"] },
+      { id: "naval-tug-adaptor-clan", name: "Naval Tug Adaptor", techBase: "clan", tons: 100, slots: 0, availability: [{ from: 2200 }], yearsInferred: true, units: ["smallcraft", "dropship", "ship"] },
+      { id: "space-mine-dispenser-is", name: "Mine Dispenser (Space)", techBase: "inner-sphere", tons: 10, slots: 1, heat: 0, damage: "Special", availability: [{ from: 2200 }], yearsInferred: true, units: ["aero", "smallcraft", "dropship", "ship"], by: { vehicle: { slots: 1, note: "Large support vehicle only" } } },
+      { id: "space-mine-dispenser-clan", name: "Mine Dispenser (Space)", techBase: "clan", tons: 10, slots: 1, heat: 0, damage: "Special", availability: [{ from: 2200 }], yearsInferred: true, units: ["aero", "smallcraft", "dropship", "ship"], by: { vehicle: { slots: 1, note: "Large support vehicle only" } } },
+      // The VTOL jet booster weighs a tenth of the vehicle engine weight (itemFacts) and costs 10,000 for each point of engine rating; VTOLs only (the vehicle check).
+      { id: "vtol-jet-booster-is", name: "VTOL Jet Booster", techBase: "inner-sphere", tons: "vtol-booster-tons", slots: 1, availability: [{ from: 3009 }], rulesLevel: "experimental", units: ["vehicle"], playCite: { book: TO, page: 162 } },
+      { id: "vtol-jet-booster-clan", name: "VTOL Jet Booster", techBase: "clan", tons: "vtol-booster-tons", slots: 1, availability: [{ from: 2839 }], rulesLevel: "experimental", units: ["vehicle"], playCite: { book: TO, page: 162 } },
+    ],
+  },
+  {
+    // Large-craft systems of the Additional Alternate Era table (IO:AE printed p. 211 construction data, p. 210 play table for the Age of War rows; pp. 212-213
+    // and 214-215 for the rest; entries pp. 113-114, 142-144, read against the page images). Every cost is the table's per item. Dates: the table's Latest
+    // Intro Date (the entries agree for the bay, 2120 extinct 2500, and the post-boom collar, 2470). A "P" date is prototype-only, with the entry's extinction.
+    // The DropShuttle bay is 11,000 tons, counts as two docking collars, one per 100,000 tons of the ship (rules p. 114). Not added: the primitive K-F boom
+    // and the pre-boom docking collar (the table dates them 2342P and 2350 where the boom's entry prints 2304 and 2350, a doubt for the book panel), the
+    // space station K-F adapter and modular space stations (their price is a final-cost multiplier of x20 and x50 over the station, p. 180, which a catalog
+    // item cannot carry), and the robotic and drone control systems (their weights are percentages of the drone unit, by unit type).
+    defaults: { kind: "other", techBase: "inner-sphere", cite: { book: IO, page: 211 }, playCite: { book: IO, page: 210 }, checked: "page", slots: 0, units: ["ship"], rulesLevel: "advanced" },
+    items: [
+      { id: "dropshuttle-bay-is", name: "DropShuttle Bay", tons: 11000, availability: [{ from: 2120, to: 2500 }], type: "PE" },
+      // Pre-boom docking collar (IO:AE printed p. 211 construction data, p. 210 play table, rules box p. 112, entry p. 114; availability table p. 36): prototype 2304, production 2350,
+      // common 2364, extinct 2520; 1,000 t, 500,000 a collar; Advanced by its rules box (the play table prints Experimental; the owner is deciding). A JumpShip, WarShip or space
+      // station mounts it. The prototype DropShip K-F boom has no row (the panel left it optional): 2458 prototype, 2470 production, no mass or slot, and the collar of a ship built
+      // 2458-2469 costs 1,010,000 (p. 113); the table's "2342P" for it matches no other page and is not used.
+      { id: "docking-collar-pre-boom-is", name: "Docking Collar (Pre-Boom)", tons: 1000, availability: [{ from: 2350, to: 2520 }], prototypeYear: 2304, type: "PE" },
+      { id: "docking-collar-post-boom-is", name: "DropShip Docking Collar (post-Boom)", tons: 1000, availability: [{ from: 2470 }], units: ["dropship", "ship"], type: "PE", prototypeYear: 2458 },
+      { id: "sldf-sds-jammer-system-is", name: "SLDF SDS Jammer System", tons: 30000, availability: [{ from: 2776, to: 2780 }], type: "E", rulesLevel: "experimental", cite: { book: IO, page: 215 }, playCite: { book: IO, page: 214 } },
+      { id: "wob-super-jump-drive-is", name: "Word of Blake Super-Jump Drive", tons: 0, availability: [{ from: 3059 }], type: "PE", rulesLevel: "experimental", cite: { book: IO, page: 213 }, playCite: { book: IO, page: 212 } },
+      { id: "dragons-breath-launch-system-is", name: "Word of Blake Dragon's Breath MCM Launch System", aliases: ["Dragon's Breath"], tons: 5000, availability: [{ from: 3077, to: 3078 }], type: "CAP, AE", damage: "Special", rulesLevel: "experimental", cite: { book: IO, page: 215 }, playCite: { book: IO, page: 214 } },
+    ],
+  },
+  {
     defaults: { kind: "other", techBase: "inner-sphere", cite: { book: IO, page: 215 }, playCite: { book: IO, page: 214 }, checked: "page", rulesLevel: "experimental" },
     items: [
       // RISC and Dark Age electronics and equipment
