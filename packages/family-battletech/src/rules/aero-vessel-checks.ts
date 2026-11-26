@@ -3,7 +3,7 @@
 // the WarShip's drive. These join the fighter checks in `AERO_CHECKS` (rules/aero-checks.ts). Every figure and page comes from data/aero.ts; a
 // message states the numbers and names the deciding page through its cite. Findings are advice, never refusals, and a unit this version does
 // not understand gets none from here.
-import { CAPITAL_FIGURES, CAPITAL_SYSTEMS, CRAFT_FIGURES, DEFAULT_AERO_EDITION, FIGHTER_ARMOR_TYPES, FIGHTER_EDITIONS, FIGHTER_PATCHWORK_TYPES, aeroEditionName } from "../data/aero";
+import { CAPITAL_FIGURES, CAPITAL_SYSTEMS, CRAFT_FIGURES, capitalSystemFigure, DEFAULT_AERO_EDITION, FIGHTER_ARMOR_TYPES, FIGHTER_EDITIONS, FIGHTER_PATCHWORK_TYPES, aeroEditionName } from "../data/aero";
 import type { FigureGroup } from "../data/aero";
 import { aeroLocationName, armorTypeAt, fighterPatchworkActive, capitalKind, capitalSystems, craftAmmoShortfalls, craftKind, heatByArc, locationsOf, stationKeeping, towingShare, vessel } from "./aero";
 import type { AeroRecord } from "./aero";
@@ -245,6 +245,10 @@ const systemsCheck: AeroCheck = {
     };
     for (const line of systems.lines) {
       const label = CAPITAL_SYSTEMS.find((r) => r.kind === line.kind)?.label ?? line.kind;
+      const dates = capitalSystemFigure(line.kind, record.editionId)?.dates;
+      if (dates !== undefined && record.year !== null && record.year < dates.prototype && line.count > 0) {
+        out.push({ check: "systems", level: "error", message: `${label} (the kind that mates with a DropShip's K-F boom) is not built before ${String(dates.prototype)}; a ship of ${String(record.year)} mounts the pre-boom docking collar instead (Interstellar Operations: Alternate Eras, p. 113).`, where: { field: "systems" }, ...withCite(page(line.kind)) });
+      }
       if (!line.allowed) out.push({ check: "systems", level: "error", message: `A ${kindName(record)} does not carry ${label.toLowerCase()} in ${aeroEditionName(record.editionId)}.`, where: { field: "systems" }, ...withCite(page(line.kind)) });
       else if (line.limit !== undefined && line.count > line.limit) out.push({ check: "systems", level: "error", message: `${plural(line.count, label.toLowerCase())} are over the ${num(line.limit)} a ${num(record.tons)}-ton ${kindName(record)} may carry.`, where: { field: "systems" }, ...withCite(page(line.kind)) });
     }

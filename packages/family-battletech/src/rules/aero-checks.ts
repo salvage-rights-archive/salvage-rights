@@ -6,10 +6,10 @@
 // its cite. Older editions predate the seven rules levels and show none.
 import { ARMOR, ENGINE_TYPES, MIXED_TECHNOLOGY, PATCHWORK_ARMOR } from "../data/chassis";
 import type { RulesLevel } from "../data/chassis";
-import { CAPITAL_FIGURES, CRAFT_FIGURES, DEFAULT_AERO_EDITION, FIGHTER_ARMOR_TYPES, FIGHTER_FIGURES, fighterPatchworkTypes, aeroEditionName, aeroTypesFor, figureOf, kindFigureOf } from "../data/aero";
+import { CAPITAL_FIGURES, CAPITAL_SYSTEMS, CRAFT_FIGURES, DEFAULT_AERO_EDITION, capitalSystemFigure, FIGHTER_ARMOR_TYPES, FIGHTER_FIGURES, fighterPatchworkTypes, aeroEditionName, aeroTypesFor, figureOf, kindFigureOf } from "../data/aero";
 import type { AeroTypeRow, FigureGroup, FighterKind, FighterPatchworkType } from "../data/aero";
 import { AERO_WEAPON_EDITIONS, aeroWeaponOffered } from "../data/aero-weapons";
-import { armorTypeAt, fighterArcs, fighterArmor, fighterArmorLimit, fighterArmorTons, fighterPatchworkActive, energyWeaponHeat, fighterHeat, fighterKind, fighterPartsNotOffered, fighterTally, engineRating, fuelPoints, locationsOf, vessel, wingsMatch, aeroLocationName } from "./aero";
+import { armorTypeAt, capitalKind, fighterArcs, fighterArmor, fighterArmorLimit, fighterArmorTons, fighterPatchworkActive, energyWeaponHeat, fighterHeat, fighterKind, fighterPartsNotOffered, fighterTally, engineRating, fuelPoints, locationsOf, vessel, wingsMatch, aeroLocationName } from "./aero";
 import type { AeroRecord } from "./aero";
 import { baseFits, ownSpans, partPhase, pastEraCap } from "./availability";
 import type { Catalog } from "./catalog";
@@ -419,6 +419,15 @@ export function aeroLevelItems(record: AeroRecord, catalog: Catalog): AeroLevelI
       cite: bookPage(equipment.levelCite ?? equipment.cite),
       where: { mountId: mount.id },
     });
+  }
+  // A ship system with dates (the docking hardpoint, which comes with the K-F boom) is Experimental in its prototype years and at its own level after.
+  if (capitalKind(record) !== undefined) {
+    for (const [kind, count] of Object.entries(record.systems ?? {})) {
+      const dates = capitalSystemFigure(kind, record.editionId)?.dates;
+      if (dates === undefined || count <= 0) continue;
+      const phase = phaseIn([{ from: dates.production }], dates.prototype, window);
+      items.push({ what: "equipment", name: CAPITAL_SYSTEMS.find((r) => r.kind === kind)?.label ?? kind, level: levelIn(dates.level, phase), ...(phase === "prototype" ? { prototype: datesText(dates.prototype, dates.production) } : {}), where: { field: "systems" } });
+    }
   }
   return items;
 }

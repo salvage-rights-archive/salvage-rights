@@ -14,6 +14,7 @@ import { checkInfantry } from "../../rules/infantry/checks";
 import type { InfantryFinding } from "../../rules/infantry/checks";
 import { infantryBv, infantryCost, lineCode, platoonOf, standardSize } from "../../rules/infantry/platoon";
 import type { InfantryRecord } from "../../rules/infantry/platoon";
+import SneakSystemsField from "./SneakSystemsField";
 import LeaveConfirm from "../editor/LeaveConfirm";
 import LevelSelect from "../editor/LevelSelect";
 import { STORAGE_READ_FAILED, STORAGE_WRITE_FAILED } from "../storage";
@@ -157,6 +158,7 @@ function Editor({ initial, catalog, storage }: { initial: InfantryRecord; catalo
   const primaries = withCurrent(offered.filter((r) => r.infantry?.mode !== "Support"), record.primary);
   const secondaries = withCurrent(offered.filter((r) => r.infantry !== undefined), record.secondary.weapon);
   const motives = MOTIVES.filter((m) => m.id === record.motive || levelAtLeast(level, m.level));
+  const sneakKit = record.armor ? armorKitOf(record.armor) : undefined;
   const kitsOffered = ARMOR_KITS.filter((k) => k.id === record.armor || (levelAtLeast(level, "advanced") && (k.techBase === "both" || k.techBase === record.techBase) && (record.year === null || k.year <= record.year)));
   // Hide, do not mark: a specialty the platoon type rules out is not listed (one already held stays). Combat engineers wait until their sub-types can be chosen.
   const specsOffered = SPECIALIZATIONS.filter((s) => record.specializations.includes(s.id) || (levelAtLeast(level, "advanced") && s.id !== "combat-engineers" && (s.motives === undefined || s.motives.includes(platoon.motive?.id ?? "foot"))));
@@ -239,7 +241,7 @@ function Editor({ initial, catalog, storage }: { initial: InfantryRecord; catalo
             <li>{`Movement ${String(platoon.mp)} ${platoon.mpType}${platoon.moveOrShoot ? ", move or fire" : ""}`}</li>
             <li>{`Damage ${String(platoon.totalDamage)} at full strength, ${num(platoon.perTrooper)} a trooper`}</li>
             <li>{`Weight ${num(platoon.weight)} tons`}</li>
-            <li>{bv.bv === undefined ? `Battle Value: not worked out${bv.reason ? `. ${bv.reason}` : " yet."}` : `Battle Value ${String(bv.bv)}`}</li>
+            <li>{bv.bv === undefined ? "Battle Value: not worked out yet." : `Battle Value ${String(bv.bv)}`}</li>
             <li>{`Cost ${money(cost.total)} C-bills`}</li>
           </ul>
           <InfantryDiagram kind={motiveOf(record.motive)?.mechanized ? "mechanized" : record.motive} locations={platoon.lines.map((n, i) => ({ code: lineCode(i, platoon.lines.length), name: platoon.lines.length === 1 ? "Platoon" : `Sub-platoon ${String(i + 1)}`, armor: n }))} use="armor" />
@@ -298,6 +300,7 @@ function Editor({ initial, catalog, storage }: { initial: InfantryRecord; catalo
               <div className="bt-grid">
                 <SelectField id="field-armor" label="Armor kit" hint={record.armor ? `Damage divisor ${String(armorKitOf(record.armor)?.divisor ?? 1)}.` : "Tactical Operations: Advanced Units and Equipment, p. 129."} value={record.armor ?? ""} options={[{ value: "", label: "No armor kit" }, ...kitsOffered.map((k) => ({ value: k.id, label: `${k.name} (divisor ${String(k.divisor)}${k.encumbering ? ", encumbering" : ""})` }))]} onChange={(v) => { edit((d) => void (d.armor = v === "" ? null : v)); }} />
               </div>
+              {sneakKit?.systems && <SneakSystemsField kit={sneakKit} systems={platoon.sneakSystems} onChange={(list) => { edit((d) => void (d.sneakSystems = list)); }} />}
               <fieldset className="bt-arm">
                 <legend>Specialties (Veteran troops or better)</legend>
                 {specsOffered.map((s) => (

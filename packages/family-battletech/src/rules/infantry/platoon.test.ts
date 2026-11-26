@@ -53,10 +53,29 @@ describe("platoon build (the book's examples)", () => {
     const foot = make({ primary: "inf-auto-rifle-is", armor: "ballistic-plate-standard", specializations: ["marines"], perSquad: 7, squads: 4 });
     const bv = infantryBv(foot, catalog);
     expect([bv.defensive, bv.bv]).toEqual([84, 146]); // 28 x 2 x 1.5 = 84; (84 + 2 x 28 x 1.59 x 0.54) x 1.3 x 0.85
-    expect(infantryBv({ ...foot, armor: "sneak-1" }, catalog).bv).toBeUndefined();
-    expect(infantryBv(make({ primary: "inf-auto-rifle-is", armor: "flak-standard" }, { motive: "hover" }), catalog).bv).toBeUndefined();
     // Mechanized infantry use the 5 column (Gunnery 4 and 5 is 1.0), not a fixed 8.
     expect(infantryBv(make({ primary: "inf-auto-rifle-is" }, { motive: "hover" }), catalog).skill).toBe(1);
+  });
+
+  it("a sneak suit adds the Defensive Factor bonus of each chosen system (TO:AUE p. 191: camo 0.2, IR 0.2, ECM 0.1), defaulting to the owner's choices", () => {
+    // 28 foot troopers with auto rifles: offense 2 x 28 x 1.59 x 0.54 = 48.0816, skill 0.85, divisor 1, so defense is 28 x 1 x 1.5 x (1 + bonus).
+    const suit = make({ primary: "inf-auto-rifle-is", perSquad: 7, squads: 4 });
+    const bvOf = (armor: string, sneakSystems?: string[]) => infantryBv({ ...suit, armor, ...(sneakSystems ? { sneakSystems } : {}) }, catalog).bv;
+    // one system (IR, +0.2): (50.4 + 48.0816) x 0.85 = 83.7; two (IR + ECM, +0.3): (54.6 + 48.0816) x 0.85 = 87.3; three (+0.5): (63 + 48.0816) x 0.85 = 94.4
+    expect([bvOf("sneak-1"), bvOf("sneak-2"), bvOf("sneak-3")]).toEqual([84, 87, 94]);
+    // chosen: camo + ECM on a two-system suit (+0.3) is the same; a choice over the suit's count is cut to it (camo + IR, +0.4: (58.8 + 48.0816) x 0.85 = 90.9)
+    expect([bvOf("sneak-2", ["camo", "ecm"]), bvOf("sneak-2", ["camo", "ir", "ecm"])]).toEqual([87, 91]);
+    // an old record has no sneakSystems and loads with the defaults of the suit
+    const old = withDefaults({ ...suit, armor: "sneak-3" }, "x") as InfantryRecord;
+    expect([old.sneakSystems, platoonOf(old, catalog).sneakSystems]).toEqual([undefined, ["camo", "ir", "ecm"]]);
+  });
+
+  it("a mechanized platoon under the Advanced rules keeps the Hover row's Unit Type Modifier of 0.7 (TO:AUE p. 193; the table has no motorized row)", () => {
+    const r = make({ primary: "inf-auto-rifle-is", armor: "flak-standard" }, { motive: "hover" });
+    const p = platoonOf(r, catalog);
+    const bv = infantryBv(r, catalog);
+    // 20 troopers, 5 MP (+2, Defensive Factor 1.2): defense 20 x 1 x 1.5 x 1.2 = 36; offense 20 x 1.59 x 1.00 = 31.8, not doubled (no anti-Mech attacks); (36 + 31.8) x 0.7 x 1.0 = 47.46 (TO:AUE pp. 191, 193, TM pp. 309, 317)
+    expect([p.troopers, p.mp, bv.targetModifier, bv.bv]).toEqual([20, 5, 2, 47]);
   });
 
   it("splits a platoon into the fewest even lines, odd troopers to the first", () => {

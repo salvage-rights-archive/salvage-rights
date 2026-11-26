@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { newAeroRecord, withDefaults } from "./aero";
 import type { AeroRecord } from "./aero";
-import { aeroLowestLevel, aeroOfficialState, checkAero, checkUnder, markAeroOfficial } from "./aero-checks";
+import { aeroLevelItems, aeroLowestLevel, aeroOfficialState, checkAero, checkUnder, markAeroOfficial } from "./aero-checks";
 import { loadCatalog } from "./catalog";
 
 const catalog = await loadCatalog();
@@ -64,6 +64,14 @@ describe("aerospace rules check", () => {
     const ship = { ...newAeroRecord({ id: "d", unitType: "dropship", tons: 3000, year: 3070 }, "aerotech2-revised") };
     const shape = (list: ReturnType<typeof checkAero>) => list.map((f) => `${f.check}:${f.level}`);
     expect(shape(checkUnder(ship, "tw-tm-so", catalog))).toEqual(shape(checkAero(ship, catalog)));
+  });
+
+  it("the docking hardpoint comes with the K-F boom: an error before 2458, Experimental in 2458-2469, Advanced from 2470 (IO:AE pp. 36, 113)", () => {
+    const ship = (year: number) => ({ ...newAeroRecord({ id: "h", unitType: "warship", tons: 500000, year }, "tw-tm-so"), systems: { "docking-hardpoint": 2 } });
+    const hardpoint = (year: number) => aeroLevelItems(ship(year), catalog).find((i) => i.name === "Docking hardpoint")?.level;
+    expect([hardpoint(2457), hardpoint(2458), hardpoint(2469), hardpoint(2470)]).toEqual(["advanced", "experimental", "experimental", "advanced"]);
+    expect([2457, 2458].map((y) => kinds(checkAero(ship(y), catalog)).includes("systems:error"))).toEqual([true, false]);
+    expect(kinds(checkAero({ ...ship(3070), year: null }, catalog))).not.toContain("systems:error");
   });
 
   it("the level of a WarShip in the current rules is Advanced, and an older edition shows no level", () => {

@@ -96,8 +96,12 @@ export interface ArmorKit extends Cited {
   /** The year introduced; "PS" (pre-spaceflight) is 1950 and "ES" (early spaceflight) 2200, as everywhere. */
   year: number;
   cost: number;
-  /** The stealth bonus to the Defensive Factor (TO:AUE p. 191): DEST +0.2. A sneak suit's depends on which systems it has, which the table does not say. */
+  /** The stealth bonus to the Defensive Factor (TO:AUE p. 191): DEST +0.2. A sneak suit's is the sum of its chosen systems' (STEALTH_MODIFIERS). */
   bvStealth?: number;
+  /** A sneak suit: how many different sneak systems it carries (p. 130: each different Sneak armor type counts as one "system"). */
+  systems?: number;
+  /** The systems a sneak suit has until the player picks: the owner's ruling (2026-11-27); the book prints no default. */
+  defaultSystems?: string[];
 }
 const PS = 1950;
 const ES = 2200;
@@ -149,18 +153,20 @@ export const ARMOR_KITS: ArmorKit[] = [
   { id: "kit-word-of-blake", name: "Word of Blake kit", divisor: 2, techBase: "inner-sphere", rating: "F", availability: "X-X-D", year: 3055, cost: 4300, cite: C2, checked: "page" },
   { id: "kit-generic", name: "Other Periphery or generic kit", divisor: 1, techBase: "both", rating: "C", availability: "B-B-B", year: ES, cost: 330, cite: C2, checked: "page" },
   { id: "sneak-dest", name: "DEST infiltration suit", divisor: 1, stealth: true, bvStealth: 0.2, techBase: "inner-sphere", rating: "D", availability: "X-E-E", year: 2840, cost: 50000, cite: C2, checked: "page" },
-  { id: "sneak-1", name: "Sneak suit (one system)", divisor: 1, stealth: true, techBase: "both", rating: "D", availability: "C-C-C", year: 2450, cost: 7000, cite: C2, checked: "page" },
-  { id: "sneak-2", name: "Sneak suit (two systems)", divisor: 1, stealth: true, techBase: "both", rating: "D", availability: "D-D-D", year: 2460, cost: 21000, cite: C2, checked: "page" },
-  { id: "sneak-3", name: "Sneak suit (three systems)", divisor: 1, stealth: true, techBase: "both", rating: "D", availability: "D-E-E", year: 2475, cost: 28000, cite: C2, checked: "page" },
+  { id: "sneak-1", name: "Sneak suit (one system)", divisor: 1, stealth: true, systems: 1, defaultSystems: ["ir"], techBase: "both", rating: "D", availability: "C-C-C", year: 2450, cost: 7000, cite: C2, checked: "page" },
+  { id: "sneak-2", name: "Sneak suit (two systems)", divisor: 1, stealth: true, systems: 2, defaultSystems: ["ir", "ecm"], techBase: "both", rating: "D", availability: "D-D-D", year: 2460, cost: 21000, cite: C2, checked: "page" },
+  { id: "sneak-3", name: "Sneak suit (three systems)", divisor: 1, stealth: true, systems: 3, defaultSystems: ["camo", "ir", "ecm"], techBase: "both", rating: "D", availability: "D-E-E", year: 2475, cost: 28000, cite: C2, checked: "page" },
 ];
 export const armorKitOf = (id: string): ArmorKit | undefined => ARMOR_KITS.find((k) => k.id === id);
 /** Infantry Stealth Modifiers Table (TO:AUE p. 130): camo by hexes moved 0/1/2/3/4+, IR by short/medium/long range. */
-export const STEALTH_MODIFIERS: { id: string; name: string; camo: number[]; ir: number[]; ecm: string }[] = [
-  { id: "dest", name: "DEST infiltration suit", camo: [1, 0, 0, 0, 0], ir: [1, 1, 2], ecm: "none" },
-  { id: "camo", name: "Sneak, camo", camo: [3, 2, 1, 0, 0], ir: [0, 0, 0], ecm: "none" },
-  { id: "ir", name: "Sneak, IR", camo: [0, 0, 0, 0, 0], ir: [1, 1, 2], ecm: "none" },
-  { id: "ecm", name: "Sneak, ECM", camo: [0, 0, 0, 0, 0], ir: [0, 0, 0], ecm: "invisible to standard and light active probes" },
+export const STEALTH_MODIFIERS: { id: string; name: string; camo: number[]; ir: number[]; ecm: string; bv: number }[] = [
+  { id: "dest", name: "DEST infiltration suit", camo: [1, 0, 0, 0, 0], ir: [1, 1, 2], ecm: "none", bv: 0.2 },
+  { id: "camo", name: "Sneak, camo", camo: [3, 2, 1, 0, 0], ir: [0, 0, 0], ecm: "none", bv: 0.2 },
+  { id: "ir", name: "Sneak, IR", camo: [0, 0, 0, 0, 0], ir: [1, 1, 2], ecm: "none", bv: 0.2 },
+  { id: "ecm", name: "Sneak, ECM", camo: [0, 0, 0, 0, 0], ir: [0, 0, 0], ecm: "invisible to standard and light active probes", bv: 0.1 },
 ];
+/** The three sneak systems a suit may carry, in the table's order. Each adds its `bv` to the Defensive Factor, cumulatively (Defensive Factors Modifier Table, TO:AUE p. 191). */
+export const SNEAK_SYSTEMS = ["camo", "ir", "ecm"] as const;
 
 export interface Specialization extends Cited {
   id: string;
