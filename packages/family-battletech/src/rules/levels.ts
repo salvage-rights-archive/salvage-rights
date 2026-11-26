@@ -8,7 +8,7 @@ import type { Ruleset } from "../data/rulesets";
 import type { Catalog, EquipmentRow } from "./catalog";
 import { armorTypesUsed, configurationOf, mechTypeOf, patchworkActive, superheavyOf } from "./mech";
 import type { LocationCode, MechRecord } from "./mech";
-import { clanInTime, datesText, erasOfYear, partPrototype, partSpans, phaseIn, rowPhase, superheavyPhase, windowOf } from "./time";
+import { clanInTime, datesText, erasOfYear, partPrototype, partSpans, phaseIn, rowPhase, superheavyDates, superheavyPhase, windowOf } from "./time";
 import type { Phase, When } from "./time";
 
 export const LEVEL_ORDER: RulesLevel[] = RULES_LEVELS.map((row) => row.id);
@@ -174,7 +174,7 @@ export function levelItems(record: MechRecord, catalog: Catalog): LevelItem[] {
   // A superheavy 'Mech is an Advanced option (IO:AE printed p.153), Experimental in its prototype years.
   if (superheavyOf(record)) {
     const phase = superheavyPhase(record);
-    const dates = SUPERHEAVY.dates[type.industrial ? "industrialmech" : "mech"];
+    const dates = superheavyDates(record);
     items.push(asListed({ what: "option", name: "Superheavy 'Mech", ...inPhase(SUPERHEAVY.rulesLevel, phase, dates.prototypeYear, dates.availability), cite: SUPERHEAVY.levelCite, where: { field: "tons" } }, listed(undefined, ruleset), ruleset));
   }
   const config = configurationOf(record.configuration);

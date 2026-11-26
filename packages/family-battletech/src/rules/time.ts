@@ -129,12 +129,14 @@ export function datesText(prototype: number | undefined, production: number | un
   return production === undefined ? "" : `Production ${production}`;
 }
 
-/** A superheavy 'Mech's own phase for a record: the years of its type (the BattleMech tripod's are later than the biped's and quad's), as the
- * Construction Options table prints them (IO:AE printed p.44). Production for a 'Mech of 100 tons or less, which has no dates of this kind. */
+/** A superheavy 'Mech's own phase for a record: the years of its type (the BattleMech tripod's are later than the biped's and quad's), as the book panel read them (SUPERHEAVY.dates). Production for a 'Mech of 100 tons or less, which has no dates of this kind. */
 export function superheavyPhase(record: When & Pick<MechRecord, "tons" | "unitType" | "configuration">): Phase | null {
   if (!superheavyOf(record)) return "production";
+  return rowPhase(superheavyDates(record), "inner-sphere", windowOf(record));
+}
+/** The production and prototype years of the superheavy 'Mech a record is: by BattleMech or IndustrialMech and by tripod or not (SUPERHEAVY.dates). */
+export function superheavyDates(record: Pick<MechRecord, "unitType" | "configuration">): { availability: Span[]; prototypeYear?: number } {
   const industrial = industrialRulesOf(record) !== undefined;
-  const dates = SUPERHEAVY.dates[industrial ? "industrialmech" : "mech"];
-  const tripod = !industrial && record.configuration === "tripod";
-  return rowPhase({ availability: tripod ? SUPERHEAVY.dates.mechTripod.availability : dates.availability, prototypeYear: tripod ? undefined : dates.prototypeYear }, "inner-sphere", windowOf(record));
+  const tripod = record.configuration === "tripod";
+  return SUPERHEAVY.dates[industrial ? (tripod ? "industrialTripod" : "industrialmech") : tripod ? "mechTripod" : "mech"];
 }

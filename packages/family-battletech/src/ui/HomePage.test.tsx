@@ -180,7 +180,7 @@ describe("Classic BattleTech home", () => {
     expect([...tons.options].some((o) => o.value === "150")).toBe(false);
     await user.selectOptions(within(form).getByLabelText("Rules level"), "advanced");
     await user.type(within(form).getByLabelText("Year"), "2445");
-    expect([...tons.options].some((o) => o.value === "150")).toBe(false); // superheavy 'Mechs are 3078 and later
+    expect([...tons.options].some((o) => o.value === "150")).toBe(false); // superheavy 'Mechs are 3076 and later
     await user.selectOptions(within(form).getByLabelText("Era"), "age-of-war"); // 2445 is in two eras
     await user.selectOptions(within(form).getByLabelText("Type"), "primitive-mech");
     await user.type(within(form).getByLabelText("Name"), "Mackie");

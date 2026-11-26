@@ -10,6 +10,7 @@ import { editRecord, layout, maxArmor, newRecord, structurePoints, weights } fro
 import type { MechRecord, Mount } from "./mech";
 import { levelItems } from "./levels";
 import { equipmentAvailable, partAvailable } from "./availability";
+import { superheavyPhase } from "./time";
 
 const catalog = createCatalog(expand([...WEAPONS, ...AMMUNITION, ...OTHER]));
 
@@ -101,7 +102,9 @@ describe("a superheavy 'Mech", () => {
     expect(equipmentAvailable(row("jump-jet-is"), { ...subject, tons: 100, year: 3080 }, catalog)).toBe(true);
   });
 
-  it("needs Advanced rules, and its years (a BattleMech from 3078, prototype 3077)", () => {
+  it("needs Advanced rules, and its years (a BattleMech from 3076 with no prototype, an IndustrialMech from 2940, a BattleMech tripod from 3135 with a prototype ~3130)", () => {
+    const phase = (patch: Partial<MechRecord>) => superheavyPhase(editRecord(omega(), (d) => void Object.assign(d, patch)));
+    expect([phase({ year: 3075 }), phase({ year: 3076 }), phase({ year: 3134, configuration: "tripod" }), phase({ year: 3130, configuration: "tripod" }), phase({ year: 2939, unitType: "industrialmech" })]).toEqual([null, "production", "prototype", "prototype", null]);
     expect(levelItems(omega(), catalog).find((i) => i.name === "Superheavy 'Mech")?.level).toBe("advanced");
     const early = runChecks(editRecord(omega(), (d) => void (d.year = 3070)), catalog);
     expect(early.some((f) => f.check === "superheavy" && f.message.includes("not available in 3070"))).toBe(true);

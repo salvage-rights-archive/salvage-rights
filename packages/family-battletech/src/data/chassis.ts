@@ -1387,9 +1387,8 @@ export interface SuperheavyRules {
   /** Catalog id stems no superheavy 'Mech may mount, and the stealth items that do nothing on one. */
   barred: { stems: string[]; why: string }[];
   noEffect: { stems: string[]; why: string };
-  /** Production and prototype years by 'Mech type, from the Construction Options table (printed p.44): the Word of Blake's BattleMech, the
-   * Free Worlds League's IndustrialMech; the BattleMech tripod follows the Republic of the Sphere's date (the game rules' history, p.157). */
-  dates: Record<"mech" | "industrialmech", { availability: Span[]; prototypeYear: number }> & { mechTripod: { availability: Span[] } };
+  /** Production and prototype years by 'Mech type and body: the Word of Blake's BattleMech (the entry, p.153), the Free Worlds League's IndustrialMech, and the tripods (p.157, p.42). */
+  dates: Record<"mech" | "industrialmech" | "mechTripod" | "industrialTripod", { availability: Span[]; prototypeYear?: number }>;
   datesCite: Cite;
 }
 export const SUPERHEAVY: SuperheavyRules = {
@@ -1445,11 +1444,14 @@ export const SUPERHEAVY: SuperheavyRules = {
   ],
   noEffect: { stems: ["chameleon-lps", "null-signature-system", "void-signature-system"], why: "a machine this large is too big for the system to hide it" },
   dates: {
-    mech: { availability: [{ from: 3078 }], prototypeYear: 3077 },
-    industrialmech: { availability: [{ from: 2940 }], prototypeYear: 2930 },
-    mechTripod: { availability: [{ from: 3135 }] },
+    // The book panel's ruling (2026-11-27): the entry's 3076 is the BattleMech's production year (the Construction Options row's 3077 and 3078 are dropped; the
+    // parts' own rows, pp.42 and 215, agree), with no prototype year; the IndustrialMech 2940; the tripods follow their own structure rows, ~3130 / 3135 and ~2930 / 2940.
+    mech: { availability: [{ from: 3076 }] },
+    industrialmech: { availability: [{ from: 2940 }] },
+    mechTripod: { availability: [{ from: 3135 }], prototypeYear: 3130 },
+    industrialTripod: { availability: [{ from: 2940 }], prototypeYear: 2930 },
   },
-  datesCite: { book: IO, page: 44 },
+  datesCite: { book: IO, page: 153 },
 };
 
 const TM_P = (page: number): Cite => ({ book: "TechManual", page });

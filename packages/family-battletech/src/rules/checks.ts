@@ -32,7 +32,7 @@ import { listed, RULESETS, rulesetOf } from "../data/rulesets";
 import { CLAN_CASE_IDS, clanCaseAllowed } from "./case";
 import { heatSinkTypeOf, locationsFor, mountableOn, mountsRequired, podMountable } from "./catalog";
 import { heatSinkMixAllowed, levelAtLeast, levelIn, levelItems, levelOfRecord, levelRow, mixedPhase } from "./levels";
-import { clanInTime, datesText, partIsPrototypeOnly, partPrototype, superheavyPhase } from "./time";
+import { clanInTime, datesText, partIsPrototypeOnly, partPrototype, superheavyDates, superheavyPhase } from "./time";
 import type { Catalog, EquipmentRow } from "./catalog";
 import { ARM_FULL, armorSpread, armorTypeAt, armorTypesUsed, armsOf, canSplitBetween, configurationOf, donorTons, engineRatingOf, engineTons, freeHeatSinks, industrialRulesOf, layout as buildLayout, maxArmor, mechTypeOf, mountCanFireRear, patchworkActive, patchworkSlotsFor, primitiveRulesOf, requiredCockpit, slotsFor, slotsTaken, splitOf, structurePoints, superheavyOf, walkMP, weights } from "./mech";
 import { locationName, type Layout, type LocationCode, type MechRecord, type Mount } from "./mech";
@@ -1390,9 +1390,8 @@ function superheavyCheck({ record, catalog }: CheckInput): Finding[] {
   const phase = superheavyPhase(record);
   if (phase === null) {
     const when = record.year !== null ? String(record.year) : `the ${eraOfRecord(record)?.name ?? "chosen"} era`;
-    const dates = SUPERHEAVY.dates[industrial ? "industrialmech" : "mech"];
-    const first = !industrial && record.configuration === "tripod" ? SUPERHEAVY.dates.mechTripod.availability[0]?.from : dates.availability[0]?.from;
-    add("error", `A superheavy ${kind} is not available in ${when}; ${datesText(industrial || record.configuration !== "tripod" ? dates.prototypeYear : undefined, first).toLowerCase()}.`, { field: "tons" }, SUPERHEAVY.datesCite);
+    const dates = superheavyDates(record);
+    add("error", `A superheavy ${kind} is not available in ${when}; ${datesText(dates.prototypeYear, dates.availability[0]?.from).toLowerCase()}.`, { field: "tons" }, SUPERHEAVY.datesCite);
   }
   return out;
 }
