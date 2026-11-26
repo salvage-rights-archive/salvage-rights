@@ -23,6 +23,7 @@ export interface AeroTypeChoices {
 }
 
 const AERO_PREFIX = "aero:";
+const BA_PREFIX = "ba:";
 
 export default function TypeSelect({
   record,
@@ -30,30 +31,40 @@ export default function TypeSelect({
   id = "field-unitType",
   className,
   aero,
+  battleArmor,
 }: {
   record: Subject;
   onChange: (type: MechType) => void;
   id?: string;
   className?: string;
   aero?: AeroTypeChoices;
+  /** The battle armor on offer: a group of its own that opens the battle armor editor. */
+  battleArmor?: AeroTypeChoices;
 }) {
   const choices = typeChoices(record);
   const current = mechTypeOf(record);
   const noteId = `${id}-note`;
   const waiting = choices.flatMap((choice) => (choice.disabled === undefined ? [] : [`${MECH_TYPES.find((t) => t.id === choice.id)?.label ?? choice.id} is not offered yet: ${choice.disabled}`]));
   const picked = aero?.chosen === undefined ? undefined : aero.options.find((option) => option.id === aero.chosen);
+  const pickedBa = battleArmor?.chosen === undefined ? undefined : battleArmor.options.find((option) => option.id === battleArmor.chosen);
   return (
     <div className={className ? `bt-field bt-level ${className}` : "bt-field bt-level"}>
       <label htmlFor={id}>Type</label>
       <select
         id={id}
-        value={picked ? `${AERO_PREFIX}${picked.id}` : current.id}
+        value={pickedBa ? `${BA_PREFIX}${pickedBa.id}` : picked ? `${AERO_PREFIX}${picked.id}` : current.id}
         aria-describedby={noteId}
         onChange={(event) => {
           const value = event.target.value;
-          if (value.startsWith(AERO_PREFIX)) aero?.onChoose(value.slice(AERO_PREFIX.length));
-          else {
+          if (value.startsWith(AERO_PREFIX)) {
+            battleArmor?.onChoose(undefined);
+            aero?.onChoose(value.slice(AERO_PREFIX.length));
+          } else if (value.startsWith(BA_PREFIX)) {
             aero?.onChoose(undefined);
+            battleArmor?.onChoose(value.slice(BA_PREFIX.length));
+          } else {
+            aero?.onChoose(undefined);
+            battleArmor?.onChoose(undefined);
             onChange(value as MechType);
           }
         }}
@@ -72,10 +83,19 @@ export default function TypeSelect({
             ))}
           </optgroup>
         )}
+        {battleArmor && battleArmor.options.length > 0 && (
+          <optgroup label="Battle armor (opens the battle armor editor)">
+            {battleArmor.options.map((option) => (
+              <option key={option.id} value={`${BA_PREFIX}${option.id}`}>
+                {option.label}
+              </option>
+            ))}
+          </optgroup>
+        )}
       </select>
       <span id={noteId} className="bt-hint bt-level__note">
-        {picked ? picked.note : `${current.description} ${bookName(current.cite.book)}, p. ${String(current.cite.page)}.`}
-        {!picked && waiting.length > 0 && ` ${waiting.join(" ")}`}
+        {pickedBa ? pickedBa.note : picked ? picked.note : `${current.description} ${bookName(current.cite.book)}, p. ${String(current.cite.page)}.`}
+        {!picked && !pickedBa && waiting.length > 0 && ` ${waiting.join(" ")}`}
       </span>
     </div>
   );

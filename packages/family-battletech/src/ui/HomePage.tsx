@@ -25,6 +25,12 @@ import { startTons, typeReady, typeRow, weightHint } from "./aero/edit";
 import { NumberField } from "./aero/fields";
 import { AERO_HOME, editorHref } from "./aero/routes";
 import { openAeroStorage } from "./aero/storage";
+import { WEIGHT_CLASSES } from "../data/battlearmor";
+import { newBaRecord } from "../rules/battlearmor/record";
+import { suitOffered, weightClassChoices } from "../rules/battlearmor/availability";
+import { SavedBattleArmor } from "./battlearmor/SavedBattleArmor";
+import { editorHref as baEditorHref } from "./battlearmor/routes";
+import { openBaStorage } from "./battlearmor/storage";
 import type { MechRecord, NewMechOptions } from "../rules/mech";
 import { MAX_LIBRARY_BYTES, STORAGE_READ_FAILED, STORAGE_WRITE_FAILED, downloadLibrary, downloadMech, downloadOmni, fileGame, fromLibraryFile, fromMechFile, fromOmniFile, openFamilyStorage, wrongGameMessage } from "./storage";
 import type { FamilyStorage, SavedEntry } from "./storage";
@@ -93,6 +99,12 @@ export default function HomePage() {
   const [aeroType, setAeroType] = useState<string>();
   const [aeroTons, setAeroTons] = useState<number>();
   const [aeroThrust, setAeroThrust] = useState(5);
+  /** Battle armor chosen in the new-unit list: it opens the battle armor editor, with the weight class and body picked here. */
+  const [baPick, setBaPick] = useState<string>();
+  const [baClass, setBaClass] = useState<string>();
+  const [baBody, setBaBody] = useState<"humanoid" | "quad">("humanoid");
+  /** Bumped when a battle armor unit is saved or deleted, so the list of them reads again. */
+  const [baListed, setBaListed] = useState(0);
   /** The year typed in the build form, as text; empty or not a year means no year, and nothing is hidden by time. */
   const [yearText, setYearText] = useState("");
   /** The era picked when the typed year is in two eras (an Inner Sphere era and a Clan sub-era). */
@@ -231,6 +243,25 @@ export default function HomePage() {
   const aeroPicked = aeroOptions.find((option) => option.id === aeroType);
   const aeroRow = aeroPicked?.row;
 
+  // Battle armor: offered at the levels that include it (Standard and above) while some weight class exists for the year and tech base (hide, do not mark).
+  const baSubject = { techBase: techBase === "clan" ? ("clan" as const) : ("inner-sphere" as const), year: yearTyped, era: eraChosen?.id, rulesLevel: draft.rulesLevel, editionId: edition };
+  const baClasses = suitOffered(draft.rulesLevel) && techBase !== "mixed" ? weightClassChoices(baSubject) : [];
+  const baOptions = baClasses.length === 0 ? [] : [{ id: "battlearmor", label: "Battle armor", note: "Battle armor: a squad or Point of suits, built under TechManual and opened in the battle armor editor. TechManual, p. 160." }];
+  const baPicked = baOptions.find((option) => option.id === baPick);
+  const baClassId = baClasses.find((row) => row.id === baClass)?.id ?? baClasses[0]?.id ?? WEIGHT_CLASSES[1]?.id ?? "light";
+
+  const buildBa = async () => {
+    if (!storage || !baPicked || !draft.chassis.trim() || missing !== "") return;
+    const made = newBaRecord(
+      { id: crypto.randomUUID(), chassis: draft.chassis.trim(), model: draft.model.trim(), techBase: baSubject.techBase, year: yearTyped, ...(eraChosen ? { era: eraChosen.id } : {}), rulesLevel: draft.rulesLevel, weightClass: baClassId as (typeof WEIGHT_CLASSES)[number]["id"], body: baClassId === "pal" ? "humanoid" : baBody },
+      edition,
+    );
+    const baStorage = await openBaStorage().catch(() => undefined);
+    if (!baStorage || !(await attempt(STORAGE_WRITE_FAILED, () => baStorage.save(made)))) return;
+    setBaListed((n) => n + 1);
+    void navigate(baEditorHref(made.id));
+  };
+
   const buildAero = async () => {
     const aeroTonnage = aeroTons ?? startTons(aeroRow ?? undefined);
     if (!storage || !aeroPicked || !aeroRow || !draft.chassis.trim() || aeroTonnage <= 0 || missing !== "") return;
@@ -255,6 +286,7 @@ export default function HomePage() {
   };
 
   const build = async () => {
+    if (baPicked) return buildBa();
     if (aeroPicked) return buildAero();
     if (!storage || !draft.chassis.trim() || missing !== "") return;
     const options = { ...draft, techBase, configuration, tons, chassis: draft.chassis.trim(), model: draft.model.trim(), walk: Math.min(draft.walk, walks.at(-1) ?? 1), year: yearTyped };
@@ -629,6 +661,8 @@ export default function HomePage() {
         )}
       </section>
 
+      <SavedBattleArmor key={baListed} />
+
       <section className="bt-section" aria-labelledby="bt-add">
         <h2 id="bt-add">Add a 'Mech</h2>
         <form
@@ -661,8 +695,9 @@ export default function HomePage() {
                   setAeroTons(undefined);
                 },
               }}
+              battleArmor={{ options: baOptions, chosen: baPicked?.id, onChoose: setBaPick }}
             />
-            {!aeroPicked && (
+            {!aeroPicked && !baPicked && (
             <div className="bt-field">
               <label htmlFor="bt-new-config">Configuration</label>
               <select
@@ -729,7 +764,25 @@ export default function HomePage() {
                 ))}
               </select>
             </div>
-            {aeroPicked && aeroRow ? (
+            {baPicked ? (
+              <>
+                <div className="bt-field">
+                  <label htmlFor="bt-new-ba-class">Weight class</label>
+                  <select id="bt-new-ba-class" value={baClassId} onChange={(e) => { setBaClass(e.target.value); }}>
+                    {baClasses.map((row) => (
+                      <option key={row.id} value={row.id}>{`${row.label} (${String(row.minKg)} to ${String(row.maxKg)} kg)`}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="bt-field">
+                  <label htmlFor="bt-new-ba-body">Body</label>
+                  <select id="bt-new-ba-body" value={baClassId === "pal" ? "humanoid" : baBody} disabled={baClassId === "pal"} onChange={(e) => { setBaBody(e.target.value === "quad" ? "quad" : "humanoid"); }}>
+                    <option value="humanoid">Humanoid</option>
+                    <option value="quad">Quad</option>
+                  </select>
+                </div>
+              </>
+            ) : aeroPicked && aeroRow ? (
               <>
                 <NumberField id="bt-new-aero-tons" label="Tonnage" value={aeroTons ?? startTons(aeroRow)} min={0} hint={weightHint(aeroRow.weight)} onValid={(tons) => { setAeroTons(tons ?? undefined); }} />
                 <NumberField id="bt-new-aero-thrust" label="Safe Thrust" value={aeroThrust} min={0} onValid={(thrust) => { setAeroThrust(thrust ?? 0); }} />
@@ -759,10 +812,11 @@ export default function HomePage() {
             </>
             )}
           </div>
-          <p className="bt-hint">
+          {baPicked && <p className="bt-hint">You start with the chassis, its free ground MP, no armor and no equipment. The battle armor editor rules check shows what is left to do.</p>}
+          {!baPicked && <p className="bt-hint">
             {aeroPicked ? "You start with a standard engine, no fuel, no armor, no heat sinks and no equipment. The AeroTech editor's rules check shows what is left to do." : unitType === "industrialmech" ? "You start with an industrial frame and cockpit, a standard fusion engine" : "You start with standard parts"}, ten
             heat sinks, no armor and no equipment. {unitType === "omnimech" && "An OmniMech starts as a base chassis with an empty Prime configuration. "}The editor's rules check shows what is left to do.
-          </p>
+          </p>}
           {missing !== "" && <p id="bt-new-missing" className="bt-hint">{missing}</p>}
           <button type="submit" className="bt-button" disabled={!storage || missing !== "" || (aeroPicked !== undefined && (aeroTons ?? startTons(aeroRow)) <= 0)} aria-describedby={missing === "" ? undefined : "bt-new-missing"}>
             Start building

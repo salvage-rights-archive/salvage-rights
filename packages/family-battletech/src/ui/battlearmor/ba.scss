@@ -1,0 +1,59 @@
+// The battle armor pages' own styles, after the Classic ones they share.
+.ba-diagram {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sr-space-2);
+  padding: 0;
+  list-style: none;
+
+  > li {
+    margin: 0;
+    min-width: 0;
+  }
+}
+
+.ba-diagram__box {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sr-space-1);
+  min-height: 44px;
+  min-width: 44px;
+  padding: var(--sr-space-2);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  background: var(--sr-surface);
+  border: var(--sr-border) solid var(--sr-line);
+  border-radius: var(--sr-radius);
+
+  &.is-selected {
+    border-color: var(--sr-accent);
+  }
+
+  &.is-error {
+    border-style: dashed;
+  }
+}
+
+.ba-diagram__name {
+  font-weight: 700;
+}
+
+.ba-bubbles {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+.ba-bubbles__armor {
+  fill: none;
+  stroke: currentcolor;
+  stroke-width: 1.5;
+}
+
+.ba-bubbles__trooper {
+  fill: currentcolor;
+  fill-opacity: 0.35;
+  stroke: currentcolor;
+  stroke-width: 1.5;
+}
