@@ -1,5 +1,5 @@
 // The conventional infantry rules check: advice, never a refusal. Each finding names the printed page its rule rests on.
-import { WEAPON_RULES, armorKitOf, specializationOf } from "../../data/infantry-tables";
+import { CREATURE_SIZES, FIELD_ARTILLERY_ID, FIELD_GUN_ID, FIELD_GUN_RULES, SECONDARY_SLOT_TROOPS, WEAPON_RULES, XCT, armorKitOf, specializationOf, xctOf } from "../../data/infantry-tables";
 import type { Catalog } from "../catalog";
 import { DEFAULT_LEVEL, equipmentLevel, levelAtLeast, levelRow } from "../levels";
 import { yearEraFindings } from "../checks";
@@ -30,12 +30,27 @@ export function checkInfantry(record: InfantryRecord, catalog: Catalog): Infantr
   for (const f of yearEraFindings(record, level, "platoon")) found.push({ level: f.level, check: "year", message: f.message, cite: f.cite ? at(f.cite.book, f.cite.page) : undefined, where: f.where?.field ? { field: f.where.field } : undefined });
   if (!m) add("error", "motive", `The platoon type "${record.motive}" is not one this app knows.`, at(TM, 145), "motive");
   if (m && !levelAtLeast(level, m.level)) add("error", "motive-level", `${m.label} infantry is an Advanced option.`, at(m.cite.book, m.cite.page), "motive");
+  if (m?.year !== undefined && record.year !== null && record.year < m.year) add("warning", "motive-year", `${m.label} infantry appears in ${String(m.year)}.`, at(m.cite.book, m.cite.page), "motive");
 
   if (m) {
     if (record.perSquad > m.maxSquad) add("error", "squad", `A ${m.label.toLowerCase()} squad holds at most ${String(m.maxSquad)} troopers.`, at(TM, 145), "perSquad");
     if (record.perSquad < 1 || record.squads < 1) add("error", "size", "The platoon needs at least one squad of one trooper.", undefined, "squads");
     if (record.squads > 5 * p.lines.length && p.lines.length > 0) add("warning", "squads", "A platoon or sub-platoon has at most 5 squads.", at(TM, 146), "squads");
     if (p.lines.length > 1) add("note", "sub-platoons", `The platoon is over the ${String(m.maxPlatoon)}-trooper line and plays as ${String(p.lines.length)} sub-platoons of ${[...new Set(p.lines)].join(" and ")}.`, at(TM, 146));
+  }
+
+  if (record.motive === "beast") {
+    const b = p.beast;
+    if (!b) add("warning", "beast-unknown", record.beast === null ? "No creature is chosen for the beast-mounted platoon." : "The creature is not in our table.", at("Tactical Operations: Advanced Units and Equipment", 106), "beast");
+    else {
+      const size = CREATURE_SIZES[b.size];
+      if (p.creatures > size.creatures) add("error", "beast-creatures", `A platoon rides at most ${String(size.creatures)} ${b.size} creatures, so at most ${String(size.creatures * size.troops)} troopers.`, at("Tactical Operations: Advanced Units and Equipment", 106), "squads");
+      if (size.troops > 1 && record.perSquad !== size.troops) add("warning", "beast-squad", `Each ${b.size} creature is a squad of its own and carries ${String(size.troops)} troopers.`, at("Tactical Operations: Advanced Units and Equipment", 106), "perSquad");
+      const support = p.secondary?.infantry?.mode === "Support";
+      if (support && record.secondary.perSquad > size.supportPerCreature) add("error", "beast-support", size.supportPerCreature === 0 ? "Troopers on Large creatures may not carry support weapons." : `A ${b.size} creature carries at most ${String(size.supportPerCreature)} support weapons.`, at("Tactical Operations: Advanced Units and Equipment", 106), "secondary");
+      if (record.antiMech && b.size === "Monstrous") add("warning", "beast-anti-mech", "Riders of Monstrous creatures may not make anti-'Mech attacks, so the kit does nothing.", at("Tactical Operations: Advanced Units and Equipment", 108), "antiMech");
+      if (p.xct?.id === "vacuum") add("error", "xct-beast", "Beast-mounted troops cannot be trained for vacuum or trace atmospheres.", at("Tactical Operations: Advanced Units and Equipment", 162), "xct");
+    }
   }
 
   const primary = p.primary;
@@ -83,7 +98,57 @@ export function checkInfantry(record: InfantryRecord, catalog: Catalog): Infantr
         if (spec.motives && m && !spec.motives.includes(m.id)) add("error", "spec-motive", `${spec.name} needs ${spec.motives.map((x) => x).join(" or ")} infantry.`, at(TO, 153), "specializations");
         if (spec.maxSquad !== null && record.perSquad > spec.maxSquad) add("error", "spec-squad", `${spec.name} squads hold at most ${String(spec.maxSquad)} troopers.`, at(TO, 153), "perSquad");
         if (spec.maxSecondary !== null && record.secondary.perSquad > spec.maxSecondary) add("error", "spec-secondary", `${spec.name} carry at most ${String(spec.maxSecondary)} Secondary Weapons a squad.`, at(TO, 153), "secondary");
+        if (spec.year !== undefined && record.year !== null && record.year < spec.year) add("warning", "spec-year", `${spec.name} appear in ${String(spec.year)}.`, at(TO, 225), "specializations");
       }
+    }
+  }
+  const medicTags = record.paramedics > 0 || record.tagTroops > 0;
+  if (medicTags) {
+    if (!levelAtLeast(level, "advanced")) add("error", "medic-level", "Paramedics and TAG troops are an Advanced option.", at(TO, 153), "paramedics");
+    const none = p.specializations.find((x) => x.maxSecondary === 0);
+    if (none) add("error", "medic-no-secondary", `${none.name} carry no Secondary Weapons, so a squad has no place for paramedics or TAG troops; none are built.`, at(TO, 153), "paramedics");
+    if (record.paramedics + record.tagTroops > SECONDARY_SLOT_TROOPS.perSquad) add("warning", "medic-squad", `A squad has at most ${String(SECONDARY_SLOT_TROOPS.perSquad)} paramedics and TAG troops together; the extra are left out.`, at(TO, 153), "paramedics");
+    else if (p.secondary && record.secondary.perSquad + record.paramedics + record.tagTroops > SECONDARY_SLOT_TROOPS.perSquad) add("warning", "medic-secondary", "Paramedics and TAG troops each replace a Secondary Weapon trooper, so the squad's Secondary Weapons are cut to fit.", at(TO, 153), "secondary");
+    if (record.tagTroops > 0 && record.tagTroops < SECONDARY_SLOT_TROOPS.tag.minPerSquad) add("warning", "tag-minimum", `TAG troops only function when ${String(SECONDARY_SLOT_TROOPS.tag.minPerSquad)} are assigned to a squad.`, at(TO, 153), "tagTroops");
+  }
+  if (record.xct !== null) {
+    const env = xctOf(record.xct);
+    if (!levelAtLeast(level, "advanced")) add("error", "xct-level", "Xenoplanetary Condition-Trained troops are an Advanced option.", at(TO, 163), "xct");
+    if (record.year !== null && record.year < XCT.year) add("warning", "xct-year", `XCT troops appear in ${String(XCT.year)}.`, at(TO, 163), "xct");
+    if (!env) add("warning", "xct-unknown", "The XCT environment is not in our table.", at(TO, 162), "xct");
+    else {
+      if (record.armor === null || !env.armor.includes(record.armor)) add("error", "xct-armor", `XCT troops for ${env.label.toLowerCase()} must wear one of: ${env.armor.map((id) => armorKitOf(id)?.name ?? id).join(", ")}.`, at(TO, 162), "armor");
+      if (env.id === "vacuum" && (record.motive === "microlite" || record.motive === "microcopter")) add("error", "xct-vtol", "Mechanized VTOL troops cannot be trained for vacuum or trace atmospheres.", at(TO, 162), "xct");
+    }
+  }
+  const gunRow = p.fieldGun;
+  const artRow = p.fieldArtillery;
+  if (record.fieldGun.weapon !== null || record.fieldArtillery !== null) {
+    const FP = FIELD_GUN_RULES.cite;
+    if (!levelAtLeast(level, "advanced")) add("error", "field-level", "Field guns and field artillery are an Advanced option.", at(FP.book, FP.page), "fieldGun");
+    if (m && !FIELD_GUN_RULES.motives.includes(m.id)) add("error", "field-motive", "Only motorized platoons, and wheeled or tracked mechanized platoons, may tow field guns or field artillery.", at(FP.book, FP.page), "motive");
+    if (record.fieldGun.weapon !== null) {
+      if (!gunRow) add("warning", "field-unknown", "The field gun is not in our table.", at(FP.book, FP.page), "fieldGun");
+      else {
+        if (!FIELD_GUN_ID.test(gunRow.id)) add("error", "field-gun-type", `${gunRow.name} cannot be a field gun: only autocannons and Gauss weapons (not Heavy or Hyper-Assault) can.`, at(FP.book, 122), "fieldGun");
+        if (p.fieldGuns < 1) add("warning", "field-count", "A field gun is chosen but the platoon has none.", at(FP.book, FP.page), "fieldGun");
+        if (p.fieldGuns * p.gunCrew + p.artilleryCrew > p.troopers) add("error", "field-crew", `Each ${gunRow.name} needs ${String(p.gunCrew)} troopers to operate${p.artilleryCrew > 0 ? `, and the artillery piece ${String(p.artilleryCrew)} more` : ""}; ${String(p.troopers)} troopers crew ${String(Math.max(0, Math.floor((p.troopers - p.artilleryCrew) / p.gunCrew)))}.`, at(FP.book, FP.page), "fieldGun");
+        if (record.antiMech) add("warning", "field-anti-mech", "A platoon with field guns cannot make anti-'Mech attacks, so the kit does nothing.", at(FP.book, FP.page), "antiMech");
+      }
+    }
+    if (record.fieldArtillery !== null) {
+      if (!artRow) add("warning", "field-unknown", "The field artillery piece is not in our table.", at(FP.book, FP.page), "fieldArtillery");
+      else {
+        if (!FIELD_ARTILLERY_ID.test(artRow.id)) add("error", "field-artillery-type", `${artRow.name} cannot be field artillery: only Sniper, Thumper, Long Tom, Arrow IV and the artillery cannons can.`, at(FP.book, 122), "fieldArtillery");
+        const tons = typeof artRow.tons === "number" ? artRow.tons : 0;
+        if (p.troopers < tons || p.fieldGuns * p.gunCrew + p.artilleryCrew > p.troopers) add("error", "field-artillery-crew", `${artRow.name} needs ${String(p.artilleryCrew)} troopers (its weight in tons) beside any gun crews, and a platoon at least that large.`, at(FP.book, 122), "fieldArtillery");
+      }
+    }
+    for (const [row, field] of [[gunRow, "fieldGun"], [artRow, "fieldArtillery"]] as const) {
+      if (!row) continue;
+      if (row.techBase !== (record.techBase === "clan" ? "clan" : "inner-sphere")) add("error", "weapon-tech", `${row.name} is ${row.techBase === "clan" ? "Clan" : "Inner Sphere"} equipment on a ${record.techBase === "clan" ? "Clan" : "Inner Sphere"} platoon.`, at(TM, 147), field);
+      if (record.year !== null && !catalog.available(row, record.editionId, record.year)) add("warning", "weapon-year", `${row.name} is not available in ${String(record.year)}.`, at(row.cite.book, row.cite.page), field);
+      if (!levelAtLeast(level, equipmentLevel(row))) add("warning", "weapon-level", `${row.name} needs ${levelRow(equipmentLevel(row)).label} rules or higher.`, at(row.cite.book, row.cite.page), field);
     }
   }
   if (record.skills.gunnery > 8 || record.skills.antiMech > 8) add("warning", "skill", "Skill ratings run from 0 to 8.", at("TechManual Battle Value v4.1", 314), "skills");
