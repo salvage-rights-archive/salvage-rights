@@ -28,6 +28,19 @@ describe("battle armor fixed-weight items (TechManual pp. 298, 346-348)", () => 
   });
 });
 
+// Conventional infantry weapons where IO:AE (third printing, printed pp. 48-49, Production column) is later than the TechManual table (sixth printing): id, availability.
+describe("infantry weapon years follow the later printing (IO:AE pp. 48-49 over TechManual p. 299)", () => {
+  it.each([
+    ["inf-whip-neural-lash-is", [{ from: 2320 }]],
+    ["inf-whip-neural-whip-is", [{ from: 2325 }]],
+    ["inf-whip-neural-whip-clan", [{ from: 2325, to: 2786 }]],
+    ["inf-gyrojet-pistol-coventry-handrocket-is", [{ from: 3052 }]],
+    ["inf-laser-rifle-marx-xx-is", [{ from: 2670 }]],
+  ])("%s", (id, availability) => {
+    expect(catalog.byId(id)?.availability).toEqual(availability);
+  });
+});
+
 describe("battle armor parafoil, remote sensor dispenser and partial wing rules", () => {
   const record = (mounts: ReturnType<typeof mount>[], motive = { kind: "jump", mp: 2 }) => ({ ...newBaRecord({ weightClass: "medium", year: 3070 }), motive, mounts });
   const errors = (r: ReturnType<typeof record>) => checkBa(r, catalog).filter((f) => f.level === "error").map((f) => f.message);
