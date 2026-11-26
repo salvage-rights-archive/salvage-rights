@@ -518,6 +518,12 @@ export const EQUIPMENT_COST: PriceGroup[] = [
     prices: { "ba-ap-gauss-rifle": 10000, "ba-bearhunter-superheavy-ac": 11250, "ba-er-micro-laser": 10000, "ba-micro-pulse-laser": 12500, "ba-heavy-small-laser": 20000, "ba-heavy-medium-laser": 100000, "ba-bomb-rack": 30000, "ba-advanced-srm-1": 15000, "ba-advanced-srm-2": 30000, "ba-advanced-srm-3": 45000, "ba-advanced-srm-4": 60000, "ba-advanced-srm-5": 75000, "ba-advanced-srm-6": 90000 },
   },
   {
+    // TechManual p.298 (Additional Battle Armor Weapons and Equipment, continued): the fixed-weight items; one price for both tech bases
+    cite: { book: TM, page: 298 },
+    checked: "page",
+    prices: { "ba-parafoil": 3_000, "ba-partial-wing": 50_000, "ba-power-pack": 1_000, "ba-remote-sensor-dispenser": 7_500, "ba-searchlight": 500, "ba-shotgun-microphone": 750, "ba-space-operations-adaptation": 50_000, "ba-light-tag": 40_000 },
+  },
+  {
     // TO:AUE p.221 (Heavy Weapons and Equipment Construction Data: the weapon price of the naval weapons and mass drivers; the ammunition price beside it is not kept)
     cite: { book: TO, page: 221 },
     checked: "page",

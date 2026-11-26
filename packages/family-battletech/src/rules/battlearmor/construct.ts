@@ -24,7 +24,8 @@ export const locationName = (code: string): string => (Object.hasOwn(LOCATION_NA
 /** An item of the catalog's missile launchers, which carry ammunition counted in shots. */
 export const carriesShots = (row: EquipmentRow | undefined): boolean => row?.ammoKgPerShot !== undefined;
 export const isBooster = (row: EquipmentRow | undefined): boolean => row?.id.startsWith("ba-jump-booster") === true;
-export const isClamps = (row: EquipmentRow | undefined): boolean => row?.id.startsWith("ba-magnetic-clamps") === true;
+export const isWing = (row: EquipmentRow | undefined): boolean => row?.id.startsWith("ba-partial-wing") === true;
+export const isClamps =(row: EquipmentRow | undefined): boolean => row?.id.startsWith("ba-magnetic-clamps") === true;
 
 /** Kilograms, with float noise off (the catalog stores tons). */
 const kgOfTons = (tons: number): number => tidy(tons * 1000);
@@ -199,9 +200,11 @@ export function build(record: BaRecord, catalog: Catalog): BaBuild {
 
   // Movement.
   const boosters = used.filter((u) => isBooster(u.figures.row)).length;
+  // The partial wing adds a Jumping MP in atmosphere (TechManual printed p. 266); the figure shown is the atmospheric one.
+  const wings = Math.min(1, used.filter((u) => isWing(u.figures.row)).length);
   const moves: Moves = {
     ground: record.ground,
-    jump: kind === "jump" ? motiveMp + boosters : 0,
+    jump: kind === "jump" ? motiveMp + boosters + wings : 0,
     vtol: kind === "vtol" ? motiveMp : 0,
     umu: kind === "umu" ? motiveMp : 0,
   };

@@ -805,6 +805,34 @@ export const OTHER: EquipmentGroup[] = [
       { id: "ba-advanced-srm-6-clan", name: "Advanced SRM 6 (Battle Armor)", tons: 0.21, slots: 4, availability: [{ from: 3056 }], prototypeYear: 3052, kind: "weapon", ammoKgPerShot: 60, damage: "2/Msl", range: [0, 4, 8, 12] },
     ],
   },
+  {
+    // Battle armor items with a fixed weight that the two battle armor tables list (TechManual printed pp. 346-348; prices and dates printed p. 298, read
+    // against the page image): parafoil, power pack, remote sensor dispenser, searchlight, shotgun microphone, space operations adaptation, light TAG, and
+    // the Inner Sphere partial wing (printed pp. 265-266: 200 kg, one Body slot, one more Jumping MP in atmosphere, jump jets needed, never with a jump
+    // booster). Years: the table's Introduced column; "PS" is 1950 (inferred for the Clan row where it prints a dash); the remote sensor dispenser's 3050
+    // is the errata v8.0 correction to p. 268 (the table still prints PS); the space operations adaptation is 3011 (Taurian Concordat) / 2895 (Clan Snow
+    // Raven); the light TAG is 3053 (Draconis Combine) / 3054 (Clan Wolf). One suit mounts at most one parafoil (Body only) and one remote sensor
+    // dispenser (fixed payload of 6 sensors, errata v8.0 to p. 268); the others may be repeated. The squad support weapon mount, modular and turret
+    // mounts, mission equipment and detachable missile pack have a variable weight and are not rows.
+    defaults: { kind: "other", checked: "page", units: ["battlearmor"], cite: { book: "TechManual", page: 347 } },
+    items: [
+      { id: "ba-parafoil-is", techBase: "inner-sphere", name: "Parafoil (Battle Armor)", tons: 0.035, slots: 1, availability: [{ from: 1950 }] },
+      { id: "ba-power-pack-is", techBase: "inner-sphere", name: "Power Pack (Battle Armor)", tons: 0.025, slots: 1, availability: [{ from: 1950 }] },
+      { id: "ba-remote-sensor-dispenser-is", techBase: "inner-sphere", name: "Remote Sensor Dispenser (Battle Armor)", tons: 0.04, slots: 1, availability: [{ from: 3050 }] },
+      { id: "ba-searchlight-is", techBase: "inner-sphere", name: "Searchlight (Battle Armor)", tons: 0.005, slots: 1, range: [0, 0, 0, 9], availability: [{ from: 1950 }] },
+      { id: "ba-shotgun-microphone-is", techBase: "inner-sphere", name: "Shotgun Microphone (Battle Armor)", tons: 0.005, slots: 1, range: [0, 0, 0, 3], availability: [{ from: 1950 }] },
+      { id: "ba-space-operations-adaptation-is", techBase: "inner-sphere", name: "Space Operations Adaptation (Battle Armor)", tons: 0.1, slots: 1, availability: [{ from: 3011 }] },
+      { id: "ba-light-tag-is", techBase: "inner-sphere", name: "Light TAG (Battle Armor)", tons: 0.035, slots: 1, type: "E", range: [0, 3, 6, 9], availability: [{ from: 3053 }] },
+      { id: "ba-partial-wing-is", techBase: "inner-sphere", name: "Partial Wing (Battle Armor)", tons: 0.2, slots: 1, availability: [{ from: 3053 }], cite: { book: "TechManual", page: 266 } },
+      { id: "ba-parafoil-clan", techBase: "clan", name: "Parafoil (Battle Armor)", tons: 0.035, slots: 1, availability: [{ from: 1950 }], yearsInferred: true, cite: { book: "TechManual", page: 348 } },
+      { id: "ba-power-pack-clan", techBase: "clan", name: "Power Pack (Battle Armor)", tons: 0.025, slots: 1, availability: [{ from: 1950 }], yearsInferred: true, cite: { book: "TechManual", page: 348 } },
+      { id: "ba-remote-sensor-dispenser-clan", techBase: "clan", name: "Remote Sensor Dispenser (Battle Armor)", tons: 0.04, slots: 1, availability: [{ from: 3050 }], yearsInferred: true, cite: { book: "TechManual", page: 348 } },
+      { id: "ba-searchlight-clan", techBase: "clan", name: "Searchlight (Battle Armor)", tons: 0.005, slots: 1, range: [0, 0, 0, 9], availability: [{ from: 1950 }], yearsInferred: true, cite: { book: "TechManual", page: 348 } },
+      { id: "ba-shotgun-microphone-clan", techBase: "clan", name: "Shotgun Microphone (Battle Armor)", tons: 0.005, slots: 1, range: [0, 0, 0, 3], availability: [{ from: 1950 }], yearsInferred: true, cite: { book: "TechManual", page: 348 } },
+      { id: "ba-space-operations-adaptation-clan", techBase: "clan", name: "Space Operations Adaptation (Battle Armor)", tons: 0.1, slots: 1, availability: [{ from: 2895 }], cite: { book: "TechManual", page: 348 } },
+      { id: "ba-light-tag-clan", techBase: "clan", name: "Light TAG (Battle Armor)", tons: 0.035, slots: 1, type: "E", range: [0, 3, 6, 9], availability: [{ from: 3054 }], cite: { book: "TechManual", page: 348 } },
+    ],
+  },
   // Conventional infantry weapons (TechManual, Conventional Infantry Weapons Table printed pp. 349-352, read against the page images;
   // costs and dates pp. 298-301). One row per weapon and tech base (the table's "IS / Clan" is two rows, as elsewhere), `units: ["infantry"]`,
   // so no BattleMech picker offers them. `tons` is the weapon's own weight (kg / 1000; the book says it does not enter platoon construction but is

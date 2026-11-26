@@ -11,7 +11,7 @@ import { yearEraFindings } from "../checks";
 import { datesText } from "../time";
 import { tidy } from "../walk";
 import { baseFits, itemOffered, itemPhase, phaseOf, suitOffered } from "./availability";
-import { build, carriesShots, isBooster, locationName, locationsOf, shotsOf, weaponLimit } from "./construct";
+import { build, carriesShots, isBooster, isWing, locationName, locationsOf, shotsOf, weaponLimit } from "./construct";
 import type { BaRecord } from "./record";
 
 export interface BaFinding {
@@ -83,6 +83,10 @@ const motiveCheck: Check = (record, catalog) => {
   const boosters = record.mounts.filter((m) => isBooster(m.equipmentId === null ? undefined : catalog.byId(m.equipmentId)));
   if (boosters.length > 0 && kind !== "jump") out.push({ check: "motive", level: "error", message: "A jump booster needs jump jets.", where: { mountId: boosters[0]?.id }, cite: TM(165) });
   if (boosters.length > 1) out.push({ check: "motive", level: "warning", message: "A suit has one jump booster.", where: { mountId: boosters[1]?.id }, cite: TM(165) });
+  const wings = record.mounts.filter((m) => isWing(m.equipmentId === null ? undefined : catalog.byId(m.equipmentId)));
+  if (wings.length > 0 && kind !== "jump") out.push({ check: "motive", level: "error", message: "A partial wing needs jump jets.", where: { mountId: wings[0]?.id }, cite: TM(266) });
+  if (wings.length > 0 && boosters.length > 0) out.push({ check: "motive", level: "error", message: "A partial wing and a jump booster cannot be combined.", where: { mountId: wings[0]?.id }, cite: TM(266) });
+  if (wings.length > 1) out.push({ check: "motive", level: "warning", message: "A suit has one partial wing.", where: { mountId: wings[1]?.id }, cite: TM(266) });
   return out;
 };
 
@@ -138,6 +142,13 @@ const equipmentCheck: Check = (record, catalog) => {
   const out: BaFinding[] = [];
   const camo = record.mounts.filter((m) => m.equipmentId?.startsWith("ba-camo-system"));
   if (camo.length > 1) out.push({ check: "equipment", level: "error", message: "A suit may mount only one camo system.", where: { mountId: camo[1]?.id }, cite: TM(253) });
+  // One parafoil, in the Body (errata v8.0 to p. 266); one remote sensor dispenser (p. 268).
+  const parafoils = record.mounts.filter((m) => m.equipmentId?.startsWith("ba-parafoil"));
+  if (parafoils.length > 1) out.push({ check: "equipment", level: "error", message: "A suit may mount only one parafoil.", where: { mountId: parafoils[1]?.id }, cite: TM(266) });
+  const outsideBody = parafoils.find((m) => m.location !== "body");
+  if (outsideBody) out.push({ check: "equipment", level: "error", message: "A parafoil can only be mounted in the Body.", where: { mountId: outsideBody.id }, cite: TM(266) });
+  const dispensers = record.mounts.filter((m) => m.equipmentId?.startsWith("ba-remote-sensor-dispenser"));
+  if (dispensers.length > 1) out.push({ check: "equipment", level: "error", message: "A suit may mount only one remote sensor dispenser.", where: { mountId: dispensers[1]?.id }, cite: TM(268) });
   if (camo.length > 0 && record.armor.type === "mimetic") out.push({ check: "equipment", level: "error", message: "A suit may mount only one camo system, and mimetic armor is one.", where: { mountId: camo[0]?.id }, cite: TM(253) });
   for (const mount of record.mounts) {
     const row = mount.equipmentId === null ? undefined : catalog.rowFor(mount.equipmentId, record.editionId);
