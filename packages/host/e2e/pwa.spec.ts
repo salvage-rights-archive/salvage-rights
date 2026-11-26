@@ -1,6 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import type { Page } from "@playwright/test";
-import { CLASSIC, FREE, expect, test } from "./fixtures";
+import { ACES, CLASSIC, FREE, expect, test } from "./fixtures";
 
 // Service workers and offline emulation behave the same way in Chromium only, so the other browsers skip these.
 test.beforeEach(({ browserName }) => {
@@ -26,6 +26,18 @@ test("a deep link reloads with no connection, and the offline notices show", asy
 
   await page.goto(`${FREE}${CLASSIC}/import`);
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+  await context.setOffline(false);
+});
+
+test("the Aces pages, the game page among them, open with no connection once the app is installed", async ({ page, context }) => {
+  await openInstalled(page);
+  await expect(page.getByText("Offline ready: the app is saved on this device")).toBeVisible();
+  await context.setOffline(true);
+  for (const path of ["home", "new-game", "game?id=none"]) {
+    await page.goto(`${FREE}${ACES}/${path}`);
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+  }
+  await expect(page.getByText("That game is not saved on this device.")).toBeVisible();
   await context.setOffline(false);
 });
 

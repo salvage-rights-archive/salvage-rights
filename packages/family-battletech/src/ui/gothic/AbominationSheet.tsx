@@ -319,7 +319,7 @@ export default function AbominationSheet({ units = [], blank, catalog, handlers 
         <text x={ABOM_SHEET_WIDTH / 2} y={2188} fontSize={20} textAnchor="middle" fill={INK} {...squeeze(TRADEMARK_LINE, 20, 1640)}>{TRADEMARK_LINE}</text>
       </svg>
       <section className="sr-visually-hidden bt-sheet-text" aria-labelledby={`${id}-heading`}>
-        <h2 id={`${id}-heading`}>The Abomination sheet as text</h2>
+        <h2 id={`${id}-heading`}>{`The Abomination sheet as text${pageLabel ? `, ${pageLabel}` : ""}`}</h2>
         {models.map((model, i) => (
           <ModelText key={model.unit?.id ?? i} model={model} catalog={catalog} handler={model.unit ? handlers[model.unit.id] : undefined} />
         ))}

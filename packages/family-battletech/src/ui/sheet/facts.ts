@@ -1,11 +1,13 @@
 // The words and figures the record sheet prints for a 'Mech, worked out once so the drawing and the screen reader's copy
 // of the sheet say the same thing.
 import { editionName } from "../../data/editions";
+import { DAZZLE, HANDLER } from "../../data/gothic";
 import { SHEET_HEAT_SINKS, TECH_BASE_NAMES } from "../../data/sheet";
 import { ammoLines, ammoSlotLabels, inventoryLines } from "../../rules/catalog";
 import type { Catalog, InventoryLine } from "../../rules/catalog";
 import { battleValue as battleValueOf } from "../../rules/bv";
 import { BV_METHOD } from "../../data/bv";
+import { changedSinceImport } from "../../rules/mordel";
 import { levelOfRecord, levelRow } from "../../rules/levels";
 import { rulesetOf } from "../../data/rulesets";
 import type { GameId } from "../../data/rulesets";
@@ -88,9 +90,6 @@ function safeLayout(record: MechRecord, catalog: Catalog): Layout {
   }
 }
 
-/** The Handler line starts at the medium class (rulebook p. 80). */
-export const HANDLER_TONS = 40;
-
 /** Whether the record carries a Searchlight (Gothic rulebook p. 90). Read defensively until the editor lands the `gothic` field on the record. */
 export const hasSearchlight = (record: MechRecord): boolean => record.gothic?.searchlight === true;
 
@@ -103,7 +102,7 @@ export function withDazzle(lines: InventoryLine[]): InventoryLine[] {
     const heat = Number(line.heat);
     const damage = Number(line.damage);
     if (!isLaser(line) || !Number.isInteger(heat) || !Number.isInteger(damage)) return [line];
-    return [line, { ...line, qty: 0, name: "Dazzle", location: "", heat: String(Math.floor(heat / 2)), damage: String(Math.max(1, Math.floor(damage / 2))), sub: true as const }];
+    return [line, { ...line, qty: 0, name: "Dazzle", location: "", heat: String(Math.max(DAZZLE.minHeat, Math.floor(heat / DAZZLE.heatDivisor))), damage: String(Math.max(DAZZLE.minDamage, Math.floor(damage / DAZZLE.damageDivisor))), sub: true as const }];
   });
 }
 
@@ -142,14 +141,16 @@ export function sheetFacts(record: MechRecord, catalog: Catalog, options: { dazz
   const layout = safeLayout(record, catalog);
   const structure = structurePoints(record);
   const codes = layout.supported ? layout.locations : (Object.keys(record.armor) as LocationCode[]);
-  const imported = record.source?.values.battleValue;
+  // A box design keeps its printed value only until it is changed; after that the figure is ours. mordel.net imports always keep theirs.
+  const printed = record.source?.values.battleValue;
+  const imported = record.source?.kind === "book" && changedSinceImport(record).size > 0 ? undefined : printed;
   const isBase = record.omni?.isBase === true;
   const computed = imported === undefined && !isBase ? battleValueOf(record, catalog) : undefined;
   // An OmniMech configuration prints the level of its contents, never below Standard; the base prints its pod space where a Battle Value would go.
   const total = isBase ? weights(record, catalog.factsOf).total : null;
   return {
     game: ruleset.game,
-    gothic: gothic ? { handler: record.tons >= HANDLER_TONS, searchlight: hasSearchlight(record), dazzle: options.dazzle === true } : undefined,
+    gothic: gothic ? { handler: record.tons >= HANDLER.minMechTons, searchlight: hasSearchlight(record), dazzle: options.dazzle === true } : undefined,
     title: sheetTitle(record),
     walk: moved === null ? DASH : String(moved.walk),
     run: moved === null ? DASH : String(moved.run),
@@ -166,7 +167,7 @@ export function sheetFacts(record: MechRecord, catalog: Catalog, options: { dazz
     inventory: gothic && options.dazzle === true ? withDazzle(inventoryLines(record, catalog)) : inventoryLines(record, catalog),
     ammo,
     battleValue: isBase ? DASH : imported !== undefined ? imported.toLocaleString("en-US") : `${computed?.complete === false ? "at least " : ""}${(computed?.total ?? 0).toLocaleString("en-US")}`,
-    battleValueFrom: isBase ? (total === null ? "the base has none" : `the base has none; pod space ${String(Math.round((record.tons - total) * 1000) / 1000)} tons`) : imported !== undefined ? "mordel.net" : "calculated, pilot 4/5",
+    battleValueFrom: isBase ? (total === null ? "the base has none" : `the base has none; pod space ${String(Math.round((record.tons - total) * 1000) / 1000)} tons`) : imported !== undefined ? (record.source?.kind === "book" ? "as printed on the sheet" : "mordel.net") : "calculated, pilot 4/5",
     heatSinks: {
       line: `${label} Heat Sinks: ${counts} (${dissipation})`,
       summary: `${label}, ${counts} (${dissipation})`,

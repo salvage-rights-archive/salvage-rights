@@ -107,6 +107,38 @@ export interface TurnState {
   active?: { unitId: string; ticked: string[] };
   /** The distances typed during the last activation, to prefill the next. */
   lastDistances: Record<string, number>;
+  /** The Combat Phase: who has attacked, the open automated attack, Edge pips used (rules/aces-combat.ts). */
+  combat?: CombatState;
+  /** The End Phase: the step now open and the dice it has used (rules/aces-combat.ts). */
+  end?: EndState;
+}
+
+/** The Combat Phase of one turn (Aces pp. 18-20). */
+export interface CombatState {
+  /** Units that have made their attack, or been settled with none, by game-unit id: whether it was a weapon attack and the Overheat used (it cools in the End Phase unless it fired). */
+  done: Record<string, { weapon: boolean; ov: number; target?: string }>;
+  /** The automated unit whose attack is open, and the terrain the players have set for attacks on each enemy. */
+  active?: { unitId: string; terrain: Record<string, string[]> };
+  /** Pilots who have added a pip to an attack roll this phase: once a Combat Phase (p. 24). */
+  pips: string[];
+}
+
+/** The End Phase of one turn: the six steps of p. 32. */
+export interface EndState {
+  /** The step now open, 1 to 6. */
+  step: number;
+  /** Rolls typed or rerolled for a unit's critical hit and motive checks, by unit then the check's place in the order they are asked. */
+  rolls: Record<string, Record<string, number>>;
+  /** The checks an Edge token has already rerolled, by unit (one token a check, p. 24). */
+  rerolled: Record<string, number[]>;
+  /** Dice we have rolled this phase, so every roll is a new draw from the game's seed. */
+  drawn: number;
+  /** The heat step's report, kept once the damage has been applied. */
+  heat?: { id: string; name: string; from: number; to: number; shutdown: boolean; restarted: boolean }[];
+  /** The players say the sortie's objectives are complete and it ends now. */
+  objectivesComplete?: boolean;
+  /** The strategy row that held and the card taken, kept when the step is done. */
+  strategy?: { row: number | null; letter: string | null };
 }
 
 export interface AcesGame {
@@ -130,6 +162,10 @@ export interface AcesGame {
   /** The totals (rolls with every modifier) and the winner; `turn` is the turn it was decided in and `previous` the turn before's winner, for the -2. */
   initiative?: { player: number; automated: number; winner: "player" | "automated"; turn?: number; previous?: "player" | "automated" };
   tokens: { moveFirst?: string; moveLast?: string };
+  /** The last turn of the sortie, when it has one: it ends when that turn's End Phase is done (p. 32). */
+  turnLimit?: number;
+  /** Set when the game is over: why, and in which turn. */
+  over?: { reason: "turn-limit" | "objectives" | "empty-side" | "ended"; turn: number };
   /** What the players have answered during the open activation or Initiative orders. */
   sight: SightSheet;
   turnState?: TurnState;
@@ -234,6 +270,8 @@ export interface GameSetup {
   waypoints?: readonly { letter: string; turn?: number }[];
   rules?: Partial<AcesRules>;
   campaign?: AcesGame["campaign"];
+  /** The sortie's last turn, when it names one. */
+  turnLimit?: number;
 }
 
 /** A force's members as setup units, taking each from the roster (a member whose unit is gone is left out). */
@@ -313,6 +351,7 @@ export function newAcesGame(setup: GameSetup): AcesGame {
     turn: 1,
     phase: "setup",
     tokens: {},
+    ...(setup.turnLimit === undefined ? {} : { turnLimit: setup.turnLimit }),
     sight: emptySheet(),
     log: [{ turn: 0, text: "Game set up.", cite: ACES_GAME_CITE.setup.cite }],
     undo: [],

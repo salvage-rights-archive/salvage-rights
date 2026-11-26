@@ -47,6 +47,7 @@ export default function NewGamePage() {
   const [destroy, setDestroy] = useState("");
   const [waypoints, setWaypoints] = useState<WaypointRow[]>([]);
   const [rules, setRules] = useState<AcesRules>(DEFAULT_RULES);
+  const [turnLimit, setTurnLimit] = useState("");
 
   useEffect(() => {
     void (async () => {
@@ -104,6 +105,7 @@ export default function NewGamePage() {
       },
       waypoints: waypoints.filter((w) => w.letter.trim()).map((w) => ({ letter: w.letter.trim(), ...(/^\d+$/.test(w.turn.trim()) ? { turn: Number(w.turn) } : {}) })),
       rules,
+      ...(/^[1-9]\d*$/.test(turnLimit.trim()) ? { turnLimit: Number(turnLimit) } : {}),
     });
     try {
       await (await openGameStorage()).save(game);
@@ -145,7 +147,7 @@ export default function NewGamePage() {
             : `Your force is ${String(playerPv)} PV and the automated force ${String(automatedPv)} PV${aids.ratio === null ? "" : `, ${String(aids.ratio)}% of yours`}.`}
         </p>
         <p className="bt-hint">
-          {`For a game that is less challenging, build the automated force at about 80% of your PV (${String(aids.easierPv)}) and lower its Skill ratings by 1. For one that is more challenging, about 120% (${String(aids.harderPv)}) and raise them by 1. The PV total is not recalculated after a Skill change (Aces p. 38).`}
+          {`Easier: the automated force at about 80% of your PV (${String(aids.easierPv)}), each Skill number up by 1, so a Skill 4 unit becomes Skill 5. Harder: about 120% (${String(aids.harderPv)}), each Skill number down by 1. PV is not recalculated (Aces p. 38).`}
         </p>
         <div className="bt-field">
           <button type="button" className="bt-button bt-button--secondary" disabled={automated.rows.length === 0} onClick={() => { shift("easier"); }}>
@@ -245,6 +247,10 @@ export default function NewGamePage() {
           <input id="ng-48" type="checkbox" checked={rules.bigTable48} onChange={(e) => { setRule("bigTable48", e.target.checked); }} />
           A 48" table for the ideal colours
         </label>
+        <div className="bt-field">
+          <label htmlFor="ng-limit">Last turn of the sortie (leave empty for no limit)</label>
+          <input id="ng-limit" inputMode="numeric" value={turnLimit} onChange={(e) => { setTurnLimit(e.target.value); }} />
+        </div>
         <div className="bt-field">
           <label htmlFor="ng-withdraw">Forced withdrawal for crippled units</label>
           <select id="ng-withdraw" value={rules.forcedWithdrawal} onChange={(e) => { setRule("forcedWithdrawal", e.target.value as AcesRules["forcedWithdrawal"]); }}>

@@ -48,6 +48,23 @@ describe("The editor in Gothic", () => {
     expect(within(dialog).queryByRole("button", { name: /XL/ })).toBeNull();
   });
 
+  it("shows Type and Tech base at Unlimited only, which opens the whole catalog", async () => {
+    const user = userEvent.setup();
+    await openBox("FS9-HB");
+    const card = screen.getByRole("heading", { level: 2, name: "Identity" }).closest("section");
+    if (!card) throw new Error("no identity card");
+    await user.selectOptions(within(card).getByLabelText("Rules level"), "unlimited");
+    expect(within(card).getByLabelText("Type")).toBeTruthy();
+    expect([...within(card).getByLabelText<HTMLSelectElement>("Tech base").options].map((o) => o.text)).toContain("Clan");
+  });
+
+  it("hides the Official and Tournament check panels and the OFFICIAL badge, which only Classic defines", async () => {
+    await openBox("UM-R60B");
+    expect(screen.queryByRole("heading", { name: "Tournament check" })).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Official or not" })).toBeNull();
+    expect(screen.queryByText(/NOT OFFICIAL|licensed-noncanon|Standard or lower/)).toBeNull();
+  });
+
   it("shows no cost, and the printed Battle Value beside ours that says when it differs after a change", async () => {
     const user = userEvent.setup();
     await openBox("PXH-1T");
@@ -58,7 +75,8 @@ describe("The editor in Gothic", () => {
     await user.clear(screen.getByLabelText("CT, Center Torso front armor"));
     await user.type(screen.getByLabelText("CT, Center Torso front armor"), "1");
     await waitFor(() => { expect(Number(screen.getByTestId("bv-total").textContent?.replace(/\D/g, ""))).toBeLessThan(ours); });
-    expect(screen.getByText(/^Differs from the printed Battle Value/)).toBeTruthy();
+    expect(screen.getByTestId("bv-printed").textContent).toMatch(/^The sheet printed [\d,]+ before the changes; the figure above is calculated, pilot 4\/5\.$/);
+    expect(screen.getByText(/^Changed from the sheet: it printed/)).toBeTruthy();
   });
 
   it("toggles the searchlight on the record and adds no weight", async () => {

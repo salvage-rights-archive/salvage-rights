@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { newAcesCard } from "./aces-card";
 import type { AcesCard, Column, CommandCard, Key, Order, OvRow, SpecialOrderCard, SupportCard } from "./aces-card";
-import { answer, emptySheet, logText, questionText, step } from "./aces-resolve";
+import { answer, emptySheet, logText, physicalOptions, questionText, step } from "./aces-resolve";
 import type { CombatContext, DecisionOf, InitiativeContext, MoveContext, MoveDecision, Question, Reply, ResolveContext, StrategyContext, SupportContext, TableUnit } from "./aces-resolve";
 import { newPlayState } from "./as-play";
 import type { AsCard } from "./as-unit";
@@ -445,6 +445,20 @@ describe("Aces combat and command resolver", () => {
     expect(play(fight(card, [unit("mark")], { unit: down })).decision).toMatchObject({ attack: "none", reason: "shutdown" });
     const hold = combatCard(anyZone, [], [{ action: { token: "hold-fire" } }]);
     expect(play(fight(hold, [unit("mark")], { unit: unit("hound", { type: "CV" }) }), { inches: { mark: 10 } }).decision).toMatchObject({ attack: "weapon", ov: 0 });
+    // A stunned crew does not attack (Aces p. 4); an engine hit costs 1 of the heat room (ASCE p. 53).
+    const stunned = unit("hound");
+    stunned.play.stunned = true;
+    expect(play(fight(card, [unit("mark")], { unit: stunned })).decision).toMatchObject({ attack: "none", reason: "stunned" });
+    const engine = unit("hound", { ov: 3, heat: 1 });
+    engine.play.crits.engine = 1;
+    expect(play(fight(card, [unit("mark")], { unit: engine }), { inches: { mark: 10 } }).decision).toMatchObject({ attack: "weapon", ov: 1 });
+  });
+
+  it("offers each unit type only its own physical attacks: infantry Anti-Mech with AM, vehicles Charge (Melee with MEL), Mechs the rest (Aces pp. 4-5; ASCE errata v7.02)", () => {
+    const mel = [{ code: "MEL", values: [], raw: "MEL" }];
+    const am = [{ code: "AM", values: [], raw: "AM" }];
+    const kinds = (type: string, specials: AsCard["specials"] = []) => physicalOptions(unit("u", { type, specials }).card);
+    expect([kinds("CI"), kinds("BA", am), kinds("CV"), kinds("CV", mel), kinds("BM"), kinds("BM", mel)]).toEqual([[], ["anti-mech"], ["charge"], ["charge", "melee"], ["standard", "charge", "dfa"], ["melee", "charge", "dfa"]]);
   });
 
   it("attacks physically in base contact (no weapons there but for infantry), and within 1 inch (2 with MEL) when it deals more or has a Fire Control hit or heat (Aces pp. 5, 20; ASCE pp. 43, 46)", () => {
@@ -486,11 +500,15 @@ describe("Aces combat and command resolver", () => {
     const lobber = (o: UnitOptions = {}) => unit("lobber", { damage: blank, specials: iff, ov: 2, ...o });
     const ctx = (extra: Partial<CombatContext>, enemy = unit("far", { moved: 1 })) => fight(card, [enemy], { unit: lobber(), allies: [eye], ...extra });
     const prepared = { indirect: { target: "far", spotter: "eye" } };
+    const hurt = lobber();
+    hurt.play.crits.weapon = 1;
     const inRange = { s: { value: 1 }, m: { value: 1 }, l: { value: 1 } };
     const rows: [string, CombatContext, Record<string, unknown>][] = [
       ["prepared target", ctx(prepared), { attack: "indirect", target: "far", ov: 0, damage: 2, tn: { total: 9 } }],
       ["target already destroyed", ctx(prepared, unit("far", { moved: 1, staged: 9 })), { attack: "none", reason: "indirect-destroyed" }],
       ["nothing prepared", ctx({}), { attack: "none", reason: "indirect-unprepared" }],
+      ["IF0* is minimal damage", ctx({ ...prepared, unit: lobber({ specials: [{ code: "IF", values: ["0*"], raw: "IF0*" }] }) }), { attack: "indirect", damage: 0.5 }],
+      ["a Weapon Hit takes 1 off IF", ctx({ ...prepared, unit: hurt }), { attack: "indirect", damage: 1 }],
       ["no IF special", ctx({ ...prepared, unit: lobber({ specials: [] }) }), { attack: "none", reason: "no-target" }],
       ["an enemy in range comes first", ctx({ ...prepared, unit: lobber({ damage: inRange }) }), { attack: "weapon", target: "far" }],
     ];
@@ -504,6 +522,8 @@ describe("Aces combat and command resolver", () => {
     const { decision } = play(fight(undefined, enemies, { unit: gun, command: cmd }), { inches: { knight: 20, pike: 7, rook: 5 } });
     expect(decision).toMatchObject({ attack: "weapon", target: "rook", ov: 0, tn: { total: 4 } });
     expect(decision.tn?.parts.filter((p) => p.value < 0)).toEqual([expect.objectContaining({ label: "Emplacement attacking", value: -1 })]);
+    // No weapon attack on a unit in base contact (ASCE errata v7.02).
+    expect(play(fight(undefined, [unit("rook", { armor: 3, moved: 1 })], { unit: gun, command: cmd }), { inches: { rook: 0 } }).decision).toMatchObject({ attack: "none", reason: "no-target" });
   });
 
   it("gives the Initiative modifier and the Move Last and Move First tokens by their keys among units that may hold them (pp. 8, 10)", () => {

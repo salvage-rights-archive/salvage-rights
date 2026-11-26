@@ -1,7 +1,7 @@
 // The Aces table screen: a sticky bar with the turn, phase, Initiative winner, Undo and Next; the activation card with the one step
 // the players are on; a units drawer; and the log. The game saves on every change, so a reload comes back to the same step. Screen
 // Wake Lock keeps the display on while the page is open, with an off switch.
-// Combat and the End Phase are not on this page yet (ACES-9).
+// Combat and the End Phase have their own panels (AttackPanel, EndPhasePanel); a finished game shows its summary.
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { RefObject } from "react";
 import { Link, useSearchParams } from "react-router";
@@ -11,8 +11,11 @@ import { emptySheet } from "../../rules/aces-resolve";
 import { PHASE_WORDS, addLog, currentStep, forceLabel, initiativeSummary, logLine, ordersDone, ordersState, startMovement, turnStateOf, TURN_CITE } from "../../rules/aces-turn";
 import type { TurnRecords } from "../../rules/aces-turn";
 import { STORAGE_READ_FAILED, STORAGE_WRITE_FAILED } from "../storage";
+import { combatForce, startEnd } from "../../rules/aces-combat";
 import ActivationCard from "./ActivationCard";
 import type { Apply } from "./ActivationCard";
+import CombatPanel from "./AttackPanel";
+import EndPhasePanel, { GameOverPanel } from "./EndPhasePanel";
 import UnitsDrawer from "./UnitsDrawer";
 import { openGameStorage } from "./game-storage";
 import type { GameStorage } from "./game-storage";
@@ -80,6 +83,19 @@ function Log({ game, headingRef }: { game: AcesGame; headingRef: RefObject<HTMLH
       </ol>
     </section>
   );
+}
+
+function Phase(props: { game: AcesGame; records: TurnRecords; apply: Apply; touched: boolean }) {
+  switch (props.game.phase) {
+    case "combat":
+      return <CombatPanel {...props} />;
+    case "end":
+      return <EndPhasePanel {...props} />;
+    case "over":
+      return <GameOverPanel game={props.game} />;
+    default:
+      return <ActivationCard {...props} />;
+  }
 }
 
 export default function GamePage() {
@@ -182,12 +198,20 @@ export default function GamePage() {
     ...game.sides.automated.units.map((unit) => ({ force: "automated" as const, unit })),
   ];
 
-  const nextLabel = game.phase === "initiative" ? "Start the Movement Phase" : game.phase === "movement" ? "Go to the Combat Phase" : "";
-  const nextReady = game.phase === "initiative" ? summary.outcome === "decided" && ordersDone(ordersState(game, records)) : game.phase === "movement" ? currentStep(game) === null && !ts.active : false;
-  const nextWhy = game.phase === "initiative" ? "Settle the orders and the roll first." : "Every unit has to move first.";
+  const nextLabel = game.phase === "initiative" ? "Start the Movement Phase" : game.phase === "movement" ? "Go to the Combat Phase" : game.phase === "combat" ? "Go to the End Phase" : "";
+  const nextReady =
+    game.phase === "initiative"
+      ? summary.outcome === "decided" && ordersDone(ordersState(game, records))
+      : game.phase === "movement"
+        ? currentStep(game) === null && !ts.active
+        : game.phase === "combat"
+          ? combatForce(game) === null && !ts.combat?.active
+          : false;
+  const nextWhy = game.phase === "initiative" ? "Settle the orders and the roll first." : game.phase === "movement" ? "Every unit has to move first." : "Every unit has to attack first.";
   const advance = (): void => {
     if (game.phase === "initiative") apply((g) => startMovement(g, initiativeSummary(g)));
-    else apply((g) => addLog({ ...g, phase: "combat", sight: emptySheet() }, logLine(g, "Movement Phase ends.", TURN_CITE.loserFirst.cite)));
+    else if (game.phase === "movement") apply((g) => addLog({ ...g, phase: "combat", sight: emptySheet() }, logLine(g, "Movement Phase ends.", TURN_CITE.loserFirst.cite)));
+    else apply((g) => startEnd(g));
   };
 
   const undo = (): void => {
@@ -224,9 +248,9 @@ export default function GamePage() {
               Log
             </button>
           </div>
-          {view === "now" ? <ActivationCard game={game} records={records} apply={apply} touched={touched} /> : <Log game={game} headingRef={logHeading} />}
+          {view === "now" ? <Phase game={game} records={records} apply={apply} touched={touched} /> : <Log game={game} headingRef={logHeading} />}
         </div>
-        <UnitsDrawer units={units} />
+        <UnitsDrawer units={units} phase={game.phase} apply={apply} />
       </div>
 
       <div className="aces-bar" role="region" aria-label="Turn bar">

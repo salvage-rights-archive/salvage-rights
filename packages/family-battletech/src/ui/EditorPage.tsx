@@ -2,7 +2,7 @@
 // (for Undo and Redo), derives everything else from the current record, and hands each panel what it shows and an
 // `onEdit(change)` callback. Every edit goes through `editRecord`.
 import { editionName } from "../data/editions";
-import { baseOf, gameBase, gameOfPath, RULESETS, rulesetOf } from "../data/rulesets";
+import { baseOf, gameBase, gameOfPath, listsOpen, RULESETS, rulesetOf } from "../data/rulesets";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import type { ChangeEvent, CSSProperties, ReactNode } from "react";
 import { Link, useBlocker, useLocation, useNavigate, useSearchParams } from "react-router";
@@ -694,6 +694,7 @@ function Editor({ initial, unsaved, startAt, catalog, storage }: { initial: Doc;
   const base = gameBase(record);
   const ruleset = rulesetOf(record.editionId);
   const gothic = ruleset.game === "gothic";
+  const open = listsOpen(ruleset, record.rulesLevel); // Unlimited opens the whole catalog, Clan rows and every unit type included
   // Items whose weight we worked out because no book prints it (the Light Blazer), each named once for the weight list.
   const inferredWeights = gothic ? [...new Set(record.mounts.flatMap((m) => { const row = m.equipmentId ? catalog.rowFor(m.equipmentId, record.editionId) : undefined; const why = row && inferredWeight(row); return row && why ? [`${row.name}: ${why}`] : []; }))] : [];
   const mark = (path: string) => changed.has(path);
@@ -742,9 +743,11 @@ function Editor({ initial, unsaved, startAt, catalog, storage }: { initial: Doc;
           </Link>
           <h1 tabIndex={-1}>{title || "Unnamed 'Mech"}</h1>
           <p className="bt-hint">Built under: {editionName(record.editionId)}</p>
-          <p>
-            <OfficialBadge record={record} />
-          </p>
+          {!gothic && (
+            <p>
+              <OfficialBadge record={record} />
+            </p>
+          )}
         </div>
         <div className="bt-actions">
           <button type="button" className="bt-button" disabled={!dirty} onClick={() => void save()}>
@@ -845,7 +848,8 @@ function Editor({ initial, unsaved, startAt, catalog, storage }: { initial: Doc;
 
       <div className="bt-editor__side">
         <FindingsPanel findings={findings} targetOf={targetOf} onChoose={focusTarget} />
-        <CompliancePanel compliance={compliance} targetOf={targetOf} onChoose={focusTarget} />
+        {/* The Gothic books name no Official mark and no tournament check, so Gothic records show neither (hide, do not mark). */}
+        {!gothic && <CompliancePanel compliance={compliance} targetOf={targetOf} onChoose={focusTarget} />}
         <CalculatorPanel record={record} catalog={catalog} />
       </div>
 
@@ -904,7 +908,7 @@ function Editor({ initial, unsaved, startAt, catalog, storage }: { initial: Doc;
                     OmniMech
                   </span>
                 </div>
-              ) : gothic ? null : (
+              ) : gothic && !open ? null : (
                 <TypeSelect
                   record={record}
                   onChange={(type) => {
@@ -937,7 +941,7 @@ function Editor({ initial, unsaved, startAt, catalog, storage }: { initial: Doc;
                 onChange={(v) => { edit((d) => { setConfiguration(d, v); }); }}
               />
               <LevelSelect record={record} ruleset={ruleset} onChange={(level) => { edit((d) => void (d.rulesLevel = level)); }} />
-              {!gothic && (
+              {(!gothic || open) && (
               <SelectField
                 id="field-techBase"
                 label="Tech base"
@@ -1063,7 +1067,7 @@ function Editor({ initial, unsaved, startAt, catalog, storage }: { initial: Doc;
               })}
           </section>
 
-          <OfficialPanel key={record.id} record={record} onEdit={edit} />
+          {!gothic && <OfficialPanel key={record.id} record={record} onEdit={edit} />}
 
           <section className="bt-panel">
             <details className="bt-notes">

@@ -167,26 +167,27 @@ export function flipTop(state: DeckState, unitId: string): DeckState {
  * so every card is turned back and shuffled (p. 19). Units sharing a split deck are re-dealt together from all their cards and
  * the set-aside ones (p. 38).
  */
-export function cycle(state: DeckState, unitId: string): { state: DeckState; reshuffled: boolean } {
+export function cycle(state: DeckState, unitId: string, using: (unitId: string) => boolean = () => true): { state: DeckState; reshuffled: boolean } {
   const deck = deckOf(state, unitId);
   if (!deck || deck.cards.length === 0) return { state, reshuffled: false };
   const [top, ...rest] = deck.cards;
   const cards = [...rest, top!];
   const moved: DeckState = { ...state, decks: state.decks.map((d) => (d === deck ? { ...d, cards } : d)) };
   if (!cards[0]!.flipped) return { state: moved, reshuffled: false };
-  return { state: reshuffle(moved, deck.deckKey), reshuffled: true };
+  return { state: reshuffle(moved, deck.deckKey, (id) => id === unitId || using(id)), reshuffled: true };
 }
 
-function reshuffle(state: DeckState, key: string): DeckState {
+/** Only the units still using the deck pool its cards and are dealt again (p. 38); a destroyed unit keeps what it had. */
+function reshuffle(state: DeckState, key: string, using: (unitId: string) => boolean): DeckState {
   const rng = mulberry32(state.rng);
-  const sharing = state.decks.filter((d) => d.deckKey === key);
+  const sharing = state.decks.filter((d) => d.deckKey === key && using(d.unitId));
   const pool = [...sharing.flatMap((d) => d.cards.map((c) => c.id)), ...(state.aside[key] ?? [])];
   const { piles, aside: extras } = sharing.length === 1 ? { piles: [shuffled(pool, rng)], aside: [] } : deal(pool, sharing.length, rng);
   const nextAside = { ...state.aside };
   if (extras.length) nextAside[key] = extras;
   else delete nextAside[key];
   let i = 0;
-  const decks = state.decks.map((d) => (d.deckKey === key ? { ...d, cards: slots(piles[i++]!) } : d));
+  const decks = state.decks.map((d) => (sharing.includes(d) ? { ...d, cards: slots(piles[i++]!) } : d));
   return { rng: rng.state(), decks, aside: nextAside };
 }
 

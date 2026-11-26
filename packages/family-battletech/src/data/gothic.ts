@@ -156,3 +156,80 @@ export const HANDLER = { skillBonus: -1, maxUnits: 3, minMechTons: 40, cite: { b
 
 /** More than this much damage to a unit in one phase can make it stumble (p. 73): the AniMelee roll to avoid it takes +1 above this and +1 per creature killed. */
 export const STUMBLE_DAMAGE = 20;
+
+// ---- Optional rules and scenario figures (rulebook pp. 79 and 90; read against the page images 2026-11-25, G-10) --------------------
+
+/** Dazzle Mode (p. 79): a laser's heat and damage against a 'Mech are divided and rounded down, to these floors; full damage against Abominations. */
+export const DAZZLE = { heatDivisor: 2, minHeat: 0, damageDivisor: 2, minDamage: 1, cite: { book: GOTHIC_BOOK, page: 79 }, checked: "page" } as const;
+/** A head hit by a Dazzle Mode laser on a Frayed MechWarrior's 'Mech (p. 79): pilot damage and consciousness rolls. */
+export const DAZZLE_FRAYED = { pilotDamage: 2, consciousnessRolls: 2, cite: { book: GOTHIC_BOOK, page: 79 }, checked: "page" } as const;
+
+/** Expanded Flamers (p. 79): the heat a flamer may apply instead of damage equals its damage (the catalog's `flamer-is`); a flamer hit on an Abomination does this much damage, in clusters. */
+export const FLAMER = { flamerId: "flamer-is", againstAbomination: "2D6", clusterSize: 5, cite: { book: GOTHIC_BOOK, page: 79 }, checked: "page" } as const;
+
+export type ConditionId = "full-moon-night" | "glaring-sun" | "moonless-night" | "solar-flare" | "pitch-black";
+/** Planetary conditions (p. 90): extra MP per hex, weapon and physical attack modifiers, and the heat on the target that lowers the attack modifiers by 1. */
+export interface PlanetaryCondition {
+  /** The conditions that share these figures. */
+  ids: ConditionId[];
+  mp: number;
+  weapon: number;
+  physical: number;
+  heatPerStep: number;
+  cite: GothicCite;
+  checked: Checked;
+}
+const P90 = { book: GOTHIC_BOOK, page: 90 };
+export const CONDITION_NAMES: Record<ConditionId, string> = {
+  "full-moon-night": "Full Moon Night",
+  "glaring-sun": "Glaring Sun",
+  "moonless-night": "Moonless Night",
+  "solar-flare": "Solar Flare",
+  "pitch-black": "Pitch Black",
+};
+export const PLANETARY_CONDITIONS: readonly PlanetaryCondition[] = [
+  { ids: ["full-moon-night", "glaring-sun"], mp: 1, weapon: 2, physical: 0, heatPerStep: 20, cite: P90, checked: "page" },
+  { ids: ["moonless-night", "solar-flare"], mp: 2, weapon: 3, physical: 1, heatPerStep: 15, cite: P90, checked: "page" },
+  { ids: ["pitch-black"], mp: 3, weapon: 4, physical: 2, heatPerStep: 10, cite: P90, checked: "page" },
+];
+
+/** Ultraviolet sensitivity (p. 90) as it changes a condition's modifiers, for Abominations and for 'Mechs driven by Frayed MechWarriors:
+ * "ignore", or a change to every movement and attack modifier (a reduction never goes below 0), or 0 for no effect. */
+export type UvEffect = "ignore" | number;
+export const ULTRAVIOLET: readonly { ids: ConditionId[]; abomination: UvEffect; frayed: UvEffect; cite: GothicCite; checked: Checked }[] = [
+  { ids: ["full-moon-night"], abomination: "ignore", frayed: "ignore", cite: P90, checked: "page" },
+  { ids: ["moonless-night", "pitch-black"], abomination: -2, frayed: -2, cite: P90, checked: "page" },
+  { ids: ["glaring-sun", "solar-flare"], abomination: 1, frayed: 0, cite: P90, checked: "page" },
+];
+
+/** Searchlights (p. 90): darkness modifiers drop by this much, to a minimum of 0, in the lit area; the light breaks on this roll or more (2D6) when the torso takes damage. */
+export const SEARCHLIGHT = { reduction: 3, breaksOn: 7, cite: P90, checked: "page" } as const;
+/** Fortified hexes (p. 90): added to attacks on a unit of these classes at ground level. */
+export const FORTIFIED = { modifier: 2, classes: ["swarmer", "hulk"] as AbomClassId[], cite: P90, checked: "page" } as const;
+
+/** The order and grouping of the Abomination-Mounted Weapons Table (p. 92). Each id is a catalog row; its figures are read from it, not repeated. */
+export const ABOM_WEAPON_ROWS: readonly { group: string; ids: string[] }[] = [
+  { group: "Energy", ids: ["medium-laser-is", "small-laser-is", "light-blazer-gothic", "flamer-is"] },
+  { group: "Ballistic", ids: ["light-antimech-rifle-gothic", "medium-antimech-rifle-gothic", "heavy-antimech-rifle-gothic", "light-machine-gun-is", "machine-gun-is", "heavy-machine-gun-is"] },
+  { group: "Missile (per tube)", ids: ["lrm-5-is", "rocket-launcher-5-gothic", "srm-4-is", "srm-5-gothic", "srm-6-is"] },
+];
+export const ABOM_WEAPON_CITE: GothicCite = { book: GOTHIC_BOOK, page: 92 };
+
+/** Short names for hit locations (see HitLocation). */
+export const LOCATION_NAMES: Record<HitLocation, string> = {
+  HD: "Head",
+  "CT-F": "Front CT",
+  "CT-R": "Rear CT",
+  "RT-F": "Front RT",
+  "RT-R": "Rear RT",
+  "LT-F": "Front LT",
+  "LT-R": "Rear LT",
+  RA: "Right arm",
+  LA: "Left arm",
+  RL: "Right leg",
+  LL: "Left leg",
+  RFL: "Right front leg",
+  RRL: "Right rear leg",
+  LFL: "Left front leg",
+  LRL: "Left rear leg",
+};

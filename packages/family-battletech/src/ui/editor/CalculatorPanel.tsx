@@ -9,6 +9,7 @@ import { battleValue } from "../../rules/bv";
 import type { BvResult } from "../../rules/bv";
 import { unitCost } from "../../rules/cost";
 import type { UnitCost } from "../../rules/cost";
+import { changedSinceImport } from "../../rules/mordel";
 import { industrialRulesOf } from "../../rules/mech";
 import type { MechRecord } from "../../rules/mech";
 
@@ -170,6 +171,7 @@ export default function CalculatorPanel({ record, catalog }: { record: MechRecor
   const ruleset = rulesetOf(record.editionId);
   const sourceBv = record.source?.values.battleValue;
   const printedBook = record.source?.kind === "book";
+  const changedBook = printedBook && changedSinceImport(record).size > 0;
   const inferredBv = deferred.mounts.some((m) => (m.equipmentId ? catalog.byId(m.equipmentId)?.bvInferred : false));
 
   // A status line that is read out once the figures have settled for a moment, not on every key.
@@ -222,12 +224,14 @@ export default function CalculatorPanel({ record, catalog }: { record: MechRecor
         {bvText}
       </p>
       {printedBook && sourceBv !== undefined && (
-        <p className="bt-calc__printed" data-testid="bv-printed">{`As printed on the sheet: ${number(sourceBv)}`}</p>
+        <p className="bt-calc__printed" data-testid="bv-printed">{changedBook ? `The sheet printed ${number(sourceBv)} before the changes; the figure above is calculated, pilot 4/5.` : `As printed on the sheet: ${number(sourceBv)}`}</p>
       )}
       {sourceBv !== undefined && sourceBv !== bv.baseBv && (
         <p className="bt-calc__differs">
           {printedBook
-            ? `Differs from the printed Battle Value: the sheet prints ${number(sourceBv)}; we work out ${number(bv.baseBv)} at Gunnery 4, Piloting 5, a difference of ${number(Math.abs(sourceBv - bv.baseBv))}.${inferredBv ? " An item here has no printed Battle Value, so ours is inferred." : ""}`
+            ? changedBook
+              ? `Changed from the sheet: it printed ${number(sourceBv)}; we work out ${number(bv.baseBv)} at Gunnery 4, Piloting 5.${inferredBv ? " An item here has no printed Battle Value, so ours is inferred." : ""}`
+              : `Differs from the printed Battle Value: the sheet prints ${number(sourceBv)}; we work out ${number(bv.baseBv)} at Gunnery 4, Piloting 5, a difference of ${number(Math.abs(sourceBv - bv.baseBv))}.${inferredBv ? " An item here has no printed Battle Value, so ours is inferred." : ""}`
             : `Mordel gives ${number(sourceBv)}; we work out ${number(bv.baseBv)} at Gunnery 4, Piloting 5, a difference of ${number(Math.abs(sourceBv - bv.baseBv))}. The record sheet prints Mordel's figure.`}
         </p>
       )}

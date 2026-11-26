@@ -33,6 +33,12 @@ const books = (["play", "construction"] as const)
   })
   .join(" ");
 
+/** What the rules check will say about a box design that the sheet itself explains, in our words. */
+const BOX_NOTES: Record<string, string> = {
+  "KGC-0000": "The sheet splits each AC/20 across a torso and an arm. We place each in its arm, so the rules check shows two slot errors.",
+  "PXH-1T": "The sheet leaves half a ton unused, so the rules check shows a weight finding.",
+};
+
 /** The box designs grouped by chassis, in the order the sheets list them. */
 const BOX_GROUPS = GOTHIC_BOX_SPECS.reduce<{ chassis: string; specs: typeof GOTHIC_BOX_SPECS }[]>((groups, spec) => {
   const group = groups.find((g) => g.chassis === spec.chassis);
@@ -349,6 +355,7 @@ export default function GothicHomePage() {
                   <span className="bt-row__text">
                     {spec.tons} tons
                     <span className="bt-row__credit">{`${levelRow(spec.level, GOTHIC).label}, Battle Value ${spec.printedBv.toLocaleString("en-US")} as printed`}</span>
+                    {BOX_NOTES[spec.model] !== undefined && <span className="bt-row__credit">{BOX_NOTES[spec.model]}</span>}
                   </span>
                   <span className="bt-row__actions">
                     <button
@@ -476,10 +483,25 @@ export default function GothicHomePage() {
       </section>
 
       <section className="bt-section" aria-labelledby="bt-abom">
-        <h2 id="bt-abom">Abomination units</h2>
-        <p>
+        <h2 id="bt-abom">Abomination units and forces</h2>
+        <p className="bt-actions">
           <Link className="bt-button" to={`${GOTHIC_BASE}/abominations`}>
             Abomination units
+          </Link>{" "}
+          <Link className="bt-button" to={`${GOTHIC_BASE}/force`}>
+            Forces
+          </Link>{" "}
+          <Link className="bt-button bt-button--secondary" to={`${GOTHIC_BASE}/play`}>
+            Abomination tracker
+          </Link>
+        </p>
+      </section>
+
+      <section className="bt-section" aria-labelledby="bt-aids">
+        <h2 id="bt-aids">Rules reference</h2>
+        <p>
+          <Link className="bt-button" to={`${GOTHIC_BASE}/aids`}>
+            Rules reference tables
           </Link>
         </p>
       </section>

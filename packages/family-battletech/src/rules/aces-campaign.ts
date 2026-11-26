@@ -17,11 +17,17 @@ import {
   type PilotType,
   type RepairCategory,
 } from "../data/aces";
+import { ACES_SS_BOOK, acesCite } from "../data/aces";
+import { SS_SORTIES } from "../data/aces-scouring-sands";
+import type { SsSortie, SsUnit } from "../data/aces-scouring-sands";
+import type { CommandLetter } from "../data/aces-vocab";
 import { crippled } from "./as-play";
 import type { PlayState } from "./as-play";
-import type { AsCard } from "./as-unit";
-import { isEmplacement } from "./aces-game";
-import type { GameUnit } from "./aces-game";
+import type { AsCard, AsUnit } from "./as-unit";
+import { unitTitle } from "./as-unit";
+import type { AcesCard, CommandCard } from "./aces-card";
+import { isEmplacement, newAcesGame, recordedDecks } from "./aces-game";
+import type { AcesGame, AcesRules, GameUnit, SetupUnit } from "./aces-game";
 
 export interface Finding {
   id: string;
@@ -112,6 +118,8 @@ export interface AcesCampaign {
   pilots: NamedPilot[];
   ledger: LedgerEntry[];
   sorties: SortieRecord[];
+  /** The sortie started and not yet recorded: its game and the reconnaissance paid for, which the after-sortie steps read back. */
+  started?: { number: number; gameId: string; recon: { label: string; sp: number }[] };
 }
 
 const finding = (id: string, text: string, cite: string): Finding => ({ id, text, cite });
@@ -675,4 +683,217 @@ export function isAcesCampaign(v: unknown): v is AcesCampaign {
   if (typeof v !== "object" || v === null) return false;
   const c = v as Partial<AcesCampaign>;
   return c.kind === "aces-campaign" && c.schema === 1 && typeof c.id === "string" && Array.isArray(c.roster) && Array.isArray(c.pilots) && Array.isArray(c.ledger) && Array.isArray(c.sorties);
+}
+
+// ---- Starting a sortie (Aces pp. 30-31; Scouring Sands pp. 5-63) ----
+
+const SORTIE_CITE = { setup: acesCite("30-31"), fielding: acesCite(31), checked: "page" } as const;
+
+/** One opposing unit of the book's list, one row per miniature, numbered as the book numbers them. */
+export interface OpposingRow extends Omit<SsUnit, "count"> {
+  /** The book's position in the list, from 1. */
+  position: number;
+}
+
+/** The book's unit rows expanded one per unit, so "x4" is four rows and positions match the book's numbers. */
+export function opposingRows(sortie: Pick<SsSortie, "opposing">): OpposingRow[] {
+  const rows: OpposingRow[] = [];
+  for (const { count = 1, ...u } of sortie.opposing.units) {
+    for (let i = 0; i < count; i += 1) rows.push({ ...u, position: rows.length + 1 });
+  }
+  return rows;
+}
+
+const squash = (name: string): string => name.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+
+/**
+ * The saved Alpha Strike unit for a name printed in the book: the same words ignoring case and punctuation, else the one unit
+ * whose name begins with them (a roster entry "Howler 6" for the book's "Howler"). Undefined when none fits or several do.
+ */
+export function matchOpposingUnit(name: string, roster: readonly AsUnit[]): AsUnit | undefined {
+  const want = squash(name);
+  const exact = roster.filter((u) => squash(unitTitle(u)) === want);
+  if (exact.length > 0) return exact[0];
+  const prefix = roster.filter((u) => squash(unitTitle(u)).startsWith(`${want} `));
+  return prefix.length === 1 ? prefix[0] : undefined;
+}
+
+/** The sortie numbers to offer: the next steps of the last recorded sortie, the same number again after a failure, 1 at the start. */
+export function nextSortieOffers(c: Pick<AcesCampaign, "sorties">): { n: number; keyword?: true }[] {
+  const last = c.sorties.at(-1);
+  if (!last) return [{ n: 1 }];
+  if (last.result === "failed") return [{ n: last.number }];
+  if (last.next !== undefined) return [{ n: last.next }];
+  const data = SS_SORTIES.find((s) => s.n === last.number && s.n > 0);
+  return data ? data.next : [];
+}
+
+/** Units the player may field: active ones only. Destroyed and sold units are not offered (hide, do not mark). */
+export const fieldableUnits = (c: AcesCampaign): RosterUnit[] => activeUnits(c);
+
+export interface FieldedUnit {
+  unitId: string;
+  pilotId?: string;
+  commander?: boolean;
+  /** The PV of the OMNI variant the unit is reconfigured to, when it is. */
+  omniPv?: number;
+}
+
+/** Pilots for one unit's choice: right type, alive, not wounded, and not already crewing another fielded unit. */
+export function pilotsForUnit(c: AcesCampaign, unitType: string, taken: readonly string[]): NamedPilot[] {
+  return eligiblePilots(c, unitType).filter((p) => !taken.includes(p.id));
+}
+
+export interface OmniLine {
+  unitId: string;
+  name: string;
+  sp: number;
+}
+
+/** The OMNI reconfiguration costs of the fielded units (p. 31). */
+export function omniLines(c: AcesCampaign, fielded: readonly FieldedUnit[]): OmniLine[] {
+  return fielded.flatMap((f) => {
+    const unit = c.roster.find((r) => r.unitId === f.unitId);
+    if (!unit || f.omniPv === undefined || f.omniPv <= 0) return [];
+    return [{ unitId: unit.unitId, name: unit.name, sp: omniCost({ size: unit.size ?? 1, oldPv: unit.pv, newPv: f.omniPv }) }];
+  });
+}
+
+/** The PV the fielded force counts for against the limit: each unit's printed PV, or its OMNI variant's. */
+export function fieldedPv(c: AcesCampaign, fielded: readonly FieldedUnit[]): number {
+  return sum(fielded.map((f) => f.omniPv ?? c.roster.find((r) => r.unitId === f.unitId)?.pv ?? 0));
+}
+
+export interface FieldingCheck {
+  limit: number;
+  adjusted: number;
+  total: number;
+  findings: Finding[];
+}
+
+const ssPages = (s: { pages: string }): string => `${ACES_SS_BOOK}, pp. ${s.pages}`;
+
+/** The force against the sortie's limit adjusted for the difficulty (p. 31), and the book's count limits. Advice, never a refusal. */
+export function checkFielding(c: AcesCampaign, fielded: readonly FieldedUnit[], sortie: Pick<SsSortie, "pages"> & { player: { pv: number; maxUnits?: number; units?: number } } | undefined, limitOverride?: number): FieldingCheck {
+  const limit = limitOverride ?? sortie?.player.pv ?? 0;
+  const adjusted = adjustedPvLimit(limit, c);
+  const total = fieldedPv(c, fielded);
+  const findings: Finding[] = [];
+  if (limit > 0 && total > adjusted) findings.push(finding("over-limit", `The force is ${String(total)} PV and the limit for this sortie is ${String(adjusted)} PV.`, SORTIE_CITE.fielding));
+  if (sortie?.player.maxUnits !== undefined && fielded.length > sortie.player.maxUnits) findings.push(finding("too-many", `The sortie allows at most ${String(sortie.player.maxUnits)} units.`, ssPages(sortie)));
+  if (sortie?.player.units !== undefined && fielded.length !== sortie.player.units) findings.push(finding("exact-count", `The sortie asks for exactly ${String(sortie.player.units)} units.`, ssPages(sortie)));
+  if (fielded.length === 0) findings.push(finding("none", "Choose at least one unit.", SORTIE_CITE.setup));
+  return { limit, adjusted, total, findings };
+}
+
+/** The letters of a waypoint group as the book writes them: "A" or "A-E". */
+export function expandLetters(letters: string): string[] {
+  const m = /^([A-Z])-([A-Z])$/.exec(letters.trim());
+  if (!m) return letters.trim() === "" ? [] : [letters.trim()];
+  const from = m[1]!.charCodeAt(0);
+  const to = m[2]!.charCodeAt(0);
+  return Array.from({ length: Math.max(0, to - from + 1) }, (_, i) => String.fromCharCode(from + i));
+}
+
+/** The game's waypoint letters from the book's placements: one letter each, with its turn when the book gives a single one. */
+export function sortieWaypoints(sortie: Pick<SsSortie, "waypoints">): { letter: string; turn?: number }[] {
+  return sortie.waypoints.flatMap((g) => expandLetters(g.letters).map((letter) => ({ letter, ...(g.at === "turn" && g.turn !== undefined ? { turn: g.turn } : {}) })));
+}
+
+export interface SortieGameInput {
+  id: string;
+  seed: number;
+  at: string;
+  campaign: AcesCampaign;
+  number: number;
+  /** The book's data for the sortie; absent for a sortie of the player's own. */
+  sortie?: SsSortie;
+  /** The units fielded, with their Alpha Strike cards. */
+  fielded: (FieldedUnit & { unit: AsUnit })[];
+  /** The opposing units in the order they take, each with its row (book or typed) and the card matched to it. */
+  opposing: { row: { position: number; name: string; skill: number; commander?: boolean; deck?: SsUnit["deck"] | undefined }; unit: AsUnit }[];
+  cards: readonly AcesCard[];
+  commandCards: readonly CommandCard[];
+  startLetter?: CommandLetter;
+  rules?: Partial<AcesRules>;
+  waypoints?: { letter: string; turn?: number }[];
+}
+
+/** A unit without a Named Pilot fights at Skill 4. A pilot's Skill does not change the PV, which stays the printed one (p. 31). */
+const UNNAMED_SKILL = 4;
+
+/** The deck the book names for an opposing unit, when the player has recorded it (else its role deck; else none, and the usual choice stands). */
+export function bookDeck(deck: SsUnit["deck"], recorded: readonly string[]): string | undefined {
+  if (!deck) return undefined;
+  const same = (a: string, b: string): boolean => a.trim().toLowerCase() === b.trim().toLowerCase();
+  const full = deck.subtype ? `${deck.role} (${deck.subtype})` : deck.role;
+  return recorded.find((r) => same(r, full)) ?? recorded.find((r) => same(r, deck.role));
+}
+
+const squeeze = (text: string): string => text.toLowerCase().replace(/\s+/g, "");
+
+/** The game for a sortie: the fielded units with their pilots, the opposing force from the book, decks, and the command deck's start card. */
+export function buildSortieGame(input: SortieGameInput): AcesGame {
+  const { campaign, sortie } = input;
+  const recorded = recordedDecks(input.cards);
+  const pilots = new Map(campaign.pilots.map((p) => [p.id, p]));
+  const player: SetupUnit[] = input.fielded.map((f) => {
+    const pilot = f.pilotId ? pilots.get(f.pilotId) : undefined;
+    const stats = pilot ? pilotStats(pilot) : undefined;
+    const roster = campaign.roster.find((r) => r.unitId === f.unitId);
+    return {
+      unitId: f.unitId,
+      name: roster?.name ?? unitTitle(f.unit),
+      card: f.unit.card,
+      skill: stats?.skill ?? UNNAMED_SKILL,
+      pv: f.omniPv ?? roster?.pv ?? f.unit.card.pv,
+      ...(pilot ? { pilot: pilot.callsign, pilotId: pilot.id, edge: stats?.edge ?? 0 } : {}),
+    };
+  });
+  const playerCommander = input.fielded.findIndex((f) => f.commander);
+  const automated: SetupUnit[] = input.opposing.map(({ row, unit }) => {
+    const deck = row.deck ? bookDeck(row.deck, recorded) : isEmplacement(unit.card) ? null : undefined;
+    return { unitId: unit.id, name: row.name, card: unit.card, skill: row.skill, ...(deck === undefined ? {} : { deck }) };
+  });
+  // Where the book makes a later unit the commander, it takes over.
+  const autoCommander = input.opposing.reduce((at, o, i) => (o.row.commander ? i : at), -1);
+  const wanted = sortie ? squeeze(sortie.command.commander) : undefined;
+  const commandCards = wanted ? input.commandCards.filter((c) => squeeze(c.commander) === wanted) : input.commandCards;
+  const game = newAcesGame({
+    id: input.id,
+    name: sortie && sortie.n > 0 ? `Sortie ${String(sortie.n)}: ${sortie.title}` : `Sortie ${String(input.number)}`,
+    seed: input.seed,
+    at: input.at,
+    player: { units: player, ...(playerCommander < 0 ? {} : { commander: playerCommander }) },
+    automated: { units: automated, ...(autoCommander < 0 ? {} : { commander: autoCommander }) },
+    cards: input.cards,
+    commandCards,
+    ...(input.startLetter ? { startLetter: input.startLetter } : {}),
+    waypoints: input.waypoints ?? [],
+    rules: input.rules ?? {},
+    ...(sortie?.turns ? { turnLimit: sortie.turns } : {}),
+    campaign: { campaignId: campaign.id, sortie: String(input.number) },
+  });
+  // A waypoint on a numbered opposing unit follows that unit into the game.
+  for (const group of sortie?.waypoints ?? []) {
+    if (group.at !== "unit" || group.unit === undefined) continue;
+    const at = input.opposing.findIndex((o) => o.row.position === group.unit);
+    if (at < 0) continue;
+    for (const letter of expandLetters(group.letters)) {
+      const w = game.waypoints.find((x) => x.letter === letter);
+      if (w) w.unitId = `a${String(at + 1)}`;
+    }
+  }
+  return game;
+}
+
+/** The reconnaissance paid for when this sortie was started, for the after-sortie expenses. */
+export const reconPaid = (c: Pick<AcesCampaign, "started">, number: number): { label: string; sp: number }[] => (c.started?.number === number ? c.started.recon : []);
+
+/** Starts the sortie on the campaign: the game it belongs to, the reconnaissance paid for, and the OMNI fees on the ledger. */
+export function startSortie(c: AcesCampaign, input: { number: number; gameId: string; recon: { label: string; sp: number }[]; omni: OmniLine[] }): AcesCampaign {
+  const id = `sortie-${String(input.number)}`;
+  const kept = c.ledger.filter((l) => !(l.sortie === id && l.id.startsWith(`${id}-omni-`)));
+  const fees = input.omni.filter((o) => o.sp > 0).map((o) => ({ id: `${id}-omni-${o.unitId}`, label: `OMNI reconfiguration of ${o.name}`, amount: -o.sp, sortie: id }));
+  return { ...c, ledger: [...kept, ...fees], started: { number: input.number, gameId: input.gameId, recon: input.recon } };
 }

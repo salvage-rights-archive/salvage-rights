@@ -35,6 +35,7 @@ test.describe("dev edition", () => {
       const box = await link.boundingBox();
       if (box) expect(box.height).toBeGreaterThanOrEqual(44);
     }
+    await expect(tile.getByRole("link", { name: /Gothic/ })).toHaveAttribute("href", /\/battletech\/gothic\/home$/);
   });
 
   test("hiding the families one at a time reaches the single layout, then the all-hidden line, and survives a reload", async ({ page }) => {

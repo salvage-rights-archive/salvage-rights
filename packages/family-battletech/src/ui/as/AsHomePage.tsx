@@ -12,6 +12,7 @@ import AsMordelImport from "./AsMordelImport";
 import AsMulImport from "./AsMulImport";
 import AsMordelFile from "./AsMordelFile";
 import GamePicture from "../GamePicture";
+import { ACES_HEADING, ACES_HOME } from "../aces/routes";
 import "../classic.scss";
 import "./alpha-strike.scss";
 
@@ -241,9 +242,9 @@ export default function AsHomePage() {
       </section>
 
       <section className="bt-section" aria-labelledby="as-aces">
-        <h2 id="as-aces">Aces (in progress)</h2>
+        <h2 id="as-aces">{ACES_HEADING}</h2>
         <p>
-          <Link className="bt-button bt-button--secondary" to="/battletech/aces-preview/home">
+          <Link className="bt-button bt-button--secondary" to={ACES_HOME}>
             Record your Aces cards
           </Link>
         </p>
