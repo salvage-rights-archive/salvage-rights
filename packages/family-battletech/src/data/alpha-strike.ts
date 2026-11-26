@@ -428,8 +428,8 @@ export const AS_MOVE_COSTS: MoveCostRow[] = [
   { terrain: "Woods", cost: "+1\"", barred: "g, n, h, s, v, w", note: "Infantry pay 1\" less (least +0\"); w(b) and w(m) may enter." },
   { terrain: "Water, surface only", cost: "+0\"", barred: "all except g, h, n, s", note: "Wheeled or tracked with AMP pay +1\"." },
   { terrain: "Water, depth 0", cost: "+0\"", barred: "n, s" },
-  { terrain: "Water, depth 1\"", cost: "+1\"", barred: "ground and air vehicles, infantry, IndustrialMechs", note: "Along the bottom; SEAL vehicles, UMU infantry and SEAL IndustrialMechs may enter." },
-  { terrain: "Water, depth 2\" or more", cost: "+3\"", barred: "ground and air vehicles, infantry, IndustrialMechs", note: "As depth 1\"; submarine movement adds nothing." },
+  { terrain: "Water, depth 1\"", cost: "+1\"", barred: "ground and air vehicles, infantry, IndustrialMechs", note: "Along the bottom; SEAL vehicles and UMU infantry may enter." },
+  { terrain: "Water, depth 2\" or more", cost: "+3\"", barred: "ground and air vehicles, infantry, IndustrialMechs", note: "As depth 1\"; submarine movement adds nothing. A SEAL IndustrialMech may enter (p. 34 note 9)." },
 ];
 /** Level changes (p. 34), per 1 inch up or down. */
 export const AS_LEVEL_CHANGES: { who: string; cost: string }[] = [
@@ -440,4 +440,6 @@ export const AS_LEVEL_CHANGES: { who: string; cost: string }[] = [
 ];
 /** The tallest step each may climb: 'Mechs 2 inches; infantry, ground vehicles, ProtoMechs and WiGEs 1 inch (p. 34; errata v7.02 for p. 35). */
 export const AS_LEVEL_LIMITS = { mech: 2, others: 1, cite: asceCite("34-35") } as const;
-export const AS_MOVE_CITE = asceCite("34-35");
+export const AS_MOVE_CITE = "ASCE p. 34, 2024 printing; errata v7.02 replaces this table with a download we have not read";
+/** Entering a terrain type (p. 32, errata v7.02). */
+export const AS_ENTER_TERRAIN = { cite: "ASCE p. 32, errata v7.02", text: "Entering a new terrain type costs one full inch; the unit may then move 1 more inch in it, and further inches may be paid in full or half inches." } as const;

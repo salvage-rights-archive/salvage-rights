@@ -2,7 +2,7 @@
 // words and figures with the page they were read from; the rules level decides whether the optional rules appear.
 import {
   AS_CRIT_COLUMNS, AS_CRIT_EFFECTS, AS_CRIT_TRIGGERS, AS_HEAT, AS_HEAT_NOTES, AS_HEAT_SCALE_CITE, AS_HEAT_STEPS, AS_LEVEL_CHANGES, AS_LEVEL_LIMITS, AS_MOTIVE_CITE,
-  AS_MOTIVE_MODIFIER, AS_MOTIVE_RESULTS, AS_MOVE_CITE, AS_MOVE_COSTS, AS_MOVE_TYPES, AS_RANGE_ROWS, AS_TURN_STEPS, AS_CRIT_TABLES, asceCite,
+  AS_MOTIVE_MODIFIER, AS_MOTIVE_RESULTS, AS_ENTER_TERRAIN, AS_MOVE_CITE, AS_MOVE_COSTS, AS_MOVE_TYPES, AS_RANGE_ROWS, AS_TURN_STEPS, AS_CRIT_TABLES, asceCite,
 } from "../../data/alpha-strike";
 import type { RulesLevel } from "../../data/chassis";
 import { heatEffect, offersOptional } from "../../rules/as-aids";
@@ -48,7 +48,7 @@ export function RangesAid({ level }: { level: RulesLevel }) {
           </li>
         ))}
       </ul>
-      {offersOptional(level) && <p className="bt-hint">Extreme and Horizon are optional ranges: only a unit with Long damage may use them, and no Overheat unless it has OVL.</p>}
+      {offersOptional(level) && <p className="bt-hint">Extreme and Horizon are optional ranges: only a unit with Long damage may use them, and no Overheat unless it has OVL. For a ground unit to shoot at either, a friendly unit needs line of sight and sensor range to the target, and line of sight stops at 42 inches. Aerospace units use Extreme as a standard range but never Horizon (p. 162).</p>}
     </section>
   );
 }
@@ -64,7 +64,7 @@ export function HeatAid() {
           return (
             <li key={n}>
               <strong>{e.shutdown ? "Level 4 (S)" : `Level ${String(n)}`}</strong>
-              {e.shutdown ? ": shut down." : `: ${sign(e.attack)} to weapon attacks, -${String(e.moveLoss)}" Move${e.tmmLoss ? `, -${String(e.tmmLoss)} TMM` : ""}.`}
+              {e.shutdown ? ": shut down." : n === 0 ? ": no effect." : `: ${sign(e.attack)} to weapon attacks, -${String(e.moveLoss)}" Move${e.tmmLoss ? `, -${String(e.tmmLoss)} TMM` : ""}.`}
             </li>
           );
         })}
@@ -148,7 +148,7 @@ export function MovementAid() {
   return (
     <section className="bt-section" aria-labelledby="as-move">
       <h2 id="as-move">Movement costs</h2>
-      <p className="bt-hint">{`Extra Move per inch of the terrain, and the movement letters or unit types that may not enter it. A unit pays for a full inch to enter a new terrain type. ${AS_MOVE_CITE}.`}</p>
+      <p className="bt-hint">{`Extra Move per inch of the terrain, and the movement letters or unit types that may not enter it. ${AS_ENTER_TERRAIN.text} (${AS_ENTER_TERRAIN.cite}). Table: ${AS_MOVE_CITE}.`}</p>
       <ul className="bt-list as-aids__rows">
         {AS_MOVE_COSTS.map((r) => (
           <li key={r.terrain}>

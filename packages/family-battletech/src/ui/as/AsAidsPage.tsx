@@ -6,8 +6,8 @@ import { oddsByRange, offersOptional } from "../../rules/as-aids";
 import { odds2d6, targetNumber } from "../../rules/as-attack";
 import type { AttackerMove, TargetMove } from "../../rules/as-attack";
 import { inPlay, playLevel } from "../../rules/as-force";
-import { unitTitle } from "../../rules/as-unit";
-import type { AsUnit } from "../../rules/as-unit";
+import { formatDamage, parseDamage, unitTitle } from "../../rules/as-unit";
+import type { AsDamage, AsUnit } from "../../rules/as-unit";
 import { CriticalsAid, HeatAid, MovementAid, RangesAid, TurnAid } from "./AsAidsTables";
 import AsPlayFilter from "./AsPlayFilter";
 import { usePlaySettings } from "./playSettings";
@@ -32,7 +32,7 @@ const FLAGS = Object.keys(AS_ATTACK_FLAGS) as AsAttackFlag[];
 const OPTIONAL_FLAGS: readonly AsAttackFlag[] = ["secondary"];
 const whole = (text: string, min: number, max: number): number => Math.min(max, Math.max(min, Number.parseInt(text, 10) || 0));
 const percent = (chance: number) => `${String(Math.round(chance * 100))}% (${String(Math.round(chance * 36))} in 36)`;
-const damageOf = (d: { value: number } | null): string => (d === null ? "0" : String(d.value));
+
 
 /**
  * Play aids for Alpha Strike. The rules level and edition at the top (the one play setting) decide which optional parts show. The
@@ -90,10 +90,12 @@ export default function AsAidsPage() {
   const result = targetNumber({ ...base, distance: whole(distance, 0, 999), extreme });
   const chance = result.blocked ? 0 : odds2d6(result.total);
   const shown = (physical === "" ? FLAGS : FLAGS.filter((f) => !AS_WEAPON_ONLY_FLAGS.includes(f))).filter((f) => optional || !OPTIONAL_FLAGS.includes(f));
-  const typed = (text: string): number | undefined => {
-    const v = Number.parseFloat(text);
-    return text.trim() !== "" && Number.isFinite(v) && v >= 0 ? v : undefined;
+  // A box left empty or not readable gives no damage yet; "-" is a range with no attack, "0*" minimal damage.
+  const typed = (text: string): AsDamage | undefined => {
+    const parsed = parseDamage(text);
+    return text.trim() === "" || !parsed.ok ? undefined : parsed.value;
   };
+  const invalid = (text: string): boolean => text.trim() !== "" && !parseDamage(text).ok;
   const ranges = physical === "" ? oddsByRange(base, { S: typed(damage.S), M: typed(damage.M), L: typed(damage.L) }, extreme) : [];
   const toggle = (flag: AsAttackFlag, on: boolean) => { setPicked(on ? [...picked, flag] : picked.filter((f) => f !== flag)); };
   const select = (id: string, label: string, value: string, set: (v: string) => void, options: [string, string][]) => (
@@ -118,7 +120,7 @@ export default function AsAidsPage() {
   const candidates = roster.filter((u) => inPlay(u, filter));
   const fill = (id: string) => {
     const unit = roster.find((u) => u.id === id);
-    if (unit) setDamage({ S: damageOf(unit.card.damage.s), M: damageOf(unit.card.damage.m), L: damageOf(unit.card.damage.l) });
+    if (unit) setDamage({ S: formatDamage(unit.card.damage.s), M: formatDamage(unit.card.damage.m), L: formatDamage(unit.card.damage.l) });
   };
 
   return (
@@ -190,7 +192,7 @@ export default function AsAidsPage() {
         {physical === "" && (
           <>
             <h3>Expected damage by range</h3>
-            <p className="bt-hint">Type the damage the card gives at each range, or take it from a unit on your roster. We multiply it by the chance to hit; nothing else is counted, and 0* counts as 0.</p>
+            <p className="bt-hint">Type the damage the card gives at each range, or take it from a unit on your roster. We multiply it by the chance to hit; nothing else is counted. A 0* range counts as half a point on a hit (1D6, 1 on a 4 or more); a dash means no attack at that range.</p>
             {candidates.length > 0 && (
               <div className="bt-field">
                 <label htmlFor="aid-unit">Take the damage from a unit</label>
@@ -207,22 +209,22 @@ export default function AsAidsPage() {
                 <li key={r.id} className="as-aids__range">
                   <strong>{`${r.label}: Target Number ${String(r.tn)}, ${percent(r.chance)}`}</strong>
                   {r.id === "E" ? (
-                    <span>{r.damage === undefined ? "Takes the Long damage less 1." : `Damage ${String(r.damage)}.`}</span>
+                    <span>{r.none ? "No attack at this range." : r.damage === undefined ? "Takes the Long damage less 1." : `Damage ${String(r.damage)}.`}</span>
                   ) : (
                     <div className="bt-field">
                       <label htmlFor={`aid-dmg-${r.id}`}>{`Damage at ${r.label.toLowerCase()} range (from the card)`}</label>
                       <input
                         id={`aid-dmg-${r.id}`}
-                        type="number"
-                        inputMode="decimal"
-                        min={0}
-                        step="any"
+                        inputMode="text"
+                        aria-invalid={invalid(damage[r.id as "S" | "M" | "L"]) || undefined}
                         value={damage[r.id as "S" | "M" | "L"]}
                         onChange={(event) => { setDamage({ ...damage, [r.id]: event.target.value }); }}
                       />
                     </div>
                   )}
-                  {r.expected !== undefined && <span>{`Expected damage ${r.expected.toFixed(2)} (the chance to hit times ${String(r.damage)}).`}</span>}
+                  {r.id !== "E" && invalid(damage[r.id as "S" | "M" | "L"]) && <span className="bt-problem">Use a whole number, 0* or a dash.</span>}
+                  {r.none && r.id !== "E" && <span>No attack at this range.</span>}
+                  {r.expected !== undefined && <span>{`Expected damage ${r.expected.toFixed(2)} (the chance to hit times ${r.minimal ? "0.5 for 0*" : String(r.damage)}).`}</span>}
                 </li>
               ))}
             </ul>

@@ -6,13 +6,20 @@ const base = { skill: 4, attackerType: "BM", attackerMove: "ground" as const, ta
 
 describe("play aids arithmetic", () => {
   it("gives the odds and expected damage at each range, with Extreme taking Long less 1 and only when asked for", () => {
-    const rows = oddsByRange(base, { S: 3, M: 3, L: 2 }, true);
+    const rows = oddsByRange(base, { S: { value: 3 }, M: { value: 3 }, L: { value: 2 } }, true);
     // 4 + 2 (TMM) + the range's own modifier: 6, 8, 10 and 12, which 2D6 meets 26, 15, 6 and 1 times in 36.
     expect(rows.map((r) => [r.id, r.tn, Math.round(r.chance * 36)])).toEqual([["S", 6, 26], ["M", 8, 15], ["L", 10, 6], ["E", 12, 1]]);
     expect(rows[1]?.expected).toBeCloseTo((15 / 36) * 3);
     expect(rows[3]).toMatchObject({ damage: extremeDamage(2), expected: 1 / 36 });
     expect(oddsByRange(base, {}, false).map((r) => r.id)).toEqual(["S", "M", "L"]);
     expect(oddsByRange({ ...base, attackerMove: "sprint" }, {}, false)).toEqual([]);
+  });
+
+  it("counts a 0* range as half a point on a hit, and a dash as no attack", () => {
+    const rows = oddsByRange(base, { S: { value: 0, minimal: true }, M: null }, false);
+    expect(rows[0]).toMatchObject({ minimal: true, expected: (26 / 36) * 0.5 });
+    expect(rows[1]).toMatchObject({ none: true });
+    expect(rows[1]?.expected).toBeUndefined();
   });
 
   it("measures an underwater attacker's ranges at half distance, so every bracket still comes out", () => {
