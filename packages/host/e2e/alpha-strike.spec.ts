@@ -140,7 +140,7 @@ test("the play aids and the table work at 320 px: the calculator answers, a stag
   await page.getByRole("button", { name: "Add to force" }).click();
   await page.getByRole("link", { name: "Play at the table" }).click();
   await expect(page.getByRole("heading", { level: 1 })).toContainText("turn 1");
-  await page.getByLabel("Damage taken").fill("2");
+  await page.getByLabel("Damage taken", { exact: true }).fill("2");
   await page.getByRole("button", { name: "Stage the hit" }).click();
   await expect(page.getByText("Waiting for the End Phase: 2 = 2.")).toBeVisible();
   await page.getByRole("button", { name: "End the turn" }).click();

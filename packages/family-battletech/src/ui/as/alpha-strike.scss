@@ -238,12 +238,102 @@
   }
 
   &--down {
-    opacity: .6;
+    background: var(--sr-surface-sunk);
+    color: var(--sr-ink-muted);
+    border-style: dashed;
+  }
+}
+
+.as-stepper__row {
+  display: flex;
+  gap: var(--sr-space-2);
+
+  input {
+    flex: 1 1 0;
+    width: 0;
+    min-width: 0;
+  }
+
+  .bt-button {
+    min-width: 44px;
+  }
+}
+
+.as-bubbles {
+  margin: 0 0 var(--sr-space-2);
+
+  &__count {
+    margin: 0;
+    font-weight: 600;
+  }
+
+  &__row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sr-space-1);
+  }
+
+  &__none {
+    align-self: center;
+  }
+}
+
+// A bubble is a 44 px button; the border and fill draw the round mark, so it reads without colour.
+.as-bubble {
+  box-sizing: border-box;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  background: var(--sr-surface);
+  border: 3px solid var(--sr-ink);
+  border-radius: 50%;
+  cursor: pointer;
+
+  &--marking {
+    background: var(--sr-danger);
+  }
+
+  &--waiting {
+    display: inline-block;
+    border-style: dashed;
+    background: var(--sr-surface-sunk);
+  }
+
+  &:focus-visible {
+    outline: 3px solid var(--sr-ink);
+    outline-offset: 2px;
+  }
+}
+
+.as-crits {
+  &__title {
+    margin: 0;
+    font-weight: 600;
+  }
+
+  &__boxes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sr-space-2);
+  }
+}
+
+.as-table__cripple {
+  margin: var(--sr-space-2) 0;
+
+  summary {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    font-weight: 600;
   }
 }
 
 .as-table__controls {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
   gap: var(--sr-space-2);
   margin: var(--sr-space-2) 0 0;
 }

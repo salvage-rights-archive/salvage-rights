@@ -402,6 +402,21 @@ export async function putAsPrintForce(page: Page, rounds = 1): Promise<string> {
   return force.id;
 }
 
+/** Saves a force of four invented units for the table tracker (two 'Mechs, a hover tank, a foot platoon); returns the force id. */
+export async function putAsTableForce(page: Page): Promise<string> {
+  const base = inventedUnit("x", "x").card;
+  const kinds: [string, string, Record<string, unknown>][] = [
+    ["tbl-alpha", "Alpha Mech", {}],
+    ["tbl-bravo", "Bravo Mech", { armor: 3, structure: 3, ov: 2 }],
+    ["tbl-tank", "Charlie Tank", { type: "CV", move: [{ inches: 8, mode: "h" }], tmm: 2, ov: 0 }],
+    ["tbl-foot", "Delta Foot", { type: "CI", tmm: 0, move: [{ inches: 2, mode: "f" }], ov: 0, armor: 2, structure: 2 }],
+  ];
+  const units = kinds.map(([id, chassis, card]) => ({ ...inventedUnit(id, chassis), card: { ...base, ...card } }));
+  const force = { schema: 1, kind: "as-force", id: "table-force", editionId: "asce", name: "Table lance", members: units.map((u) => ({ unitId: u.id, skill: 4 })) };
+  await putRecords(page, [...units.map((u): [string, unknown] => [`as-unit:${u.id}`, { unit: u }]), ["as-force:table-force", { force }]]);
+  return force.id;
+}
+
 /**
  * Answers an Aces game's resolver questions until the given text shows: every distance as 10 inches, yes and no as No, a pick of
  * units as none. For the invented games of the tests only.
