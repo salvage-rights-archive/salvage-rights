@@ -26,6 +26,39 @@ export function groupScale(org: AsOrganisation | undefined, type: AsFormationTyp
   return Math.max(1, Math.round(units.length / base));
 }
 
+/** The organisations of each family from the lowest level up (a Binary or Trinary, Supernova or not, is one layer): the layers officers are counted by. */
+const OFFICER_LAYERS: Record<string, string[][]> = {
+  is: [["is-lance"], ["is-company"], ["is-battalion"], ["is-regiment"], ["is-brigade"]],
+  clan: [["clan-star"], ["clan-binary", "clan-trinary", "clan-supernova-binary", "clan-supernova-trinary"], ["clan-cluster"], ["clan-galaxy"]],
+  comstar: [["cs-level-2"], ["cs-level-3"], ["cs-level-4"], ["cs-level-5"]],
+};
+/** The smaller groups one group of each layer holds, at most (p. 113): our assumption for the count of a layer when no group of it is set. */
+const OFFICER_FAN: Record<string, number[]> = { is: [1, 4, 4, 4, 6], clan: [1, 3, 5, 5], comstar: [1, 6, 6, 6] };
+
+/**
+ * The officers a Command formation asks for over the one per lowest-level group (the owner's ruling, built on the one officer of the Command
+ * Lance, p. 120): each layer above the lowest has two (a commander and an executive officer), for Inner Sphere, Clan and ComStar alike. So a
+ * company needs its lances plus 2, a battalion its lances plus 2 per company plus 2, and so on up. `inside` holds the organisation ids of the
+ * groups inside this one; a layer with none set is counted by our assumption, the groups of the layer below split at the most p. 113 gives
+ * (the book gives no count for loose units). Returns 0 for the lowest layer, for an organisation outside these chains, and for other formations.
+ */
+export function commandOfficersOver(org: AsOrganisation | undefined, type: AsFormationType | undefined, scale: number, inside: readonly string[] = []): number {
+  if (type?.id !== "command" && type?.id !== "command-vehicle") return 0;
+  const family = org?.family;
+  const chain = family === undefined ? undefined : OFFICER_LAYERS[family];
+  const rank = chain?.findIndex((ids) => org !== undefined && ids.includes(org.id)) ?? -1;
+  if (!family || !chain || rank < 1) return 0;
+  const fan = OFFICER_FAN[family] ?? [];
+  let below = scale;
+  let groups = 0;
+  for (let k = 1; k < rank; k++) {
+    const set = inside.filter((id) => chain[k]?.includes(id)).length;
+    below = set > 0 ? set : Math.ceil(below / (fan[k] ?? 1));
+    groups += below;
+  }
+  return 2 * (1 + groups);
+}
+
 export interface OverlayCheck {
   overlay: AsOverlay;
   met: boolean;
@@ -75,28 +108,45 @@ const times = (n: number, noun: string): string => `${String(n)} ${noun}`;
 export function checkComposition(children: readonly GroupTotals[], orgId: string | undefined): CompositionCheck | undefined {
   const table = compositionFor(orgId);
   if (!table || children.length === 0) return undefined;
-  const filled = new Map<string, number>();
-  const unplaced: GroupTotals[] = [];
-  for (const child of children) {
-    const row = table.rows.find((r) => fits(child, r));
-    if (row) filled.set(row.id, (filled.get(row.id) ?? 0) + 1);
-    else unplaced.push(child);
-  }
-  const core = table.rows.filter((r) => r.section === "core");
-  const coreCount = core.reduce((sum, r) => sum + (filled.get(r.id) ?? 0), 0);
-  const rows = table.rows.map((row): RowResult => {
-    const have = filled.get(row.id) ?? 0;
-    const others = core.filter((r) => r.id !== row.id && r.id !== "command" && r.id !== "support").reduce((sum, r) => sum + (filled.get(r.id) ?? 0), 0);
-    const problem =
-      have < row.min ? `${row.label}: at least ${String(row.min)} (the group has ${String(have)}).`
-      : have > row.max ? `${row.label}: at most ${String(row.max)} (the group has ${String(have)}).`
-      : row.perCore !== undefined && have > row.perCore * others ? `${row.label}: at most ${String(row.perCore)} for each core group of another kind (the group has ${String(have)} against ${String(others)}).`
-      : "";
-    return { row, have, problem };
-  });
-  const problems = rows.flatMap((r) => (r.problem ? [r.problem] : []));
-  const total = orgId === undefined ? undefined : table.core[orgId];
-  if (total && (coreCount < total[0] || coreCount > total[1])) problems.push(`The core of a ${table.name} is ${total[0] === total[1] ? times(total[0], table.coreName) : `${String(total[0])} to ${times(total[1], table.coreName)}`}; this group has ${String(coreCount)}.`);
-  for (const child of unplaced) problems.push(`${child.group.name.trim() || "An unnamed group"} fits no row of the table: give it a formation type, or an organisation or units that fit a detachment row.`);
-  return { table, rows, problems, met: problems.length === 0 };
+  const first = children.map((child) => ({ child, row: table.rows.find((r) => fits(child, r)) }));
+  const units = (c: GroupTotals) => c.lines.flatMap((l) => (l.unit ? [l.unit] : []));
+  const allMech = (c: GroupTotals): boolean => units(c).length > 0 && units(c).every((x) => x.card.type === "BM");
+  const allVehicle = (c: GroupTotals): boolean => units(c).length > 0 && units(c).every((x) => x.card.type === "CV" || x.card.type === "SV");
+  const evaluate = (placed: { child: GroupTotals; row: AsCompositionRow | undefined }[]): CompositionCheck => {
+    const filled = new Map<string, number>();
+    const unplaced: GroupTotals[] = [];
+    for (const { child, row } of placed) {
+      if (row) filled.set(row.id, (filled.get(row.id) ?? 0) + 1);
+      else unplaced.push(child);
+    }
+    const core = table.rows.filter((r) => r.section === "core");
+    const coreCount = core.reduce((sum, r) => sum + (filled.get(r.id) ?? 0), 0);
+    const rows = table.rows.map((row): RowResult => {
+      const have = filled.get(row.id) ?? 0;
+      const others = core.filter((r) => r.id !== row.id && r.id !== "command" && r.id !== "support").reduce((sum, r) => sum + (filled.get(r.id) ?? 0), 0);
+      const problem =
+        have < row.min ? `${row.label}: at least ${String(row.min)} (the group has ${String(have)}).`
+        : have > row.max ? `${row.label}: at most ${String(row.max)} (the group has ${String(have)}).`
+        : row.perCore !== undefined && have > row.perCore * others ? `${row.label}: at most ${String(row.perCore)} for each core group of another kind (the group has ${String(have)} against ${String(others)}).`
+        : "";
+      return { row, have, problem };
+    });
+    const problems = rows.flatMap((r) => (r.problem ? [r.problem] : []));
+    const total = orgId === undefined ? undefined : table.core[orgId];
+    if (total && (coreCount < total[0] || coreCount > total[1])) problems.push(`The core of a ${table.name} is ${total[0] === total[1] ? times(total[0], table.coreName) : `${String(total[0])} to ${times(total[1], table.coreName)}`}; this group has ${String(coreCount)}.`);
+    for (const child of unplaced) problems.push(`${child.group.name.trim() || "An unnamed group"} fits no row of the table: give it a formation type, or an organisation or units that fit a detachment row.`);
+    return { table, rows, problems, met: problems.length === 0 };
+  };
+  const plain = evaluate(first);
+  // The footnotes of p. 124: where the core is vehicle groups, the vehicle detachment row may be BattleMech groups instead. The table is also
+  // read that way (all-BattleMech groups in that row, the all-vehicle groups sitting in it counted as the core) and that reading is kept only
+  // when it finds fewer problems, so a BattleMech core with a vehicle detachment is never misread.
+  const swapRow = table.rows.find((r) => r.orMechs);
+  if (!swapRow || plain.met) return plain;
+  const swapped = evaluate(first.map(({ child, row }) => {
+    if (allMech(child)) return { child, row: swapRow };
+    const core = row === swapRow && allVehicle(child) ? table.rows.find((r) => r.section === "core" && r.match.orgs && child.group.org && r.match.orgs.includes(child.group.org)) : undefined;
+    return { child, row: core ?? row };
+  }));
+  return swapped.problems.length < plain.problems.length ? swapped : plain;
 }
