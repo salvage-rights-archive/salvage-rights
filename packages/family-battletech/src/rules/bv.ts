@@ -11,6 +11,7 @@ import {
   CAPACITOR,
   CASE_ROWS,
   COOLANT_POD_IDS,
+  DEAD_FIRE_AMMO_BV,
   ENGINE_BV_MODIFIER,
   EQUIPMENT_BV,
   GYRO_BV_MODIFIER,
@@ -153,6 +154,25 @@ function launcherAmmo(row: EquipmentRow, items: Item[]): Entry | string {
   const launchers = [...found.values()];
   if (launchers.length === 0) return "a munition with no launcher on the unit that it fits, so its BV is not known";
   if (new Set(launchers.map((e) => e.ammoBv)).size > 1) return "a munition that fits launchers whose ammunition is worth different amounts, so which it is for is not known";
+  return launchers[0] as Entry;
+}
+
+/** Dead-Fire ammunition counts as the ammunition of the launcher size it is fired from (DEAD_FIRE_AMMO_BV, IO:AE p. 190): the launcher's entry carrying that figure a ton. A reason, in
+ * place of an entry, when no launcher of its family is on the unit or the launchers on it are worth different amounts (which size the bin is for is not known); undefined
+ * for any other row. An MML feeds both families, each in its own mode. */
+function deadFireAmmo(row: EquipmentRow, items: Item[]): Entry | string | undefined {
+  const family = own(DEAD_FIRE_AMMO_BV.family, stemOf(row.id));
+  if (family === undefined) return undefined;
+  const found = new Map<string, Entry>();
+  for (const { row: launcher } of items) {
+    const parts = /^(lrm|srm|mml)-(\d+)-(is|clan)$/.exec(launcher.id);
+    const entry = WEAPONS.get(launcher.id);
+    const value = parts && (parts[1] === family || parts[1] === "mml") ? own(DEAD_FIRE_AMMO_BV.perTon, parts[1] === "mml" ? `mml-${family}` : family)?.[Number(parts[2])] : undefined;
+    if (entry && value !== undefined) found.set(entry.id, { ...entry, ammoBv: value });
+  }
+  const launchers = [...found.values()];
+  if (launchers.length === 0) return "a Dead-Fire munition with no launcher on the unit that it fits, so its BV is not known";
+  if (new Set(launchers.map((e) => e.ammoBv)).size > 1) return "a Dead-Fire munition that fits launchers of different sizes, so which size the bin is for is not known";
   return launchers[0] as Entry;
 }
 
@@ -498,7 +518,7 @@ export function battleValue(record: MechRecord, catalog: Catalog, pilot: PilotSk
   const ammoBv = new Map<string, number>();
   for (const { mount, row, tons } of items) {
     if (row.kind !== "ammunition") continue;
-    const resolved = AMMO.get(row.id) ?? (LAUNCHER_MUNITIONS.stems.includes(stemOf(row.id)) ? launcherAmmo(row, items) : undefined);
+    const resolved = AMMO.get(row.id) ?? (LAUNCHER_MUNITIONS.stems.includes(stemOf(row.id)) ? launcherAmmo(row, items) : deadFireAmmo(row, items));
     const entry = typeof resolved === "string" ? undefined : resolved;
     if (!entry) {
       unlisted({ mount, row }, typeof resolved === "string" ? resolved : "ammunition whose BV the books do not print");
