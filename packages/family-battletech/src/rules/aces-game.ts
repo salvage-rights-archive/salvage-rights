@@ -83,6 +83,32 @@ export interface GameLogLine {
 
 export const UNDO_LIMIT = 20;
 
+export type ForceName = "player" | "automated";
+
+/**
+ * Where this turn's Initiative and Movement Phases stand. It belongs to one turn: when `turn` is not the game's turn it is read as
+ * a fresh one, so the End Phase need only move the turn on (rules/aces-turn.ts keeps it).
+ */
+export interface TurnState {
+  turn: number;
+  /** The command card's Initiative orders have been carried out (tokens, withdrawal, the roll's modifier). */
+  ordersApplied?: boolean;
+  /** Added to the automated force's Initiative roll by the command card's orders. */
+  modifier: number;
+  /** The 2D6 of each force, rolled by us or typed in; before any modifier. */
+  rolls: { player?: number; automated?: number };
+  /** How many dice rolls we have made this turn, so each one is a new draw from the game's seed. */
+  rollCount: number;
+  /** The Movement Phase's order, fixed when it begins; each step is one force moving some units. */
+  schedule?: { side: ForceName; count: number }[];
+  /** Game-unit ids in the order they moved, by force. */
+  moved: { player: string[]; automated: string[] };
+  /** The automated unit whose activation is open, and the movement filters the players have ticked off. */
+  active?: { unitId: string; ticked: string[] };
+  /** The distances typed during the last activation, to prefill the next. */
+  lastDistances: Record<string, number>;
+}
+
 export interface AcesGame {
   schema: 1;
   kind: "aces-game";
@@ -101,9 +127,12 @@ export interface AcesGame {
   waypoints: Waypoint[];
   turn: number;
   phase: "setup" | "initiative" | "movement" | "combat" | "end" | "over";
-  initiative?: { player: number; automated: number; winner: "player" | "automated" };
+  /** The totals (rolls with every modifier) and the winner; `turn` is the turn it was decided in and `previous` the turn before's winner, for the -2. */
+  initiative?: { player: number; automated: number; winner: "player" | "automated"; turn?: number; previous?: "player" | "automated" };
   tokens: { moveFirst?: string; moveLast?: string };
+  /** What the players have answered during the open activation or Initiative orders. */
   sight: SightSheet;
+  turnState?: TurnState;
   log: GameLogLine[];
   /** Compact snapshots of the game before each change, newest last. */
   undo: string[];

@@ -175,3 +175,241 @@
     padding-left: var(--sr-space-4);
   }
 }
+
+// ---- The game screen -----------------------------------------------------------------------------------------------------------
+
+.aces-game {
+  &__top {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--sr-space-2) var(--sr-space-4);
+    margin: 0 0 var(--sr-space-2);
+  }
+
+  &__columns {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--sr-space-4);
+
+    @media (min-width: 56rem) {
+      grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+      grid-template-areas: "units main";
+      align-items: start;
+    }
+  }
+
+  &__main {
+    min-width: 0;
+
+    @media (min-width: 56rem) {
+      grid-area: main;
+    }
+  }
+}
+
+.aces-tabs {
+  display: flex;
+  gap: var(--sr-space-2);
+  margin-bottom: var(--sr-space-3);
+}
+
+.aces-card {
+  min-width: 0;
+
+  h2:focus-visible,
+  summary:focus-visible {
+    outline: 3px solid var(--sr-focus);
+    outline-offset: 2px;
+  }
+
+  h2 {
+    margin-top: 0;
+  }
+}
+
+.aces-pinned {
+  margin: var(--sr-space-3) 0;
+  padding: var(--sr-space-3);
+  background: var(--sr-surface-sunk);
+  border: var(--sr-border) solid var(--sr-line-strong);
+  border-radius: var(--sr-radius);
+  font-weight: 700;
+}
+
+.aces-filters {
+  margin: 0 0 var(--sr-space-2);
+  padding: 0;
+  list-style: none;
+}
+
+.aces-summary {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  cursor: pointer;
+}
+
+.aces-modes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sr-space-2);
+  margin-bottom: var(--sr-space-3);
+}
+
+.aces-mover .aces-modes {
+  margin-bottom: 0;
+}
+
+.aces-schedule {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sr-space-2);
+  margin: 0 0 var(--sr-space-3);
+  padding: 0;
+  list-style: none;
+
+  &__step {
+    padding: var(--sr-space-1) var(--sr-space-2);
+    border: var(--sr-border) solid var(--sr-line);
+    border-radius: var(--sr-radius);
+    color: var(--sr-ink-muted);
+
+    &--now {
+      border-color: var(--sr-line-strong);
+      color: var(--sr-ink);
+      font-weight: 700;
+    }
+  }
+}
+
+.aces-unit {
+  display: inline-flex;
+  flex-direction: column;
+
+  &__facts {
+    color: var(--sr-ink-muted);
+    font-size: .85rem;
+  }
+}
+
+.aces-question {
+  margin: var(--sr-space-3) 0;
+
+  &__row {
+    align-items: flex-start;
+  }
+
+  &__tick {
+    flex: 1 1 auto;
+  }
+
+  &__buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sr-space-2);
+  }
+}
+
+.aces-stepper__input {
+  flex: 1 1 4rem;
+  min-width: 0;
+  min-height: 44px;
+  background: var(--sr-field-bg);
+  color: var(--sr-field-ink);
+  border: var(--sr-border) solid var(--sr-field-line);
+  border-radius: var(--sr-radius);
+  font: inherit;
+  text-align: center;
+}
+
+.aces-drawer {
+  min-width: 0;
+
+  @media (min-width: 56rem) {
+    grid-area: units;
+  }
+
+  &__toggle {
+    margin-bottom: var(--sr-space-2);
+
+    @media (min-width: 56rem) {
+      display: none;
+    }
+  }
+
+  &__body {
+    display: none;
+
+    &--open {
+      display: block;
+    }
+
+    @media (min-width: 56rem) {
+      display: block;
+    }
+  }
+
+  &__row {
+    align-items: flex-start;
+  }
+}
+
+.aces-log {
+  margin: 0;
+  padding-left: var(--sr-space-4);
+
+  li {
+    margin-bottom: var(--sr-space-2);
+  }
+}
+
+// The turn bar stays at the bottom edge so Undo and Next are under the thumb.
+.aces-bar {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sr-space-2) var(--sr-space-3);
+  margin-top: var(--sr-space-4);
+  padding: var(--sr-space-2) var(--sr-space-3);
+  background: var(--sr-surface);
+  border-top: var(--sr-border) solid var(--sr-line-strong);
+
+  &__status,
+  &__why {
+    margin: 0;
+  }
+
+  &__why {
+    flex: 1 1 100%;
+  }
+
+  &__buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sr-space-2);
+  }
+}
+
+.aces-bar {
+  font-size: .9rem;
+
+  .bt-button:disabled {
+    background: var(--sr-surface-sunk);
+    color: var(--sr-ink-disabled);
+    border: var(--sr-border) solid var(--sr-line);
+    cursor: not-allowed;
+  }
+
+  &__why {
+    font-size: .85rem;
+  }
+}
+
+.aces-drawer__row .bt-tag {
+  margin-left: var(--sr-space-2);
+}

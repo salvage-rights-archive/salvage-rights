@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router";
 import { STORAGE_READ_FAILED, STORAGE_WRITE_FAILED } from "../storage";
+import { PHASE_WORDS } from "../../rules/aces-turn";
 import { openGameStorage } from "./game-storage";
 import type { GameEntry, GameStorage } from "./game-storage";
 import { gameHref } from "./routes";
@@ -71,7 +72,7 @@ export default function GamesInProgress() {
           <li key={e.id} className="bt-row">
             <span className="bt-row__text">
               <strong>{e.game?.name ?? "A game that cannot be read"}</strong>
-              <span className="bt-row__credit">{e.game ? `Turn ${String(e.game.turn)}` : (e.unreadable ?? "")}</span>
+              <span className="bt-row__credit">{e.game ? `Turn ${String(e.game.turn)}, ${PHASE_WORDS[e.game.phase]}` : (e.unreadable ?? "")}</span>
             </span>
             {e.game && (
               <Link className="bt-button" to={gameHref(e.id)} aria-label={`Resume ${e.game.name}`}>

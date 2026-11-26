@@ -182,5 +182,59 @@ test("a three against four game is set up on a 320 px phone, started, listed on 
   await page.goto(`${DEV}${ACES}/home`);
   await expect(page.getByText("Turn 1")).toBeVisible();
   await page.getByRole("link", { name: "Resume New game" }).click();
-  await expect(page.getByRole("heading", { level: 2, name: "Automated force" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 2, name: "Turn 1: Initiative" })).toBeVisible();
+});
+
+test("a movement phase is played on a 320 px phone: Initiative, a unit tapped as moved, and an automated activation", async ({ page }) => {
+  test.setTimeout(120_000);
+  await saveAcesCard(page, DEV);
+  for (const name of ["Mine A", "Mine B", "Theirs A", "Theirs B", "Theirs C"]) await saveAsUnit(page, DEV, name, 20);
+  await page.setViewportSize({ width: 320, height: 700 });
+  await page.goto(`${DEV}${ACES}/new-game`);
+  await addUnits(page, "your force", ["Mine A", "Mine B"], 20);
+  await addUnits(page, "automated force", ["Theirs A", "Theirs B", "Theirs C"], 20);
+  await page.getByRole("button", { name: "Start the game" }).click();
+  await expect(page.getByRole("heading", { level: 2, name: "Turn 1: Initiative" })).toBeVisible();
+  await fitsPhone(page, "Initiative");
+  await page.getByLabel("Your force: 2D6 roll, 2 to 12").fill("5");
+  await page.getByLabel("Automated force: 2D6 roll, 2 to 12").fill("9");
+  await fitsPhone(page, "Initiative decided");
+  await page.getByRole("button", { name: "Start the Movement Phase" }).click();
+  // Two against three: you move 1, the automated force 2, you 1, the automated force 1.
+  await expect(page.getByText("You: move 1").first()).toBeVisible();
+  await expect(page.getByText("Automated: move 2")).toBeVisible();
+  await fitsPhone(page, "Movement, your move");
+  await page.getByRole("button", { name: "Mine A: Standstill" }).click();
+  await expect(page.getByRole("heading", { level: 2, name: /The automated force moves 2 units/ })).toBeVisible();
+  await fitsPhone(page, "Movement, the automated force");
+  await page.getByRole("button", { name: "Activate Theirs A" }).click();
+  await expect(page.getByRole("heading", { level: 2, name: "Moving Theirs A" })).toBeVisible();
+  await fitsPhone(page, "an activation");
+  await page.getByRole("button", { name: "Show the units" }).click();
+  await fitsPhone(page, "the units drawer");
+});
+
+test("an Initiative roll and the first move are made with the keyboard alone", async ({ page }) => {
+  test.setTimeout(120_000);
+  await saveAcesCard(page, DEV);
+  for (const name of ["Mine A", "Theirs A"]) await saveAsUnit(page, DEV, name, 20);
+  await page.goto(`${DEV}${ACES}/new-game`);
+  await addUnits(page, "your force", ["Mine A"], 20);
+  await addUnits(page, "automated force", ["Theirs A"], 20);
+  await page.getByRole("button", { name: "Start the game" }).click();
+  await expect(page.getByRole("heading", { level: 2, name: "Turn 1: Initiative" })).toBeVisible();
+  await tabToControl(page, "Your force: 2D6 roll, 2 to 12");
+  await page.keyboard.type("5");
+  await tabToControl(page, "Automated force: 2D6 roll, 2 to 12");
+  await page.keyboard.type("9");
+  await tabToControl(page, "Start the Movement Phase");
+  await page.keyboard.press("Enter");
+  const heading = page.getByRole("heading", { level: 2, name: /You move 1 unit/ });
+  await expect(heading).toBeFocused();
+  await tabToControl(page, "Mine A: Standstill");
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("heading", { level: 2, name: /The automated force moves 1 unit/ })).toBeFocused();
+  await tabToControl(page, "Activate Theirs A");
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("heading", { level: 2, name: "Moving Theirs A" })).toBeFocused();
 });
