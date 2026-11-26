@@ -36,9 +36,10 @@
 // and spot welder that rule is arms on a humanoid 'Mech (the hand actuator removed) or side torsos on a quad:
 // `locations` holds the biped rule and `locationsQuad` the quad rule. The wrecking ball and salvage arm are humanoid arms
 // only (`locationsQuad: []`, none); the bridgelayer is quad torsos only (`locations: []`); the lift hoist is arms and
-// torsos for both. The sprayer and light fluid suction system `need` liquid cargo space (their entries).
+// torsos for both. The ladder (p. 245) is a tenth of a ton for each 20 meters of its length or part of one, one slot, torso only; its
+// length (1 to 100 meters) is the mount's amount. The sprayer and light fluid suction system `need` liquid cargo space (their entries).
 // Not tabulated: the mounted searchlight (a BattleMech's first one is free, so a mount has no fixed weight), tracks (weight is a tenth of the 'Mech split
-// over its legs), ladders, cargo bays and communications equipment (variable), and the items the entries bar from
+// over its legs), cargo bays and communications equipment (variable), and the items the entries bar from
 // BattleMechs (manipulators, fluid suction systems, paramedic equipment, MASH, dumpers, quarters and the like).
 //
 // Play figures: heat, and range where the table prints numbers, are the Heat and Range columns of the Weapons and Equipment
@@ -48,7 +49,7 @@
 // table), the nail/rivet gun's 0; a dash or NA prints nothing. The Machine Gun Array's heat is NA in the table, so it has
 // none. Type "E" (electronic) is from the Core Rulebook's Weapons and Equipment Tables (printed pp. 250 and 252, read against
 // the page images); the industrial items have no Type there.
-// Left out, as variable or barred from a BattleMech: communications equipment, environmental sealing, extended fuel tanks, ladders,
+// Left out, as variable or barred from a BattleMech: communications equipment, environmental sealing, extended fuel tanks,
 // tracks, cargo, ejection seat and mounted searchlight (IndustrialMech only, or a first one free; roadmap piece 3),
 // bulldozers, bay doors and dumpers (no BattleMech space), standard fluid suction systems and paramedic equipment.
 
@@ -472,7 +473,7 @@ export const OTHER: EquipmentGroup[] = [
   // that are not NA; `by` is where a column differs from the BattleMech or IndustrialMech's.
   // Cargo and communications equipment take one slot per ton or fraction of a ton on a 'Mech (pp. 212, 239); the extended fuel tank
   // is a tenth of the engine's weight up to the half ton, with a slot for each ton of that, torso locations only (p. 244). Left out of this table: the dumper (weight is a share of the cargo it empties), tracks,
-  // environmental sealing and ladders (weight by a rule on the unit), the bulldozer, field kitchen, MASH, quarters and the other
+  // environmental sealing (weight by a rule on the unit), the bulldozer, field kitchen, MASH, quarters and the other
   // vehicle-only equipment (next pass).
   // -------------------------------------------------------------------------------------------------------------
   {
@@ -489,6 +490,7 @@ export const OTHER: EquipmentGroup[] = [
       { id: "dumper-is", name: "Dumper", tons: "dumper-tons", slots: 1, availability: [{ from: 1950 }], units: ["industrialmech", "vehicle"] },
       { id: "paramedic-equipment-is", name: "Paramedic Equipment", tons: 0.25, slots: 1, availability: [{ from: 1950 }], units: ["industrialmech", "vehicle"] },
       { id: "cargo-container-is", name: "Cargo Container", aliases: ["Cargo, Container"], tons: 10, slots: 1, availability: [{ from: 1950 }], units: ["industrialmech", "vehicle"] },
+      { id: "ladder-is", name: "Ladder", tons: "ladder-tons", slots: 1, availability: [{ from: 1950 }], locations: ["CT", "LT", "RT"], amount: { unit: "meters", min: 1, max: 100, step: 1 }, cite: { book: "TechManual", page: 245 }, units: ["mech", "industrialmech", "vehicle"] },
     ],
   },
   {
@@ -505,6 +507,7 @@ export const OTHER: EquipmentGroup[] = [
       { id: "dumper-clan", name: "Dumper", tons: "dumper-tons", slots: 1, availability: [{ from: 1950 }], units: ["industrialmech", "vehicle"] },
       { id: "paramedic-equipment-clan", name: "Paramedic Equipment", tons: 0.25, slots: 1, availability: [{ from: 1950 }], units: ["industrialmech", "vehicle"] },
       { id: "cargo-container-clan", name: "Cargo Container", aliases: ["Cargo, Container"], tons: 10, slots: 1, availability: [{ from: 1950 }], units: ["industrialmech", "vehicle"] },
+      { id: "ladder-clan", name: "Ladder", tons: "ladder-tons", slots: 1, availability: [{ from: 1950 }], locations: ["CT", "LT", "RT"], amount: { unit: "meters", min: 1, max: 100, step: 1 }, cite: { book: "TechManual", page: 245 }, units: ["mech", "industrialmech", "vehicle"] },
     ],
   },
   {

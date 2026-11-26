@@ -20,7 +20,7 @@ export const EQUIPMENT_GROUPS: GroupRule[] = [
   { id: "capital", label: "Capital weapons", match: words("nac|nl|n-ppc|n-gauss|mass-driver|killer-whale|killer-whale-t|white-shark|white-shark-t|barracuda|barracuda-t|ar-10-launcher|kraken-t|screen-launcher") },
   { id: "battlearmor", label: "Battle armor equipment", match: words("ba") },
   { id: "artillery", label: "Artillery", match: words("arrow-iv|thumper|sniper|long-tom") },
-  { id: "industrial", label: "Industrial equipment", match: words("backhoe|chainsaw|combine|dual-saw|pile-driver|mining-drill|rock-cutter|spot-welder|nail-rivet|wrecking-ball|salvage-arm|sprayer|fluid-suction|lift-hoist|bridgelayer|remote-sensor-dispenser|searchlight|ejection-seat|tracks|environmental-sealing|bulldozer|field-kitchen|mash|dumper|paramedic-equipment|quarters|seating|lifeboat|escape-pod|extended-fuel-tank|communications-equipment|cargo") },
+  { id: "industrial", label: "Industrial equipment", match: words("backhoe|chainsaw|combine|dual-saw|pile-driver|mining-drill|rock-cutter|spot-welder|nail-rivet|wrecking-ball|salvage-arm|sprayer|fluid-suction|lift-hoist|ladder|bridgelayer|remote-sensor-dispenser|searchlight|ejection-seat|tracks|environmental-sealing|bulldozer|field-kitchen|mash|dumper|paramedic-equipment|quarters|seating|lifeboat|escape-pod|extended-fuel-tank|communications-equipment|cargo") },
   { id: "actuators", label: "Actuator enhancement", match: words("aes-arm|aes-leg") },
   { id: "stealth", label: "Stealth and signature systems", match: words("chameleon-lps|null-signature-system|void-signature-system") },
   { id: "command", label: "Command consoles and modules", match: words("cockpit-command-console|collapsible-command-module|remote-drone-command-console") },

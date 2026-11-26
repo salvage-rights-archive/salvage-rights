@@ -968,6 +968,108 @@ function frankenCheck({ record, catalog }: CheckInput): Finding[] {
   return out;
 }
 
+// Arm checks (hatchet, sword and the industrial tools): the printed page for each item's construction rules (TechManual).
+const BLADE_PAGES: Record<string, number> = { hatchet: 220, sword: 237 };
+const TOOL_PAGES: Record<string, number> = {
+  backhoe: 241,
+  chainsaw: 242,
+  combine: 243,
+  "dual-saw": 243,
+  "heavy-duty-pile-driver": 244,
+  "mining-drill": 246,
+  "rock-cutter": 247,
+  "salvage-arm": 248,
+  "spot-welder": 248,
+  "wrecking-ball": 249,
+};
+// The tools one location may hold only one kind of (the spot welder is the one tool the pages leave out of that list).
+const isExclusiveTool = (row: EquipmentRow) => row.armRemoves !== undefined && stemOf(row.id) !== "spot-welder";
+
+/**
+ * Hatchets, swords and the industrial tools in a location (TechManual pp.220, 237, 241-248): a blade only in an arm with the lower arm and
+ * hand actuators in place, one of each kind per arm; a tool that replaces the hand (the pile driver, the lower arm too) only once those
+ * actuators are removed, one of each kind per location, and no two different tools in one location (the salvage arm excludes all of them).
+ */
+function armCheck({ record, catalog }: CheckInput): Finding[] {
+  const out: Finding[] = [];
+  const byPlace = new Map<LocationCode, { mount: Mount; row: EquipmentRow; stem: string }[]>();
+  for (const mount of record.mounts) {
+    const row = rowOf(catalog, record, mount);
+    if (!row || !mount.location) continue;
+    const stem = stemOf(row.id);
+    if (!own(BLADE_PAGES, stem) && row.armRemoves === undefined) continue;
+    byPlace.set(mount.location, [...(byPlace.get(mount.location) ?? []), { mount, row, stem }]);
+  }
+  for (const [location, items] of byPlace) {
+    const arm = location === "LA" || location === "RA";
+    const has = { ...ARM_FULL, ...(arm ? armsOf(record)?.[location] : undefined) };
+    const place = locationName(location);
+    const seen = new Set<string>();
+    for (const { mount, row, stem } of items) {
+      const where = { location, mountId: mount.id };
+      const blade = own(BLADE_PAGES, stem);
+      const cite = tm((blade ? BLADE_PAGES[stem] : TOOL_PAGES[stem]) ?? PAGE.techBase);
+      if (blade && arm && !(has.lowerArm && has.hand)) {
+        out.push(finding("arms", "error", `${mount.name} in the ${place} needs the full set of arm actuators, with the lower arm and the hand in place.`, { where, cite }));
+      }
+      if (row.armRemoves !== undefined && arm) {
+        if (row.armRemoves === "lower-arm" && (has.lowerArm || has.hand)) {
+          out.push(finding("arms", "error", `${mount.name} in the ${place} replaces the lower arm and the hand; remove both actuators from that arm first.`, { where, cite }));
+        } else if (row.armRemoves === "hand" && has.hand) {
+          out.push(finding("arms", "error", `${mount.name} in the ${place} replaces the hand; remove the hand actuator from that arm first.`, { where, cite }));
+        }
+      }
+      if (seen.has(stem)) {
+        out.push(finding("arms", "error", `The ${place} holds more than one ${row.name}; the book allows one of each kind per ${arm ? "arm" : "location"}.`, { where, cite }));
+      }
+      seen.add(stem);
+    }
+    const kinds = [...new Set(items.filter((i) => isExclusiveTool(i.row)).map((i) => i.stem))];
+    if (kinds.length > 1) {
+      const names = items.filter((i) => isExclusiveTool(i.row)).map((i) => i.row.name);
+      const second = items.find((i) => isExclusiveTool(i.row) && i.stem !== kinds[0]);
+      out.push(
+        finding("arms", "error", `The ${place} holds ${[...new Set(names)].join(" and ")}; one location may hold only one kind of industrial tool, and the salvage arm excludes all the others.`, {
+          where: { location, mountId: second?.mount.id },
+          cite: tm(TOOL_PAGES[kinds[1] ?? ""] ?? PAGE.techBase),
+        }),
+      );
+    }
+  }
+  return out;
+}
+
+// Pairing and count limits that no single mount shows: C3 with C3i (p.209), the lift hoist's two (p.245), the extended fuel tank's engine
+// (p.244) and the heavy Gauss rifle's engine (p.219).
+const C3_STANDARD = /^c3-computer-(master|slave)-/;
+const HEAVY_GAUSS = /^heavy-gauss-rifle-/;
+const FUEL_BURNING = ["ice", "fuel-cell"];
+const MAX_LIFT_HOISTS = 2;
+
+function pairingCheck({ record, catalog }: CheckInput): Finding[] {
+  const out: Finding[] = [];
+  const rows = record.mounts.map((mount) => ({ mount, row: rowOf(catalog, record, mount) }));
+  const standard = rows.find((r) => C3_STANDARD.test(r.mount.equipmentId ?? ""));
+  const improved = rows.find((r) => stemOf(r.mount.equipmentId ?? "") === "improved-c3-computer");
+  if (standard && improved) {
+    out.push(finding("pairing", "error", `${standard.mount.name} and ${improved.mount.name} cannot share a unit; C3 and C3i are incompatible networks.`, { where: { mountId: improved.mount.id }, cite: tm(209) }));
+  }
+  const hoists = rows.filter((r) => stemOf(r.mount.equipmentId ?? "") === "lift-hoist");
+  if (hoists.length > MAX_LIFT_HOISTS) {
+    out.push(finding("pairing", "error", `${hoists.length} lift hoists are mounted; a 'Mech may carry at most ${MAX_LIFT_HOISTS}.`, { where: { mountId: hoists[MAX_LIFT_HOISTS]?.mount.id }, cite: tm(245) }));
+  }
+  const engine = record.chassis.engine.type;
+  const gauss = rows.find((r) => HEAVY_GAUSS.test(r.mount.equipmentId ?? ""));
+  if (gauss && FUEL_BURNING.includes(engine)) {
+    out.push(finding("pairing", "error", `${gauss.mount.name} needs a fusion or fission engine; the ${partName(ENGINE_TYPES, engine)} engine does not qualify.`, { where: { mountId: gauss.mount.id }, cite: tm(219) }));
+  }
+  const tank = rows.find((r) => stemOf(r.mount.equipmentId ?? "") === "extended-fuel-tank");
+  if (tank && !FUEL_BURNING.includes(engine)) {
+    out.push(finding("pairing", "error", `${tank.mount.name} is for an internal combustion or fuel cell engine; the ${partName(ENGINE_TYPES, engine)} engine does not use one.`, { where: { mountId: tank.mount.id }, cite: tm(244) }));
+  }
+  return out;
+}
+
 export const CHECKS: Check[] = [
   { id: "weight", editions: "all", run: weightCheck },
   { id: "slots", editions: "all", run: slotsCheck },
@@ -988,6 +1090,8 @@ export const CHECKS: Check[] = [
   { id: "unsupported", editions: "all", run: unsupportedCheck },
   { id: "omni", editions: "all", run: omniCheck },
   { id: "frankenmech", editions: "all", run: frankenCheck },
+  { id: "arms", editions: "all", run: armCheck },
+  { id: "pairing", editions: "all", run: pairingCheck },
 ];
 
 const NO_LAYOUT: Layout = { supported: false, locations: [], slots: {}, unplaced: [], conflicts: [], overflow: [], partSlots: [] };
