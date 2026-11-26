@@ -351,3 +351,40 @@ test("the Gothic Abomination tracker, empty and with a unit on the table, has no
     await scan(page, theme, "the tracker with a unit");
   }
 });
+
+test("patchwork armor in the editor and on the record sheet: axe clean in both themes, no sideways scroll at 320 px", async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.goto(`${DEV}${CLASSIC}/home`);
+  const form = page.getByRole("form", { name: "Build a new one" });
+  await form.getByLabel("Name").fill("Patch");
+  await form.getByLabel("Rules level").selectOption("advanced");
+  await form.getByLabel("Year").fill("3080");
+  await form.getByRole("button", { name: "Start building" }).click();
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Patch");
+  const editor = new URL(page.url());
+  const path = `${editor.pathname.replace(/^\/salvage-rights/, "")}${editor.search}`;
+  // Offered at Advanced from 3075; choosing a type for one location takes its slots there.
+  await page.getByText("Patchwork armor", { exact: true }).click();
+  await page.getByLabel("Right Arm armor type").selectOption("ferro-fibrous");
+  await expect(page.getByText("Armor of the Right Arm").first()).toBeVisible();
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await page.getByRole("link", { name: "Record sheet" }).click();
+  await expect(page.locator("[data-diagram=armor-types]")).toContainText("Ferro-Fibrous: RA");
+  const sheet = new URL(page.url());
+  const sheetPath = `${sheet.pathname.replace(/^\/salvage-rights/, "")}${sheet.search}`;
+  for (const theme of ["Light", "Dark"] as const) {
+    await chooseTheme(page, DEV, theme);
+    await page.goto(`${DEV}${path}`);
+    await page.getByText("Patchwork armor", { exact: true }).click();
+    await scan(page, theme, "the editor with patchwork armor");
+    await page.goto(`${DEV}${sheetPath}`);
+    await scan(page, theme, "the record sheet with patchwork armor");
+  }
+  await page.setViewportSize({ width: 320, height: 700 });
+  for (const address of [path, sheetPath]) {
+    await page.goto(`${DEV}${address}`);
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    const widths = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, client: document.documentElement.clientWidth }));
+    expect(widths.scroll, `scroll width on ${address}`).toBe(widths.client);
+  }
+});

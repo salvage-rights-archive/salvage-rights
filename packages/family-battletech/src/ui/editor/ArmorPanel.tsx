@@ -208,7 +208,7 @@ export default function ArmorPanel({
               <SelectField
                 key={location}
                 id={`field-patchwork-${location}`}
-                label={`${locationName(location)} armor`}
+                label={`${locationName(location)} armor type`}
                 value={armorTypeAt(record, location)}
                 options={partChoices("armor", record, armorTypeAt(record, location)).filter(([key]) => patchworkSlotsFor(key) !== undefined || key === armorTypeAt(record, location))}
                 changed={changed.has(`patchwork.${location}`)}
