@@ -60,6 +60,8 @@ const typeCheck: Check = (record, _catalog, out) => {
   if (!Number.isInteger(record.tons) || record.tons < min || record.tons > max) {
     out.push({ check: "weight", level: "error", message: `A ProtoMech weighs ${String(min)} to ${String(max)} tons in steps of ${String(step)}; this one is ${num(record.tons)}.`, where: { field: "tons" }, cite });
   }
+  const minTons = configOf(record)?.minTons;
+  if (minTons !== undefined && Number.isFinite(record.tons) && record.tons < minTons) out.push({ check: "weight", level: "error", message: `A glider is built only on the biped Ultraheavy chassis, ${String(minTons)} to ${String(max)} tons; this one is ${num(record.tons)}.`, where: { field: "tons" }, cite: page(PROTO_WEIGHT.cite) });
   if (configOf(record) === undefined) out.push({ check: "configuration", level: "warning", message: `This unit names a chassis ("${String(record.configuration)}") we do not know, so it is read as a biped.`, where: { field: "configuration" } });
   const mixedOk = record.techBase === "mixed" && (record.cockpit === "interface" || levelAtLeast(levelOfRecord(record), "advanced"));
   if (record.cockpit === "interface" && record.techBase !== "mixed") {

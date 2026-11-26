@@ -63,12 +63,25 @@ describe("a quad ProtoMech", () => {
     expect(errors({ ...quad, armor: { ...quad.armor, la: 2 } }, "armor")).toHaveLength(1);
   });
 
-  it("needs a Running MP of 3, holds four torso items, costs 500 a ton for structure with no arm actuators, and alone carries the quad melee system", () => {
+  it("needs a Running MP of 3", () => {
     expect(errors(build(8, 1, "quad"), "engine")).toHaveLength(1);
-    const quad = build(8, 3, "quad", { mounts: ["a", "b", "c", "d"].map((id) => mount(id, "er-micro-laser-clan", "t")) });
-    expect(errors(quad, "location")).toEqual([]);
-    const lines = Object.fromEntries(protoCost(quad, catalog).lines.map((l) => [l.label, l.cost]));
-    expect([lines["Internal structure"], lines["Arm actuators, both arms"]]).toEqual([4000, undefined]);
+    expect(errors(build(8, 2, "quad"), "engine")).toEqual([]);
+  });
+
+  it("holds four torso items, or six and two in the main gun when Ultraheavy", () => {
+    const items = (ids: string[], location: string) => ids.map((id) => mount(id, "er-micro-laser-clan", location));
+    expect(errors(build(8, 3, "quad", { mounts: items(["a", "b", "c", "d"], "t") }), "location")).toEqual([]);
+    expect(errors(build(8, 3, "quad", { mounts: items(["a", "b", "c", "d", "e"], "t") }), "location")).toHaveLength(1);
+    const ultra = build(10, 3, "quad", { mainGun: true, mounts: [...items(["a", "b", "c", "d", "e", "f"], "t"), ...items(["g", "h"], "mg")] });
+    expect(errors(ultra, "location")).toEqual([]);
+  });
+
+  it("costs 500 a ton for structure and 540 a ton for its legs once, with no arm actuators", () => {
+    const lines = Object.fromEntries(protoCost(build(8, 3, "quad"), catalog).lines.map((l) => [l.label, l.cost]));
+    expect([lines["Internal structure"], lines["Leg actuators, both legs"], lines["Arm actuators, both arms"]]).toEqual([4000, 4320, undefined]);
+  });
+
+  it("alone carries the quad melee system, valued at 2 damage per 5 tons times 1.25, and takes no magnetic clamp", () => {
     const melee = build(8, 3, "quad", { mounts: [mount("m", "protomech-quad-melee-weapon-system-clan", "t")] });
     expect(offeredEquipment(melee, catalog).map((r) => r.id)).toContain("protomech-quad-melee-weapon-system-clan");
     expect(offeredEquipment(build(8, 3, undefined), catalog).map((r) => r.id)).not.toContain("protomech-quad-melee-weapon-system-clan");
@@ -76,36 +89,39 @@ describe("a quad ProtoMech", () => {
     expect(protoBattleValue(melee, catalog).lines[0]?.bv).toBe(Math.ceil(8 / 5) * 2 * 1.25);
     expect(errors({ ...melee, mounts: [mount("c", "magnetic-clamp-system-clan", "t")] }, "item")).toHaveLength(1);
   });
-
-  it("holds six torso items and two in the main gun when Ultraheavy", () => {
-    const six = build(10, 3, "quad", { mainGun: true, mounts: [...["a", "b", "c", "d", "e", "f"].map((id) => mount(id, "er-micro-laser-clan", "t")), mount("g", "er-micro-laser-clan", "mg"), mount("h", "er-micro-laser-clan", "mg")] });
-    expect(errors(six, "location")).toEqual([]);
-  });
 });
 
 describe("a glider ProtoMech", () => {
   it("is built on WiGE Cruising MP: its engine rating is its weight times its WiGE Flanking MP less 2, and it needs a Flanking MP of 4", () => {
-    const glider = build(6, 4, "glider");
-    expect([engineRating(glider), engineKg(glider)]).toEqual([24, 600]);
-    expect(errors(glider, "engine")).toEqual([]);
-    expect(errors(build(6, 2, "glider"), "engine")).toHaveLength(1);
+    expect(engineRating(build(12, 4, "glider"))).toBe(50);
+    expect(errors(build(12, 4, "glider"), "engine")).toEqual([]);
+    expect(errors(build(12, 2, "glider"), "engine")).toHaveLength(1);
   });
 
-  it("may not have jump jets, a booster or a partial wing, costs 600 a ton for structure, and reads its WiGE Flanking MP for the Battle Value", () => {
-    const glider = build(6, 4, "glider", { jump: 2, booster: true, partialWing: true, rulesLevel: "experimental" });
+  it("may not have jump jets, a booster or a partial wing, and costs 600 a ton for structure", () => {
+    const glider = build(12, 4, "glider", { jump: 2, booster: true, partialWing: true, rulesLevel: "experimental" });
     expect(errors(glider, "part").map((f) => f.where?.field)).toEqual(["jump"]);
-    expect(protoCost(glider, catalog).lines.find((l) => l.label === "Internal structure")?.cost).toBe(3600);
-    expect(protoBattleValue(glider, catalog).offensive.speed).toBe(6);
+    expect(protoCost(glider, catalog).lines.find((l) => l.label === "Internal structure")?.cost).toBe(7200);
     expect(errors({ ...glider, mounts: [mount("c", "magnetic-clamp-system-clan", "t")] }, "item")).toHaveLength(1);
   });
 
-  it("takes the Ultra (Biped) location column at any weight, and its dates are 3075 and about 3084", () => {
-    const glider = build(5, 4, "glider", { mounts: [mount("a", "er-micro-laser-clan", "t"), mount("b", "er-micro-laser-clan", "t"), mount("c", "er-micro-laser-clan", "t")] });
-    expect(errors(glider, "location")).toEqual([]);
-    expect(configChoices({ ...glider, year: 3090 }).map((c) => c.id)).toEqual(["biped", "quad", "glider"]);
-    expect(configChoices({ ...glider, year: 3090, rulesLevel: "standard", configuration: undefined }).map((c) => c.id)).toEqual(["biped"]);
-    expect(protoLowestLevel({ ...glider, year: 3083 }, catalog)).toBe("experimental");
-    expect(errors({ ...glider, year: 3070 }, "part")).toHaveLength(1);
+  it("is read by its WiGE Flanking MP for the Battle Value, with the airborne +1 on its target movement modifier only", () => {
+    const bv = protoBattleValue(build(12, 4, "glider", { jump: 2, booster: true }), catalog);
+    expect([bv.offensive.speed, bv.defensive.targetModifier]).toEqual([6, 3]);
+  });
+
+  it("is built only from 10 tons on the biped chassis: hidden below, an error where a record already has it, and the Ultra (Biped) location column", () => {
+    expect(configChoices(build(5, 4, undefined)).map((c) => c.id)).toEqual(["biped", "quad"]);
+    expect(configChoices(build(12, 4, undefined)).map((c) => c.id)).toEqual(["biped", "quad", "glider"]);
+    expect(configChoices(build(5, 4, "glider")).map((c) => c.id)).toContain("glider");
+    expect(errors(build(5, 4, "glider"), "weight")).toHaveLength(1);
+    const three = build(12, 4, "glider", { mounts: ["a", "b", "c"].map((id) => mount(id, "er-micro-laser-clan", "t")) });
+    expect(errors(three, "location")).toEqual([]);
+  });
+
+  it("has its dates: Experimental in 3083, in production from 3084, not before 3075", () => {
+    expect(protoLowestLevel(build(12, 4, "glider", { year: 3083 }), catalog)).toBe("experimental");
+    expect(errors(build(12, 4, "glider", { year: 3070 }), "part").length).toBeGreaterThan(0);
   });
 });
 

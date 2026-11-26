@@ -154,7 +154,7 @@ test("an Ultraheavy glider ProtoMech: offered at Advanced rules in its years, bu
   await page.getByLabel("WiGE Cruising MP", { exact: true }).fill("4");
   await expect(page.getByText("WiGE Flanking MP 6.")).toBeVisible();
   await expect(page.getByText(/Engine rating 50/)).toBeVisible();
-  await expect(page.getByText(/each arm 1 item of 1000 kg at most/)).toBeVisible();
+  await expect(page.getByText(/each arm 1 item of 1,000 kg at most/)).toBeVisible();
   await page.getByLabel("Torso armor", { exact: true }).fill("24");
   await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.getByText("Saved.")).toBeVisible();

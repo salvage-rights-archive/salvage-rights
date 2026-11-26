@@ -308,11 +308,13 @@ export interface ProtoConfig extends Sourced {
   level: RulesLevel;
   dates?: ProtoDates;
   arms: boolean;
+  /** The lightest weight the chassis may have: a glider is built only on the biped Ultraheavy chassis, 10 to 15 tons (IO:AE p. 94; book panel). */
+  minTons?: number;
 }
 export const PROTO_CONFIGS: Record<string, ProtoConfig> = {
   biped: { label: "Biped", level: "standard", arms: true, cite: { book: TM, page: 80 }, checked: "page" },
   quad: { label: "Quad (ProtoQuad)", level: "advanced", dates: PROTO_DATES.quad, arms: false, cite: { book: IO, page: 92 }, checked: "page" },
-  glider: { label: "Glider", level: "advanced", dates: PROTO_DATES.glider, arms: true, cite: { book: IO, page: 92 }, checked: "page" },
+  glider: { label: "Glider", level: "advanced", dates: PROTO_DATES.glider, arms: true, minTons: 10, cite: { book: IO, page: 92 }, checked: "page" },
 };
 /** A ProtoMech of `PROTO_WEIGHT.ultraFrom` tons or more is Ultraheavy (IO:AE p. 94): Advanced, with the dates here. */
 export const PROTO_ULTRA: Sourced & { label: string; level: RulesLevel; dates: ProtoDates } = { label: "Ultraheavy ProtoMech", level: "advanced", dates: PROTO_DATES.ultra, cite: { book: IO, page: 92 }, checked: "page" };

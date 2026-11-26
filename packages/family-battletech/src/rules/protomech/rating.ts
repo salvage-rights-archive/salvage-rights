@@ -92,7 +92,8 @@ export function protoBattleValue(record: ProtoRecord, catalog: Catalog): ProtoBv
   const glider = isGlider(record);
   const running = runMP(record);
   const jumping = glider ? 0 : jumpMP(record);
-  const tmm = Math.max(targetModifier(running, false), jumping > 0 ? targetModifier(jumping, true) : 0);
+  // A glider in flight is airborne: its modifier is that of its WiGE Flanking MP plus 1 (IO:AE pp. 106, 186; book panel).
+  const tmm = Math.max(targetModifier(running, glider), jumping > 0 ? targetModifier(jumping, true) : 0);
   const factor = 1 + tmm / 10 + PROTO_BV.defensiveBonus;
   const defensive = { armor, structure, equipment, subtotal, targetModifier: tmm, factor: tidy(factor), rating: subtotal * factor };
 
@@ -164,7 +165,7 @@ export function protoCost(record: ProtoRecord, catalog: Catalog): ProtoCost {
   add("Life support", C.lifeSupport);
   add("Sensors", C.sensorsPerTon * tons);
   add("Musculature", C.musculaturePerTon * tons);
-  // A quad and a glider have a structure cost of their own per ton, whatever their weight (IO:AE p. 180); a quad has no arms to put actuators in.
+  // A quad and a glider have a structure cost of their own per ton, whatever their weight (IO:AE p. 180); a quad has no arms to put actuators in, and its one leg location pays the printed 540 a ton: the book prints no separate four-leg figure (book panel; mordel.net charges 360 a ton more, as if the arm actuators were kept).
   add("Internal structure", (Object.hasOwn(C.structurePerTonBy, record.configuration ?? "") ? (C.structurePerTonBy[record.configuration ?? ""] ?? C.structurePerTon) : C.structurePerTon) * tons);
   if (!isQuad(record)) add("Arm actuators, both arms", 2 * C.armActuatorPerTon * tons);
   add("Leg actuators, both legs", C.legActuatorPerTon * tons);

@@ -22,7 +22,7 @@ import { tidy } from "../../rules/walk";
 import { NumberField, SelectField, TextField, fieldId } from "../aero/fields";
 import LevelSelect from "../editor/LevelSelect";
 import ProtoDiagram from "./ProtoDiagram";
-import { locationDomId, mountDomId, mountFor, pickerLabel } from "./edit";
+import { locationDomId, mountDomId, mountFor, pickerLabel, setChassis } from "./edit";
 import type { ProtoOnEdit } from "./edit";
 
 const num = (n: number): string => String(tidy(n));
@@ -31,18 +31,6 @@ const money = (n: number): string => `${n.toLocaleString("en-US")} C-bills`;
 const setOption = (d: ProtoRecord, key: "cockpit" | "armorType" | "jumpType", id: string) => {
   if (id === "standard") delete d[key];
   else d[key] = id;
-};
-
-/** Sets the chassis. A glider has no jump jets, partial wing or Myomer Booster, so the ones the unit had are taken off when it becomes one. */
-const setChassis = (d: ProtoRecord, id: string) => {
-  if (id === "biped") delete d.configuration;
-  else d.configuration = id;
-  if (id === "glider") {
-    d.jump = 0;
-    d.booster = false;
-    delete d.partialWing;
-    delete d.jumpType;
-  }
 };
 
 interface PartProps {
@@ -224,8 +212,8 @@ function limitsHint(record: ProtoRecord): string {
   const arm = limitOf(record, "la");
   const gun = limitOf(record, "mg");
   const items = (n: number) => `${String(n)} ${n === 1 ? "item" : "items"}`;
-  const arms = locationsOf(record).includes("la") && arm ? `each arm ${items(arm.items)} of ${num(arm.kg ?? 0)} kg at most, ` : "";
-  return `The torso holds ${items(torso?.items ?? 0)} weighing ${num(torso?.kg ?? 0)} kg together (less one item for each of Electric Discharge armor and the partial wing), ${arms}the main gun ${items(gun?.items ?? 1)} of any weight. The head and legs hold none. Ammunition does not count against these limits.`;
+  const arms = locationsOf(record).includes("la") && arm ? `each arm ${items(arm.items)} of ${(arm.kg ?? 0).toLocaleString("en-US")} kg at most, ` : "";
+  return `The torso holds ${items(torso?.items ?? 0)} weighing ${(torso?.kg ?? 0).toLocaleString("en-US")} kg together (less one item for each of Electric Discharge armor and the partial wing), ${arms}the main gun ${items(gun?.items ?? 1)} of any weight. The head and legs hold none. Ammunition does not count against these limits.`;
 }
 
 export function WeaponsPanel({ record, catalog, onEdit }: PartProps & { catalog: Catalog }) {

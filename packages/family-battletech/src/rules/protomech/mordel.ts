@@ -117,7 +117,7 @@ function convert(response: unknown, catalog: Catalog, editionId: string, now: st
   if (walk === undefined) note("Mordel gave no walking MP; it is set to 1.");
   // A glider is built on its WiGE Cruising MP, which Mordel does not document: the one whose engine rating is Mordel's is read, else its walking MP.
   if (record.configuration === "glider" && rating !== undefined) {
-    const fits = Array.from({ length: 40 }, (_, i) => i + 1).find((cruise) => engineRating({ ...record, walk: cruise }) === rating);
+    const fits = [walk ?? 1, ...Array.from({ length: 40 }, (_, i) => i + 1)].find((cruise) => engineRating({ ...record, walk: cruise }) === rating);
     if (fits !== undefined) {
       record.walk = fits;
       note(`A glider: its WiGE Cruising MP is read as ${String(fits)} from Mordel's engine rating of ${String(rating)}; check it.`);
@@ -213,14 +213,20 @@ function convert(response: unknown, catalog: Catalog, editionId: string, now: st
     if (str(entry["facing"], `${name} facing`)?.toLowerCase() === "rear" && loc === "t") mount.rear = true;
     record.mounts.push(mount);
   });
-  if (ammo.length > 0) note("Mordel lists ammunition as entries like \"LRM 3 (Ammo 1)\"; each is read as that many shots of the weapon it names. Check the ammunition counts.");
-  for (const { name, shots } of ammo) {
+  if (ammo.length > 0) note("Mordel lists ammunition as entries like \"LRM 3 (Ammo 1)\"; each is read as that many shots of the kind of weapon it names, shared among the weapons of that kind. Check the ammunition counts.");
+  // Each entry is one shot of a weapon kind. Mordel does not say which weapon of the kind it feeds, so a kind's shots are shared out evenly among its weapons (the first takes the remainder).
+  const totals = new Map<string, number>();
+  for (const { name, shots } of ammo) totals.set(name, (totals.get(name) ?? 0) + shots);
+  for (const [name, total] of totals) {
     const found = findRow(name, catalog, clan);
-    // Each entry goes to the next weapon of its kind that has no ammunition yet (two launchers of one size each get theirs), else to the first.
     const kind = record.mounts.filter((m) => (found.row ? m.equipmentId === found.row.id && (found.tubes === undefined || m.tubes === found.tubes) : m.name === name));
-    const target = kind.find((m) => m.shots === undefined) ?? kind[0];
-    if (target) target.shots = (target.shots ?? 0) + shots;
-    else note(`Ammunition for ${name} was left out: no such weapon is on the unit.`);
+    if (kind.length === 0) {
+      note(`Ammunition for ${name} was left out: no such weapon is on the unit.`);
+      continue;
+    }
+    kind.forEach((m, i) => {
+      m.shots = Math.floor(total / kind.length) + (i < total % kind.length ? 1 : 0);
+    });
   }
 
   // Notes, values, the level and the mark

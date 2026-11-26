@@ -88,7 +88,7 @@ export const jumpChoices = (record: ProtoRecord): OptionChoice[] => offered(PROT
 export const wingOffered = (record: ProtoRecord): boolean => record.partialWing === true || (!isGlider(record) && optionOffered(record, PROTO_WING.level, PROTO_WING.dates));
 
 /** The chassis to offer: a biped always, the others when the rules level and time allow (hide, do not mark), and the one the record already has. */
-export const configChoices = (record: ProtoRecord): OptionChoice[] => offered(PROTO_CONFIGS, record, record.configuration ?? "biped");
+export const configChoices = (record: ProtoRecord): OptionChoice[] => offered(PROTO_CONFIGS, record, record.configuration ?? "biped").filter((c) => c.id === (record.configuration ?? "biped") || record.tons >= (own(PROTO_CONFIGS, c.id)?.minTons ?? 0));
 /** The weights to offer: the TechManual weights, and the Ultraheavy ones when the rules level and time allow them or the unit already weighs that much. */
 export function tonnageChoices(record: ProtoRecord): number[] {
   const top = isUltra(record) || optionOffered(record, PROTO_ULTRA.level, PROTO_ULTRA.dates) ? PROTO_WEIGHT.max : PROTO_WEIGHT.standardMax;

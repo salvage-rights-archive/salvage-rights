@@ -1,6 +1,5 @@
-// The ProtoMech import from Mordel. The bodies below are saved by hand from the fields mordel.net documents for a unit of type pm (no live call is made, and no key is
-// involved): the Delphyne-2 of the TechManual worked example (p. 89), and a glider and a quad built on the same layout. Where the documentation is silent (the glider's movement,
-// the words for the jump jets), the fixture says what the importer is expected to do.
+// The ProtoMech import from Mordel. The bodies below have the field names and value forms of real pm units read from mordel.net (2026-11-27), trimmed to the fields the import reads and
+// with the figures of the TechManual Delphyne-2 worked example (p. 89): no design text, and no live call in the tests. A glider and a quad are built on the same layout.
 import { beforeAll, describe, expect, it } from "vitest";
 import { loadCatalog } from "../catalog";
 import type { Catalog } from "../catalog";
@@ -16,8 +15,9 @@ beforeAll(async () => {
 
 let counter = 0;
 const run = (response: unknown): ProtoMordelImport => fromMordelProto(response, catalog, "total-warfare", "2026-11-27T10:00:00.000Z", () => `rec-${String(++counter)}`);
-const entry = (id: number | null, name: string, location: string | null, extra: Record<string, unknown> = {}) => ({ id, name, model: null, location, technology: "Clan", slots: 1, facing: "Front", associated_id: null, stacks: null, ...extra });
-const place = (code: string, armor: number) => ({ location: code, code, armor, rear_armor: null, structure: 1, armor_type: "Standard", structure_type: "Standard" });
+const entry = (id: number | null, name: string, location: string | null) => ({ id, name, location, technology: "Clan", slots: location === null ? 0 : 1, facing: "Front" });
+const shots = (name: string, count: number) => Array.from({ length: count }, () => entry(null, `${name} (Ammo 1)`, null));
+const place = (code: string, armor: number) => ({ code, armor, rear_armor: null, armor_type: null });
 
 /** The Delphyne-2: 9 tons, walk 5, jump 5, 2 heat sinks, 40 armor, 2 ER micro lasers in the arms, 2 SRM 3 in the torso with 10 shots each. */
 const delphyne = () => ({
@@ -32,7 +32,6 @@ const delphyne = () => ({
     canon: true,
     tech_base: "Clan",
     mixed_tech: false,
-    era: "Clan Invasion",
     year: 3070,
     rules_level: "Standard",
     tons: 9,
@@ -41,21 +40,19 @@ const delphyne = () => ({
     sources: [{ title: "TechManual", publisher: "Catalyst Game Labs", year: 2007 }],
     configuration: "Biped",
     movement: { walk: 5, run: 8, jump: 5, mechanical_jump_booster: 0 },
-    engine: { type: "Fusion", rating: 75 },
-    heat_sinks: { type: "Single", count: 2 },
-    jump_jets: { type: "ProtoMech", technology: "Clan", model: null, tons: 0.5 },
+    engine: { type: "ProtoMech Fusion", technology: "Clan", rating: 75 },
+    heat_sinks: { count: 2, type: "ProtoMech" },
+    jump_jets: { type: "ProtoMech", technology: "Clan" },
     cockpit: { type: "ProtoMech", technology: "Clan" },
-    armor: { type: "Standard", technology: "Clan", model: null, points: 40, tons: 2 },
+    armor: { type: "ProtoMech", technology: "Clan", points: 40 },
     locations: [place("H", 6), place("T", 16), place("LA", 4), place("RA", 4), place("L", 10)],
     equipment: [
       entry(1, "ER Micro Laser", "LA"),
       entry(2, "ER Micro Laser", "RA"),
       entry(3, "SRM 3", "T"),
       entry(4, "SRM 3", "T"),
-      entry(null, "SRM 3 (Ammo 10)", null),
-      entry(null, "SRM 3 (Ammo 10)", null),
+      ...shots("SRM 3", 20),
     ],
-    fluff: { overview: "A light fast ProtoMech.", capabilities: null },
   },
 });
 
@@ -82,11 +79,11 @@ describe("fromMordelProto", () => {
   });
 
   it("reads a quad's configuration and location codes, a glider's WiGE Cruising MP from its engine rating, and says what it could not match", () => {
-    const quad = imported({ ...delphyne(), unit: { ...delphyne().unit, configuration: "Quad", tons: 8, movement: { walk: 3, run: 5, jump: 0 }, engine: { type: "Fusion", rating: 24 }, jump_jets: null, locations: [place("H", 6), place("T", 16), place("L", 18), place("RA", 4)], equipment: [entry(1, "Gun of Unknown Make", "T")] } });
+    const quad = imported({ ...delphyne(), unit: { ...delphyne().unit, configuration: "Quad", tons: 8, movement: { walk: 3, run: 5, jump: 0 }, engine: { type: "ProtoMech Fusion", rating: 24 }, jump_jets: null, locations: [place("H", 6), place("T", 16), place("L", 18), place("RA", 4)], equipment: [entry(1, "Gun of Unknown Make", "T")] } });
     expect(quad.record.configuration).toBe("quad");
     expect(quad.notes).toEqual(expect.arrayContaining([expect.stringContaining("Gun of Unknown Make is not in our equipment table")]));
     expect(checkProto(quad.record, catalog).some((f) => f.check === "armor" && f.level === "error")).toBe(true);
-    const glider = imported({ ...delphyne(), unit: { ...delphyne().unit, configuration: "Glider", tons: 6, year: 3090, movement: { walk: 1, run: 1, jump: 0 }, engine: { type: "Fusion", rating: 24 }, jump_jets: null, equipment: [], canon: false } });
+    const glider = imported({ ...delphyne(), unit: { ...delphyne().unit, configuration: "Glider", tons: 12, year: 3090, movement: { walk: 4, run: 6, jump: 0 }, engine: { type: "ProtoMech Fusion", rating: 50 }, jump_jets: null, equipment: [], canon: false } });
     expect([glider.record.configuration, glider.record.walk, glider.record.rulesLevel, glider.record.official]).toEqual(["glider", 4, "advanced", undefined]);
   });
 
