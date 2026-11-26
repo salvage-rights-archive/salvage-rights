@@ -5,10 +5,11 @@ import type { ChangeEvent } from "react";
 import { Link, useNavigate } from "react-router";
 import { AERO_EDITION_ART, AI_LABEL } from "../../artwork/games";
 import { AERO_EDITIONS, DEFAULT_AERO_EDITION, aeroEditionName } from "../../data/aero";
-import { bookName } from "../../data/editions";
+import { bookName, eraLabel } from "../../data/editions";
+import LevelSelect from "../editor/LevelSelect";
 import GamePicture from "../GamePicture";
 import { MAX_LIBRARY_BYTES, STORAGE_READ_FAILED, STORAGE_WRITE_FAILED } from "../storage";
-import { newDraft, recordFromDraft, settle, typeReady, weightHint } from "./edit";
+import { draftMissing, newDraft, recordFromDraft, settle, techBasesFor, typeReady, typesAt, weightHint, yearErasOf } from "./edit";
 import type { AeroDraft } from "./edit";
 import { NumberField, SelectField, TextField } from "./fields";
 import { sheetProfileFor } from "../../data/aero-sheet";
@@ -18,6 +19,12 @@ import type { AeroEntry, AeroStorage } from "./storage";
 import "./aero.scss";
 
 const nameOf = (entry: AeroEntry): string => `${entry.record?.name.chassis ?? ""} ${entry.record?.name.model ?? ""}`.trim() || "Unnamed unit";
+const TECH_BASE_LABELS: Record<string, string> = { "inner-sphere": "Inner Sphere", clan: "Clan", mixed: "Mixed" };
+const withoutEra = (draft: AeroDraft): AeroDraft => {
+  const copy = { ...draft };
+  delete copy.era;
+  return copy;
+};
 const typeLabel = (editionId: string, unitType: string): string => AERO_EDITIONS.find((e) => e.id === editionId)?.types.find((t) => t.type === unitType)?.label ?? unitType;
 const bookLines = (edition: (typeof AERO_EDITIONS)[number]): string[] =>
   [...new Set(edition.books.map((b) => `${bookName(b.title)}, ${b.printing}${b.errata === undefined ? "" : `, errata ${b.errata}`}`))];
@@ -93,7 +100,8 @@ export default function AeroHomePage() {
   };
 
   const ready = typeReady(draft.editionId, draft.unitType);
-  const canBuild = storage !== undefined && draft.chassis.trim() !== "" && draft.tons > 0 && ready;
+  const missing = draftMissing(draft);
+  const canBuild = storage !== undefined && draft.chassis.trim() !== "" && draft.tons > 0 && ready && missing === "";
   const build = async () => {
     if (!storage || !canBuild) return;
     const made = recordFromDraft(draft);
@@ -135,6 +143,7 @@ export default function AeroHomePage() {
   const editionIds = [...AERO_EDITIONS.map((e) => e.id), ...new Set(readable.map((e) => e.record?.editionId ?? "").filter((id) => !AERO_EDITIONS.some((e) => e.id === id)))];
   const types = AERO_EDITIONS.find((e) => e.id === draft.editionId)?.types ?? [];
   const row = types.find((t) => t.type === draft.unitType);
+  const yearEras = yearErasOf(draft);
 
   return (
     <div className="sr-page">
@@ -342,10 +351,56 @@ export default function AeroHomePage() {
               id="bt-new-type"
               label="Type"
               value={draft.unitType}
-              options={types.filter((t) => typeReady(draft.editionId, t.type)).map((t) => ({ value: t.type, label: t.label }))}
+              options={typesAt(draft).map((t) => ({ value: t.type, label: t.label }))}
               hint={row?.cite}
               onChange={(unitType) => {
                 setDraft(settle({ ...draft, unitType }));
+              }}
+            />
+            {draft.editionId === DEFAULT_AERO_EDITION && (
+              <LevelSelect
+                id="bt-new-level"
+                record={draft}
+                onChange={(rulesLevel) => {
+                  setDraft(settle({ ...draft, rulesLevel }));
+                }}
+              />
+            )}
+            <NumberField
+              id="bt-new-year"
+              label="Year"
+              value={draft.year}
+              allowEmpty
+              hint={missing.startsWith("A year") ? missing : draft.editionId === DEFAULT_AERO_EDITION ? "The year sets the era and hides the tech bases and equipment that did not exist yet." : "Optional: these books print no dates, but a year still sets the era and the tech bases that existed."}
+              onValid={(year) => {
+                setDraft(settle({ ...draft, year }));
+              }}
+            />
+            {yearEras.length === 1 && (
+              <div className="bt-field">
+                <span id="bt-new-era-label" className="bt-label">Era</span>
+                <span id="bt-new-era" aria-labelledby="bt-new-era-label">{yearEras[0] ? eraLabel(yearEras[0]) : ""}</span>
+              </div>
+            )}
+            {yearEras.length > 1 && (
+              <SelectField
+                id="bt-new-era-pick"
+                label="Era"
+                value={draft.era ?? ""}
+                options={[{ value: "", label: "Choose an era" }, ...yearEras.map((era) => ({ value: era.id, label: eraLabel(era) }))]}
+                hint={missing.startsWith("The year") ? missing : undefined}
+                onChange={(era) => {
+                  setDraft(settle(era === "" ? withoutEra(draft) : { ...draft, era }));
+                }}
+              />
+            )}
+            <SelectField
+              id="bt-new-tech"
+              label="Tech base"
+              value={draft.techBase}
+              options={techBasesFor(draft).map((id) => ({ value: id, label: TECH_BASE_LABELS[id] ?? id }))}
+              onChange={(techBase) => {
+                setDraft({ ...draft, techBase: techBase === "clan" || techBase === "mixed" ? techBase : "inner-sphere" });
               }}
             />
             <NumberField id="bt-new-tons" label="Tons" value={draft.tons} min={0} hint={weightHint(row?.weight)} onValid={(tons) => { setDraft({ ...draft, tons: tons ?? 0 }); }} />

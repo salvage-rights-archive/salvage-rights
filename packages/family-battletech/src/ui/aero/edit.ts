@@ -1,13 +1,17 @@
 // What the AeroTech pages decide before a record is touched: which unit types an edition can build today, the new-unit form and what a
 // change of edition resets in it, which tech bases and equipment an edition offers a unit, and small edits to a record. Pure functions;
 // the book figures all come from data/aero.ts and rules/aero.ts.
-import { DEFAULT_LEVEL, equipmentLevel, levelAtLeast } from "../../rules/levels";
+import type { RulesLevel } from "../../data/chassis";
+import type { EraRow } from "../../data/editions";
+import { rulesetOf } from "../../data/rulesets";
+import { DEFAULT_LEVEL, equipmentLevel, levelAtLeast, levelRow, techBaseChoices } from "../../rules/levels";
 import { DEFAULT_AERO_EDITION, FIGHTER_FIGURES, aeroTypesFor, figureOf } from "../../data/aero";
 import type { AeroType, AeroTypeRow } from "../../data/aero";
 import { AERO_WEAPON_EDITIONS, aeroWeaponOffered, ammoRowOf } from "../../data/aero-weapons";
 import type { UnitId } from "../../data/units";
 import { fighterKind, locationsOf, newAeroRecord, vesselGroup } from "../../rules/aero";
 import type { AeroMount, AeroRecord } from "../../rules/aero";
+import { baseFits, erasOfYear, ownSpans, pastEraCap, setYear } from "../../rules/availability";
 import { mountableOn } from "../../rules/catalog";
 import type { Catalog, EquipmentRow } from "../../rules/catalog";
 import { phaseIn, windowOf } from "../../rules/time";
@@ -24,10 +28,13 @@ export function typeReady(editionId: string, unitType: string): boolean {
 
 export const typeRow = (editionId: string, unitType: string): AeroTypeRow | undefined => aeroTypesFor(editionId).find((row) => row.type === unitType);
 
-/** The tech bases an edition offers. AeroTech (1986) lists Inner Sphere weapons only (its p. 15 table); a base the record already has stays on offer. */
-export function techBasesFor(editionId: string, current?: string): string[] {
-  const all = editionId === AERO_WEAPON_EDITIONS.at1 ? ["inner-sphere"] : ["inner-sphere", "clan", "mixed"];
-  return current !== undefined && !all.includes(current) ? [...all, current] : all;
+/** The tech bases the unit may choose: Classic's rule (hide, do not mark): its rules level, its year and the era picked decide them (no Clan before the Clan sub-eras,
+ * Mixed from its prototype years and at its level, none across the Succession Wars). Older editions have no level, so only the year and era limit them, and AeroTech (1986)
+ * lists Inner Sphere weapons only (its p. 15 table). The base the record already has stays on offer. */
+export function techBasesFor(record: Pick<AeroRecord, "editionId" | "rulesLevel" | "year" | "era" | "techBase">, keepCurrent = true): string[] {
+  const listed = record.editionId === AERO_WEAPON_EDITIONS.at1 ? ["inner-sphere"] : ["inner-sphere", "clan", "mixed"];
+  const level = record.editionId === DEFAULT_AERO_EDITION ? record.rulesLevel : "unlimited";
+  return techBaseChoices(level, keepCurrent ? record.techBase : "", record).map(([id]) => id).filter((id) => (keepCurrent && id === record.techBase) || listed.includes(id));
 }
 
 /** The weight range a type is built in, in words; undefined where the book names none. */
@@ -48,6 +55,12 @@ export interface AeroDraft {
   unitType: string;
   tons: number;
   safeThrust: number;
+  /** The current edition only: the older books have no levels. */
+  rulesLevel?: RulesLevel;
+  /** Above the tech base, as in Classic's form: the year sets the era, and the era and year decide which tech bases are offered. */
+  year: number | null;
+  era?: string;
+  techBase: AeroRecord["techBase"];
 }
 
 /** Where a type starts: the lightest the edition allows, or the heaviest where it names no lightest. */
@@ -56,24 +69,56 @@ export const startTons = (row: AeroTypeRow | undefined): number => row?.weight.m
 const inBand = (row: AeroTypeRow, tons: number): boolean => (row.weight.min === undefined || tons >= row.weight.min) && (row.weight.max === undefined || tons <= row.weight.max);
 
 export function newDraft(editionId: string = DEFAULT_AERO_EDITION): AeroDraft {
-  return settle({ chassis: "", model: "", editionId, unitType: "", tons: 0, safeThrust: 5 });
+  return settle({ chassis: "", model: "", editionId, unitType: "", tons: 0, safeThrust: 5, year: null, techBase: "inner-sphere" });
+}
+
+/** The unit types the form offers at its edition and level: the ones the app builds, and in the current edition those at or below the rules level (hide, do not mark). */
+export function typesAt(draft: Pick<AeroDraft, "editionId" | "rulesLevel">): AeroTypeRow[] {
+  const atLevel = (row: AeroTypeRow) => draft.editionId !== DEFAULT_AERO_EDITION || levelAtLeast(draft.rulesLevel ?? DEFAULT_LEVEL, row.level ?? DEFAULT_LEVEL);
+  return aeroTypesFor(draft.editionId).filter((row) => typeReady(draft.editionId, row.type) && atLevel(row));
+}
+
+/** The eras a typed year is in that the form offers: Classic's rule (an era whose tech bases the level does not offer is not a choice, so at Introductory only the
+ * Inner Sphere era of a year in two). One means the era is settled; two, the player picks, and the era decides the tech base. */
+export function yearErasOf(draft: Pick<AeroDraft, "editionId" | "rulesLevel" | "year">): EraRow[] {
+  const level = draft.editionId === DEFAULT_AERO_EDITION ? draft.rulesLevel : "unlimited";
+  const bases = techBaseChoices(level, "", { year: draft.year, editionId: draft.editionId }).map(([value]) => value);
+  return erasOfYear(draft.year, rulesetOf(draft.editionId)).filter((era) => era.techBases === undefined || era.techBases.some((base) => bases.includes(base)));
+}
+
+/** What still blocks the form, in words ("" when nothing does): in the current rules a year above Introductory, and the era when the year is in two. The older books
+ * have no levels and print no dates, so they ask for neither. */
+export function draftMissing(draft: AeroDraft): string {
+  const level = draft.rulesLevel ?? DEFAULT_LEVEL;
+  if (draft.editionId !== DEFAULT_AERO_EDITION || level === "introductory") return "";
+  if (draft.year === null) return `A year is needed at ${levelRow(level).label} rules: it sets the era, and the era and year decide what is offered.`;
+  return yearErasOf(draft).length > 1 && !yearErasOf(draft).some((era) => era.id === draft.era) ? `The year ${String(draft.year)} is in two eras; choose one, since it decides the tech base.` : "";
 }
 
 /**
- * Brings a form to what its edition offers, and nothing more: the type stays where the edition builds it and otherwise becomes the
- * edition's first buildable one; the tons stay where the (new) type's weight range holds them and otherwise start at its lightest. The name, model
- * and thrust are never touched.
+ * Brings a form to what its edition offers, and nothing more, in the order the form reads: the level (current edition), the year, the era, the tech base the year and
+ * era leave, then the type (the edition's first buildable one at the level when the chosen one is not) and its tons (kept where the type's weight range holds them,
+ * else its lightest). The name, model and thrust are never touched.
  */
 export function settle(draft: AeroDraft): AeroDraft {
-  const types = aeroTypesFor(draft.editionId);
-  const keep = types.find((row) => row.type === draft.unitType && typeReady(draft.editionId, row.type));
-  const buildable = types.filter((r) => typeReady(draft.editionId, r.type));
-  const row = keep ?? buildable.find((r) => r.type === "aerospace-fighter") ?? buildable[0] ?? types[0];
-  const tons = row !== undefined && draft.tons > 0 && inBand(row, draft.tons) ? draft.tons : startTons(row);
-  return { ...draft, unitType: row?.type ?? draft.unitType, tons };
+  const current = draft.editionId === DEFAULT_AERO_EDITION;
+  const next: AeroDraft = { ...draft };
+  if (current) next.rulesLevel ??= DEFAULT_LEVEL;
+  else delete next.rulesLevel;
+  setYear(next, next.year);
+  const eras = yearErasOf(next);
+  if (eras.length === 1 && eras[0]) next.era = eras[0].id;
+  else if (next.era !== undefined && next.year !== null && !eras.some((era) => era.id === next.era)) delete next.era;
+  const bases = techBasesFor(next, false);
+  next.techBase = bases.includes(next.techBase) ? next.techBase : ((bases[0] ?? "inner-sphere") as AeroDraft["techBase"]);
+  const offered = typesAt(next);
+  const row = offered.find((r) => r.type === next.unitType) ?? offered.find((r) => r.type === "aerospace-fighter") ?? offered[0] ?? typeRow(next.editionId, next.unitType) ?? aeroTypesFor(next.editionId)[0];
+  next.tons = row !== undefined && next.tons > 0 && inBand(row, next.tons) ? next.tons : startTons(row);
+  next.unitType = row?.type ?? next.unitType;
+  return next;
 }
 
-/** The unit the form describes: a bare one to build on, with the rules level of its type in the current edition. */
+/** The unit the form describes: a bare one to build on, with the rules level the form chose in the current edition. */
 export function recordFromDraft(draft: AeroDraft, id: string = crypto.randomUUID()): AeroRecord {
   const row = typeRow(draft.editionId, draft.unitType);
   const unitType = draft.unitType as AeroType;
@@ -85,7 +130,10 @@ export function recordFromDraft(draft: AeroDraft, id: string = crypto.randomUUID
       unitType,
       tons: draft.tons,
       safeThrust: draft.safeThrust,
-      ...(draft.editionId === DEFAULT_AERO_EDITION ? { rulesLevel: row?.level ?? DEFAULT_LEVEL } : {}),
+      techBase: draft.techBase,
+      year: draft.year,
+      ...(draft.era === undefined ? {} : { era: draft.era }),
+      ...(draft.editionId === DEFAULT_AERO_EDITION ? { rulesLevel: draft.rulesLevel ?? row?.level ?? DEFAULT_LEVEL } : {}),
     },
     draft.editionId,
   );
@@ -120,10 +168,13 @@ export function offeredEquipment(record: AeroRecord, catalog: Catalog, everythin
   const out: EquipmentRow[] = [];
   const narrow = (row: EquipmentRow): boolean => {
     if (everything || row.id === keep) return true;
-    if (record.techBase !== "mixed" && row.techBase !== record.techBase) return false;
-    if (!current) return true;
+    if (!current) return record.techBase === "mixed" || row.techBase === record.techBase;
+    const dates = seen(row).availability;
+    // The current rules read the unit as Classic does: the tech base (a Clan unit keeps the Star League items built before 2781), the level, the era's date limit, then the year.
+    if (!baseFits(row.techBase, record.techBase, dates)) return false;
     if (record.rulesLevel !== undefined && !levelAtLeast(record.rulesLevel, equipmentLevel(row))) return false;
-    return window === null || phaseIn(row.availability, row.prototypeYear, window) !== null;
+    if (pastEraCap(record, dates)) return false;
+    return window === null || phaseIn(ownSpans(record, row.techBase, dates), row.prototypeYear, window) !== null;
   };
   for (const base of catalog.all()) {
     if (base.kind === "weapon" && mountableOn(base, unit) && aeroWeaponOffered(edition, base.id)) {

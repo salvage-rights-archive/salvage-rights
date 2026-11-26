@@ -4,8 +4,9 @@
 // the edition prints none.
 import { ENGINE_TYPES } from "../../data/chassis";
 import { CAPITAL_ARMOR_TYPES, CAPITAL_FIGURES, CRAFT_FIGURES, DEFAULT_AERO_EDITION, FIGHTER_FIGURES, aeroTypesFor, fighterArmorTypes, fighterPatchworkTypes, figureOf, kindFigureOf } from "../../data/aero";
-import { ERAS } from "../../data/editions";
-import { setEra, setYear } from "../../rules/availability";
+import { ERAS, SUB_ERAS, eraLabel } from "../../data/editions";
+import type { EraRow } from "../../data/editions";
+import { eraNeedsPick, eraOfRecord, erasOfYear, setEra, setYear } from "../../rules/availability";
 import {
   aeroLocationName,
   armorTypeAt,
@@ -43,7 +44,9 @@ const AT1 = "aerotech-1986";
 const num = (n: number): string => String(tidy(n));
 const plural = (n: number, word: string) => `${num(n)} ${word}${n === 1 ? "" : "s"}`;
 const TECH_BASE_LABELS: Record<string, string> = { "inner-sphere": "Inner Sphere", clan: "Clan", mixed: "Mixed" };
-const ERA_CHOICES = [{ value: "", label: "Any era" }, ...ERAS.map((era) => ({ value: era.id, label: `${era.name} (${String(era.startYear)}${era.endYear === undefined ? " on" : `-${String(era.endYear)}`})` }))];
+const eraChoice = (era: EraRow): { value: string; label: string } => ({ value: era.id, label: `${eraLabel(era)} (${String(era.startYear)}${era.endYear === undefined ? " on" : `-${String(era.endYear)}`})` });
+const eraName = (era: EraRow | undefined): string => (era ? eraLabel(era) : "Any era");
+const ERA_CHOICES = [{ value: "", label: "Any era" }, ...[...ERAS, ...SUB_ERAS].map(eraChoice)];
 const titleCase = (id: string): string => id.charAt(0).toUpperCase() + id.slice(1);
 
 /** A short list of derived figures, each a sentence, in the panel's own words. */
@@ -77,6 +80,10 @@ export function IdentityPanel({ record, catalog, onEdit }: PartProps & { catalog
   const hasShape = record.unitType === "small-craft" || record.unitType === "dropship";
   const current = edition === DEFAULT_AERO_EDITION;
   const lowest = current ? aeroLowestLevel(record, catalog) : undefined;
+  // The year sits above the tech base and decides the eras: one era holds it, or two (an Inner Sphere era and a Clan sub-era) and the era is picked. The current
+  // rules ask for a year above Introductory; the older books have no levels, so none is asked for there.
+  const yearEras = erasOfYear(record.year);
+  const needsYear = current && record.year === null && level !== "introductory";
   return (
     <section className="bt-panel" aria-labelledby="aero-identity">
       <h2 id="aero-identity">Identity</h2>
@@ -149,35 +156,57 @@ export function IdentityPanel({ record, catalog, onEdit }: PartProps & { catalog
             }}
           />
         )}
-        <SelectField
-          id="field-techBase"
-          label="Tech base"
-          value={record.techBase}
-          options={techBasesFor(edition, record.techBase).map((id) => ({ value: id, label: TECH_BASE_LABELS[id] ?? id }))}
-          onChange={(v) => {
-            onEdit((d) => void (d.techBase = v === "clan" || v === "mixed" ? v : "inner-sphere"));
-          }}
-        />
+        {current && (
+          <LevelSelect
+            record={record}
+            onChange={(level) => {
+              onEdit((d) => void (d.rulesLevel = level));
+            }}
+          />
+        )}
         <NumberField
           id="field-year"
           label="Year"
           value={record.year}
           allowEmpty
+          hint={needsYear ? `Needs a year at ${levelRow(level).label} rules: the year sets the era and decides what is offered.` : undefined}
           onValid={(v) => {
             onEdit((d) => {
               setYear(d, v);
             }, "year");
           }}
         />
+        {yearEras.length === 1 ? (
+          <div className="bt-field">
+            <span id="field-era-label" className="bt-label">
+              Era
+            </span>
+            <span id="field-era" tabIndex={-1} aria-labelledby="field-era-label">
+              {eraName(eraOfRecord(record))}
+            </span>
+            <span className="bt-hint">The era follows the year.</span>
+          </div>
+        ) : (
+          <SelectField
+            id="field-era"
+            label="Era"
+            value={yearEras.length > 1 ? (eraNeedsPick(record) ? "" : (eraOfRecord(record)?.id ?? "")) : (record.era ?? "")}
+            options={yearEras.length > 1 ? [{ value: "", label: "Choose an era" }, ...yearEras.map(eraChoice)] : ERA_CHOICES}
+            hint={yearEras.length > 1 ? `The year ${String(record.year)} is in two eras; the era you choose decides the tech base.` : undefined}
+            onChange={(v) => {
+              onEdit((d) => {
+                setEra(d, v);
+              });
+            }}
+          />
+        )}
         <SelectField
-          id="field-era"
-          label="Era"
-          value={record.era ?? ""}
-          options={ERA_CHOICES}
+          id="field-techBase"
+          label="Tech base"
+          value={record.techBase}
+          options={techBasesFor(record).map((id) => ({ value: id, label: TECH_BASE_LABELS[id] ?? id }))}
           onChange={(v) => {
-            onEdit((d) => {
-              setEra(d, v);
-            });
+            onEdit((d) => void (d.techBase = v === "clan" || v === "mixed" ? v : "inner-sphere"));
           }}
         />
         <NumberField
@@ -190,14 +219,6 @@ export function IdentityPanel({ record, catalog, onEdit }: PartProps & { catalog
             onEdit((d) => void (d.tons = v ?? d.tons), "tons");
           }}
         />
-        {current && (
-          <LevelSelect
-            record={record}
-            onChange={(level) => {
-              onEdit((d) => void (d.rulesLevel = level));
-            }}
-          />
-        )}
       </div>
       {lowest !== undefined && <p className="bt-hint">{`The lowest rules level that fits everything on the unit: ${levelRow(lowest).label}.`}</p>}
     </section>
