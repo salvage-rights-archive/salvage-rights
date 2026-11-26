@@ -1,0 +1,11 @@
+// The infantry pages' own styles, after the Classic ones they share.
+.bt-infantry-diagram {
+  display: block;
+  margin-top: var(--sr-space-2);
+  color: var(--sr-text);
+
+  [role="button"]:focus-visible {
+    outline: 3px solid var(--sr-focus, currentColor);
+    outline-offset: 2px;
+  }
+}

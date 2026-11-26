@@ -25,6 +25,7 @@ import { startTons, typeReady, typeRow, weightHint } from "./aero/edit";
 import { NumberField } from "./aero/fields";
 import { AERO_HOME, editorHref } from "./aero/routes";
 import { openAeroStorage } from "./aero/storage";
+import { INFANTRY_CHOICE, InfantrySaved, startInfantry } from "./infantry/HomePart";
 import { newProtoRecord } from "../rules/protomech/record";
 import { PROTO_WEIGHT } from "../data/protomech";
 import ProtoSavedUnits from "./protomech/ProtoSavedUnits";
@@ -111,6 +112,8 @@ export default function HomePage() {
   const [aeroType, setAeroType] = useState<string>();
   const [aeroTons, setAeroTons] = useState<number>();
   const [aeroThrust, setAeroThrust] = useState(5);
+  /** True when conventional infantry is the choice in the new-unit list: it opens the infantry editor. */
+  const [infantryWanted, setInfantryPicked] = useState(false);
   /** The ProtoMech chosen in the new-unit list, when it is: it opens the ProtoMech editor. */
   const [protoType, setProtoType] = useState<string>();
   const [protoTons, setProtoTons] = useState(5);
@@ -266,6 +269,9 @@ export default function HomePage() {
   // The ProtoMech the current rules build (Clan only, from its prototype years), offered where the level, year and era allow it (hidden, never marked).
   const protoOptions = protoNewOptions({ rulesLevel: draft.rulesLevel, year: yearTyped, era: eraChosen?.id, clanOffered: offeredBases.some(([value]) => value === "clan") });
   const protoPicked = protoOptions.some((option) => option.id === protoType);
+  // Infantry is Level Two (Total Warfare p. 9): not offered at Introductory.
+  const infantryOffered = levelAtLeast(draft.rulesLevel ?? "standard", "standard");
+  const infantryPicked = infantryWanted && infantryOffered;
   const buildProto = async () => {
     if (!storage || !draft.chassis.trim() || missing !== "") return;
     const made = newProtoRecord({ chassis: draft.chassis.trim(), model: draft.model.trim(), tons: protoTons, walk: protoWalk, year: yearTyped, ...(eraChosen ? { era: eraChosen.id } : {}), rulesLevel: draft.rulesLevel });
@@ -345,6 +351,13 @@ export default function HomePage() {
     if (baPicked) return buildBa();
     if (aeroPicked) return buildAero();
     if (vehiclePicked) return buildVehicle();
+    if (infantryPicked) {
+      if (missing !== "" || !draft.chassis.trim()) return;
+      const id = await startInfantry({ name: draft.chassis.trim(), model: draft.model.trim(), techBase, year: yearTyped, era: eraChosen?.id, rulesLevel: draft.rulesLevel }).catch(() => undefined);
+      if (id === undefined) setProblem(STORAGE_WRITE_FAILED);
+      else void navigate(`/battletech/classic/infantry-editor?id=${encodeURIComponent(id)}`);
+      return;
+    }
     if (!storage || !draft.chassis.trim() || missing !== "") return;
     const options = { ...draft, techBase, configuration, tons, chassis: draft.chassis.trim(), model: draft.model.trim(), walk: Math.min(draft.walk, walks.at(-1) ?? 1), year: yearTyped };
     // An OmniMech is a chassis (its fixed base and a Prime to start) and is saved as one.
@@ -675,6 +688,7 @@ export default function HomePage() {
             })}
           </ul>
         )}
+        <InfantrySaved />
         {entries.some((e) => e.record !== undefined || e.chassis !== undefined) && (
           <p>
             <button
@@ -785,9 +799,14 @@ export default function HomePage() {
                   label: "Battle armor (opens the battle armor editor)",
                   choices: { options: baOptions, chosen: baPicked?.id, onChoose: setBaPick },
                 },
+                {
+                  prefix: "infantry:",
+                  label: "Infantry (opens the infantry editor)",
+                  choices: { options: infantryOffered ? [INFANTRY_CHOICE] : [], chosen: infantryPicked ? INFANTRY_CHOICE.id : undefined, onChoose: (id) => { setInfantryPicked(id !== undefined); } },
+                },
               ]}
             />
-            {!aeroPicked && !protoPicked && !vehiclePicked && !baPicked && (
+            {!aeroPicked && !protoPicked && !vehiclePicked && !baPicked && !infantryPicked && (
             <div className="bt-field">
               <label htmlFor="bt-new-config">Configuration</label>
               <select
@@ -852,8 +871,8 @@ export default function HomePage() {
             ) : (
             <div className="bt-field">
               <label htmlFor="bt-new-tech">Tech base</label>
-              <select id="bt-new-tech" value={techBase} onChange={(e) => setDraft({ ...draft, techBase: e.target.value as NewMechOptions["techBase"] })}>
-                {techBaseChoices(draft.rulesLevel, techBase, when).map(([value, label]) => (
+              <select id="bt-new-tech" value={infantryPicked && techBase === "mixed" ? "inner-sphere" : techBase} onChange={(e) => setDraft({ ...draft, techBase: e.target.value as NewMechOptions["techBase"] })}>
+                {techBaseChoices(draft.rulesLevel, techBase, when).filter(([value]) => !(infantryPicked && value === "mixed")).map(([value, label]) => (
                   <option key={value} value={value}>
                     {label}
                   </option>
@@ -908,7 +927,7 @@ export default function HomePage() {
                 <NumberField id="bt-new-aero-tons" label="Tonnage" value={aeroTons ?? startTons(aeroRow)} min={0} hint={weightHint(aeroRow.weight)} onValid={(tons) => { setAeroTons(tons ?? undefined); }} />
                 <NumberField id="bt-new-aero-thrust" label="Safe Thrust" value={aeroThrust} min={0} onValid={(thrust) => { setAeroThrust(thrust ?? 0); }} />
               </>
-            ) : (
+            ) : infantryPicked ? null : (
             <>
             <div className="bt-field">
               <label htmlFor="bt-new-tons">Tonnage</label>
@@ -934,7 +953,9 @@ export default function HomePage() {
             )}
           </div>
           <p className="bt-hint">
-            {protoPicked ? (
+            {infantryPicked ? (
+              "You start with a platoon of the standard size for its type and affiliation, no weapons and no armor. The infantry rules check shows what is left to do."
+            ) : protoPicked ? (
               "You start with the chassis and an engine for the walking speed, no jump jets, no heat sinks, no armor and no equipment. The ProtoMech editor's rules check shows what is left to do."
             ) : vehiclePicked ? (
               "You start with a standard fusion engine and its ten free heat sinks (an internal combustion engine gives none), no armor, no turret and no equipment. The vehicle editor's rules check shows what is left to do."
