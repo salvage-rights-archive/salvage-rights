@@ -68,6 +68,17 @@ describe("split weapons", () => {
     expect(splitFindings({ ...arrow, unitType: "industrialmech" })).toEqual([74]);
   });
 
+  // Which rows may split is each row's own entry against the slot rule: the later books' autocannons of 8 or more slots may (IO:AE pp.90-92,
+  // TO:AUE p.96), and the standard AC/10 (7 slots) never can.
+  it.each([
+    ["rotary-ac-5-clan", true],
+    ["prototype-ultra-ac-10-clan", true],
+    ["improved-ac-20-clan", true],
+    ["ac-10-is", false],
+  ])("marks %s as splittable: %s", (id, expected) => {
+    expect(catalog.byId(id)?.splittable === true).toBe(expected);
+  });
+
   it("does not let a split go into a leg", () => {
     const record = barghest();
     record.mounts = record.mounts.filter((m) => m.location !== "RRL").map((m) => (m.id === "lb" ? { ...m, split: { location: "RRL", slot: 4, slots: 2 } } : m));
