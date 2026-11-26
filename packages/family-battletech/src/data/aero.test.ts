@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { AERO_EDITIONS, aeroEditionName, aeroFigures, aeroTypesFor } from "./aero";
+import { AERO_EDITIONS, FIGHTER_ARMOR_TYPES, FIGHTER_EDITIONS, FIGHTER_FIGURES, aeroEditionName, aeroFigures, aeroTypesFor, fighterArmorPointsPerTon } from "./aero";
+import type { FigureGroup } from "./aero";
 import { newer } from "./editions";
 
 describe("the AeroTech editions", () => {
@@ -42,5 +43,22 @@ describe("the AeroTech editions", () => {
     }
     expect(aeroTypesFor("no-such-edition")).toEqual([]);
     expect(AERO_EDITIONS).toHaveLength(5);
+  });
+});
+
+describe("the fighter construction figures", () => {
+  it("name each edition once per group with a cite, offer armor only to cited editions, and read the armor multipliers from the one armor table", () => {
+    const groups = Object.values(FIGHTER_FIGURES).flatMap((g) => (Array.isArray(g) ? [g] : Object.values(g))) as FigureGroup<unknown>[];
+    const editions = Object.values(FIGHTER_EDITIONS) as string[];
+    const problems: string[] = [];
+    for (const [i, group] of groups.entries()) {
+      const named = group.flatMap((row) => row.editions);
+      if (new Set(named).size !== named.length) problems.push(`group ${i} names an edition twice`);
+      for (const row of group) if (row.editions.some((e) => !editions.includes(e) || !row.cite[e]) || Object.keys(row.cite).length !== row.editions.length) problems.push(`group ${i} cite`);
+    }
+    for (const type of FIGHTER_ARMOR_TYPES) if (type.editions.some((e) => !type.cite[e]) || Object.keys(type.cite).length !== type.editions.length) problems.push(`armor ${type.id} cite`);
+    expect(problems).toEqual([]);
+    // TechManual p. 192 prints these points a ton on the base 16.
+    expect(["standard", "light-ferro-aluminum", "ferro-aluminum", "ferro-aluminum-clan", "heavy-ferro-aluminum"].map((id) => fighterArmorPointsPerTon(id, "tw-tm-so"))).toEqual([16, 16.96, 17.92, 19.2, 19.84]);
   });
 });
