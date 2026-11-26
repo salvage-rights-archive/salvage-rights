@@ -2,7 +2,7 @@
 // (for Undo and Redo), derives everything else from the current record, and hands each panel what it shows and an
 // `onEdit(change)` callback. Every edit goes through `editRecord`.
 import { editionName } from "../data/editions";
-import { baseOf, gameBase, gameOfPath, RULESETS } from "../data/rulesets";
+import { baseOf, gameBase, gameOfPath, RULESETS, rulesetOf } from "../data/rulesets";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import type { ChangeEvent, CSSProperties, ReactNode } from "react";
 import { Link, useBlocker, useLocation, useNavigate, useSearchParams } from "react-router";
@@ -37,6 +37,7 @@ import TypeSelect from "./editor/TypeSelect";
 import ArmorPanel from "./editor/ArmorPanel";
 import LeaveConfirm from "./editor/LeaveConfirm";
 import CalculatorPanel from "./editor/CalculatorPanel";
+import { inferredWeight } from "./editor/gothicNotes";
 import FindingsPanel from "./editor/FindingsPanel";
 import { CompliancePanel, OfficialBadge, OfficialPanel } from "./editor/Marks";
 import { standardCompliance } from "../rules/official";
@@ -376,7 +377,7 @@ const CHASSIS_FIELDS: ChassisField[] = [
   { kind: "number", path: "chassis.heatSinks-count", label: "Heat sinks", read: (r) => r.chassis.heatSinks.count, write: (d, v) => void (d.chassis.heatSinks.count = v) },
 ];
 
-const ERA_CHOICES: [string, string][] = [["", "Any era"], ...ERAS.map((era): [string, string] => [era.id, `${era.name} (${String(era.startYear)}${era.endYear === undefined ? " on" : `-${String(era.endYear)}`})`])];
+const eraChoices = (eras: typeof ERAS): [string, string][] => [["", "Any era"], ...eras.map((era): [string, string] => [era.id, `${era.name} (${String(era.startYear)}${era.endYear === undefined ? " on" : `-${String(era.endYear)}`})`])];
 
 // ---------------------------------------------------------------------------------------------------------------
 // What a finding or a changed marker can point at
@@ -691,6 +692,10 @@ function Editor({ initial, unsaved, startAt, catalog, storage }: { initial: Doc;
       ].filter(Boolean)
     : [];
   const base = gameBase(record);
+  const ruleset = rulesetOf(record.editionId);
+  const gothic = ruleset.game === "gothic";
+  // Items whose weight we worked out because no book prints it (the Light Blazer), each named once for the weight list.
+  const inferredWeights = gothic ? [...new Set(record.mounts.flatMap((m) => { const row = m.equipmentId ? catalog.rowFor(m.equipmentId, record.editionId) : undefined; const why = row && inferredWeight(row); return row && why ? [`${row.name}: ${why}`] : []; }))] : [];
   const mark = (path: string) => changed.has(path);
   const notes = importNotes(useLocation().state);
   // Once a 'Mech opened for review is saved, its address names it, so a reload finds it.
@@ -808,7 +813,14 @@ function Editor({ initial, unsaved, startAt, catalog, storage }: { initial: Doc;
             ))}
           </ul>
         )}
-        {figures.length > 0 && <p className="bt-hint bt-figures">{`Mordel's figures: ${figures.join(", ")}`}</p>}
+        {gothic && weightOpen && inferredWeights.length > 0 && (
+          <ul className="bt-weight bt-hint">
+            {inferredWeights.map((line) => (
+              <li key={line}>{line}</li>
+            ))}
+          </ul>
+        )}
+        {figures.length > 0 && source?.kind === "mordel" && <p className="bt-hint bt-figures">{`Mordel's figures: ${figures.join(", ")}`}</p>}
         {dirty && <p className="bt-hint">{savedDoc === undefined ? "This 'Mech is not saved yet. Review it, then press Save." : "You have changes that are not saved."}</p>}
         {notes.length > 0 && (
           <details className="bt-notes" aria-labelledby={notesId}>
@@ -892,7 +904,7 @@ function Editor({ initial, unsaved, startAt, catalog, storage }: { initial: Doc;
                     OmniMech
                   </span>
                 </div>
-              ) : (
+              ) : gothic ? null : (
                 <TypeSelect
                   record={record}
                   onChange={(type) => {
@@ -924,7 +936,8 @@ function Editor({ initial, unsaved, startAt, catalog, storage }: { initial: Doc;
                 disabled={fixedHere}
                 onChange={(v) => { edit((d) => { setConfiguration(d, v); }); }}
               />
-              <LevelSelect record={record} onChange={(level) => { edit((d) => void (d.rulesLevel = level)); }} />
+              <LevelSelect record={record} ruleset={ruleset} onChange={(level) => { edit((d) => void (d.rulesLevel = level)); }} />
+              {!gothic && (
               <SelectField
                 id="field-techBase"
                 label="Tech base"
@@ -934,13 +947,28 @@ function Editor({ initial, unsaved, startAt, catalog, storage }: { initial: Doc;
                 disabled={fixedHere}
                 onChange={(v) => { edit((d) => void (d.techBase = v as MechRecord["techBase"])); }}
               />
+              )}
+              {gothic && (
+                <label className="bt-check bt-grid__wide" htmlFor="field-searchlight">
+                  <input
+                    id="field-searchlight"
+                    type="checkbox"
+                    checked={record.gothic?.searchlight === true}
+                    disabled={fixedHere}
+                    onChange={(event) => {
+                      edit((d) => { if (event.target.checked) d.gothic = { ...d.gothic, searchlight: true }; else if (d.gothic) { delete d.gothic.searchlight; if (Object.keys(d.gothic).length === 0) delete d.gothic; } });
+                    }}
+                  />
+                  Searchlight (no weight, no slot; rulebook p. 90)
+                </label>
+              )}
               <NumberField id="field-year" label="Year" value={record.year} allowEmpty changed={mark("year")} onValid={(v) => { edit((d) => { setYear(d, v); }, "year"); }} />
               <div className="bt-grid__wide">
               <SelectField
                 id="field-era"
                 label="Era"
                 value={eraOfRecord(record)?.id ?? ""}
-                options={ERA_CHOICES}
+                options={eraChoices(ruleset.eras)}
                 changed={mark("era")}
                 disabled={fixedHere}
                 onChange={(v) => { edit((d) => { setEra(d, v); }, "era"); }}

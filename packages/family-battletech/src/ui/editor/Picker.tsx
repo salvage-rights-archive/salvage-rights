@@ -8,7 +8,9 @@ import type { Catalog, EquipmentRow, GroupKey } from "../../rules/catalog";
 import { DEFAULT_LEVEL, equipmentLevel, levelRow } from "../../rules/levels";
 import type { MechRecord, Mount } from "../../rules/mech";
 import { datesText } from "../../rules/time";
+import { rulesetOf } from "../../data/rulesets";
 import { dialogKeyDown } from "./dialog";
+import { gothicNotes } from "./gothicNotes";
 
 const TECH_BASE_NAMES = { "inner-sphere": "Inner Sphere", clan: "Clan" };
 const plural = (n: number, word: string) => `${String(n)} ${word}${n === 1 ? "" : "s"}`;
@@ -37,6 +39,8 @@ export default function Picker({
   /** Offer only what an OmniMech pod may carry (the rows without `pod: false`). */
   podOnly?: boolean;
 }) {
+  const ruleset = rulesetOf(record.editionId);
+  const gothic = ruleset.game === "gothic";
   const [query, setQuery] = useState("");
   const [everything, setEverything] = useState(false);
   const [toggled, setToggled] = useState<Record<string, boolean>>({});
@@ -74,12 +78,13 @@ export default function Picker({
     const facts = catalog.factsOf(trial, record);
     // A heat sink's weight is counted with the chassis heat sinks, so it is not listed as 0 tons.
     const size = facts ? (row.kind === "heat-sink" ? `weight counted with the chassis heat sinks, ${plural(facts.slots, "slot")}` : `${plural(facts.tons, "ton")}, ${plural(facts.slots, "slot")}`) : "weight and slots not known for this 'Mech";
-    const parts = [TECH_BASE_NAMES[row.techBase], size];
+    const parts = gothic ? [size] : [TECH_BASE_NAMES[row.techBase], size];
     const level = equipmentLevel(row);
-    if (level !== "introductory" && level !== DEFAULT_LEVEL) parts.push(`${levelRow(level).label} level`);
+    if (level !== "introductory" && level !== DEFAULT_LEVEL) parts.push(`${levelRow(level, ruleset).label} level`);
     // Both dates where the books print both; "prototype" says the unit's time falls between them, so the item needs Experimental rules.
-    if (row.prototypeYear !== undefined) parts.push(datesText(row.prototypeYear, row.availability[0]?.from).toLowerCase() + (equipmentPhase(row, record, catalog) === "prototype" ? ", a prototype in this unit's time" : ""));
-    if (row.yearsInferred) parts.push("year not printed in the book");
+    if (gothic) parts.push(...gothicNotes(row));
+    if (row.prototypeYear !== undefined && ruleset.dated) parts.push(datesText(row.prototypeYear, row.availability[0]?.from).toLowerCase() + (equipmentPhase(row, record, catalog) === "prototype" ? ", a prototype in this unit's time" : ""));
+    if (row.yearsInferred && ruleset.dated) parts.push("year not printed in the book");
     if (!equipmentAvailable(row, record, catalog)) parts.push("not available to this unit");
     return parts.join(", ");
   };
@@ -103,26 +108,29 @@ export default function Picker({
             }}
           />
         </div>
-        <div className="bt-field">
-          <label>
-            <input
-              type="checkbox"
-              checked={everything}
-              onChange={(event) => {
-                setEverything(event.target.checked);
-              }}
-            />{" "}
-            Show everything
-          </label>
-          <span className="bt-hint">
-            {everything ? "Showing every item, whatever its tech base or era. Items above the unit's rules level stay hidden." : "Showing what this unit's rules level, tech base and era or year allow."}
-          </span>
-        </div>
+        {/* Gothic has no tech bases or dates to lift, so there is nothing for "Show everything" to show (its list opens at Unlimited). */}
+        {!gothic && (
+          <div className="bt-field">
+            <label>
+              <input
+                type="checkbox"
+                checked={everything}
+                onChange={(event) => {
+                  setEverything(event.target.checked);
+                }}
+              />{" "}
+              Show everything
+            </label>
+            <span className="bt-hint">
+              {everything ? "Showing every item, whatever its tech base or era. Items above the unit's rules level stay hidden." : "Showing what this unit's rules level, tech base and era or year allow."}
+            </span>
+          </div>
+        )}
         {total === 0 ? (
           <p>No equipment matches.</p>
         ) : (
           <>
-            <p role="status">{`${plural(total, "item")} in ${plural(groups.length, "group")}, at ${levelRow(record.rulesLevel ?? DEFAULT_LEVEL).label} level or below`}</p>
+            <p role="status">{`${plural(total, "item")} in ${plural(groups.length, "group")}, at ${levelRow(record.rulesLevel ?? DEFAULT_LEVEL, ruleset).label} level or below`}</p>
             {groups.map((group, index) => {
               const open = isOpen(group, index);
               const headingId = `${panelId}-${group.id}-h`;
