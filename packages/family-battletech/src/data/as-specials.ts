@@ -25,13 +25,17 @@ export interface AsSpecialRow {
 
 /**
  * What the Introductory level shows: the codes printed on the unit cards of the box sets that level covers. ASCE does not define the
- * level for Alpha Strike; the design takes it from the box set's own rules and cards. We read the specials line of every 'Mech card in
- * three folders of our private card scans (read in place, nothing copied): "Boxed Set - A Game of Armored Combat" (cards 01-16),
- * "Boxed Set - Alpha Strike" (cards 01-26) and "Boxed Set - Clan Invasion - Card Pack" (cards 01-10), 52 cards in all. Pilot abilities on
- * the pilot cards are not special abilities and are left out. Not read: the larger "Boxed Set - Clan Invasion - AS Cards" folder (213 files).
- * IF0 appears on some cards with a die-roll note beside it; it is the IF code.
+ * level for Alpha Strike; the design takes it from the box sets' own cards. We read the specials line of every unit card (fronts only) in
+ * four folders of our private card scans, in place, nothing copied: "Boxed Set - A Game of Armored Combat" (16 cards), "Boxed Set - Alpha
+ * Strike" (26), "Boxed Set - Clan Invasion - Card Pack" (10) and "Boxed Set - Clan Invasion - AS Cards" (192 unit cards; its 20 formation
+ * cards and the pilot cards of the other folders are not unit cards), 244 cards in all. Pilot abilities are not special abilities and are
+ * left out. IF0 and the starred FLK0 and REAR0 forms carry a die-roll note on the card; they are the IF, FLK and REAR codes. ARTAIS is a
+ * member of the artillery family, listed as ARTX.
  */
-export const AS_INTRODUCTORY_CODES = ["AC", "AMS", "CASE", "CASEII", "ECM", "ENE", "HT", "IF", "JMPW", "LRM", "OMNI", "OVL", "REAR", "SRM", "STL"];
+export const AS_INTRODUCTORY_CODES = [
+  "AC", "AMS", "ARTX", "C3I", "C3M", "C3S", "CASE", "CASEII", "ECM", "ENE", "FLK", "HT", "IF", "JMPW", "LRM", "MEL", "MHQ", "OMNI", "OVL", "PRB",
+  "RCN", "REAR", "SNARC", "SRM", "STL", "TAG", "TSM",
+];
 
 export const ASCE_SPECIALS_CITE = {
   book: "Alpha Strike: Commander's Edition",

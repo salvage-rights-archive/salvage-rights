@@ -26,7 +26,26 @@ const FROM_TABLES = [
   ...Object.keys(DAMAGE_SPECIALS),
   LARGE.code,
 ];
-const FROM_RULES = ["BFC", "ENE", "ES", "HT", "JMPS", "JMPW", "MASH", "MEL", "MHQ", "OMNI", "OVL", "SEAL", "SOA", "STL", "SUBS", "CASE", "BAR", "TSEMP"];
+const FROM_RULES = [
+  "BFC",
+  "ENE",
+  "ES",
+  "HT",
+  "JMPS",
+  "JMPW",
+  "MASH",
+  "MEL",
+  "MHQ",
+  "OMNI",
+  "OVL",
+  "SEAL",
+  "SOA",
+  "STL",
+  "SUBS",
+  "CASE",
+  "BAR",
+  "TSEMP",
+];
 
 describe("special abilities table", () => {
   it("covers every code the conversion can produce, and every artillery type", () => {
@@ -53,6 +72,34 @@ describe("special abilities table", () => {
     expect(infantry).toContain("MTN");
     expect(infantry).not.toContain("TSM");
     expect(glossOf(findSpecial("CAP")!)).toBeUndefined();
-    expect(specialsFor("introductory").map((r) => r.code)).toEqual(["AC", "AMS", "CASE", "CASEII", "ECM", "ENE", "HT", "IF", "JMPW", "LRM", "OMNI", "OVL", "REAR", "SRM", "STL"]);
+    expect(specialsFor("introductory").map((r) => r.code)).toEqual([
+      "AC",
+      "AMS",
+      "ARTX",
+      "C3I",
+      "C3M",
+      "C3S",
+      "CASE",
+      "CASEII",
+      "ECM",
+      "ENE",
+      "FLK",
+      "HT",
+      "IF",
+      "JMPW",
+      "LRM",
+      "MEL",
+      "MHQ",
+      "OMNI",
+      "OVL",
+      "PRB",
+      "RCN",
+      "REAR",
+      "SNARC",
+      "SRM",
+      "STL",
+      "TAG",
+      "TSM",
+    ]);
   });
 });
