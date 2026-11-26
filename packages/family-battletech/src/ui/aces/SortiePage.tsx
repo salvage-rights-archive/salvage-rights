@@ -182,7 +182,8 @@ function Sortie({ loaded, firstNumber }: { loaded: Loaded; firstNumber?: number 
 
   const create = async () => {
     const id = crypto.randomUUID();
-    const rules: Partial<AcesRules> = sortie ? { multipleAttackRolls: true, frontLoaded: true, forcedWithdrawal: sortie.withdrawal } : { forcedWithdrawal: withdrawal };
+    // Multiple Attack Rolls and the Front-Loaded way of moving are required in every campaign (Aces p. 24).
+    const rules: Partial<AcesRules> = { multipleAttackRolls: true, frontLoaded: true, forcedWithdrawal: sortie ? sortie.withdrawal : withdrawal };
     const game = buildSortieGame({
       id,
       seed: crypto.getRandomValues(new Uint32Array(1))[0] ?? 1,
@@ -202,8 +203,9 @@ function Sortie({ loaded, firstNumber }: { loaded: Loaded; firstNumber?: number 
       waypoints: sortie ? sortieWaypoints(sortie) : [],
     });
     try {
-      await loaded.storage.save(startSortie(campaign, { number, gameId: id, recon: reconRecords, omni: fees }));
+      // The game is saved before the campaign that points at it, so a failure between the two leaves no dangling pointer.
       await (await openGameStorage()).save(game);
+      await loaded.storage.save(startSortie(campaign, { number, gameId: id, recon: reconRecords, omni: fees }));
     } catch {
       setProblem(STORAGE_WRITE_FAILED);
       return;
@@ -317,7 +319,7 @@ function Sortie({ loaded, firstNumber }: { loaded: Loaded; firstNumber?: number 
             <p role="status">{`Adjusted for your difficulty ${String(check.adjusted)}. Fielded: ${String(fielded.length)} units, ${String(check.total)} PV.`}</p>
           </>
         )}
-        {sortie?.player.allies && <p className="bt-hint">{`Allied ${sortie.player.allies.name} vehicles do not count toward your PV; see your book.`}</p>}
+        {sortie?.player.allies && <p className="bt-hint">{`Allied ${sortie.player.allies.name} vehicles add nothing to your PV; see your book.`}</p>}
         {units.length === 0 ? (
           <p>Your campaign has no active units. Add them on the campaign page.</p>
         ) : (
