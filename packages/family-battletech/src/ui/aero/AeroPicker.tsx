@@ -3,7 +3,7 @@
 // editor's picker: focus in the search box, Escape closes, Tab stays inside.
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { DEFAULT_AERO_EDITION } from "../../data/aero";
-import { aeroCatalogFigures, aeroWeaponFigures } from "../../data/aero-weapons";
+import { aeroCatalogFigures, aeroToHit, aeroWeaponFigures } from "../../data/aero-weapons";
 import type { AeroRecord } from "../../rules/aero";
 import { groupOf, groupRank } from "../../rules/catalog";
 import type { Catalog, EquipmentRow, GroupKey } from "../../rules/catalog";
@@ -28,6 +28,7 @@ function factsLine(row: EquipmentRow, record: AeroRecord, catalog: Catalog): str
     if (figures?.tons !== undefined) parts.push(plural(figures.tons, "ton"));
     if (figures?.heat !== undefined) parts.push(`heat ${String(figures.heat)}`);
     if (figures?.attack !== undefined) parts.push(`attack ${String(figures.attack)}`);
+    if (record.editionId === DEFAULT_AERO_EDITION && aeroToHit(row.id) !== 0) parts.push(`to-hit ${aeroToHit(row.id) > 0 ? "+" : ""}${String(aeroToHit(row.id))}`);
     if (figures?.tons === undefined) parts.push("weight not known");
   }
   const level = equipmentLevel(row);

@@ -112,6 +112,7 @@ export const VEHICLE_ARMOR: { id: string; slots: number; cite?: BookPage }[] = [
   { id: "laser-reflective-clan", slots: 1, cite: { book: TO, page: 92 } },
   { id: "reactive", slots: 2, cite: { book: TO, page: 92 } },
   { id: "reactive-clan", slots: 1, cite: { book: TO, page: 92 } },
+  { id: "vehicular-stealth", slots: 2, cite: { book: TO, page: 92 } },
   { id: "anti-penetrative-ablation", slots: 1, cite: { book: IO, page: 82 } },
   { id: "ballistic-reinforced", slots: 1, cite: { book: IO, page: 82 } },
 ];

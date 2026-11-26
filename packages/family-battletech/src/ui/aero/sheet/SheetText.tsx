@@ -45,7 +45,7 @@ export default function SheetText({ facts, record, profile }: { facts: FighterFa
         <caption>Weapons and equipment inventory</caption>
         <thead>
           <tr>
-            {["Qty", "Type", "Loc", "Ht", "Short", "Medium", "Long", "Extreme", "Damage", "Hex ranges"].map((heading) => (
+            {["Qty", "Type", "Loc", "Ht", "Short", "Medium", "Long", "Extreme", "Damage", "Hex ranges", "To-hit"].map((heading) => (
               <th key={heading} scope="col">
                 {heading}
               </th>
@@ -64,6 +64,7 @@ export default function SheetText({ facts, record, profile }: { facts: FighterFa
               ))}
               <td>{line.damage}</td>
               <td>{line.hexes}</td>
+              <td>{line.toHit}</td>
             </tr>
           ))}
         </tbody>

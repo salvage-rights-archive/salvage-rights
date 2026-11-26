@@ -101,3 +101,35 @@ test("a mine dispenser takes a mine type chosen on its row, names it on the reco
   await expectPage(page.getByRole("heading", { level: 1 })).toBeVisible();
   await expect(page.getByText("Mine Dispenser (Vehicular), Active").first()).toBeAttached();
 });
+
+test("vehicular stealth and modular armor on a vehicle: offered from the year and level, the rules check asks for an ECM suite and counts the modular penalties; axe clean in both themes, keyboard picker, no sideways scroll at 320 px", async ({ page }) => {
+  test.setTimeout(180_000);
+  const editor = await startVehicle(page, "Stealth Tank");
+  await expect(page.getByLabel("Armor type").locator("option[value=vehicular-stealth]")).toHaveCount(0);
+  await page.getByLabel("Rules level").selectOption("experimental");
+  await page.getByLabel("Year", { exact: true }).fill("3090");
+  await page.getByLabel("Armor type").selectOption("vehicular-stealth");
+  await expect(page.getByText(/Vehicular stealth armor needs a working ECM suite/)).toBeVisible();
+  await page.getByRole("button", { name: "Add equipment" }).click();
+  await page.getByLabel("Search by name").fill("modular armor");
+  await page.getByRole("button", { name: /^Modular Armor/ }).first().focus();
+  await page.keyboard.press("Enter");
+  await expect(page.getByText(/Modular armor adds 10 armor points/)).toBeVisible();
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(page.getByText("Saved.")).toBeVisible();
+  const sheet = editor.replace("vehicle-editor", "vehicle-sheet");
+  for (const theme of ["Light", "Dark"] as const) {
+    await chooseTheme(page, theme);
+    for (const path of [editor, sheet]) {
+      await page.goto(`${DEV}${path}`);
+      await expectPage(page.getByRole("heading", { level: 1 })).toBeVisible();
+      const results = await new AxeBuilder({ page }).analyze();
+      expect(results.violations, `${theme} theme, ${path}`).toEqual([]);
+    }
+  }
+  await page.setViewportSize({ width: 320, height: 700 });
+  await page.goto(`${DEV}${editor}`);
+  await expectPage(page.getByRole("heading", { level: 1 })).toBeVisible();
+  const widths = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, client: document.documentElement.clientWidth }));
+  expect(widths.scroll).toBe(widths.client);
+});

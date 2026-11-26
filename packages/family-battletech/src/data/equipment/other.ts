@@ -1275,6 +1275,16 @@ export const OTHER: EquipmentGroup[] = [
     ],
   },
   {
+    // Modular armor (TO:AUE printed p. 217 construction data and p. 92 armor table, rules p. 93, read against the page images): one ton, one slot, 10,000 C-bills, 10 armor points
+    // (MODULAR_ARMOR in data/chassis.ts). Prototype ("P") years 3072 (Inner Sphere) and 3074 (Clan) are the Universal Technology Advancement Table's prototype dates; its
+    // production is about 3096 for both (IO:AE printed p. 29). Experimental. The table's F column prints 2 slots on a fighter, the armor table 1: the armor table is followed.
+    defaults: { kind: "other", cite: { book: TO, page: 217 }, playCite: { book: TO, page: 93 }, checked: "page", tons: 1, slots: 1, rulesLevel: "experimental", units: ["vehicle", "aero"] },
+    items: [
+      { id: "modular-armor-is", name: "Modular Armor", techBase: "inner-sphere", availability: [{ from: 3096 }], prototypeYear: 3072 },
+      { id: "modular-armor-clan", name: "Modular Armor", techBase: "clan", availability: [{ from: 3096 }], prototypeYear: 3074 },
+    ],
+  },
+  {
     // Satellite imagers and the VTOL mast mount (TO:AUE printed p. 223 construction data, p. 222 play table, rules pp. 151 and 162, read against the
     // page images). Imagers: type E, Advanced, one slot on a combat vehicle, fighter, small craft, DropShip, ship or building (the hyperspectral
     // imager's support vehicle column prints 2, a note); a footprint of 1* on vehicles and buildings means the rules decide (p. 151). "ES" dates are

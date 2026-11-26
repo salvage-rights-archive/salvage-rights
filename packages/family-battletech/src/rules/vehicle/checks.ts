@@ -1,7 +1,8 @@
 // The rules check for Combat Vehicles: what is illegal or does not add up, each finding with the printed page it rests on. Findings are advice,
 // never refusals: nothing is removed from a record and nothing throws on one this version does not understand. They share the 'Mech check's
 // `Finding` shape, so the same panel shows them. Messages are our own words and state the numbers.
-import { ARMOR, ENGINE_TYPES } from "../../data/chassis";
+import { ARMOR, ENGINE_TYPES, MODULAR_ARMOR, VEHICULAR_STEALTH } from "../../data/chassis";
+import { crowdedModular, hasStealthEcm, modularItems, modularPoints } from "../advanced-armor";
 import { VEHICLE_ARMOR, VEHICLE_CLASS_DATES, VEHICLE_ENGINES, VEHICLE_RULES, ENGINE_SLOTS_CITE, ARMOR_CITE, MOTIVE_CITE, SUSPENSION_CITE } from "../../data/vehicle";
 import type { Catalog, EquipmentRow } from "../catalog";
 import { mountableOn } from "../catalog";
@@ -114,6 +115,14 @@ const armorCheck: VehicleCheck = {
     if (type === "hardened" && ["vtol", "wige", "hover"].includes(record.motive)) out.push(finding("armor", "error", "Hardened armor may not be carried by VTOL, WiGE or hover vehicles.", { where: { field: "armor.type" }, cite: { book: "Tactical Operations: Advanced Units and Equipment", page: 92 } }));
     // ... and only on standard units, never on an OmniVehicle (TO:AUE p. 92).
     if (type === "hardened" && record.omni !== undefined) out.push(finding("armor", "error", "Hardened armor is for standard units, not OmniVehicles.", { where: { field: "armor.type" }, cite: { book: "Tactical Operations: Advanced Units and Equipment", page: 92 } }));
+    if (type === VEHICULAR_STEALTH.id && !hasStealthEcm(record.mounts)) out.push(finding("armor", "error", "Vehicular stealth armor needs a working ECM suite of any type; the vehicle carries none.", { where: { field: "armor.type" }, cite: VEHICULAR_STEALTH.cite }));
+    const modular = modularItems(record.mounts);
+    if (modular.length > 0) {
+      out.push(finding("armor", "note", `Modular armor adds ${plural(modularPoints(record.mounts), "armor point")}. While any of it stands the vehicle takes +1 on Driving rolls and has 1 less Cruise MP (flank follows), and stealth armor does not work; Battle Value counts the points and not the penalties.`, { where: { field: "armor.type" }, cite: MODULAR_ARMOR.cite }));
+      for (const where of crowdedModular(record.mounts, (m) => m.location)) out.push(finding("armor", "error", `The ${vehicleLocationName(where)} holds more than one modular armor item; the book allows one to a location.`, { where: { field: "mounts" }, cite: MODULAR_ARMOR.armorCite }));
+      if (modular.some((m) => m.location === "rot")) out.push(finding("armor", "error", "Modular armor may not be mounted on a rotor.", { where: { field: "mounts" }, cite: MODULAR_ARMOR.armorCite }));
+      if (type === VEHICULAR_STEALTH.id) out.push(finding("armor", "note", "Modular armor stops stealth armor working.", { where: { field: "armor.type" }, cite: MODULAR_ARMOR.cite }));
+    }
     if (record.armor.tons < 0 || !Number.isInteger(tidy(record.armor.tons * 2))) out.push(finding("armor", "error", "Armor comes in lots of a half ton or a whole ton.", { where: { field: "armor.tons" }, cite: ARMOR_CITE }));
     const available = armorPointsFor(type, record.armor.tons);
     const assigned = assignedArmor(record);
@@ -137,10 +146,11 @@ const heatCheck: VehicleCheck = {
   id: "heat",
   run({ record, catalog }) {
     const out: Finding[] = [];
-    const heat = energyHeat(record, catalog);
+    const stealthHeat = record.armor.type === VEHICULAR_STEALTH.id ? VEHICULAR_STEALTH.heat : 0;
+    const heat = energyHeat(record, catalog) + stealthHeat;
     const sinks = record.heatSinks.count;
     if (!Number.isInteger(sinks) || sinks < 0) out.push(finding("heat", "error", "The number of heat sinks is a whole number of 0 or more.", { where: { field: "heatSinks" }, cite: tm(104) }));
-    else if (sinks < heat) out.push(finding("heat", "error", `Firing every energy weapon at once makes ${plural(heat, "point")} of heat, and the unit has ${plural(sinks, "heat sink")}.`, { where: { field: "heatSinks" }, cite: tm(104) }));
+    else if (sinks < heat) out.push(finding("heat", "error", `Firing every energy weapon at once${stealthHeat > 0 ? " with the stealth armor running (10 heat)" : ""} makes ${plural(heat, "point")} of heat, and the unit has ${plural(sinks, "heat sink")}.`, { where: { field: "heatSinks" }, cite: tm(104) }));
     if (isFusion(record.engine.type) && Number.isInteger(sinks) && sinks < freeHeatSinks(record)) out.push(finding("heat", "note", `A fusion engine gives ${freeHeatSinks(record)} heat sinks at no weight; the unit has only ${sinks}.`, { where: { field: "heatSinks" }, cite: tm(104) }));
     if (heat === 0 && sinks > freeHeatSinks(record)) out.push(finding("heat", "note", "The unit carries no energy weapon, so it needs no heat sinks beyond the free ones.", { where: { field: "heatSinks" }, cite: tm(104) }));
     const amps = amplifierTons(record, catalog);

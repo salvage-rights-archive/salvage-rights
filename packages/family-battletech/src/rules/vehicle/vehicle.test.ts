@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { DEFAULT_EDITION } from "../../data/editions";
+import { partChoices } from "../availability";
 import { loadCatalog } from "../catalog";
 import { checkVehicle, markVehicleOfficial, vehicleOfficialState } from "./checks";
 import { armorChoices, engineChoices, equipmentOffered, motiveChoices } from "./availability";
@@ -104,6 +106,26 @@ describe("advanced armor on a combat vehicle (TO:AUE p. 92, IO:AE p. 82)", () =>
     expect(checks(hardened)).not.toContain("armor:error");
     expect(checks(build({ ...base, motive: "hover", armor: { ...base.armor, type: "hardened" } }))).toContain("armor:error");
     expect(checks(build({ ...base, omni: {}, armor: { ...base.armor, type: "hardened" } }))).toContain("armor:error");
+  });
+  it("vehicular stealth armor: 2 slots, 50,000 a ton, offered from its production year, needs an ECM suite and 10 heat of sinks, and no BattleMech is offered it", () => {
+    const stealth = { ...base, armor: { ...base.armor, type: "vehicular-stealth" }, heatSinks: { count: 10 } };
+    expect(armorChoices(build(base)).map(([id]) => id)).toContain("vehicular-stealth");
+    expect(armorChoices(build({ ...base, year: 3050 })).map(([id]) => id)).not.toContain("vehicular-stealth");
+    expect(partChoices("armor", { techBase: "inner-sphere", year: 3130, rulesLevel: "experimental", unitType: "mech", editionId: DEFAULT_EDITION }, "standard").map(([id]) => id)).not.toContain("vehicular-stealth");
+    expect(slotTally(build(stealth), catalog).lost).toContainEqual({ label: "armor", slots: 2 });
+    expect(vehicleCost(build(stealth), catalog).lines.find((l) => l.label === "Armor")?.cost).toBe(5 * 50_000);
+    expect(checks(build(stealth))).toContain("armor:error"); // no ECM
+    expect(checks(build(stealth, [["body", "guardian-ecm-suite-is"]]))).not.toContain("armor:error");
+    expect(checks(build({ ...stealth, heatSinks: { count: 8 } }, [["body", "guardian-ecm-suite-is"]]))).toContain("heat:error"); // the 10 heat of the armor needs 10 sinks
+  });
+  it("modular armor adds its 10 points to the Battle Value without a value of its own, one to a location, and notes its penalties", () => {
+    const plain = build(base);
+    const modular = build(base, [["f", "modular-armor-is"]]);
+    expect(vehicleBv(modular, catalog).total).toBeGreaterThan(vehicleBv(plain, catalog).total);
+    expect(vehicleBv(modular, catalog).unvalued).toEqual([]);
+    expect(vehicleCost(modular, catalog).lines.find((l) => l.label === "Modular Armor")?.cost).toBe(10_000);
+    expect(checkVehicle(modular, catalog).some((f) => /Modular armor adds 10 armor points/.test(f.message))).toBe(true);
+    expect(checks(build(base, [["f", "modular-armor-is"], ["f", "modular-armor-is"]]))).toContain("armor:error");
   });
 });
 

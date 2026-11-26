@@ -997,7 +997,7 @@ export function craftPartsNotOffered(record: AeroRecord): ("engine" | "armor" | 
   if (craftKind(record) === undefined) return [];
   const out: ("engine" | "armor" | "heat-sinks")[] = [];
   if (record.engine.type !== "standard") out.push("engine");
-  if (!fighterArmorTypes(record.editionId).some((t) => t.id === record.armor.type)) out.push("armor");
+  if (!fighterArmorTypes(record.editionId).some((t) => t.id === record.armor.type && !t.fighterOnly)) out.push("armor");
   const sinks = kindFigureOf(FIGHTER_FIGURES.heatSinkTypes, "aerospace", record.editionId);
   if (sinks !== undefined && !sinks.includes(record.heatSinks.type)) out.push("heat-sinks");
   return out;
@@ -1424,4 +1424,24 @@ export function vessel(record: AeroRecord, catalog?: Catalog): Vessel | null {
     };
   }
   return null;
+}
+
+/**
+ * The launchers an Artemis IV FCS links in the current rules: each Artemis IV mount raises one missile launcher in its arc (a wing that fires aft counts as its own arc), the
+ * largest first. Their Aero Attack Value is the figure after the slash of the Total Warfare table. Empty under the older editions, whose Artemis is part of the weapon.
+ */
+export function artemisLinked(record: AeroRecord, catalog: Catalog): Set<string> {
+  const linked = new Set<string>();
+  if (record.editionId !== DEFAULT_AERO_EDITION) return linked;
+  const arcKey = (m: AeroMount) => `${m.arc}${m.aft === true ? "*" : ""}`;
+  const counts = new Map<string, number>();
+  for (const m of record.mounts) if (/^artemis-iv-(is|clan)$/.test(m.equipmentId ?? "")) counts.set(arcKey(m), (counts.get(arcKey(m)) ?? 0) + 1);
+  for (const [arc, n] of counts) {
+    record.mounts
+      .filter((m) => arcKey(m) === arc && /^(lrm|srm|mml)-\d+-(is|clan)$/.test(m.equipmentId ?? "") && catalog.byId(m.equipmentId ?? "") !== undefined)
+      .sort((a, b) => Number(/\d+/.exec(b.equipmentId ?? "")?.[0]) - Number(/\d+/.exec(a.equipmentId ?? "")?.[0]))
+      .slice(0, n)
+      .forEach((m) => linked.add(m.id));
+  }
+  return linked;
 }

@@ -11,7 +11,7 @@
 // from its prototype year to the year before production it is a prototype, available only at Experimental level and above (or
 // the level its `prototypeLevel` names, where the books print it lower); before its prototype year it does not exist.
 import { ARMOR, COCKPITS, ENGINE_TYPES, GYROS, HEAT_SINKS, isStarLeagueTech, MECH_TYPES, MYOMER, SHEET, STRUCTURE_TYPES } from "../data/chassis";
-import type { ConfigurationRow, MechType, MechTypeRow, PartFacts, RulesLevel, Span } from "../data/chassis";
+import type { ConfigurationRow, MechType, MechTypeRow, PartFacts, PartUnit, RulesLevel, Span } from "../data/chassis";
 import { inGame, listsOpen, rulesetOf } from "../data/rulesets";
 import { CLAN_CASE_IDS, clanCaseAllowed } from "./case";
 import { mountableOn } from "./catalog";
@@ -122,9 +122,10 @@ export function partPhase(part: PartFacts, record: Pick<Subject, "techBase" | "y
 }
 
 /** A chassis part by table and key. A key the table does not have is available (we know nothing against it). */
-export function partAvailable(kind: PartKind, key: string, record: Subject, everything = false): boolean {
+export function partAvailable(kind: PartKind, key: string, record: Subject, everything = false, unit: PartUnit = "mech"): boolean {
   const part = partRow(kind, key);
   if (!part) return true;
+  if (part.units !== undefined && !part.units.includes(unit)) return false; // a part printed for other units only, never offered here even with Show everything
   // The type decides first: an IndustrialMech takes the parts its rules name, and any other 'Mech none printed for IndustrialMechs.
   const industrial = industrialRulesOf(record);
   if (industrial ? !industrial.parts[kind].includes(key) : part.industrial) return false;

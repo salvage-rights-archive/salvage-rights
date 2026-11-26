@@ -1,12 +1,12 @@
 // What a fighter's record sheet prints, worked out once from the record: the data block, the weapons and equipment lines, the armor of each
 // area with its Damage Threshold, the heat sinks. Pure; nothing here throws on a record it does not understand (a figure we cannot work out
 // is an empty string, never a made-up one).
-import { aeroLocationName, armorTypeAt, fighterHeat, fighterPatchworkActive, fighterSI, fuelPoints, maxThrust } from "../../../rules/aero";
+import { aeroLocationName, armorTypeAt, artemisLinked, fighterHeat, fighterPatchworkActive, fighterSI, fuelPoints, maxThrust } from "../../../rules/aero";
 import type { AeroMount, AeroRecord } from "../../../rules/aero";
 import { aeroOfficialState } from "../../../rules/aero-checks";
-import { aeroCatalogFigures, aeroWeaponFigures } from "../../../data/aero-weapons";
+import { aeroArtemisAttack, aeroCatalogFigures, aeroMmlSrm, aeroToHit, aeroWeaponFigures } from "../../../data/aero-weapons";
 import type { AeroWeaponFigures } from "../../../data/aero-weapons";
-import { aeroEditionName, fighterPatchworkTypes } from "../../../data/aero";
+import { DEFAULT_AERO_EDITION, aeroEditionName, fighterPatchworkTypes } from "../../../data/aero";
 import { SHEET_HEAT_SINKS, TECH_BASE_NAMES } from "../../../data/sheet";
 import type { SheetProfile } from "../../../data/aero-sheet";
 import type { Catalog } from "../../../rules/catalog";
@@ -30,6 +30,8 @@ export interface WeaponLine {
   /** AeroTech (1986): damage, and the hex ranges (minimum, short, medium, long). */
   damage: string;
   hexes: string;
+  /** The To-Hit Modifier column of the weapons table (Total Warfare pp. 303-304): empty where it is 0. */
+  toHit: string;
 }
 
 export interface ArmorArea {
@@ -78,30 +80,48 @@ const isAmmo = (mount: AeroMount, catalog: Catalog): boolean => (mount.equipment
 const figuresOf = (mount: AeroMount, record: AeroRecord, catalog: Catalog): AeroWeaponFigures | undefined =>
   mount.equipmentId === null ? undefined : (aeroWeaponFigures(catalog, mount.equipmentId, record.editionId) ?? aeroCatalogFigures(catalog, mount.equipmentId));
 
-export function lineOf(mount: AeroMount, record: AeroRecord, catalog: Catalog, qty: number): WeaponLine {
+export interface LineOptions {
+  /** The launcher is linked to an Artemis IV FCS in its arc: the figure after the slash of the Aero Attack Value column. */
+  linked?: boolean;
+  /** A multi-mode launcher line for its SRM mode (range Short). */
+  srm?: boolean;
+}
+
+export function lineOf(mount: AeroMount, record: AeroRecord, catalog: Catalog, qty: number, options: LineOptions = {}): WeaponLine {
   const f = figuresOf(mount, record, catalog);
-  const reach = f?.maxRange === undefined ? 0 : BANDS.indexOf(f.maxRange) + 1;
-  const attack = f?.attack === undefined ? "" : String(f.attack);
+  const id = mount.equipmentId ?? "";
+  const current = record.editionId === DEFAULT_AERO_EDITION;
+  const srm = current && options.srm === true ? aeroMmlSrm(id) : undefined;
+  const linkedLrm = current && options.linked === true && srm === undefined ? aeroArtemisAttack(id) : undefined;
+  const reach = srm !== undefined ? 1 : f?.maxRange === undefined ? 0 : BANDS.indexOf(f.maxRange) + 1;
+  const attack = srm !== undefined ? String(options.linked === true ? srm.linked : srm.attack) : linkedLrm !== undefined ? String(linkedLrm) : f?.attack === undefined ? "" : String(f.attack);
   // The one attack value stands in every bracket up to the weapon's longest range class (the first bracket when the class is not known).
   const covered = reach > 0 ? reach : 1;
   // A value that changes by range ("10/8") gives one figure to each bracket, in order.
   const steps = attack.split("/");
   const av = [0, 1, 2, 3].map((band) => (steps.length > 1 ? (steps[band] ?? "") : attack !== "" && band < covered ? attack : "")) as WeaponLine["av"];
   const hexes = f?.hexRange === undefined ? "" : f.hexRange.map((n) => String(n)).join("/");
-  return { qty, name: mount.name, loc: `${mount.arc}${mount.aft === true ? " aft" : ""}`, heat: text(f?.heat), av, damage: attack, hexes };
+  const hit = current && mount.equipmentId !== null ? aeroToHit(id) : 0;
+  return { qty, name: srm === undefined ? mount.name : `${mount.name} (SRM mode)`, loc: `${mount.arc}${mount.aft === true ? " aft" : ""}`, heat: text(f?.heat), av, damage: attack, hexes, toHit: hit === 0 ? "" : hit > 0 ? `+${String(hit)}` : String(hit) };
 }
 
 /** One line per kind of weapon in an arc: two Medium Lasers in the nose are one line with a quantity of 2. */
 export function weaponLines(record: AeroRecord, catalog: Catalog): WeaponLine[] {
-  const groups = new Map<string, { mount: AeroMount; qty: number }>();
+  const linked = artemisLinked(record, catalog);
+  const groups = new Map<string, { mount: AeroMount; qty: number; linked: boolean }>();
   for (const mount of record.mounts) {
     if (isAmmo(mount, catalog)) continue;
-    const key = `${mount.equipmentId ?? mount.name}|${mount.arc}|${mount.aft === true ? "aft" : ""}|${mount.amount ?? ""}`;
+    const isLinked = linked.has(mount.id);
+    const key = `${mount.equipmentId ?? mount.name}|${mount.arc}|${mount.aft === true ? "aft" : ""}|${mount.amount ?? ""}|${isLinked ? "linked" : ""}`;
     const group = groups.get(key);
     if (group) group.qty += 1;
-    else groups.set(key, { mount, qty: 1 });
+    else groups.set(key, { mount, qty: 1, linked: isLinked });
   }
-  return [...groups.values()].map(({ mount, qty }) => lineOf(mount, record, catalog, qty));
+  return [...groups.values()].flatMap(({ mount, qty, linked: isLinked }) => [
+    lineOf(mount, record, catalog, qty, { linked: isLinked }),
+    // A multi-mode launcher also has its SRM mode line (current rules: the Total Warfare table prints one for each mode).
+    ...(record.editionId === DEFAULT_AERO_EDITION && aeroMmlSrm(mount.equipmentId ?? "") !== undefined ? [lineOf(mount, record, catalog, qty, { linked: isLinked, srm: true })] : []),
+  ]);
 }
 
 /** The ammunition the unit carries, one line per mount: the name, its tons and the shots they hold. */

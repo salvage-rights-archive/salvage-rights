@@ -6,6 +6,7 @@ import { AIRBORNE_MOTIVES, VEHICLE_BV, motiveOf } from "../../data/vehicle";
 import { ammoBvEntryOf, bvEntryOf, defensiveMunitionBv, munitionAmmoEntry, retroStreakCap, skillMultiplier, speedFactor } from "../bv";
 import { bvWithMunition, chosenMunition, grenadeExtraBv } from "../munitions";
 import type { PilotSkills } from "../bv";
+import { isModularArmor, modularPoints } from "../advanced-armor";
 import type { Catalog } from "../catalog";
 import { own, tidy, roundHalfUp } from "../walk";
 import { assignedArmor, flankMP, itemFacts, rowOf, structurePoints } from "./vehicle";
@@ -42,7 +43,7 @@ export function vehicleBv(record: VehicleRecord, catalog: Catalog, pilot: PilotS
   const unvalued: string[] = [];
   const motive = motiveOf(record.motive);
   // Defensive Battle Rating.
-  const armor = assignedArmor(record);
+  const armor = assignedArmor(record) + modularPoints(record.mounts); // modular armor adds its points at the armor modifier of the armor beside it (TO:AUE p. 192)
   const locations = armorLocations(record).length;
   const structure = structurePoints(record) * locations;
   let defensiveEquipment = 0;
@@ -90,6 +91,7 @@ export function vehicleBv(record: VehicleRecord, catalog: Catalog, pilot: PilotS
       else ammoBins.push({ weapon: entry.id, bv: value });
       continue;
     }
+    if (isModularArmor(row.id)) continue; // its points are in the armor total; it has no Battle Value of its own
     if (ARTEMIS_IDS[row.id] !== undefined) {
       artemis[m.location] = (artemis[m.location] ?? 0) + 1;
       continue;
