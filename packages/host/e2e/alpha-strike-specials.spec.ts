@@ -1,6 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import type { Page } from "@playwright/test";
-import { DEV, expect, test } from "./fixtures";
+import { DEV, expect, expectPage, test } from "./fixtures";
 
 const ALPHA = "/battletech/alpha-strike";
 
@@ -11,7 +11,8 @@ async function chooseTheme(page: Page, theme: "Light" | "Dark") {
 }
 
 async function clean(page: Page, where: string) {
-  await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+  // A lazily loaded page shows its placeholder first; on a busy machine that outlasts the default wait.
+  await expectPage(page.getByRole("heading", { level: 1 })).toBeVisible();
   const results = await new AxeBuilder({ page }).analyze();
   expect(results.violations, where).toEqual([]);
   const widths = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, client: document.documentElement.clientWidth }));
