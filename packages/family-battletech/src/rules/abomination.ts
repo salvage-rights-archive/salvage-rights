@@ -550,7 +550,7 @@ export interface ConditionEffect {
 /**
  * A planetary condition's figures for a unit with ultraviolet sensitivity (an Abomination, or a 'Mech driven by a Frayed MechWarrior):
  * the condition's own figures, then the ultraviolet change: ignored, lowered by 2 (never below 0) or raised by 1, on movement and on
- * both kinds of attack. Heat on the target (p. 90) is not applied: an Abomination keeps no heat.
+ * both kinds of attack. The target's heat (p. 90, `heatPerStep`) is not applied here: it lowers the modifier against a 'Mech by 1 for each step of heat on that 'Mech's scale, and the tracker shows that figure as a hint.
  */
 export function conditionEffect(id: ConditionId, who: "abomination" | "frayed" = "abomination"): ConditionEffect | undefined {
   const base = PLANETARY_CONDITIONS.find((c) => c.ids.includes(id));

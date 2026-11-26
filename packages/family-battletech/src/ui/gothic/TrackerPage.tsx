@@ -126,6 +126,7 @@ function weaponLabel(weapon: AbomWeapon, catalog: Catalog | undefined): string {
 
 function UnitTracker({ unit, stats, state, catalog, onChange: keepState, onRemove, onAnother, condition }: UnitTrackerProps) {
   const effect = condition ? conditionEffect(condition, "abomination") : undefined;
+  const heatPerStep = PLANETARY_CONDITIONS.find((c) => condition !== undefined && c.ids.includes(condition))?.heatPerStep ?? 0;
   const name = unitName(unit, stats);
   /** The state before the last change, for Undo; kept on the page only, so a reload starts without one. */
   const [previous, setPrevious] = useState<TrackerState>();
@@ -201,6 +202,7 @@ function UnitTracker({ unit, stats, state, catalog, onChange: keepState, onRemov
           <div>
             <dt>Weapon attack modifier</dt>
             <dd>{signed(effect.weapon)}</dd>
+            <dd className="bt-track__cite">{`Against a 'Mech: 1 less for every ${String(heatPerStep)} heat on its scale (p. ${String(PLANETARY_PAGE)})`}</dd>
           </div>
           <div>
             <dt>Physical attack modifier</dt>
