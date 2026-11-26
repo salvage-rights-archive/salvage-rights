@@ -17,6 +17,7 @@ test("build an infantry platoon at 320 px, save it, open its record sheet and fi
   const form = page.getByRole("form", { name: "Build a new one" });
   await form.getByLabel("Name").fill("Rifle Platoon");
   await form.getByLabel("Type", { exact: true }).selectOption({ label: "Conventional infantry" });
+  await form.getByLabel("Year").fill("3050");
   await form.getByRole("button", { name: "Start building" }).click();
   await expect(page.getByRole("heading", { level: 1, name: "Rifle Platoon" })).toBeVisible();
   await page.getByLabel("Primary weapon").selectOption({ label: "Auto-Rifle: 0.52 damage, range 1, crew 1" });
