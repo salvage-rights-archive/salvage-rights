@@ -25,7 +25,7 @@ export const EQUIPMENT_GROUPS: GroupRule[] = [
   { id: "actuators", label: "Actuator enhancement", match: words("aes-arm|aes-leg") },
   { id: "stealth", label: "Stealth and signature systems", match: words("chameleon-lps|null-signature-system|void-signature-system") },
   { id: "command", label: "Command consoles and modules", match: words("cockpit-command-console|collapsible-command-module|remote-drone-command-console") },
-  { id: "defensive", label: "Defensive equipment", match: words("ams|case|shield|laser-anti-missile|pds|harjel|harjel-ii|harjel-iii|full-head-ejection-system|aquatic-survival-system") },
+  { id: "defensive", label: "Defensive equipment", match: words("ams|case|shield|laser-anti-missile|pds|armored-component|armored-motive-system|harjel|harjel-ii|harjel-iii|full-head-ejection-system|aquatic-survival-system") },
   { id: "heat", label: "Heat and movement equipment", match: words("heat-sink|jump-jet|jump-pack|mechanical-jump-booster|partial-wing|umu|supercharger|masc|tsm|triple-strength|super-cooled|coolant|laser-insulator|lam") },
   { id: "electronics", label: "Electronics and targeting", match: words("c3|ecm|probe|tag|cews|electronic-warfare|recon-camera|remote-sensor|remote-sensors|apollo|targeting-computer|artemis|viral-jammer|chaff|drone-operating-system") },
   { id: "aerospace", label: "Bombs and aerospace equipment", match: words("bomb|bay-door|look-down-radar") },

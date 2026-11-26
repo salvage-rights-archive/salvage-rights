@@ -1084,6 +1084,40 @@ export const OTHER: EquipmentGroup[] = [
       { id: "turret-clan", pod: false, podCite: { book: TO, page: 87 }, name: "Turret", techBase: "clan" },
     ],
   },
+  {
+    // The other turrets (TO:AUE printed p. 223 construction data, rules p. 159 and 160, read against the page images): weight is the turret equipment
+    // tonnage over 10 ("TE / 10"), which is the vehicle turret's rule, so the rows use the same formula and the same `linkedTo` mechanism; the book
+    // prints no rounding for these, so the half-ton rounding of the combat vehicle turret (TechManual p. 98) is taken (a doubt for the book panel).
+    // The BattleMech turrets take 1 slot, the one for the turret mechanism (p. 159); vehicle turrets none ("0*"). The sponson turret's weight and cost
+    // are for the two sponsons together. Prototype ("P") years only: nothing later is printed, so the span starts there. Experimental (pp. 159, 160).
+    defaults: { kind: "other", cite: { book: TO, page: 223 }, playCite: { book: TO, page: 159 }, checked: "page", tons: "turret-tons", slots: 0, rulesLevel: "experimental" },
+    items: [
+      { id: "battlemech-turret-shoulder-is", name: "BattleMech Turret (Shoulder)", techBase: "inner-sphere", slots: 1, availability: [{ from: 2450 }], units: ["mech", "industrialmech"] },
+      { id: "battlemech-turret-shoulder-clan", name: "BattleMech Turret (Shoulder)", techBase: "clan", slots: 1, availability: [{ from: 2450 }], units: ["mech", "industrialmech"] },
+      { id: "battlemech-turret-head-is", name: "BattleMech Turret (Head)", techBase: "inner-sphere", slots: 1, availability: [{ from: 3055 }], locations: ["HD"], units: ["mech", "industrialmech"] },
+      { id: "battlemech-turret-quad-is", name: "BattleMech Turret (Quad)", techBase: "inner-sphere", slots: 1, availability: [{ from: 2320 }], units: ["mech", "industrialmech"] },
+      { id: "battlemech-turret-quad-clan", name: "BattleMech Turret (Quad)", techBase: "clan", slots: 1, availability: [{ from: 2320 }], units: ["mech", "industrialmech"] },
+      { id: "dual-turret-is", name: "Dual Turret (Vehicular)", techBase: "inner-sphere", availability: [{ from: 1950 }], playCite: { book: TO, page: 159 }, yearsInferred: true, units: ["vehicle"] },
+      { id: "dual-turret-clan", name: "Dual Turret (Vehicular)", techBase: "clan", availability: [{ from: 1950 }], yearsInferred: true, units: ["vehicle"] },
+      { id: "sponson-turret-is", name: "Sponson Turret (Vehicular)", techBase: "inner-sphere", availability: [{ from: 1950 }], playCite: { book: TO, page: 160 }, yearsInferred: true, units: ["vehicle"] },
+      { id: "sponson-turret-clan", name: "Sponson Turret (Vehicular)", techBase: "clan", availability: [{ from: 1950 }], playCite: { book: TO, page: 160 }, yearsInferred: true, units: ["vehicle"] },
+      { id: "vtol-chin-turret-is", name: "VTOL Chin Turret", techBase: "inner-sphere", availability: [{ from: 1950 }], playCite: { book: TO, page: 160 }, yearsInferred: true, units: ["vehicle"] },
+      { id: "vtol-chin-turret-clan", name: "VTOL Chin Turret", techBase: "clan", availability: [{ from: 1950 }], playCite: { book: TO, page: 160 }, yearsInferred: true, units: ["vehicle"] },
+    ],
+  },
+  {
+    // Armored components and the armored motive system (TO:AUE printed p. 95 rules, p. 217 construction data, read against the page images). An armored
+    // component is one mount linked to the item it armors: half a ton for each of that item's slots, at least half a ton (the cockpit's own extra ton
+    // is the chassis', not this row's), no slot of its own, 150,000 C-bills for each slot armored. Prototype ("P") years only (3061 for both tech
+    // bases; the motive system 3071 Inner Sphere and 3057 Clan). Experimental. Ammunition bins, CASE and "roll again" items cannot be armored (p. 95).
+    defaults: { kind: "other", cite: { book: TO, page: 217 }, playCite: { book: TO, page: 95 }, checked: "page", slots: 0, rulesLevel: "experimental" },
+    items: [
+      { id: "armored-component-is", name: "Armored Component", techBase: "inner-sphere", tons: "armored-component-tons", availability: [{ from: 3061 }], units: ["mech", "industrialmech"] },
+      { id: "armored-component-clan", name: "Armored Component", techBase: "clan", tons: "armored-component-tons", availability: [{ from: 3061 }], units: ["mech", "industrialmech"] },
+      { id: "armored-motive-system-is", name: "Armored Motive System", techBase: "inner-sphere", tons: "armored-motive-is", availability: [{ from: 3071 }], units: ["vehicle"] },
+      { id: "armored-motive-system-clan", name: "Armored Motive System", techBase: "clan", tons: "armored-motive-clan", availability: [{ from: 3057 }], units: ["vehicle"] },
+    ],
+  },
   // Aerospace and ship items from the Industrial Equipment table (TechManual, printed p. 344, read against the page image; item entries on pp. 209
   // and 227; dates from the Industrial Equipment cost table, printed p. 293: both "PS / -", so the Clan rows take the Inner Sphere year and are
   // marked inferred). The bay door weighs nothing and takes no space on a small craft or DropShip ("0*": the construction rules, p. 209, say how
