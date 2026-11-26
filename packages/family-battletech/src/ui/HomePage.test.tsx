@@ -133,10 +133,10 @@ describe("Classic BattleTech home", () => {
     const config = within(form).getByLabelText<HTMLSelectElement>("Configuration");
     const texts = (select: HTMLSelectElement) => [...select.options].map((o) => o.text);
     expect([type.value, config.value]).toEqual(["mech", "biped"]); // a new unit starts as a BattleMech biped
-    // The aerospace units come after the 'Mechs, and go (with the level they need) when the rules level is below Standard.
-    expect(texts(type)).toEqual(["BattleMech", "IndustrialMech", "OmniMech", "Aerospace fighter", "Conventional fighter", "Small craft", "DropShip"]);
+    // The vehicles and the aerospace units come after the 'Mechs, and go (with the level they need) when the rules level is below Standard.
+    expect(texts(type)).toEqual(["BattleMech", "IndustrialMech", "OmniMech", "Tracked", "Wheeled", "Hover", "Wing-in-Ground Effect (WiGE)", "VTOL", "Naval (displacement hull)", "Naval (hydrofoil)", "Naval (submarine)", "Aerospace fighter", "Conventional fighter", "Small craft", "DropShip"]);
     await user.selectOptions(within(form).getByLabelText("Rules level"), "introductory");
-    expect(texts(type)).toEqual(["BattleMech"]);
+    expect(texts(type)).toEqual(["BattleMech", "Tracked", "Wheeled", "Hover", "Wing-in-Ground Effect (WiGE)", "VTOL", "Naval (displacement hull)", "Naval (hydrofoil)", "Naval (submarine)"]); // vehicles are 3025 technology too (Total Warfare p. 275)
     await user.selectOptions(within(form).getByLabelText("Rules level"), "experimental");
     expect(texts(config)).toEqual(["Biped", "Quad", "Tripod", "Land-Air 'Mech", "Bimodal Land-Air 'Mech"]);
     await user.selectOptions(config, "tripod");

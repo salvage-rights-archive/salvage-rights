@@ -31,7 +31,7 @@ export interface MotiveRow {
   costDivisor: number;
   /** TM p. 316, Unit Type Modifiers Table. */
   bvModifier: number;
-  /** The least rules level that offers the motive type. */
+  /** The least rules level that offers the motive type. Introductory for all: Total Warfare p. 275 speaks of 3025 (introductory) technology for vehicles, and no book names a motive type left out of it. */
   level: RulesLevel;
   /** True for the motive types whose hit locations and Record Sheet belong to the book's Naval sheet. */
   naval?: true;
@@ -40,14 +40,14 @@ export interface MotiveRow {
 const bands = (factors: number[], step: number): [number, number][] => factors.map((factor, i) => [(i + 1) * step, factor]);
 
 export const MOTIVES: MotiveRow[] = [
-  { id: "tracked", label: "Tracked", maxTons: 100, sheet: "ground", suspension: [[100, 0]], costDivisor: 100, bvModifier: 0.9, level: "standard" },
-  { id: "wheeled", label: "Wheeled", maxTons: 80, sheet: "ground", suspension: [[80, 20]], costDivisor: 200, bvModifier: 0.8, level: "standard" },
-  { id: "hover", label: "Hover", maxTons: 50, sheet: "ground", suspension: bands([40, 85, 130, 175, 235], 10), lift: "lift", costDivisor: 50, bvModifier: 0.7, level: "standard" },
-  { id: "wige", label: "Wing-in-Ground Effect (WiGE)", maxTons: 80, sheet: "ground", suspension: [[15, 45], [30, 80], [45, 115], [80, 140]], lift: "lift", minCruise: 5, costDivisor: 25, bvModifier: 0.7, level: "standard" },
-  { id: "vtol", label: "VTOL", maxTons: 30, sheet: "vtol", suspension: bands([50, 95, 140], 10), lift: "rotor", costDivisor: 30, bvModifier: 0.7, level: "standard" },
-  { id: "naval", label: "Naval (displacement hull)", maxTons: 300, sheet: "naval", suspension: [[300, 30]], costDivisor: 200, bvModifier: 0.6, level: "standard", naval: true },
-  { id: "hydrofoil", label: "Naval (hydrofoil)", maxTons: 100, sheet: "naval", suspension: bands([60, 105, 150, 195, 255, 300, 345, 390, 435, 480], 10), lift: "lift", costDivisor: 75, bvModifier: 0.6, level: "standard", naval: true },
-  { id: "submarine", label: "Naval (submarine)", maxTons: 300, sheet: "naval", suspension: [[300, 30]], lift: "dive", costDivisor: 50, bvModifier: 0.6, level: "standard", naval: true },
+  { id: "tracked", label: "Tracked", maxTons: 100, sheet: "ground", suspension: [[100, 0]], costDivisor: 100, bvModifier: 0.9, level: "introductory" },
+  { id: "wheeled", label: "Wheeled", maxTons: 80, sheet: "ground", suspension: [[80, 20]], costDivisor: 200, bvModifier: 0.8, level: "introductory" },
+  { id: "hover", label: "Hover", maxTons: 50, sheet: "ground", suspension: bands([40, 85, 130, 175, 235], 10), lift: "lift", costDivisor: 50, bvModifier: 0.7, level: "introductory" },
+  { id: "wige", label: "Wing-in-Ground Effect (WiGE)", maxTons: 80, sheet: "ground", suspension: [[15, 45], [30, 80], [45, 115], [80, 140]], lift: "lift", minCruise: 5, costDivisor: 25, bvModifier: 0.7, level: "introductory" },
+  { id: "vtol", label: "VTOL", maxTons: 30, sheet: "vtol", suspension: bands([50, 95, 140], 10), lift: "rotor", costDivisor: 30, bvModifier: 0.7, level: "introductory" },
+  { id: "naval", label: "Naval (displacement hull)", maxTons: 300, sheet: "naval", suspension: [[300, 30]], costDivisor: 200, bvModifier: 0.6, level: "introductory", naval: true },
+  { id: "hydrofoil", label: "Naval (hydrofoil)", maxTons: 100, sheet: "naval", suspension: bands([60, 105, 150, 195, 255, 300, 345, 390, 435, 480], 10), lift: "lift", costDivisor: 75, bvModifier: 0.6, level: "introductory", naval: true },
+  { id: "submarine", label: "Naval (submarine)", maxTons: 300, sheet: "naval", suspension: [[300, 30]], lift: "dive", costDivisor: 50, bvModifier: 0.6, level: "introductory", naval: true },
 ];
 export const MOTIVE_CITE: BookPage = { book: TM, page: 96 };
 export const SUSPENSION_CITE: BookPage = { book: TM, page: 100 };

@@ -14,7 +14,7 @@ import { officialLabel } from "../official";
 import { own, tidy } from "../walk";
 import { enginePossible, equipmentOffered, armorPossible } from "./availability";
 import {
-  SMALL_BIN, ammoIdOf, amplifierTons, armorLocations, armorPointsFor, armorSlots, assignedArmor, baseRating, baseSlots, engineRating, engineWeight, energyHeat, flankMP, freeHeatSinks, isFusion, itemFacts, maxArmorPoints, motiveRowOf,
+  SMALL_BIN, ammoIdOf, amplifierTons, armorLocations, armorPointsFor, assignedArmor, baseRating, baseSlots, engineRating, engineWeight, energyHeat, flankMP, freeHeatSinks, isFusion, itemFacts, maxArmorPoints, motiveRowOf,
   mountLocations, rowOf, slotTally, suspensionFactor, vehicleLocationName, vehicleTally,
 } from "./vehicle";
 import type { VehicleRecord } from "./vehicle";
@@ -198,7 +198,7 @@ const equipmentCheck: VehicleCheck = {
 
 const turretCheck: VehicleCheck = {
   id: "turret",
-  run({ record, catalog }) {
+  run({ record }) {
     if (!record.turret || record.motive === "vtol") return [];
     const inside = record.mounts.some((m) => m.location === "t");
     return inside ? [] : [finding("turret", "note", "The turret holds nothing, so it weighs nothing; a vehicle may go without it.", { where: { field: "turret" }, cite: tm(107) })];
@@ -214,7 +214,6 @@ const timeCheck: VehicleCheck = {
     else if (record.year !== null && eraNeedsPick(record)) out.push(finding("time", "note", `The year ${num(record.year)} falls in two eras; pick one, since it decides the tech base.`, { where: { field: "era" } }));
     const row = motiveRowOf(record);
     if (row && !levelAtLeast(level, row.level)) out.push(finding("level", "warning", `A ${row.label} vehicle needs ${levelRow(row.level).label} rules.`, { where: { field: "motive" }, cite: MOTIVE_CITE }));
-    if (level === "introductory") out.push(finding("level", "warning", "Introductory rules build BattleMechs, not vehicles; use Standard or above.", { where: { field: "rulesLevel" } }));
     return out;
   },
 };

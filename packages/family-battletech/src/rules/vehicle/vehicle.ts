@@ -320,7 +320,7 @@ export function itemFacts(mount: VehicleMount, record: VehicleRecord, catalog: C
   if (row === undefined) return { row, tons: null, slots: 1, heat: 0, energy: false, ammo: false, weapon: false };
   const by = row.by?.vehicle;
   const ammo = row.kind === "ammunition";
-  let tons: number | null = null;
+  let tons: number | null;
   if (ammo) tons = mount.amount ?? VEHICLE_RULES.ammo.minTons;
   else if (typeof by?.tons === "number") tons = by.tons;
   else if (typeof row.tons === "number") tons = row.tons;

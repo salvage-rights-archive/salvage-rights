@@ -1,7 +1,7 @@
 // The C-bill cost of a Combat Vehicle: TechManual's Combat Vehicle Costs table (printed p. 279) for the structure, engine, heat sinks, armor, turret
 // and power amplifiers, the equipment prices the 'Mech cost uses (data/cost.ts), and the Final Unit Cost Formulas Table (p. 285) for the tonnage
 // multiplier. An item with no printed price is left out and listed in `unpriced`. Rounded up to a hundredth of a C-bill, as errata v8.0 says of p. 274.
-import { COST_FORMULA_CITE, VEHICLE_COST, motiveOf } from "../../data/vehicle";
+import { COST_FORMULA_CITE, VEHICLE_COST } from "../../data/vehicle";
 import type { BookPage } from "../../data/vehicle";
 import { perTonCost, priceOf, roundUpCents } from "../cost";
 import type { Catalog } from "../catalog";

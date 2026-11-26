@@ -84,7 +84,7 @@ describe("what a record offers", () => {
     expect(engineChoices(r).map(([id]) => id)).toContain("ice");
     expect(engineChoices(r).map(([id]) => id)).not.toContain("compact");
     expect(equipmentOffered(catalog.byId("er-ppc-clan")!, r, catalog)).toBe(false);
-    expect(motiveChoices({ rulesLevel: "introductory", motive: "tracked" }).map(([id]) => id)).toEqual(["tracked"]);
+    expect(motiveChoices({ rulesLevel: "introductory", motive: "tracked" })).toHaveLength(8);
   });
 });
 
