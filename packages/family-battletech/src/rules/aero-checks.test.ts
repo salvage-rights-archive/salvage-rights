@@ -71,6 +71,7 @@ describe("aerospace rules check", () => {
     const hardpoint = (year: number) => aeroLevelItems(ship(year), catalog).find((i) => i.name === "Docking hardpoint")?.level;
     expect([hardpoint(2457), hardpoint(2458), hardpoint(2469), hardpoint(2470)]).toEqual(["advanced", "experimental", "experimental", "advanced"]);
     expect([2457, 2458].map((y) => kinds(checkAero(ship(y), catalog)).includes("systems:error"))).toEqual([true, false]);
+    expect(kinds(checkAero({ ...ship(3070), year: null }, catalog))).not.toContain("systems:error");
   });
 
   it("the level of a WarShip in the current rules is Advanced, and an older edition shows no level", () => {

@@ -22,12 +22,19 @@ test("build an infantry platoon at 320 px, save it, open its record sheet and fi
   await expect(page.getByRole("heading", { level: 1, name: "Rifle Platoon" })).toBeVisible();
   await page.getByLabel("Primary weapon").selectOption({ label: "Auto-Rifle: 0.52 damage, range 1, crew 1" });
   await expect(page.getByText(/Damage \d+ at full strength/)).toBeVisible();
+  // A sneak suit: its one system is chosen from a radio group, reachable by keyboard.
+  await page.getByLabel("Rules level").selectOption("advanced");
+  await page.getByLabel("Armor kit").selectOption({ label: "Sneak suit (one system) (divisor 1)" });
+  await page.getByRole("radio", { name: "camo" }).focus();
+  await page.keyboard.press("Space");
+  await expect(page.getByRole("radio", { name: "camo" })).toBeChecked();
+  await expect(page.getByRole("radio", { name: "IR" })).not.toBeChecked();
   await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.getByText("Saved.")).toBeVisible();
   const widths = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, client: document.documentElement.clientWidth }));
   expect(widths.scroll).toBe(widths.client);
   const editor = new URL(page.url());
-  for (const control of await page.locator("button, select, input:not([type=file]):not([type=checkbox]), a.bt-button").all()) {
+  for (const control of await page.locator("button, select, input:not([type=file]):not([type=checkbox]):not([type=radio]), label:has(input[type=radio]), a.bt-button").all()) {
     const box = await control.boundingBox();
     if (box) expect(box.height, (await control.textContent())?.slice(0, 30) ?? "").toBeGreaterThanOrEqual(43.5);
   }

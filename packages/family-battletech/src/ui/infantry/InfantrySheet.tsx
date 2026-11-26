@@ -33,7 +33,7 @@ export function sheetFacts(record: InfantryRecord, catalog: Catalog): string[] {
     `Damage ${String(p.totalDamage)} for the full platoon; skills Gunnery ${String(record.skills.gunnery)}, Anti-'Mech ${p.motive?.mechanized ? "none (mechanized)" : record.antiMech ? String(record.skills.antiMech) : "8 (fixed)"}`,
     `Range modifiers by hex from 0: ${p.rangeMods.map(signed).join(", ")}`,
     ...(p.specials.length > 0 ? [`Special: ${p.specials.join("; ")}`] : []),
-    ...(p.armor ? [`Armor kit ${p.armor.name}${p.sneakSystems.length > 0 ? ` (${p.sneakSystems.map((id) => STEALTH_MODIFIERS.find((m) => m.id === id)?.name ?? id).join("; ")})` : ""}, damage divisor ${String(p.armor.divisor)}`] : []),
+    ...(p.armor ? [`Armor kit ${p.armor.name}${p.sneakSystems.length > 0 ? ` (${p.sneakSystems.map((id) => STEALTH_MODIFIERS.find((m) => m.id === id)?.name.replace(/^Sneak, /, "") ?? id).join("; ")})` : ""}, damage divisor ${String(p.armor.divisor)}`] : []),
     ...(p.specializations.length > 0 ? [`Specialties: ${p.specializations.map((s) => s.name).join(", ")}`] : []),
     `Weight ${num(p.weight)} tons; cost ${cost.total.toLocaleString("en-US")} C-bills; Battle Value ${bv.bv === undefined ? "not worked out" : String(bv.bv)}`,
   ];

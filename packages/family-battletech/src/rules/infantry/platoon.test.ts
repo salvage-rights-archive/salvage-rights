@@ -65,14 +65,17 @@ describe("platoon build (the book's examples)", () => {
     expect([bvOf("sneak-1"), bvOf("sneak-2"), bvOf("sneak-3")]).toEqual([84, 87, 94]);
     // chosen: camo + ECM on a two-system suit (+0.3) is the same; a choice over the suit's count is cut to it (camo + IR, +0.4: (58.8 + 48.0816) x 0.85 = 90.9)
     expect([bvOf("sneak-2", ["camo", "ecm"]), bvOf("sneak-2", ["camo", "ir", "ecm"])]).toEqual([87, 91]);
+    // an old record has no sneakSystems and loads with the defaults of the suit
+    const old = withDefaults({ ...suit, armor: "sneak-3" }, "x") as InfantryRecord;
+    expect([old.sneakSystems, platoonOf(old, catalog).sneakSystems]).toEqual([undefined, ["camo", "ir", "ecm"]]);
   });
 
-  it("a mechanized platoon under the Advanced rules takes the motorized Unit Type Modifier (none, so 1.0), as the book table has no row for it", () => {
+  it("a mechanized platoon under the Advanced rules keeps the Hover row's Unit Type Modifier of 0.7 (TO:AUE p. 193; the table has no motorized row)", () => {
     const r = make({ primary: "inf-auto-rifle-is", armor: "flak-standard" }, { motive: "hover" });
     const p = platoonOf(r, catalog);
     const bv = infantryBv(r, catalog);
-    // 20 troopers, 5 MP (+2, Defensive Factor 1.2): defense 20 x 1 x 1.5 x 1.2 = 36; offense 20 x 1.59 x 1.00 = 31.8, not doubled (no anti-Mech attacks); (36 + 31.8) x 1.0 x 1.0 = 67.8 (TO:AUE p. 191, TM pp. 309, 317)
-    expect([p.troopers, p.mp, bv.targetModifier, bv.bv]).toEqual([20, 5, 2, 68]);
+    // 20 troopers, 5 MP (+2, Defensive Factor 1.2): defense 20 x 1 x 1.5 x 1.2 = 36; offense 20 x 1.59 x 1.00 = 31.8, not doubled (no anti-Mech attacks); (36 + 31.8) x 0.7 x 1.0 = 47.46 (TO:AUE pp. 191, 193, TM pp. 309, 317)
+    expect([p.troopers, p.mp, bv.targetModifier, bv.bv]).toEqual([20, 5, 2, 47]);
   });
 
   it("splits a platoon into the fewest even lines, odd troopers to the first", () => {

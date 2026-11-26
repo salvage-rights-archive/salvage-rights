@@ -162,7 +162,7 @@ export function splitLines(troopers: number, max: number): number[] {
   return Array.from({ length: count }, (_, i) => base + (i < extra ? 1 : 0));
 }
 
-/** The systems a sneak suit carries: the chosen ones, no more than the suit has; the suit's defaults when none of the choice is usable. */
+/** The systems a sneak suit carries: the chosen ones, no more than the suit has; the suit's defaults when none of the choice is usable. A stored choice longer than the suit's count is cut in table order (camo, IR, ECM), so a switch to sneak-1 keeps the first system of the choice, not the default. */
 export function sneakSystemsOf(kit: ArmorKit | undefined, chosen: string[] | undefined): string[] {
   if (!kit?.systems) return [];
   const picked = SNEAK_SYSTEMS.filter((id) => chosen?.includes(id)).slice(0, kit.systems);
@@ -328,7 +328,7 @@ export function infantryBv(record: InfantryRecord, catalog: Catalog): InfantryBv
   const band = TARGET_MODIFIER.bands.find(([most]) => p.mp <= most);
   const targetModifier = (band?.[1] ?? 0) + (jumper ? TARGET_MODIFIER.jumpBonus : 0);
   const mechanized = p.motive?.mechanized ?? false;
-  // With an armor kit or a specialty the Advanced infantry rules apply (TO:AUE pp. 191, 193); the parts of them the books leave open are "not worked out".
+  // With an armor kit or a specialty the Advanced infantry rules apply (TO:AUE pp. 191, 193); a platoon is not worked out only when a weapon has no Battle Value in our table.
   const advanced = p.armor !== undefined || p.specializations.length > 0;
   const divisor = advanced ? (p.armor?.divisor ?? 1) : 1;
   // A sneak suit adds each chosen system's bonus (TO:AUE p. 191, cumulative); the DEST suit has its own.
@@ -341,7 +341,10 @@ export function infantryBv(record: InfantryRecord, catalog: Catalog): InfantryBv
   // Mechanized infantry use the 5 column and change only Gunnery (BV v4.1 p. 314; errata v8.0 for TM p. 155 drops the fixed 8 for them); other platoons without the kit are fixed at 8.
   const antiMechSkill = mechanized ? 5 : record.antiMech ? record.skills.antiMech : ANTI_MECH.defaultSkill;
   const skill = skillMultiplier({ gunnery: record.skills.gunnery, piloting: antiMechSkill });
-  const unitType = advanced ? 1 + p.specializations.reduce((sum, s) => sum + s.bvModifier, 0) : 1;
+  // TO:AUE p. 193 prints Unit Type Modifiers for vehicles (Hover 0.7, Wheeled 0.8, Tracked 0.9, VTOL 0.7) and none for motorized infantry. Owner rulings, 2026-11-27: "mechanized is congruous
+  // to motorized", so a mechanized platoon takes the motorized 1.0; and "Hover maintain 0.7", so a hover platoon keeps the Hover row. The wheeled, tracked and VTOL rows are not applied (awaiting a ruling).
+  // The specialty modifiers are added to the base.
+  const unitType = (advanced ? (p.motive?.id === "hover" ? 0.7 : 1) + p.specializations.reduce((sum, s) => sum + s.bvModifier, 0) : 1);
   const worked = unvalued.length === 0 && p.primary !== undefined;
   return { bv: worked ? roundHalfUp((defensive + offensive) * unitType * skill) : undefined, defensive, offensive, weaponBv, speed, targetModifier, skill, unvalued };
 }
