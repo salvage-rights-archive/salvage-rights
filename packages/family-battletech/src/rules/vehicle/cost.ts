@@ -1,6 +1,7 @@
 // The C-bill cost of a Combat Vehicle: TechManual's Combat Vehicle Costs table (printed p. 279) for the structure, engine, heat sinks, armor, turret
 // and power amplifiers, the equipment prices the 'Mech cost uses (data/cost.ts), and the Final Unit Cost Formulas Table (p. 285) for the tonnage
 // multiplier. An item with no printed price is left out and listed in `unpriced`. Rounded up to a hundredth of a C-bill, as errata v8.0 says of p. 274.
+import { ARMOR_COST } from "../../data/cost";
 import { COST_FORMULA_CITE, VEHICLE_COST } from "../../data/vehicle";
 import type { BookPage } from "../../data/vehicle";
 import { perTonCost, priceOf, roundUpCents } from "../cost";
@@ -47,7 +48,8 @@ export function vehicleCost(record: VehicleRecord, catalog: Catalog, options: { 
   // Heat sinks: a fusion engine's first ten are free; with any other engine every sink is paid for.
   const paid = Math.max(0, record.heatSinks.count - (isFusion(record.engine.type) ? freeHeatSinks(record) : 0));
   if (paid > 0) add("Heat sinks", VEHICLE_COST.heatSinkEach * paid, `${money(VEHICLE_COST.heatSinkEach)} x ${String(paid)}`);
-  const armorEach = own(VEHICLE_COST.armorPerTon, record.armor.type) ? VEHICLE_COST.armorPerTon[record.armor.type] : undefined;
+  // The advanced armor types are priced per ton as the 'Mech table prices them (TO:AUE p. 217, IO:AE p. 215).
+  const armorEach = own(VEHICLE_COST.armorPerTon, record.armor.type) ? VEHICLE_COST.armorPerTon[record.armor.type] : own(ARMOR_COST.rows, record.armor.type)?.perTon;
   if (record.armor.tons > 0) {
     if (armorEach === undefined) unpriced.push({ name: `${record.armor.type} armor`, why: "the cost table has no such armor" });
     else add("Armor", armorEach * record.armor.tons, `${money(armorEach)} x ${String(record.armor.tons)} t`);

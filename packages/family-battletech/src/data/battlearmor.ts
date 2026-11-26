@@ -17,6 +17,7 @@ export interface Cite {
 }
 const TM = "TechManual";
 const IO = "Interstellar Operations: Alternate Eras";
+const TO = "Tactical Operations: Advanced Units and Equipment";
 const WEIGHT_CITE: Cite = { book: TM, page: 163 };
 
 export type WeightClassId = "pal" | "light" | "medium" | "heavy" | "assault";
@@ -209,6 +210,18 @@ export const ARMOR_TYPES: ArmorRow[] = [
   {
     id: "mimetic", label: "Mimetic", kg: { "inner-sphere": 50 }, slots: 7, techBase: "inner-sphere", moveMods: [3, 2, 1, 0], bvFactor: 0.3, bvPerPoint: 2.5, costPerPoint: 15_000, cite: ARMOR_CITE,
     availability: [{ from: 3061 }], prototypeYear: 3058, datesCite: ARMOR_DATES,
+  },
+  // Laser-reflective and reactive armor for battle armor (TO:AUE printed p. 92, Advanced Armor Table: 7 slots, 55 / 30 kg and 60 / 35 kg a point, Inner
+  // Sphere / Clan; price p. 225, 37,000 for each, taken as a price per point like the other rows; Experimental, rules pp. 93-94; read against the page
+  // images). TO:AUE prints only a prototype year (3074P, 3075P), so the production year is IO:AE printed p. 30's (circa 3089 and 3093, Inner Sphere and
+  // Clan alike). Battle Value is that of fire resistant armor (TO:AUE p. 192: 3.5 a point, no defensive factor).
+  {
+    id: "laser-reflective", label: "Laser-reflective", kg: { "inner-sphere": 55, clan: 30 }, slots: 7, rulesLevel: "experimental", bvFactor: 0, bvPerPoint: 3.5, costPerPoint: 37_000, cite: { book: TO, page: 92 },
+    availability: [{ from: 3089 }], prototypeYear: 3074, datesCite: ARMOR_DATES,
+  },
+  {
+    id: "reactive", label: "Reactive", kg: { "inner-sphere": 60, clan: 35 }, slots: 7, rulesLevel: "experimental", bvFactor: 0, bvPerPoint: 3.5, costPerPoint: 37_000, cite: { book: TO, page: 92 },
+    availability: [{ from: 3093 }], prototypeYear: 3075, datesCite: ARMOR_DATES,
   },
 ];
 

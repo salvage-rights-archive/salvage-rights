@@ -104,11 +104,13 @@ const armorCheck: VehicleCheck = {
     const out: Finding[] = [];
     const type = record.armor.type;
     if (!VEHICLE_ARMOR.some((a) => a.id === type)) {
-      out.push(finding("armor", "error", `A vehicle wears standard or ferro-fibrous armor; ${quoted(type)} is not one of them.`, { where: { field: "armor.type" }, cite: ARMOR_CITE }));
+      out.push(finding("armor", "error", `${quoted(type)} is not armor a combat vehicle may wear.`, { where: { field: "armor.type" }, cite: ARMOR_CITE }));
     } else if (!armorPossible(type, record)) {
       const name = own(ARMOR.types, type) ? ARMOR.types[type]?.name : type;
       out.push(finding("armor", "warning", `${name ?? type} armor is not available to this unit's tech base, year or rules level.`, { where: { field: "armor.type" }, cite: ARMOR_CITE }));
     }
+    // Hardened armor may not be carried by VTOL, WiGE or hover vehicles (TO:AUE p. 92).
+    if (type === "hardened" && ["vtol", "wige", "hover"].includes(record.motive)) out.push(finding("armor", "error", "Hardened armor may not be carried by VTOL, WiGE or hover vehicles.", { where: { field: "armor.type" }, cite: { book: "Tactical Operations: Advanced Units and Equipment", page: 92 } }));
     if (record.armor.tons < 0 || !Number.isInteger(tidy(record.armor.tons * 2))) out.push(finding("armor", "error", "Armor comes in lots of a half ton or a whole ton.", { where: { field: "armor.tons" }, cite: ARMOR_CITE }));
     const available = armorPointsFor(type, record.armor.tons);
     const assigned = assignedArmor(record);

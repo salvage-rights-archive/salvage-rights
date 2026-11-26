@@ -1,12 +1,12 @@
 // Battle Value of a Combat Vehicle: TechManual's method in the Battle Value v4.1 replacement pages ("Calculating Vehicle BV"), with the Unit
 // Type Modifiers, Defensive Factors and Speed Factor tables (printed pp. 315-316) and the item values in data/bv.ts, which the 'Mech method
 // shares. Nothing here throws: an item the book prints no BV for is left out of the total and listed in `unvalued`, and `complete` says so.
-import { ARTEMIS_IDS, TARGET_MODIFIER, TARGETING_COMPUTER_IDS } from "../../data/bv";
+import { ADVANCED_BV_MODIFIERS, ARMOR_BV_MODIFIER, ARTEMIS_IDS, TARGET_MODIFIER, TARGETING_COMPUTER_IDS } from "../../data/bv";
 import { AIRBORNE_MOTIVES, VEHICLE_BV, motiveOf } from "../../data/vehicle";
 import { ammoBvEntryOf, bvEntryOf, skillMultiplier, speedFactor } from "../bv";
 import type { PilotSkills } from "../bv";
 import type { Catalog } from "../catalog";
-import { tidy, roundHalfUp } from "../walk";
+import { own, tidy, roundHalfUp } from "../walk";
 import { assignedArmor, flankMP, itemFacts, rowOf, structurePoints } from "./vehicle";
 import type { VehicleRecord } from "./vehicle";
 import { armorLocations } from "./vehicle";
@@ -117,12 +117,14 @@ export function vehicleBv(record: VehicleRecord, catalog: Catalog, pilot: PilotS
   const amsCap = defensiveEquipment; // anti-missile ammunition counts up to the systems themselves
   const defensiveAmmoCounted = Math.min(defensiveAmmo, amsCap);
 
-  const defensiveBase = armor * VEHICLE_BV.armorFactor + structure * VEHICLE_BV.structureFactor + defensiveEquipment + defensiveAmmoCounted;
+  // The armor type modifier (TM p. 315; TO:AUE p. 192 extends it to every unit but infantry); a type the tables do not list counts 1.
+  const armorModifier = own(ARMOR_BV_MODIFIER.values, record.armor.type) ?? own(ADVANCED_BV_MODIFIERS.armor, record.armor.type)?.value ?? 1;
+  const defensiveBase = armor * VEHICLE_BV.armorFactor * armorModifier + structure * VEHICLE_BV.structureFactor + defensiveEquipment + defensiveAmmoCounted;
   const typeModifier = motive?.bvModifier ?? 1;
   const factor = defensiveFactor(record);
   const defensive = defensiveBase * typeModifier * factor;
   lines.push(
-    { label: "Armor points", value: armor * VEHICLE_BV.armorFactor, note: `${String(armor)} x ${String(VEHICLE_BV.armorFactor)}` },
+    { label: "Armor points", value: armor * VEHICLE_BV.armorFactor * armorModifier, note: `${String(armor)} x ${String(VEHICLE_BV.armorFactor)}${armorModifier === 1 ? "" : ` x ${String(armorModifier)} (armor type)`}` },
     { label: "Structure points", value: structure * VEHICLE_BV.structureFactor, note: `${String(structure)} x ${String(VEHICLE_BV.structureFactor)}` },
     { label: "Defensive equipment", value: defensiveEquipment + defensiveAmmoCounted },
     { label: "Unit type modifier", value: typeModifier },

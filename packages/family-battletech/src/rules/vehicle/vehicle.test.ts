@@ -92,6 +92,20 @@ describe("what a record offers", () => {
   });
 });
 
+describe("advanced armor on a combat vehicle (TO:AUE p. 92, IO:AE p. 82)", () => {
+  const base = { motive: "tracked" as const, tons: 40, cruise: 4, year: 3130, rulesLevel: "experimental" as const, armor: { type: "standard", tons: 5, points: { f: 10, l: 10, r: 10, b: 10 } } };
+  it("offers the types the table gives vehicles, with their slots, price and Battle Value modifier, and bars hardened armor from hover vehicles", () => {
+    expect(armorChoices(build(base)).map(([id]) => id)).toEqual(expect.arrayContaining(["hardened", "reactive", "anti-penetrative-ablation", "ballistic-reinforced"]));
+    expect(armorChoices(build(base)).map(([id]) => id)).not.toContain("heat-dissipating");
+    const plain = build(base);
+    const hardened = build({ ...base, armor: { ...base.armor, type: "hardened" } });
+    expect(vehicleCost(hardened, catalog).lines.find((l) => l.label === "Armor")?.cost).toBe(5 * 15_000);
+    expect(vehicleBv(hardened, catalog).total).toBeGreaterThan(vehicleBv(plain, catalog).total);
+    expect(checks(hardened)).not.toContain("armor:error");
+    expect(checks(build({ ...base, motive: "hover", armor: { ...base.armor, type: "hardened" } }))).toContain("armor:error");
+  });
+});
+
 describe("Battle Value and cost, the book's Hephaestus (Primary)", () => {
   const prime = build(
     { motive: "hover", tons: 30, cruise: 8, techBase: "clan", year: 3060, turret: true, omni: {}, armor: { type: "ferro-fibrous-clan", tons: 5, points: { f: 20, l: 20, r: 20, b: 18, t: 18 } } },
