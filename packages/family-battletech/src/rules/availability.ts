@@ -13,6 +13,7 @@
 import { ARMOR, COCKPITS, ENGINE_TYPES, GYROS, HEAT_SINKS, MECH_TYPES, MYOMER, SHEET, STRUCTURE_TYPES } from "../data/chassis";
 import type { ConfigurationRow, MechType, MechTypeRow, PartFacts, RulesLevel } from "../data/chassis";
 import { ERAS } from "../data/editions";
+import { CLAN_CASE_IDS, clanCaseAllowed } from "./case";
 import { mountableOn } from "./catalog";
 import type { Catalog, EquipmentRow } from "./catalog";
 import { DEFAULT_LEVEL, equipmentLevel, levelAtLeast, levelIn, partLevel } from "./levels";
@@ -53,7 +54,7 @@ export function setEra(draft: Pick<MechRecord, "era" | "year">, id: string): voi
 // The rule
 // ---------------------------------------------------------------------------------------------------------------
 
-type Subject = Pick<MechRecord, "techBase" | "year" | "era" | "rulesLevel" | "unitType"> & { configuration?: string };
+type Subject = Pick<MechRecord, "techBase" | "year" | "era" | "rulesLevel" | "unitType" | "frankenmech"> & { configuration?: string; chassis?: Pick<MechRecord["chassis"], "structure"> };
 // `everything`, where a function takes it, lifts the tech base and time limits (the picker's "Show everything") and never the rules level.
 const recordLevel = (record: Subject): RulesLevel => record.rulesLevel ?? DEFAULT_LEVEL;
 
@@ -71,6 +72,7 @@ export function equipmentPhase(row: EquipmentRow, record: Subject & Pick<MechRec
 /** An equipment row: at or below the level, the record's tech base, and in the record's time (read through the record's edition). */
 export function equipmentAvailable(row: EquipmentRow, record: Subject & Pick<MechRecord, "editionId">, catalog: Catalog, everything = false): boolean {
   if (!mountableOn(row, mechTypeOf(record).unit)) return false; // a row whose `units` leaves out the unit's type is never offered to it, not even with Show everything
+  if (CLAN_CASE_IDS.includes(row.id) && !clanCaseAllowed(record)) return false; // Clan CASE is for a Clan structure (TM p.210); hidden, never marked, even with Show everything
   const level = equipmentLevel(row);
   if (!levelAtLeast(recordLevel(record), level)) return false;
   if (everything) return true;

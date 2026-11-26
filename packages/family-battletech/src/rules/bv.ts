@@ -34,6 +34,7 @@ import {
   WEAPON_BV,
 } from "../data/bv";
 import type { BvGroup, BvOptions } from "../data/bv";
+import { clanStructure } from "./case";
 import { industrialRulesOf, totalHeatSinks, walkMP } from "./mech";
 import type { LocationCode, MechRecord, Mount } from "./mech";
 import type { Catalog, EquipmentRow } from "./catalog";
@@ -248,7 +249,7 @@ export function battleValue(record: MechRecord, catalog: Catalog, pilot: PilotSk
   // Explosive ammunition and Gauss weapons: points per critical slot, by where the slot is.
   // A Clan 'Mech with an XXL engine loses points for explosive slots as an Inner Sphere XL does, and so does an Inner Sphere XXL (TO:AUE p. 193).
   const xxl = chassis.engine.type === "xxl" || chassis.engine.type === "xxl-clan";
-  const clanMech = !xxl && (record.techBase === "clan" || chassis.engine.type === "xl-clan");
+  const clanMech = !xxl && clanStructure(record); // automatic CASE comes with a Clan internal structure, not a Clan engine (TM p.210); an explicit Clan CASE elsewhere protects only its own location
   const xlInnerSphere = chassis.engine.type === "xl" || xxl;
   const caseAt = (loc: LocationCode | null): number | undefined => {
     const found = items.filter((i) => i.mount.location === loc && own(CASE_ROWS, i.row.id) !== undefined);
