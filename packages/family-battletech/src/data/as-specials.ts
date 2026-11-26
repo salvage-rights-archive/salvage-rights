@@ -1,0 +1,187 @@
+// Alpha Strike special abilities: the one table of codes. Each row has the code, the name the book gives it, the page where the book
+// describes it (Alpha Strike: Commander's Edition, ASCE, printed page numbers; the Appendix list is p. 205), whether it is a standard or
+// an optional ability, the unit types the book limits it to (none stated means any type), and whether errata v7.02 changes the entry.
+// Figures, codes, names and page numbers only, each read against the page image. The short notes are in data/as-glosses.ts, apart,
+// so they can be switched off or removed without touching this table. Nothing here runs.
+
+/** Standard abilities are pp. 76-81 (the C3 family runs on to p. 82); optional ones are pp. 82-91 and need every player's agreement (p. 82). */
+export type AsSpecialLevel = "standard" | "optional";
+
+export interface AsSpecialRow {
+  code: string;
+  name: string;
+  /** Where the book describes it (printed page). */
+  page: number;
+  /** Other pages the entry sends the reader to for how it works. */
+  also?: number[];
+  level: AsSpecialLevel;
+  /** Unit type codes (data/alpha-strike.ts) the book limits the ability to. Absent means the book states no limit. */
+  types?: string[];
+  /** Errata v7.02 changes this entry. */
+  errata?: boolean;
+  /** Other spellings of the code that cards and our own conversion use. */
+  aliases?: string[];
+}
+
+export const ASCE_SPECIALS_CITE = { book: "Alpha Strike: Commander's Edition", appendixPage: 205, errata: "v7.02", checked: "page" } as const;
+
+const MECH = ["BM", "IM"];
+const INFANTRY = ["CI", "BA"];
+
+type Extra = Pick<AsSpecialRow, "types" | "errata" | "also" | "aliases"> & { level?: AsSpecialLevel };
+const row = (code: string, name: string, page: number, extra: Extra = {}): AsSpecialRow => ({ code, name, page, level: page < 82 ? "standard" : "optional", ...extra });
+/** The C3 family: described on p. 82 but part of the standard C3 network rules that begin on p. 80. */
+const c3 = (code: string, name: string, extra: Extra = {}): AsSpecialRow => row(code, name, 82, { level: "standard", also: [80], ...extra });
+
+export const AS_SPECIALS: AsSpecialRow[] = [
+  row("ABA", "Anti-Penetrative Ablation Armor", 83),
+  row("AC", "Autocannon", 83),
+  row("AECM", "Angel ECM", 76, { errata: true }),
+  row("AFC", "Advanced Fire Control", 76, { types: ["IM", "SV"] }),
+  row("AM", "Anti-'Mech", 76, { types: INFANTRY }),
+  row("AMP", "Amphibious", 76),
+  row("AMS", "Anti-Missile System", 76),
+  row("ARM", "Armored Component", 76),
+  row("ARS", "Armored Motive System", 77, { types: ["CV", "SV"] }),
+  row("ARTX", "Artillery", 82),
+  row("AT", "Aerospace Transport", 82),
+  row("ATAC", "Advanced Tactical Analysis Computer", 82),
+  row("BAR", "Barrier Armor Rating", 77),
+  row("BFC", "Basic Fire Control", 77, { types: ["IM", "SV"] }),
+  row("BH", "Bloodhound Active Probe", 83),
+  row("BHJ", "BattleMech HarJel", 77, { types: MECH }),
+  row("BHJ2", "BattleMech HarJel II", 83, { types: MECH }),
+  row("BHJ3", "BattleMech HarJel III", 83, { types: MECH }),
+  row("BIM", "Bimodal Land-Air BattleMech", 83, { types: ["BM"] }),
+  row("BOMB", "Bomb", 77, { types: ["AF", "CF", "SV", "BA"] }),
+  row("BRA", "Ballistic-Reinforced Armor", 83, { errata: true }),
+  row("BRID", "Bridgelayer", 83),
+  row("BT", "Booby Trap", 83),
+  row("BTAS", "Battle Armor Taser", 90, { types: ["BA"] }),
+  row("C3BSM", "Boosted System C3 Master", 80),
+  row("C3BSS", "Boosted System C3 Slave", 80),
+  c3("C3EM", "C3 Emergency Master"),
+  c3("C3I", "C3 Improved"),
+  c3("C3M", "C3 Master", { errata: true }),
+  c3("C3RS", "C3 Remote Sensor"),
+  c3("C3S", "C3 Slave", { errata: true }),
+  row("CAP", "Capital Weapons", 84),
+  row("CAR", "Cargo", 77, { types: INFANTRY }),
+  row("CASE", "Cellular Ammunition Storage Equipment", 77),
+  row("CASEII", "Cellular Ammunition Storage Equipment II", 77),
+  row("CASEP", "Prototype CASE", 88),
+  row("CK", "Cargo Transport, Kilotons", 84),
+  row("CNARC", "Compact Narc Missile Beacon", 87, { errata: true }),
+  row("CR", "Critical-Resistant", 84),
+  row("CRW", "Crew", 84),
+  row("CT", "Cargo Transport, Tons", 84, { errata: true }),
+  row("D", "Door", 84, { types: ["DS", "DA", "SC", "SV"] }),
+  row("DCC", "Drone Carrier Control System", 85),
+  row("DJ", "RISC Viral Jammer, Decoy", 89),
+  row("DNI", "Direct Neural Control System", 84, { aliases: ["DN"] }),
+  row("DRO", "Drone", 84),
+  row("DUN", "Dune Buggy", 85),
+  row("ECM", "Electronic Countermeasures", 77, { errata: true }),
+  row("ECS", "RISC Emergency Coolant System", 89),
+  row("EE", "Elementary Engine", 77),
+  row("ENE", "Energy", 77),
+  row("ENG", "Engineering", 85),
+  row("ES", "Ejection Seat", 85),
+  row("FC", "Fuel Cell Engine", 77),
+  row("FD", "Flight Deck", 85),
+  row("FF", "Firefighter", 85),
+  row("FLK", "Flak", 78, { errata: true }),
+  row("FR", "Fire Resistant", 78),
+  row("GLD", "Glider ProtoMech", 85, { types: ["PM"] }),
+  row("HELI", "Helipad", 85),
+  row("HJ", "RISC Viral Jammer, Homing", 89),
+  row("HPG", "HyperPulse Generator", 85),
+  row("HT", "Heat", 78, { errata: true }),
+  row("HTC", "Trailer Hitch", 90, { types: ["CV", "SV"] }),
+  row("IATM", "Improved ATM", 86, { errata: true }),
+  row("IF", "Indirect Fire", 78),
+  row("INARC", "Improved Narc Missile Beacon", 86, { errata: true }),
+  row("IRA", "Impact-Resistant Armor", 86, { errata: true }),
+  row("IT", "Infantry Transport", 78),
+  row("I-TSM", "Industrial Triple-Strength Myomer", 78, { types: MECH }),
+  row("JAM", "SDS Jammer", 89),
+  row("JMPS", "Jump Jets, Strong", 78, { errata: true }),
+  row("JMPW", "Jump Jets, Weak", 78, { errata: true }),
+  row("LAM", "Land-Air BattleMech", 86, { types: ["BM"] }),
+  row("LECM", "Light ECM", 78),
+  row("LG", "Large", 86, { errata: true }),
+  row("LMAS", "Light Mimetic Armor System", 78),
+  row("LPRB", "Light Active Probe", 86),
+  row("LRM", "Long-Range Missiles", 86),
+  row("LTAG", "Light TAG", 86),
+  row("MAG", "Maglev", 86),
+  row("MAS", "Mimetic Armor System", 78),
+  row("MASH", "Mobile Army Surgical Hospital", 87),
+  row("MCS", "Magnetic Clamp System", 87, { types: ["PM"] }),
+  row("MDS", "Mine Dispenser", 87, { errata: true }),
+  row("MEC", "Mechanized", 78, { types: ["BA"] }),
+  row("MEL", "Melee", 78, { types: MECH }),
+  row("MFB", "Mobile Field Base", 87),
+  row("MHQ", "Mobile Headquarters", 87),
+  row("MSL", "Missile", 87),
+  row("MSW", "Minesweeper", 87),
+  row("MT", "'Mech Transport", 87),
+  row("MTAS", "'Mech Taser", 90, { types: MECH }),
+  row("MTN", "Mountain Troops", 87, { types: ["CI"] }),
+  row("NC3", "Naval C3", 87),
+  row("NOVA", "Nova Composite EW System", 87),
+  row("OMNI", "Omni", 78, { types: ["BM", "IM", "CV", "SV"], errata: true }),
+  row("ORO", "Off-Road", 78, { types: ["SV"] }),
+  row("OVL", "Overheat Long", 78),
+  row("PAR", "Paratroops", 87, { types: INFANTRY }),
+  row("PNT", "Point Defense", 87, { errata: true, also: [88] }),
+  row("PRB", "Active Probe", 82),
+  row("PT", "ProtoMech Transport", 88),
+  row("QV", "Quadvee", 88, { types: ["BM"] }),
+  row("RAIL", "Rail", 88),
+  row("RAMS", "RISC Advanced PD System", 89),
+  row("RBT", "Robotic Drone", 89),
+  row("RCA", "Reactive Armor", 88, { errata: true }),
+  row("RCN", "Recon", 88),
+  row("REAR", "Rear-Firing Weapons", 79),
+  row("REL", "Re-Engineered Lasers", 88),
+  row("RFA", "Reflective Armor", 88, { errata: true }),
+  row("RHS", "Radical Heat Sink System", 88),
+  row("RSD", "Remote Sensor Dispenser", 88, { errata: true, also: [89] }),
+  row("SAW", "Saw", 89),
+  row("SCAP", "Sub-Capital", 90),
+  row("SDCS", "SDS Drone Control System", 89),
+  row("SDS-C", "SDS, Capital", 90),
+  row("SDS-CM", "SDS, Capital Missile", 90),
+  row("SDS-SC", "SDS, Subcapital", 90),
+  row("SEAL", "Environmental Sealing", 85),
+  row("SHLD", "BattleMech Shield", 77, { types: MECH }),
+  row("SLG", "Super Large", 90),
+  row("SNARC", "Standard Narc Missile Beacon", 87, { errata: true }),
+  row("SOA", "Space Operations Adaptation", 90),
+  row("SRCH", "Searchlight", 90),
+  row("SRM", "Short Range Missiles", 90),
+  row("ST", "Small Craft Transport", 90),
+  row("STL", "Stealth", 79),
+  row("SUBS", "Submersible, Strong", 79, { errata: true }),
+  row("SUBW", "Submersible, Weak", 79, { errata: true }),
+  row("TAG", "Target Acquisition Gear", 90, { errata: true }),
+  row("TOR", "Torpedo", 79),
+  row("TRN", "Trenchworks Engineers", 91, { types: ["CI"], errata: true }),
+  row("TSEMP", "Tight-Stream EMP Weapon", 90, { errata: true, aliases: ["TSEMP-O"] }),
+  row("TSI", "Triple-Strength Implants", 91, { types: INFANTRY }),
+  row("TSM", "Triple-Strength Myomer", 79, { types: MECH }),
+  row("TSMX", "Prototype TSM", 88),
+  row("TUR", "Turret", 79, { errata: true }),
+  row("UCS", "Magnetic Clamp System", 87, { types: ["PM"] }),
+  row("UMU", "Underwater Maneuvering Units", 80),
+  row("VLG", "Very Large", 91),
+  row("VR", "Virtual Reality Piloting Pod", 91),
+  row("VRT", "Variable-Range Targeting", 91),
+  row("VSTOL", "Very-Short Takeoff/Landing", 91),
+  row("VTH", "Heavy Vehicle Transport", 91),
+  row("VTM", "Medium Vehicle Transport", 91),
+  row("VTS", "Super-Heavy Vehicle Transport", 91),
+  row("WAT", "Watchdog", 80, { errata: true }),
+  row("XMEC", "Extended Mechanized", 78, { types: ["BA"] }),
+];

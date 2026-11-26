@@ -1,5 +1,6 @@
 // Alpha Strike identifiers: what a unit card's type, role and special-ability fields can hold. Codes and names as identifiers
 // only, each with the page it is read from; no rules wording. Plain data; nothing here runs.
+import { AS_SPECIALS } from "./as-specials";
 
 /** The play book the roster follows (its row in `BOOKS` comes with the edition piece). */
 export const AS_EDITION = { id: "asce", name: "Alpha Strike: Commander's Edition", publisher: "Catalyst Game Labs" } as const;
@@ -52,21 +53,10 @@ export const AS_AEROSPACE_ROLES = ["Attack Fighter", "Dogfighter", "Fast Dogfigh
 export const AS_MOVE_MODES = ["j", "t", "h", "w", "v", "g", "n", "s"];
 
 /**
- * The special-ability codes of the Appendix list (p. 205), without their value marks: `IF#` is `IF`. The artillery family
- * `ARTX-#` is matched by `ARTX_FAMILY` below. Which are standard and which optional, their names and pages come with the
- * play-aids piece.
+ * The special-ability codes, without their value marks: `IF#` is `IF`. They come from the one table in data/as-specials.ts (names, pages,
+ * levels, unit types), with the spellings cards and our conversion also use. The artillery family `ARTX-#` is matched by `ARTX_FAMILY` below.
  */
-export const AS_SPECIAL_CODES = [
-  "ABA", "AECM", "AFC", "AM", "AMP", "AMS", "ARM", "ARS", "AT", "ATAC", "BAR", "BFC", "BH", "BHJ", "BHJ2", "BHJ3", "BIM", "BOMB", "BRA",
-  "BRID", "BT", "BTAS", "C3BSM", "C3BSS", "C3EM", "C3I", "C3M", "C3RS", "C3S", "CAP", "CAR", "CASE", "CASEII", "CASEP", "CK", "CNARC",
-  "CR", "CRW", "D", "DCC", "DJ", "DNI", "DRO", "DUN", "ECM", "ECS", "EE", "ENE", "ENG", "ES", "FC", "FD", "FF", "FLK", "FR", "GLD",
-  "HELI", "HJ", "HPG", "HT", "HTC", "IATM", "IF", "IRA", "IT", "I-TSM", "JAM", "JMPS", "JMPW", "LAM", "LECM", "LG", "LMAS", "LPRB",
-  "LRM", "LTAG", "MAG", "MAS", "MASH", "MCS", "MDS", "MEC", "MEL", "MFB", "MHQ", "MSL", "MSW", "MT", "MTAS", "MTN", "NC3", "NOVA",
-  "OMNI", "ORO", "OVL", "PAR", "PNT", "PRB", "PT", "QV", "RAIL", "RAMS", "RBT", "RCA", "RCN", "REAR", "REL", "RFA", "RHS", "RSD",
-  "SAW", "SCAP", "SDCS", "SDS-C", "SDS-CM", "SDS-SC", "SEAL", "SHLD", "SLG", "SNARC", "SOA", "SRCH", "SRM", "ST", "STL", "SUBS",
-  "SUBW", "TAG", "TOR", "TRN", "TSEMP", "TSI", "TSM", "TSMX", "TUR", "UCS", "UMU", "VLG", "VR", "VRT", "VSTOL", "VTH", "VTM", "VTS",
-  "WAT", "XMEC",
-];
+export const AS_SPECIAL_CODES = AS_SPECIALS.filter((r) => r.code !== "ARTX").flatMap((r) => [r.code, ...(r.aliases ?? [])]);
 
 /** An artillery special is `ARTX-#` with a type in place of the X (for example a letters-only suffix); it is written with a dash. */
 export const ARTX_FAMILY = /^ART[A-Z0-9]*$/;
