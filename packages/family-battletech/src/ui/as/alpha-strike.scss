@@ -334,3 +334,38 @@
     height: 2.5in;
   }
 }
+
+.as-specials {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sr-space-1) var(--sr-space-3);
+  margin: var(--sr-space-1) 0;
+  padding: 0;
+  list-style: none;
+
+  a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 2.75rem;
+    min-width: 2.75rem;
+  }
+
+  &__note {
+    display: block;
+  }
+}
+
+.as-member__specials {
+  grid-column: 1 / -1;
+}
+
+.as-specials-aid {
+  .as-spec {
+    overflow-wrap: anywhere;
+  }
+
+  &__note,
+  .as-spec__note {
+    display: block;
+  }
+}

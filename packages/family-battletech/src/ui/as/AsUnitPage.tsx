@@ -9,6 +9,7 @@ import { asOfficialMark } from "../../rules/as-mul";
 import LeaveConfirm from "../editor/LeaveConfirm";
 import { readPicture } from "../picture";
 import { STORAGE_READ_FAILED, STORAGE_WRITE_FAILED } from "../storage";
+import { GlossSwitch, SpecialLinks } from "./AsSpecials";
 import { downloadUnit, isAsUnit, openAsStorage } from "./storage";
 import type { AsStorage } from "./storage";
 
@@ -179,9 +180,11 @@ function Preview({ unit }: { unit: AsUnit }) {
         <div className="as-card__cell"><dt>A</dt><dd>{card.armor}</dd></div>
         <div className="as-card__cell"><dt>S</dt><dd>{card.structure}</dd></div>
       </dl>
-      <p className="as-card__special">
-        <strong>SPECIAL:</strong> {formatSpecials(card.specials) || "none"}
-      </p>
+      <div className="as-card__special">
+        <strong>SPECIAL:</strong>
+        <SpecialLinks specials={card.specials} />
+        {card.specials.length > 0 && <GlossSwitch id="as-card-gloss" />}
+      </div>
       {unit.picture && <img className="as-card__picture" src={unit.picture.dataUrl} alt="" />}
     </section>
   );
