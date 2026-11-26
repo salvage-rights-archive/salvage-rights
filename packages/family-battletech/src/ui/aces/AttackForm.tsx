@@ -100,11 +100,11 @@ export function RollBlock({ game, attacker, targetId, kind, physical, tn, damage
   const natural12 = multi ? twelve : roll === 12;
   const needsDie = minimal && hit;
   const dieOk = validDie(die);
-  // A 0* hit that rolls under 4 loses its own point but keeps any OV (ASCE pp. 48, 53, 174). In Multiple Attack Rolls the OV points count
-  // before the rolls (p. 175), so we add them to the 0* die's result. A rear hit adds 1 even when the 0* roll fails (ASCE p. 48, 7th printing).
+  // A 0* hit that rolls under 4 loses its own point but keeps any OV (ASCE pp. 48, 53, 174). In Multiple Attack Rolls each point, OV included,
+  // gets its own attack roll (p. 175): one roll is the 0* point, which the die decides, and each other success is an OV point that lands. A rear hit adds 1 even when the 0* roll fails (ASCE p. 48, 7th printing).
   const cardDamage = minimal ? (dieOk && !minimalDelivers(die) ? ovAdds : damage) : damage;
   const typed = Number.parseInt(damageText, 10);
-  const baseDamage = multi ? (minimal ? ovAdds + (dieOk && minimalDelivers(die) ? 1 : 0) : successes) : damageText === "" ? cardDamage : Number.isFinite(typed) ? typed : cardDamage;
+  const baseDamage = multi ? (minimal ? Math.max(0, successes - 1) + (successes > 0 && dieOk && minimalDelivers(die) ? 1 : 0) : successes) : damageText === "" ? cardDamage : Number.isFinite(typed) ? typed : cardDamage;
   const dealt = hit ? Math.max(0, baseDamage) + (rear && rearPossible ? 1 : 0) : 0;
   const ready = (multi ? successOk : rollOk) && (!needsDie || dieOk);
   const damageEnded = hit && dealt === 0;
