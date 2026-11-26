@@ -11,13 +11,14 @@ import type { AeroTypeRow, FigureGroup, FighterKind, FighterPatchworkType } from
 import { AERO_WEAPON_EDITIONS, aeroWeaponOffered } from "../data/aero-weapons";
 import { armorTypeAt, fighterArcs, fighterArmor, fighterArmorLimit, fighterArmorTons, fighterPatchworkActive, energyWeaponHeat, fighterHeat, fighterKind, fighterPartsNotOffered, fighterTally, engineRating, fuelPoints, locationsOf, vessel, wingsMatch, aeroLocationName } from "./aero";
 import type { AeroRecord } from "./aero";
-import { partPhase } from "./availability";
+import { baseFits, ownSpans, partPhase, pastEraCap } from "./availability";
 import type { Catalog } from "./catalog";
 import { VESSEL_CHECKS } from "./aero-vessel-checks";
 import { DEFAULT_LEVEL, LEVEL_ORDER, equipmentLevel, levelAtLeast, levelIn, levelRow, mixedPhase, partLevel, patchworkPhase } from "./levels";
 import { canon, officialLabel } from "./official";
 import type { OfficialState } from "./official";
-import { partPrototype, partSpans, phaseIn, windowOf, datesText } from "./time";
+import { yearEraFindings } from "./checks";
+import { eraOfRecord, partPrototype, partSpans, phaseIn, windowOf, datesText } from "./time";
 import type { Phase } from "./time";
 import { own, tidy } from "./walk";
 
@@ -250,7 +251,7 @@ const equipmentCheck: AeroCheck = {
       const techPage = TECH_BASE_PAGES[record.editionId];
       // AeroTech 2 lets capital weapons serve both tech bases (p. 46).
       const bothBases = record.editionId === AT2_EDITION && row.bayClass?.startsWith("Capital") === true;
-      if (techPage !== undefined && !bothBases && record.techBase !== "mixed" && row.techBase !== record.techBase && (row.kind === "weapon" || row.kind === "ammunition")) {
+      if (techPage !== undefined && !bothBases && record.techBase !== "mixed" && row.techBase !== record.techBase && !(record.editionId === DEFAULT_AERO_EDITION && baseFits(row.techBase, record.techBase, row.availability)) && (row.kind === "weapon" || row.kind === "ammunition")) {
         out.push({ check: "equipment", level: "warning", message: `${row.name} is ${row.techBase === "clan" ? "Clan" : "Inner Sphere"} equipment on a${record.techBase === "clan" ? " Clan" : "n Inner Sphere"} unit.`, where: { mountId: mount.id }, cite: techPage });
       }
     }
@@ -293,6 +294,28 @@ const patchworkCheck: AeroCheck = {
   },
 };
 
+/** The level the unit is read at: its own, else the lowest that fits what it uses (current edition only; the older books have no levels). */
+function aeroLevelOf(record: AeroRecord, catalog: Catalog): RulesLevel | undefined {
+  if (record.editionId !== DEFAULT_AERO_EDITION) return undefined;
+  return record.rulesLevel !== undefined && LEVEL_ORDER.includes(record.rulesLevel) ? record.rulesLevel : aeroLowestLevel(record, catalog);
+}
+
+/** The year, era and tech base against one another, the rule Classic reads (rules/checks.ts): in the current edition the year is needed above Introductory;
+ * in every edition the era must hold the year and suit the tech base, with no Clan technology before the Clan sub-eras. The older books have no levels
+ * and print no dates, so they ask for no year but still hold a year they are given to the era table. */
+const yearCheck: AeroCheck = {
+  id: "year",
+  run({ record, catalog }) {
+    return yearEraFindings(record, aeroLevelOf(record, catalog), "unit").map(({ level, message, where, cite }) => ({
+      check: "year",
+      level,
+      message,
+      ...(where?.field === undefined ? {} : { where: { field: where.field } }),
+      ...withCite(cite && bookPage(cite)),
+    }));
+  },
+};
+
 /** The current edition's dates: equipment, engine and armor against the unit's year or era (older books print no dates we read). */
 const datesCheck: AeroCheck = {
   id: "dates",
@@ -301,13 +324,21 @@ const datesCheck: AeroCheck = {
     const out: AeroFinding[] = [];
     const when = { era: record.era, year: record.year };
     const window = windowOf(when);
-    if (window === null) return [{ check: "dates", level: "note", message: "The unit has no year or era, so availability was not checked.", where: { field: "year" } }];
+    if (window === null && aeroLevelOf(record, catalog) === "introductory") return [{ check: "dates", level: "note", message: "The unit has no year or era, so availability was not checked.", where: { field: "year" } }];
     const say = (name: string, phase: Phase | null, where: AeroFinding["where"], cite?: string) => {
       if (phase === null) out.push({ check: "dates", level: "warning", message: `${name} is not on sale in the unit's time.`, where, ...withCite(cite) });
     };
     for (const mount of record.mounts) {
       const row = mount.equipmentId === null ? undefined : catalog.byId(mount.equipmentId);
-      if (row) say(row.name, phaseIn((catalog.rowFor(row.id, record.editionId) ?? row).availability, row.prototypeYear, window), { mountId: mount.id }, bookPage(row.cite));
+      if (!row) continue;
+      const dates = (catalog.rowFor(row.id, record.editionId) ?? row).availability;
+      say(row.name, phaseIn(ownSpans(record, row.techBase, dates), row.prototypeYear, window), { mountId: mount.id }, bookPage(row.cite));
+      // An era with its own date limit (Clan Post-Reaving) leaves out what was introduced after it.
+      const era = eraOfRecord(when);
+      const cap = era?.introCaps?.[record.techBase];
+      if (era !== undefined && cap !== undefined && pastEraCap({ ...when, techBase: record.techBase }, dates)) {
+        out.push({ check: "dates", level: "warning", message: `${row.name} was introduced after ${String(cap)}, the latest date ${era.name} allows its technology.`, where: { mountId: mount.id }, ...withCite(era.cite && bookPage(era.cite)) });
+      }
     }
     const engine = own(ENGINE_TYPES.types, record.engine.type) ? ENGINE_TYPES.types[record.engine.type] : undefined;
     if (engine) say(engine.name, partPhase(engine, { ...when, techBase: record.techBase }), { field: "engine" }, bookPage(ENGINE_TYPES.cite));
@@ -345,6 +376,7 @@ export function aeroLevelItems(record: AeroRecord, catalog: Catalog): AeroLevelI
   const window = windowOf({ era: record.era, year: record.year });
   const row = typeRow(record);
   if (row?.level !== undefined) items.push({ what: "type", name: row.label, level: row.level, cite: row.cite, where: { field: "unitType" } });
+  if (record.techBase === "clan") items.push({ what: "tech base", name: "Clan technology", level: DEFAULT_LEVEL, where: { field: "techBase" } });
   if (record.techBase === "mixed") {
     const phase = mixedPhase({ era: record.era, year: record.year });
     items.push({
@@ -453,7 +485,7 @@ const officialCheck: AeroCheck = {
 // ---- Running them ---------------------------------------------------------------------------------------------------------------
 
 /** One table of checks. The small craft, DropShip and capital ship pieces add their checks here. */
-export const AERO_CHECKS: AeroCheck[] = [typeCheck, weightCheck, engineCheck, lotsCheck, fuelCheck, armorCheck, patchworkCheck, heatCheck, arcsCheck, equipmentCheck, datesCheck, levelCheck, officialCheck, ...VESSEL_CHECKS];
+export const AERO_CHECKS: AeroCheck[] = [typeCheck, weightCheck, engineCheck, lotsCheck, fuelCheck, armorCheck, patchworkCheck, heatCheck, arcsCheck, equipmentCheck, yearCheck, datesCheck, levelCheck, officialCheck, ...VESSEL_CHECKS];
 
 /** Every finding for the unit under its own edition. Never throws: a check that fails on a record it does not understand gives a note. */
 export function checkAero(record: AeroRecord, catalog: Catalog): AeroFinding[] {

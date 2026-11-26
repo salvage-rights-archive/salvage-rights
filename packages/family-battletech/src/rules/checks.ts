@@ -25,7 +25,7 @@ import {
   SHIELDS,
   STRUCTURE_TYPES,
 } from "../data/chassis";
-import type { Cite, PartFacts, Span } from "../data/chassis";
+import type { Cite, PartFacts, RulesLevel, Span } from "../data/chassis";
 import { configurationInTime, equipmentPhase, eraOfRecord, erasOfYear, pastEraCap, partPhase, partSpans, typeInTime, windowOf } from "./availability";
 import { listed, RULESETS, rulesetOf } from "../data/rulesets";
 import { CLAN_CASE_IDS, clanCaseAllowed } from "./case";
@@ -590,16 +590,17 @@ function availabilityCheck({ record, catalog }: CheckInput): Finding[] {
   return out;
 }
 
-/** The era and the year disagree, or the body type is not one this tech base and time had. */
-function eraCheck({ record, catalog }: CheckInput): Finding[] {
+/** The year, era and tech base of a unit of any kind against one another and the game's era table: the year is needed above Introductory (`level`; none
+ * means the unit's edition has no levels and asks for none), the era must hold the year and suit the tech base, Mixed has no place in the Succession Wars,
+ * and Clan technology starts with the Clan sub-eras. The 'Mech check and the AeroTech check share it; `unit` is the word the message uses. */
+export function yearEraFindings(record: Pick<MechRecord, "year" | "era" | "techBase" | "editionId">, level: RulesLevel | undefined, unit = "'Mech"): Finding[] {
   const out: Finding[] = [];
   const ruleset = rulesetOf(record.editionId);
   const holding = erasOfYear(record.year, ruleset);
   // Above Introductory a year is needed: it sets the era and the dates the books give each item (IO:AE p.27). Introductory is 3025 technology
   // (Total Warfare p.275), so it may go without one. A record with none still loads; this is its error.
-  const level = levelOfRecord(record, catalog);
-  if (ruleset.dated && record.year === null && level !== "introductory") {
-    out.push(finding("availability", "error", `This 'Mech needs a year at ${levelRow(level, ruleset).label} rules: the year sets the era, and the era and year decide the technology offered.`, { where: { field: "year" }, cite: IO_UTA }));
+  if (ruleset.dated && record.year === null && level !== undefined && level !== "introductory") {
+    out.push(finding("availability", "error", `This ${unit} needs a year at ${levelRow(level, ruleset).label} rules: the year sets the era, and the era and year decide the technology offered.`, { where: { field: "year" }, cite: IO_UTA }));
   }
   if (record.era !== undefined && record.year !== null && !holding.some((era) => era.id === record.era)) {
     out.push(finding("availability", "warning", `The era is ${record.era}, but the year ${record.year} is ${holding[0] ? `in the ${holding[0].name} era` : "in no era we list"}. Choose the era again or change the year.`, { where: { field: "era" } }));
@@ -617,6 +618,23 @@ function eraCheck({ record, catalog }: CheckInput): Finding[] {
   if (record.techBase === "mixed" && holding.length > 0 && holding.every((era) => era.noMixed === true)) {
     out.push(finding("availability", "error", `Mixed technology is not used in ${record.year ?? "this era"}: in the Succession Wars the Clan and Inner Sphere technology bases do not cross.`, { where: { field: "techBase" }, cite: { book: "Interstellar Operations: Alternate Eras", page: 9 } }));
   }
+  if (record.techBase === "clan" && !clanInTime(record)) {
+    const when = record.year !== null ? String(record.year) : `the ${eraOfRecord(record)?.name ?? "chosen"} era`;
+    out.push(finding("availability", "error", `Clan technology is not available in ${when}; the Clan Sub-Eras begin in ${CLAN_TECHNOLOGY.firstYear}.`, { where: { field: "techBase" }, cite: CLAN_TECHNOLOGY.cite }));
+  }
+  if (record.techBase === "mixed" && mixedPhase(record) === null) {
+    const when = record.year !== null ? String(record.year) : `the ${eraOfRecord(record)?.name ?? "chosen"} era`;
+    out.push(finding("availability", "error", `Mixed technology is not available in ${when}; the book dates its first prototypes to about ${MIXED_TECHNOLOGY.clanPrototypeYear}.`, { where: { field: "techBase" }, cite: MIXED_TECHNOLOGY.availabilityCite }));
+  }
+  return out;
+}
+
+/** The era and the year disagree, or the body type is not one this tech base and time had. */
+function eraCheck({ record, catalog }: CheckInput): Finding[] {
+  const out = yearEraFindings(record, levelOfRecord(record, catalog));
+  const ruleset = rulesetOf(record.editionId);
+  const holding = erasOfYear(record.year, ruleset);
+  const named = record.era === undefined ? undefined : [...ruleset.eras, ...(ruleset.subEras ?? [])].find((era) => era.id === record.era);
   // An era with its own date limit (Clan Post-Reaving) leaves out what was introduced after it.
   if (named && holding.some((era) => era.id === named.id)) {
     const cap = named.introCaps?.[record.techBase];
@@ -637,14 +655,6 @@ function eraCheck({ record, catalog }: CheckInput): Finding[] {
   if (row && !bodyInTime) {
     const when = record.year !== null ? String(record.year) : `the ${eraOfRecord(record)?.name ?? "chosen"} era`;
     out.push(finding("availability", "error", `${aOrAn(row.name)} is not available to ${record.techBase === "clan" ? "a Clan" : record.techBase === "mixed" ? "a mixed technology" : "an Inner Sphere"} 'Mech in ${when}; ${spansText(record.techBase === "clan" ? (row.clanAvailability ?? row.availability) : row.availability, prototypeOf(record.techBase === "clan" ? (row.clanPrototypeYear ?? row.prototypeYear) : row.prototypeYear))}.`, { where: { field: "configuration" }, cite: { book: "Interstellar Operations: Alternate Eras", page: 44 } }));
-  }
-  if (record.techBase === "clan" && !clanInTime(record)) {
-    const when = record.year !== null ? String(record.year) : `the ${eraOfRecord(record)?.name ?? "chosen"} era`;
-    out.push(finding("availability", "error", `Clan technology is not available in ${when}; the Clan Sub-Eras begin in ${CLAN_TECHNOLOGY.firstYear}.`, { where: { field: "techBase" }, cite: CLAN_TECHNOLOGY.cite }));
-  }
-  if (record.techBase === "mixed" && mixedPhase(record) === null) {
-    const when = record.year !== null ? String(record.year) : `the ${eraOfRecord(record)?.name ?? "chosen"} era`;
-    out.push(finding("availability", "error", `Mixed technology is not available in ${when}; the book dates its first prototypes to about ${MIXED_TECHNOLOGY.clanPrototypeYear}.`, { where: { field: "techBase" }, cite: MIXED_TECHNOLOGY.availabilityCite }));
   }
   return out;
 }

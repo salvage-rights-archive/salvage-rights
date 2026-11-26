@@ -12,7 +12,11 @@ async function startUnit(page: Page, edition: string, name: string, type?: strin
   const form = page.getByRole("form", { name: "Build a new unit" });
   await form.getByLabel("Name").fill(name);
   await form.getByLabel("Edition").selectOption(edition);
+  // The large craft are Advanced: the form lists a type only at a level that reaches it.
+  if (edition === "tw-tm-so" && ["jumpship", "warship", "space-station"].includes(type ?? "")) await form.getByLabel("Rules level").selectOption({ label: "Advanced" });
   if (type !== undefined) await form.getByLabel("Type").selectOption(type);
+  // The current rules need a year above Introductory (3060 is in one era); the older books ask for none.
+  if (edition === "tw-tm-so") await form.getByLabel("Year").fill("3060");
   await form.getByRole("button", { name: "Start building" }).click();
   await expect(page.getByRole("heading", { level: 1, name })).toBeVisible();
   const url = new URL(page.url());
