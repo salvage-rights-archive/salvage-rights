@@ -173,6 +173,17 @@ describe("Multi-mode launchers and special munitions on the sheet", () => {
     ]);
   });
 
+  it("prints an ATM as its own line and one each for standard, ER and HE, and gives ER and HE ammunition the ATM's shots", async () => {
+    const { inventory, ammo } = await factsFor("atm-6-clan", "ammo-er-atm-clan", "ammo-he-atm-clan");
+    expect(inventory.map((l) => [l.name, l.damage, l.min, l.short, l.medium, l.long])).toEqual([
+      ["ATM 6", "", "", "", "", ""],
+      ["ATM", "2/Msl", "4", "5", "10", "15"],
+      ["ER", "1/Msl", "4", "9", "18", "27"],
+      ["HE", "3/Msl", "—", "3", "6", "9"],
+    ]);
+    expect(ammo).toBe("(ER ATM) 10, (HE ATM) 10");
+  });
+
   it("gives a special munition its launcher's shots, and each choice when two launchers could take it", async () => {
     expect((await factsFor("lrm-15-is", "ammo-artemis-capable-is")).ammo).toBe("(Artemis-Capable Missile) 8");
     expect((await factsFor("srm-4-is", "srm-6-is", "ammo-inferno-is")).ammo).toBe("(Inferno SRM) 25 for SRM 4 or 15 for SRM 6");

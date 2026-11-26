@@ -20,6 +20,7 @@ import {
   INDUSTRIAL_BV,
   LAM_BV,
   LASER_INSULATOR_IDS,
+  LAUNCHER_MUNITIONS,
   MACHINE_GUN_ARRAY_IDS,
   PHYSICAL_BV,
   SKILL_MULTIPLIER,
@@ -126,6 +127,22 @@ const AMMO = new Map<string, Entry>();
 for (const entry of [...WEAPONS.values(), ...EQUIPMENT.values()]) {
   if (entry.ammoBv === undefined) continue;
   for (const id of entry.options.ammo ?? [`ammo-${entry.id}`]) if (!AMMO.has(id)) AMMO.set(id, entry);
+}
+
+/** The launcher ammunition a munition counts as: the ammunition entry of the missile launcher on the unit that the munition feeds. A reason, in
+ * place of an entry, when the unit has no such launcher or has launchers whose ammunition is worth different amounts (so which one the bin
+ * is for is not known). Launchers with the same ammunition BV give the same figure whichever is meant; the first one holds the bin. */
+function launcherAmmo(row: EquipmentRow, items: Item[]): Entry | string {
+  const found = new Map<string, Entry>();
+  for (const { row: launcher } of items) {
+    const family = /^(lrm|srm|mml|atm)-\d+-(is|clan)$/.exec(launcher.id)?.[1] as "lrm" | "srm" | "mml" | "atm" | undefined;
+    const entry = WEAPONS.get(launcher.id);
+    if (family && row.feeds?.includes(family) && entry?.ammoBv !== undefined) found.set(entry.id, entry);
+  }
+  const launchers = [...found.values()];
+  if (launchers.length === 0) return "a munition with no launcher on the unit that it fits, so its BV is not known";
+  if (new Set(launchers.map((e) => e.ammoBv)).size > 1) return "a munition that fits launchers whose ammunition is worth different amounts, so which it is for is not known";
+  return launchers[0] as Entry;
 }
 
 /** The bands of the Target Movement Modifier table. */
@@ -454,9 +471,10 @@ export function battleValue(record: MechRecord, catalog: Catalog, pilot: PilotSk
   const ammoBv = new Map<string, number>();
   for (const { mount, row, tons } of items) {
     if (row.kind !== "ammunition") continue;
-    const entry = AMMO.get(row.id);
+    const resolved = AMMO.get(row.id) ?? (LAUNCHER_MUNITIONS.stems.includes(stemOf(row.id)) ? launcherAmmo(row, items) : undefined);
+    const entry = typeof resolved === "string" ? undefined : resolved;
     if (!entry) {
-      unlisted({ mount, row }, "ammunition whose BV the books do not print");
+      unlisted({ mount, row }, typeof resolved === "string" ? resolved : "ammunition whose BV the books do not print");
       continue;
     }
     if (entry.options.defensiveAmmo) continue;

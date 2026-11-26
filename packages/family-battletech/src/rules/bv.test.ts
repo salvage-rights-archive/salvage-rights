@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { BATTLE_ARMOR_BV, CASE_ROWS, EQUIPMENT_BV, LAM_BV, SPECIAL_MUNITIONS, UNFIXED, UNLISTED_IS_ZERO, WEAPON_BV } from "../data/bv";
+import { BATTLE_ARMOR_BV, CASE_ROWS, EQUIPMENT_BV, LAM_BV, LAUNCHER_MUNITIONS, SPECIAL_MUNITIONS, UNFIXED, UNLISTED_IS_ZERO, WEAPON_BV } from "../data/bv";
 import { AMMUNITION } from "../data/equipment/ammunition";
 import { OTHER } from "../data/equipment/other";
 import { WEAPONS } from "../data/equipment/weapons";
@@ -163,6 +163,23 @@ describe("the method's rules", () => {
     expect(bv.offensive.ammunition).toBe(11);
   });
 
+  it("Artemis-capable ammunition is exact and worth the standard bin, with no 1.2 on it", () => {
+    const launcher = m("lrm-10-is", "LT");
+    const artemis = m("artemis-iv-is", "LT", { linkedTo: launcher.id });
+    const standard = battleValue(biped([launcher, artemis, m("ammo-lrm-10-is", "LT")]), catalog);
+    const capable = battleValue(biped([launcher, artemis, m("ammo-artemis-capable-is", "LT")]), catalog);
+    expect(capable.complete).toBe(true);
+    expect(capable.offensive.ammunition).toBe(standard.offensive.ammunition);
+  });
+
+  it("ER and HE ATM ammunition is worth the ATM's own ammunition, and is reported when two sizes could take it", () => {
+    const one = battleValue(biped([m("atm-6-clan", "RA"), m("ammo-er-atm-clan", "RT"), m("ammo-he-atm-clan", "RT")]), catalog);
+    expect(one.complete).toBe(true);
+    expect(one.offensive.ammunition).toBe(52); // two tons at 26
+    const two = battleValue(biped([m("atm-3-clan", "RA"), m("atm-6-clan", "LA"), m("ammo-er-atm-clan", "RT")]), catalog);
+    expect(two.unvalued.map((u) => u.name)).toEqual(["ammo-er-atm-clan"]);
+  });
+
   it("stealth armor adds 10 to movement heat and 2 to the target modifier", () => {
     const plain = battleValue(biped([]), catalog);
     const stealth = battleValue(biped([], { chassis: { ...bipedRecord().chassis, armorType: "stealth" } }), catalog);
@@ -242,7 +259,7 @@ describe("Tactical Operations equipment", () => {
     const zero = (r: EquipmentRow) => r.kind !== "ammunition" && UNLISTED_IS_ZERO.books.includes(r.cite.book);
     // Alternative munitions added from TO:AUE p. 229 (mortar, remote sensor dispenser and Copperhead rounds): their Battle Value is the Battle Value work's to settle.
     const newMunitions = (r: EquipmentRow) => /^ammo-(mortar|copperhead|remote-sensor-dispenser)-/.test(r.id);
-    const leftOpen = (r: EquipmentRow) => r.id in UNFIXED || SPECIAL_MUNITIONS.stems.includes(stemOf(r.id)) || newMunitions(r);
+    const leftOpen = (r: EquipmentRow) => r.id in UNFIXED || SPECIAL_MUNITIONS.stems.includes(stemOf(r.id)) || LAUNCHER_MUNITIONS.stems.includes(stemOf(r.id)) || newMunitions(r);
     const open = catalog.all().filter((r) => !known.has(r.id) && !zero(r) && !leftOpen(r) && !["heat-sink", "jump-jet"].includes(r.kind) && !LAM_BV.fuelSlotIds.includes(r.id) && !(r.id in CASE_ROWS));
     expect(open.map((r) => r.id)).toEqual([]);
   });

@@ -145,8 +145,8 @@ export const AMMUNITION: EquipmentGroup[] = [
       // Anti-missile and Narc ammunition (Clan); the Narc rows use the launcher lines of the p. 291-292 table, which match the p. 296 ammunition lines
       { id: "ammo-ams-clan", name: "Anti-Missile System Ammo", aliases: ["AMS Ammo"], shotsPerTon: 24, availability: [{ from: 2831 }], prototypeYear: 2824 },
       // Special munitions (Clan)
-      { id: "ammo-er-atm-clan", name: "ER ATM Ammo", availability: [{ from: 3054 }] },
-      { id: "ammo-he-atm-clan", name: "HE ATM Ammo", availability: [{ from: 3054 }] },
+      { id: "ammo-er-atm-clan", feeds: ["atm"], name: "ER ATM Ammo", availability: [{ from: 3054 }] },
+      { id: "ammo-he-atm-clan", feeds: ["atm"], name: "HE ATM Ammo", availability: [{ from: 3054 }] },
     ],
   },
   {
@@ -173,7 +173,7 @@ export const AMMUNITION: EquipmentGroup[] = [
       // Anti-missile and Narc ammunition (Clan); the Narc rows use the launcher lines of the p. 291-292 table, which match the p. 296 ammunition lines
       { id: "ammo-narc-missile-beacon-clan", name: "Narc Missile Beacon Ammo", aliases: ["Narc Ammo"], shotsPerTon: 6, availability: [{ from: 2828 }], prototypeYear: 2820 },
       // Special munitions (Clan)
-      { id: "ammo-artemis-capable-clan", name: "Artemis-Capable Missile Ammo", availability: [{ from: 2824 }] },
+      { id: "ammo-artemis-capable-clan", feeds: ["lrm", "srm", "mml"], name: "Artemis-Capable Missile Ammo", availability: [{ from: 2824 }] },
       { id: "ammo-narc-capable-clan", name: "Narc-Capable Missile Ammo", availability: [{ from: 2824 }] },
       { id: "ammo-fragmentation-clan", name: "Fragmentation Missile Ammo", availability: [{ from: 2824 }] },
       { id: "ammo-harpoon-clan", name: "Harpoon SRM Ammo", availability: [{ from: 2824 }] },
