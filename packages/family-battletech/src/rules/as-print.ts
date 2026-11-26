@@ -3,7 +3,7 @@
 // Pure; nothing here throws on a unit it does not understand (an unknown type is drawn with no critical boxes).
 import { AS_CARD_AIR, AS_CARD_CRITS, AS_CARD_LAYOUT_OF, AS_UNIT_TYPES } from "../data/alpha-strike";
 import type { CardCritRow, CardLayout } from "../data/alpha-strike";
-import { findFormation, forceTotals, groupsOf, skillAdjustedPv } from "./as-force";
+import { findFormation, findSpa, forceTotals, groupsOf, memberSpas, skillAdjustedPv, spaCost } from "./as-force";
 import type { AsForce, AsMember } from "./as-force";
 import { formatDamage, formatMove, formatSpecials, unitTitle } from "./as-unit";
 import type { AsUnit } from "./as-unit";
@@ -182,6 +182,8 @@ export interface RosterRow {
   skill: number;
   pilot: string;
   formation: string;
+  /** The pilot abilities with their points, as "Name 2, Name 1". */
+  abilities: string;
   basePv: number;
   pv: number;
   specials: string;
@@ -220,6 +222,7 @@ export function printRoster(force: AsForce, roster: ReadonlyMap<string, AsUnit>)
             skill: line.member.skill,
             pilot: line.member.pilot?.trim() ?? "",
             formation: groupLabel(force, line.member),
+            abilities: memberSpas(line.member, line.unit).picks.flatMap((p) => { const spa = findSpa(p.id); return spa ? [`${spa.name} ${String(spaCost(spa, p))}`] : []; }).join(", "),
             basePv: line.base,
             pv: line.adjusted,
             specials: formatSpecials(line.unit.card.specials),

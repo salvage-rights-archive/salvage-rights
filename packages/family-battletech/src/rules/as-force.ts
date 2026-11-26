@@ -1,5 +1,7 @@
 // An Alpha Strike force: units from the roster with a Skill each, and the totals. Pure; nothing here throws on odd input.
-import { AS_EDITION, AS_EDITIONS, AS_PV_STEPS, ARTX_FAMILY, DEFAULT_SKILL } from "../data/alpha-strike";
+import { AS_EDITION, AS_EDITIONS, AS_PV_STEPS, AS_UNIT_TYPES, ARTX_FAMILY, DEFAULT_SKILL } from "../data/alpha-strike";
+import { AS_OFFICERS_PER, AS_SCAS, AS_SCA_BY_AVERAGE_SKILL, AS_SPAS, AS_SPA_BY_SKILL, AS_SPA_UNITS_PER } from "../data/as-abilities";
+import type { AsSca, AsSpa } from "../data/as-abilities";
 import { AS_FORMATIONS, AS_GROUND_TYPES, AS_ORGANISATIONS, AS_ORGANISATION_PAGE } from "../data/as-formations";
 import type { AsFormationType, AsOrganisation, AsReq, AsUnitTest } from "../data/as-formations";
 import { RULES_LEVELS } from "../data/chassis";
@@ -20,6 +22,14 @@ export interface AsMember {
   group?: string;
   /** Named as the force commander or a key officer (ASCE p. 102); a Command Lance needs one in it. */
   officer?: "commander" | "key";
+  /** Special pilot abilities (pp. 92-101) given in force building, step 6. */
+  spas?: AsSpaPick[];
+}
+
+/** One pilot ability picked: its id in `AS_SPAS`, and the points put into it where the book lets the player buy 1 to 4. */
+export interface AsSpaPick {
+  id: string;
+  points?: number;
 }
 
 /** A group inside a force: a lance, Star or Level II and the rest of the p. 113 table, with the formation type the player designates (p. 116). */
@@ -43,6 +53,8 @@ export interface AsForce {
   pvLimit?: number;
   members: AsMember[];
   groups?: AsGroup[];
+  /** Special command abilities chosen for the force (pp. 102-109), by id in `AS_SCAS`. */
+  commands?: string[];
   notes?: string;
 }
 
@@ -330,4 +342,108 @@ export function groupFindings(group: AsGroup, count: number): string[] {
   const [min, max] = org.units;
   if (count >= min && count <= max) return [];
   return [`A ${org.name} is ${org.definition} (ASCE p. ${String(AS_ORGANISATION_PAGE)}); this group has ${String(count)}.`];
+}
+
+// ---- Pilot and command abilities (ASCE pp. 92-94, 102-109, steps 6 and 7 on p. 112) --------------------------------------------
+
+/** Whether a unit is of an ability's kind: a type code, or `vtol`, `airborne` (the aerospace types and VTOLs) or `ground` (not airborne). */
+export function unitIsKind(unit: AsUnit, kind: string): boolean {
+  const { type, move } = unit.card;
+  const vtol = (type === "CV" || type === "SV") && move.some((m) => m.mode === "v");
+  const airborne = vtol || AS_UNIT_TYPES.some((t) => t.code === type && t.aerospace);
+  if (kind === "vtol") return vtol;
+  if (kind === "airborne") return airborne;
+  if (kind === "ground") return !airborne;
+  return kind === type;
+}
+
+export const unitAllowsSpa = (unit: AsUnit, spa: AsSpa): boolean => spa.kinds === undefined || spa.kinds.some((k) => unitIsKind(unit, k));
+
+export const findSpa = (id: string): AsSpa | undefined => AS_SPAS.find((s) => s.id === id);
+export const findSca = (id: string): AsSca | undefined => AS_SCAS.find((s) => s.id === id);
+
+/** What one pick costs: the fixed cost, or for a ranged one the points the player put in, held to the range (one point where none is given). */
+export function spaCost(spa: AsSpa, pick: AsSpaPick): number {
+  if (typeof spa.cost === "number") return spa.cost;
+  const [min, max] = spa.cost;
+  return Math.min(max, Math.max(min, Math.round(Number.isFinite(pick.points) ? (pick.points as number) : min)));
+}
+
+/** The limits a Skill puts on one unit's SPAs (p. 92); a Skill below Green is held to Green's none. */
+export const spaLimits = (skill: number): { count: number; points: number } => AS_SPA_BY_SKILL[Math.min(5, clampSkill(skill))] ?? { count: 0, points: 0 };
+
+const picksOf = (member: AsMember): AsSpaPick[] => (Array.isArray(member.spas) ? member.spas.filter((p): p is AsSpaPick => typeof p === "object" && p !== null && typeof p.id === "string") : []);
+
+export interface MemberSpas {
+  picks: AsSpaPick[];
+  count: number;
+  points: number;
+  limit: { count: number; points: number };
+  /** Advice, in our words, on anything over a limit or not allowed for the unit's type. */
+  problems: string[];
+}
+
+/** The SPAs of one member against the Skill table and the unit's type. The book's limits are advice here, never a refusal. */
+export function memberSpas(member: AsMember, unit: AsUnit | undefined): MemberSpas {
+  const picks = picksOf(member);
+  const limit = spaLimits(member.skill);
+  const known = picks.flatMap((p) => { const spa = findSpa(p.id); return spa ? [{ p, spa }] : []; });
+  const points = known.reduce((sum, { p, spa }) => sum + spaCost(spa, p), 0);
+  const problems: string[] = [];
+  if (known.length > limit.count) problems.push(`Skill ${String(clampSkill(member.skill))} allows ${String(limit.count)} ${limit.count === 1 ? "ability" : "abilities"}; this unit has ${String(known.length)} (ASCE p. 92).`);
+  if (points > limit.points) problems.push(`Skill ${String(clampSkill(member.skill))} allows ${String(limit.points)} points of abilities; this unit has ${String(points)} (p. 92).`);
+  if (unit) for (const { spa } of known) if (!unitAllowsSpa(unit, spa)) problems.push(`${spa.name} is not for this unit type (p. ${String(spa.page)}).`);
+  return { picks, count: known.length, points, limit, problems };
+}
+
+export interface ForceSpas {
+  /** Members holding at least one SPA. */
+  holders: number;
+  /** Units of the force that may hold SPAs: one per 12 (step 6, p. 112), at least one. */
+  allowed: number;
+  problems: string[];
+}
+
+export function forceSpas(force: AsForce, totals: ForceTotals): ForceSpas {
+  const holders = force.members.filter((m) => picksOf(m).length > 0).length;
+  const allowed = Math.max(1, Math.ceil(totals.count / AS_SPA_UNITS_PER));
+  return { holders, allowed, problems: holders > allowed ? [`Step 6 allows SPAs on ${String(allowed)} ${allowed === 1 ? "unit" : "units"} in a force of ${String(totals.count)} (p. 112); ${String(holders)} have them.`] : [] };
+}
+
+/** The average Skill of the units in the force, rounded normally (p. 102); none for a force with no unit. */
+export function averageSkill(force: AsForce, totals: ForceTotals): number | undefined {
+  const skills = totals.lines.filter((l) => l.unit).map((l) => clampSkill(l.member.skill));
+  return skills.length === 0 ? undefined : Math.round(skills.reduce((a, b) => a + b, 0) / skills.length);
+}
+
+export interface ForceScas {
+  average?: number;
+  /** How many the average Skill allows; for Green and lower, the one general specialization instead of none. */
+  allowed: number;
+  chosen: AsSca[];
+  officers: number;
+  officersAllowed: number;
+  problems: string[];
+}
+
+/** The command abilities chosen against the average Skill, their own conditions, and the one-officer-per-six rule (p. 102). */
+export function forceScas(force: AsForce, totals: ForceTotals): ForceScas {
+  const ids = Array.isArray(force.commands) ? force.commands : [];
+  const chosen = ids.flatMap((id) => { const s = findSca(id); return s ? [s] : []; });
+  const average = averageSkill(force, totals);
+  const allowed = AS_SCA_BY_AVERAGE_SKILL[Math.min(7, average ?? 4)] ?? 0;
+  const officers = force.members.filter((m) => m.officer !== undefined).length;
+  const officersAllowed = Math.max(1, Math.ceil(totals.count / AS_OFFICERS_PER));
+  const problems: string[] = [];
+  if (chosen.length > allowed) problems.push(`An average Skill of ${String(average ?? "?")} allows ${String(allowed)} command ${allowed === 1 ? "ability" : "abilities"}; ${String(chosen.length)} are chosen (p. 102).`);
+  if (average !== undefined && average >= 5) for (const s of chosen) if (!s.general) problems.push(`${s.name} is not one of the general specializations a Green or lower force may take (p. 102).`);
+  for (const s of chosen) {
+    if (s.needs && !chosen.some((c) => c.id === s.needs)) problems.push(`${s.name} also needs ${findSca(s.needs)?.name ?? s.needs} (p. ${String(s.page)}).`);
+    if (s.maxAverageSkill !== undefined && average !== undefined && average > s.maxAverageSkill) problems.push(`${s.name} is for forces averaging Veteran or better (p. ${String(s.page)}).`);
+    if (s.kinds && totals.lines.some((l) => l.unit && !s.kinds?.some((k) => l.unit && unitIsKind(l.unit, k)))) problems.push(`${s.name} is for airborne units only (p. ${String(s.page)}).`);
+  }
+  if (officers > officersAllowed) problems.push(`One key officer for every 6 units allows ${String(officersAllowed)} officers in a force of ${String(totals.count)}; ${String(officers)} are named (p. 102).`);
+  const commanders = force.members.filter((m) => m.officer === "commander").length;
+  if (chosen.length > 0 && commanders !== 1) problems.push(commanders === 0 ? "Command abilities need one officer named as the force commander (p. 102)." : "Only one officer is the force commander (p. 102).");
+  return { average, allowed, chosen, officers, officersAllowed, problems };
 }

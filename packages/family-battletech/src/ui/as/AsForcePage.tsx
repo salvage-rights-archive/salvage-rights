@@ -9,6 +9,7 @@ import { unitTitle } from "../../rules/as-unit";
 import { GlossSwitch, SpecialLinks } from "./AsSpecials";
 import type { AsUnit } from "../../rules/as-unit";
 import { STORAGE_READ_FAILED, STORAGE_WRITE_FAILED } from "../storage";
+import { CommandSection, MemberAbilities } from "./AsAbilities";
 import { GroupsSection } from "./AsGroups";
 import { forceHref, limitWords, printForceHref } from "./AsForces";
 import { downloadForce, openAsStorage } from "./storage";
@@ -302,6 +303,9 @@ function ForceEditor({ initial, roster, filter, storage }: { initial: AsForce; r
                     <button type="button" className="bt-button bt-button--secondary" aria-label={name ? `Remove ${name}` : "Remove this unit"} onClick={() => { remove(index); }}>
                       Remove
                     </button>
+                    {line.unit && (building || (line.member.spas?.length ?? 0) > 0) && (
+                      <MemberAbilities member={line.member} unit={line.unit} index={index} setMember={(patch) => { void setMember(index, patch); }} />
+                    )}
                     {line.unit && line.unit.card.specials.length > 0 && (
                       <div className="as-member__specials">
                         <strong>Specials</strong>
@@ -317,6 +321,8 @@ function ForceEditor({ initial, roster, filter, storage }: { initial: AsForce; r
       </section>
 
       {(building || groups.length > 0) && <GroupsSection force={force} totals={totals} change={change} headingRef={groupsRef} />}
+
+      {(building || (force.commands?.length ?? 0) > 0) && <CommandSection force={force} totals={totals} change={change} />}
 
       <section className="bt-section" aria-labelledby="as-force-add">
         <h2 id="as-force-add">Add from your roster</h2>

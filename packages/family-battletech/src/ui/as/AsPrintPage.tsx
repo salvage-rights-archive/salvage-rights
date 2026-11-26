@@ -44,6 +44,7 @@ function Roster({ roster }: { roster: PrintRoster }) {
   const long = roster.rows.filter((r) => fitSpecials(r.specials).more);
   const pilots = roster.rows.some((r) => r.pilot !== "");
   const groups = roster.rows.some((r) => r.formation !== "");
+  const abilities = roster.rows.some((r) => r.abilities !== "");
   return (
     <section className="as-sheet as-sheet--roster" aria-label="Force roster">
       <h2>{`Force roster: ${roster.name}`}</h2>
@@ -59,6 +60,7 @@ function Roster({ roster }: { roster: PrintRoster }) {
               <th scope="col">Skill</th>
               {pilots && <th scope="col">Pilot</th>}
               {groups && <th scope="col">Group</th>}
+              {abilities && <th scope="col">Pilot abilities</th>}
               <th scope="col">Base PV</th>
               <th scope="col">PV at Skill</th>
             </tr>
@@ -74,6 +76,7 @@ function Roster({ roster }: { roster: PrintRoster }) {
                 <td>{String(r.skill)}</td>
                 {pilots && <td>{r.pilot}</td>}
                 {groups && <td>{r.formation}</td>}
+                {abilities && <td>{r.abilities}</td>}
                 <td>{String(r.basePv)}</td>
                 <td>{String(r.pv)}</td>
               </tr>
@@ -81,7 +84,7 @@ function Roster({ roster }: { roster: PrintRoster }) {
           </tbody>
           <tfoot>
             <tr>
-              <th scope="row" colSpan={7 + Number(pilots) + Number(groups)}>{`Total, ${String(roster.rows.length)} ${roster.rows.length === 1 ? "unit" : "units"}`}</th>
+              <th scope="row" colSpan={7 + Number(pilots) + Number(groups) + Number(abilities)}>{`Total, ${String(roster.rows.length)} ${roster.rows.length === 1 ? "unit" : "units"}`}</th>
               <td>{String(roster.total)}</td>
             </tr>
           </tfoot>
