@@ -97,10 +97,10 @@ export const AMMUNITION: EquipmentGroup[] = [
       { id: "ammo-swarm-is", feeds: ["lrm"], name: "Swarm LRM Ammo", availability: [{ from: 2621, to: 2840 }, { from: 3053 }], units: ["mech", "industrialmech", "vehicle"] },
       { id: "ammo-swarm-i-is", feeds: ["lrm"], name: "Swarm-I LRM Ammo", availability: [{ from: 3057 }], units: ["mech", "industrialmech", "vehicle"] },
       { id: "ammo-thunder-is", feeds: ["lrm"], name: "Thunder LRM Ammo", availability: [{ from: 2620, to: 2840 }, { from: 3052 }], units: ["mech", "industrialmech", "vehicle"] },
-      { id: "ammo-thunder-augmented-is", feeds: ["lrm"], name: "Thunder-Augmented LRM Ammo", availability: [{ from: 3057 }], units: ["mech", "industrialmech", "vehicle"] },
-      { id: "ammo-thunder-inferno-is", feeds: ["lrm"], name: "Thunder-Inferno LRM Ammo", availability: [{ from: 3056 }], units: ["mech", "industrialmech", "vehicle"] },
-      { id: "ammo-thunder-vibrabomb-is", feeds: ["lrm"], name: "Thunder-Vibrabomb LRM Ammo", availability: [{ from: 3057 }], units: ["mech", "industrialmech", "vehicle"] },
-      { id: "ammo-thunder-active-is", feeds: ["lrm"], name: "Thunder-Active LRM Ammo", availability: [{ from: 3058 }], units: ["mech", "industrialmech", "vehicle"] },
+      { id: "ammo-thunder-augmented-is", feeds: ["lrm"], shotsFactor: 0.5, name: "Thunder-Augmented LRM Ammo", availability: [{ from: 3057 }], units: ["mech", "industrialmech", "vehicle"] },
+      { id: "ammo-thunder-inferno-is", feeds: ["lrm"], shotsFactor: 0.5, name: "Thunder-Inferno LRM Ammo", availability: [{ from: 3056 }], units: ["mech", "industrialmech", "vehicle"] },
+      { id: "ammo-thunder-vibrabomb-is", feeds: ["lrm"], shotsFactor: 0.5, name: "Thunder-Vibrabomb LRM Ammo", availability: [{ from: 3057 }], units: ["mech", "industrialmech", "vehicle"] },
+      { id: "ammo-thunder-active-is", feeds: ["lrm"], shotsFactor: 0.5, name: "Thunder-Active LRM Ammo", availability: [{ from: 3058 }], units: ["mech", "industrialmech", "vehicle"] },
       // Narc and iNarc pods (Inner Sphere)
       { id: "ammo-narc-explosive-is", name: "Narc Missile Beacon (Explosive) Ammo", aliases: ["Narc Explosive Ammo"], shotsPerTon: 6, availability: [{ from: 3060 }] },
       { id: "ammo-improved-narc-ecm-is", name: "Improved Narc Launcher (ECM) Ammo", aliases: ["iNarc ECM Ammo"], shotsPerTon: 4, availability: [{ from: 3062 }] },
@@ -395,6 +395,69 @@ export const AMMUNITION: EquipmentGroup[] = [
       { id: "ammo-copperhead-long-tom-clan", name: "Copperhead (Long Tom) Ammo", availability: [{ from: 2645 }], cite: { book: TO, page: 226 }, checked: "text" },
       { id: "ammo-copperhead-sniper-clan", name: "Copperhead (Sniper) Ammo", availability: [{ from: 2645 }], cite: { book: TO, page: 226 }, checked: "text" },
       { id: "ammo-copperhead-thumper-clan", name: "Copperhead (Thumper) Ammo", availability: [{ from: 2645 }], cite: { book: TO, page: 227 } },
+    ],
+  },
+  // Missile munitions from the same tables (TO:AUE printed pp. 226-229, read against the page images; construction data pp. 227 and 229,
+  // play figures and rules level pp. 226 and 228). Dates are the Latest Intro Date column; a "P" date (prototype only, nothing later printed)
+  // is the first year with no second one, and an item the Universal Technology Advancement Table (IO:AE printed pp. 55-56) marks extinct ends
+  // there. Where that table's older dates differ from this newer printing, this printing's are used (conflict 90 in the archive).
+  // A ton carries the launcher's standard shots times `shotsFactor` (the Ammo column: x0.5 or x1). The tables give weight x1: the bin is a
+  // ton in a slot. Not added here: Anti-Ship and other bomb and artillery munitions, the grenade-launcher, flamer and mine munitions.
+  {
+    defaults: { kind: "ammunition", techBase: "inner-sphere", cite: { book: TO, page: 227 }, playCite: { book: TO, page: 226 }, checked: "page", tons: 1, slots: 1, rulesLevel: "advanced", units: ["mech", "industrialmech", "vehicle"] },
+    items: [
+      { id: "ammo-acid-srm-is", feeds: ["srm", "mml"], shotsFactor: 0.5, name: "Acid SRM Ammo", availability: [{ from: 3053 }], rulesLevel: "experimental" },
+      { id: "ammo-anti-radiation-srm-is", feeds: ["srm", "mml"], name: "Anti-Radiation SRM Ammo", availability: [{ from: 3066 }], rulesLevel: "experimental" },
+      { id: "ammo-anti-radiation-lrm-is", feeds: ["lrm", "mml"], name: "Anti-Radiation LRM Ammo", availability: [{ from: 3066 }], rulesLevel: "experimental" },
+      { id: "ammo-bola-narc-pods-is", name: "Bola Narc Pod Ammo", availability: [{ from: 3056 }], rulesLevel: "experimental" },
+      { id: "ammo-follow-the-leader-lrm-is", feeds: ["lrm", "mml"], shotsFactor: 0.5, name: "Follow-the-Leader LRM Ammo", availability: [{ from: 3053 }], rulesLevel: "experimental" },
+      { id: "ammo-heat-seeking-srm-is", feeds: ["srm", "mml"], shotsFactor: 0.5, name: "Heat-Seeking SRM Ammo", availability: [{ from: 2340 }] },
+      { id: "ammo-heat-seeking-lrm-is", feeds: ["lrm", "mml"], shotsFactor: 0.5, name: "Heat-Seeking LRM Ammo", availability: [{ from: 2340 }] },
+      { id: "ammo-incendiary-lrm-is", feeds: ["lrm", "mml"], name: "Incendiary LRM Ammo", availability: [{ from: 2342 }] },
+      { id: "ammo-magnetic-pulse-srm-is", feeds: ["srm", "mml"], name: "Magnetic-Pulse SRM Ammo", availability: [{ from: 3057, to: 3065 }], prototypeYear: 3055, rulesLevel: "experimental" },
+      { id: "ammo-magnetic-pulse-lrm-is", feeds: ["lrm", "mml"], name: "Magnetic-Pulse LRM Ammo", availability: [{ from: 3057, to: 3065 }], prototypeYear: 3055, rulesLevel: "experimental" },
+      { id: "ammo-mine-clearance-srm-is", feeds: ["srm", "mml"], name: "Mine-Clearance SRM Ammo", availability: [{ from: 3069 }] },
+      { id: "ammo-mine-clearance-lrm-is", feeds: ["lrm", "mml"], name: "Mine-Clearance LRM Ammo", availability: [{ from: 3069 }], cite: { book: TO, page: 229 }, playCite: { book: TO, page: 228 } },
+      { id: "ammo-smoke-srm-is", feeds: ["srm", "mml"], name: "Smoke SRM Ammo", availability: [{ from: 2333 }], cite: { book: TO, page: 229 }, playCite: { book: TO, page: 228 } },
+      { id: "ammo-smoke-lrm-is", feeds: ["lrm", "mml"], name: "Smoke LRM Ammo", availability: [{ from: 2333 }], cite: { book: TO, page: 229 }, playCite: { book: TO, page: 228 } },
+      { id: "ammo-tandem-charge-srm-is", feeds: ["srm", "mml"], shotsFactor: 0.5, name: "Tandem-Charge SRM Ammo", availability: [{ from: 2757 }], rulesLevel: "experimental", cite: { book: TO, page: 229 }, playCite: { book: TO, page: 228 } },
+    ],
+  },
+  {
+    defaults: { kind: "ammunition", techBase: "clan", cite: { book: TO, page: 227 }, playCite: { book: TO, page: 226 }, checked: "page", tons: 1, slots: 1, rulesLevel: "advanced", units: ["mech", "industrialmech", "vehicle"] },
+    items: [
+      { id: "ammo-anti-radiation-srm-clan", feeds: ["srm", "mml"], name: "Anti-Radiation SRM Ammo", availability: [{ from: 3057 }], rulesLevel: "experimental" },
+      { id: "ammo-anti-radiation-lrm-clan", feeds: ["lrm", "mml"], name: "Anti-Radiation LRM Ammo", availability: [{ from: 3057 }], rulesLevel: "experimental" },
+      { id: "ammo-follow-the-leader-lrm-clan", feeds: ["lrm", "mml"], shotsFactor: 0.5, name: "Follow-the-Leader LRM Ammo", availability: [{ from: 2755 }], rulesLevel: "experimental" },
+      { id: "ammo-heat-seeking-srm-clan", feeds: ["srm", "mml"], shotsFactor: 0.5, name: "Heat-Seeking SRM Ammo", availability: [{ from: 2340 }] },
+      { id: "ammo-heat-seeking-lrm-clan", feeds: ["lrm", "mml"], shotsFactor: 0.5, name: "Heat-Seeking LRM Ammo", availability: [{ from: 2340 }] },
+      { id: "ammo-incendiary-lrm-clan", feeds: ["lrm", "mml"], name: "Incendiary LRM Ammo", availability: [{ from: 2825 }] },
+      { id: "ammo-smoke-srm-clan", feeds: ["srm", "mml"], name: "Smoke SRM Ammo", availability: [{ from: 2333 }], cite: { book: TO, page: 229 }, playCite: { book: TO, page: 228 } },
+      { id: "ammo-smoke-lrm-clan", feeds: ["lrm", "mml"], name: "Smoke LRM Ammo", availability: [{ from: 2825 }], cite: { book: TO, page: 229 }, playCite: { book: TO, page: 228 } },
+    ],
+  },
+  // Special munitions of the Additional Alternate Era table (IO:AE printed pp. 212-213; the item entries are on pp. 61-62, 98-99, 125-127). Dates
+  // are those p. 213 prints, "P" being a prototype year, except Retro-Streak and Shoot-and-Sit, where the Universal Technology Advancement Table
+  // (pp. 55-56) prints a different year and the extinction (conflict 91 in the archive). A ton carries the launcher's standard shots where the
+  // launcher is one the catalog can follow (LRM, SRM, MML, ATM); Retro-Streak, Shoot-and-Sit and the improved ATM munitions name none.
+  {
+    defaults: { kind: "ammunition", techBase: "inner-sphere", cite: { book: IO, page: 213 }, playCite: { book: IO, page: 212 }, checked: "page", tons: 1, slots: 1, rulesLevel: "experimental", units: ["mech", "industrialmech", "vehicle"] },
+    items: [
+      { id: "ammo-anti-tsm-lrm-is", feeds: ["lrm", "mml"], name: "Anti-TSM LRM Ammo", availability: [{ from: 3027 }], prototypeYear: 3026 },
+      { id: "ammo-anti-tsm-srm-is", feeds: ["srm", "mml"], name: "Anti-TSM SRM Ammo", availability: [{ from: 3027 }], prototypeYear: 3026 },
+      { id: "ammo-listen-kill-lrm-is", feeds: ["lrm", "mml"], name: "Listen-Kill LRM Ammo", availability: [{ from: 3037, to: 3040 }] },
+      { id: "ammo-listen-kill-srm-is", feeds: ["srm", "mml"], name: "Listen-Kill SRM Ammo", availability: [{ from: 3037, to: 3040 }] },
+      { id: "ammo-dead-fire-lrm-is", feeds: ["lrm", "mml"], name: "Dead-Fire LRM Ammo", availability: [{ from: 3052 }] },
+      { id: "ammo-dead-fire-srm-is", feeds: ["srm", "mml"], name: "Dead-Fire SRM Ammo", availability: [{ from: 3052 }] },
+      { id: "ammo-retro-streak-srm-is", name: "Retro-Streak SSRM Ammo", availability: [{ from: 3048, to: 3057 }] },
+      { id: "ammo-shoot-and-sit-narc-is", name: "Shoot-and-Sit Narc Ammo", availability: [{ from: 3049, to: 3059 }] },
+    ],
+  },
+  {
+    defaults: { kind: "ammunition", techBase: "clan", cite: { book: IO, page: 213 }, playCite: { book: IO, page: 212 }, checked: "page", tons: 1, slots: 1, rulesLevel: "experimental", units: ["mech", "industrialmech", "vehicle"] },
+    items: [
+      { id: "ammo-improved-magnetic-pulse-atm-clan", name: "Improved Magnetic Pulse ATM Ammo", availability: [{ from: 3070, to: 3080 }] },
+      { id: "ammo-improved-inferno-atm-clan", name: "Improved Inferno ATM Ammo", availability: [{ from: 3070 }] },
     ],
   },
 ];

@@ -318,6 +318,27 @@ describe("Interstellar Operations: Alternate Eras unit-type columns", () => {
   });
 });
 
+describe("missile munitions from TO:AUE pp. 226-229 and IO:AE p. 213", () => {
+  // id, tech base, first year, rules level, launcher families, the Ammo (per Ton) multiplier
+  it.each([
+    ["ammo-heat-seeking-lrm-is", "inner-sphere", 2340, "advanced", ["lrm", "mml"], 0.5],
+    ["ammo-smoke-lrm-clan", "clan", 2825, "advanced", ["lrm", "mml"], undefined],
+    ["ammo-tandem-charge-srm-is", "inner-sphere", 2757, "experimental", ["srm", "mml"], 0.5],
+    ["ammo-dead-fire-srm-is", "inner-sphere", 3052, "experimental", ["srm", "mml"], undefined],
+  ])("%s is a one-ton bin of the launcher's ammunition at the printed date and level", async (id, techBase, from, rulesLevel, feeds, shotsFactor) => {
+    const row = (await loadCatalog()).byId(id);
+    expect(row).toMatchObject({ kind: "ammunition", techBase, rulesLevel, feeds, tons: 1, slots: 1 });
+    expect(row?.availability[0]?.from).toBe(from);
+    expect(row?.shotsFactor).toBe(shotsFactor);
+  });
+
+  it("a bin of a half-count munition carries half the launcher's shots on the record", async () => {
+    const real = await loadCatalog();
+    const record = bipedRecord({ mounts: [mount("l", "lrm-10-is", "RT", 0), mount("a", "ammo-heat-seeking-lrm-is", "LT", 0), mount("s", "ammo-smoke-lrm-is", "CT", 0)] });
+    expect(ammoLines(record, real).map((l) => [l.name, l.shots])).toEqual([["Heat-Seeking LRM Ammo", 6], ["Smoke LRM Ammo", 12]]); // LRM 10 carries 12 a ton
+  });
+});
+
 describe("Tactical Operations: Advanced Units and Equipment unit-type columns (printed pp. 217, 219, 221, 223)", () => {
   // The Space columns of the Heavy Weapons and Equipment Construction Data: NA leaves the unit type out; a number that differs from the Mech column is the slots there.
   it.each([
