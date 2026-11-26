@@ -4,7 +4,6 @@
 // a figure the card does not hold (an artillery blast radius) the value is null and a finding says so, never a guess.
 import {
   PV_ARMOR_MULTIPLIER,
-  PV_ARTILLERY,
   PV_BLANKET,
   PV_DAMAGE,
   PV_DEFENSE_FACTOR,
@@ -109,7 +108,7 @@ export function pointValue(card: AsCard): PointValue {
     findings.push({ code: "pv-artillery", message: "The book's factor for an artillery weapon needs its blast radius, which the card does not hold; we leave the Point Value unset.", cite: PV_PAGES.offenseTable });
     return out(null, null, null, null);
   }
-  void PV_ARTILLERY;
+  
 
   // ---- Step 1: Offensive Value ----
   const adf = tidy(s + m + l + m);
@@ -127,7 +126,7 @@ export function pointValue(card: AsCard): PointValue {
     const entry = Object.hasOwn(PV_OFFENSE_SPECIALS, sp.code) ? PV_OFFENSE_SPECIALS[sp.code] : undefined;
     if (!entry) continue;
     const f = entry.factor;
-    let value = 0;
+    let value: number;
     if (f.kind === "flat") value = f.value;
     else if (f.kind === "rating") value = Math.min(f.max ?? Infinity, ratingOf(sp) * f.per);
     else if (f.kind === "heat") {
@@ -177,7 +176,7 @@ export function pointValue(card: AsCard): PointValue {
     if (!entry) continue;
     const f = entry.factor;
     const threes = Math.floor(card.armor / 3);
-    let value = 0;
+    let value: number;
     if (f.kind === "flat") value = f.value;
     else if (f.kind === "armored") value = card.structure <= 1 ? 0 : f.value;
     else if (f.kind === "structureAtLeast") value = card.structure >= f.min ? f.value : 0;
