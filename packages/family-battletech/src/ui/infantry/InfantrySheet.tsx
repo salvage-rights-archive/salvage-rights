@@ -7,6 +7,10 @@ import { infantryBv, infantryCost, platoonOf } from "../../rules/infantry/platoo
 import type { InfantryRecord } from "../../rules/infantry/platoon";
 import { TRADEMARK_LINE } from "../sheet/RecordSheet";
 import { INK } from "../sheet/text";
+import FigureDiagram from "../doll/figure-diagram";
+import InfantryDoll, { fitInfantryDoll, infantryLayout } from "../doll/infantry-doll";
+
+const DOLL = { Doll: InfantryDoll, layout: infantryLayout, fit: fitInfantryDoll };
 
 const W = 1700;
 const H = 2200;
@@ -43,6 +47,9 @@ export default function InfantrySheet({ record, catalog }: { record: InfantryRec
   const lineHeight = 380;
   const top = 330;
   const rangeTop = top + lines.length * lineHeight + 20;
+  const figuresTop = rangeTop + 350 + Math.max(0, facts.length - 1) * 36 + 20;
+  const figuresH = Math.min(560, H - 70 - figuresTop - 50);
+  const kind = p.motive?.mechanized ? "mechanized" : record.motive;
   const kit = record.armor ? armorKitOf(record.armor) : undefined;
   return (
     <svg className="bt-sheet bt-infantry-sheet" viewBox={`0 0 ${String(W)} ${String(H)}`} role="img" aria-label={`Record sheet of ${title}. ${facts.join(". ")}.`} xmlns="http://www.w3.org/2000/svg" fontFamily="Arial, Helvetica, sans-serif">
@@ -111,6 +118,18 @@ export default function InfantrySheet({ record, catalog }: { record: InfantryRec
           <text key={i} x={40} y={rangeTop + 350 + i * 36} fontSize={24} fill={INK}>{line}</text>
         ))}
       </g>
+      {figuresH >= 200 && (
+        <g data-diagram="platoon-figures">
+          <text x={40} y={figuresTop + 30} fontSize={30} fontWeight="bold" fill={INK}>Platoon figures</text>
+          {lines.map((count, li) => (
+            <FigureDiagram
+              key={li} kind={DOLL} unit={{ layout: kind, locations: [{ code: "pl", name: lines.length === 1 ? "Platoon" : `Sub-platoon ${String(li + 1)}`, armor: count }] }} use="armor" suffix={`inf-sheet-${String(li)}`}
+              label={`${lines.length === 1 ? "Platoon" : `Sub-platoon ${String(li + 1)}`}, ${String(count)} troopers`} labelSize={26}
+              rect={{ x: 40 + (li * (W - 80)) / lines.length, y: figuresTop + 50, w: (W - 80) / lines.length - 20, h: figuresH }}
+            />
+          ))}
+        </g>
+      )}
       <text x={40} y={H - 30} fontSize={18} fill={INK}>{TRADEMARK_LINE}</text>
     </svg>
   );

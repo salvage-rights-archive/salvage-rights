@@ -2,74 +2,8 @@
 .pm-diagram {
   display: block;
   width: 100%;
-  max-width: 40rem;
+  max-width: 28rem;
   height: auto;
-  color: var(--sr-ink);
-
-  text {
-    font-family: var(--sr-font-body);
-    fill: currentcolor;
-  }
-
-  &__box {
-    fill: var(--sr-surface);
-    stroke: var(--sr-line-strong);
-    stroke-width: 3;
-  }
-
-  &__armor {
-    fill: none;
-    stroke: currentcolor;
-    stroke-width: 2;
-  }
-
-  &__structure {
-    fill: var(--sr-line-strong);
-    stroke: currentcolor;
-    stroke-width: 2;
-  }
-
-  &__loc--error .pm-diagram__box {
-    stroke: var(--sr-danger);
-    stroke-width: 6;
-    stroke-dasharray: 10 6;
-  }
-
-  &__loc[role="button"] {
-    cursor: pointer;
-
-    &:hover .pm-diagram__box {
-      stroke: var(--sr-accent);
-    }
-
-    &:focus-visible {
-      outline: none;
-
-      .pm-diagram__box {
-        stroke: var(--sr-focus);
-        stroke-width: 7;
-      }
-    }
-  }
-
-  &__loc--selected .pm-diagram__box {
-    stroke: var(--sr-accent);
-    stroke-width: 6;
-  }
-
-  // On the sheet: paper and ink, whatever the theme.
-  &--sheet {
-    color: #000;
-
-    .pm-diagram__box {
-      fill: #fff;
-      stroke: #000;
-    }
-
-    .pm-diagram__structure {
-      fill: #bbb;
-    }
-  }
 }
 
 .pm-mounts {

@@ -205,7 +205,7 @@ export function ArmorPanel({ record, onEdit, selected, onSelect }: PartProps & {
 
 export function ArmorDrawing({ record, selected, onSelect }: { record: VehicleRecord; selected?: string; onSelect?: (code: string) => void }) {
   const locations = armorLocations(record).map((code) => ({ code, name: vehicleLocationName(code), armor: record.armor.points[code] ?? 0, structure: structurePoints(record) }));
-  return <div className="bt-vehicle-doll"><VehicleDiagram locations={locations} use="armor" {...(onSelect ? { onSelect } : {})} {...(selected === undefined ? {} : { selected })} /></div>;
+  return <div className="bt-vehicle-doll"><VehicleDiagram locations={locations} use="armor" motive={record.motive} {...(onSelect ? { onSelect } : {})} {...(selected === undefined ? {} : { selected })} /></div>;
 }
 
 export function HeatPanel({ record, catalog, onEdit }: PartProps & { catalog: Catalog }) {
