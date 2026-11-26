@@ -152,7 +152,8 @@ describe("The Abomination tracker", () => {
     expect(screen.getByText(/Showing every saved unit/)).toBeTruthy();
     await user.click(screen.getByRole("button", { name: "Clear the table" }));
     await user.click(within(screen.getByRole("group", { name: "Confirm clear the table" })).getByRole("button", { name: "Clear the table" }));
-    expect(screen.queryByRole("heading", { level: 2, name: /\(Gnat\)/ })).toBeNull();
+    // Clearing waits on the store; on a slow machine the headings go a moment later.
+    await waitFor(() => { expect(screen.queryByRole("heading", { level: 2, name: /\(Gnat\)/ })).toBeNull(); });
     expect(await screen.findByRole("button", { name: "Put on the table: Test (Gnat)" })).toBeTruthy();
     await user.click(screen.getByRole("button", { name: "Put on the table: Test (Gnat)" }));
     await user.click(screen.getByRole("button", { name: /^Put another on the table: / }));
