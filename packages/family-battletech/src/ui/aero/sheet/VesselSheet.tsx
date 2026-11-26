@@ -31,23 +31,23 @@ const BLOCKS = {
   inventory: r(30, 665, 690, 780),
   crew: r(30, 1465, 690, 330),
   armor: r(735, 245, 935, 760),
-  critical: r(735, 1025, 500, 770),
-  heat: r(1255, 1025, 415, 770),
+  critical: r(735, 1025, 570, 770),
+  heat: r(1325, 1025, 345, 770),
   velocity: r(30, 1815, 1640, 320),
 };
 
 /** Where each armor facing sits in the diagram: the centre as a share of the block, and the size. A facing we have no place for goes in a row below. */
 const PLACES: Record<string, { x: number; y: number; w: number; h: number }> = {
-  NO: { x: 0.5, y: 0.1, w: 300, h: 150 },
-  FL: { x: 0.2, y: 0.26, w: 270, h: 150 },
-  FR: { x: 0.8, y: 0.26, w: 270, h: 150 },
+  NO: { x: 0.5, y: 0.1, w: 260, h: 150 },
+  FL: { x: 0.17, y: 0.28, w: 250, h: 150 },
+  FR: { x: 0.83, y: 0.28, w: 250, h: 150 },
   LW: { x: 0.14, y: 0.5, w: 250, h: 150 },
   RW: { x: 0.86, y: 0.5, w: 250, h: 150 },
   LB: { x: 0.14, y: 0.5, w: 250, h: 150 },
   RB: { x: 0.86, y: 0.5, w: 250, h: 150 },
-  AL: { x: 0.2, y: 0.74, w: 270, h: 150 },
-  AR: { x: 0.8, y: 0.74, w: 270, h: 150 },
-  AF: { x: 0.5, y: 0.9, w: 300, h: 150 },
+  AL: { x: 0.17, y: 0.68, w: 250, h: 150 },
+  AR: { x: 0.83, y: 0.68, w: 250, h: 150 },
+  AF: { x: 0.5, y: 0.9, w: 260, h: 150 },
 };
 const LABEL_BAND = 72;
 
@@ -157,11 +157,12 @@ function Inventory({ rect, facts }: { rect: Rect; facts: VesselFacts }) {
   const top = y + 82;
   const shown = facts.weapons.slice(0, MAX_BAY_LINES);
   const ammo = facts.ammo.join("; ");
+  const legend = `Attack in ${facts.capital ? "standard points, C is capital scale" : "standard points"}; SRV 0-6, MRV 7-12, LRV 13-20, ERV 21-25 hexes`;
   return (
     <Frame rect={rect} title="WEAPONS AND EQUIPMENT INVENTORY">
       <g data-inventory="">
-        <text x={x + 24} y={y + 62} fontSize={20} fill={INK}>
-          {`Attack values in ${facts.capital ? "standard-scale points, C for capital scale" : "standard-scale points"}; range brackets in hexes: SRV 0-6, MRV 7-12, LRV 13-20, ERV 21-25`}
+        <text x={x + 24} y={y + 62} fontSize={20} fill={INK} {...squeeze(legend, 20, w - 48)}>
+          {legend}
         </text>
         <text x={x + columns.name} y={y + 100} fontSize={20} fontWeight={700} fill={INK}>
           Bay

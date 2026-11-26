@@ -2,7 +2,7 @@
 // count against the edition's limit; items are added through the grouped picker. An arc the edition does not give the unit, holding items
 // the unit already has, stays listed so the items can be moved (the rules check reports them).
 import { useEffect, useRef, useState } from "react";
-import { CAPITAL_FIGURES, CRAFT_FIGURES, FIGHTER_FIGURES, craftBaysFor, figureOf } from "../../data/aero";
+import { CAPITAL_FIGURES, CRAFT_FIGURES, capitalSystemFigure, FIGHTER_FIGURES, craftBaysFor, figureOf } from "../../data/aero";
 import { aeroLocationName, capitalKind, capitalSystems, capitalSystemsFor, craftAmmoShortfalls, craftKind, craftQuarters, fighterArcs, fighterKind, locationsOf, vessel, vesselGroup } from "../../rules/aero";
 import type { AeroMount, AeroRecord } from "../../rules/aero";
 import type { Catalog, EquipmentRow } from "../../rules/catalog";
@@ -195,7 +195,9 @@ const QUARTERS: [string, string][] = [
 
 /** The ship systems of a capital ship (docking hardpoints, grav decks, batteries and the like): how many of each, with the edition's most and what the type may carry. */
 function ShipSystems({ record, onEdit }: { record: AeroRecord; onEdit: AeroOnEdit }) {
-  const kinds = capitalSystemsFor(record.editionId);
+  // Hide, do not mark: a system the unit type may not carry is listed only when the unit already holds some.
+  const type = capitalKind(record);
+  const kinds = capitalSystemsFor(record.editionId).filter(({ kind }) => (record.systems?.[kind] ?? 0) > 0 || (type !== undefined && capitalSystemFigure(kind, record.editionId)?.types.includes(type) === true));
   const lines = capitalSystems(record).lines;
   if (kinds.length === 0) return null;
   return (

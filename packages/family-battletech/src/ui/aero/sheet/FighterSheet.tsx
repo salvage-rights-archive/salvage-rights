@@ -32,14 +32,17 @@ const AT1 = {
   heat: r(1270, 240, 400, 1010),
   equipment: r(690, 1270, 980, 860),
 };
+// The AeroTech 2 pair follow the flagged page: the armor diagram top left, Pilot Data above Vessel Data and the Heat Scale down the right, critical
+// damage with the movement vectors under the diagram, and the velocity record beside them.
 const AT2 = {
-  armor: r(30, 220, 1060, 1010),
-  vessel: r(1110, 220, 560, 880),
-  heat: r(1110, 1120, 560, 1030),
-  critical: r(30, 1250, 510, 420),
-  pilot: r(560, 1250, 530, 290),
-  stores: r(560, 1560, 530, 250),
-  velocityDown: r(560, 1560, 530, 590),
+  armor: r(30, 220, 1060, 930),
+  pilot: r(1110, 220, 560, 280),
+  vessel: r(1110, 520, 560, 740),
+  heat: r(1110, 1280, 560, 870),
+  critical: r(30, 1170, 510, 430),
+  vectors: { x: 150, y: 1618 },
+  stores: r(560, 1170, 530, 250),
+  velocityDown: r(560, 1170, 530, 980),
   velocityAcross: r(30, 1830, 1060, 320),
 };
 const CURRENT = {
@@ -115,23 +118,23 @@ function At2({ facts, profile }: LayoutProps) {
   return (
     <>
       <ArmorDiagram rect={AT2.armor} profile={profile} armor={facts.armor} si={siOf(facts)} />
-      <MovementVectors x={AT2.armor.x + 10} y={AT2.armor.y + 20} />
       <DataBlock rect={AT2.vessel} facts={facts} profile={profile} />
       <SinksStrip rect={{ x: AT2.vessel.x, y: AT2.vessel.y + AT2.vessel.h - 130, w: AT2.vessel.w, h: 120 }} facts={facts} profile={profile} />
       <PilotBlock rect={AT2.pilot} profile={profile} />
       <HeatScale rect={AT2.heat} profile={profile} />
       <CriticalBlock rect={AT2.critical} profile={profile} />
+      <MovementVectors x={AT2.vectors.x} y={AT2.vectors.y} />
       {across ? (
         <>
           <StoresBlock rect={AT2.stores} profile={profile} />
-          <text x={30} y={1730} fontSize={22} fill={INK}>
+          <text x={380} y={1700} fontSize={22} fill={INK}>
             BV:
           </text>
-          <line x1={90} x2={400} y1={1734} y2={1734} stroke={INK} strokeWidth={2} />
-          <text x={30} y={1780} fontSize={22} fill={INK}>
+          <line x1={440} x2={540} y1={1704} y2={1704} stroke={INK} strokeWidth={2} />
+          <text x={380} y={1750} fontSize={22} fill={INK}>
             Cost:
           </text>
-          <line x1={100} x2={400} y1={1784} y2={1784} stroke={INK} strokeWidth={2} />
+          <line x1={450} x2={540} y1={1754} y2={1754} stroke={INK} strokeWidth={2} />
           <VelocityBlock rect={AT2.velocityAcross} profile={profile} fuel={facts.fuel} />
         </>
       ) : (
