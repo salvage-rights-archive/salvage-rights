@@ -27,6 +27,7 @@ export const EQUIPMENT_GROUPS: GroupRule[] = [
   { id: "defensive", label: "Defensive equipment", match: words("ams|case|shield|laser-anti-missile|pds|harjel|harjel-ii|harjel-iii|full-head-ejection-system|aquatic-survival-system") },
   { id: "heat", label: "Heat and movement equipment", match: words("heat-sink|jump-jet|jump-pack|mechanical-jump-booster|partial-wing|umu|supercharger|masc|tsm|triple-strength|super-cooled|coolant|laser-insulator|lam") },
   { id: "electronics", label: "Electronics and targeting", match: words("c3|ecm|probe|tag|cews|electronic-warfare|recon-camera|remote-sensor|remote-sensors|apollo|targeting-computer|artemis|viral-jammer|chaff|drone-operating-system") },
+  { id: "aerospace", label: "Bombs and aerospace equipment", match: words("bomb|bay-door|look-down-radar") },
   { id: "special", label: "Anti-personnel and special weapons", match: words("booby-trap|machine-gun|machine-gun-array|a-pods|b-pods|grenade|mine-dispenser|taser|fluid-gun|m-pod") },
   { id: "physical", label: "Physical weapons", match: words("claws|mace|lance|talons|hatchet|sword|retractable-blade|chain-whip|flail|spikes|vibroblade") },
   { id: "missile", label: "Missile weapons", match: words("lrm|srm|mrm|mml|atm|rocket-launcher|narc|thunderbolt|mortar") },
@@ -45,4 +46,4 @@ export const AMMO_GROUPS: GroupRule[] = [
 export const AMMO_OTHER_GROUP = { id: "ammo-other", label: "Ammunition: machine guns, flamers and other" };
 
 /** The order the picker lists the groups in. */
-export const GROUP_ORDER: string[] = ["battlearmor", "infantry", "vehicle", "capital", "energy", "ballistic", "missile", "artillery", "physical", "special", "electronics", "stealth", "command", "defensive", "actuators", "heat", "industrial", "ammo-ballistic", "ammo-missile", "ammo-artillery", "ammo-other", "other"];
+export const GROUP_ORDER: string[] = ["battlearmor", "infantry", "vehicle", "capital", "energy", "ballistic", "missile", "artillery", "physical", "special", "electronics", "aerospace", "stealth", "command", "defensive", "actuators", "heat", "industrial", "ammo-ballistic", "ammo-missile", "ammo-artillery", "ammo-other", "other"];

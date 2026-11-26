@@ -90,6 +90,10 @@ export interface EquipmentRow {
   feeds?: ("lrm" | "srm" | "mml" | "atm")[];
   /** A multi-mode launcher (MML) only: what each mode fires, as its own line under the weapon on the record sheet. `range` is as above. */
   modes?: { name: string; damage: string; range: [min: number, short: number, medium: number, long: number] }[];
+  /** The weapon bay class an aerospace unit groups the item under, where the books name one (TechManual's Aerospace Weapon Classes, printed p.352; capital laser, PPC, autocannon and Gauss as AeroTech 2 p.101 and AeroTech 2 Revised p.75 print them). Absent: no book read names a class. An older edition that prints a different class holds it in data/aero-weapons.ts. */
+  bayClass?: string;
+  /** A capital weapon only: the tons of ammunition one shot uses (AeroTech 2 p.101, AeroTech 2 Revised p.75: the Tons Per Shot column, equal in both). */
+  tonsPerShot?: number;
   /** The page the play figures came from, when it is not `cite`. */
   playCite?: { book: string; page: number };
   /** Conventional infantry weapons only: the per-trooper figures (see InfantryStats). */

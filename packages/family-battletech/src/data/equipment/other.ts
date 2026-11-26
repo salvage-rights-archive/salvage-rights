@@ -92,7 +92,7 @@ export const OTHER: EquipmentGroup[] = [
       { id: "improved-c3-computer-is", name: "Improved C3 Computer", aliases: ["C3i"], tons: 2.5, slots: 2, heat: 0, availability: [{ from: 3062 }], prototypeYear: 3052, units: ["mech", "industrialmech", "vehicle"], by: { vehicle: { slots: 1, note: "Support vehicle: 1* slots" } } },
       { id: "guardian-ecm-suite-is", name: "Guardian ECM Suite", aliases: ["ECM Suite (Guardian)"], tons: 1.5, slots: 2, type: "E", heat: 0, range: [0, 0, 0, 6], availability: [{ from: 2597, to: 2845 }, { from: 3045 }], prototypeYear: 2595, units: ["mech", "industrialmech", "vehicle", "aero", "smallcraft"], by: { vehicle: { slots: 1, note: "Support vehicle: 2 slots" }, aero: { slots: 1 }, smallcraft: { slots: 1 } } },
       { id: "machine-gun-array-is", name: "Machine Gun Array", aliases: ["Machine Gun Array Module", "Light Machine Gun Array Module", "Heavy Machine Gun Array Module"], tons: 0.5, slots: 1, availability: [{ from: 3068 }], prototypeYear: 3066, needs: "machine-gun" },
-      { id: "tag-is", name: "TAG", tons: 1, slots: 1, type: "E", heat: 0, range: [0, 5, 9, 15], availability: [{ from: 2600, to: 2835 }, { from: 3044 }], prototypeYear: 2593, units: ["mech", "industrialmech", "vehicle", "aero", "smallcraft", "dropship"] },
+      { id: "tag-is", bayClass: "Laser", name: "TAG", tons: 1, slots: 1, type: "E", heat: 0, range: [0, 5, 9, 15], availability: [{ from: 2600, to: 2835 }, { from: 3044 }], prototypeYear: 2593, units: ["mech", "industrialmech", "vehicle", "aero", "smallcraft", "dropship"] },
       // Artemis IV (Inner Sphere); weight and slots are derived, see the file header
       { id: "artemis-iv-is", name: "Artemis IV", aliases: ["Artemis IV FCS", "Artemis IV Fire-Control System"], tons: 1, slots: 1, availability: [{ from: 2598, to: 2855 }, { from: 3035 }], prototypeYear: 2592, needs: "launcher", checked: "text" },
     ],
@@ -197,7 +197,7 @@ export const OTHER: EquipmentGroup[] = [
     defaults: { kind: "other", techBase: "clan", cite: { book: "TechManual", page: 343 }, checked: "page", yearsInferred: true },
     items: [
       // Electronics, CASE and fire control (Clan)
-      { id: "tag-clan", name: "TAG", tons: 1, slots: 1, type: "E", heat: 0, range: [0, 5, 9, 15], availability: [{ from: 2830 }], prototypeYear: 2828, yearsInferred: false, units: ["mech", "industrialmech", "vehicle", "protomech", "aero", "smallcraft", "dropship"] },
+      { id: "tag-clan", bayClass: "Laser", name: "TAG", tons: 1, slots: 1, type: "E", heat: 0, range: [0, 5, 9, 15], availability: [{ from: 2830 }], prototypeYear: 2828, yearsInferred: false, units: ["mech", "industrialmech", "vehicle", "protomech", "aero", "smallcraft", "dropship"] },
       // Artemis IV (Clan); weight and slots are derived, see the file header
       { id: "artemis-iv-clan", name: "Artemis IV", aliases: ["Artemis IV FCS", "Artemis IV Fire-Control System"], tons: 1, slots: 1, availability: [{ from: 2818 }], prototypeYear: 2816, yearsInferred: false, needs: "launcher", checked: "text" },
     ],
@@ -1082,6 +1082,19 @@ export const OTHER: EquipmentGroup[] = [
     items: [
       { id: "turret-is", pod: false, podCite: { book: TO, page: 87 }, name: "Turret", techBase: "inner-sphere" },
       { id: "turret-clan", pod: false, podCite: { book: TO, page: 87 }, name: "Turret", techBase: "clan" },
+    ],
+  },
+  // Aerospace and ship items from the Industrial Equipment table (TechManual, printed p. 344, read against the page image; item entries on pp. 209
+  // and 227; dates from the Industrial Equipment cost table, printed p. 293: both "PS / -", so the Clan rows take the Inner Sphere year and are
+  // marked inferred). The bay door weighs nothing and takes no space on a small craft or DropShip ("0*": the construction rules, p. 209, say how
+  // many a unit needs and may have). The look-down radar weighs 5 tons and takes no weapon slot on a fighter, small craft or DropShip.
+  {
+    defaults: { kind: "other", cite: { book: "TechManual", page: 344 }, checked: "page", slots: 0, availability: [{ from: 1950 }] },
+    items: [
+      { id: "bay-door-is", name: "Bay Door", techBase: "inner-sphere", tons: 0, units: ["smallcraft", "dropship"] },
+      { id: "bay-door-clan", name: "Bay Door", techBase: "clan", tons: 0, units: ["smallcraft", "dropship"], yearsInferred: true },
+      { id: "look-down-radar-is", name: "Look-Down Radar", techBase: "inner-sphere", tons: 5, units: ["aero", "smallcraft", "dropship"] },
+      { id: "look-down-radar-clan", name: "Look-Down Radar", techBase: "clan", tons: 5, units: ["aero", "smallcraft", "dropship"], yearsInferred: true },
     ],
   },
 ];
