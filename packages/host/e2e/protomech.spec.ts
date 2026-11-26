@@ -13,7 +13,7 @@ async function chooseTheme(page: Page, theme: "Light" | "Dark") {
 /** Builds a bare ProtoMech from the Classic home (a Clan year at Standard rules) and returns the editor's path. */
 async function startProto(page: Page, name: string): Promise<string> {
   await page.goto(HOME);
-  await expectPage(page.getByLabel("Import a file")).toBeEnabled();
+  await expectPage(page.getByLabel("Import a file", { exact: true })).toBeEnabled();
   const form = page.getByRole("form", { name: "Build a new one" });
   await form.getByLabel("Name").fill(name);
   await form.getByLabel("Year").fill("3070");
@@ -31,11 +31,11 @@ test("build a ProtoMech at 320 px, save it, and open the Point sheet", async ({ 
   test.setTimeout(150_000);
   await page.setViewportSize({ width: 320, height: 700 });
   await startProto(page, "Delphyne");
-  await page.getByLabel("Walking MP").fill("5");
-  await page.getByLabel("Jumping MP").fill("5");
-  await page.getByLabel("Heat sinks").fill("2");
-  await page.getByLabel("Head armor").fill("6");
-  await page.getByLabel("Torso armor").fill("16");
+  await page.getByLabel("Walking MP", { exact: true }).fill("5");
+  await page.getByLabel("Jumping MP", { exact: true }).fill("5");
+  await page.getByLabel("Heat sinks", { exact: true }).fill("2");
+  await page.getByLabel("Head armor", { exact: true }).fill("6");
+  await page.getByLabel("Torso armor", { exact: true }).fill("16");
   await page.getByRole("combobox", { name: "Add to Left Arm" }).selectOption({ label: "ER Micro Laser" });
   await page.getByRole("button", { name: "Add to Left Arm" }).click();
   await expect(page.getByRole("button", { name: "Remove ER Micro Laser from Left Arm" })).toBeVisible();
@@ -49,7 +49,7 @@ test("build a ProtoMech at 320 px, save it, and open the Point sheet", async ({ 
   await expectPage(page.getByRole("heading", { level: 1, name: "ProtoMech record sheet" })).toBeVisible();
   await expect(page.getByRole("img", { name: /ProtoMech Point record sheet: Delphyne/ })).toBeVisible();
   await page.getByLabel("Add a ProtoMech to the Point").selectOption({ index: 1 });
-  await expect(page.getByText("2. Delphyne")).toBeVisible();
+  await expect(page.getByRole("button", { name: /Remove Delphyne \(2\)/ })).toBeVisible();
 
   await page.goto(HOME);
   await expect(page.getByRole("link", { name: "Open Delphyne" })).toBeVisible();
@@ -58,6 +58,7 @@ test("build a ProtoMech at 320 px, save it, and open the Point sheet", async ({ 
 test("the ProtoMech editor and sheet have no axe violations in either theme", async ({ page }) => {
   test.setTimeout(150_000);
   const editor = await startProto(page, "Scan Proto");
+  await page.getByLabel("Walking MP", { exact: true }).fill("3");
   await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.getByText("Saved.")).toBeVisible();
   const id = new URL(page.url()).searchParams.get("id") ?? "";
