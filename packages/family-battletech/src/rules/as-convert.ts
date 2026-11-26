@@ -141,7 +141,7 @@ export function convertMovement(record: MechRecord, catalog: Catalog): Step<Move
   });
 
   const masc = mascOf(record, items);
-  const boosts = (masc.named || masc.mounts.length > 0 ? 1 : 0) + (items.some((i) => MOVE_EQUIPMENT.supercharger.includes(stemOf(i.row.id))) ? 1 : 0);
+  const boosts = (masc.mounts.length > 0 ? 1 : 0) + (items.some((i) => MOVE_EQUIPMENT.supercharger.includes(stemOf(i.row.id))) ? 1 : 0);
   if (boosts > 0 && penaltyMP > 0) {
     return fail({
       code: "penalty-with-boost",

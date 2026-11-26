@@ -11,7 +11,7 @@ import type { Catalog } from "../rules/catalog";
 import { runChecks } from "../rules/checks";
 import type { Finding } from "../rules/checks";
 import { changedSinceImport } from "../rules/mordel";
-import { ARM_FULL, bodyOf, configurationOf, donorTons, editRecord, layout as buildLayout, locationName, mechTypeOf, partMountBase, setConfiguration, structurePoints, weights as buildWeights } from "../rules/mech";
+import { ARM_FULL, bodyOf, configurationOf, donorTons, editRecord, layout as buildLayout, locationName, mechTypeOf, partMountBase, setConfiguration, setMyomer, structurePoints, weights as buildWeights } from "../rules/mech";
 import type { Layout, LocationCode, MechRecord } from "../rules/mech";
 import { configurationChoices, eraOfRecord, partChoices, setEra, setYear } from "../rules/availability";
 import type { PartKind } from "../rules/availability";
@@ -315,7 +315,7 @@ const NOTE_FIELDS = [
 
 /** `choices` replaces the part table's list of options. */
 type ChassisField =
-  | { kind: "select"; path: string; label: string; part: PartKind; read: (r: MechRecord) => string; write: (d: MechRecord, v: string) => void; choices?: (r: MechRecord) => [string, string][] }
+  | { kind: "select"; path: string; label: string; part: PartKind; read: (r: MechRecord) => string; write: (d: MechRecord, v: string, catalog: Catalog) => void; choices?: (r: MechRecord) => [string, string][] }
   | { kind: "number"; path: string; label: string; read: (r: MechRecord) => number; write: (d: MechRecord, v: number) => void };
 
 /** The extra heat sink groups' controls: one pair for each stored group and one to add another, offered only where some pairing could be
@@ -371,7 +371,7 @@ const CHASSIS_FIELDS: ChassisField[] = [
   { kind: "select", path: "chassis.cockpit", label: "Cockpit", part: "cockpit", read: (r) => r.chassis.cockpit, write: (d, v) => void (d.chassis.cockpit = v) },
   { kind: "select", path: "chassis.structure", label: "Structure type", part: "structure", read: (r) => r.chassis.structure, write: (d, v) => { setPartType(d, "structure", v); } },
   { kind: "select", path: "chassis.armorType", label: "Armor type", part: "armor", read: (r) => r.chassis.armorType, write: (d, v) => { setPartType(d, "armor", v); } },
-  { kind: "select", path: "chassis.myomer", label: "Myomer", part: "myomer", read: (r) => r.chassis.myomer, write: (d, v) => void (d.chassis.myomer = v) },
+  { kind: "select", path: "chassis.myomer", label: "Myomer", part: "myomer", read: (r) => r.chassis.myomer, write: (d, v, catalog) => { setMyomer(d, v, catalog); } },
   { kind: "select", path: "chassis.heatSinks", label: "Heat sink type", part: "heatSink", read: (r) => r.chassis.heatSinks.type, write: (d, v) => void (d.chassis.heatSinks.type = v) },
   { kind: "number", path: "chassis.heatSinks-count", label: "Heat sinks", read: (r) => r.chassis.heatSinks.count, write: (d, v) => void (d.chassis.heatSinks.count = v) },
 ];
@@ -989,7 +989,7 @@ function Editor({ initial, unsaved, startAt, catalog, storage }: { initial: Doc;
                         options={field.choices ? field.choices(record) : partChoices(field.part, record, field.read(record))}
                         changed={mark(field.path)}
                         disabled={fixedHere}
-                        onChange={(v) => { edit((d) => { field.write(d, v); }); }}
+                        onChange={(v) => { edit((d) => { field.write(d, v, catalog); }); }}
                       />
                     ) : (
                       <NumberField

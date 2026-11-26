@@ -170,11 +170,12 @@ describe("the method's rules", () => {
     expect(stealth.defensive.targetModifier - plain.defensive.targetModifier).toBe(2);
   });
 
-  it("triple-strength myomer multiplies tonnage by 1.5 and adds 1 to the walking speed; MASC doubles it, named or mounted", () => {
+  it("triple-strength myomer multiplies tonnage by 1.5 and adds 1 to the walking speed; MASC doubles it only when its mount is there", () => {
     const bv = battleValue(biped([m("tsm-is", "LT")]), catalog);
     expect(bv.offensive.tonnage).toBe(75);
     expect(bv.offensive.runMP).toBe(8); // walk 4 + 2 at 9 heat, less the 1 that heat takes: 5 x 1.5, rounded up
-    expect(battleValue(biped([], { chassis: { ...bipedRecord().chassis, myomer: "masc" } }), catalog).offensive.runMP).toBe(8);
+    expect(battleValue(biped([m("masc-is", "RT")]), catalog).offensive.runMP).toBe(8);
+    expect(battleValue(biped([], { chassis: { ...bipedRecord().chassis, myomer: "masc" } }), catalog).offensive.runMP).toBe(6);
   });
 
   it("a small cockpit takes 5 percent off the total", () => {

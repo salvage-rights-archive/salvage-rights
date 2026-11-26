@@ -577,7 +577,7 @@ export const HEAT_SINKS: Sourced & { types: Record<string, HeatSinkType> } = {
 // none in the head or center torso, printed p.56 footnote and p.55 text; the text says 2 slots in each location but those two, so on a
 // quad the four legs and the two side torsos carry them, which makes the same 12; a tripod's center leg carries 2 more, 14,
 // per Interstellar Operations: Alternate Eras printed p.159: the rule says the third leg takes the extra slots, not how many). Stealth armor also wants a Guardian
-// ECM Suite; that part is not modelled here.
+// ECM Suite (printed p.56 footnote, p.213); the stealth check in rules/checks.ts asks for one.
 // ---------------------------------------------------------------------------------------------------------------
 type Spread = Partial<Record<LocationCode, number>>;
 const TO_ARMOR: Cite = { book: TO, page: 92 };
@@ -596,10 +596,16 @@ export const ARMOR: Sourced & { basePointsPerTon: number; types: Record<string, 
   basePointsPerTon: 16,
   types: {
     standard: { name: "Standard", multiplier: 1.0, slots: 0, availability: [{ from: 2470 }], prototypeYear: 2460, availabilityCite: UTA(29) },
+    // Inner Sphere BattleMechs only (TechManual printed p.55, table p.56). Dates from the Universal Technology Advancement Table (IO:AE printed
+    // p.29, read against the page image): prototype about 3051, production 3063, common 3072. IO:AE is the newer book, so its dates stand.
     stealth: {
       name: "Stealth",
       multiplier: 1.0,
       slots: 12,
+      techBase: "inner-sphere",
+      availability: [{ from: 3063 }],
+      prototypeYear: 3051,
+      availabilityCite: UTA(29),
       slotsIn: {
         biped: { LA: 2, RA: 2, LL: 2, RL: 2, LT: 2, RT: 2 },
         quad: { FLL: 2, FRL: 2, RLL: 2, RRL: 2, LT: 2, RT: 2 },
@@ -814,16 +820,16 @@ export interface MyomerType extends PartFacts {
   percentOfTons: number;
   slots: number | "percent";
 }
-// Read by the checks (Task 3), not by layout or weights.
+// Read by the checks and by setMyomer (rules/mech.ts), not by layout or weights.
 export const MYOMER: Sourced & { types: Record<string, MyomerType> } = {
   cite: { book: "TechManual", page: 52 },
   checked: "page",
   types: {
     standard: { name: "Standard", percentOfTons: 0, slots: 0 },
-    masc: { name: "MASC", percentOfTons: 5, slots: "percent", techBase: "inner-sphere", availability: [{ from: 2740, to: 2795 }, { from: 3035 }], prototypeYear: 2730, availabilityCite: UTA(29) },
+    masc: { name: "MASC", catalogId: "masc-is", percentOfTons: 5, slots: "percent", techBase: "inner-sphere", availability: [{ from: 2740, to: 2795 }, { from: 3035 }], prototypeYear: 2730, availabilityCite: UTA(29) },
     // RISC super-cooled myomer (Interstellar Operations: Alternate Eras printed p.88): six slots, one in each arm, leg and side torso; BattleMechs only.
     "super-cooled": { name: "Super-Cooled Myomer", catalogId: "super-cooled-myomer-is", percentOfTons: 0, slots: 6, techBase: "inner-sphere", rulesLevel: "experimental", introduced: { is: 3132, prototype: ["is"] }, cite: { book: IO, page: 88 }, checked: "page" },
-    "masc-clan": { name: "MASC (Clan)", percentOfTons: 4, slots: "percent", techBase: "clan", availability: [{ from: 2827 }], prototypeYear: 2820, availabilityCite: UTA(29) },
+    "masc-clan": { name: "MASC (Clan)", catalogId: "masc-clan", percentOfTons: 4, slots: "percent", techBase: "clan", availability: [{ from: 2827 }], prototypeYear: 2820, availabilityCite: UTA(29) },
     tsm: { name: "Triple-Strength Myomer", catalogId: "tsm-is", percentOfTons: 0, slots: 6, techBase: "inner-sphere", availability: [{ from: 3050 }], prototypeYear: 3028, availabilityCite: UTA(42) },
     // IndustrialMech Triple-Strength Myomer (TechManual printed p.70; production 3045, IO:AE printed p.42): weightless, twelve slots anywhere.
     "industrial-tsm": { name: "Industrial Triple-Strength Myomer", catalogId: "industrial-tsm-is", percentOfTons: 0, slots: 12, techBase: "inner-sphere", industrial: true, availability: [{ from: 3045 }], prototypeYear: 3035, availabilityCite: UTA(42), cite: { book: "TechManual", page: 70 }, checked: "page", rules: "Twice as bulky as battlefield TSM and difficult to use in combat. The Battle Value counts it as tonnage times 1.15, not as extra movement." },
