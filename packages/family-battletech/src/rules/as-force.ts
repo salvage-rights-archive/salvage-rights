@@ -355,7 +355,7 @@ function mostAlike(entries: Entry[]): number {
   return Math.max(0, ...counts.values());
 }
 
-function checkReq(req: AsReq, entries: Entry[], scale = 1): ReqResult {
+function checkReq(req: AsReq, entries: Entry[], scale = 1, extraOfficers = 0): ReqResult {
   const n = entries.length;
   const pass = (test: AsUnitTest): number => entries.filter((e) => unitPasses(e.unit, e.member, test)).length;
   const gap = (have: number, need: number): ReqResult => ({ ok: have >= need, text: have >= need ? "" : `${describeReq(req, scale)} (the group has ${String(have)}, needs ${String(need)})` });
@@ -364,6 +364,10 @@ function checkReq(req: AsReq, entries: Entry[], scale = 1): ReqResult {
     case "share": return gap(pass(req.test), shareNeed(n, req.pct, req.over, req.round));
     case "count": {
       const have = pass(req.test);
+      if (req.test.officer && extraOfficers > 0) {
+        const need = req.n * scale + extraOfficers;
+        return { ok: have >= need, text: have >= need ? "" : `Officers: one for each of the ${String(scale)} lances, Stars or Level IIs and two for each group above them (${String(extraOfficers)} in all), so ${String(need)} units named as the force commander or a key officer (the group has ${String(have)})` };
+      }
       return req.max !== undefined && have > req.max * scale ? { ok: false, text: `${describeReq(req, scale)} (the group has ${String(have)})` } : gap(have, req.n * scale);
     }
     case "none": {
@@ -385,7 +389,7 @@ function checkReq(req: AsReq, entries: Entry[], scale = 1): ReqResult {
       return { ok: left.length === 0, text: left.length === 0 ? "" : `${describeReq(req)} (not carried: ${left.map((e) => unitTitle(e.unit) || "unnamed unit").join(", ")})` };
     }
     case "any": {
-      const results = req.of.map((r) => checkReq(r, entries, scale));
+      const results = req.of.map((r) => checkReq(r, entries, scale, extraOfficers));
       return results.some((r) => r.ok) ? { ok: true, text: "" } : { ok: false, text: `Either ${results.map((r) => r.text).join(", or ")}` };
     }
   }
@@ -407,20 +411,20 @@ export interface FormationCheck {
 }
 
 /** What of these requirements the members do not meet, in our words with the group's own figures; none when all are met. */
-export function checkRequirements(reqs: readonly AsReq[], lines: readonly ForceLine[], scale = 1): string[] {
+export function checkRequirements(reqs: readonly AsReq[], lines: readonly ForceLine[], scale = 1, extraOfficers = 0): string[] {
   const entries = lines.flatMap((l) => (l.unit ? [{ unit: l.unit, member: l.member }] : []));
-  return reqs.map((r) => checkReq(r, entries, scale)).filter((r) => !r.ok).map((r) => r.text);
+  return reqs.map((r) => checkReq(r, entries, scale, extraOfficers)).filter((r) => !r.ok).map((r) => r.text);
 }
 
 /**
  * Whether the members meet a formation type. A group with no unit in the roster meets nothing. `scale` is how many lances, Stars or
  * Level IIs the group holds above the first level: counts and pair counts are multiplied by it, shares already follow the group's size.
  */
-export function checkFormation(type: AsFormationType, lines: readonly ForceLine[], scale = 1): FormationCheck {
+export function checkFormation(type: AsFormationType, lines: readonly ForceLine[], scale = 1, extraOfficers = 0): FormationCheck {
   const entries = lines.flatMap((l) => (l.unit ? [{ unit: l.unit, member: l.member }] : []));
   if (entries.length === 0) return { type, met: false, missing: ["The group has no units."] };
   if (type.ideal && entries.every((e) => (e.unit.card.role ?? "").toLowerCase() === type.ideal?.toLowerCase())) return { type, met: true, waivedBy: type.ideal, missing: [] };
-  const missing = checkRequirements(requirementsOf(type), lines, scale);
+  const missing = checkRequirements(requirementsOf(type), lines, scale, extraOfficers);
   return { type, met: missing.length === 0, missing };
 }
 

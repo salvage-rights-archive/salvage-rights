@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { checkFormation, duplicateForce, findFormation, findOrganisation, findOverlay, findSpa, forceScas, forceSpas, forceTotals, groupFindings, groupTotals, groupsOf, inPlay, memberSpas, newAsForce, playFindings, pvStep, readFilter, skillAdjustedPv, unitAllowsSpa } from "./as-force";
 import type { AsForce, AsGroup, AsMember } from "./as-force";
-import { baseLines, checkComposition, checkOverlay, groupScale } from "./as-composition";
+import { baseLines, checkComposition, checkOverlay, commandOfficersOver, groupScale } from "./as-composition";
 import { newAsUnit, parseMove } from "./as-unit";
 import type { AsUnit } from "./as-unit";
 
@@ -214,6 +214,8 @@ describe("groups and formation types", () => {
     const check = (infantry: Spec[]) => checkOverlay(mech, group([...tanks, ...infantry]).totals.lines);
     expect(check([ba("MEC"), ba("XMEC")]).met).toBe(true); // an OMNI each, or any ground unit
     expect(check([ba("MEC"), ba("MEC"), ba("MEC")]).missing[0]).toContain("not carried");
+    expect(check([ba("XMEC"), ba("XMEC"), ba("XMEC"), ba("XMEC")]).met).toBe(true); // one XMEC unit per carrier: 4 carriers
+    expect(check([ba("XMEC"), ba("XMEC"), ba("XMEC"), ba("XMEC"), ba("XMEC")]).met).toBe(false);
     expect(check([ba("CAR4"), { type: "CI", specials: ["CAR2"] }]).met).toBe(true); // 6 of IT6
     expect(check([ba("CAR4"), ba("CAR4")]).met).toBe(false);
     expect(check([]).met).toBe(false); // no infantry to carry
@@ -233,6 +235,33 @@ describe("groups and formation types", () => {
     expect(baseLines(air, lines(fighter("A"), fighter("A")))).toHaveLength(4);
   });
 
+  it("asks a Clan or ComStar Command formation for the same layering: a Binary or Trinary 2, a Cluster 2 for itself and 2 for each Binary or Trinary", () => {
+    const type = findFormation("command")!;
+    const over = (org: string, scale: number, inside: string[] = []) => commandOfficersOver(findOrganisation(org), type, scale, inside);
+    expect(over("clan-star", 1)).toBe(0);
+    expect(over("clan-trinary", 3)).toBe(2);
+    expect(over("clan-cluster", 6, ["clan-binary", "clan-trinary"])).toBe(6);
+    expect(over("clan-cluster", 6)).toBe(6); // our assumption: 3 Stars to a Binary or Trinary
+    expect(over("cs-level-3", 6)).toBe(2);
+    expect(over("cs-level-4", 12, ["cs-level-3", "cs-level-3"])).toBe(6);
+  });
+
+  it("asks an Inner Sphere Command formation for one officer per lance and two for each group above, counted from the groups inside", () => {
+    const type = findFormation("command")!;
+    const lines = (officers: number) => group([...Array.from({ length: 6 }, () => ({ role: "Sniper" })), { role: "Scout" }, { role: "Scout" }]).totals.lines.map((l, i) => ({ ...l, member: { ...l.member, ...(i < officers ? { officer: "key" as const } : {}) } })); // 2 lances
+    const over = (org: string, scale: number, inside: string[] = []) => commandOfficersOver(findOrganisation(org), type, scale, inside);
+    expect(over("is-company", 2)).toBe(2);
+    expect(over("is-battalion", 10, ["is-company", "is-company", "is-company"])).toBe(8);
+    expect(over("is-battalion", 10)).toBe(8); // our assumption: 4 lances to a company, so 3 companies
+    expect(over("is-regiment", 10, ["is-company", "is-company", "is-company", "is-battalion"])).toBe(10);
+    expect(over("is-lance", 1)).toBe(0);
+    expect(commandOfficersOver(findOrganisation("is-company"), findFormation("battle"), 2)).toBe(0);
+    expect(checkFormation(type, lines(2), 2).met).toBe(true);
+    const short = checkFormation(type, lines(3), 2, over("is-company", 2));
+    expect(short.missing[0]).toBe("Officers: one for each of the 2 lances, Stars or Level IIs and two for each group above them (2 in all), so 4 units named as the force commander or a key officer (the group has 3)");
+    expect(checkFormation(type, lines(4), 2, 2).met).toBe(true);
+  });
+
   it("checks a company against its composition table from the lances inside it", () => {
     const inner = (id: string, formation: string | undefined, units: Spec[] = four({})): AsGroup & { units: Spec[] } => ({ id, name: id, parent: "co", formation, units });
     const company = (...lances: (AsGroup & { units: Spec[] })[]) => {
@@ -247,6 +276,17 @@ describe("groups and formation types", () => {
       "The core of a Company is 2 to 4 lances; this group has 5.",
     ]);
     expect(company(inner("a", "battle"), inner("b", "battle"), inner("x", undefined))?.problems.join(" ")).toContain("x fits no row");
+    // The p. 124 footnote: with a vehicle core, the vehicle detachment row may be BattleMech lances (up to its 0-3).
+    const tanks = (id: string, formation?: string) => inner(id, formation, four({ type: "CV" }));
+    const mechs = (id: string) => inner(id, undefined, four({}));
+    expect(company(tanks("a", "battle"), tanks("b", "battle"), mechs("m"))?.met).toBe(true);
+    expect(company(inner("a", "battle"), inner("b", "battle"), mechs("m"))?.problems.join(" ")).toContain("m fits no row"); // a 'Mech core gets no swap
+    expect(company(tanks("a", "battle"), tanks("b", "battle"), ...["m", "n", "o", "p"].map(mechs))?.problems.join(" ")).toContain("at most 3 (the group has 4)");
+    // The same footnote for a battalion: vehicle companies as the core let the Vehicle Company slots be BattleMech companies.
+    const companyOf = (id: string, units: Spec[]): AsGroup & { units: Spec[] } => ({ id, name: id, parent: "bn", org: "is-company", units });
+    const battalion = (...cos: (AsGroup & { units: Spec[] })[]) => checkComposition(tree([{ id: "bn", name: "Bn", org: "is-battalion" }, ...cos]).by.groups.filter((x) => x.group.parent === "bn"), "is-battalion");
+    expect(battalion(...["a", "b", "c"].map((id) => companyOf(id, four({ type: "CV" }))), companyOf("m", four({})), companyOf("n", four({})))?.met).toBe(true);
+    expect(battalion(...["a", "b", "c"].map((id) => companyOf(id, four({}))), companyOf("v", four({ type: "CV" })))?.met).toBe(true); // a BattleMech core keeps its vehicle detachment
     expect(checkComposition([], "is-company")).toBeUndefined(); // nothing inside to check
     expect(checkComposition([{} as never], "is-lance")).toBeUndefined(); // the book gives a lance no table
   });
