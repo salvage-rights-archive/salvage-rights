@@ -72,7 +72,7 @@ export default function SheetText({ facts, record, profile }: { facts: FighterFa
       <h3>Armor points</h3>
       <ul>
         {facts.armor.map((area) => (
-          <li key={area.code}>{profile.thresholds ? `${area.name}: ${String(area.points)} points, damage threshold ${String(area.threshold)}` : `${area.name}: ${String(area.points)} points`}</li>
+          <li key={area.code}>{`${area.name}: ${String(area.points)} points${area.type === undefined ? "" : `, ${area.type} armor`}${profile.thresholds ? `, damage threshold ${String(area.threshold)}` : ""}`}</li>
         ))}
         {facts.strayArmor.map((area) => (
           <li key={area.code}>{`"${area.code}": ${String(area.points)} points (an area this sheet does not draw)`}</li>
