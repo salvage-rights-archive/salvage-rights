@@ -264,3 +264,62 @@ export const AS_PHYSICAL_DAMAGE_CITE = asceCite(46);
 
 /** Multiple Attack Rolls (optional): one 2D6 roll per point of damage (ASCE pp. 174-175, agreeing with Quick-Start p. 21). */
 export const AS_MULTI_ROLL_CITE = `${asceCite("174-175")}; ${qsCite(21)}`;
+
+// ==== AS-3: the printed card (ASCE blank cards pp. 213-215, which the publisher marks for personal copying; fields p. 27) ========
+
+/** Which blank card a unit type is drawn on: 'Mech (p. 213), vehicle and infantry (p. 214), fighter, ProtoMech and large unit (p. 215). */
+export type CardLayout = "mech" | "vehicle" | "infantry" | "fighter" | "proto" | "large-air";
+
+export const AS_CARD_LAYOUT_OF: Record<string, CardLayout> = {
+  BM: "mech", IM: "mech", PM: "proto", CV: "vehicle", SV: "vehicle", MS: "vehicle", BA: "infantry", CI: "infantry", BD: "infantry",
+  AF: "fighter", CF: "fighter", SC: "large-air", DS: "large-air", DA: "large-air",
+};
+
+/** One row of the Critical Hits box: its label, the boxes in groups (a gap between groups) and a short effect after each group. */
+export interface CardCritRow {
+  label: string;
+  groups: number[];
+  effects: string[];
+}
+
+/** The boxes each blank card prints (counts read from the page images; the short effects are our own words and figures). */
+export const AS_CARD_CRITS: Record<CardLayout, CardCritRow[]> = {
+  mech: [
+    { label: "Engine", groups: [1], effects: ["+1 heat"] },
+    { label: "Fire control", groups: [4], effects: ["+2 TN each"] },
+    { label: "MP", groups: [4], effects: ["1/2 MV each"] },
+    { label: "Weapons", groups: [4], effects: ["-1 dmg each"] },
+  ],
+  vehicle: [
+    { label: "Engine", groups: [1], effects: ["1/2 MV, dmg"] },
+    { label: "Fire control", groups: [4], effects: ["+2 TN each"] },
+    { label: "Weapons", groups: [4], effects: ["-1 dmg each"] },
+    { label: "Motive MV", groups: [2, 2, 1], effects: ["-2", "1/2", "0"] },
+  ],
+  infantry: [],
+  fighter: [
+    { label: "Engine", groups: [1], effects: ["1/2 MV (min 1)"] },
+    { label: "Fire control", groups: [4], effects: ["+2 TN each"] },
+    { label: "Weapons", groups: [4], effects: ["-1 dmg each"] },
+  ],
+  proto: [
+    { label: "Fire control", groups: [4], effects: ["+2 TN each"] },
+    { label: "MP", groups: [4], effects: ["1/2 MV each"] },
+    { label: "Weapons", groups: [4], effects: ["-1 dmg each"] },
+  ],
+  "large-air": [
+    { label: "Crew", groups: [2], effects: ["+2 TN each"] },
+    { label: "Engine", groups: [3], effects: ["-25/50/100%"] },
+    { label: "Fire control", groups: [4], effects: ["+2 TN each"] },
+    { label: "KF boom", groups: [1], effects: ["no jump carry"] },
+    { label: "Dock collar", groups: [1], effects: ["no dock"] },
+    { label: "Thruster", groups: [1], effects: ["-1 THR"] },
+    { label: "Weapons", groups: [4], effects: ["-25% each"] },
+  ],
+};
+
+/** The cards that carry a Thrust and a Damage Threshold, not a Move and a TMM, and the fourth damage bracket E (p. 215). */
+export const AS_CARD_AIR: readonly CardLayout[] = ["fighter", "large-air"];
+
+/** Our own cite for the card's foot line: the blank card followed. */
+export const AS_CARD_FOOT = "ASCE p. 213";
