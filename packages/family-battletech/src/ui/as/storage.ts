@@ -121,7 +121,7 @@ export function isAsUnit(value: unknown): value is AsUnit {
 }
 
 /** An old edition id reads as the edition it means now, and a unit without a source reads as manual. */
-const migrated = (unit: AsUnit): AsUnit => {
+export const migrated = (unit: AsUnit): AsUnit => {
   const editionId = currentEditionId(unit.editionId);
   const source = (unit.source as AsUnit["source"] | undefined) ?? { kind: "manual" };
   // Only a Master Unit List import can carry the OFFICIAL flag; a file from any other source loses it.

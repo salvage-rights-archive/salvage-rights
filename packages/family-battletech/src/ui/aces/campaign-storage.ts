@@ -20,6 +20,8 @@ export interface CampaignStorage {
   list(): Promise<CampaignEntry[]>;
   get(id: string): Promise<CampaignEntry | undefined>;
   save(campaign: AcesCampaign): Promise<void>;
+  /** What is stored under the id, exactly as it is, readable or not. */
+  raw(id: string): Promise<unknown>;
   remove(id: string): Promise<void>;
 }
 
@@ -46,6 +48,7 @@ export function wrapCampaignStore(store: Store): CampaignStorage {
     },
     save: (campaign) =>
       isAcesCampaign(campaign) ? store.set(ACES_CAMPAIGN_PREFIX + campaign.id, { campaign, savedAt: new Date().toISOString() }) : Promise.reject(new Error("This campaign is incomplete and cannot be saved.")),
+    raw: (id) => store.get<unknown>(ACES_CAMPAIGN_PREFIX + id),
     remove: (id) => store.delete(ACES_CAMPAIGN_PREFIX + id),
   };
 }

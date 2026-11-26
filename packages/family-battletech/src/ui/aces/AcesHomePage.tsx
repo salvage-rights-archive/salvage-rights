@@ -1,10 +1,10 @@
-// The Aces home: four doors. Only the cards door opens so far; games in progress will be listed here when play arrives.
+// The Aces home: four doors. The cards, games and campaigns doors open; the rules reference is not ready yet.
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import GamePicture from "../GamePicture";
 import { STORAGE_READ_FAILED } from "../storage";
 import GamesInProgress from "./GamesInProgress";
-import { ACES_CARDS, ACES_NEW_GAME } from "./routes";
+import { ACES_CAMPAIGNS, ACES_CARDS, ACES_NEW_GAME } from "./routes";
 import { openAcesStorage } from "./storage";
 import "./styles";
 
@@ -57,8 +57,11 @@ export default function AcesHomePage() {
         <li className="bt-row">
           <span className="bt-row__text">
             <strong>Campaigns</strong>
-            <span className="bt-row__credit">Not ready yet.</span>
+            <span className="bt-row__credit">Start, open, export and import your campaigns.</span>
           </span>
+          <Link className="bt-button" to={ACES_CAMPAIGNS}>
+            Open my campaigns
+          </Link>
         </li>
         <li className="bt-row">
           <span className="bt-row__text">

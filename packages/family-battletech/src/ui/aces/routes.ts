@@ -19,3 +19,6 @@ export const ACES_AFTER = `${ACES_BASE}/after`;
 export const afterHref = (campaignId: string, sortie: number): string => `${ACES_AFTER}?campaign=${encodeURIComponent(campaignId)}&n=${String(sortie)}`;
 export const ACES_SORTIE = `${ACES_BASE}/sortie`;
 export const sortieHref = (campaignId: string, sortie?: number): string => `${ACES_SORTIE}?campaign=${encodeURIComponent(campaignId)}${sortie === undefined ? "" : `&n=${String(sortie)}`}`;
+export const ACES_CAMPAIGNS = `${ACES_BASE}/campaigns`;
+export const ACES_CAMPAIGN = `${ACES_BASE}/campaign`;
+export const campaignHref = (id: string): string => `${ACES_CAMPAIGN}?id=${encodeURIComponent(id)}`;
