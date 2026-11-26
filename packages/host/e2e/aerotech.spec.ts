@@ -1,6 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import type { Page } from "@playwright/test";
-import { DEV, expect, test } from "./fixtures";
+import { DEV, expect, expectPage, test } from "./fixtures";
 
 const AERO = "/battletech/aerotech";
 
@@ -73,6 +73,38 @@ test("the AeroTech home and editor have no axe violations in either theme and fi
       if (box) expect(box.height, `${path}: ${(await control.textContent())?.slice(0, 30) ?? ""}`).toBeGreaterThanOrEqual(43.5);
     }
   }
+});
+
+test("the editor's Battle Value and cost panel shows both figures with their breakdowns, has no axe violations in either theme and fits 320 px", async ({ page }) => {
+  test.setTimeout(150_000);
+  const editor = await startUnit(page, "tw-tm-so", "Value Sabre");
+  await page.getByRole("button", { name: "Add equipment to Nose" }).click();
+  await page.getByLabel("Search by name").fill("medium laser");
+  await page.getByRole("button", { name: /^Medium Laser/ }).first().click();
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(page.getByText("Saved.")).toBeVisible();
+  const openPanel = async () => {
+    const panel = page.getByRole("region", { name: "Battle Value and cost" });
+    await expectPage(panel.getByTestId("bv-total")).toHaveText(/^\d[\d,]*$/);
+    await expect(panel.getByTestId("cost-total")).toHaveText(/^\d[\d,.]* C-bills$/);
+    await panel.getByRole("button", { name: "Show Battle Value breakdown" }).click();
+    await panel.getByRole("button", { name: "Show cost breakdown" }).click();
+    await expect(panel.getByText("Defensive battle rating")).toBeVisible();
+    await expect(panel.getByText("Final multiplier")).toBeVisible();
+    await expect(panel.getByText(/TechManual Battle Value v4\.1/)).toBeVisible();
+  };
+  for (const theme of ["Light", "Dark"] as const) {
+    await chooseTheme(page, theme);
+    await page.goto(`${DEV}${editor}`);
+    await openPanel();
+    const results = await new AxeBuilder({ page }).analyze();
+    expect(results.violations, `${theme} theme`).toEqual([]);
+  }
+  await page.setViewportSize({ width: 320, height: 700 });
+  await page.goto(`${DEV}${editor}`);
+  await openPanel();
+  const widths = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, client: document.documentElement.clientWidth }));
+  expect(widths.scroll).toBe(widths.client);
 });
 
 test("a fighter's sheet opens from the editor, prints as one page, has no axe violations in either theme and fits 320 px", async ({ page }) => {

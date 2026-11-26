@@ -130,6 +130,15 @@ for (const entry of [...WEAPONS.values(), ...EQUIPMENT.values()]) {
   for (const id of entry.options.ammo ?? [`ammo-${entry.id}`]) if (!AMMO.has(id)) AMMO.set(id, entry);
 }
 
+/** The printed BV entry of a catalog row (a weapon's, else an equipment item's), for the other unit kinds' Battle Value (rules/aero-bv.ts). */
+export function bvEntryOf(id: string): { bv: number; ammoBv?: number; options: BvOptions; cite: BvGroup["cite"] } | undefined {
+  return WEAPONS.get(id) ?? EQUIPMENT.get(id);
+}
+/** The entry whose ammunition a catalog ammunition row is. */
+export function ammoBvEntryOf(id: string): { id: string; ammoBv?: number; options: BvOptions; cite: BvGroup["cite"] } | undefined {
+  return AMMO.get(id);
+}
+
 /** The launcher ammunition a munition counts as: the ammunition entry of the missile launcher on the unit that the munition feeds. A reason, in
  * place of an entry, when the unit has no such launcher or has launchers whose ammunition is worth different amounts (so which one the bin
  * is for is not known). Launchers with the same ammunition BV give the same figure whichever is meant; the first one holds the bin. */

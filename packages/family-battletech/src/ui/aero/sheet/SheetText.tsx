@@ -3,6 +3,7 @@
 import { AERO_HEAT_TOP, AT1_HEAT, FLAGGED_HEAT } from "../../../data/aero-sheet";
 import type { SheetProfile } from "../../../data/aero-sheet";
 import type { AeroRecord } from "../../../rules/aero";
+import { printsValue } from "./facts";
 import type { FighterFacts } from "./facts";
 
 export default function SheetText({ facts, record, profile }: { facts: FighterFacts; record: AeroRecord; profile: SheetProfile }) {
@@ -18,6 +19,12 @@ export default function SheetText({ facts, record, profile }: { facts: FighterFa
     ["Structural Integrity", facts.si || "not worked out"],
     ["Fuel points", facts.fuel || "not worked out"],
     ["Heat sinks", facts.sinks.line],
+    ...(printsValue(profile)
+      ? ([
+          ["BV", facts.bv || "not worked out"],
+          ["Cost", facts.cost ? `${facts.cost} C-bills` : "not worked out"],
+        ] as [string, string][])
+      : []),
     ["Official", facts.official.detail ? `${facts.official.badge}, ${facts.official.detail}` : facts.official.badge],
     ["Layout", profile.flagged ? `Follows ${profile.follows}; drawn by us, with no logo or art.` : `Follows ${profile.follows}; drawn by us.`],
     ...(profile.notice === undefined ? [] : ([["Permission notice", `${profile.notice}; the sheet follows that page as a form.`]] as [string, string][])),

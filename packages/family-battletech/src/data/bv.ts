@@ -531,6 +531,37 @@ export const WEAPON_BV: BvGroup[] = [
     ],
   },
   {
+    // TechManual, Aerospace Weapons and Equipment BV Table, printed p. 318 (read against the page image). The ammunition figures of the capital missiles
+    // are per missile, not per ton; the catalog has no capital missile ammunition rows yet, so they are kept for when it does. The bombs print an
+    // ammunition figure only ("—" for the item): a bomb is one item, so its figure is the item's here. The screen launcher is defensive (the dagger).
+    cite: { book: TM, page: 318 },
+    checked: "page",
+    rows: [
+      ["killer-whale-is", 769, 96], ["white-shark-is", 577, 72], ["barracuda-is", 522, 65], ["ar-10-launcher-is", 961],
+      ["killer-whale-clan", 769, 96], ["white-shark-clan", 577, 72], ["barracuda-clan", 522, 65], ["ar-10-launcher-clan", 961],
+      ["kraken-t-is", 2306, 288], ["killer-whale-t-is", 923, 115], ["white-shark-t-is", 692, 86], ["barracuda-t-is", 461, 58],
+      ["screen-launcher-is", 160, 20, { defensive: true, defensiveAmmo: true }],
+      ["bomb-high-explosive-is", 12], ["bomb-cluster-is", 13], ["bomb-laser-guided-is", 20], ["bomb-inferno-is", 16],
+      ["bomb-high-explosive-clan", 12], ["bomb-cluster-clan", 13], ["bomb-laser-guided-clan", 20], ["bomb-inferno-clan", 16],
+    ],
+  },
+  {
+    // Tactical Operations: Advanced Units and Equipment, Inner Sphere and Clan Capital Scale Weapons and Equipment BV Tables [Addendum], printed p. 196
+    // (read against the page image of the corrected seventh printing). Both tables print the same figures for the weapons both have; the mass drivers
+    // are Inner Sphere only. The catalog has no naval ammunition rows yet, so the ammunition figures wait for them.
+    cite: { book: TO, page: 196 },
+    checked: "page",
+    rows: [
+      ...(["is", "clan"] as const).flatMap((tech): BvRow[] => [
+        [`nac-10-${tech}`, 1896, 237], [`nac-20-${tech}`, 3792, 474], [`nac-25-${tech}`, 4740, 593], [`nac-30-${tech}`, 5688, 711], [`nac-35-${tech}`, 4956, 620], [`nac-40-${tech}`, 5664, 708],
+        [`light-n-gauss-${tech}`, 3024, 378], [`medium-n-gauss-${tech}`, 5040, 630], [`heavy-n-gauss-${tech}`, 6048, 756],
+        [`nl-35-${tech}`, 830], [`nl-45-${tech}`, 1134], [`nl-55-${tech}`, 1386],
+        [`light-n-ppc-${tech}`, 1659], [`medium-n-ppc-${tech}`, 2268], [`heavy-n-ppc-${tech}`, 3780],
+      ]),
+      ["light-mass-driver-is", 7056, 882], ["medium-mass-driver-is", 11760, 1470], ["heavy-mass-driver-is", 16464, 2058],
+    ],
+  },
+  {
     // The Gothic Light Blazer (catalog row `light-blazer-gothic`, flagged `bvInferred`): no book prints its Battle Value. 148 is the one
     // figure that, run through this table's method, reproduces the three printed Battle Values that carry it: the FS9-HB (1,067), the
     // KGC-0KP (1,986) and the MAD-3H (1,735, with its Mace at 19). Searched over 0 to 600 with the engine; the FS9-HB and the KGC-0KP
