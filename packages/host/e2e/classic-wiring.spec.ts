@@ -77,8 +77,8 @@ test("rules level: Introductory hides Clan and advanced parts, and the check nam
   await form.getByLabel("Rules level").selectOption("experimental");
   await form.getByLabel("Year").fill("3060");
   await form.getByRole("button", { name: "Start building" }).click();
-  const armor = page.getByLabel("Armor type").locator("option");
-  await expectPage(page.getByLabel("Armor type")).toBeVisible();
+  const armor = page.getByLabel("Armor type", { exact: true }).locator("option");
+  await expectPage(page.getByLabel("Armor type", { exact: true })).toBeVisible();
   await expect.poll(() => armor.count()).toBeGreaterThan(1);
   const all = await armor.count();
   await page.getByLabel("Rules level").selectOption("introductory");
