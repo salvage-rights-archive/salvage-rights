@@ -20,6 +20,8 @@ export interface AsOrganisation {
   rank: string;
   /** The number of units in the group, where one group is a count of units rather than of smaller groups (p. 113 and p. 115). */
   units?: [min: number, max: number];
+  /** A group built of lances, Stars or Level IIs (company and up, binary and up, Level III and up), the levels a formation's requirements scale to. */
+  higher?: true;
 }
 
 const org = (id: string, family: AsOrgFamily, name: string, definition: string, rank: string, units?: [number, number]): AsOrganisation => ({
@@ -30,6 +32,7 @@ const org = (id: string, family: AsOrgFamily, name: string, definition: string, 
   rank,
   ...(units ? { units } : {}),
 });
+const up = (o: AsOrganisation): AsOrganisation => ({ ...o, higher: true });
 
 /** The table of p. 113, in its own order. A unit count is given only for the groups made directly of units. */
 export const AS_ORGANISATIONS: AsOrganisation[] = [
@@ -39,33 +42,44 @@ export const AS_ORGANISATIONS: AsOrganisation[] = [
   org("is-company-inf", "is", "Company (Conventional)", "3-4 platoons", "Captain*"),
   org("is-flight", "is", "Flight", "2 fighters", "Lieutenant", [2, 2]),
   org("is-squadron", "is", "Squadron", "3 flights", "Captain", [6, 6]),
-  org("is-wing", "is", "Wing", "3-4 squadrons", "Major"),
+  up(org("is-wing", "is", "Wing", "3-4 squadrons", "Major")),
   org("is-lance", "is", "Lance", "4 ground units", "Lieutenant", [4, 4]),
-  org("is-company", "is", "Company", "3-4 lances", "Captain"),
-  org("is-battalion", "is", "Battalion", "3-4 companies", "Major"),
-  org("is-regiment", "is", "Regiment", "3-4 battalions", "Colonel"),
-  org("is-brigade", "is", "Brigade", "3-6 regiments", "General"),
+  up(org("is-company", "is", "Company", "3-4 lances", "Captain")),
+  up(org("is-battalion", "is", "Battalion", "3-4 companies", "Major")),
+  up(org("is-regiment", "is", "Regiment", "3-4 battalions", "Colonel")),
+  up(org("is-brigade", "is", "Brigade", "3-6 regiments", "General")),
   org("clan-point-ba", "clan", "Point (Battle Armor)", "5 troopers", "Point Commander*"),
   org("clan-point-conv", "clan", "Point (Conventional)", "20-25 troopers", "Point Commander"),
   org("clan-point-proto", "clan", "Point (ProtoMech)", "5 ProtoMechs", "Point Commander*"),
   org("clan-star", "clan", "Star", "5 'Mechs (10 vehicles, p. 115)", "Star Commander", [5, 10]),
   org("clan-nova", "clan", "Nova", "5 'Mechs, 5 infantry Points", "Star Commander or Nova Commander"),
-  org("clan-binary", "clan", "Binary", "2 Stars", "Star Captain or Nova Commander"),
-  org("clan-supernova-binary", "clan", "Supernova Binary", "2 Novas", "Star Captain or Nova Captain"),
-  org("clan-trinary", "clan", "Trinary", "3 Stars", "Star Captain"),
-  org("clan-supernova-trinary", "clan", "Supernova Trinary", "3 Novas", "Star Captain or Nova Captain"),
-  org("clan-cluster", "clan", "Cluster", "3-5 Binaries or Trinaries", "Star Colonel"),
-  org("clan-galaxy", "clan", "Galaxy", "3-5 Clusters", "Galaxy Commander"),
+  up(org("clan-binary", "clan", "Binary", "2 Stars", "Star Captain or Nova Commander")),
+  up(org("clan-supernova-binary", "clan", "Supernova Binary", "2 Novas", "Star Captain or Nova Captain")),
+  up(org("clan-trinary", "clan", "Trinary", "3 Stars", "Star Captain")),
+  up(org("clan-supernova-trinary", "clan", "Supernova Trinary", "3 Novas", "Star Captain or Nova Captain")),
+  up(org("clan-cluster", "clan", "Cluster", "3-5 Binaries or Trinaries", "Star Colonel")),
+  up(org("clan-galaxy", "clan", "Galaxy", "3-5 Clusters", "Galaxy Commander")),
   org("clan-point", "clan", "Point (vehicles and fighters)", "2 units", "Point Commander", [2, 2]),
   org("clan-star-vf", "clan", "Star (vehicles and fighters)", "5 Points", "Star Commander", [10, 10]),
   org("cs-level-1-ba", "comstar", "Level I (Battle Armor)", "6 troopers", "Acolyte*"),
   org("cs-level-1-conv", "comstar", "Level I (Conventional)", "30-36 troopers", "Acolyte*"),
   org("cs-level-1", "comstar", "Level I", "1 unit", "Acolyte", [1, 1]),
   org("cs-level-2", "comstar", "Level II (Demi-Company)", "6 Level Is", "Adept", [6, 6]),
-  org("cs-level-3", "comstar", "Level III (Battalion)", "6 Level IIs", "Adept (Demi-Precentor)"),
-  org("cs-level-4", "comstar", "Level IV (Division)", "6 Level IIIs", "Precentor"),
-  org("cs-level-5", "comstar", "Level V (Army)", "6 Level IVs", "Precentor"),
+  up(org("cs-level-3", "comstar", "Level III (Battalion)", "6 Level IIs", "Adept (Demi-Precentor)")),
+  up(org("cs-level-4", "comstar", "Level IV (Division)", "6 Level IIIs", "Precentor")),
+  up(org("cs-level-5", "comstar", "Level V (Army)", "6 Level IVs", "Precentor")),
 ];
+
+/**
+ * How many units make one lance, Star or Level II, the base a higher group's requirements scale from (pp. 113 and 115): a lance is 4 ground
+ * units, a Clan Star 5 'Mechs or 10 vehicles, a Level II 6; a fighter squadron is 6 (Inner Sphere), a Clan fighter Star 10, a Level II 6.
+ */
+export const AS_BASE_UNITS = {
+  ground: { is: 4, clan: 5, comstar: 6 },
+  aerospace: { is: 6, clan: 10, comstar: 6 },
+} as const satisfies Record<"ground" | "aerospace", Record<AsOrgFamily, number>>;
+/** A Clan Star of vehicles is 10 units (p. 115). */
+export const AS_CLAN_VEHICLE_STAR = 10;
 
 export const AS_FAMILY_NAMES: Record<AsOrgFamily, string> = { is: "Inner Sphere and Periphery", clan: "Clan", comstar: "ComStar and Word of Blake" };
 
@@ -98,11 +112,16 @@ export interface AsUnitTest {
  * One requirement of a formation. Percentages round up to whole units (p. 116) unless `round` says "normal". `over` means more than that
  * share. Only shares scale with the size of the group (p. 116); a fixed count stays as written. `vehicles` limits a requirement to a group
  * made only of combat or support vehicles. A matched pair is two units with the same chassis and model (the book does not define it).
+ * `same` is that many units of one chassis and model. `carry` is that every infantry unit has a transport among the group's other units
+ * (p. 121). On a group above lance level a count and a pair count are multiplied by the number of lances, Stars or Level
+ * IIs the group holds (the owner's rule for scaling up; the book gives none, only the sizes of p. 113 and the tables of p. 124).
  */
 export type AsReq =
   | { k: "all"; test: AsUnitTest }
   | { k: "share"; pct: number; test: AsUnitTest; over?: true; round?: "normal" }
-  | { k: "count"; n: number; test: AsUnitTest }
+  | { k: "count"; n: number; test: AsUnitTest; /** Also no more than this many (a pair of fighters is exactly two). */ max?: number }
+  | { k: "same"; n: number; test: AsUnitTest }
+  | { k: "carry" }
   | { k: "none"; test: AsUnitTest }
   | { k: "pairs"; n: number; test: AsUnitTest; vehicles: true }
   | { k: "any"; of: AsReq[] };
@@ -335,8 +354,35 @@ export const AS_FORMATIONS: AsFormationType[] = [
   },
 ];
 
-/** Formation types the book describes but we do not check, because they sit on top of another formation or need a transport count. */
-export const AS_FORMATIONS_NOT_BUILT = ["Mechanized", "Nova", "Air Lance"];
+/**
+ * The three formations that sit on top of another one (p. 121): a group meets one of these and its base formation at once. `excludes` are the
+ * unit types left out when the base formation is checked, so the base formation is met by the other units alone. The Mechanized and Nova
+ * share their requirement and differ in what they give; the Air Lance gives nothing, and its fighters take no part in the base formation.
+ */
+export interface AsOverlay {
+  id: string;
+  name: string;
+  page: number;
+  excludes: string[];
+  requires: AsReq[];
+  bonus: AsBonus;
+}
+
+const INFANTRY = ["BA", "CI"];
+const COMBINED: AsReq[] = [{ k: "count", n: 1, test: t({ type: INFANTRY }) }, { k: "carry" }];
+
+export const AS_OVERLAYS: AsOverlay[] = [
+  { id: "mechanized", name: "Mechanized", page: 121, excludes: INFANTRY, requires: COMBINED, bonus: { page: 121, names: [] } },
+  { id: "nova", name: "Nova", page: 121, excludes: INFANTRY, requires: COMBINED, bonus: { page: 121, names: [] } },
+  {
+    id: "air-lance", name: "Air Lance", page: 121, excludes: FIGHTERS, bonus: { page: 121, names: [] },
+    requires: [
+      { k: "none", test: t({ type: INFANTRY }) },
+      { k: "count", n: 2, max: 2, test: t({ type: FIGHTERS }) },
+      { k: "same", n: 2, test: t({ type: FIGHTERS }) },
+    ],
+  },
+];
 
 /** The "ground" unit types a lance or Star is built of (pp. 115-117). */
 export const AS_GROUND_TYPES = GROUND;

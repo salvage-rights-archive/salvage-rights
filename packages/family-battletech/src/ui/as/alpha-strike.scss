@@ -521,6 +521,10 @@
   .as-group__check ul {
     margin: 0;
   }
+
+  &--nested {
+    margin-inline-start: calc(var(--as-depth, 0) * 0.75rem);
+  }
 }
 
 .as-specials-aid {

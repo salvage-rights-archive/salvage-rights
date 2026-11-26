@@ -1,6 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import type { Page } from "@playwright/test";
-import { DEV, expect, expectPage, putAsFormationForce, test } from "./fixtures";
+import { DEV, expect, expectPage, putAsCompositionForce, putAsFormationForce, test } from "./fixtures";
 
 const FORCE = `${DEV}/battletech/alpha-strike/force?id=formation-force`;
 
@@ -131,4 +131,51 @@ test("the printed roster with pilot, group and pilot ability columns still fits 
   expect((pdf.toString("latin1").match(/\/Type\s*\/Page[^s]/g) ?? []).length).toBe(3);
   const widths = await roster.locator(".as-sheet__scroll").evaluate((el) => ({ scroll: el.scrollWidth, client: el.clientWidth }));
   expect(widths.scroll).toBeLessThanOrEqual(widths.client);
+});
+
+test("put lances in a company and check it against its composition table, then build a Mechanized formation on top, at 320 px with axe in both themes", async ({ page }, testInfo) => {
+  test.setTimeout(120_000);
+  await putAsCompositionForce(page);
+  const url = `${DEV}/battletech/alpha-strike/force?id=composition-force`;
+  await page.setViewportSize({ width: 320, height: 900 });
+  await page.goto(url);
+  await expectPage(page.getByRole("heading", { name: "Groups and formations" })).toBeVisible();
+
+  const company = page.getByRole("group", { name: "Composition check for Company" });
+  await expect(company).toContainText("Fits the Company composition table");
+  await expect(company).toContainText("2 Battle, Assault, Striker, Fire, Recon or Pursuit Lance");
+  // Taking the Second lance out of the company leaves it one lance short, and the unit totals stay.
+  await page.getByLabel("Part of group").nth(3).selectOption({ label: "Stands alone" });
+  await expect(company).toContainText("Does not yet fit the Company composition table");
+  await expect(company).toContainText("The core of a Company is 2 to 4 lances; this group has 1.");
+  await page.getByLabel("Part of group").nth(3).selectOption({ label: "Company" });
+  await expect(company).toContainText("Fits the Company composition table");
+
+  // A Mechanized formation on top of a Battle Lance: the base formation is checked on the four non-infantry units, the infantry is carried by an OMNI.
+  await page.getByLabel("Formation type").nth(0).selectOption({ label: "Battle Lance" });
+  await page.getByLabel("Built on top as").nth(0).selectOption({ label: "Mechanized" });
+  await expect(page.getByRole("group", { name: "Mechanized check for Carriers" })).toContainText("Meets the Mechanized requirements");
+  await expect(page.getByRole("group", { name: "Battle Lance check for Carriers" })).toContainText("Meets the Battle Lance requirements");
+  await page.getByLabel("Built on top as").nth(0).selectOption({ label: "Air Lance" });
+  await expect(page.getByRole("group", { name: "Air Lance check for Carriers" })).toContainText("Does not yet meet the Air Lance requirements");
+  await page.getByLabel("Built on top as").nth(0).selectOption({ label: "Mechanized" });
+  await page.reload();
+  await expect(page.getByLabel("Built on top as").nth(0)).toHaveValue("mechanized");
+  await expect(page.getByLabel("Part of group").nth(3)).toHaveValue("co");
+
+  const widths = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, client: document.documentElement.clientWidth }));
+  expect(widths.scroll).toBe(widths.client);
+  for (const control of await page.locator(".as-group select, .as-group input, .as-group button").all()) {
+    const box = await control.boundingBox();
+    if (box) expect(box.height).toBeGreaterThanOrEqual(44);
+  }
+  await page.screenshot({ path: testInfo.outputPath("compositions-320.png"), fullPage: true });
+
+  for (const theme of ["Light", "Dark"] as const) {
+    await chooseTheme(page, theme);
+    await page.goto(url);
+    await expectPage(page.getByRole("heading", { name: "Groups and formations" })).toBeVisible();
+    const results = await new AxeBuilder({ page }).analyze();
+    expect(results.violations, `${theme} theme`).toEqual([]);
+  }
 });

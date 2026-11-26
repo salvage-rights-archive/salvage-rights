@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { checkFormation, duplicateForce, findFormation, findSpa, forceScas, forceSpas, forceTotals, groupFindings, groupTotals, groupsOf, inPlay, memberSpas, newAsForce, playFindings, pvStep, readFilter, skillAdjustedPv, unitAllowsSpa } from "./as-force";
-import type { AsForce, AsMember } from "./as-force";
+import { checkFormation, duplicateForce, findFormation, findOrganisation, findOverlay, findSpa, forceScas, forceSpas, forceTotals, groupFindings, groupTotals, groupsOf, inPlay, memberSpas, newAsForce, playFindings, pvStep, readFilter, skillAdjustedPv, unitAllowsSpa } from "./as-force";
+import type { AsForce, AsGroup, AsMember } from "./as-force";
+import { baseLines, checkComposition, checkOverlay, groupScale } from "./as-composition";
 import { newAsUnit, parseMove } from "./as-unit";
 import type { AsUnit } from "./as-unit";
 
@@ -86,7 +87,10 @@ describe("groups and formation types", () => {
       armor: spec.armor ?? 4,
       move: parsed.ok ? parsed.value : [],
       damage: { s: { value: spec.s ?? 2 }, m: { value: spec.m ?? 2 }, l: { value: spec.l ?? 1 } },
-      specials: (spec.specials ?? []).map((code) => ({ code, values: [], raw: code })),
+      specials: (spec.specials ?? []).map((raw) => {
+        const m = /^([A-Z]+)(\d+)$/.exec(raw); // IT6 is the special IT with the value 6
+        return { code: m?.[1] ?? raw, values: m?.[2] ? [m[2]] : [], raw };
+      }),
       pv: 30,
     };
     u.name = { chassis: spec.model ?? id, model: "" };
@@ -164,6 +168,87 @@ describe("groups and formation types", () => {
     expect(groupFindings(two.groups[0]!, 3)[0]).toContain("4 ground units");
     expect(groupFindings(two.groups[0]!, 4)).toEqual([]);
     expect(groupsOf({ groups: [{ id: "x" } as never, 7 as never] }).map((x) => x.name)).toEqual([""]); // a damaged record reads as unnamed
+  });
+
+  /** Several groups: each entry is a group and the specs of the units set directly on it. */
+  const tree = (groups: (AsGroup & { units?: Spec[] })[]) => {
+    const units: AsUnit[] = [];
+    const members: AsMember[] = [];
+    for (const g of groups) {
+      for (const spec of g.units ?? []) {
+        const u = unit(`${g.id}${String(units.length)}`, spec);
+        units.push(u);
+        members.push({ unitId: u.id, skill: 4, group: g.id });
+      }
+    }
+    const force = { ...newAsForce("f"), members, groups: groups.map((g) => ({ id: g.id, name: g.name, org: g.org, formation: g.formation, parent: g.parent })) };
+    const totals = forceTotals(force, new Map(units.map((u) => [u.id, u])));
+    return { force, totals, by: groupTotals(force, totals) };
+  };
+
+  it("holds a group in a group without changing an old force, and survives a parent that is gone or a loop", () => {
+    const { by } = tree([{ id: "co", name: "Company", units: [{}] }, { id: "a", name: "A", parent: "co", units: [{}, {}] }, { id: "b", name: "B", parent: "a", units: [{}] }]);
+    expect(by.groups.map((x) => [x.group.id, x.depth, x.count, x.total])).toEqual([["co", 0, 4, 120], ["a", 1, 3, 90], ["b", 2, 1, 30]]);
+    const odd = tree([{ id: "x", name: "X", parent: "y", units: [{}] }, { id: "y", name: "Y", parent: "x", units: [{}] }, { id: "z", name: "Z", parent: "gone", units: [{}] }]).by;
+    expect(odd.groups.map((x) => x.group.id).sort()).toEqual(["x", "y", "z"]);
+    expect(odd.groups.reduce((n, x) => n + x.direct.length, 0)).toBe(3);
+  });
+
+  it("multiplies the counts of a formation by the lances a higher group holds, and leaves a lance alone", () => {
+    const ifs = (n: number): Spec[] => [...Array.from({ length: n }, () => ({ specials: ["IF"] })), ...Array.from({ length: 8 - n }, () => ({}))];
+    const lines = (n: number) => group(ifs(n)).totals.lines;
+    const type = findFormation("fire-support")!;
+    expect(groupScale(findOrganisation("is-company"), type, lines(6))).toBe(2); // 8 units on the 4 of a lance
+    expect(groupScale(findOrganisation("is-lance"), type, lines(6))).toBe(1);
+    expect(groupScale(findOrganisation("clan-trinary"), type, group(Array.from({ length: 15 }, () => ({}))).totals.lines)).toBe(3);
+    expect(checkFormation(type, lines(6), 2).met).toBe(true); // 3 IF at lance level, 6 for two lances
+    const short = checkFormation(type, lines(5), 2);
+    expect(short.met).toBe(false);
+    expect(short.missing[0]).toBe("At least 6 units: has IF (the group has 5, needs 6)");
+  });
+
+  it("checks a Mechanized formation on top of its base, with the infantry carried by OMNI, XMEC or IT space", () => {
+    const mech = findOverlay("mechanized")!;
+    const tanks: Spec[] = [{ type: "CV", size: 1, specials: ["OMNI"] }, { type: "CV", size: 1, specials: ["OMNI"] }, { type: "CV", size: 1, specials: ["IT6"] }, { type: "BM", size: 3 }];
+    const ba = (...specials: string[]): Spec => ({ type: "BA", size: 1, specials });
+    const check = (infantry: Spec[]) => checkOverlay(mech, group([...tanks, ...infantry]).totals.lines);
+    expect(check([ba("MEC"), ba("XMEC")]).met).toBe(true); // an OMNI each, or any ground unit
+    expect(check([ba("MEC"), ba("MEC"), ba("MEC")]).missing[0]).toContain("not carried");
+    expect(check([ba("CAR4"), { type: "CI", specials: ["CAR2"] }]).met).toBe(true); // 6 of IT6
+    expect(check([ba("CAR4"), ba("CAR4")]).met).toBe(false);
+    expect(check([]).met).toBe(false); // no infantry to carry
+    // The base formation is checked on the non-infantry units alone: a Size 1 infantry unit would break a Heavy Battle Lance.
+    const lines = group([...four({ size: 3 }), ba("MEC")]).totals.lines;
+    expect(checkFormation(findFormation("battle-heavy")!, lines).met).toBe(false);
+    expect(checkFormation(findFormation("battle-heavy")!, baseLines(mech, lines)).met).toBe(true);
+  });
+
+  it("needs an Air Lance to have exactly two identical fighters, which the base formation leaves out", () => {
+    const air = findOverlay("air-lance")!;
+    const fighter = (model: string): Spec => ({ type: "AF", model });
+    const lines = (...fighters: Spec[]) => group([...four({ size: 2 }), ...fighters]).totals.lines;
+    expect(checkOverlay(air, lines(fighter("A"), fighter("A"))).met).toBe(true);
+    expect(checkOverlay(air, lines(fighter("A"), fighter("B"))).missing[0]).toContain("one chassis and model");
+    expect(checkOverlay(air, lines(fighter("A"), fighter("A"), fighter("A"))).missing[0]).toContain("Exactly 2");
+    expect(baseLines(air, lines(fighter("A"), fighter("A")))).toHaveLength(4);
+  });
+
+  it("checks a company against its composition table from the lances inside it", () => {
+    const inner = (id: string, formation: string | undefined, units: Spec[] = four({})): AsGroup & { units: Spec[] } => ({ id, name: id, parent: "co", formation, units });
+    const company = (...lances: (AsGroup & { units: Spec[] })[]) => {
+      const { by } = tree([{ id: "co", name: "Co", org: "is-company" }, ...lances]);
+      return checkComposition(by.groups.filter((x) => x.group.parent === "co"), "is-company");
+    };
+    expect(company(inner("a", "battle"), inner("b", "recon"), inner("c", "support"))?.met).toBe(true);
+    expect(company(inner("a", "battle"), inner("b", "battle"), inner("p", undefined, [{ type: "CI" }]))?.met).toBe(true); // a platoon is a detachment
+    expect(company(inner("a", "battle"), inner("b", "support"), inner("c", "support"))?.problems.join(" ")).toContain("Support Lance: at most 1 for each core group of another kind");
+    expect(company(...["a", "b", "c", "d", "e"].map((id) => inner(id, "battle")))?.problems).toEqual([
+      "Battle, Assault, Striker, Fire, Recon or Pursuit Lance: at most 4 (the group has 5).",
+      "The core of a Company is 2 to 4 lances; this group has 5.",
+    ]);
+    expect(company(inner("a", "battle"), inner("b", "battle"), inner("x", undefined))?.problems.join(" ")).toContain("x fits no row");
+    expect(checkComposition([], "is-company")).toBeUndefined(); // nothing inside to check
+    expect(checkComposition([{} as never], "is-lance")).toBeUndefined(); // the book gives a lance no table
   });
 });
 

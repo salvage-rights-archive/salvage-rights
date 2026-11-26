@@ -1,11 +1,13 @@
 // The groups of a force and their formation types: a lance, Star or Level II named and given an organisation (ASCE p. 113), a formation
 // type the player designates (p. 116), what that type still needs, and its bonus named with its page. The bonus text is ours behind the
 // notes switch. Shown at Standard and above, or when the force already has groups.
-import { AS_FAMILY_NAMES, AS_FORMATIONS, AS_FORMATIONS_NOT_BUILT, AS_ORGANISATIONS, AS_ORGANISATION_PAGE } from "../../data/as-formations";
+import { AS_COMPOSITION_PAGE } from "../../data/as-compositions";
+import { AS_FAMILY_NAMES, AS_FORMATIONS, AS_ORGANISATIONS, AS_ORGANISATION_PAGE, AS_OVERLAYS } from "../../data/as-formations";
 import type { AsOrgFamily } from "../../data/as-formations";
 import { AS_FORMATION_GLOSSES } from "../../data/as-glosses";
 import { AS_EDITION } from "../../data/alpha-strike";
-import { bonusFigure, checkFormation, findFormation, findOrganisation, formationsMet, groupFindings, groupTotals, groupsOf, newGroup } from "../../rules/as-force";
+import { bonusFigure, checkFormation, findFormation, findOrganisation, findOverlay, formationsMet, groupFindings, groupTotals, groupsOf, newGroup } from "../../rules/as-force";
+import { baseLines, checkComposition, checkOverlay, groupScale } from "../../rules/as-composition";
 import type { AsForce, AsGroup, ForceTotals, GroupTotals } from "../../rules/as-force";
 import { unitTitle } from "../../rules/as-unit";
 import { GlossSwitch } from "./AsSpecials";
@@ -35,7 +37,7 @@ export function GroupsSection({ force, totals, change, headingRef }: Props) {
 
   const remove = (group: AsGroup) => {
     void change(
-      { ...force, groups: groups.filter((g) => g.id !== group.id), members: force.members.map((m) => (m.group === group.id ? { ...m, group: undefined } : m)) },
+      { ...force, groups: groups.filter((g) => g.id !== group.id).map((g) => (g.parent === group.id ? { ...g, parent: group.parent } : g)), members: force.members.map((m) => (m.group === group.id ? { ...m, group: undefined } : m)) },
       `Removed ${group.name.trim() || "the group"}. Its units stay in the force.`,
     );
     headingRef.current?.focus();
@@ -47,13 +49,13 @@ export function GroupsSection({ force, totals, change, headingRef }: Props) {
         Groups and formations
       </h2>
       <p className="bt-hint">
-        {`Name each lance, Star or Level II and choose its organisation from the table on p. ${String(AS_ORGANISATION_PAGE)} of ${AS_EDITION.name}, then designate the formation type it is built as (pp. 117-123). A group is one type, never two (p. 116). Each unit's group is set in its row above.`}
+        {`Name each lance, Star or Level II and choose its organisation from the table on p. ${String(AS_ORGANISATION_PAGE)} of ${AS_EDITION.name}, then designate the formation type it is built as (pp. 117-123). A group is one type, never two (p. 116). A Mechanized, Nova or Air Lance formation may sit on top of it (p. 121). Each unit's group is set in its row above. Put a lance in a company, or a Star in a Binary, with Part of group: a company and the groups above it are checked against the composition tables on p. ${String(AS_COMPOSITION_PAGE)}, and a formation designated on one multiplies its counts by the number of lances it holds.`}
       </p>
       <GlossSwitch id="as-groups-gloss" />
       {groups.length === 0 ? <p>No groups yet.</p> : (
         <ul className="bt-list">
           {by.groups.map((entry) => (
-            <GroupCard key={entry.group.id} entry={entry} glosses={glosses} setGroup={setGroup} remove={remove} />
+            <GroupCard key={entry.group.id} entry={entry} all={by.groups} glosses={glosses} setGroup={setGroup} remove={remove} />
           ))}
         </ul>
       )}
@@ -63,27 +65,59 @@ export function GroupsSection({ force, totals, change, headingRef }: Props) {
       <button type="button" className="bt-button bt-button--secondary" onClick={add}>
         Add a group
       </button>
-      <p className="bt-hint">{`Not checked here: the ${AS_FORMATIONS_NOT_BUILT.join(", ")} formations, which are built on top of another formation, and the company and battalion composition tables (p. 124).`}</p>
+      <p className="bt-hint">Not checked: the footnote that swaps vehicle and BattleMech lances when a company is built of vehicle lances (p. 124).</p>
     </section>
   );
 }
 
-function GroupCard({ entry, glosses, setGroup, remove }: { entry: GroupTotals; glosses: boolean; setGroup: (id: string, patch: Partial<AsGroup>) => Promise<void>; remove: (group: AsGroup) => void }) {
-  const { group, lines, count, total } = entry;
+/** The ids of every group inside this one, however deep, so a group is never offered as part of its own contents. */
+const insideOf = (all: GroupTotals[], id: string): Set<string> => {
+  const found = new Set<string>();
+  const walk = (at: string) => {
+    for (const child of all.find((e) => e.group.id === at)?.childIds ?? []) {
+      if (!found.has(child)) {
+        found.add(child);
+        walk(child);
+      }
+    }
+  };
+  walk(id);
+  return found;
+};
+
+function GroupCard({ entry, all, glosses, setGroup, remove }: { entry: GroupTotals; all: GroupTotals[]; glosses: boolean; setGroup: (id: string, patch: Partial<AsGroup>) => Promise<void>; remove: (group: AsGroup) => void }) {
+  const { group, lines, total } = entry;
   const n = group.id;
   const type = findFormation(group.formation);
-  const check = type ? checkFormation(type, lines) : undefined;
-  const met = formationsMet(lines);
   const org = findOrganisation(group.org);
+  const overlay = findOverlay(group.overlay);
+  const base = baseLines(overlay, lines);
+  const count = base.filter((l) => l.unit).length;
+  const scale = groupScale(org, type, base);
+  const check = type ? checkFormation(type, base, scale) : undefined;
+  const met = formationsMet(base, scale);
   const notes = groupFindings(group, count);
   const gloss = type && glosses ? AS_FORMATION_GLOSSES[type.id] : undefined;
   const figure = type ? bonusFigure(type, count) : undefined;
+  const overlayCheck = overlay ? checkOverlay(overlay, lines) : undefined;
+  const composition = checkComposition(all.filter((e) => entry.childIds.includes(e.group.id)), group.org);
+  const held = insideOf(all, n);
+  const unitCount = entry.count;
   const name = group.name.trim() || "this group";
   return (
-    <li className="bt-row as-group">
+    <li className={`bt-row as-group${entry.depth > 0 ? " as-group--nested" : ""}`} style={{ "--as-depth": Math.min(entry.depth, 3) } as React.CSSProperties}>
       <div className="bt-field">
         <label htmlFor={`as-group-name-${n}`}>Group name</label>
         <input id={`as-group-name-${n}`} value={group.name} onChange={(e) => void setGroup(n, { name: e.target.value })} />
+      </div>
+      <div className="bt-field">
+        <label htmlFor={`as-group-parent-${n}`}>Part of group</label>
+        <select id={`as-group-parent-${n}`} value={group.parent !== undefined && all.some((e) => e.group.id === group.parent) ? group.parent : ""} onChange={(e) => void setGroup(n, { parent: e.target.value || undefined })}>
+          <option value="">Stands alone</option>
+          {all.filter((e) => e.group.id !== n && !held.has(e.group.id)).map((e) => (
+            <option key={e.group.id} value={e.group.id}>{e.group.name.trim() || "Unnamed group"}</option>
+          ))}
+        </select>
       </div>
       <div className="bt-field">
         <label htmlFor={`as-group-org-${n}`}>Organisation</label>
@@ -115,6 +149,15 @@ function GroupCard({ entry, glosses, setGroup, remove }: { entry: GroupTotals; g
           ))}
         </select>
       </div>
+      <div className="bt-field">
+        <label htmlFor={`as-group-overlay-${n}`}>Built on top as</label>
+        <select id={`as-group-overlay-${n}`} value={overlay?.id ?? ""} onChange={(e) => void setGroup(n, { overlay: e.target.value || undefined })}>
+          <option value="">Nothing on top</option>
+          {AS_OVERLAYS.map((o) => (
+            <option key={o.id} value={o.id}>{o.name}</option>
+          ))}
+        </select>
+      </div>
       {type?.bonus.choose && (
         <div className="bt-field">
           <label htmlFor={`as-group-bonus-${n}`}>Bonus ability chosen</label>
@@ -126,7 +169,8 @@ function GroupCard({ entry, glosses, setGroup, remove }: { entry: GroupTotals; g
           </select>
         </div>
       )}
-      <p className="as-group__totals">{`${String(count)} ${count === 1 ? "unit" : "units"}, PV ${String(total)}${lines.length > 0 ? `: ${lines.flatMap((l) => (l.unit ? [unitTitle(l.unit) || "Unnamed unit"] : [])).join(", ")}` : ""}.`}</p>
+      <p className="as-group__totals">{`${String(unitCount)} ${unitCount === 1 ? "unit" : "units"}, PV ${String(total)}${lines.length > 0 ? `: ${lines.flatMap((l) => (l.unit ? [unitTitle(l.unit) || "Unnamed unit"] : [])).join(", ")}` : ""}.`}</p>
+      {scale > 1 && <p className="bt-hint">{`This group holds ${String(scale)} lances, Stars or Level IIs by the sizes on p. ${String(AS_ORGANISATION_PAGE)}, so the counts of a formation are multiplied by ${String(scale)}.`}</p>}
       {notes.map((text) => (
         <p key={text} className="bt-hint">{text}</p>
       ))}
@@ -158,6 +202,44 @@ function GroupCard({ entry, glosses, setGroup, remove }: { entry: GroupTotals; g
           </p>
         </div>
       )}
+      {overlay && overlayCheck && (
+        <div className="as-group__check" role="group" aria-label={`${overlay.name} check for ${name}`}>
+          {overlayCheck.met ? (
+            <p>
+              <strong>{`Meets the ${overlay.name} requirements`}</strong>
+              {`, p. ${String(overlay.page)}. The formation under it is checked on the other units alone.`}
+              {glosses && AS_FORMATION_GLOSSES[overlay.id] && <span className="as-spec__note">{AS_FORMATION_GLOSSES[overlay.id]}</span>}
+            </p>
+          ) : (
+            <>
+              <p>
+                <strong>{`Does not yet meet the ${overlay.name} requirements`}</strong>
+                {`, p. ${String(overlay.page)}. Missing:`}
+              </p>
+              <ul>
+                {overlayCheck.missing.map((text) => (
+                  <li key={text}>{text}</li>
+                ))}
+              </ul>
+            </>
+          )}
+        </div>
+      )}
+      {composition ? (
+        <div className="as-group__check" role="group" aria-label={`Composition check for ${name}`}>
+          <p>
+            <strong>{composition.met ? `Fits the ${composition.table.name} composition table` : `Does not yet fit the ${composition.table.name} composition table`}</strong>
+            {`, p. ${String(AS_COMPOSITION_PAGE)}. ${composition.rows.filter((r) => r.have > 0).map((r) => `${String(r.have)} ${r.row.label}`).join(", ") || "No inner group fits a row."}`}
+          </p>
+          {composition.problems.length > 0 && (
+            <ul>
+              {composition.problems.map((text) => (
+                <li key={text}>{text}</li>
+              ))}
+            </ul>
+          )}
+        </div>
+      ) : null}
       <details>
         <summary>{`Formation types this group meets (${String(met.length)})`}</summary>
         <p>{met.length === 0 ? "None yet." : met.map((f) => f.name).join(", ")}</p>

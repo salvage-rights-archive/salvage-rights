@@ -440,6 +440,41 @@ export async function putAsFormationForce(page: Page, full = false): Promise<str
 }
 
 /**
+ * A force of a Mechanized group (three vehicles with OMNI and a 'Mech, carrying one battle armor unit with MEC) and the two lances of a
+ * company (a Battle Lance and a Recon Lance of four each), already in groups, for the compositions spec.
+ */
+export async function putAsCompositionForce(page: Page): Promise<string> {
+  const base = inventedUnit("x", "x").card;
+  const special = (code: string) => ({ code, values: [], raw: code });
+  const kinds: [string, string, string, Record<string, unknown>][] = [
+    ["cp-a", "Anvil", "m", { type: "CV", size: 3, role: "Brawler", specials: [special("OMNI")] }],
+    ["cp-b", "Bulwark", "m", { type: "CV", size: 3, role: "Sniper", specials: [special("OMNI")] }],
+    ["cp-c", "Citadel", "m", { type: "BM", size: 2, role: "Skirmisher" }],
+    ["cp-d", "Dagger", "m", { type: "BM", size: 3, role: "Brawler" }],
+    ["cp-e", "Eyrie", "m", { type: "BA", size: 1, specials: [special("MEC")] }],
+    ["cp-f", "Falcon", "l1", { size: 3, role: "Brawler" }],
+    ["cp-g", "Gadfly", "l1", { size: 3, role: "Sniper" }],
+    ["cp-h", "Harrier", "l1", { size: 2, role: "Skirmisher" }],
+    ["cp-i", "Ibis", "l1", { size: 1 }],
+    ["cp-j", "Jackal", "l2", { size: 1, role: "Scout", move: [{ inches: 12, mode: "" }] }],
+    ["cp-k", "Kestrel", "l2", { size: 1, role: "Scout", move: [{ inches: 12, mode: "" }] }],
+    ["cp-l", "Lynx", "l2", { size: 1, role: "Scout", move: [{ inches: 12, mode: "" }] }],
+    ["cp-m", "Magpie", "l2", { size: 1, role: "Scout", move: [{ inches: 12, mode: "" }] }],
+  ];
+  const units = kinds.map(([id, chassis, , card]) => ({ ...inventedUnit(id, chassis), card: { ...base, ...card } }));
+  const members = kinds.map(([id, , group]) => ({ unitId: id, skill: 4, group }));
+  const groups = [
+    { id: "m", name: "Carriers" },
+    { id: "co", name: "Company", org: "is-company" },
+    { id: "l1", name: "First", formation: "battle", parent: "co" },
+    { id: "l2", name: "Second", formation: "recon", parent: "co" },
+  ];
+  const force = { schema: 1, kind: "as-force", id: "composition-force", editionId: "asce", name: "Composition test", members, groups };
+  await putRecords(page, [...units.map((u): [string, unknown] => [`as-unit:${u.id}`, { unit: u }]), ["as-force:composition-force", { force }]]);
+  return force.id;
+}
+
+/**
  * Answers an Aces game's resolver questions until the given text shows: every distance as 10 inches, yes and no as No, a pick of
  * units as none. For the invented games of the tests only.
  */
