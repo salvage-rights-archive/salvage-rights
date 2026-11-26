@@ -82,6 +82,13 @@ picture and shares its prompt.
   ownership of what they generate, and ask for no attribution.
 - Prompt: not recorded yet.
 
+## succession-wars-war-room.jpg and succession-wars-icon.jpg
+
+- The Succession Wars tile entry (coming soon) and its icon. Made by the Salvage Rights team with an AI image tool
+  (creen.ai) on 2026-11-26, cropped and resized. creen.ai's terms of service (effective 2025-10-11) say the user keeps
+  ownership of what they generate, and ask for no attribution.
+- Prompt: not recorded yet.
+
 ## empty-bay.jpg
 
 - Made by the Salvage Rights team with an AI image tool (Nano Banana 2) on 2026-11-24, and resized. It is shown on
