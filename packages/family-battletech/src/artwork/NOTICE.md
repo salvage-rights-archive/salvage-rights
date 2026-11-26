@@ -44,9 +44,9 @@ picture and shares its prompt.
   or before 2026-11-25, cropped and resized.
 - Prompt: "hard sci fi space art upper atmosphere above a planet curve bulky industrial tug spacecraft using..."
 
-## aerotech2-broken-warship.jpg and aerotech2-icon.jpg
+## battlespace-broken-warship.jpg and battlespace-icon.jpg
 
-- The AeroTech 2 tile entry and its icon. Made by the Salvage Rights team with an AI image tool (DeviantArt DreamUp)
+- The BattleSpace card on the AeroTech home, with its icon, and the home's picture when no unit is saved. Made by the Salvage Rights team with an AI image tool (DeviantArt DreamUp)
   on or before 2026-11-25, cropped and resized.
 - Prompt: "hard sci fi space art upper atmosphere above a planet curve heavily damaged warship in orbit with..."
 

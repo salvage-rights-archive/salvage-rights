@@ -44,6 +44,12 @@ describe("family packages", () => {
   }
 });
 
+describe("AeroTech", () => {
+  it("is one game in the BattleTech family, with its editions inside", () => {
+    expect(battletech.games.filter((game) => game.id.startsWith("aerotech")).map((game) => game.id)).toEqual(["aerotech"]);
+  });
+});
+
 describe("editions", () => {
   it("finds the three edition files", () => {
     expect(editionFiles.sort()).toEqual([
