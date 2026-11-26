@@ -161,7 +161,7 @@ export default function CardLibraryPage() {
       fail(STORAGE_WRITE_FAILED);
       return;
     }
-    if (await reload(storage)) say("Added the sample cards. They are marked Sample, and you can remove them at any time.");
+    if (await reload(storage)) say("Added the sample cards and the sample lance. They are marked Sample, and you can remove them at any time.");
   };
 
   const declineSamples = async () => {
@@ -281,7 +281,7 @@ export default function CardLibraryPage() {
         <section className="bt-section" aria-labelledby="aces-samples">
           <h2 id="aces-samples">Try our sample cards</h2>
           <p>
-            You have no cards yet. We can add a small set of our own invention, two behaviour decks, a command deck, the five special orders and two support cards, so you can try a sortie and a game straight away. They are marked Sample, stay out of your library file, and you can remove them at any time.
+            You have no cards yet. We can add a small set of our own invention, two behaviour decks, a command deck, the five special orders, two support cards and a sample lance of four units, so you can try a sortie and a game straight away. They are marked Sample, stay out of your library file, and you can remove them at any time.
           </p>
           <p>
             <button type="button" className="bt-button" onClick={() => void addSamples()}>
@@ -296,7 +296,7 @@ export default function CardLibraryPage() {
       {hasSamples && (
         <section className="bt-section" aria-labelledby="aces-samples-have">
           <h2 id="aces-samples-have">Sample cards</h2>
-          <p>Cards marked Sample are ours, not yours. A deck, commander or order you record yourself is used in their place, and they are left out of your library file.</p>
+          <p>Cards and units marked Sample are ours, not yours. A deck, commander, order or unit you record yourself is used in their place, and they are left out of your library file.</p>
           <p>
             <button type="button" className="bt-button bt-button--secondary" onClick={() => void removeSamples()}>
               Remove the sample cards

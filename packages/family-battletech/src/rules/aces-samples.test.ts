@@ -2,15 +2,15 @@ import { describe, expect, it } from "vitest";
 import { findings, isAcesRecord, isSample } from "./aces-card";
 import type { AcesCard, CommandCard } from "./aces-card";
 import { defaultDeck, isAcesGame, newAcesGame, recordedDecks } from "./aces-game";
-import { acesSamples, withoutShadowedSamples } from "./aces-samples";
-import { newAsUnit } from "./as-unit";
-import type { AsCard } from "./as-unit";
+import { acesSamples, sampleUnits, withoutShadowedSampleUnits, withoutShadowedSamples } from "./aces-samples";
+import type { AsUnit } from "./as-unit";
 
 const AT = "2026-01-01T00:00:00Z";
 const samples = acesSamples(AT);
 const cards = samples.filter((r): r is AcesCard => r.kind === "aces-card");
 const commands = samples.filter((r): r is CommandCard => r.kind === "aces-command");
-const cardOf = (role: string): AsCard => ({ ...newAsUnit("x").card, type: "BM", role, pv: 30, armor: 4, structure: 4, move: [{ inches: 6, mode: "" }] });
+const lance = sampleUnits();
+const asSetup = (u: AsUnit) => ({ unitId: u.id, name: u.name.chassis, card: u.card, skill: u.skill });
 
 describe("Aces sample cards", () => {
   it("are a full set in every kind, each flagged as a sample, readable, with ids of their own and priorities inside the book's range", () => {
@@ -31,14 +31,14 @@ describe("Aces sample cards", () => {
       name: "Sample game",
       seed: 5,
       at: AT,
-      player: { units: [{ unitId: "mine", name: "Mine", card: cardOf("Brawler"), skill: 4 }] },
-      automated: { units: [{ unitId: "theirs", name: "Theirs", card: cardOf("Sniper"), skill: 4 }] },
+      player: { units: lance.filter((u) => u.card.role === "Brawler").map(asSetup) },
+      automated: { units: lance.filter((u) => u.card.role === "Sniper").map(asSetup) },
       cards,
       commandCards: commands,
       startLetter: "A",
     });
     expect(isAcesGame(game)).toBe(true);
-    expect(defaultDeck(cardOf("Sniper"), recordedDecks(cards)).status).toBe("chosen");
+    expect(lance.map((u) => defaultDeck(u.card, recordedDecks(cards)).key)).toEqual(["Brawler", "Brawler", "Sniper", "Sniper"]);
   });
 
   it("give way to a deck, commander, order or support card the player records themselves, and to nothing else", () => {
@@ -48,5 +48,12 @@ describe("Aces sample cards", () => {
     expect(kept.filter((r) => r.kind === "aces-card" && r.deck.role === "Brawler").map((r) => r.id)).toEqual(["mine-1"]);
     expect(kept.filter((r) => r.kind === "aces-card" && r.deck.role === "Sniper")).toHaveLength(6);
     expect(kept).toHaveLength(samples.length - 5);
+  });
+
+  it("make a lance of four flagged units whose roles match the two decks, and a sample unit steps aside for the player's own of the same name", () => {
+    expect(lance.map((u) => [u.sample, u.card.role])).toEqual([[true, "Brawler"], [true, "Brawler"], [true, "Sniper"], [true, "Sniper"]]);
+    const mine: AsUnit = { ...structuredClone(lance[0]!), id: "mine" };
+    delete mine.sample;
+    expect(withoutShadowedSampleUnits([...lance, mine]).map((u) => u.id)).toEqual([lance[1]!.id, lance[2]!.id, lance[3]!.id, "mine"]);
   });
 });

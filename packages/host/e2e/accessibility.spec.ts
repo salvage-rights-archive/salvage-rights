@@ -161,7 +161,7 @@ test("the Aces library with the sample offer and with the sample cards added has
   await expectNoViolations(page, DEV, [`${ACES}/cards`]);
   await page.goto(`${DEV}${ACES}/cards`);
   await page.getByRole("button", { name: "Add the sample cards" }).click();
-  await expectPage(page.getByText("Added the sample cards.")).toBeVisible();
+  await expectPage(page.getByText("Added the sample cards and the sample lance.")).toBeVisible();
   await expectNoViolations(page, DEV, [`${ACES}/cards`]);
 });
 

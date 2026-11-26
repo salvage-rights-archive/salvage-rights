@@ -5,6 +5,7 @@ import { exportStore, openStore } from "@salvage-rights/shared";
 import { isSample, newAcesCard } from "../../rules/aces-card";
 import type { AcesCard, SupportCard } from "../../rules/aces-card";
 import { acesSamples } from "../../rules/aces-samples";
+import { openAsStorage } from "../as/storage";
 import { emptyLibrary, fromLibraryFile, libraryOf, openAcesStorage, planLibraryImport, toLibraryFile } from "./storage";
 
 // Cards invented for the tests; no printed card.
@@ -61,11 +62,13 @@ describe("Aces card storage", () => {
     expect(records.filter((r) => !isSample(r)).map((r) => r.id)).toEqual(["c1"]);
     const file = toLibraryFile(libraryOf(records));
     expect([...file.cards, ...file.commands, ...file.orders, ...file.supports].map((r) => r.id)).toEqual(["c1"]);
+    expect((await (await openAsStorage()).list()).map((e) => e.unit?.sample)).toEqual([true, true, true, true]);
     expect(Object.keys((await exportStore(await openStore("battletech"))).entries)).toEqual(["aces-card:c1"]);
 
     expect(await storage.samplesDeclined()).toBe(false);
     await storage.removeSamples();
     expect((await storage.list()).map((e) => e.id)).toEqual(["c1"]);
+    expect(await (await openAsStorage()).list()).toEqual([]);
     expect(await storage.samplesDeclined()).toBe(true);
   });
 

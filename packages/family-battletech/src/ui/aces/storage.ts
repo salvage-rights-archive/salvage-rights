@@ -4,7 +4,8 @@ import { openStore } from "@salvage-rights/shared";
 import type { Store } from "@salvage-rights/shared";
 import { ACES_KINDS, isAcesRecord, isSample } from "../../rules/aces-card";
 import type { AcesCard, AcesKind, AcesRecord, CommandCard, SpecialOrderCard, SupportCard } from "../../rules/aces-card";
-import { acesSamples } from "../../rules/aces-samples";
+import { acesSamples, sampleUnits } from "../../rules/aces-samples";
+import { openAsStorage } from "../as/storage";
 import { downloadJson, isPicture } from "../storage";
 
 /** Store prefixes by record kind. A backup of everything picks Aces records up by these. */
@@ -34,9 +35,9 @@ export interface AcesStorage {
   /** What is stored under the id, exactly as it is. */
   raw(kind: AcesKind, id: string): Promise<unknown>;
   remove(kind: AcesKind, id: string): Promise<void>;
-  /** Saves our sample cards, leaving any the player already has under the same id. */
+  /** Saves our sample cards and the sample lance, leaving any the player already has under the same id. */
   addSamples(): Promise<void>;
-  /** Deletes every record still flagged as a sample, and remembers that the player does not want them offered again. */
+  /** Deletes every card and roster unit still flagged as a sample, and remembers that the player does not want them offered again. */
   removeSamples(): Promise<void>;
   /** Whether the player has said no to the offer of samples. */
   samplesDeclined(): Promise<boolean>;
@@ -165,9 +166,14 @@ function wrap(store: Store): AcesStorage {
     addSamples: async () => {
       const have = new Set((await api.list()).map((e) => `${e.kind}:${e.id}`));
       for (const r of acesSamples(new Date().toISOString())) if (!have.has(`${r.kind}:${r.id}`)) await api.save(r);
+      const roster = await openAsStorage();
+      const owned = new Set((await roster.list()).map((e) => e.id));
+      for (const u of sampleUnits()) if (!owned.has(u.id)) await roster.save(u);
     },
     removeSamples: async () => {
       for (const e of await api.list()) if (e.record && isSample(e.record)) await api.remove(e.kind, e.id);
+      const roster = await openAsStorage();
+      for (const e of await roster.list()) if (e.unit?.sample === true) await roster.remove(e.id);
       await api.declineSamples();
     },
     samplesDeclined: async () => (await store.get<boolean>(SAMPLES_DECLINED)) === true,

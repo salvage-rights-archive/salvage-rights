@@ -6,7 +6,7 @@ import { Link, useNavigate } from "react-router";
 import { ACES_LETTERS } from "../../data/aces-vocab";
 import type { CommandLetter } from "../../data/aces-vocab";
 import type { AcesCard, CommandCard, SupportCard } from "../../rules/aces-card";
-import { withoutShadowedSamples } from "../../rules/aces-samples";
+import { withoutShadowedSampleUnits, withoutShadowedSamples } from "../../rules/aces-samples";
 import { DEFAULT_RULES, difficultyAids, newAcesGame, recordedDecks, shiftSkill } from "../../rules/aces-game";
 import type { AcesRules } from "../../rules/aces-game";
 import type { AsForce } from "../../rules/as-force";
@@ -58,7 +58,7 @@ export default function NewGamePage() {
         const records = withoutShadowedSamples((await aces.list(["aces-card", "aces-command", "aces-support"])).flatMap((e) => (e.record ? [e.record] : [])));
         setLoaded({
           forces: (await as.listForces()).flatMap((e) => (e.force ? [e.force] : [])),
-          roster: new Map((await as.list()).flatMap((e) => (e.unit ? [[e.unit.id, e.unit] as const] : []))),
+          roster: new Map(withoutShadowedSampleUnits((await as.list()).flatMap((e) => (e.unit ? [e.unit] : []))).map((u) => [u.id, u] as const)),
           cards: records.filter((r): r is AcesCard => r.kind === "aces-card"),
           commands: records.filter((r): r is CommandCard => r.kind === "aces-command"),
           supports: records.filter((r): r is SupportCard => r.kind === "aces-support"),

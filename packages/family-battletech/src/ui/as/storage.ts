@@ -119,6 +119,7 @@ export function isAsUnit(value: unknown): value is AsUnit {
     optional(value.year, (y) => y === null || isNumber(y)) &&
     optional(value.era, isString) &&
     optional(value.notes, isString) &&
+    optional(value.sample, (x) => x === true) &&
     isPicture(value.picture) &&
     optional(value.source, isSource)
   );

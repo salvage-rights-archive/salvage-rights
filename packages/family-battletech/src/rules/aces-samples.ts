@@ -7,6 +7,8 @@
 import { ACES_LETTERS } from "../data/aces-vocab";
 import type { ColumnId, CommandLetter } from "../data/aces-vocab";
 import { deckKey } from "./aces-card";
+import { newAsUnit } from "./as-unit";
+import type { AsUnit } from "./as-unit";
 import type { AcesCard, AcesRecord, Column, CommandCard, Condition, Filter, Key, OvRow, SpecialOrderCard, SupportCard, TokenUse } from "./aces-card";
 
 export const ACES_SAMPLES_CITE = { cite: "Aces pp. 8, 10, 12, 20-21, 38", checked: "page" } as const;
@@ -172,4 +174,49 @@ const slotOf = (r: AcesRecord): string => {
 export function withoutShadowedSamples<T extends AcesRecord>(records: readonly T[]): T[] {
   const own = new Set(records.filter((r) => r.sample !== true).map(slotOf));
   return records.filter((r) => r.sample !== true || !own.has(slotOf(r)));
+}
+
+// ---- A sample lance of our own units ---------------------------------------------------------------------------------------------
+
+interface UnitPlan {
+  chassis: string;
+  model: string;
+  role: string;
+  size: number;
+  tmm: number;
+  inches: number;
+  pv: number;
+  /** Damage at short, medium and long range. */
+  damage: [number, number, number];
+  armor: number;
+  structure: number;
+}
+
+// Our own invented units, two for each sample behaviour deck. Figures sit in the ranges of Alpha Strike BattleMech cards; none is a real design.
+const LANCE: UnitPlan[] = [
+  { chassis: "Sample Hammer", model: "SH-1", role: "Brawler", size: 3, tmm: 1, inches: 6, pv: 30, damage: [3, 3, 1], armor: 6, structure: 5 },
+  { chassis: "Sample Bruiser", model: "SB-2", role: "Brawler", size: 2, tmm: 2, inches: 8, pv: 26, damage: [3, 2, 0], armor: 4, structure: 4 },
+  { chassis: "Sample Longbow", model: "SL-1", role: "Sniper", size: 3, tmm: 1, inches: 4, pv: 33, damage: [1, 3, 3], armor: 5, structure: 5 },
+  { chassis: "Sample Reach", model: "SR-3", role: "Sniper", size: 2, tmm: 1, inches: 6, pv: 28, damage: [1, 2, 3], armor: 3, structure: 4 },
+];
+
+/** The sample lance, ready to save as roster units, each flagged as a sample. */
+export function sampleUnits(): AsUnit[] {
+  return LANCE.map((p) => {
+    const base = newAsUnit(`sample-${p.model.toLowerCase()}`);
+    const [s, m, l] = p.damage.map((value) => ({ value }));
+    return {
+      ...base,
+      sample: true,
+      name: { chassis: p.chassis, model: p.model },
+      card: { ...base.card, type: "BM", size: p.size, tmm: p.tmm, move: [{ inches: p.inches, mode: "" }], role: p.role, pv: p.pv, damage: { s: s!, m: m!, l: l! }, ov: 1, armor: p.armor, structure: p.structure },
+    };
+  });
+}
+
+/** Roster units to offer: a sample unit steps aside where the player saved one under the same name. */
+export function withoutShadowedSampleUnits(units: readonly AsUnit[]): AsUnit[] {
+  const name = (u: AsUnit): string => `${u.name.chassis} ${u.name.model}`.trim().toLowerCase();
+  const own = new Set(units.filter((u) => u.sample !== true).map(name));
+  return units.filter((u) => u.sample !== true || !own.has(name(u)));
 }

@@ -9,7 +9,7 @@ import type { SsRecon, SsSortie } from "../../data/aces-scouring-sands";
 import { ACES_LETTERS } from "../../data/aces-vocab";
 import type { CommandLetter } from "../../data/aces-vocab";
 import type { AcesCard, CommandCard } from "../../rules/aces-card";
-import { withoutShadowedSamples } from "../../rules/aces-samples";
+import { withoutShadowedSampleUnits, withoutShadowedSamples } from "../../rules/aces-samples";
 import {
   buildSortieGame,
   checkFielding,
@@ -82,7 +82,7 @@ export default function SortiePage() {
         setLoaded({
           storage,
           campaign: entry.campaign,
-          roster: (await as.list()).flatMap((e) => (e.unit ? [e.unit] : [])),
+          roster: withoutShadowedSampleUnits((await as.list()).flatMap((e) => (e.unit ? [e.unit] : []))),
           cards: records.filter((r): r is AcesCard => r.kind === "aces-card"),
           commands: records.filter((r): r is CommandCard => r.kind === "aces-command"),
         });

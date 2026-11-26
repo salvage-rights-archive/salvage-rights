@@ -29,6 +29,7 @@ describe("store transfer", () => {
     const store = await openStore(ns());
     await store.set("aces-card:mine", { record: { id: "mine" } });
     await store.set("aces-card:sample-1", { record: { id: "sample-1", sample: true } });
+    await store.set("as-unit:sample-1", { unit: { id: "sample-1", sample: true } });
     expect(Object.keys((await exportStore(store)).entries)).toEqual(["aces-card:mine"]);
   });
 
