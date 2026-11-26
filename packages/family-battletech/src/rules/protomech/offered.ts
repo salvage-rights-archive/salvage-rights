@@ -6,7 +6,7 @@
 import { isStarLeagueTech } from "../../data/chassis";
 import type { RulesLevel } from "../../data/chassis";
 import { inGame, rulesetOf } from "../../data/rulesets";
-import { PROTO_DATES, PROTO_EXCLUDED, PROTO_LAUNCHERS } from "../../data/protomech";
+import { PROTO_CONFIGS, PROTO_DATES, PROTO_EXCLUDED, PROTO_LAUNCHERS, PROTO_PLACEMENT } from "../../data/protomech";
 import type { ProtoDates } from "../../data/protomech";
 import { baseFits, equipmentPhase, ownSpans, pastEraCap } from "../availability";
 import { mountableOn } from "../catalog";
@@ -14,6 +14,7 @@ import type { Catalog, EquipmentRow } from "../catalog";
 import { DEFAULT_LEVEL, equipmentLevel, levelAtLeast, levelIn } from "../levels";
 import type { MechRecord } from "../mech";
 import { phaseIn, windowOf } from "../time";
+import { own } from "../walk";
 import type { Phase } from "../time";
 import type { ProtoRecord } from "./record";
 
@@ -52,6 +53,18 @@ export function protoMountable(row: EquipmentRow): boolean {
   return !SIZED.test(row.id) || FAMILY_ROWS.has(row.id);
 }
 
+/** Whether the unit's chassis may carry the item: the quad melee system only a quad, the magnetic clamp neither a quad nor a glider (IO:AE pp. 60-61), and an item that goes only on
+ * arms is of no use to a quad, which has none. */
+export function configAllows(row: Pick<EquipmentRow, "id">, record: Pick<ProtoRecord, "configuration">): boolean {
+  const config = record.configuration ?? "biped";
+  const rule = own(PROTO_PLACEMENT.configs, row.id);
+  if (rule?.only && !rule.only.includes(config)) return false;
+  if (rule?.not?.includes(config)) return false;
+  const places = own(PROTO_PLACEMENT.only, row.id);
+  const arms = PROTO_CONFIGS[config]?.arms !== false;
+  return !places || places.some((code) => arms || (code !== "la" && code !== "ra"));
+}
+
 /** The row's phase for the record: production, prototype or neither. */
 export function itemPhase(row: EquipmentRow, record: ProtoRecord, catalog: Catalog): Phase | null {
   return equipmentPhase(row, subjectOf(record), catalog);
@@ -65,7 +78,7 @@ export function itemLevel(row: EquipmentRow, record: ProtoRecord, catalog: Catal
 
 /** Whether the row is on offer: mountable, on the edition's list, at or under the rules level, Clan or Star League technology and in the record's time. `everything` lifts the tech base and time limits. */
 export function itemAvailable(row: EquipmentRow, record: ProtoRecord, catalog: Catalog, everything = false): boolean {
-  if (!protoMountable(row) || !inGame(row.games, rulesetOf(record.editionId), record.rulesLevel)) return false;
+  if (!protoMountable(row) || !configAllows(row, record) || !inGame(row.games, rulesetOf(record.editionId), record.rulesLevel)) return false;
   const seen = catalog.rowFor(row.id, record.editionId) ?? row;
   const level = equipmentLevel(seen);
   if (!levelAtLeast(levelOfRecord(record), level)) return false;

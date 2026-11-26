@@ -890,7 +890,7 @@ export default function HomePage() {
                 <div className="bt-field">
                   <label htmlFor="bt-new-proto-tons">Tonnage</label>
                   <select id="bt-new-proto-tons" value={protoTons} onChange={(e) => { setProtoTons(Number(e.target.value)); }}>
-                    {Array.from({ length: PROTO_WEIGHT.max - PROTO_WEIGHT.min + 1 }, (_, i) => PROTO_WEIGHT.min + i).map((each) => (
+                    {Array.from({ length: PROTO_WEIGHT.standardMax - PROTO_WEIGHT.min + 1 }, (_, i) => PROTO_WEIGHT.min + i).map((each) => (
                       <option key={each} value={each}>{each} tons</option>
                     ))}
                   </select>

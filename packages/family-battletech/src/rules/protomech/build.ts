@@ -2,21 +2,27 @@
 // the weight of every mounted item and its ammunition, and the weight tally. Every figure is read from data/protomech.ts; this file only does the
 // arithmetic. Kilograms throughout. Pure functions; nothing here throws, and a record that does not fit the tables (a weight the book has no row for,
 // an item we do not know) gives undefined or null for that figure and a note in `unknown`, never a guess.
-import { PROTO_AMMO_KG, PROTO_BANDED_KG, PROTO_CODES, PROTO_LAUNCHERS, PROTO_LIMITS, PROTO_PARTS, PROTO_STRUCTURE } from "../../data/protomech";
+import { PROTO_AMMO_KG, PROTO_BANDED_KG, PROTO_CODES, PROTO_CONFIGS, PROTO_LAUNCHERS, PROTO_PARTS, PROTO_STRUCTURE } from "../../data/protomech";
 import type { ProtoLauncher, ProtoLocation, ProtoStructureRow } from "../../data/protomech";
 import { groupOf } from "../catalog";
 import type { Catalog, EquipmentRow } from "../catalog";
 import { engineTons } from "../mech";
 import { own, tidy } from "../walk";
 import { plainRun } from "./movement";
-import { armorTypeOf, cockpitOf, jumpSystemOf, torsoItemsLost, wingKg } from "./options";
+import { isGlider, isQuad, limitRows } from "./config";
+import { armorTypeOf, cockpitKg, jumpSystemOf, torsoItemsLost, wingKg } from "./options";
 import type { ProtoMount, ProtoRecord } from "./record";
 
-/** The structure and armor row for the record's tonnage; undefined for a weight the table does not have. */
-export const structureRow = (record: Pick<ProtoRecord, "tons">): ProtoStructureRow | undefined => (Number.isInteger(record.tons) ? own(PROTO_STRUCTURE.rows as Record<string, ProtoStructureRow>, String(record.tons)) : undefined);
+/** The structure and armor row for the record's tonnage; undefined for a weight the table does not have. A quad has the Legs (Quad, All) column for its legs (IO:AE p. 95). */
+export function structureRow(record: Pick<ProtoRecord, "tons" | "configuration">): ProtoStructureRow | undefined {
+  const base = Number.isInteger(record.tons) ? own(PROTO_STRUCTURE.rows as Record<string, ProtoStructureRow>, String(record.tons)) : undefined;
+  if (!base || !isQuad(record)) return base;
+  return { ...base, structure: { ...base.structure, lg: base.quadLegs[0] }, armor: { ...base.armor, lg: base.quadLegs[1] } };
+}
 
-/** The locations the unit has: the main gun only when it carries one. */
-export const locationsOf = (record: Pick<ProtoRecord, "mainGun">): ProtoLocation[] => PROTO_CODES.filter((code) => code !== "mg" || record.mainGun);
+/** The locations the unit has: the main gun only when it carries one, and no arms on a quad. */
+export const locationsOf = (record: Pick<ProtoRecord, "mainGun" | "configuration">): ProtoLocation[] =>
+  PROTO_CODES.filter((code) => (code !== "mg" || record.mainGun) && (PROTO_CONFIGS[record.configuration ?? "biped"]?.arms !== false || (code !== "la" && code !== "ra")));
 
 /** Total internal structure points, over the locations the unit has; null where the table has no row. */
 export function structurePoints(record: ProtoRecord): number | null {
@@ -31,10 +37,13 @@ export const armorPoints = (record: ProtoRecord): number => locationsOf(record).
 
 export { plainRun, runMP } from "./movement";
 
-/** Engine rating: tons x Running MP (the unboosted one), between 1 and 400 (p. 83); null for a walk that is not a whole number of at least 1. */
+/** Engine rating: tons x Running MP (the unboosted one), between 1 and 400 (p. 83); a quad or a glider has tons x (Running or WiGE Flanking MP less 2) (IO:AE p. 95).
+ * Null for a walk that is not a whole number of at least 1, and for a quad or glider so slow that the rating would be 0 or less. */
 export function engineRating(record: ProtoRecord): number | null {
   if (!Number.isInteger(record.walk) || record.walk < 1) return null;
-  const raw = record.tons * plainRun(record.walk);
+  const run = plainRun(record.walk) - (isQuad(record) || isGlider(record) ? PROTO_PARTS.quadRunOffset : 0);
+  if (run < 1) return null;
+  const raw = record.tons * run;
   // From rating 40 up the engine is one on the Master Engine Table, so the rating rounds up to a multiple of 5 (p. 84).
   return raw >= PROTO_PARTS.smallEngineBelow ? Math.ceil(raw / 5) * 5 : raw;
 }
@@ -64,9 +73,9 @@ export const armorKg = (record: ProtoRecord): number | null => {
   return type ? armorPoints(record) * type.kgPerPoint : null;
 };
 
-/** What a location holds at most: the Location Restrictions Table (p. 87), with the torso cut by Electric Discharge armor and the partial wing. Undefined for a place that is not a location. */
+/** What a location holds at most: the Location Restrictions Table (p. 87) or the expanded one (IO:AE p. 95), with the torso cut by Electric Discharge armor and the partial wing. Undefined for a place that is not a location. */
 export function limitOf(record: ProtoRecord, location: string): { items: number; kg: number | null } | undefined {
-  const limit = own(PROTO_LIMITS.rows, location);
+  const limit = own(limitRows(record), location);
   return limit && location === "t" ? { ...limit, items: Math.max(0, limit.items - torsoItemsLost(record)) } : limit;
 }
 
@@ -149,7 +158,7 @@ export function tally(record: ProtoRecord, catalog: Catalog): Tally {
   add("Internal structure", structureKg(record));
   const rating = engineRating(record);
   add(rating === null ? "Engine" : `Engine, rating ${String(rating)}`, engineKg(record));
-  add("Cockpit", cockpitOf(record)?.kg);
+  add("Cockpit", cockpitKg(record));
   add(jumpSystemOf(record)?.label ?? "Jump system", jumpJetKg(record));
   add("Myomer Booster", boosterKg(record));
   add("Partial wing", wingKg(record));

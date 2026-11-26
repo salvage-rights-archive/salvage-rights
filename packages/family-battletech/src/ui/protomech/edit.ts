@@ -2,7 +2,7 @@
 import { launcherOf } from "../../rules/protomech/build";
 import type { EquipmentRow } from "../../rules/catalog";
 import type { ProtoMount, ProtoRecord } from "../../rules/protomech/record";
-import { PROTO_LAUNCHERS } from "../../data/protomech";
+import { PROTO_LAUNCHERS, PROTO_WEIGHT } from "../../data/protomech";
 
 /** An edit to a record; edits with the same `field` in a row (one visit to a field) are one Undo step. */
 export type ProtoChange = (draft: ProtoRecord) => void;
@@ -31,3 +31,21 @@ export function pickerLabel(row: EquipmentRow): string {
 }
 
 export const launcherKinds = Object.values(PROTO_LAUNCHERS.rows);
+
+/** Sets the chassis. A glider has no jump jets, partial wing or Myomer Booster and is built only from 10 tons (IO:AE p. 94), so the ones the unit had are taken off and its weight raised to 10;
+ * a quad has no arms, so any armor the arms held is cleared. */
+export function setChassis(d: ProtoRecord, id: string): void {
+  if (id === "biped") delete d.configuration;
+  else d.configuration = id;
+  if (id === "glider") {
+    d.jump = 0;
+    d.booster = false;
+    delete d.partialWing;
+    delete d.jumpType;
+    d.tons = Math.max(d.tons, PROTO_WEIGHT.ultraFrom);
+  }
+  if (id === "quad") {
+    d.armor.la = 0;
+    d.armor.ra = 0;
+  }
+}

@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mordelBiped, mordelOdd } from "../rules/fixtures";
 import ImportPage from "./ImportPage";
 import type { MordelClient, MordelFailure, MordelResult } from "./mordel-client";
+import { openProtoStorage } from "./protomech/storage";
 import { openFamilyStorage } from "./storage";
 
 const control = vi.hoisted(() => ({ failSetKey: false }));
@@ -139,7 +140,7 @@ describe("Import from Mordel", () => {
     await user.type(box, "cv 12");
     await user.click(screen.getByRole("button", { name: "Import" }));
     await waitFor(() => {
-      expect(screen.getByRole("alert").textContent).toBe("Only BattleMechs and IndustrialMechs can be imported so far.");
+      expect(screen.getByRole("alert").textContent).toBe("Only BattleMechs, IndustrialMechs and ProtoMechs can be imported so far.");
     });
     expect(unit).not.toHaveBeenCalled();
 
@@ -151,6 +152,25 @@ describe("Import from Mordel", () => {
     const saved = await (await openFamilyStorage()).list();
     expect(saved).toHaveLength(1);
     expect(where.textContent).toBe(`/battletech/classic/editor?id=${saved[0]?.id ?? ""}`);
+    const state = JSON.parse(screen.getByTestId("state").textContent) as { notes: string[] };
+    expect(state.notes).toContain("Frobnicator 9000 is not in our equipment table.");
+  });
+
+  it("imports a ProtoMech into the ProtoMech store and opens the ProtoMech editor with the import notes", async () => {
+    const user = userEvent.setup();
+    await (await openFamilyStorage()).setKey("abc123");
+    const body = { status: "OK", unit: { unit_type_short: "pm", id: 14, name_parts: { name: "Centaur", model: "1" }, tech_base: "Clan", year: 3070, tons: 4, configuration: "Biped", movement: { walk: 4, run: 6, jump: 0 }, locations: [{ code: "H", armor: 3 }], equipment: [{ id: 1, name: "Frobnicator 9000", location: "T" }] } };
+    const unit = vi.fn(() => Promise.resolve<MordelResult<unknown>>({ ok: true, value: body }));
+    renderImport(fakeClient({ unit }));
+    await user.type(await screen.findByLabelText("Unit number or address"), "pm 14");
+    await user.click(screen.getByRole("button", { name: "Import" }));
+    const where = await screen.findByTestId("where");
+    expect(unit).toHaveBeenCalledWith("pm", 14);
+    const saved = await (await openProtoStorage()).list();
+    expect(saved).toHaveLength(1);
+    expect(where.textContent).toBe(`/battletech/classic/protomech-editor?id=${saved[0]?.id ?? ""}`);
+    expect(saved[0]?.record).toMatchObject({ tons: 4, walk: 4, name: { chassis: "Centaur", model: "1" } });
+    expect(await (await openFamilyStorage()).list()).toHaveLength(0);
     const state = JSON.parse(screen.getByTestId("state").textContent) as { notes: string[] };
     expect(state.notes).toContain("Frobnicator 9000 is not in our equipment table.");
   });

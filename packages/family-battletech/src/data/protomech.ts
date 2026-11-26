@@ -10,10 +10,11 @@
 // Ultra AC/10, LB 10-X AC, Gauss Rifle, HAG/20 and the vehicle Flamer, plasma weapons may be mounted, and the Myomer Booster has its own
 // cost line. Where the printed page and its extract disagreed (the internal structure cost, 400 a ton, p. 279) the page image decided.
 //
-// Left for later pieces (not built here): quad, glider and ultraheavy ProtoMechs (Interstellar Operations: Alternate Eras printed pp. 92-99, Advanced
-// rules: prototype 3075, production about 3083 to 3084) and the ultraheavy cockpit. The part options (the Inner Sphere interface cockpit, Electric Discharge
-// armor, the extended jump jet system, UMUs and the partial wing) are below, after the dates. Not built yet, so not handled here: glider ProtoMechs (they may have no jump jets, XJJ, wing, UMUs or booster:
-// IO:AE pp. 59, 95) and ultraheavy ones (jets and UMUs 150 kg per MP, the interface cockpit 750 kg over 9 tons: IO:AE pp. 95-96); the editor builds standard bipeds of 2 to 9 tons.
+// Expanded ProtoMechs (Interstellar Operations: Alternate Eras, "Expanded ProtoMechs (Wars of Reaving)", printed pp. 92-96, Advanced rules, read against the page
+// images): quad and glider chassis, and ultraheavy ProtoMechs of 10 to 15 tons. They add the expanded structure and armor and location tables (p. 95), the engine
+// formulas for quads and gliders and the 150 kg jump jet band (pp. 95-96), the 750 kg control system over 9 tons (p. 95), their dates and rules level (pp. 44 and 93)
+// and their structure and cockpit costs (p. 215). Gliders: WiGE movement, and no jump jets, partial wing, UMU or Myomer Booster (pp. 93, 95).
+// The part options (the Inner Sphere interface cockpit, Electric Discharge armor, the extended jump jet system, UMUs and the partial wing) are below, after the dates.
 import type { RulesLevel } from "./chassis";
 
 export interface ProtoCite {
@@ -48,7 +49,8 @@ export const PROTO_CODES: ProtoLocation[] = PROTO_LOCATIONS.map((l) => l.code);
 export const PROTO_LOCATION_NAMES: Record<string, string> = Object.fromEntries(PROTO_LOCATIONS.map((l) => [l.code, l.name]));
 
 /** Where weapons and equipment may go, with what each location holds at most (the Location Restrictions Table, p. 87). Kilograms; ammunition does not count. */
-export const PROTO_LIMITS: Sourced & { rows: Record<string, { items: number; kg: number | null }> } = {
+export type ProtoLimitRows = Record<string, { items: number; kg: number | null }>;
+export const PROTO_LIMITS: Sourced & { rows: ProtoLimitRows; expanded: Sourced & { kinds: Record<"quad" | "ultra" | "ultraQuad", ProtoLimitRows> } } = {
   cite: { book: TM, page: 87 },
   checked: "page",
   rows: {
@@ -59,6 +61,17 @@ export const PROTO_LIMITS: Sourced & { rows: Record<string, { items: number; kg:
     lg: { items: 0, kg: 0 },
     mg: { items: 1, kg: null },
   },
+  // The Expanded ProtoMech Location Restrictions Table (IO:AE p. 95). `rows` above is its standard biped column. "Ultra (Biped)" includes every glider, whatever its weight;
+  // a quad has no arms (N/A on the table). Only an ultraheavy quad's main gun holds two items.
+  expanded: {
+    cite: { book: IO, page: 95 },
+    checked: "page",
+    kinds: {
+      quad: { hd: { items: 0, kg: 0 }, t: { items: 4, kg: 5000 }, la: { items: 0, kg: 0 }, ra: { items: 0, kg: 0 }, lg: { items: 0, kg: 0 }, mg: { items: 1, kg: null } },
+      ultra: { hd: { items: 0, kg: 0 }, t: { items: 3, kg: 4000 }, la: { items: 1, kg: 1000 }, ra: { items: 1, kg: 1000 }, lg: { items: 0, kg: 0 }, mg: { items: 1, kg: null } },
+      ultraQuad: { hd: { items: 0, kg: 0 }, t: { items: 6, kg: 8000 }, la: { items: 0, kg: 0 }, ra: { items: 0, kg: 0 }, lg: { items: 0, kg: 0 }, mg: { items: 2, kg: null } },
+    },
+  },
 };
 /** Only a torso weapon may face the rear (p. 80, p. 86). */
 export const PROTO_REAR_LOCATIONS: string[] = ["t"];
@@ -66,34 +79,45 @@ export const PROTO_REAR_LOCATIONS: string[] = ["t"];
 // ---------------------------------------------------------------------------------------------------------------
 // Weight and the Structure and Armor Table (p. 82, with errata v8.0).
 // ---------------------------------------------------------------------------------------------------------------
-export const PROTO_WEIGHT: Sourced & { min: number; max: number; step: number } = { cite: { book: TM, page: 80 }, checked: "page", min: 2, max: 9, step: 1 };
+/** `max` is the heaviest ProtoMech (15 tons since the expanded rules, IO:AE p. 94); `standardMax` the heaviest of the TechManual's own weights (p. 80). From `ultraFrom` tons a ProtoMech is Ultraheavy. */
+export const PROTO_WEIGHT: Sourced & { min: number; max: number; step: number; standardMax: number; ultraFrom: number } = { cite: { book: IO, page: 94 }, checked: "page", min: 2, max: 15, step: 1, standardMax: 9, ultraFrom: 10 };
 
 export interface ProtoStructureRow {
   /** Internal structure points by location; the main gun's holds only when a main gun is carried. */
   structure: Record<ProtoLocation, number>;
   /** The most armor points each location may hold. */
   armor: Record<ProtoLocation, number>;
+  /** A quad has no arms: its legs take the "Legs (Quad, All)" column, as [structure points, most armor] (IO:AE p. 95). */
+  quadLegs: [number, number];
 }
-const row = (tons: number, head: [number, number], arm: [number, number], legs: [number, number]): ProtoStructureRow => ({
-  structure: { hd: head[0], t: tons, la: arm[0], ra: arm[0], lg: legs[0], mg: 1 },
-  armor: { hd: head[1], t: tons * 2, la: arm[1], ra: arm[1], lg: legs[1], mg: 3 },
+const row = (tons: number, head: [number, number], arm: [number, number], legs: [number, number], quadLegs: [number, number], gun: [number, number] = [1, 3]): ProtoStructureRow => ({
+  structure: { hd: head[0], t: tons, la: arm[0], ra: arm[0], lg: legs[0], mg: gun[0] },
+  armor: { hd: head[1], t: tons * 2, la: arm[1], ra: arm[1], lg: legs[1], mg: gun[1] },
+  quadLegs,
 });
+/** The Expanded ProtoMech Structure and Armor Table (IO:AE p. 95), which holds the TechManual's 2 to 9 ton rows (p. 82, with errata v8.0) and adds 10 to 15 tons. */
 export const PROTO_STRUCTURE: Sourced & { rows: Record<number, ProtoStructureRow> } = {
-  cite: { book: TM, page: 82 },
+  cite: { book: IO, page: 95 },
   checked: "page",
   rows: {
-    2: row(2, [1, 3], [1, 2], [2, 4]),
-    3: row(3, [1, 3], [1, 2], [2, 4]),
-    4: row(4, [1, 4], [1, 2], [3, 6]),
-    5: row(5, [1, 4], [1, 2], [3, 6]),
-    6: row(6, [2, 5], [2, 4], [4, 8]),
-    7: row(7, [2, 5], [2, 4], [4, 8]),
-    8: row(8, [2, 6], [2, 4], [5, 10]),
-    9: row(9, [2, 6], [2, 4], [5, 10]),
+    2: row(2, [1, 3], [1, 2], [2, 4], [4, 8]),
+    3: row(3, [1, 3], [1, 2], [2, 4], [4, 8]),
+    4: row(4, [1, 4], [1, 2], [3, 6], [5, 10]),
+    5: row(5, [1, 4], [1, 2], [3, 6], [5, 10]),
+    6: row(6, [2, 5], [2, 4], [4, 8], [8, 16]),
+    7: row(7, [2, 5], [2, 4], [4, 8], [8, 16]),
+    8: row(8, [2, 6], [2, 4], [5, 10], [9, 18]),
+    9: row(9, [2, 6], [2, 4], [5, 10], [9, 18]),
+    10: row(10, [3, 7], [3, 6], [6, 12], [12, 24], [2, 6]),
+    11: row(11, [3, 7], [3, 6], [6, 12], [12, 24], [2, 6]),
+    12: row(12, [3, 8], [3, 6], [7, 14], [13, 26], [2, 6]),
+    13: row(13, [3, 8], [3, 6], [7, 14], [13, 26], [2, 6]),
+    14: row(14, [4, 9], [4, 6], [8, 16], [14, 28], [2, 6]),
+    15: row(15, [4, 9], [4, 6], [8, 16], [14, 28], [2, 6]),
   },
 };
-/** The page's "Maximum Armor Factor" column, without and with a main gun: kept for the test that the rows above add up to it. */
-export const PROTO_MAX_ARMOR_FACTOR: Record<number, [number, number]> = { 2: [15, 18], 3: [17, 20], 4: [22, 25], 5: [24, 27], 6: [33, 36], 7: [35, 38], 8: [40, 43], 9: [42, 45] };
+/** The page's "Maximum Armor Factor" column, without and with a main gun: kept for the test that the rows above add up to it (a quad's legs column adds up to the same figures). */
+export const PROTO_MAX_ARMOR_FACTOR: Record<number, [number, number]> = { 2: [15, 18], 3: [17, 20], 4: [22, 25], 5: [24, 27], 6: [33, 36], 7: [35, 38], 8: [40, 43], 9: [42, 45], 10: [51, 57], 11: [53, 59], 12: [58, 64], 13: [60, 66], 14: [65, 71], 15: [67, 73] };
 
 // ---------------------------------------------------------------------------------------------------------------
 // Parts and their weights (pp. 82-86). Kilograms.
@@ -107,6 +131,11 @@ export const PROTO_PARTS: Sourced & {
   smallEngineBelow: number;
   smallEngineKgPerRating: number;
   jumpJetKg: { upTo: number; kg: number }[];
+  /** A quad's and a glider's engine rating is its tons times its Running (WiGE Flanking) MP less this (IO:AE p. 95). */
+  quadRunOffset: number;
+  /** The least Running MP of a quad and the least WiGE Flanking MP of a glider (IO:AE p. 95). */
+  minQuadRun: number;
+  minGliderFlank: number;
 } = {
   cite: { book: TM, page: 84 },
   checked: "page",
@@ -116,10 +145,15 @@ export const PROTO_PARTS: Sourced & {
   engineMaxRating: 400,
   smallEngineBelow: 40,
   smallEngineKgPerRating: 25,
+  // The jump jet weight table (IO:AE p. 96) adds the 10 to 15 ton band.
   jumpJetKg: [
     { upTo: 5, kg: 50 },
     { upTo: 9, kg: 100 },
+    { upTo: 15, kg: 150 },
   ],
+  quadRunOffset: 2,
+  minQuadRun: 3,
+  minGliderFlank: 4,
 };
 /** Pages for each part: engine and jump jets p. 84, cockpit and Myomer Booster p. 85, heat sinks and armor p. 86. */
 export const PROTO_PART_PAGES = { structure: 82, engine: 83, jumpJets: 84, booster: 85, cockpit: 85, heatSinks: 86, armor: 86 } as const;
@@ -189,10 +223,9 @@ export const PROTO_AMMO_KG: Sourced & { rows: Record<string, number> } = {
     "protomech-ac-8-clan": 100,
   },
 };
-/** Catalog ids a ProtoMech may not mount although the catalog lists others of their kind: ATMs, MMLs, MRMs, rockets and one-shot launchers (TechManual p. 231 as amended by errata v8.0),
- * and the quad melee system, which only a quadruped's torso takes (IO:AE p. 61) while the editor builds bipeds.
+/** Catalog ids a ProtoMech may not mount although the catalog lists others of their kind: ATMs, MMLs, MRMs, rockets and one-shot launchers (TechManual p. 231 as amended by errata v8.0).
  * The catalog's own `units` list decides everything else. */
-export const PROTO_EXCLUDED = /^(atm|mml|mrm|rocket|protomech-quad)/;
+export const PROTO_EXCLUDED = /^(atm|mml|mrm|rocket)/;
 
 /** Items whose weight steps with the ProtoMech's tonnage: the Magnetic Clamp System weighs 250 kg under 6 tons, 500 kg from 6 to 9 and 1,000 kg from 10 (IO:AE p. 60). */
 export const PROTO_BANDED_KG: Sourced & { rows: Record<string, { fromTons: number; kg: number }[]> } = {
@@ -202,13 +235,25 @@ export const PROTO_BANDED_KG: Sourced & { rows: Record<string, { fromTons: numbe
 };
 
 /** Where an item may go, where the book names the place (the clamp takes a weapon slot in the torso, IO:AE p. 60; the melee weapon one on an arm, TO:AUE p. 148), and the items of which a ProtoMech may carry one. */
-export const PROTO_PLACEMENT: Sourced & { only: Record<string, string[]>; one: string[]; cites: Record<string, ProtoCite> } = {
+export const PROTO_PLACEMENT: Sourced & { only: Record<string, string[]>; one: string[]; cites: Record<string, ProtoCite>; configs: Record<string, { only?: string[]; not?: string[] }> } = {
   cite: { book: TO, page: 148 },
   checked: "page",
-  only: { "magnetic-clamp-system-clan": ["t"], "protomech-melee-weapon-clan": ["la", "ra"] },
+  only: { "magnetic-clamp-system-clan": ["t"], "protomech-melee-weapon-clan": ["la", "ra"], "protomech-quad-melee-weapon-system-clan": ["t"] },
   /** Items whose placement rule is in another book than the melee weapon's. */
-  cites: { "magnetic-clamp-system-clan": { book: IO, page: 60 } },
-  one: ["protomech-melee-weapon-clan"],
+  cites: { "magnetic-clamp-system-clan": { book: IO, page: 60 }, "protomech-quad-melee-weapon-system-clan": { book: IO, page: 61 } },
+  one: ["protomech-melee-weapon-clan", "protomech-quad-melee-weapon-system-clan"],
+  /** Items only some configurations may carry: the quad melee system only a quad (IO:AE p. 61); the magnetic clamp neither a quad nor a glider (IO:AE p. 60). */
+  configs: { "protomech-quad-melee-weapon-system-clan": { only: ["quad"] }, "magnetic-clamp-system-clan": { not: ["quad", "glider"] } },
+};
+
+/** The quad melee weapon system adds 2 damage per 5 tons of ProtoMech (or part of 5) to a frenzy attack (IO:AE p. 61) and its Battle Value is that damage x 1.25 (IO:AE p. 190). */
+export const PROTO_QUAD_MELEE: Sourced & { row: string; damagePerStep: number; tonsPerStep: number; bvFactor: number } = {
+  cite: { book: IO, page: 61 },
+  checked: "page",
+  row: "protomech-quad-melee-weapon-system-clan",
+  damagePerStep: 2,
+  tonsPerStep: 5,
+  bvFactor: 1.25,
 };
 
 /** The melee weapon adds 1 damage per 5 tons of ProtoMech (rounded up) to a frenzy attack (TO:AUE p. 149) and its Battle Value is that damage x 1.25 (TO:AUE BV table addendum). */
@@ -234,8 +279,12 @@ export interface ProtoDates {
   cite: ProtoCite;
   checked: ProtoChecked;
 }
-export const PROTO_DATES: Record<"unit" | "jumpJets" | "armor" | "booster" | "interface" | "edp" | "xjj" | "umu" | "wing", ProtoDates> = {
+export const PROTO_DATES: Record<"unit" | "quad" | "glider" | "ultra" | "jumpJets" | "armor" | "booster" | "interface" | "edp" | "xjj" | "umu" | "wing", ProtoDates> = {
   unit: { prototype: 3055, production: 3059, cite: { book: IO, page: 44 }, checked: "page" },
+  // IO:AE printed p. 44 (Universal Technology Advancement Table): prototype 3075 for all three, production about 3083 (quad, ultraheavy) and 3084 (glider), common 3100.
+  quad: { prototype: 3075, production: 3083, cite: { book: IO, page: 44 }, checked: "page" },
+  glider: { prototype: 3075, production: 3084, cite: { book: IO, page: 44 }, checked: "page" },
+  ultra: { prototype: 3075, production: 3083, cite: { book: IO, page: 44 }, checked: "page" },
   jumpJets: { prototype: 3055, production: 3060, cite: { book: IO, page: 29 }, checked: "page" },
   armor: { prototype: 3055, production: 3060, cite: { book: IO, page: 30 }, checked: "page" },
   booster: { prototype: 3066, production: 3068, cite: { book: IO, page: 29 }, checked: "page" },
@@ -252,6 +301,27 @@ export const PROTO_DATES: Record<"unit" | "jumpJets" | "armor" | "booster" | "in
 /** The rules level of the ProtoMech rules in play: Total Warfare's standard rules (TechManual p. 80). */
 export const PROTO_LEVEL = "standard" as const;
 
+/** The chassis a ProtoMech is built on. A biped is the TechManual one; a quad and a glider are the expanded rules (Advanced, IO:AE p. 93: "Available to: PM"). A quad has no arms;
+ * a glider is a biped that flies by WiGE movement, so its `walk` is its WiGE Cruising MP (IO:AE pp. 93, 95). */
+export interface ProtoConfig extends Sourced {
+  label: string;
+  level: RulesLevel;
+  dates?: ProtoDates;
+  arms: boolean;
+  /** The lightest weight the chassis may have: a glider is built only on the biped Ultraheavy chassis, 10 to 15 tons (IO:AE p. 94; book panel). */
+  minTons?: number;
+}
+export const PROTO_CONFIGS: Record<string, ProtoConfig> = {
+  biped: { label: "Biped", level: "standard", arms: true, cite: { book: TM, page: 80 }, checked: "page" },
+  quad: { label: "Quad (ProtoQuad)", level: "advanced", dates: PROTO_DATES.quad, arms: false, cite: { book: IO, page: 92 }, checked: "page" },
+  glider: { label: "Glider", level: "advanced", dates: PROTO_DATES.glider, arms: true, minTons: 10, cite: { book: IO, page: 92 }, checked: "page" },
+};
+/** A ProtoMech of `PROTO_WEIGHT.ultraFrom` tons or more is Ultraheavy (IO:AE p. 94): Advanced, with the dates here. */
+export const PROTO_ULTRA: Sourced & { label: string; level: RulesLevel; dates: ProtoDates } = { label: "Ultraheavy ProtoMech", level: "advanced", dates: PROTO_DATES.ultra, cite: { book: IO, page: 92 }, checked: "page" };
+
+/** The glider moves only 1 MP on the ground (IO:AE p. 93), flies at its WiGE Cruising MP, needs 4 WiGE MP to stay aloft (p. 93) and may not climb above 12 levels over the terrain. */
+export const PROTO_GLIDER: Sourced & { groundMP: number; minFlank: number; maxLevels: number } = { cite: { book: IO, page: 93 }, checked: "page", groundMP: 1, minFlank: 4, maxLevels: 12 };
+
 // ---------------------------------------------------------------------------------------------------------------
 // Cost (p. 279, structural costs; p. 285, final cost) and Battle Value (TechManual Battle Value v4.1, ProtoMech method; the Delphyne-2 example).
 // ---------------------------------------------------------------------------------------------------------------
@@ -260,6 +330,8 @@ export const PROTO_COST: Sourced & {
   sensorsPerTon: number;
   musculaturePerTon: number;
   structurePerTon: number;
+  /** The structure cost per ton of a quad and of a glider, which replaces the standard one (IO:AE p. 180, table p. 215). */
+  structurePerTonBy: Record<string, number>;
   armActuatorPerTon: number;
   legActuatorPerTon: number;
   engineDivisor: number;
@@ -274,6 +346,7 @@ export const PROTO_COST: Sourced & {
   sensorsPerTon: 2_000,
   musculaturePerTon: 2_000,
   structurePerTon: 400,
+  structurePerTonBy: { quad: 500, glider: 600 },
   armActuatorPerTon: 180,
   legActuatorPerTon: 540,
   engineDivisor: 75,
@@ -310,12 +383,14 @@ export interface ProtoCockpit extends Sourced {
   dates?: ProtoDates;
   /** The interface makes the unit a Mixed Technology unit (IO:AE p. 96). */
   mixed?: true;
+  /** From 10 tons the control system weighs 750 kg (IO:AE p. 95), and the standard cockpit costs 800,000 in place of its own (the Ultraheavy ProtoMech Cockpit, IO:AE p. 215). */
+  ultra?: { kg: number; cost?: number };
 }
 export const PROTO_COCKPITS: Record<string, ProtoCockpit> = {
-  standard: { label: "Standard ProtoMech cockpit", kg: 500, cost: 500_000, level: "standard", cite: { book: TM, page: 85 }, checked: "page" },
+  standard: { label: "Standard ProtoMech cockpit", kg: 500, cost: 500_000, level: "standard", ultra: { kg: 750, cost: 800_000 }, cite: { book: TM, page: 85 }, checked: "page" },
   // Inner Sphere technology (IO:AE pp. 96, 213) offered in this Clan-only editor: held for the book panel, which rules whether the interface makes the unit Mixed Technology.
   // Weighs as much as a standard cockpit, takes no space on the record sheet, costs 1,000,000, and does not change the Battle Value.
-  interface: { label: "Inner Sphere ProtoMech interface cockpit", kg: 500, cost: 1_000_000, level: "experimental", dates: PROTO_DATES.interface, mixed: true, cite: { book: IO, page: 96 }, checked: "page" },
+  interface: { label: "Inner Sphere ProtoMech interface cockpit", kg: 500, cost: 1_000_000, level: "experimental", dates: PROTO_DATES.interface, mixed: true, ultra: { kg: 750 }, cite: { book: IO, page: 96 }, checked: "page" },
 };
 
 export interface ProtoArmorType extends Sourced {

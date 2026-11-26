@@ -129,3 +129,52 @@ test("the ProtoMech part options appear with the rules level and year, and show 
   await page.goto(HOME);
   await expectPage(page.getByText(/Extended jump jets \(XJJ\)/).first()).toBeVisible();
 });
+
+test("an Ultraheavy glider ProtoMech: offered at Advanced rules in its years, built on WiGE Cruising MP, with no jump jets, by keyboard, at 320 px and in both themes", async ({ page }) => {
+  test.setTimeout(180_000);
+  await page.setViewportSize({ width: 320, height: 700 });
+  const editor = await startProto(page, "Soarer");
+  await page.getByLabel("Year", { exact: true }).fill("3090");
+  // Standard rules: no quad, glider or Ultraheavy weight is on offer (hide, do not mark).
+  await expect(page.getByLabel("Chassis")).toHaveCount(0);
+  await expect(page.getByLabel("Tons", { exact: true }).locator("option")).toHaveCount(8);
+  await page.getByLabel("Rules level").selectOption("advanced");
+  await expect(page.getByLabel("Tons", { exact: true }).locator("option")).toHaveCount(14);
+  await page.getByLabel("Tons", { exact: true }).selectOption("12");
+  await expect(page.getByText(/From 10 tons a ProtoMech is Ultraheavy/)).toBeVisible();
+  // The chassis is chosen from the keyboard: Biped, Quad, Glider.
+  await page.getByLabel("Chassis").focus();
+  await page.keyboard.press("ArrowDown");
+  await page.keyboard.press("ArrowDown");
+  await expect(page.getByLabel("Chassis")).toHaveValue("glider");
+  // A glider is built on WiGE Cruising MP and has no jump jets, wing or booster.
+  await expect(page.getByLabel("WiGE Cruising MP", { exact: true })).toBeVisible();
+  await expect(page.getByLabel("Jumping MP", { exact: true })).toHaveCount(0);
+  await expect(page.getByLabel("Myomer Booster")).toHaveCount(0);
+  await page.getByLabel("WiGE Cruising MP", { exact: true }).fill("4");
+  await expect(page.getByText("WiGE Flanking MP 6.")).toBeVisible();
+  await expect(page.getByText(/Engine rating 50/)).toBeVisible();
+  await expect(page.getByText(/each arm 1 item of 1,000 kg at most/)).toBeVisible();
+  await page.getByLabel("Torso armor", { exact: true }).fill("24");
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(page.getByText("Saved.")).toBeVisible();
+  const widths = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, client: document.documentElement.clientWidth }));
+  expect(widths.scroll).toBe(widths.client);
+  for (const control of await page.locator("button, select, input:not([type=file]):not([type=checkbox]), a.bt-button, label.pm-check, svg [role=button]").all()) {
+    const box = await control.boundingBox();
+    if (box) expect(box.height, (await control.textContent())?.slice(0, 30) ?? (await control.getAttribute("aria-label")) ?? "").toBeGreaterThanOrEqual(43.5);
+  }
+  const id = new URL(page.url()).searchParams.get("id") ?? "";
+  for (const theme of ["Light", "Dark"] as const) {
+    await chooseTheme(page, theme);
+    for (const path of [editor, `/battletech/classic/protomech-sheet?id=${id}`]) {
+      await page.goto(`${DEV}${path}`);
+      await expectPage(page.getByRole("heading", { level: 1 })).toBeVisible();
+      const results = await new AxeBuilder({ page }).analyze();
+      expect(results.violations, `${theme} theme, ${path}`).toEqual([]);
+    }
+  }
+  await expect(page.getByText("WiGE Flanking MP").first()).toBeAttached();
+  await page.goto(HOME);
+  await expectPage(page.getByText(/Glider, Ultraheavy ProtoMech/).first()).toBeVisible();
+});
