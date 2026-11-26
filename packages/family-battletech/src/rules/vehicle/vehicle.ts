@@ -322,6 +322,7 @@ export function itemFacts(mount: VehicleMount, record: VehicleRecord, catalog: C
   const ammo = row.kind === "ammunition";
   let tons: number | null;
   if (ammo) tons = mount.amount ?? VEHICLE_RULES.ammo.minTons;
+  else if (row.tons === "vtol-booster-tons") tons = ceilHalf((engineWeight(record) ?? 0) / 10); // a tenth of this vehicle's own engine weight (TO:AUE p. 162)
   else if (typeof by?.tons === "number") tons = by.tons;
   else if (typeof row.tons === "number") tons = row.tons;
   else tons = catalog.factsOf(pseudoMount(mount, row), pseudoRecord(record, row, catalog))?.tons ?? null;

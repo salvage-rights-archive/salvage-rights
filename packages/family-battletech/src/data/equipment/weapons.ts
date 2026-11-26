@@ -726,12 +726,12 @@ export const WEAPONS: EquipmentGroup[] = [
   // Sub-capital weapons and cruise missile artillery (TO:AUE printed p. 223 construction data, p. 222 play table for the sub-capital weapons; p. 217 and p. 216 for the
   // cruise missiles; rules pp. 95-97 and 155-156; read against the page images of the corrected seventh printing). Heat and damage are the Aero columns ("-C" capital damage),
   // as the naval weapons above have them; the range class is the table's bracket. `tonsPerShot` is the Ammo column read as the capital missiles' is ("1/10" is ten tons a
-  // shot; "2" a ton is two shots, half a ton a shot). A support vehicle mounts them in the slot count the SV column prints (a note; the combat vehicle column is NA for the
+  // shot; "2" a ton is two shots, half a ton a shot). The support vehicle slot counts the SV column prints are kept in `by.vehicle` for a support vehicle editor; `units` leaves out `vehicle` (the combat vehicle editor: the CV column is NA for the
   // sub-capital weapons); a DropShip, JumpShip, WarShip, space station or mobile structure takes one slot ("1-C*", "1"). Sub-capital cannons and lasers are Inner Sphere only
   // (3073); the missiles 3072 (Inner Sphere) and 3073 (Clan). Advanced; the cruise missiles Experimental and prototype-only (3065, "3065P"). The sub-compact K-F drive
   // is a drive, not a mount (not added). Ammunition rows are not added (as for the naval weapons).
   {
-    defaults: { kind: "weapon", techBase: "inner-sphere", cite: { book: TO, page: 223 }, playCite: { book: TO, page: 222 }, checked: "page", slots: 1, type: "CAP, AE", rulesLevel: "advanced", units: ["vehicle", "dropship", "ship", "building"] },
+    defaults: { kind: "weapon", techBase: "inner-sphere", cite: { book: TO, page: 223 }, playCite: { book: TO, page: 222 }, checked: "page", slots: 1, type: "CAP, AE", rulesLevel: "advanced", units: ["dropship", "ship", "building"] },
     items: [
       { id: "light-scc-is", bayClass: "Sub-Capital Cannon", tonsPerShot: 0.5, name: "Light SCC", aliases: ["Light Sub-Capital Cannon"], tons: 200, availability: [{ from: 3073 }], heat: 12, damage: "2-C", by: { vehicle: { slots: 30, note: "Support vehicle only: 30 slots" }, dropship: { rangeClass: "Long" }, ship: { rangeClass: "Long" } } },
       { id: "medium-scc-is", bayClass: "Sub-Capital Cannon", tonsPerShot: 1, name: "Medium SCC", aliases: ["Medium Sub-Capital Cannon"], tons: 500, availability: [{ from: 3073 }], heat: 30, damage: "5-C", by: { vehicle: { slots: 50, note: "Support vehicle only: 50 slots" }, dropship: { rangeClass: "Medium" }, ship: { rangeClass: "Medium" } } },
@@ -746,7 +746,7 @@ export const WEAPONS: EquipmentGroup[] = [
     ],
   },
   {
-    defaults: { kind: "weapon", techBase: "clan", cite: { book: TO, page: 223 }, playCite: { book: TO, page: 222 }, checked: "page", slots: 1, type: "CAP, AE", rulesLevel: "advanced", availability: [{ from: 3073 }], units: ["vehicle", "dropship", "ship", "building"] },
+    defaults: { kind: "weapon", techBase: "clan", cite: { book: TO, page: 223 }, playCite: { book: TO, page: 222 }, checked: "page", slots: 1, type: "CAP, AE", rulesLevel: "advanced", availability: [{ from: 3073 }], units: ["dropship", "ship", "building"] },
     items: [
       { id: "piranha-clan", bayClass: "Sub-Capital Missile", tonsPerShot: 10, name: "Piranha", tons: 100, heat: 9, damage: "3-C", by: { vehicle: { slots: 18, note: "Support vehicle only: 18 slots" }, dropship: { rangeClass: "Long" }, ship: { rangeClass: "Long" } } },
       { id: "stingray-clan", bayClass: "Sub-Capital Missile", tonsPerShot: 12, name: "Stingray", tons: 120, heat: 12, damage: "3.5-C", by: { vehicle: { slots: 25, note: "Support vehicle only: 25 slots" }, dropship: { rangeClass: "Medium" }, ship: { rangeClass: "Medium" } } },

@@ -85,6 +85,8 @@ const COCKPIT_WORDS: Record<string, Words> = {
   standard: { is: "standard" },
   small: { is: "small" },
   torsomounted: { is: "torso-mounted" },
+  virtualrealitypilotingpod: { is: "vrpp" },
+  vrpp: { is: "vrpp" },
   industrial: { is: "industrial" },
   industrialafc: { is: "industrial-afc" },
   industrialadvancedfirecontrol: { is: "industrial-afc" },

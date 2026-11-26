@@ -74,6 +74,7 @@ export function vehicleCost(record: VehicleRecord, catalog: Catalog, options: { 
     else if ("perTon" in found.price) add(row.name, perTonCost(found.price.perTon, facts.tons ?? 0), `${money(found.price.perTon)} x ${String(Math.ceil(facts.tons ?? 0))} t`, at);
     else if ("perWeight" in found.price) add(row.name, found.price.perWeight * (facts.tons ?? 0) + (found.price.base ?? 0), `${money(found.price.perWeight)} x ${String(facts.tons ?? 0)} t`, at);
     else if ("perUnitTon" in found.price) add(row.name, found.price.perUnitTon * record.tons, `${money(found.price.perUnitTon)} x ${String(record.tons)}`, at);
+    else if ("perRating" in found.price) add(row.name, found.price.perRating * (engineRating(record) ?? 0), `${money(found.price.perRating)} x ${String(engineRating(record) ?? 0)}`, at);
     else if ("perAmount" in found.price) add(row.name, found.price.perAmount * (m.amount ?? row.amount?.min ?? 0), `${money(found.price.perAmount)} x ${String(m.amount ?? row.amount?.min ?? 0)}`, at);
     else unpriced.push({ name: row.name, why: "its price depends on the 'Mech's engine" });
   }

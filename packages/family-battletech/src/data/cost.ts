@@ -255,7 +255,7 @@ export const EQUIPMENT_COST: PriceGroup[] = [
       "dual-turret": { perWeight: 5_000 }, "sponson-turret": { perWeight: 4_000 }, "vtol-chin-turret": { perWeight: 5_000 },
       "armored-component": { perWeight: 300_000 }, "armored-motive-system": { perWeight: 100_000 },
       // p.221: sub-capital cannons, lasers and missiles (the ammunition price beside the cannons and missiles is not kept), cruise missiles (p.217), minesweeper,
-      // field base, hyperpulse generators, comm-scanner suites, tug adaptor, space mine dispenser, ProtoMech Streak tube; the VTOL jet booster is 10,000 an engine rating point
+      // field base, hyperpulse generators, comm-scanner suites, tug adaptor, space mine dispenser, ProtoMech Streak tube; the VTOL jet booster is 10,000 an engine rating point (the sub-capital weapons are on p. 223, the rest p. 221)
       "light-scc": 330_000, "medium-scc": 780_000, "heavy-scc": 1_300_000, "scl-1": 220_000, "scl-2": 335_000, "scl-3": 450_000,
       piranha: 75_000, stingray: 85_000, swordfish: 110_000, "manta-ray": 150_000,
       "cruise-missile-50": 900_000, "cruise-missile-70": 1_250_000, "cruise-missile-90": 2_550_000, "cruise-missile-120": 3_000_000,

@@ -543,6 +543,9 @@ export function battleValue(record: MechRecord, catalog: Catalog, pilot: PilotSk
 
   // ---- Final ----------------------------------------------------------------------------------------------------
   const smallCockpit = chassis.cockpit === "small";
+  // The Virtual Reality Piloting Pod: the BV table (IO:AE printed p. 190) gives it a skill modifier adjustment (-2 Piloting, -1 Gunnery) and the book does not say
+  // whether the torso-mounted cockpit's armor and final factors apply to it, so its BV is left open.
+  if (chassis.cockpit === "vrpp") note(undefined, "Virtual Reality Piloting Pod", "its BV skill modifier adjustment (-2 Piloting, -1 Gunnery) and whether the torso-mounted cockpit factors apply are not computed here (IO:AE p. 190)");
   const kits = items.reduce((product, i) => product * (own(BV_RULE_ITEMS.finalMultiplier.multipliers, i.row.id) ?? 1), 1);
   // A drone operating system: the final BV is multiplied by 0.95 and no cockpit modifier applies (TO:AUE p. 193).
   const sum = (defensiveRating + offensiveRating) * (drone ? BV_RULE_ITEMS.drone.finalFactor : (smallCockpit ? BV_METHOD.smallCockpit : 1) * (torsoCockpit ? TORSO_COCKPIT_BV.finalFactor : 1)) * kits;

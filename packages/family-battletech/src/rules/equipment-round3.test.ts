@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { COCKPITS } from "../data/chassis";
 import { COCKPIT_COST } from "../data/cost";
-import { loadCatalog } from "./catalog";
+import { loadCatalog, mountableOn } from "./catalog";
+import { isCapitalRow } from "./aero";
 
 // Items added in round 3 (IO:AE and TO:AUE tables): id, tech base, tons, slots, availability, prototype year.
 describe("TO:AUE sub-capital weapons, cruise missiles and heavy equipment (pp. 216-223)", () => {
@@ -12,8 +13,8 @@ describe("TO:AUE sub-capital weapons, cruise missiles and heavy equipment (pp. 2
     ["manta-ray-clan", 160, 3073, { slots: 38 }],
     ["cruise-missile-90-is", 100, 3065, { slots: 1, note: "Support vehicle: 45 slots" }],
     ["mobile-hpg-is", 50, 2655, { slots: 50 }],
-    ["vtol-jet-booster-clan", "supercharger", 2839, undefined],
-  ])("%s has its printed weight, year and support vehicle slots", async (id, tons, from, vehicle) => {
+    ["vtol-jet-booster-clan", "vtol-booster-tons", 2839, undefined],
+  ])("%s has its printed weight and year, and keeps the support vehicle slot figure in `by`", async (id, tons, from, vehicle) => {
     const row = (await loadCatalog()).byId(id);
     expect(row?.tons).toBe(tons);
     expect(row?.availability[0]?.from).toBe(from);
@@ -48,5 +49,13 @@ describe("IO:AE cockpit and pilot-interface items (pp. 62-64, 110, 212-213)", ()
   it("the virtual reality piloting pod is a 3-ton torso cockpit priced at 1,250,000", () => {
     expect(COCKPITS.types.vrpp).toMatchObject({ tons: 3, availability: [{ from: 3052, to: 3055 }], elsewhere: { CT: ["Cockpit", "Life Support"] } });
     expect(COCKPIT_COST.rows.vrpp?.cost).toBe(1_250_000);
+  });
+});
+
+describe("units the table does not offer (TO:AUE pp. 216-223)", () => {
+  it("items whose combat vehicle column is NA are not offered to combat vehicles, and only sub-capital weapons count as capital", async () => {
+    const catalog = await loadCatalog();
+    for (const id of ["light-scc-is", "scl-2-is", "piranha-clan", "mobile-hpg-is", "small-ncss-is", "space-mine-dispenser-is"]) expect(mountableOn(catalog.byId(id)!, "vehicle")).toBe(false);
+    expect([isCapitalRow(catalog.byId("scl-2-is")), isCapitalRow(catalog.byId("cruise-missile-70-is"))]).toEqual([true, false]);
   });
 });

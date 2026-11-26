@@ -574,7 +574,7 @@ export const WEAPON_BV: BvGroup[] = [
         [`nl-35-${tech}`, 830], [`nl-45-${tech}`, 1134], [`nl-55-${tech}`, 1386],
         [`light-n-ppc-${tech}`, 1659], [`medium-n-ppc-${tech}`, 2268], [`heavy-n-ppc-${tech}`, 3780],
       ]),
-      // The sub-capital weapons (the same page; the missiles' ammunition figure is per shot) and the cruise missiles and minesweeper (printed p. 195)
+      // The sub-capital weapons (printed p. 196; the missiles ammunition figure is per shot); the cruise missiles and minesweeper are on p. 195
       ["light-scc-is", 379, 47], ["medium-scc-is", 708, 89], ["heavy-scc-is", 991, 124],
       ["scl-1-is", 237], ["scl-2-is", 354], ["scl-3-is", 531],
       ...(["is", "clan"] as const).flatMap((tech): BvRow[] => [[`piranha-${tech}`, 589, 71], [`stingray-${tech}`, 496, 62], [`swordfish-${tech}`, 317, 40], [`manta-ray-${tech}`, 396, 50], [`minesweeper-${tech}`, 30, undefined, { defensive: true }]]),

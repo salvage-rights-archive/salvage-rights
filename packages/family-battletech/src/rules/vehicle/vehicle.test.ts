@@ -134,3 +134,15 @@ describe("the record", () => {
     expect(vehicleOfficialState({ ...r, name: { chassis: "x", model: "y" } }).official).toBe(true);
   });
 });
+
+describe("the VTOL jet booster (TO:AUE p. 162)", () => {
+  it("weighs a tenth of the VTOL engine, up to the half ton, and costs 10,000 for each point of engine rating", () => {
+    const record = build({ motive: "vtol", tons: 20, cruise: 6 }, [["body", "vtol-jet-booster-is"]]);
+    const engine = engineWeight(record) ?? 0;
+    expect(engine).toBeGreaterThan(0);
+    expect(itemFacts(record.mounts[0]!, record, catalog).tons).toBe(Math.ceil(engine / 5) / 2);
+    const cost = vehicleCost(record, catalog);
+    expect(cost.unpriced).toEqual([]);
+    expect(cost.lines.find((l) => l.label === "VTOL Jet Booster")?.cost).toBe(10_000 * (engineRating(record) ?? 0));
+  });
+});

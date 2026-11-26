@@ -77,6 +77,8 @@ const SCALED: Record<string, Scaled> = {
   "drone-os-tons": { of: "tons", divide: 10, round: "ceil-half", add: 0.5 },
   // Supercharger (p. 156): a tenth of the engine's weight, up to the half ton.
   supercharger: { of: "engine", divide: 10, round: "ceil-half" },
+  // VTOL jet booster (TO:AUE p. 162): a tenth of the vehicle's engine weight, up to the half ton; the vehicle editor works it from its own engine (itemFacts).
+  "vtol-booster-tons": { of: "engine", divide: 10, round: "ceil-half" },
   // Armored motive system (TO:AUE p. 95): 15 percent (Inner Sphere) or 10 percent (Clan) of the vehicle, quarter tons rounded up to the half ton.
   "armored-motive-is": { of: "tons", times: 0.15, round: "ceil-half" },
   "armored-motive-clan": { of: "tons", times: 0.1, round: "ceil-half" },
