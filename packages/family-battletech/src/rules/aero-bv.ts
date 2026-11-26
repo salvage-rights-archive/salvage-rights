@@ -3,17 +3,17 @@
 // and the total then says "at least". Where the book leaves a choice to the table (two sides that tie), the breakdown notes the one we took.
 import { AERO_BV_METHOD, AERO_BV_OVERLAYS, AERO_COST, AERO_PRICE_OVERLAYS, AT2_BV_RULES, TM_AERO_BV_RULES } from "../data/aero-bv";
 import type { AeroBvMethod, AeroCostFigures } from "../data/aero-bv";
-import { figureOf } from "../data/aero";
+import { fighterPatchworkTypes, figureOf } from "../data/aero";
 import { HEAT_MULTIPLIER } from "../data/bv";
 import type { BvOptions } from "../data/bv";
-import { ENGINE_COST } from "../data/cost";
+import { ARMOR_COST, ENGINE_COST } from "../data/cost";
 import { aeroCatalogFigures, aeroWeaponFigures } from "../data/aero-weapons";
-import { craftCrew, capitalKind, engineRating, fighterHeat, fighterKind, fighterSI, fighterTally, locationsOf, maxThrust, vessel } from "./aero";
+import { armorTypeAt, craftCrew, capitalKind, engineRating, fighterHeat, fighterKind, fighterPatchworkActive, fighterSI, fighterTally, locationsOf, maxThrust, patchworkTonsAt, vessel } from "./aero";
 import type { AeroMount, AeroRecord } from "./aero";
 import { ammoBvEntryOf, bvEntryOf, speedFactor } from "./bv";
 import type { Catalog, EquipmentRow } from "./catalog";
 import { priceOf } from "./cost";
-import { roundHalfUp, stemOf, tidy } from "./walk";
+import { own, roundHalfUp, stemOf, tidy } from "./walk";
 
 export interface AeroBvLine {
   label: string;
@@ -289,6 +289,7 @@ function tmBv(record: AeroRecord, catalog: Catalog, method: AeroBvMethod, frame:
   const capital = frame.kind === "capital";
   const smallUnit = frame.kind === "fighter" || frame.kind === "craft";
   const notes: string[] = [];
+  if (fighterPatchworkActive(record)) notes.push("Patchwork armor: the aerospace method gives no armor type a modifier, so every armor point counts the same wherever it sits (TechManual Battle Value pp. 312-313; Tactical Operations: AUE p. 194 works the armor location by location, which here changes nothing).");
   applyArtemis(record, parts.weapons);
   const shares = ammoShares(parts);
   const defensiveAmmo = Math.min(
@@ -510,9 +511,21 @@ export function aeroCost(record: AeroRecord, catalog: Catalog): AeroCost | null 
     if (costs.engineControl !== undefined) add("Engine control", costs.engineControl, n(costs.engineControl));
   }
   add("Fuel tanks", costs.fuelPerTon * record.fuelTons, `${n(costs.fuelPerTon)} x ${n(record.fuelTons)} t`);
-  const armorEach = Object.hasOwn(costs.armorPerTon, record.armor.type) ? costs.armorPerTon[record.armor.type] : undefined;
-  if (armorEach === undefined) unpriced.push({ id: null, name: "Armor", why: "no price for this armor type" });
-  else add("Armor", armorEach * record.armor.tons, `${n(armorEach)} x ${n(record.armor.tons)} t`);
+  if (fighter && fighterPatchworkActive(record)) {
+    // Patchwork armor is priced a type at a time, on the tons of the locations that wear it (TO:AUE p. 189); the two Interstellar Operations types take their price from its cost table (p. 215).
+    const types = new Map<string, number>();
+    for (const loc of Object.keys(record.armor.points)) types.set(armorTypeAt(record, loc), (types.get(armorTypeAt(record, loc)) ?? 0) + (patchworkTonsAt(record, loc) ?? 0));
+    for (const [id, typeTons] of types) {
+      const type = fighterPatchworkTypes(record.editionId).find((t) => t.id === id);
+      const each = Object.hasOwn(costs.armorPerTon, id) ? costs.armorPerTon[id] : type === undefined ? undefined : own(ARMOR_COST.rows, type.like)?.perTon;
+      if (each === undefined) unpriced.push({ id: null, name: `Armor (${type?.name ?? id})`, why: "no price for this armor type" });
+      else if (typeTons > 0) add(`Armor (${type?.name ?? id})`, each * typeTons, `${n(each)} x ${n(typeTons)} t`);
+    }
+  } else {
+    const armorEach = Object.hasOwn(costs.armorPerTon, record.armor.type) ? costs.armorPerTon[record.armor.type] : undefined;
+    if (armorEach === undefined) unpriced.push({ id: null, name: "Armor", why: "no price for this armor type" });
+    else add("Armor", armorEach * record.armor.tons, `${n(armorEach)} x ${n(record.armor.tons)} t`);
+  }
   const sinkEach = record.heatSinks.type === "double" ? costs.heatSinkEach.double : costs.heatSinkEach.single;
   if (sinkEach !== undefined) add("Heat sinks", sinkEach * heatSinks, `${n(sinkEach)} x ${n(heatSinks)}`);
   if (fighter === "conventional" && costs.amplifierPerTon !== undefined) {

@@ -4,17 +4,17 @@
 // from a record and nothing throws on one this version does not understand. Each edition keeps its own figures and errata, so a unit is
 // always read against the edition asked for. Messages are our own words and state the numbers; a finding names the deciding book through
 // its cite. Older editions predate the seven rules levels and show none.
-import { ARMOR, ENGINE_TYPES, MIXED_TECHNOLOGY } from "../data/chassis";
+import { ARMOR, ENGINE_TYPES, MIXED_TECHNOLOGY, PATCHWORK_ARMOR } from "../data/chassis";
 import type { RulesLevel } from "../data/chassis";
-import { CAPITAL_FIGURES, CRAFT_FIGURES, DEFAULT_AERO_EDITION, FIGHTER_ARMOR_TYPES, FIGHTER_FIGURES, aeroEditionName, aeroTypesFor, figureOf, kindFigureOf } from "../data/aero";
-import type { AeroTypeRow, FigureGroup, FighterKind } from "../data/aero";
+import { CAPITAL_FIGURES, CRAFT_FIGURES, DEFAULT_AERO_EDITION, FIGHTER_ARMOR_TYPES, FIGHTER_FIGURES, fighterPatchworkTypes, aeroEditionName, aeroTypesFor, figureOf, kindFigureOf } from "../data/aero";
+import type { AeroTypeRow, FigureGroup, FighterKind, FighterPatchworkType } from "../data/aero";
 import { AERO_WEAPON_EDITIONS, aeroWeaponOffered } from "../data/aero-weapons";
-import { fighterArcs, fighterArmor, fighterArmorLimit, energyWeaponHeat, fighterHeat, fighterKind, fighterPartsNotOffered, fighterTally, engineRating, fuelPoints, locationsOf, vessel, wingsMatch, aeroLocationName } from "./aero";
+import { armorTypeAt, fighterArcs, fighterArmor, fighterArmorLimit, fighterArmorTons, fighterPatchworkActive, energyWeaponHeat, fighterHeat, fighterKind, fighterPartsNotOffered, fighterTally, engineRating, fuelPoints, locationsOf, vessel, wingsMatch, aeroLocationName } from "./aero";
 import type { AeroRecord } from "./aero";
 import { partPhase } from "./availability";
 import type { Catalog } from "./catalog";
 import { VESSEL_CHECKS } from "./aero-vessel-checks";
-import { DEFAULT_LEVEL, LEVEL_ORDER, equipmentLevel, levelAtLeast, levelIn, levelRow, mixedPhase, partLevel } from "./levels";
+import { DEFAULT_LEVEL, LEVEL_ORDER, equipmentLevel, levelAtLeast, levelIn, levelRow, mixedPhase, partLevel, patchworkPhase } from "./levels";
 import { canon, officialLabel } from "./official";
 import type { OfficialState } from "./official";
 import { partPrototype, partSpans, phaseIn, windowOf, datesText } from "./time";
@@ -127,7 +127,7 @@ const lotsCheck: AeroCheck = {
     const out: AeroFinding[] = [];
     const lots: [string, number, FigureGroup<number>, string][] = [
       ["fuel", record.fuelTons, FIGHTER_FIGURES.fuelLot, "fuelTons"],
-      ["armor", record.armor.tons, FIGHTER_FIGURES.armorLot, "armor.tons"],
+      ["armor", fighterArmorTons(record), FIGHTER_FIGURES.armorLot, "armor.tons"],
     ];
     for (const [name, tons, group, field] of lots) {
       const lot = figureOf(group, record.editionId);
@@ -161,9 +161,10 @@ const armorCheck: AeroCheck = {
     const limit = fighterArmorLimit(record);
     const rule = kindFigureOf(FIGHTER_FIGURES.armorLimit, kind, record.editionId);
     if (limit && rule) {
-      const over = rule.unit === "tons" ? record.armor.tons > limit.tons : armor.allocated > limit.points;
+      const tons = fighterArmorTons(record);
+      const over = rule.unit === "tons" && !fighterPatchworkActive(record) ? tons > limit.tons : armor.allocated > limit.points;
       if (over) {
-        const said = rule.unit === "tons" ? `${num(record.armor.tons)} tons of armor are over the ${num(limit.tons)} tons` : `${num(armor.allocated)} armor points are over the ${num(limit.points)} points`;
+        const said = rule.unit === "tons" && !fighterPatchworkActive(record) ? `${num(tons)} tons of armor are over the ${num(limit.tons)} tons` : `${num(armor.allocated)} armor points are over the ${num(limit.points)} points`;
         out.push({ check: "armor", level: "error", message: `${said} ${aeroEditionName(record.editionId)} lets a ${num(record.tons)}-ton ${KIND_NAMES[kind]} fighter carry.`, where: { field: "armor.points" }, ...withCite(kindPageOf(FIGHTER_FIGURES.armorLimit, kind, record.editionId)) });
       }
     }
@@ -257,6 +258,41 @@ const equipmentCheck: AeroCheck = {
   },
 };
 
+/** The patchwork armor types a fighter's locations wear (each once, in the order met), as the edition lists them; a type the list lacks is left out (the patchwork check reports it). */
+function patchworkTypesUsed(record: AeroRecord): FighterPatchworkType[] {
+  const list = fighterPatchworkTypes(record.editionId);
+  const ids = [...new Set(Object.keys(record.armor.points).map((loc) => armorTypeAt(record, loc)))];
+  return ids.flatMap((id) => list.filter((t) => t.id === id));
+}
+
+/** Whether the editor offers patchwork armor: a fighter in the current rules whose level reaches the option's at the unit's time (Advanced from production in 3075,
+ * Experimental before). A record that already holds choices keeps it shown. Hide, do not mark. */
+export function fighterPatchworkOffered(record: AeroRecord): boolean {
+  if (fighterKind(record) === undefined || fighterPatchworkTypes(record.editionId).length === 0) return false;
+  if (Object.keys(record.armor.patchwork ?? {}).length > 0) return true;
+  if (record.rulesLevel === undefined) return false;
+  const phase = patchworkPhase(record);
+  return phase !== null && levelAtLeast(record.rulesLevel, levelIn(PATCHWORK_ARMOR.rulesLevel, phase));
+}
+
+const PATCHWORK_CITE = bookPage(PATCHWORK_ARMOR.cite);
+/** Patchwork armor the unit cannot have: choices a record holds under an edition or unit type without the option, a location the unit lacks, a type the option does not list for a fighter.
+ * (The weapon slots the types take are counted in the arcs check; tons and points by location are worked out, not set.) */
+const patchworkCheck: AeroCheck = {
+  id: "patchwork",
+  run({ record }) {
+    const held = Object.entries(record.armor.patchwork ?? {}).filter(([, type]) => type !== record.armor.type);
+    if (held.length === 0) return [];
+    if (!fighterPatchworkActive(record)) return [{ check: "patchwork", level: "warning", message: `${aeroEditionName(record.editionId)} does not offer patchwork armor to this unit; the record keeps the choices and they are read as one armor type.`, where: { field: "armor.patchwork" }, cite: PATCHWORK_CITE }];
+    const list = fighterPatchworkTypes(record.editionId);
+    const known = locationsOf(record).armor;
+    return held.flatMap(([loc, id]): AeroFinding[] => {
+      if (known.length > 0 && !known.includes(loc)) return [{ check: "patchwork", level: "warning", message: `${aeroLocationName(loc)} wears ${id} armor, and a unit of this type has no such location.`, where: { field: `armor.patchwork.${loc}` }, cite: PATCHWORK_CITE }];
+      return list.some((t) => t.id === id) ? [] : [{ check: "patchwork", level: "warning", message: `${id} armor is not one patchwork armor offers a fighter, so ${aeroLocationName(loc)} was left out of the weight.`, where: { field: `armor.patchwork.${loc}` }, cite: PATCHWORK_CITE }];
+    });
+  },
+};
+
 /** The current edition's dates: equipment, engine and armor against the unit's year or era (older books print no dates we read). */
 const datesCheck: AeroCheck = {
   id: "dates",
@@ -278,6 +314,13 @@ const datesCheck: AeroCheck = {
     const armorType = FIGHTER_ARMOR_TYPES.find((t) => t.id === record.armor.type);
     const armorRow = armorType && own(ARMOR.types, armorType.like) ? ARMOR.types[armorType.like] : undefined;
     if (armorType && armorRow) say(armorType.name, partPhase(armorRow, { ...when, techBase: record.techBase }), { field: "armor.type" }, bookPage(ARMOR.cite));
+    if (fighterPatchworkActive(record)) {
+      say("Patchwork armor", patchworkPhase(when), { field: "armor.patchwork" }, bookPage(PATCHWORK_ARMOR.cite));
+      for (const type of patchworkTypesUsed(record)) {
+        const row = type.id === record.armor.type ? undefined : own(ARMOR.types, type.like);
+        if (row) say(type.name, partPhase(row, { ...when, techBase: record.techBase }), { field: "armor.patchwork" }, bookPage(ARMOR.cite));
+      }
+    }
     return out;
   },
 };
@@ -286,7 +329,7 @@ const datesCheck: AeroCheck = {
 
 /** One thing a unit uses that asks something of the rules level. */
 export interface AeroLevelItem {
-  what: "type" | "equipment" | "engine" | "armor" | "tech base";
+  what: "type" | "equipment" | "engine" | "armor" | "tech base" | "option";
   name: string;
   level: RulesLevel;
   /** Set in the item's prototype years: its two dates in words; `level` is then the prototype's. */
@@ -323,6 +366,12 @@ export function aeroLevelItems(record: AeroRecord, catalog: Catalog): AeroLevelI
   if (own(ENGINE_TYPES.types, record.engine.type)) part("engine", ENGINE_TYPES.types[record.engine.type]?.name ?? record.engine.type, ENGINE_TYPES.types[record.engine.type] ?? {}, record.engine.type, "engine", bookPage(ENGINE_TYPES.cite), "engine");
   const armorType = FIGHTER_ARMOR_TYPES.find((t) => t.id === record.armor.type);
   if (armorType && own(ARMOR.types, armorType.like)) part("armor", armorType.name, ARMOR.types[armorType.like] ?? {}, armorType.like, "armor", bookPage(ARMOR.cite), "armor.type");
+  if (fighterPatchworkActive(record)) {
+    // Patchwork armor is an Advanced option (TO:AUE p. 189), Experimental before its production year (IO:AE p. 45); each type it brings has its own level.
+    const phase = patchworkPhase(record);
+    items.push({ what: "option", name: "Patchwork armor", level: levelIn(PATCHWORK_ARMOR.rulesLevel, phase), ...(phase === "prototype" ? { prototype: `Production ${String(PATCHWORK_ARMOR.availability[0]?.from ?? "")}` } : {}), cite: bookPage(PATCHWORK_ARMOR.cite), where: { field: "armor.patchwork" } });
+    for (const type of patchworkTypesUsed(record)) if (type.id !== record.armor.type && own(ARMOR.types, type.like)) part("armor", type.name, ARMOR.types[type.like] ?? {}, type.like, "armor", bookPage(ARMOR.cite), "armor.patchwork");
+  }
   const seen = new Set<string>();
   for (const mount of record.mounts) {
     if (mount.equipmentId === null || seen.has(mount.equipmentId)) continue;
@@ -404,7 +453,7 @@ const officialCheck: AeroCheck = {
 // ---- Running them ---------------------------------------------------------------------------------------------------------------
 
 /** One table of checks. The small craft, DropShip and capital ship pieces add their checks here. */
-export const AERO_CHECKS: AeroCheck[] = [typeCheck, weightCheck, engineCheck, lotsCheck, fuelCheck, armorCheck, heatCheck, arcsCheck, equipmentCheck, datesCheck, levelCheck, officialCheck, ...VESSEL_CHECKS];
+export const AERO_CHECKS: AeroCheck[] = [typeCheck, weightCheck, engineCheck, lotsCheck, fuelCheck, armorCheck, patchworkCheck, heatCheck, arcsCheck, equipmentCheck, datesCheck, levelCheck, officialCheck, ...VESSEL_CHECKS];
 
 /** Every finding for the unit under its own edition. Never throws: a check that fails on a record it does not understand gives a note. */
 export function checkAero(record: AeroRecord, catalog: Catalog): AeroFinding[] {
