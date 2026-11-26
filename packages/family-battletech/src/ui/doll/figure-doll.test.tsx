@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import BattleArmorDoll, { battleArmorLayout } from "./battle-armor-doll";
 import { figurePlates, type FigureUse, type IFigureLayout, type IFigureUnit, type IFigureUnitLocation } from "./figure-doll";
 import type { IDollFrame } from "./geometry";
+import InfantryDoll from "./infantry-doll";
 import ProtoDoll, { protoLayout } from "./proto-doll";
 import { edgeDistance, insideShape } from "./shape-bubbles";
 import VehicleDoll, { fitVehicleDoll, VEHICLE_LAYOUT_IDS, vehicleLayout } from "./vehicle-doll";
@@ -142,6 +143,19 @@ describe("the battle armor doll", () => {
   });
 });
 
+describe("the infantry doll", () => {
+  // The largest platoons: 30 on foot, motorized or jumping, 28 mechanized (TechManual, Conventional Infantry Motive Types
+  // Table, p. 145).
+  it.each([["foot", 30], ["jump", 30], ["motorized", 30], ["mechanized-tracked", 28]] as const)("draws a %s platoon with a bubble for each of its %i troopers, none touching", (layout, count) => {
+    const unit: IFigureUnit = { layout, locations: [{ code: "pl", name: "Platoon", armor: count }] };
+    const rings = ringsOf(<InfantryDoll unit={unit} use="armor" frame={FRAME} suffix="t" />).pl ?? [];
+    expect(rings).toHaveLength(count);
+    for (const [i, ring] of rings.entries()) {
+      for (const other of rings.slice(i + 1)) expect(Math.hypot(ring.x - other.x, ring.y - other.y)).toBeGreaterThan(ring.outer + other.outer + 20);
+    }
+  });
+});
+
 describe("a figure doll's locations", () => {
   it("are buttons named by the location and its points when they can be chosen, and one labelled image when they cannot", () => {
     const unit: IFigureUnit = { layout: "tracked", locations: [{ code: "f", name: "Front", armor: 30, structure: 5 }, { code: "t", name: "Turret", armor: 20, structure: 5 }] };
@@ -161,8 +175,10 @@ describe("a figure doll's locations", () => {
     expect(queryAllByRole("button")).toEqual([]);
     expect(getByRole("img").getAttribute("aria-label")).toBe("Vehicle structure diagram");
 
-    // A suit is named by its armor in either use.
+    // A suit is named by its armor in either use, and a platoon by its troopers.
     rerender(<svg><BattleArmorDoll unit={{ layout: "humanoid", locations: [{ code: "t1", name: "Trooper 1", armor: 10 }] }} use="structure" frame={FRAME} suffix="t" onSelect={() => undefined} /></svg>);
     expect(getByRole("button").getAttribute("aria-label")).toBe("Trooper 1, 10 armor");
+    rerender(<svg><InfantryDoll unit={{ layout: "jump", locations: [{ code: "pl", name: "Platoon", armor: 21 }] }} use="armor" frame={FRAME} suffix="t" onSelect={() => undefined} /></svg>);
+    expect(getByRole("button").getAttribute("aria-label")).toBe("Platoon, 21 troopers");
   });
 });
