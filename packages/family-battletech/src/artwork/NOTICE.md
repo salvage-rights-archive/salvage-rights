@@ -75,11 +75,35 @@ picture and shares its prompt.
   sweat-stained jumpsuit, squinting through flipped-down magnifying lenses while soldering..." (cut off here; the
   prompt goes on)
 
+## campaign-play-salvage-crew.jpg and campaign-play-icon.jpg
+
+- The Campaign play tile entry (coming soon) and its icon. Made by the Salvage Rights team with an AI image tool
+  (creen.ai) on 2026-11-26, cropped and resized. creen.ai's terms of service (effective 2025-10-11) say the user keeps
+  ownership of what they generate, and ask for no attribution.
+- Prompt: "Classic 1980s sci-fi painted book cover art, retro-futuristic military logistics and battlefield salvage scene..."
+  (cut off here; the prompt goes on)
+
+## succession-wars-war-room.jpg and succession-wars-icon.jpg
+
+- The Succession Wars tile entry (coming soon) and its icon. Made by the Salvage Rights team with an AI image tool
+  (creen.ai) on 2026-11-26, cropped and resized. creen.ai's terms of service (effective 2025-10-11) say the user keeps
+  ownership of what they generate, and ask for no attribution.
+- Prompt: "Overhead angled perspective of a grand-strategy sci-fi war room table during an interstellar galactic campaign..."
+  (cut off here; the prompt goes on)
+
 ## empty-bay.jpg
 
 - Made by the Salvage Rights team with an AI image tool (Nano Banana 2) on 2026-11-24, and resized. It is shown on
   the Classic BattleTech page when no 'Mech is saved, with a label saying it is AI-generated.
 - Prompt: not recorded yet.
+
+## aces-empty-quartermaster.jpg
+
+- Made by the Salvage Rights team with an AI image tool (creen.ai) on 2026-11-26, and resized. It is shown on the
+  Aces home while no Aces card and no campaign is saved, with a label saying it is AI-generated. creen.ai's terms of
+  service (effective 2025-10-11) say the user keeps ownership of what they generate, and ask for no attribution.
+- Prompt: "Classic 1980s sci-fi painted book cover art, retro-futuristic military logistics and salvage depot scene..."
+  (cut off here; the prompt goes on)
 
 ## All files
 
