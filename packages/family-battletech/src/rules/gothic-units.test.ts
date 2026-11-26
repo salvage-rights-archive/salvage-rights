@@ -18,12 +18,11 @@ beforeAll(async () => {
   records = gothicBoxMechs(catalog);
 });
 
-/** The findings the box designs are known to give, by model. The KGC-0000 sheet splits each AC/20 across a torso and an arm, which a
- * mount cannot do yet (split mounts are Classic construction work), so each sits in its arm and runs past its end. The PXH-1T sheet
- * leaves half a ton that TechManual's weights do not fill (engine, endo steel, armor, six jump jets, four medium lasers, a 45-ton sword at
- * 2.5 tons, an SRM 6 and a ton of ammunition add to 44.5); the printed Battle Value reproduces, so the items are right. */
+/** The findings the box designs are known to give, by model. The PXH-1T sheet (PDF page 8) leaves half a ton that TechManual's weights
+ * do not fill (engine, endo steel, armor, six jump jets, four medium lasers, a 45-ton sword at 2.5 tons, an SRM 6 and a ton of
+ * ammunition add to 44.5); the printed Battle Value reproduces, so the items are right. The KGC-0000's AC/20s are split mounts, as its
+ * sheet draws them, and give no finding. */
 const KNOWN: Record<string, { checks: string[]; tons?: number }> = {
-  "KGC-0000": { checks: ["slots", "slots"] },
   "PXH-1T": { checks: ["weight"], tons: 44.5 },
 };
 

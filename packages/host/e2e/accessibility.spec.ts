@@ -302,7 +302,10 @@ test("the Gothic Abomination units page, its form, a custom form and a unit shee
   }
 });
 
-test("the Gothic forces list, a force and its print view have no axe violations in either theme", async ({ page }) => {
+// The print view holds three sheets of about 4,600 elements (the armor pips alone are 1,500); axe takes about ten seconds over it
+// (the region and color-contrast rules walk every one), so each theme's scan of it is its own test and none runs long enough to
+// time out on a busy machine. Every scan is the full one.
+test("the Gothic forces list and a force have no axe violations in either theme", async ({ page }) => {
   test.setTimeout(120_000);
   const forcePath = await buildGothicForce(page, DEV);
   for (const theme of ["Light", "Dark"] as const) {
@@ -312,11 +315,21 @@ test("the Gothic forces list, a force and its print view have no axe violations 
     await page.goto(`${DEV}${forcePath}`);
     await expect(page.getByLabel("Force name")).toHaveValue("Test Lance");
     await scan(page, theme, "the force");
+  }
+});
+
+for (const theme of ["Light", "Dark"] as const) {
+  test(`the Gothic force print view has no axe violations in the ${theme.toLowerCase()} theme`, async ({ page }) => {
+    test.setTimeout(120_000);
+    const forcePath = await buildGothicForce(page, DEV);
+    await chooseTheme(page, DEV, theme);
+    await page.goto(`${DEV}${forcePath}`);
+    await expect(page.getByLabel("Force name")).toHaveValue("Test Lance");
     await page.getByRole("button", { name: "Print all sheets" }).click();
     await expect(page.locator("svg.bt-sheet")).toHaveCount(3);
     await scan(page, theme, "the force print view");
-  }
-});
+  });
+}
 test("the Gothic Abomination tracker, empty and with a unit on the table, has no axe violations in either theme", async ({ page }) => {
   test.setTimeout(120_000);
   for (const theme of ["Light", "Dark"] as const) {

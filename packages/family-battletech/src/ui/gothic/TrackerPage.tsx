@@ -4,11 +4,13 @@
 // device per unit (`gothic-play:<unit id>`), so a reload or a closed tab loses nothing.
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router";
+import { HANDLER } from "../../data/gothic";
 import type { AbomWeapon } from "../../data/gothic";
 import { GOTHIC_BASE } from "../../data/rulesets";
 import {
   activeCreatures,
   addOverflow,
+  applyDamage,
   clusterColumn,
   creatureFor,
   damageModifier,
@@ -32,8 +34,9 @@ import type { Catalog } from "../../rules/catalog";
 import GamePicture from "../GamePicture";
 import { STORAGE_READ_FAILED, STORAGE_WRITE_FAILED } from "../storage";
 import Silhouette from "./Silhouette";
-import { openGothicStorage } from "./storage";
+import { copyKey, openGothicStorage } from "./storage";
 import type { AbomEntry, GothicStorage } from "./storage";
+import { moveText, weaponFigures } from "./text";
 import { useGothicTheme } from "./theme";
 import "./tracker.scss";
 
@@ -61,6 +64,30 @@ export function forceUnits(force: GothicForce, entries: readonly AbomEntry[]): A
   });
 }
 
+/**
+ * The units on the table when no force is open: every saved unit, each followed by the extra copies of it fielded (`<id>~2` and up, in
+ * `copies`, the keys that hold state). A copy is a unit under its own key, named with its number.
+ */
+export function withCopies(saved: readonly AbominationUnit[], copies: Iterable<string>): AbominationUnit[] {
+  const keys = [...copies];
+  return saved.flatMap((unit) => {
+    const mine = keys
+      .flatMap((key) => (key.startsWith(`${unit.id}~`) ? [Number(key.slice(unit.id.length + 1))] : []))
+      .filter((n) => Number.isInteger(n) && n >= 2)
+      .sort((a, b) => a - b);
+    const base = unit.label.trim() || (unitStats(unit)?.name ?? unit.typeId ?? "Unit");
+    return [unit, ...mine.map((n) => ({ ...structuredClone(unit), id: copyKey(unit.id, n), label: `${base} ${String(n)}` }))];
+  });
+}
+
+/** The tracker key for the next extra copy of a unit: the smallest number from 2 not already on the table. */
+export const nextCopyKey = (unitId: string, onTable: Iterable<string>): string => {
+  const have = new Set(onTable);
+  let n = 2;
+  while (have.has(copyKey(unitId, n))) n += 1;
+  return copyKey(unitId, n);
+};
+
 interface UnitTrackerProps {
   unit: AbominationUnit;
   stats: UnitStats;
@@ -68,14 +95,29 @@ interface UnitTrackerProps {
   catalog: Catalog | undefined;
   onChange: (next: TrackerState) => void;
   onRemove: () => void;
+  /** Outside a force: put another of this saved unit on the table. */
+  onAnother?: () => void;
 }
+
+/** A whole number of damage from the text field; undefined when empty or not a positive whole number. */
+const damageOf = (text: string): number | undefined => {
+  const n = Number(text);
+  return text.trim() === "" || !Number.isInteger(n) || n < 1 ? undefined : n;
+};
 
 function weaponLabel(weapon: AbomWeapon, catalog: Catalog | undefined): string {
   return catalog?.rowFor(weapon.id, EDITION)?.name ?? weapon.id;
 }
 
-function UnitTracker({ unit, stats, state, catalog, onChange, onRemove }: UnitTrackerProps) {
+function UnitTracker({ unit, stats, state, catalog, onChange: keepState, onRemove, onAnother }: UnitTrackerProps) {
   const name = unitName(unit, stats);
+  /** The state before the last change, for Undo; kept on the page only, so a reload starts without one. */
+  const [previous, setPrevious] = useState<TrackerState>();
+  const [marks, setMarks] = useState<Record<number, string>>({});
+  const onChange = (next: TrackerState) => {
+    setPrevious(state);
+    keepState(next);
+  };
   const active = activeCreatures(state, stats.pipsEach);
   const out = eliminatedCreatures(state, stats.pipsEach);
   const killed = out.length;
@@ -101,6 +143,26 @@ function UnitTracker({ unit, stats, state, catalog, onChange, onRemove }: UnitTr
         </span>
       </h2>
       {active === 0 && <p className="bt-problem">All creatures are out: the unit is destroyed.</p>}
+      <dl className="bt-track__facts bt-track__facts--text">
+        <div>
+          <dt>Skills</dt>
+          <dd>{`Gunnery ${String(stats.gunneryEffective)}, AniMelee ${String(stats.animeleeEffective)}`}</dd>
+          {unit.handlerBonus && <dd className="bt-track__cite">{`Handler bonus ${String(HANDLER.skillBonus)} applied (p. ${String(HANDLER.cite.page)})`}</dd>}
+        </div>
+        <div>
+          <dt>Movement</dt>
+          <dd>{moveText(stats)}</dd>
+        </div>
+        {stats.size && (
+          <div>
+            <dt>Class target movement modifier</dt>
+            <dd>{`${signed(stats.size.bonusTmm)} (p. ${String(stats.size.cite.page)})`}</dd>
+          </div>
+        )}
+        <div>
+          <dt>Physical damage</dt>
+          <dd>{[stats.melee !== null && `Melee ${String(stats.melee)}`, stats.mob !== null && `Mob ${String(stats.mob)}`, stats.hobble !== null && `Hobble ${String(stats.hobble)}`].filter(Boolean).join(", ") || "none"}</dd>
+        </div></dl>
       <dl className="bt-track__facts">
         <div>
           <dt>Active creatures</dt>
@@ -159,6 +221,7 @@ function UnitTracker({ unit, stats, state, catalog, onChange, onRemove }: UnitTr
                 <span className="bt-row__text">
                   <strong>{`${weapon.count > 1 ? `${String(weapon.count)} ` : ""}${wname}`}</strong>
                   <span className="bt-row__credit">{row ? `Cluster column ${String(column)}${active === 1 && tubes === undefined ? " (no roll)" : ""}` : "Cluster column loading"}</span>
+                  {row && weaponFigures(row) && <span className="bt-row__credit">{`${weaponFigures(row)}${tubes === undefined ? "" : ` (damage per missile, ${String(tubes)} tubes)`}`}</span>}
                 </span>
                 {weapon.shots !== undefined && (
                   <span className="bt-row__actions">
@@ -187,13 +250,41 @@ function UnitTracker({ unit, stats, state, catalog, onChange, onRemove }: UnitTr
       )}
 
       <h3>Creatures</h3>
-      <p className="bt-hint">Tap a pip to mark damage up to it. Tap the last marked pip to take one back.</p>
+      <p className="bt-hint">Tap a pip to mark damage up to it. Tap the last marked pip to take one back. Or enter the damage a hit does and press Mark: it fills the creature's pips and any damage past the last one counts toward the phase.</p>
+      <p className="bt-actions">
+        <button type="button" className="bt-button bt-button--secondary" disabled={!previous} aria-label={`Undo the last change: ${name}`} onClick={() => { if (previous) { keepState(previous); setPrevious(undefined); } }}>
+          Undo the last change
+        </button>
+      </p>
       {state.marked.map((marked, c) => {
         const creature = c + 1;
         const gone = marked >= stats.pipsEach;
         return (
           <div key={creature} role="group" aria-label={`Creature ${String(creature)}, ${String(marked)} of ${String(stats.pipsEach)} pips marked${gone ? ", out" : ""}`} className={`bt-track__creature${gone ? " bt-track__creature--out" : ""}`}>
             <h4>{`Creature ${String(creature)}`}<span className="bt-track__count">{` ${String(stats.pipsEach - marked)} left`}</span></h4>
+            <form
+              className="bt-track__mark"
+              onSubmit={(event) => {
+                event.preventDefault();
+                const hit = damageOf(marks[creature] ?? "");
+                if (hit === undefined) return;
+                onChange(applyDamage(state, creature, hit, stats.pipsEach));
+                setMarks((all) => ({ ...all, [creature]: "" }));
+              }}
+            >
+              <label htmlFor={`bt-mark-${unit.id}-${String(creature)}`}>{`Damage to mark on creature ${String(creature)}`}</label>
+              <input
+                id={`bt-mark-${unit.id}-${String(creature)}`}
+                type="number"
+                inputMode="numeric"
+                min={1}
+                value={marks[creature] ?? ""}
+                onChange={(event) => { setMarks((all) => ({ ...all, [creature]: event.target.value })); }}
+              />
+              <button type="submit" className="bt-button bt-button--secondary" aria-label={`Mark damage on creature ${String(creature)}: ${name}`} disabled={damageOf(marks[creature] ?? "") === undefined}>
+                Mark
+              </button>
+            </form>
             <div className="bt-track__pips">
               {Array.from({ length: stats.pipsEach }, (_, p) => (
                 <button
@@ -227,7 +318,7 @@ function UnitTracker({ unit, stats, state, catalog, onChange, onRemove }: UnitTr
         <div className="bt-grid">
           <div className="bt-field">
             <label htmlFor={`bt-mounted-${unit.id}`}>Mounted</label>
-            <select id={`bt-mounted-${unit.id}`} value={state.mounted} onChange={(event) => { onChange({ ...state, mounted: event.target.value as TrackerState["mounted"] }); }}>
+            <select id={`bt-mounted-${unit.id}`} value={state.mounted} onChange={(event) => { keepState({ ...state, mounted: event.target.value as TrackerState["mounted"] }); }}>
               <option value="none">Not mounted</option>
               {stats.mob !== null && <option value="mob">Mob</option>}
               {stats.hobble !== null && <option value="hobble">Hobble</option>}
@@ -235,9 +326,14 @@ function UnitTracker({ unit, stats, state, catalog, onChange, onRemove }: UnitTr
           </div>
           <div className="bt-field">
             <label htmlFor={`bt-mounted-on-${unit.id}`}>Mounted on</label>
-            <input id={`bt-mounted-on-${unit.id}`} value={state.mountedOn} onChange={(event) => { onChange({ ...state, mountedOn: event.target.value }); }} />
+            <input id={`bt-mounted-on-${unit.id}`} value={state.mountedOn} onChange={(event) => { keepState({ ...state, mountedOn: event.target.value }); }} />
           </div>
         </div>
+      )}
+      {state.mounted !== "none" && (
+        <p className="bt-hint">
+          <Link to={`${GOTHIC_BASE}/aids#aid-${state.mounted === "mob" ? "mob-locations" : "hobble-locations"}`}>{`The ${state.mounted === "mob" ? "Mob" : "Hobble"} hit locations`}</Link>
+        </p>
       )}
 
       <p className="bt-actions">
@@ -247,6 +343,11 @@ function UnitTracker({ unit, stats, state, catalog, onChange, onRemove }: UnitTr
         <button type="button" className="bt-button bt-button--secondary" aria-label={`Start over: ${name}`} onClick={() => { onChange(newTracker(stats)); }}>
           Start over
         </button>
+        {onAnother && (
+          <button type="button" className="bt-button bt-button--secondary" aria-label={`Put another on the table: ${name}`} onClick={onAnother}>
+            Put another on the table
+          </button>
+        )}
         <button type="button" className="bt-button bt-button--secondary" aria-label={`Take off the table: ${name}`} onClick={onRemove}>
           Take off the table
         </button>
@@ -266,7 +367,13 @@ export default function TrackerPage() {
   /** The force the page was opened from: its name and the saved-unit ids it lists. */
   const [force, setForce] = useState<{ name: string; units: AbominationUnit[] }>();
   const [problem, setProblem] = useState("");
+  const [confirmingClear, setConfirmingClear] = useState(false);
   const savedRef = useRef<HTMLHeadingElement>(null);
+  const keepClearRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (confirmingClear) keepClearRef.current?.focus();
+  }, [confirmingClear]);
 
   useEffect(() => {
     void (async () => {
@@ -277,7 +384,7 @@ export default function TrackerPage() {
         const asked = forceId ? (await s.getForce(forceId))?.force : undefined;
         const onForce = asked ? forceUnits(asked, list) : undefined;
         const next: Record<string, TrackerState> = {};
-        for (const unit of onForce ?? unitsToChoose(list)) {
+        for (const unit of onForce ?? withCopies(unitsToChoose(list), Object.keys(stored))) {
           const stats = unitStats(unit);
           if (stats && unit.id in stored) next[unit.id] = trackerWithDefaults(stored[unit.id], stats);
         }
@@ -316,9 +423,22 @@ export default function TrackerPage() {
     [storage],
   );
 
-  const units = force ? force.units : unitsToChoose(entries);
+  const units = force ? force.units : withCopies(unitsToChoose(entries), Object.keys(states));
   const onTable = units.filter((u) => u.id in states);
   const waiting = units.filter((u) => !(u.id in states));
+
+  /** Puts another of the saved unit on the table (outside a force), under its next copy key. */
+  const another = (shown: AbominationUnit) => {
+    const baseId = shown.id.replace(/~\d+$/, "");
+    const stats = unitStats(shown);
+    if (stats) void keep(nextCopyKey(baseId, Object.keys(states)), newTracker(stats));
+  };
+
+  const clearTable = async () => {
+    setConfirmingClear(false);
+    for (const unit of onTable) await keep(unit.id, undefined);
+    savedRef.current?.focus();
+  };
 
   return (
     <div className="sr-page">
@@ -334,11 +454,31 @@ export default function TrackerPage() {
         {problem}
       </div>
 
-      {force && (
+      {loaded && (
         <p className="bt-hint">
-          {`Showing the units of ${force.name}. `}
-          <Link to={`${GOTHIC_BASE}/play`}>Show every saved unit</Link>
+          {force ? `Showing the units of ${force.name}, with the table that force keeps. ` : "Showing every saved unit, with the table kept outside any force. A force keeps its own table, so the same unit tracked there starts fresh. "}
+          {force && <Link to={`${GOTHIC_BASE}/play`}>Show every saved unit</Link>}
         </p>
+      )}
+      {onTable.length > 0 && (
+        <p>
+          <button type="button" className="bt-button bt-button--secondary" onClick={() => { setConfirmingClear(true); }}>
+            Clear the table
+          </button>
+        </p>
+      )}
+      {confirmingClear && (
+        <div className="bt-confirm" role="group" aria-label="Confirm clear the table" onKeyDown={(event) => { if (event.key === "Escape") setConfirmingClear(false); }}>
+          <p>{`Take ${String(onTable.length)} ${onTable.length === 1 ? "unit" : "units"} off the table? Their damage and shots are lost.`}</p>
+          <span className="bt-row__actions">
+            <button type="button" className="bt-button" onClick={() => { void clearTable(); }}>
+              Clear the table
+            </button>
+            <button type="button" ref={keepClearRef} className="bt-button bt-button--secondary" onClick={() => { setConfirmingClear(false); }}>
+              Keep it
+            </button>
+          </span>
+        </div>
       )}
 
       <section className="bt-section" aria-labelledby="bt-play-choose">
@@ -392,6 +532,7 @@ export default function TrackerPage() {
             state={state}
             catalog={catalog}
             onChange={(next) => { void keep(unit.id, next); }}
+            {...(force ? {} : { onAnother: () => { another(unit); } })}
             onRemove={() => {
               void keep(unit.id, undefined);
               savedRef.current?.focus();

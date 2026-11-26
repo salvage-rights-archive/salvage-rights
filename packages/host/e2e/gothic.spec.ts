@@ -184,3 +184,24 @@ test("the Gothic look: heading font, Settings beating the device, plain print, a
   await page.getByRole("link", { name: "Classic, BattleTech" }).click();
   await expect(page.locator("body")).not.toHaveClass(/bt-gothic/);
 });
+
+test("an old gothic-preview link goes to the same Gothic page and keeps its query", async ({ page }) => {
+  await page.goto(`${DEV}/battletech/gothic-preview/force?id=none-saved`);
+  await expect(page).toHaveURL(/\/battletech\/gothic\/force\?id=none-saved$/);
+  await expect(page.getByText("That force is not saved on this device.")).toBeVisible();
+});
+
+test("a force exports to a file and imports again, asking keep both or replace when it is already saved", async ({ page }) => {
+  await buildGothicForce(page, DEV);
+  await page.goto(`${DEV}${GOTHIC}/force`);
+  await expect(page.getByLabel("Import a file")).toBeEnabled();
+  const download = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Export Test Lance" }).click();
+  const file = await (await download).path();
+  await page.getByLabel("Import a file").setInputFiles(file);
+  const plan = page.getByRole("group", { name: "Import plan" });
+  await expect(plan).toContainText("Already saved here with the same id: 1 force, 3 units, 2 'Mechs.");
+  await plan.getByRole("button", { name: "Keep both" }).click();
+  await expect(page.getByText("Force imported.")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Export Test Lance" })).toHaveCount(2);
+});

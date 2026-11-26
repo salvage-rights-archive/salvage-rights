@@ -65,6 +65,22 @@ describe("The Abomination units page", () => {
     expect(saved).toEqual([unit]);
   });
 
+  it("duplicates a saved unit, prints all of them five to a page, and offers a blank sheet of each class", async () => {
+    const storage = await openGothicStorage();
+    await storage.save({ ...newAbominationUnit("gnat", "a-1"), label: "One" });
+    await storage.save({ ...newAbominationUnit("tyrant", "a-2"), label: "Two" });
+    const user = await ready(userEvent.setup());
+    await user.click(await screen.findByRole("button", { name: "Duplicate One (Gnat)" }));
+    expect(await screen.findByText("One (copy) (Gnat)")).toBeTruthy();
+    await waitFor(() => { expect((screen.getByRole("button", { name: "Print all" }) as HTMLButtonElement).disabled).toBe(false); });
+    await user.click(screen.getByRole("button", { name: "Print all" }));
+    expect(await screen.findByRole("heading", { level: 1, name: "All Abomination units record sheets" })).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Back to the units" }));
+    await user.click(screen.getByRole("button", { name: "Blank Titan sheet" }));
+    expect(await screen.findByRole("heading", { level: 1, name: "Blank Titan sheet" })).toBeTruthy();
+    expect(screen.getAllByText("1 tracker of 5 rows, left blank.").length).toBe(5);
+  });
+
   it.each([
     { saved: undefined, reported: true },
     { saved: "standard", reported: true },

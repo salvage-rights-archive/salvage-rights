@@ -46,6 +46,14 @@ const gothicRoutes: FamilyRoute[] = [
   { path: "aids", label: "Gothic rules reference", section: "workshop", load: () => import("./ui/gothic/AidsPage") },
 ];
 
+// The Gothic pages ran for a night under gothic-preview/*; a link kept from then goes to the same page under gothic/*, query kept.
+const gothicPreviewRoutes: FamilyRoute[] = gothicRoutes.map((route) => ({
+  path: `gothic-preview/${route.path}`,
+  label: `${route.label} (old link)`,
+  section: route.section,
+  load: () => import("./ui/gothic/PreviewRedirect"),
+}));
+
 // AeroTech's pages are the game's own routes (the game is ready).
 const aeroRoutes: FamilyRoute[] = [
   { path: "home", label: "BattleTech: AeroTech", section: "workshop", load: () => import("./ui/aero/AeroHomePage") },
@@ -70,7 +78,7 @@ const manifest: FamilyManifest = {
   unitTypes: (EDITIONS[0]?.unitTypes ?? []).filter((unit) => unit.ready), // the types the edition can build (data/editions.ts)
   eras: ERAS, // the Master Unit List's twelve (data/editions.ts)
   measures: ["hexes"],
-  routes: [],
+  routes: gothicPreviewRoutes,
   credits: {
     owner:
       // The non-affiliation notice fan projects for this game commonly carry, word for word, then two lines of our own.

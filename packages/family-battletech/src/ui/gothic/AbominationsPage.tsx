@@ -6,7 +6,7 @@ import type { ChangeEvent } from "react";
 import { Link } from "react-router";
 import type { RulesLevel } from "../../data/chassis";
 import { ABOM_CLASSES, ABOM_TYPES } from "../../data/gothic";
-import type { AbomClassId, AbomStats, AbomWeapon } from "../../data/gothic";
+import type { AbomClassId, AbomWeapon } from "../../data/gothic";
 import { GOTHIC, GOTHIC_BASE } from "../../data/rulesets";
 import { checkAbomination, launcherTubes, newAbominationUnit, unitStats } from "../../rules/abomination";
 import type { AbomCustom, AbominationUnit } from "../../rules/abomination";
@@ -17,10 +17,11 @@ import LevelSelect from "../editor/LevelSelect";
 import { LeaveGuard } from "../editor/LeaveConfirm";
 import GamePicture from "../GamePicture";
 import { MAX_LIBRARY_BYTES, STORAGE_READ_FAILED, STORAGE_WRITE_FAILED } from "../storage";
-import { AbominationSheets } from "./AbominationSheet";
+import AbominationSheet, { AbominationSheets } from "./AbominationSheet";
 import Silhouette from "./Silhouette";
 import { downloadUnits, fromAbomFile, openGothicStorage } from "./storage";
 import type { AbomEntry, GothicStorage } from "./storage";
+import { moveText } from "./text";
 import { useGothicTheme } from "./theme";
 
 const EDITION = "gothic";
@@ -35,10 +36,6 @@ function weaponsText(weapons: readonly AbomWeapon[], catalog: Catalog | undefine
   return weapons
     .map((w) => `${w.count > 1 ? `${String(w.count)} ` : ""}${weaponName(catalog, w.id)}${w.shots === undefined ? "" : ` (${shotsText(w.shots)})`}`)
     .join(", ");
-}
-
-function moveText(stats: Pick<AbomStats, "ground" | "jump" | "vtol">): string {
-  return [`Ground ${String(stats.ground)}`, ...(stats.jump === undefined ? [] : [`Jump ${String(stats.jump)}`]), ...(stats.vtol === undefined ? [] : [`VTOL ${String(stats.vtol)}`])].join(", ");
 }
 
 const typeName = (unit: AbominationUnit): string => {
@@ -87,7 +84,8 @@ export default function AbominationsPage() {
   const [draft, setDraft] = useState<AbominationUnit>();
   /** The draft as it was when opened, to tell unsaved work from an untouched form. */
   const [opened, setOpened] = useState<{ id: string; json: string }>();
-  const [printing, setPrinting] = useState<AbominationUnit>();
+  /** What the print view shows: one unit's sheet, every saved unit's (five to a page), or the blank form of a class. */
+  const [printing, setPrinting] = useState<{ title: string; hint: string; units: AbominationUnit[]; blank?: AbomClassId }>();
   const [confirming, setConfirming] = useState<{ id: string; name: string }>();
   const [status, setStatus] = useState("");
   const [problem, setProblem] = useState("");
@@ -165,10 +163,17 @@ export default function AbominationsPage() {
   const remove = async (id: string) => {
     if (!storage) return;
     setConfirming(undefined);
-    if (!(await attempt(STORAGE_WRITE_FAILED, () => storage.remove(id)))) return;
+    if (!(await attempt(STORAGE_WRITE_FAILED, async () => { await storage.remove(id); await storage.removePlaysOf(id); }))) return;
     if (draft?.id === id) setDraft(undefined);
     focusSaved.current = true;
     if (await reload(storage)) say("Deleted.");
+  };
+
+  const duplicate = async (unit: AbominationUnit) => {
+    if (!storage) return;
+    const copy = { ...structuredClone(unit), id: crypto.randomUUID(), label: `${unit.label.trim() || typeName(unit)} (copy)` };
+    if (!(await attempt(STORAGE_WRITE_FAILED, () => storage.save(copy)))) return;
+    if (await reload(storage)) say(`Copy of ${unitName(unit)} saved.`);
   };
 
   const cancel = () => {
@@ -226,7 +231,7 @@ export default function AbominationsPage() {
     return (
       <div className="sr-page bt-sheetpage">
         <div className="bt-sheetpage__bar">
-          <h1 ref={barRef} tabIndex={-1}>{`${unitName(printing)} record sheet`}</h1>
+          <h1 ref={barRef} tabIndex={-1}>{printing.title}</h1>
           <div className="bt-actions">
             <button
               type="button"
@@ -247,9 +252,9 @@ export default function AbominationsPage() {
               Print
             </button>
           </div>
-          <p className="bt-hint">Prints on one page, Letter or A4. In the print dialog, turn off headers and footers.</p>
+          <p className="bt-hint">{`${printing.hint} In the print dialog, turn off headers and footers.`}</p>
         </div>
-        <AbominationSheets units={[printing]} catalog={catalog} />
+        {printing.blank ? <AbominationSheet blank={printing.blank} catalog={catalog} /> : <AbominationSheets units={printing.units} catalog={catalog} />}
       </div>
     );
   }
@@ -320,8 +325,11 @@ export default function AbominationsPage() {
                     <button type="button" className="bt-button" aria-label={`Open ${name}`} onClick={() => { setLevel(unit.rulesLevel ?? DEFAULT_LEVEL); startDraft(structuredClone(unit)); }}>
                       Open
                     </button>
-                    <button type="button" className="bt-button bt-button--secondary" aria-label={`Record sheet for ${name}`} disabled={!catalog} onClick={() => { setPrinting(unit); }}>
+                    <button type="button" className="bt-button bt-button--secondary" aria-label={`Record sheet for ${name}`} disabled={!catalog} onClick={() => { setPrinting({ title: `${name} record sheet`, hint: "Prints on one page, Letter or A4.", units: [unit] }); }}>
                       Record sheet
+                    </button>
+                    <button type="button" className="bt-button bt-button--secondary" aria-label={`Duplicate ${name}`} onClick={() => { void duplicate(unit); }}>
+                      Duplicate
                     </button>
                     <button type="button" className="bt-button bt-button--secondary" aria-label={`Export ${name}`} onClick={() => { downloadUnits([unit]); say("Export started."); }}>
                       Export
@@ -336,9 +344,12 @@ export default function AbominationsPage() {
           </ul>
         )}
         {units.length > 1 && (
-          <p>
+          <p className="bt-actions">
             <button type="button" className="bt-button bt-button--secondary" onClick={() => { downloadUnits(units); say("Export started."); }}>
               Export all
+            </button>
+            <button type="button" className="bt-button bt-button--secondary" disabled={!catalog} onClick={() => { setPrinting({ title: "All Abomination units record sheets", hint: `${String(units.length)} units, five to a page, Letter or A4.`, units }); }}>
+              Print all
             </button>
           </p>
         )}
@@ -510,6 +521,15 @@ export default function AbominationsPage() {
             <span className="bt-hint">{` Offered at ${levelRow(CUSTOM_LEVEL, GOTHIC).label} and above.`}</span>
           </p>
         )}
+        <h3>Blank sheets</h3>
+        <p className="bt-hint">The form with nothing filled in: five blank unit blocks of one class, for pencil play.</p>
+        <p className="bt-actions">
+          {ABOM_CLASSES.map((size) => (
+            <button key={size.id} type="button" className="bt-button bt-button--secondary" disabled={!catalog} onClick={() => { setPrinting({ title: `Blank ${size.label} sheet`, hint: "Prints on one page, Letter or A4.", units: [], blank: size.id }); }}>
+              {`Blank ${size.label} sheet`}
+            </button>
+          ))}
+        </p>
         <div className="bt-field">
           <label htmlFor="bt-abom-file">Import a file</label>
           <input id="bt-abom-file" type="file" accept="application/json,.json" aria-describedby="bt-abom-file-hint" disabled={!storage} onChange={(event) => { void upload(event); }} />

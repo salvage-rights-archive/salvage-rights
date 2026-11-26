@@ -35,8 +35,7 @@ const books = (["play", "construction"] as const)
 
 /** What the rules check will say about a box design that the sheet itself explains, in our words. */
 const BOX_NOTES: Record<string, string> = {
-  "KGC-0000": "The sheet splits each AC/20 across a torso and an arm. We place each in its arm, so the rules check shows two slot errors.",
-  "PXH-1T": "The sheet leaves half a ton unused, so the rules check shows a weight finding.",
+  "PXH-1T": "The sheet leaves half a ton unused (its page 8 in the Deluxe Record Sheets), so the rules check shows a weight finding.",
 };
 
 /** The box designs grouped by chassis, in the order the sheets list them. */

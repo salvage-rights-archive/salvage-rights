@@ -2,22 +2,24 @@
 // page shows the 'Mech Battle Value total, the Initiative modifiers that apply and the force's own checks, and prints every sheet in one
 // go: each 'Mech's sheet with its pilot filled in, then the Abomination sheets five to a page (gothic-design s.7.4, s.8).
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { ChangeEvent } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router";
 import { HANDLER } from "../../data/gothic";
 import { GOTHIC_BASE } from "../../data/rulesets";
-import { checkForce, initiativeModifiers, newForce, newForceMech, newForceUnit, unitStats } from "../../rules/abomination";
+import { checkForce, duplicateForce, initiativeModifiers, newForce, newForceMech, newForceUnit, unitStats } from "../../rules/abomination";
 import type { AbominationUnit, ForceMech, ForceUnit, GothicForce } from "../../rules/abomination";
 import { battleValue } from "../../rules/bv";
 import { loadCatalog } from "../../rules/catalog";
 import type { Catalog } from "../../rules/catalog";
+import { withLevel } from "../../rules/levels";
 import type { MechRecord } from "../../rules/mech";
 import { LeaveGuard } from "../editor/LeaveConfirm";
 import GamePicture from "../GamePicture";
 import RecordSheet from "../sheet/RecordSheet";
-import { STORAGE_READ_FAILED, STORAGE_WRITE_FAILED, openFamilyStorage } from "../storage";
+import { MAX_LIBRARY_BYTES, STORAGE_READ_FAILED, STORAGE_WRITE_FAILED, fileGame, openFamilyStorage, wrongGameMessage } from "../storage";
 import { AbominationSheets } from "./AbominationSheet";
-import { openGothicStorage } from "./storage";
-import type { ForceEntry, GothicStorage } from "./storage";
+import { bundleForce, downloadForces, fromForceFile, importConflicts, openGothicStorage, planForceImport } from "./storage";
+import type { ForceBundle, ForceEntry, GothicStorage, TakenIds } from "./storage";
 import { useGothicTheme } from "./theme";
 
 const FORCES = `${GOTHIC_BASE}/force`;
@@ -60,6 +62,8 @@ function ForceList() {
   const [confirming, setConfirming] = useState<{ id: string; name: string }>();
   const [problem, setProblem] = useState("");
   const [status, setStatus] = useState("");
+  /** A force file read but not yet written: the page asks what to do with the ids already saved here. */
+  const [pending, setPending] = useState<{ bundles: ForceBundle[]; taken: TakenIds; conflicts: { forces: number; units: number; mechs: number } }>();
   const keepRef = useRef<HTMLButtonElement>(null);
   const openerRef = useRef<HTMLElement | null>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
@@ -97,7 +101,10 @@ function ForceList() {
     if (!storage) return;
     setConfirming(undefined);
     try {
+      // The force's tracker state goes with it (each unit entry keeps its own, gothic-play:<entry id>).
+      const gone = entries.find((e) => e.id === target)?.force;
       await storage.removeForce(target);
+      for (const entry of gone?.units ?? []) await storage.removePlay(entry.id);
       setEntries(await storage.listForces());
       setProblem("");
       setStatus("Deleted.");
@@ -106,6 +113,98 @@ function ForceList() {
       setStatus("");
       setProblem(STORAGE_WRITE_FAILED);
     }
+  };
+
+  /** The saved 'Mechs and units a force file may carry: everything saved on this device, read now. */
+  const savedRoster = async (s: GothicStorage) => ({
+    units: (await s.list()).flatMap((e) => (e.unit ? [e.unit] : [])),
+    mechs: (await (await openFamilyStorage()).list()).flatMap((e) => (e.game === "gothic" && e.record ? [e.record] : [])),
+  });
+
+  const exportForces = async (forces: GothicForce[]) => {
+    if (!storage) return;
+    try {
+      const saved = await savedRoster(storage);
+      const made = forces.map((f) => bundleForce(f, saved));
+      downloadForces(made.map((m) => m.bundle));
+      const missing = made.reduce((sum, m) => sum + m.missing, 0);
+      setProblem("");
+      setStatus(missing > 0 ? `Export started. ${String(missing)} ${missing === 1 ? "entry names a unit or 'Mech" : "entries name units or 'Mechs"} not saved here, so the file leaves ${missing === 1 ? "it" : "them"} out.` : "Export started.");
+    } catch {
+      setStatus("");
+      setProblem(STORAGE_READ_FAILED);
+    }
+  };
+
+  const duplicate = async (force: GothicForce) => {
+    if (!storage) return;
+    try {
+      await storage.saveForce(duplicateForce(force));
+      setEntries(await storage.listForces());
+      setProblem("");
+      setStatus(`Copy of ${force.name.trim() || "Unnamed force"} saved.`);
+    } catch {
+      setStatus("");
+      setProblem(STORAGE_WRITE_FAILED);
+    }
+  };
+
+  const write = async (bundles: ForceBundle[], taken: TakenIds, mode: "replace" | "both") => {
+    if (!storage) return;
+    setPending(undefined);
+    try {
+      const plan = planForceImport(bundles, taken, mode);
+      const [family, catalog] = await Promise.all([openFamilyStorage(), loadCatalog()]);
+      for (const record of plan.mechs) await family.save(withLevel(record, catalog));
+      for (const unit of plan.units) await storage.save(unit);
+      for (const force of plan.forces) await storage.saveForce(force);
+      setEntries(await storage.listForces());
+      setProblem("");
+      setStatus(plan.forces.length === 1 ? "Force imported." : `${String(plan.forces.length)} forces imported.`);
+    } catch {
+      setStatus("");
+      setProblem(STORAGE_WRITE_FAILED);
+    }
+  };
+
+  const upload = async (event: ChangeEvent<HTMLInputElement>) => {
+    const input = event.target;
+    const chosen = input.files?.[0];
+    if (!chosen || !storage) return;
+    setStatus("");
+    setPending(undefined);
+    let message = "";
+    let parsed: unknown;
+    if (chosen.size > MAX_LIBRARY_BYTES) message = "That file is too large to be a force file.";
+    else {
+      try {
+        parsed = JSON.parse(await chosen.text());
+      } catch {
+        message = "That file is not a force file.";
+      }
+    }
+    if (!message) {
+      const result = fromForceFile(parsed);
+      const wrong = result.ok ? wrongGameMessage("gothic", fileGame({ mechs: result.bundles.flatMap((b) => b.mechs) })) : undefined;
+      if (!result.ok) message = result.message;
+      else if (wrong) message = wrong;
+      else {
+        try {
+          const taken: TakenIds = {
+            forces: new Set((await storage.listForces()).map((e) => e.id)),
+            units: new Set((await storage.list()).map((e) => e.id)),
+            mechs: new Set((await (await openFamilyStorage()).list()).map((e) => e.id)),
+          };
+          const conflicts = importConflicts(result.bundles, taken);
+          if (conflicts.forces + conflicts.units + conflicts.mechs === 0) await write(result.bundles, taken, "both");
+          else setPending({ bundles: result.bundles, taken, conflicts });
+        } catch {
+          message = STORAGE_READ_FAILED;
+        }
+      }
+    }
+    setProblem(message);
+    input.value = "";
   };
 
   return (
@@ -155,6 +254,12 @@ function ForceList() {
                     <Link className="bt-button" aria-label={`Open ${name}`} to={`${FORCES}?id=${encodeURIComponent(force.id)}`}>
                       Open
                     </Link>
+                    <button type="button" className="bt-button bt-button--secondary" aria-label={`Duplicate ${name}`} onClick={() => { void duplicate(force); }}>
+                      Duplicate
+                    </button>
+                    <button type="button" className="bt-button bt-button--secondary" aria-label={`Export ${name}`} onClick={() => { void exportForces([force]); }}>
+                      Export
+                    </button>
                     <button type="button" className="bt-button bt-button--secondary" aria-label={`Delete ${name}`} onClick={(event) => { openerRef.current = event.currentTarget; setConfirming({ id: entry.id, name }); }}>
                       Delete
                     </button>
@@ -195,11 +300,41 @@ function ForceList() {
             </span>
           </div>
         )}
-        <p>
+        {pending && (
+          <div className="bt-confirm" role="group" aria-label="Import plan">
+            <p>
+              {`This file holds ${String(pending.bundles.length)} ${pending.bundles.length === 1 ? "force" : "forces"}. Already saved here with the same id: ${String(pending.conflicts.forces)} ${pending.conflicts.forces === 1 ? "force" : "forces"}, ${String(pending.conflicts.units)} ${pending.conflicts.units === 1 ? "unit" : "units"}, ${String(pending.conflicts.mechs)} ${pending.conflicts.mechs === 1 ? "'Mech" : "'Mechs"}.`}
+            </p>
+            <span className="bt-row__actions">
+              <button type="button" className="bt-button" onClick={() => { void write(pending.bundles, pending.taken, "both"); }}>
+                Keep both
+              </button>
+              <button type="button" className="bt-button bt-button--secondary" onClick={() => { void write(pending.bundles, pending.taken, "replace"); }}>
+                Replace what is saved
+              </button>
+              <button type="button" className="bt-button bt-button--secondary" onClick={() => { setPending(undefined); }}>
+                Cancel
+              </button>
+            </span>
+          </div>
+        )}
+        <p className="bt-actions">
           <button type="button" className="bt-button" disabled={!storage} onClick={() => { void create(); }}>
             Start a new force
           </button>
+          {entries.some((e) => e.force) && (
+            <button type="button" className="bt-button bt-button--secondary" onClick={() => { void exportForces(entries.flatMap((e) => (e.force ? [e.force] : []))); }}>
+              Export all
+            </button>
+          )}
         </p>
+        <div className="bt-field">
+          <label htmlFor="bt-force-file">Import a file</label>
+          <input id="bt-force-file" type="file" accept="application/json,.json" aria-describedby="bt-force-file-hint" disabled={!storage} onChange={(event) => { void upload(event); }} />
+          <p id="bt-force-file-hint" className="bt-hint">
+            A force file brings its units and 'Mechs with it. If any are already saved here you choose to keep both or replace them.
+          </p>
+        </div>
       </section>
     </div>
   );
@@ -268,6 +403,7 @@ function ForceBuilder({ initial, roster, storage, catalog }: { initial: GothicFo
   const [mechPick, setMechPick] = useState("");
   const [unitPick, setUnitPick] = useState("");
   const barRef = useRef<HTMLHeadingElement>(null);
+  const savedUnits = useRef(initial.units.map((u) => u.id));
   const headingRef = useRef<HTMLHeadingElement>(null);
 
   const recordOf = useCallback((recordId: string) => roster.mechs.find((r) => r.id === recordId), [roster]);
@@ -308,6 +444,10 @@ function ForceBuilder({ initial, roster, storage, catalog }: { initial: GothicFo
   const save = async () => {
     try {
       await storage.saveForce(force);
+      // A unit entry taken out of the force takes its tracker state with it.
+      const kept = new Set(force.units.map((u) => u.id));
+      for (const entryId of savedUnits.current) if (!kept.has(entryId)) await storage.removePlay(entryId);
+      savedUnits.current = [...kept];
       setDirty(false);
       setProblem("");
       setStatus("Saved.");
@@ -417,6 +557,7 @@ function ForceBuilder({ initial, roster, storage, catalog }: { initial: GothicFo
           </Link>
         )}
       </p>
+      {dirty && force.units.length > 0 && <p className="bt-hint">Save the force to play it.</p>}
 
       <section className="bt-section" aria-labelledby="bt-force-summary">
         <h2 id="bt-force-summary">The force at a glance</h2>
