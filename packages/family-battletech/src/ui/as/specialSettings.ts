@@ -1,17 +1,14 @@
-// The two choices the special-ability screens share: whether our short notes show, and the rules level the lists are cut to. They are
-// per-viewer conveniences kept in the browser; if it will not store them, the screens still work and fall back to the defaults.
+// What the special-ability screens share: whether our short notes show. It is a per-viewer convenience kept in the browser; if it will not
+// store it, the screens still work and fall back to the default. The rules level they cut the list to is the play setting (playSettings.ts).
 import { useSyncExternalStore } from "react";
-import type { RulesLevel } from "../../data/chassis";
 
 export interface SpecialSettings {
   /** Our short notes, off until we have read the first batch. */
   glosses: boolean;
-  level: RulesLevel;
 }
 
 const KEY = "salvage-rights:as-special-settings";
-const LEVELS: RulesLevel[] = ["introductory", "standard", "advanced", "experimental", "licensed-noncanon", "fan-made", "unlimited"];
-const DEFAULTS: SpecialSettings = { glosses: false, level: "standard" };
+const DEFAULTS: SpecialSettings = { glosses: false };
 
 let current: SpecialSettings | undefined;
 const listeners = new Set<() => void>();
@@ -21,7 +18,7 @@ function read(): SpecialSettings {
     const parsed: unknown = JSON.parse(localStorage.getItem(KEY) ?? "null");
     if (parsed && typeof parsed === "object") {
       const o = parsed as Partial<SpecialSettings>;
-      return { glosses: o.glosses === true, level: LEVELS.includes(o.level as RulesLevel) ? (o.level as RulesLevel) : DEFAULTS.level };
+      return { glosses: o.glosses === true };
     }
   } catch {
     // Storage blocked or unreadable: use the defaults.

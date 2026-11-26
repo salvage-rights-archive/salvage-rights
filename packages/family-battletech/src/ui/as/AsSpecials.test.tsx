@@ -5,11 +5,13 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { parseSpecials } from "../../rules/as-unit";
 import AsAidsPage from "./AsAidsPage";
 import { GlossSwitch, SpecialLinks } from "./AsSpecials";
+import { resetPlayFilter } from "./playSettings";
 import { resetSpecialSettings } from "./specialSettings";
 
 beforeEach(() => {
   localStorage.clear();
   resetSpecialSettings();
+  resetPlayFilter();
 });
 afterEach(cleanup);
 

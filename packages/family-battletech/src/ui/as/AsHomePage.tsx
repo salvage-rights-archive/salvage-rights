@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { ChangeEvent } from "react";
 import { Link } from "react-router";
-import { AS_EDITION } from "../../data/alpha-strike";
 import { asOfficialMark } from "../../rules/as-mul";
 import { unitTitle } from "../../rules/as-unit";
 import { eraOfYear } from "../../rules/time";
@@ -151,8 +150,7 @@ export default function AsHomePage() {
 
       <section className="bt-section" aria-labelledby="as-rules">
         <h2 id="as-rules">Played under</h2>
-        <p>{`${AS_EDITION.name} (${AS_EDITION.publisher}).`}</p>
-        <p className="bt-hint">It is the only edition for now, so there is nothing to choose. The year and tech base below narrow the units you can add to a force.</p>
+        <p className="bt-hint">The level, year and tech base narrow the units you can add to a force, and the level also sets what the play aids and the special abilities list show.</p>
         <AsPlayFilter />
       </section>
 
@@ -251,7 +249,7 @@ export default function AsHomePage() {
         <h2 id="as-aids">Play aids</h2>
         <p>
           <Link className="bt-button bt-button--secondary" to="/battletech/alpha-strike/aids">
-            To-hit calculator
+            Play aids: to-hit, ranges, heat, criticals, turns, movement
           </Link>
         </p>
       </section>
