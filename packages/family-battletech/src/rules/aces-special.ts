@@ -50,10 +50,8 @@ const mapUnit = (game: AcesGame, id: string, change: (u: GameUnit) => GameUnit):
   },
 });
 
-const withFlag = <K extends "moveObjective" | "destroyObjective">(flags: GameUnit["flags"], key: K, on: boolean): GameUnit["flags"] => {
-  const { [key]: _old, ...rest } = flags;
-  return on ? { ...rest, [key]: true } : rest;
-};
+const without = (flags: GameUnit["flags"], key: keyof GameUnit["flags"]): GameUnit["flags"] => Object.fromEntries(Object.entries(flags).filter(([k]) => k !== key)) as GameUnit["flags"];
+const withFlag = (flags: GameUnit["flags"], key: "moveObjective" | "destroyObjective", on: boolean): GameUnit["flags"] => (on ? { ...flags, [key]: true } : without(flags, key));
 
 /** Marks (or clears) a unit as pursuing the movement objective, or as the destroy objective. Emplacements move nowhere, so they take no movement objective. */
 export function setObjective(game: AcesGame, unitId: string, kind: "moveObjective" | "destroyObjective", on: boolean): AcesGame {
@@ -84,7 +82,7 @@ export function mountUnit(game: AcesGame, unitId: string, transportId: string | 
   if (!u || !onTable(u)) return game;
   if (transportId === null) {
     if (!u.flags.mountedIn) return game;
-    const { mountedIn: _gone, ...rest } = u.flags;
+    const rest = without(u.flags, "mountedIn");
     const t = find(game, u.flags.mountedIn);
     const next = mapUnit(game, unitId, (x) => ({ ...x, flags: rest }));
     return { ...next, log: [...next.log, line(game, `${u.name} dismounts${t ? ` from ${t.name}` : ""}. It may move up to half its Move this turn, and cannot use Standstill or Sprint to do it.`, SPECIAL_CITE.transport)] };
@@ -108,7 +106,7 @@ export function releaseFromDestroyed(game: AcesGame): AcesGame {
     if (t && !t.play.destroyed) continue;
     const omni = t !== undefined && hasSpecial(t, "OMNI");
     next = mapUnit(next, u.id, (x) => {
-      const { mountedIn: _gone, ...rest } = x.flags;
+      const rest = without(x.flags, "mountedIn");
       return omni || !t ? { ...x, flags: rest } : { ...x, flags: rest, play: { ...x.play, destroyed: true, staged: [] } };
     });
     next = { ...next, log: [...next.log, line(game, omni ? `${t.name} is destroyed. ${u.name} is set down in base contact with it.` : `${t?.name ?? "Its transport"} is destroyed, so ${u.name} is destroyed with it.`, "Aces p. 6")] };

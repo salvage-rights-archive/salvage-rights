@@ -7,7 +7,7 @@
 // Number of 'Mechs rule), all read against the page images (checked: "page"); the Quick-Start page numbers are the printed ones.
 import { ACES_LOG, ACES_SPECIAL_ORDERS, ACES_VALUES } from "../data/aces-vocab";
 import type { MoveMode } from "../data/aces-vocab";
-import type { AcesCard, CommandCard, SpecialOrderCard } from "./aces-card";
+import type { AcesCard, CommandCard, SpecialOrderCard, SupportCard } from "./aces-card";
 import { toDeckCard } from "./aces-card";
 import { canMove, flipTop, mulberry32, nextAutomated, reveal, schedule } from "./aces-deck";
 import type { Activatable, DeckCard, Pick as NextUnit, ScheduleStep } from "./aces-deck";
@@ -34,6 +34,8 @@ export interface TurnRecords {
   cards: readonly AcesCard[];
   commands: readonly CommandCard[];
   orders: readonly SpecialOrderCard[];
+  /** The player's Battlefield Support cards, for the support step after the units attack. */
+  supports?: readonly SupportCard[];
 }
 
 export const otherForce = (f: ForceName): ForceName => (f === "player" ? "automated" : "player");

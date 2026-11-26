@@ -12,6 +12,7 @@ import { PHASE_WORDS, addLog, currentStep, forceLabel, initiativeSummary, logLin
 import type { TurnRecords } from "../../rules/aces-turn";
 import { STORAGE_READ_FAILED, STORAGE_WRITE_FAILED } from "../storage";
 import { combatForce, startEnd } from "../../rules/aces-combat";
+import { supportPending } from "../../rules/aces-support";
 import ActivationCard from "./ActivationCard";
 import type { Apply } from "./ActivationCard";
 import CombatPanel from "./AttackPanel";
@@ -137,7 +138,7 @@ export default function GamePage() {
         const [entry, entries] = await Promise.all([s.get(id), openAcesStorage().then((a) => a.list())]);
         if (!live) return;
         const lib = libraryOf(entries.flatMap((e) => (e.record ? [e.record] : [])));
-        setRecords({ cards: lib.cards, commands: lib.commands, orders: lib.orders });
+        setRecords({ cards: lib.cards, commands: lib.commands, orders: lib.orders, supports: lib.supports });
         if (!entry) setLoaded({ state: "missing" });
         else if (!entry.game) setLoaded({ state: "unreadable", message: entry.unreadable ?? "" });
         else {
@@ -206,9 +207,9 @@ export default function GamePage() {
       : game.phase === "movement"
         ? currentStep(game) === null && !ts.active
         : game.phase === "combat"
-          ? combatForce(game) === null && !ts.combat?.active
+          ? combatForce(game) === null && !ts.combat?.active && !supportPending(game)
           : false;
-  const nextWhy = game.phase === "initiative" ? "Settle the orders and the roll first." : game.phase === "movement" ? "Every unit has to move first." : "Every unit has to attack first.";
+  const nextWhy = game.phase === "initiative" ? "Settle the orders and the roll first." : game.phase === "movement" ? "Every unit has to move first." : "Every unit, emplacement and support card has to be settled first.";
   const advance = (): void => {
     if (game.phase === "initiative") apply((g) => startMovement(g, initiativeSummary(g)));
     else if (game.phase === "movement") apply((g) => addLog({ ...g, phase: "combat", sight: emptySheet() }, logLine(g, "Movement Phase ends.", TURN_CITE.loserFirst.cite)));

@@ -131,6 +131,8 @@ export interface CombatState {
   active?: { unitId: string; terrain: Record<string, string[]> };
   /** Pilots who have added a pip to an attack roll this phase: once a Combat Phase (p. 24). */
   pips: string[];
+  /** The support step after the units attack: the Battlefield Support cards played this turn, and whether the players have closed it (pp. 20-21). */
+  support?: { resolved: { card: string; target: string; hit: boolean }[]; closed?: boolean };
 }
 
 /** The End Phase of one turn: the six steps of p. 32. */
