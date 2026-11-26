@@ -38,7 +38,7 @@ describe("Aces Edge abilities", () => {
     expect(edgeCostOf(row("nimble"), { tmm: 2 })).toBe(1);
     expect(edgeCostOf(row("nimble"), { tmm: 3 })).toBe(2);
     expect(edgeCostOf(row("nimble"), { tmm: null })).toBe(1);
-    expect([1, 2, 5].map((n) => edgeCostOf(row("coolant-flush"), { tmm: 1 }, n))).toEqual([1, 2, 2]);
+    expect([1, 2, 5, Number.NaN].map((n) => edgeCostOf(row("coolant-flush"), { tmm: 1 }, n))).toEqual([1, 2, 2, 1]);
   });
 
   it("Coolant Flush takes heat off for the Edge spent, and Nimble adds 1 TMM to the recorded move", () => {
@@ -70,7 +70,7 @@ describe("Aces Edge abilities", () => {
     const g = gameOf("end", [setup("Pilot", { edge: 1 })]);
     const pilot = unitNamed(g, "Pilot");
     expect(edgeBlocked(g, pilot, row("coolant-flush"))).toBe("No heat to take off.");
-    expect(edgeBlocked(g, pilot, row("nimble"))).toBeUndefined();
+    expect(edgeBlocked(g, pilot, row("nimble"))).toMatch(/ground or sprint move/);
     expect(edgeBlocked(g, { ...pilot, edge: 0 }, row("assassin"))).toMatch(/Needs 1 Edge/);
   });
 
@@ -81,5 +81,6 @@ describe("Aces Edge abilities", () => {
     const split = splitPilotAbilities(["patient", "Sixth Sense", "Patient", "ASSASSIN"]);
     expect(split).toEqual({ ids: ["patient", "assassin"], others: ["Sixth Sense"] });
     expect(joinPilotAbilities(split.ids, split.others)).toEqual(["Assassin", "Patient", "Sixth Sense"]);
+    expect(joinPilotAbilities(["nimble"], ["NIMBLE", "Sixth Sense"])).toEqual(["Nimble", "Sixth Sense"]);
   });
 });

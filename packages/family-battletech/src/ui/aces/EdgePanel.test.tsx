@@ -9,7 +9,8 @@ import EdgePanel from "./EdgePanel";
 
 // Every unit here is invented for the tests.
 const card = { ...newAsUnit("x").card, type: "BM", tmm: 3, size: 2 };
-const base = newAcesGame({ id: "g", name: "t", seed: 1, at: "2026-01-01T00:00:00Z", player: { units: [{ unitId: "p", name: "Pilot", card, skill: 4, pv: 20, edge: 2 }] }, automated: { units: [] }, cards: [] });
+const fresh = newAcesGame({ id: "g", name: "t", seed: 1, at: "2026-01-01T00:00:00Z", player: { units: [{ unitId: "p", name: "Pilot", card, skill: 4, pv: 20, edge: 2 }] }, automated: { units: [] }, cards: [] });
+const base: AcesGame = { ...fresh, sides: { ...fresh.sides, player: { ...fresh.sides.player, units: fresh.sides.player.units.map((u) => ({ ...u, play: { ...u.play, moved: { mode: "ground" as const, tmm: 3 } } })) } } };
 
 afterEach(() => {
   cleanup();
@@ -26,9 +27,9 @@ describe("Edge panel", () => {
     await user.click(screen.getByText("Edge tokens"));
     expect(screen.getAllByRole("option").map((o) => o.textContent)).toEqual(["Pilot", "Nimble (Movement)", "Speed Demon (Movement)", "Other (type the name)"]);
     expect(screen.getByText(/costs 2 Edge/)).toBeTruthy();
-    expect(screen.queryByText(/pass through enemy units/)).toBeNull();
+    expect(screen.queryByText(/may cross enemy units/)).toBeNull();
     await user.click(screen.getByLabelText("Show our short notes"));
-    expect(screen.getByText(/pass through enemy units/)).toBeTruthy();
+    expect(screen.getByText(/may cross enemy units/)).toBeTruthy();
     await user.click(screen.getByRole("button", { name: "Spend the Edge" }));
     expect(game.sides.player.units[0]?.edge).toBe(0);
     view.unmount();

@@ -1,8 +1,8 @@
 // The Edge abilities of the Aces Edge cards: one row each, with its card number, category, the unit types it is limited to, the phases it is
-// used in, and its Edge cost as figures. Read from the owner's photos of cards 1 to 11 of 12 and, for card 12, a printed sheet of the set
-// (the Aces Edge cards). The cards' own sentences are never kept here: `when` is our own label for the moment it is used, and the
-// short `note` is our own wording, shown only behind the same switch as the Alpha Strike special notes (data/as-glosses.ts).
-// Delete the notes and nothing else changes.
+// used in, and its Edge cost as figures. Read from the owner photos of cards 1 to 11 of 12 and, for card 12, a printed sheet of the set.
+// No card wording is kept: `when` is a terse label of our own for the moment it is used, and the short `note` gives the effect as figures in
+// our own phrasing, shown only behind the same switch as the Alpha Strike special notes (data/as-glosses.ts). Delete the notes and nothing
+// else changes.
 
 export type EdgePhase = "movement" | "combat" | "end";
 export type EdgeCategory = "Attack" | "Defense" | "Movement" | "Indirect Fire" | "Heat" | "Melee";
@@ -35,16 +35,16 @@ export const ACES_EDGE_CITE = "Aces Edge card";
 export const edgeCite = (a: Pick<EdgeAbility, "card">): string => `${ACES_EDGE_CITE} ${String(a.card)}/${String(ACES_EDGE_CARD_SET)}`;
 
 export const ACES_EDGE: EdgeAbility[] = [
-  { id: "assassin", card: 1, name: "Assassin", category: "Attack", phases: ["combat"], when: "Before the roll, target in its rear arc", cost: { edge: 1 }, note: "A rear-arc shot does 1 more damage, on top of what the rear arc already adds." },
-  { id: "forward-observer", card: 2, name: "Forward Observer", category: "Indirect Fire", phases: ["combat"], when: "While spotting", cost: { edge: 1 }, note: "The spotter may attack too this Combat Phase, and neither it nor the unit it spots takes the +1 TN." },
-  { id: "marksman", card: 3, name: "Marksman", category: "Attack", phases: ["combat"], when: "After the attack roll", cost: { edge: 1 }, note: "One attack roll of 11 that hits also counts as a critical hit." },
-  { id: "jumping-jack", card: 4, name: "Jumping Jack", category: "Attack", types: ["BM", "CV"], phases: ["combat"], when: "Short range, after jumping this turn", cost: { edge: 1 }, note: "The TN penalty for having jumped is +1 instead of +2." },
-  { id: "patient", card: 5, name: "Patient", category: "Attack", phases: ["combat"], when: "After the attack roll, after standing still", cost: { edge: 1 }, note: "Roll all your dice again and keep the new result." },
-  { id: "cautious", card: 6, name: "Cautious", category: "Defense", types: ["BM", "CV"], phases: ["combat"], when: "Start of the Combat Phase", cost: { edge: 1 }, note: "Turn to face any direction before attacks begin." },
-  { id: "protector", card: 7, name: "Protector", category: "Defense", phases: ["combat"], when: "A smaller friendly unit within 2 inches takes damage", cost: { edge: 1 }, note: "That unit takes 1 less damage." },
-  { id: "coolant-flush", card: 8, name: "Coolant Flush", category: "Heat", types: ["BM"], phases: ["end"], when: "End Phase", cost: { edge: 2, upTo: true }, note: "Each Edge spent takes 1 heat off, up to 2." },
-  { id: "bulwark", card: 9, name: "Bulwark", category: "Melee", types: ["BM", "CV"], phases: ["combat"], when: "You take damage from a physical attack, your own DFA or Charge included", cost: { edge: 1 }, note: "You take 1 less damage from it." },
-  { id: "melee-specialist", card: 10, name: "Melee Specialist", category: "Melee", phases: ["combat"], when: "After rolling a physical or MEL attack", cost: { edge: 1 }, note: "Roll that attack again and keep the new result." },
-  { id: "nimble", card: 11, name: "Nimble", category: "Movement", phases: ["movement"], when: "Ground or sprint movement", cost: { edge: 1, highTmm: { tmm: 3, edge: 2 } }, note: "+1 TMM, and it may pass through enemy units this Movement Phase." },
-  { id: "speed-demon", card: 12, name: "Speed Demon", category: "Movement", phases: ["movement"], when: "Ground or sprint movement", cost: { edge: 1 }, note: "+2 inches of movement this turn, or +4 inches when sprinting." },
+  { id: "assassin", card: 1, name: "Assassin", category: "Attack", phases: ["combat"], when: "Rear shot, before rolling", cost: { edge: 1 }, note: "Damage +1, as well as the rear bonus." },
+  { id: "forward-observer", card: 2, name: "Forward Observer", category: "Indirect Fire", phases: ["combat"], when: "Spotting", cost: { edge: 1 }, note: "Spotter may also attack; the +1 TN is dropped for it and its ally." },
+  { id: "marksman", card: 3, name: "Marksman", category: "Attack", phases: ["combat"], when: "After rolling", cost: { edge: 1 }, note: "One roll of 11 that hits adds a critical check." },
+  { id: "jumping-jack", card: 4, name: "Jumping Jack", category: "Attack", types: ["BM", "CV"], phases: ["combat"], when: "Short range, after a jump", cost: { edge: 1 }, note: "Jump TN +1, not +2." },
+  { id: "patient", card: 5, name: "Patient", category: "Attack", phases: ["combat"], when: "After rolling, stood still", cost: { edge: 1 }, note: "All dice rerolled." },
+  { id: "cautious", card: 6, name: "Cautious", category: "Defense", types: ["BM", "CV"], phases: ["combat"], when: "Combat Phase start", cost: { edge: 1 }, note: "Facing set freely." },
+  { id: "protector", card: 7, name: "Protector", category: "Defense", phases: ["combat"], when: "Smaller ally hit nearby", cost: { edge: 1 }, note: "Ally within 2 inches and a smaller size takes 1 less." },
+  { id: "coolant-flush", card: 8, name: "Coolant Flush", category: "Heat", types: ["BM"], phases: ["end"], when: "End Phase", cost: { edge: 2, upTo: true }, note: "Heat -1 per Edge, 2 at most." },
+  { id: "bulwark", card: 9, name: "Bulwark", category: "Melee", types: ["BM", "CV"], phases: ["combat"], when: "Hit in melee", cost: { edge: 1 }, note: "That damage -1." },
+  { id: "melee-specialist", card: 10, name: "Melee Specialist", category: "Melee", phases: ["combat"], when: "Melee roll made", cost: { edge: 1 }, note: "One reroll." },
+  { id: "nimble", card: 11, name: "Nimble", category: "Movement", phases: ["movement"], when: "While moving", cost: { edge: 1, highTmm: { tmm: 3, edge: 2 } }, note: "TMM +1; may cross enemy units." },
+  { id: "speed-demon", card: 12, name: "Speed Demon", category: "Movement", phases: ["movement"], when: "While moving", cost: { edge: 1 }, note: "Move +2 inches, +4 sprinting." },
 ];

@@ -26,7 +26,7 @@ export function edgeAbilitiesFor(unitType: string, phase: AcesGame["phase"], eve
 
 /** The Edge an ability costs this unit: the dearer price when the printed TMM reaches the card's figure; `amount` is the choice of an "up to" cost. */
 export function edgeCostOf(a: EdgeAbility, card: Pick<AsCard, "tmm">, amount = 1): number {
-  if (a.cost.upTo) return Math.min(Math.max(1, Math.floor(amount)), a.cost.edge);
+  if (a.cost.upTo) return Number.isFinite(amount) ? Math.min(Math.max(1, Math.floor(amount)), a.cost.edge) : 1;
   const high = a.cost.highTmm;
   return high && (card.tmm ?? 0) >= high.tmm ? high.edge : a.cost.edge;
 }
@@ -58,6 +58,7 @@ export function edgeBlocked(game: AcesGame, unit: GameUnit, a: EdgeAbility, choi
     if (!tracksHeat(unit.card)) return "This unit does not track heat.";
     if (unit.play.heat < cost) return unit.play.heat === 0 ? "No heat to take off." : `Only ${String(unit.play.heat)} heat to take off.`;
   }
+  if (a.id === "nimble" && unit.play.moved?.mode !== "ground" && unit.play.moved?.mode !== "sprint") return "Record a ground or sprint move first.";
   if (a.id === "bulwark" && lastDamaged(unit) < 0) return "No damage is waiting on this unit.";
   if (a.id === "protector") {
     const t = unitById(game, choice.targetId);
@@ -88,14 +89,13 @@ export function edgeNotes(game: AcesGame, unit: GameUnit, a: EdgeAbility, choice
       break;
     case "patient":
       lines.push(moved?.mode === "standstill" ? "The tracker has this unit standing still." : `The tracker has this unit as ${moved ? moved.mode : "not moved"}: confirm it stood still.`);
-      lines.push("Reroll all your dice by hand and enter the new result.");
+      lines.push("Reroll by hand and enter the new result.");
       break;
     case "melee-specialist":
       lines.push("Reroll the attack by hand and enter the new result.");
       break;
     case "nimble":
-      if (moved) lines.push(moved.mode === "ground" || moved.mode === "sprint" ? `TMM ${String(moved.tmm)} becomes ${String(moved.tmm + 1)} this phase.` : `The tracker has this unit as ${moved.mode}: the card is for ground or sprint movement.`);
-      else lines.push("Record the move first and the TMM goes up by 1.");
+      if (moved && (moved.mode === "ground" || moved.mode === "sprint")) lines.push(`TMM ${String(moved.tmm)} becomes ${String(moved.tmm + 1)} this phase.`);
       break;
     case "speed-demon":
       lines.push(moved?.mode === "sprint" ? "Sprinting: +4 inches of movement this turn." : moved?.mode === "ground" ? "Ground movement: +2 inches this turn." : "+2 inches on ground movement, +4 inches when sprinting.");
@@ -117,10 +117,10 @@ export function edgeNotes(game: AcesGame, unit: GameUnit, a: EdgeAbility, choice
       break;
     }
     case "cautious":
-      lines.push("Change this unit's facing before anyone attacks.");
+      lines.push("Set the facing by hand.");
       break;
     case "forward-observer":
-      lines.push("Leave out the +1 TN for this spotter's own attack and for the unit it spots.");
+      lines.push("No +1 TN for the spotter or the unit it spots.");
       break;
   }
   return lines;
@@ -180,5 +180,9 @@ export function splitPilotAbilities(names: string[]): { ids: string[]; others: s
   return { ids, others };
 }
 
-/** The names to keep on a pilot: the picked rows in table order, then the typed names. */
-export const joinPilotAbilities = (ids: string[], others: string[]): string[] => [...ACES_EDGE.filter((a) => ids.includes(a.id)).map((a) => a.name), ...others];
+/** The names to keep on a pilot: the picked rows in table order (a typed name that is a table name counts as picked, once), then the other typed names. */
+export function joinPilotAbilities(ids: string[], others: string[]): string[] {
+  const typed = splitPilotAbilities(others);
+  const all = [...ids, ...typed.ids];
+  return [...ACES_EDGE.filter((a) => all.includes(a.id)).map((a) => a.name), ...typed.others];
+}

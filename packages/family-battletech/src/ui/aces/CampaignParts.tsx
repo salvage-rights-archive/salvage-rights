@@ -139,7 +139,7 @@ function PilotCard({ pilot, onChange }: { pilot: NamedPilot; onChange: (next: Na
       </fieldset>
       <div className="bt-field">
         <label htmlFor={`${id}-ability-names`}>Other Edge ability names, separated by commas</label>
-        <input id={`${id}-ability-names`} defaultValue={picked.others.join(", ")} onBlur={(e) => { onChange({ ...pilot, abilities: joinPilotAbilities(picked.ids, e.target.value.split(",").map((a) => a.trim()).filter((a) => a !== "")) }); }} />
+        <input key={picked.others.join(", ")} id={`${id}-ability-names`} defaultValue={picked.others.join(", ")} onBlur={(e) => { onChange({ ...pilot, abilities: joinPilotAbilities(picked.ids, e.target.value.split(",").map((a) => a.trim()).filter((a) => a !== "")) }); }} />
       </div>
       <label className="bt-check">
         <input type="checkbox" checked={pilot.wounded} onChange={(e) => { onChange({ ...pilot, wounded: e.target.checked }); }} /> {`${pilot.callsign} is wounded`}
