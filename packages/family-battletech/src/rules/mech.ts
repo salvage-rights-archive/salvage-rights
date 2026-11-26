@@ -16,11 +16,13 @@ import {
   INTERNAL_STRUCTURE,
   LAM,
   MECH_TYPES,
+  MYOMER,
   SHEET,
   STRUCTURE_TYPES,
   STRUCTURE_WEIGHT,
 } from "../data/chassis";
 import type { ArmorType, ConfigurationRow, IndustrialRules, MechType, MechTypeRow, RulesLevel } from "../data/chassis";
+import type { Catalog } from "./catalog";
 
 export type LocationCode = "HD" | "CT" | "LT" | "RT" | "LA" | "RA" | "LL" | "RL" | "CL" | "FLL" | "FRL" | "RLL" | "RRL";
 export const LOCATION_NAMES: Record<LocationCode, string> = {
@@ -594,6 +596,27 @@ export function newRecord(options: NewMechOptions, editionId: string, id: string
  * on a mixed record is a Clan part, with the Clan slot count its row holds). */
 export const partMountBase = (part: { techBase?: "inner-sphere" | "clan" | "both" }, record: TechBase | "mixed"): TechBase =>
   record === "mixed" ? (part.techBase === "clan" ? "clan" : "inner-sphere") : record;
+
+/** Sets the chassis myomer and brings the mounts that stand for it (MASC: one; Triple-Strength Myomer: six) to the count the book asks: missing ones are
+ * added unplaced, so the weight and slots show at once; the previous myomer's unplaced mounts go, placed ones stay for the player to decide. One edit. */
+export function setMyomer(draft: MechRecord, type: string, catalog: Pick<Catalog, "byId">): void {
+  const rowOf = (key: string) => {
+    const id = Object.hasOwn(MYOMER.types, key) ? MYOMER.types[key]?.catalogId : undefined;
+    return id === undefined ? undefined : catalog.byId(id);
+  };
+  const before = rowOf(draft.chassis.myomer);
+  const row = rowOf(type);
+  draft.chassis.myomer = type;
+  if (before && before.id !== row?.id) draft.mounts = draft.mounts.filter((m) => !(m.equipmentId === before.id && m.location === null));
+  if (!row || row.perMech === undefined) return;
+  let have = draft.mounts.filter((m) => m.equipmentId === row.id).length;
+  for (let n = 1; have < row.perMech; n++) {
+    const id = `myomer-${n}`;
+    if (draft.mounts.some((m) => m.id === id)) continue;
+    draft.mounts.push({ id, equipmentId: row.id, name: row.name, techBase: row.techBase, location: null, slot: null });
+    have++;
+  }
+}
 
 /** A new record with the change applied to a copy; the original and its nested parts are untouched. */
 export function editRecord(record: MechRecord, change: (draft: MechRecord) => void): MechRecord {

@@ -179,7 +179,7 @@ export function battleValue(record: MechRecord, catalog: Catalog, pilot: PilotSk
   const stealth = chassis.armorType === "stealth";
   const tsm = tsmOf(record, items) !== undefined;
   const mascFound = mascOf(record, items);
-  const masc = mascFound.named || mascFound.mounts.length > 0;
+  const masc = mascFound.mounts.length > 0; // a chassis that only names MASC has no MASC to run on: the mount is what counts (the placement check asks for it)
 
   // ---- Movement -------------------------------------------------------------------------------------------------
   const penalty = movementPenalty(record, catalog);

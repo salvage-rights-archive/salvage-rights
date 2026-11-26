@@ -31,7 +31,7 @@ import type { Catalog, EquipmentRow } from "./catalog";
 import { ARM_FULL, armorSpread, armsOf, configurationOf, donorTons, engineTons, freeHeatSinks, industrialRulesOf, layout as buildLayout, maxArmor, mechTypeOf, structurePoints, walkMP, weights } from "./mech";
 import { locationName, type Layout, type LocationCode, type MechRecord, type Mount } from "./mech";
 import { mountedShields, missingActuators, shieldStats } from "./shields";
-import { equipmentItems, mascOf, movementPenalty, rowOf, stemOf, TSM_ROWS } from "./walk";
+import { equipmentItems, mascOf, movementPenalty, rowOf, stemOf, TSM_ROWS, tsmOf } from "./walk";
 
 export interface Finding {
   check: string;
@@ -480,13 +480,14 @@ function placementCheck({ record, layout, catalog }: CheckInput): Finding[] {
     }
     if (found.length !== required) {
       out.push(
-        finding("placement", "error", `${row.name} must be mounted ${required} times; this 'Mech has ${found.length}.`, {
+        finding("placement", "error", `${row.name} must be mounted ${required === 1 ? "once" : `${num(required)} times`}; this 'Mech has ${found.length}.`, {
           where: found[0] ? { mountId: found[0].id } : { field: "chassis.myomer" },
           cite: isMyomer ? MYOMER.cite : row.cite,
         }),
       );
     }
-    if (isMyomer && found.length > 0 && named !== id) {
+    // A MASC mount stands on its own (a record may name MASC in the chassis, mount it, or both); only the fixed-count myomers need the chassis to name them.
+    if (isMyomer && found.length > 0 && named !== id && !MASC_IDS.includes(id)) {
       out.push(finding("placement", "error", `${row.name} is mounted, but the chassis myomer is ${part}.`, { where: { mountId: found[0]?.id, field: "chassis.myomer" }, cite: MYOMER.cite }));
     }
   }
@@ -875,13 +876,17 @@ function unitTypeCheck({ record, catalog }: CheckInput): Finding[] {
 }
 
 const LAUNCHER = /^(lrm|srm|mml)-\d+-(is|clan)$/;
+const MASC_IDS = ["masc-is", "masc-clan"];
+const ARTEMIS_IV = /^(prototype-)?artemis-iv-/;
+const GUARDIAN = /guardian-ecm/;
+const STEALTH_ECM_PAGE = 213;
 // A Gauss rifle, autocannon (any kind) or PPC: the weapons that keep the lower arm and hand off the arm they sit in on an OmniMech (TechManual p.57).
 const ARM_HEAVY = /(^|-)(gauss|ppc)(-|$)|(^|-)ac-\d|-x-ac-/;
 
 /**
  * The rules only an OmniMech's configuration has (TechManual pp.19-20, 44-58): a body an Omni may have, no pod item the books bar from pods
- * (the catalog's `pod: false`), the lower arm and hand off any arm that carries a Gauss rifle, autocannon or PPC, and one Artemis IV state
- * for every missile launcher (errata v8.0): if the base's launchers lack it, none has it; if they have it, every launcher does.
+ * (the catalog's `pod: false`), and the lower arm and hand off any arm that carries a Gauss rifle, autocannon or PPC. Its Artemis IV state is
+ * read by `artemisCheck`, which every unit goes through.
  */
 function omniCheck({ record, catalog }: CheckInput): Finding[] {
   if (!record.omni) return [];
@@ -904,14 +909,23 @@ function omniCheck({ record, catalog }: CheckInput): Finding[] {
       }
     }
   }
-  // Artemis: which launcher an Artemis belongs to is its link, else the first launcher in its location.
+  return out;
+}
+
+/**
+ * Artemis IV (TechManual p.207, p.231; errata v8.0), for every unit: if one standard LRM, SRM or MML launcher has it, every one does. Which launcher an
+ * Artemis belongs to is its link, else the first launcher in its location. An OmniMech with a fixed launcher takes its state from the base: none where the
+ * base lacks it, all where it has it, and none added to a fixed launcher from a pod; an Omni with no fixed launcher follows the same all-or-none rule.
+ */
+function artemisCheck({ record, catalog }: CheckInput): Finding[] {
+  const out: Finding[] = [];
+  const cite = tm(PAGE.artemis);
   const launchers = record.mounts.filter((m) => LAUNCHER.test(m.equipmentId ?? ""));
   const artemis = record.mounts.filter((m) => rowOf(catalog, record, m)?.needs === "launcher");
   const hostOf = (a: Mount) => launchers.find((l) => l.id === a.linkedTo) ?? (a.linkedTo === undefined ? launchers.find((l) => l.location === a.location) : undefined);
   const isFixed = (m: Mount) => !m.pod;
-  if (launchers.some(isFixed)) {
+  if (record.omni && launchers.some(isFixed)) {
     const baseHas = artemis.some((a) => isFixed(a));
-    const cite = tm(PAGE.artemis);
     for (const a of artemis.filter((x) => x.pod)) {
       const host = hostOf(a);
       if (host && isFixed(host)) {
@@ -925,8 +939,27 @@ function omniCheck({ record, catalog }: CheckInput): Finding[] {
         out.push(finding("omni-artemis", "error", `The base launchers have Artemis, so every launcher here must have it; ${l.name} does not.`, { where: { mountId: l.id }, cite }));
       }
     }
+    return out;
+  }
+  if (!artemis.some((a) => ARTEMIS_IV.test(a.equipmentId ?? ""))) return out;
+  for (const l of launchers.filter((x) => !artemis.some((a) => hostOf(a)?.id === x.id))) {
+    out.push(finding("artemis", "error", `${l.name}${l.location ? ` in the ${locationName(l.location)}` : ""} has no Artemis IV, but this 'Mech uses it; every standard LRM, SRM and MML launcher must have it.`, { where: { mountId: l.id, location: l.location ?? undefined }, cite }));
   }
   return out;
+}
+
+/** MASC and Triple-Strength Myomer may not share a BattleMech (TechManual p.52, p.232). Either may be named by the chassis or mounted. */
+function myomerCheck({ record, catalog }: CheckInput): Finding[] {
+  const items = equipmentItems(record, catalog).items;
+  const masc = mascOf(record, items);
+  if (!(masc.named || masc.mounts.length > 0) || !tsmOf(record, items)) return [];
+  return [finding("myomer", "error", "MASC and Triple-Strength Myomer cannot be on the same 'Mech; remove one of them.", { where: { mountId: masc.mounts[0]?.mount.id, field: "chassis.myomer" }, cite: MYOMER.cite })];
+}
+
+/** Stealth armor needs a Guardian ECM Suite on the same 'Mech (TechManual p.56 table note, p.213). A prototype Guardian counts. */
+function stealthCheck({ record }: CheckInput): Finding[] {
+  if (record.chassis.armorType !== "stealth" || record.mounts.some((m) => GUARDIAN.test(m.equipmentId ?? ""))) return [];
+  return [finding("stealth", "error", "Stealth armor needs a Guardian ECM Suite on the same 'Mech, and none is mounted.", { where: { field: "chassis.armorType" }, cite: tm(STEALTH_ECM_PAGE) })];
 }
 
 /** The FrankenMech option (Campaign Operations p.213): what the page asks of a 'Mech built from donor parts, beyond the construction checks
@@ -985,6 +1018,9 @@ export const CHECKS: Check[] = [
   { id: "unsupported", editions: "all", run: unsupportedCheck },
   { id: "omni", editions: "all", run: omniCheck },
   { id: "frankenmech", editions: "all", run: frankenCheck },
+  { id: "artemis", editions: "all", run: artemisCheck },
+  { id: "myomer", editions: "all", run: myomerCheck },
+  { id: "stealth", editions: "all", run: stealthCheck },
 ];
 
 const NO_LAYOUT: Layout = { supported: false, locations: [], slots: {}, unplaced: [], conflicts: [], overflow: [], partSlots: [] };

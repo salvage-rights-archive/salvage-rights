@@ -3,7 +3,7 @@ import { OTHER } from "../data/equipment/other";
 import { createCatalog, expand, type EquipmentGroup } from "./catalog";
 import { CHECKS, runChecks, type Finding } from "./checks";
 import { bipedRecord, lamRecord, mount, quadRecord, tripodRecord } from "./fixtures";
-import { editRecord, newRecord, type LocationCode, type MechRecord } from "./mech";
+import { editRecord, newRecord, setMyomer, type LocationCode, type MechRecord, type Mount } from "./mech";
 
 // The stub items the fixtures name, a few launchers and guns, and an item that is only weight, beside the real "other" table.
 const TM = { book: "TechManual", page: 341 };
@@ -57,7 +57,7 @@ describe("the shared fixtures", () => {
     ["tripod", tripodRecord()],
   ])("the %s is legal: no error findings, and the checks run in order", (_name, record) => {
     expect(errors(runChecks(record, catalog))).toEqual([]);
-    expect(CHECKS.map((c) => c.id)).toEqual(["weight", "slots", "armor", "engine", "heat-sinks", "jump", "placement", "availability", "level", "configuration", "unit-type", "unmatched", "parts", "era", "shields", "lam", "unsupported", "omni", "frankenmech"]);
+    expect(CHECKS.map((c) => c.id)).toEqual(["weight", "slots", "armor", "engine", "heat-sinks", "jump", "placement", "availability", "level", "configuration", "unit-type", "unmatched", "parts", "era", "shields", "lam", "unsupported", "omni", "frankenmech", "artemis", "myomer", "stealth"]);
   });
 
   it("starts a new tripod with a level error at Standard, citing the page that makes it Advanced, and none at Advanced", () => {
@@ -329,5 +329,47 @@ describe("runChecks", () => {
     expectFinding(findings.filter((f) => f.check === id), { level: "note", text });
     expect(findings.some((f) => f.message.includes("boom"))).toBe(false);
     expect(findings.some((f) => f.check === "engine" || f.check === "armor")).toBe(true);
+  });
+});
+
+describe("myomer, stealth and Artemis rules", () => {
+  const stealthFindings = (d: MechRecord) => runChecks(d, catalog).filter((f) => f.message.includes("Stealth"));
+
+  it("choosing MASC as the myomer adds one unplaced MASC of 5 percent of the tonnage in tons and slots, and standard takes it away again", () => {
+    const masc = editRecord(bipedRecord(), (d) => void setMyomer(d, "masc", catalog));
+    const added = masc.mounts.filter((m) => m.equipmentId === "masc-is");
+    expect(added).toHaveLength(1);
+    expect(catalog.factsOf(added[0] as Mount, masc)).toMatchObject({ tons: 3, slots: 3 });
+    expect(forCheck(masc, "placement")).toEqual([]);
+    expect(editRecord(masc, (d) => void setMyomer(d, "standard", catalog)).mounts.some((m) => m.equipmentId === "masc-is")).toBe(false);
+  });
+
+  it("MASC together with Triple-Strength Myomer is an error, from the mounts or the chassis", () => {
+    const both = editRecord(bipedRecord(), (d) => {
+      d.chassis.myomer = "tsm";
+      tsm(d, 6);
+      d.mounts.push(mount("masc", "masc-is", "RT", 0));
+    });
+    expectFinding(forCheck(both, "myomer"), { level: "error", text: "MASC and Triple-Strength Myomer cannot be on the same", page: 52 });
+    expect(forCheck(editRecord(both, (d) => void (d.mounts = d.mounts.filter((m) => m.id !== "masc"))), "myomer")).toEqual([]);
+  });
+
+  it("stealth armor needs a Guardian ECM Suite", () => {
+    const bare = editRecord(bipedRecord(), (d) => void (d.chassis.armorType = "stealth"));
+    expectFinding(forCheck(bare, "stealth"), { level: "error", text: "needs a Guardian ECM Suite", where: { field: "chassis.armorType" }, page: 213 });
+    expect(forCheck(editRecord(bare, (d) => void d.mounts.push(mount("ecm", "guardian-ecm-suite-is", "HD", 0))), "stealth")).toEqual([]);
+  });
+
+  it("stealth armor is Inner Sphere only and not before its prototype year", () => {
+    const stealth = (techBase: MechRecord["techBase"], year: number) => editRecord(bipedRecord(), (d) => ((d.chassis.armorType = "stealth"), (d.techBase = techBase), (d.year = year)));
+    expect(stealthFindings(stealth("inner-sphere", 3070)).filter((f) => f.level === "error" && f.check !== "slots" && f.check !== "stealth")).toEqual([]);
+    expect(stealthFindings(stealth("clan", 3070)).some((f) => f.level === "error" && /Clan|Inner Sphere/.test(f.message))).toBe(true);
+    expect(stealthFindings(stealth("inner-sphere", 3040)).some((f) => f.level === "error" && f.message.includes("3051"))).toBe(true);
+  });
+
+  it("a standard 'Mech with Artemis on one of two LRMs is an error naming the bare launcher", () => {
+    const base = editRecord(bipedRecord(), (d) => void d.mounts.push(mount("l1", "lrm-5-is", "LT", 0), mount("l2", "lrm-5-is", "RT", 0), mount("a1", "artemis-iv-is", "LT", 1)));
+    expectFinding(forCheck(base, "artemis"), { level: "error", text: "LRM", where: { mountId: "l2" }, page: 207 });
+    expect(forCheck(editRecord(base, (d) => void d.mounts.push(mount("a2", "artemis-iv-is", "RT", 1))), "artemis")).toEqual([]);
   });
 });

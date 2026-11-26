@@ -100,7 +100,7 @@ export const OTHER: EquipmentGroup[] = [
     defaults: { kind: "other", techBase: "inner-sphere", cite: { book: "TechManual", page: 52 }, checked: "page" },
     items: [
       // MASC (Inner Sphere); weight and slots are a share of the 'Mech's tonnage
-      { id: "masc-is", pod: false, podCite: { book: "TechManual", page: 53 }, name: "MASC", aliases: ["Myomer Accelerator Signal Circuitry"], tons: "masc-is", slots: "masc-is", availability: [{ from: 2740, to: 2795 }, { from: 3035 }], prototypeYear: 2730 },
+      { id: "masc-is", pod: false, podCite: { book: "TechManual", page: 53 }, name: "MASC", aliases: ["Myomer Accelerator Signal Circuitry"], tons: "masc-is", slots: "masc-is", perMech: 1, availability: [{ from: 2740, to: 2795 }, { from: 3035 }], prototypeYear: 2730 },
       // Triple-Strength Myomer: six one-slot items, 0 tons, placed anywhere
       { id: "tsm-is", pod: false, podCite: { book: "TechManual", page: 53 }, name: "Triple-Strength Myomer", aliases: ["TSM"], tons: 0, slots: 1, availability: [{ from: 3050 }], prototypeYear: 3028, perMech: 6, checked: "text" },
       // Industrial Triple-Strength Myomer (IndustrialMech construction, printed p.70, table and text read against the page image):
@@ -212,7 +212,7 @@ export const OTHER: EquipmentGroup[] = [
     defaults: { kind: "other", techBase: "clan", cite: { book: "TechManual", page: 52 }, checked: "page", yearsInferred: true },
     items: [
       // MASC (Clan); weight and slots are a share of the 'Mech's tonnage
-      { id: "masc-clan", pod: false, podCite: { book: "TechManual", page: 53 }, name: "MASC", aliases: ["Myomer Accelerator Signal Circuitry"], tons: "masc-clan", slots: "masc-clan", availability: [{ from: 2827 }], prototypeYear: 2820, yearsInferred: false },
+      { id: "masc-clan", pod: false, podCite: { book: "TechManual", page: 53 }, name: "MASC", aliases: ["Myomer Accelerator Signal Circuitry"], tons: "masc-clan", slots: "masc-clan", perMech: 1, availability: [{ from: 2827 }], prototypeYear: 2820, yearsInferred: false },
     ],
   },
   {
