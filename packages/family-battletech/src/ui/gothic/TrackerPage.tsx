@@ -207,6 +207,7 @@ function UnitTracker({ unit, stats, state, catalog, onChange: keepState, onRemov
           <div>
             <dt>Physical attack modifier</dt>
             <dd>{`${signed(effect.physical)} (p. ${String(PLANETARY_PAGE)})`}</dd>
+            {effect.physical > 0 && <dd className="bt-track__cite">{`Against a 'Mech: 1 less for every ${String(heatPerStep)} heat on its scale`}</dd>}
           </div>
         </dl>
       )}

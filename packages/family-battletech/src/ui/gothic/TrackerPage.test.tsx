@@ -77,6 +77,7 @@ describe("The Abomination tracker", () => {
     expect(fact("Glaring Sun: extra MP per hex")).toBe("+2");
     expect(fact("Weapon attack modifier")).toBe("+3");
     expect(screen.getByText("Against a 'Mech: 1 less for every 20 heat on its scale (p. 90)")).toBeTruthy();
+    expect(screen.getAllByText(/^Against a .Mech: 1 less for every 20 heat on its scale/)).toHaveLength(2);
     expect(fact("Physical attack modifier")).toBe("+1 (p. 90)");
     await user.selectOptions(screen.getByLabelText("Planetary condition"), "None");
     expect(screen.queryByText("Weapon attack modifier")).toBeNull();
