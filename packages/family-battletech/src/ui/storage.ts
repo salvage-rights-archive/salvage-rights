@@ -286,6 +286,45 @@ export function downloadMech(record: MechRecord): void {
   downloadJson(`${base || "mech"}.mech.json`, toMechFile(record));
 }
 
+/** Every saved design in one file: the plain 'Mechs and the OmniMech chassis, as the single-design files hold them. */
+export interface LibraryFile {
+  app: "salvage-rights";
+  kind: "library";
+  version: 1;
+  mechs: MechRecord[];
+  omnis: OmniChassis[];
+}
+
+/** The most a library file may weigh: a whole saved list, pictures included, is far larger than one design. */
+export const MAX_LIBRARY_BYTES = 64 * 1024 * 1024;
+
+/** The file of every readable saved design; an entry that cannot be read is left out (the page says how many). */
+export function toLibraryFile(entries: readonly SavedEntry[]): LibraryFile {
+  return {
+    app: "salvage-rights",
+    kind: "library",
+    version: 1,
+    mechs: entries.flatMap((e) => (e.record ? [structuredClone(e.record)] : [])),
+    omnis: entries.flatMap((e) => (e.chassis ? [structuredClone(e.chassis)] : [])),
+  };
+}
+
+/** Reads a library file. One damaged design refuses the whole file, so nothing is half imported. */
+export function fromLibraryFile(file: unknown): { ok: true; mechs: MechRecord[]; omnis: OmniChassis[] } | { ok: false; message: string } {
+  if (!isObject(file)) return { ok: false, message: "This is not a Salvage Rights file." };
+  if (file.app !== "salvage-rights") return { ok: false, message: "This file was not made by Salvage Rights." };
+  if (file.kind !== "library") return { ok: false, message: "This file does not hold a saved list." };
+  if (file.version !== 1) return { ok: false, message: "This file is from a version this app cannot read." };
+  const { mechs, omnis } = file;
+  if (!Array.isArray(mechs) || !Array.isArray(omnis) || !mechs.every(isMechRecord) || !omnis.every(isOmniChassis)) return { ok: false, message: "A design in this file is incomplete or damaged." };
+  return { ok: true, mechs: mechs.map(migrated), omnis: omnis.map(migrated) };
+}
+
+/** Hands every readable saved design to the browser as one file. */
+export function downloadLibrary(entries: readonly SavedEntry[]): void {
+  downloadJson("salvage-rights-mechs.library.json", toLibraryFile(entries));
+}
+
 /** Hands any value to the browser as a JSON file. */
 export function downloadJson(filename: string, value: unknown): void {
   const url = URL.createObjectURL(new Blob([JSON.stringify(value, null, 2)], { type: "application/json" }));

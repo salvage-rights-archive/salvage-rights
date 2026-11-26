@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { openStore } from "@salvage-rights/shared";
 import { bipedRecord, gladiator } from "../rules/fixtures";
 import { resolveConfiguration } from "../rules/omni";
-import { fromMechFile, fromOmniFile, isMechRecord, openFamilyStorage, toMechFile, toOmniFile } from "./storage";
+import { fromLibraryFile, fromMechFile, fromOmniFile, isMechRecord, openFamilyStorage, toLibraryFile, toMechFile, toOmniFile } from "./storage";
 
 beforeEach(() => {
   globalThis.indexedDB = new IDBFactory();
@@ -73,6 +73,20 @@ describe("an edition id from an earlier version", () => {
     expect((await storage.get(old.id))?.record?.editionId).toBe("bcr-tm");
     const file = fromMechFile(JSON.parse(JSON.stringify(toMechFile(old))));
     expect(file.ok && file.record.editionId).toBe("bcr-tm");
+  });
+});
+
+describe("the file of every saved design", () => {
+  it("round-trips a 'Mech and an OmniMech, leaves out one it cannot read, and refuses a file with a damaged design", async () => {
+    const storage = await openFamilyStorage();
+    await storage.save(bipedRecord({ id: "plain" }));
+    await storage.saveOmni(gladiator());
+    await (await openStore("battletech")).set("mech:broken", { record: { schema: 1 } });
+    const file = JSON.parse(JSON.stringify(toLibraryFile(await storage.list())));
+    expect(file.mechs).toHaveLength(1);
+    expect(fromLibraryFile(file)).toEqual({ ok: true, mechs: [bipedRecord({ id: "plain" })], omnis: [gladiator()] });
+    expect(fromLibraryFile({ ...file, mechs: [{ ...file.mechs[0], tons: "50" }] }).ok).toBe(false);
+    expect(fromLibraryFile({ ...file, kind: "mech" }).ok).toBe(false);
   });
 });
 

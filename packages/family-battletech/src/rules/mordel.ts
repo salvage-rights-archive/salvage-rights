@@ -794,7 +794,15 @@ export function importOmniSet(base: MechRecord, variants: MechRecord[], newId: (
     const mark = config && keptMark(variant, resolveConfiguration(chassis, config.id));
     if (config && mark) config.official = mark;
   }
-  return { chassis, notes };
+  return { chassis, notes: [...notes, ...actuatorNote(base.configuration)] };
+}
+
+/** The note that goes with an OmniMech import whose body has arms: Mordel's figures leave out the actuators, ours keep them (TechManual p. 48). */
+function actuatorNote(body: string): string[] {
+  const size = configurationOf(body)?.size;
+  return size && "LA" in size
+    ? ["Mordel leaves out the lower arm and hand actuators on the arms of an OmniMech. We keep them, as the TechManual does, so our cost runs a little above Mordel's until a configuration removes them."]
+    : [];
 }
 
 function nextFreeCode(used: string[]): string {
@@ -825,6 +833,7 @@ export function importOmniSingle(record: MechRecord, catalog: Catalog, newId: ()
     if (mark) config.official = mark;
   }
   delete chassis.source;
-  if (fixedIds) return { chassis, notes: [`${why} We rebuilt the base from this variant because the base is not visible to us: the items Mordel marks as fixed are the base's, and the rest are this configuration's pods.`] };
-  return { chassis, notes: [`${why} Imported as a one-configuration OmniMech: which items are fixed in the base is a guess (the structure and armor slots, heat sinks, jump jets and items the books bar from pods); change it in the editor.`] };
+  const actuators = actuatorNote(copy.configuration);
+  if (fixedIds) return { chassis, notes: [`${why} We rebuilt the base from this variant because the base is not visible to us: the items Mordel marks as fixed are the base's, and the rest are this configuration's pods.`, ...actuators] };
+  return { chassis, notes: [`${why} Imported as a one-configuration OmniMech: which items are fixed in the base is a guess (the structure and armor slots, heat sinks, jump jets and items the books bar from pods); change it in the editor.`, ...actuators] };
 }

@@ -18,7 +18,7 @@ import LevelSelect from "./editor/LevelSelect";
 import { OfficialBadge } from "./editor/Marks";
 import TypeSelect from "./editor/TypeSelect";
 import type { MechRecord, NewMechOptions } from "../rules/mech";
-import { STORAGE_READ_FAILED, STORAGE_WRITE_FAILED, downloadMech, downloadOmni, fromMechFile, fromOmniFile, openFamilyStorage } from "./storage";
+import { MAX_LIBRARY_BYTES, STORAGE_READ_FAILED, STORAGE_WRITE_FAILED, downloadLibrary, downloadMech, downloadOmni, fromLibraryFile, fromMechFile, fromOmniFile, openFamilyStorage } from "./storage";
 import type { FamilyStorage, SavedEntry } from "./storage";
 import emptyBay from "../artwork/empty-bay.jpg";
 import GamePicture from "./GamePicture";
@@ -213,18 +213,36 @@ export default function HomePage() {
     if (!chosen || !storage) return;
     say("");
     let message = "";
-    if (chosen.size > MAX_IMPORT_BYTES) {
+    if (chosen.size > MAX_LIBRARY_BYTES) {
       message = "That file is too large to be a 'Mech file.";
     } else {
       let parsed: unknown;
       try {
         parsed = JSON.parse(await chosen.text());
       } catch {
-        message = "That file is not a 'Mech file.";
+        message = chosen.size > MAX_IMPORT_BYTES ? "That file is too large to be a 'Mech file." : "That file is not a 'Mech file.";
       }
-      if (!message) {
-        const omni = typeof parsed === "object" && parsed !== null && "kind" in parsed && parsed.kind === "omni";
-        const result = omni ? fromOmniFile(parsed) : fromMechFile(parsed);
+      const kindOf = typeof parsed === "object" && parsed !== null && "kind" in parsed ? parsed.kind : undefined;
+      if (!message && kindOf !== "library" && chosen.size > MAX_IMPORT_BYTES) message = "That file is too large to be a 'Mech file.";
+      if (!message && kindOf === "library") {
+        const library = fromLibraryFile(parsed);
+        if (!library.ok) message = library.message;
+        else {
+          const done = await attempt(STORAGE_WRITE_FAILED, async () => {
+            const catalog = await loadCatalog();
+            const used = new Set((await storage.list()).map((e) => e.id));
+            const idFor = (id: string) => {
+              const next = used.has(id) ? crypto.randomUUID() : id;
+              used.add(next);
+              return next;
+            };
+            for (const record of library.mechs) await storage.save({ ...withLevel(record, catalog), id: idFor(record.id) });
+            for (const chassis of library.omnis) await storage.saveOmni({ ...chassis, id: idFor(chassis.id) });
+          });
+          if (done && (await reload(storage))) say(`${plural(library.mechs.length + library.omnis.length, "design")} imported.`);
+        }
+      } else if (!message) {
+        const result = kindOf === "omni" ? fromOmniFile(parsed) : fromMechFile(parsed);
         if (!result.ok) {
           message = result.message;
         } else if ("chassis" in result) {
@@ -489,6 +507,21 @@ export default function HomePage() {
             })}
           </ul>
         )}
+        {entries.some((e) => e.record !== undefined || e.chassis !== undefined) && (
+          <p>
+            <button
+              type="button"
+              className="bt-button bt-button--secondary"
+              onClick={() => {
+                downloadLibrary(entries);
+                const left = entries.filter((e) => !e.record && !e.chassis).length;
+                say(left === 0 ? "Export started." : `Export started. ${plural(left, "saved design")} that cannot be read ${left === 1 ? "was" : "were"} left out.`);
+              }}
+            >
+              Export all
+            </button>
+          </p>
+        )}
         {confirming && (
           <div
             className="bt-confirm"
@@ -626,10 +659,14 @@ export default function HomePage() {
             id="bt-file"
             type="file"
             accept="application/json,.json"
+            aria-describedby="bt-file-hint"
             onChange={(event) => {
               void upload(event);
             }}
           />
+          <p id="bt-file-hint" className="bt-hint">
+            One 'Mech or OmniMech, or the file Export all makes. Designs whose id you already have are added as new ones.
+          </p>
         </div>
       </section>
     </div>

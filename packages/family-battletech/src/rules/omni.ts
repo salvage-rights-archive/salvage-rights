@@ -8,7 +8,7 @@ import { podMountable } from "./catalog";
 import { runChecks } from "./checks";
 import type { Finding } from "./checks";
 import { levelItems, levelRow, lowestLevelFor } from "./levels";
-import { armsOf, layout as buildLayout, newRecord, weights } from "./mech";
+import { armsOf, layout as buildLayout, newRecord, slotsTaken, weights } from "./mech";
 import type { LocationCode, MechRecord, Mount, NewMechOptions, OmniLink } from "./mech";
 import { rowOf } from "./walk";
 
@@ -215,12 +215,61 @@ export function applyConfigurationEdit(chassis: OmniChassis, configurationId: st
   return next;
 }
 
+/** The slots of each location of a base: true where nothing fixed sits. */
+function openCells(chassis: OmniChassis, catalog: Catalog): Partial<Record<LocationCode, boolean[]>> {
+  const laid = buildLayout(resolveBase(chassis), catalog.factsOf);
+  const open: Partial<Record<LocationCode, boolean[]>> = {};
+  for (const location of laid.locations) open[location] = (laid.slots[location] ?? []).map((c) => c.kind === "empty");
+  return open;
+}
+
+/**
+ * Recomputes where the pods may sit after the fixed equipment moved (TechManual p.83: pods use the slots the base leaves open). A pod
+ * that lay on open slots before the edit and now lies over a slot the base fills is moved to the first run of open slots in its own
+ * location that no other pod of the configuration holds. A pod with no room left stays where it is, so the layout check names the clash.
+ * Pods the edit did not touch are never moved.
+ */
+function replacePods(before: OmniChassis, after: OmniChassis, catalog: Catalog): OmniChassis {
+  const was = openCells(before, catalog);
+  const now = openCells(after, catalog);
+  const next = structuredClone(after);
+  for (const configuration of next.configurations) {
+    const record = resolveConfiguration(next, configuration.id);
+    if (!record) continue;
+    const size = (m: Mount) => Math.max(1, slotsTaken(m, record, catalog.factsOf));
+    const covers = (open: boolean[] | undefined, m: Mount) => open !== undefined && m.slot !== null && Array.from({ length: size(m) }, (_, i) => open[(m.slot ?? 0) + i] === true).every(Boolean);
+    const placed = configuration.mounts.filter((m) => m.location !== null && m.slot !== null);
+    const moved = placed.filter((m) => covers(was[m.location ?? "CT"], m) && !covers(now[m.location ?? "CT"], m));
+    const held: Partial<Record<LocationCode, Set<number>>> = {};
+    for (const m of placed) {
+      if (moved.includes(m) || m.location === null || m.slot === null) continue;
+      const set = (held[m.location] ??= new Set());
+      for (let i = 0; i < size(m); i++) set.add(m.slot + i);
+    }
+    for (const m of moved) {
+      const open = m.location === null ? undefined : now[m.location];
+      if (m.location === null || !open) continue;
+      const taken = (held[m.location] ??= new Set());
+      const run = size(m);
+      for (let start = 0; start + run <= open.length; start++) {
+        if (Array.from({ length: run }, (_, i) => open[start + i] === true && !taken.has(start + i)).every(Boolean)) {
+          m.slot = start;
+          for (let i = 0; i < run; i++) taken.add(start + i);
+          break;
+        }
+      }
+    }
+  }
+  return next;
+}
+
 /**
  * Writes an edited base back: its chassis parts, armor and fixed mounts, and the identity of the chassis (name, tonnage, body, tech base,
- * year, era, level, notes, picture). Pods are not touched. A fixed mount new to the base whose id a configuration's pod already has gets a
+ * year, era, level, notes, picture). Pods are not touched, except that with a catalog a pod the moved fixed equipment now covers is moved
+ * to the open slots the base leaves (`replacePods`). A fixed mount new to the base whose id a configuration's pod already has gets a
  * fresh id, so a resolved record never holds two mounts with one id.
  */
-export function applyBaseEdit(chassis: OmniChassis, edited: MechRecord): OmniChassis {
+export function applyBaseEdit(chassis: OmniChassis, edited: MechRecord, catalog?: Catalog): OmniChassis {
   const next = structuredClone(chassis);
   const before = new Set(chassis.base.mounts.map((m) => m.id));
   const podIds = new Set(chassis.configurations.flatMap((c) => c.mounts.map((m) => m.id)));
@@ -260,7 +309,7 @@ export function applyBaseEdit(chassis: OmniChassis, edited: MechRecord): OmniCha
   else delete next.picture;
   if (edited.official) next.official = structuredClone(edited.official);
   else delete next.official;
-  return next;
+  return catalog ? replacePods(chassis, next, catalog) : next;
 }
 
 // ---------------------------------------------------------------------------------------------------------------

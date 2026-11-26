@@ -4,7 +4,8 @@ import { makeClean, mordelBiped, mordelWith } from "./fixtures";
 import { editRecord, setConfiguration } from "./mech";
 import type { MechRecord } from "./mech";
 import { fromMordel } from "./mordel";
-import { markOfficial, officialLabel, officialState, standardCompliance } from "./official";
+import { CHECKS } from "./checks";
+import { RULES_CHECK_VERSION, markOfficial, officialLabel, officialState, rulesCheckVersion, standardCompliance } from "./official";
 import { setYear } from "./availability";
 
 const catalog = await loadCatalog();
@@ -41,6 +42,16 @@ describe("OFFICIAL", () => {
     const canon = bring(mordelWith(mordelBiped(), { canon: true, sources: [{ title: "A Published Book" }] }));
     expect(officialLabel(officialState(canon)).detail).toBe("A Published Book");
     expect(officialState(editRecord(canon, (d) => void setConfiguration(d, "quad"))).official).toBe(false);
+  });
+});
+
+describe("RULES_CHECK_VERSION", () => {
+  it("is worked out from the check ids and the errata, so it changes when a check is added or an errata moves", () => {
+    const ids = CHECKS.map((c) => c.id);
+    expect(RULES_CHECK_VERSION).toMatch(/^[0-9a-f]{8}$/);
+    expect(rulesCheckVersion(ids, ["TechManual@v8.0"])).not.toBe(rulesCheckVersion([...ids, "new-check"], ["TechManual@v8.0"]));
+    expect(rulesCheckVersion(ids, ["TechManual@v8.0"])).not.toBe(rulesCheckVersion(ids, ["TechManual@v9.0"]));
+    expect(rulesCheckVersion()).toBe(RULES_CHECK_VERSION);
   });
 });
 

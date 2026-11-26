@@ -382,6 +382,12 @@ describe("an OmniMech set (omni, omni_base_id, omni_variants; without a fixed fl
     expect(isOmniShaped(chassis)).toBe(true);
   });
 
+  it("notes that Mordel leaves out the Omni arm actuators, which we keep", () => {
+    const record = (response: unknown) => imported(response).record;
+    const { notes } = importOmniSet(record(base), [record(prime)], () => "x");
+    expect(notes.at(-1)).toContain("Mordel leaves out the lower arm and hand actuators");
+  });
+
   it("falls back, labelled, to a one-configuration chassis when the base is not to be had", async () => {
     const { chassis, notes } = importOmniSingle(imported(prime).record, catalog, () => `solo-${++counter}`, "This variant names no base.");
     expect(chassis.configurations).toHaveLength(1);

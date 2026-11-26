@@ -9,7 +9,7 @@ import { finalMultiplier, unitCost } from "./cost";
 import { bipedRecord, clanMount, gladiator } from "./fixtures";
 import { configurationLevel, omniChassisFindings, brokenBy } from "./omni";
 import type { OmniConfiguration } from "./omni";
-import { editRecord, weights } from "./mech";
+import { editRecord, layout, weights } from "./mech";
 import type { MechRecord, Mount } from "./mech";
 import {
   BASE,
@@ -88,6 +88,18 @@ describe("editing", () => {
     expect(next.configurations[0]?.arms).toEqual({});
     expect(next.configurations[1]).toEqual(chassis.configurations[1]);
     expect(applyConfigurationEdit(chassis, "nope", edited)).toBe(chassis);
+  });
+
+  it("frees the slot a moved fixed item left to the pod it now covers, and leaves every other pod where it was", () => {
+    const chassis = gladiator();
+    const edited = editRecord(resolveBase(chassis), (d) => void (d.mounts.find((m) => m.id === "masc")!.slot = 6));
+    const plain = applyBaseEdit(chassis, edited);
+    expect(layout(resolveConfiguration(plain, "prime")!, catalog.factsOf).conflicts).not.toEqual([]);
+    const next = applyBaseEdit(chassis, edited, catalog);
+    const prime = resolveConfiguration(next, "prime")!;
+    expect(layout(prime, catalog.factsOf).conflicts).toEqual([]);
+    expect(prime.mounts.filter((m) => m.id.startsWith("gauss-ammo")).map((m) => m.slot)).toEqual([2, 3]);
+    expect(next.configurations[0]?.mounts.filter((m) => m.location !== "LT")).toEqual(chassis.configurations[0]?.mounts.filter((m) => m.location !== "LT"));
   });
 
   it("writes a base edit to the base and the chassis identity, keeps every pod, and renames a new fixed mount whose id a pod already has", () => {

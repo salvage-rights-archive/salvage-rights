@@ -2,9 +2,9 @@
 // book) and the app keeps honest: the mark holds only while the design is the one that was marked. "Verified Standard Rules Compliant" is
 // never typed: it is worked out from the record, the rules level and the rules check, and says only what our check covered. Pure functions;
 // nothing here throws on a record it does not understand, and no list of official designs is kept.
-import { editionName } from "../data/editions";
+import { EDITIONS, editionName } from "../data/editions";
 import type { Catalog } from "./catalog";
-import { runChecks } from "./checks";
+import { CHECKS, runChecks } from "./checks";
 import type { Finding } from "./checks";
 import { DEFAULT_LEVEL, LEVEL_ORDER, levelAtLeast, levelItems, levelOfRecord } from "./levels";
 import { armsOf } from "./mech";
@@ -80,8 +80,20 @@ export function unmarkOfficial(draft: MechRecord): void {
 // Verified Standard Rules Compliant
 // ---------------------------------------------------------------------------------------------------------------
 
-/** The version of the rules check a verification names. */
-export const RULES_CHECK_VERSION = "0.1.0";
+/** A short hash (FNV-1a, eight hex digits) of a text. Not secret: it only has to change when the text does. */
+function shortHash(text: string): string {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < text.length; i++) h = Math.imul(h ^ text.charCodeAt(i), 0x01000193) >>> 0;
+  return h.toString(16).padStart(8, "0");
+}
+
+/** The version of the rules check a verification names: worked out from the ids of the checks that run and the errata each edition's books
+ * are read against, so it changes when a check is added or removed or an errata is taken up, and cannot be forgotten by hand. */
+export function rulesCheckVersion(checkIds: readonly string[] = CHECKS.map((c) => c.id), errata: readonly string[] = EDITIONS.flatMap((e) => e.books.flatMap((b) => (b.errata ? [`${b.title}@${b.errata}`] : [])))): string {
+  return shortHash(canon({ checks: checkIds, errata: [...new Set(errata)].sort() }));
+}
+
+export const RULES_CHECK_VERSION = rulesCheckVersion();
 
 export interface ComplianceReason {
   text: string;
