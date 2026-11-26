@@ -86,6 +86,7 @@ const manifest: FamilyManifest = {
     { id: "gothic", shortName: "Gothic", fullName: "BattleTech: Gothic", ready: true, routes: gothicRoutes, ...GAME_ART["gothic"] },
     { id: "nova-combat", shortName: "Nova Combat", fullName: "BattleTech: Nova Combat", ready: false, routes: [], ...GAME_ART["nova-combat"] },
     { id: "mechwarrior-rpg", shortName: "MechWarrior RPG", fullName: "BattleTech: MechWarrior Role-Playing", ready: false, routes: [], ...GAME_ART["mechwarrior-rpg"] },
+    { id: "campaign-play", shortName: "Campaign play", fullName: "BattleTech: Campaign Play", ready: false, routes: [], ...GAME_ART["campaign-play"] },
   ],
   unitTypes: (EDITIONS[0]?.unitTypes ?? []).filter((unit) => unit.ready), // the types the edition can build (data/editions.ts)
   eras: ERAS, // the Master Unit List's twelve (data/editions.ts)
@@ -110,7 +111,7 @@ const manifest: FamilyManifest = {
       "The AeroTech section (the editor, the rules check and the fighter record sheets) was made by the Salvage Rights team. Its record sheets are drawn by us, with no logos or art, following the blank sheets the publishers mark for personal reproduction: AeroTech 2, AeroTech 2: Revised Edition and the Catalyst blank record sheets. The AeroTech (1986) sheet is our own layout. \"OFFICIAL\" on an AeroTech unit is what the player states, and it turns off when the design is changed.",
       "The Aces section (unit cards, command cards, automated units, games and campaigns) was made by the Salvage Rights team.",
       "\"Verified Standard Rules Compliant\" means only that our own rules check, against the rulebooks we cite, found nothing wrong with a Standard-level 'Mech; tournament organisers have the final word. \"OFFICIAL\" is what the player states about a Classic design, and it turns off when the design is changed. For Alpha Strike it depends only on the Master Unit List: a unit imported from the list and not changed is OFFICIAL, and every other unit is NOT OFFICIAL.",
-      "The pictures on the BattleTech tile and for each game were generated with an AI image tool (DeviantArt DreamUp, creen.ai for Nova Combat and freegen.app for MechWarrior RPG); the picture shown on the Classic BattleTech page when no 'Mech is saved was generated with another (Nano Banana 2). We would rather show work made by a person. If you are an artist, or hold the rights to a piece, and can let us use it legally, we will gladly replace any AI-generated art here and credit you. To offer a piece, start a thread in Discussions on our GitHub repository (https://github.com/salvage-rights-archive/salvage-rights/discussions), or open an issue there.",
+      "The pictures on the BattleTech tile and for each game were generated with an AI image tool (DeviantArt DreamUp, creen.ai for Nova Combat and Campaign play, and freegen.app for MechWarrior RPG); the picture shown on the Classic BattleTech page when no 'Mech is saved was generated with another (Nano Banana 2). We would rather show work made by a person. If you are an artist, or hold the rights to a piece, and can let us use it legally, we will gladly replace any AI-generated art here and credit you. To offer a piece, start a thread in Discussions on our GitHub repository (https://github.com/salvage-rights-archive/salvage-rights/discussions), or open an issue there.",
     ],
   },
 };

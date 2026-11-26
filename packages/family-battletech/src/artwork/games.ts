@@ -16,6 +16,8 @@ import nova from "./nova-combat-desert-salvo.jpg";
 import novaIcon from "./nova-combat-icon.jpg";
 import rpg from "./mechwarrior-rpg-bench-repair.jpg";
 import rpgIcon from "./mechwarrior-rpg-icon.jpg";
+import campaign from "./campaign-play-salvage-crew.jpg";
+import campaignIcon from "./campaign-play-icon.jpg";
 
 // Every picture here is AI-generated. Terms and source: ./NOTICE.md.
 const DREAMUP = "DeviantArt DreamUp";
@@ -68,6 +70,14 @@ export const GAME_ART: Record<string, { artwork: Artwork; icon: string }> = {
       "freegen.app",
     ),
     icon: rpgIcon,
+  },
+  "campaign-play": {
+    artwork: picture(
+      campaign,
+      "A salvage crew with cranes and flatbed haulers stripping a fallen, one-armed walking war machine at sunset on a smoking battlefield, a command tent with glowing maps and a grounded drop ship behind.",
+      "creen.ai",
+    ),
+    icon: campaignIcon,
   },
 };
 
