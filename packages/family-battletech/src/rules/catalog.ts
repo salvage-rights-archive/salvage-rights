@@ -97,6 +97,8 @@ export interface EquipmentRow {
   damage?: string;
   type?: string;
   range?: [min: number, short: number, medium: number, long: number];
+  /** Battle armor missile launchers and Narc only: the kilograms one shot of ammunition weighs (TechManual printed pp.347-348, Weight Per Shot). A suit carries the shots it is given, one slot for each four. */
+  ammoKgPerShot?: number;
   /** Ammunition only: the shots one ton carries (the Ammo per Ton column of the weapons table). */
   shotsPerTon?: number;
   /** Special munitions only: the launcher families the munition fits. A ton of it carries the shots a ton of that launcher's standard

@@ -37,6 +37,12 @@ import { startTons as vehicleStartTons } from "./vehicle/edit";
 import { vehicleEditorHref } from "./vehicle/routes";
 import { openVehicleStorage } from "./vehicle/storage";
 import VehicleShelf from "./vehicle/VehicleShelf";
+import { WEIGHT_CLASSES } from "../data/battlearmor";
+import { newBaRecord } from "../rules/battlearmor/record";
+import { suitOffered, weightClassChoices } from "../rules/battlearmor/availability";
+import { SavedBattleArmor } from "./battlearmor/SavedBattleArmor";
+import { editorHref as baEditorHref } from "./battlearmor/routes";
+import { openBaStorage } from "./battlearmor/storage";
 import type { MechRecord, NewMechOptions } from "../rules/mech";
 import { MAX_LIBRARY_BYTES, STORAGE_READ_FAILED, STORAGE_WRITE_FAILED, downloadLibrary, downloadMech, downloadOmni, fileGame, fromLibraryFile, fromMechFile, fromOmniFile, openFamilyStorage, wrongGameMessage } from "./storage";
 import type { FamilyStorage, SavedEntry } from "./storage";
@@ -113,6 +119,12 @@ export default function HomePage() {
   const [vehicleType, setVehicleType] = useState<string>();
   const [vehicleTons, setVehicleTons] = useState<number>();
   const [vehicleCruise, setVehicleCruise] = useState(3);
+  /** Battle armor chosen in the new-unit list: it opens the battle armor editor, with the weight class and body picked here. */
+  const [baPick, setBaPick] = useState<string>();
+  const [baClass, setBaClass] = useState<string>();
+  const [baBody, setBaBody] = useState<"humanoid" | "quad">("humanoid");
+  /** Bumped when a battle armor unit is saved or deleted, so the list of them reads again. */
+  const [baListed, setBaListed] = useState(0);
   /** The year typed in the build form, as text; empty or not a year means no year, and nothing is hidden by time. */
   const [yearText, setYearText] = useState("");
   /** The era picked when the typed year is in two eras (an Inner Sphere era and a Clan sub-era). */
@@ -286,6 +298,25 @@ export default function HomePage() {
     void navigate(vehicleEditorHref(made.id));
   };
 
+  // Battle armor: offered at the levels that include it (Standard and above) while some weight class exists for the year and tech base (hide, do not mark).
+  const baSubject = { techBase: techBase === "clan" ? ("clan" as const) : ("inner-sphere" as const), year: yearTyped, era: eraChosen?.id, rulesLevel: draft.rulesLevel, editionId: edition };
+  const baClasses = suitOffered(draft.rulesLevel) && techBase !== "mixed" ? weightClassChoices(baSubject) : [];
+  const baOptions = baClasses.length === 0 ? [] : [{ id: "battlearmor", label: "Battle armor", note: "Battle armor: a squad or Point of suits, built under TechManual and opened in the battle armor editor. TechManual, p. 160." }];
+  const baPicked = baOptions.find((option) => option.id === baPick);
+  const baClassId = baClasses.find((row) => row.id === baClass)?.id ?? baClasses[0]?.id ?? WEIGHT_CLASSES[1]?.id ?? "light";
+
+  const buildBa = async () => {
+    if (!storage || !baPicked || !draft.chassis.trim() || missing !== "") return;
+    const made = newBaRecord(
+      { id: crypto.randomUUID(), chassis: draft.chassis.trim(), model: draft.model.trim(), techBase: baSubject.techBase, year: yearTyped, ...(eraChosen ? { era: eraChosen.id } : {}), rulesLevel: draft.rulesLevel, weightClass: baClassId as (typeof WEIGHT_CLASSES)[number]["id"], body: baClassId === "pal" ? "humanoid" : baBody },
+      edition,
+    );
+    const baStorage = await openBaStorage().catch(() => undefined);
+    if (!baStorage || !(await attempt(STORAGE_WRITE_FAILED, () => baStorage.save(made)))) return;
+    setBaListed((n) => n + 1);
+    void navigate(baEditorHref(made.id));
+  };
+
   const buildAero = async () => {
     const aeroTonnage = aeroTons ?? startTons(aeroRow ?? undefined);
     if (!storage || !aeroPicked || !aeroRow || !draft.chassis.trim() || aeroTonnage <= 0 || missing !== "") return;
@@ -311,6 +342,7 @@ export default function HomePage() {
 
   const build = async () => {
     if (protoPicked) return buildProto();
+    if (baPicked) return buildBa();
     if (aeroPicked) return buildAero();
     if (vehiclePicked) return buildVehicle();
     if (!storage || !draft.chassis.trim() || missing !== "") return;
@@ -688,6 +720,7 @@ export default function HomePage() {
 
       <ProtoSavedUnits />
       <VehicleShelf />
+      <SavedBattleArmor key={baListed} />
 
       <section className="bt-section" aria-labelledby="bt-add">
         <h2 id="bt-add">Add a 'Mech</h2>
@@ -747,9 +780,14 @@ export default function HomePage() {
                     onChoose: setProtoType,
                   },
                 },
+                {
+                  prefix: "ba:",
+                  label: "Battle armor (opens the battle armor editor)",
+                  choices: { options: baOptions, chosen: baPicked?.id, onChoose: setBaPick },
+                },
               ]}
             />
-            {!aeroPicked && !protoPicked && !vehiclePicked && (
+            {!aeroPicked && !protoPicked && !vehiclePicked && !baPicked && (
             <div className="bt-field">
               <label htmlFor="bt-new-config">Configuration</label>
               <select
@@ -847,6 +885,24 @@ export default function HomePage() {
                 <NumberField id="bt-new-vehicle-tons" label="Tonnage" value={vehicleTonnage} min={1} hint={`Whole tons, 1 to ${String(vehiclePicked.row.maxTons)}.`} onValid={(tons) => { setVehicleTons(tons ?? undefined); }} />
                 <NumberField id="bt-new-vehicle-cruise" label="Cruising MP" value={vehicleCruise} min={1} hint={vehiclePicked.row.minCruise === undefined ? undefined : `At least ${String(vehiclePicked.row.minCruise)}.`} onValid={(cruise) => { setVehicleCruise(cruise ?? 1); }} />
               </>
+            ) : baPicked ? (
+              <>
+                <div className="bt-field">
+                  <label htmlFor="bt-new-ba-class">Weight class</label>
+                  <select id="bt-new-ba-class" value={baClassId} onChange={(e) => { setBaClass(e.target.value); }}>
+                    {baClasses.map((row) => (
+                      <option key={row.id} value={row.id}>{`${row.label} (${String(row.minKg)} to ${String(row.maxKg)} kg)`}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="bt-field">
+                  <label htmlFor="bt-new-ba-body">Body</label>
+                  <select id="bt-new-ba-body" value={baClassId === "pal" ? "humanoid" : baBody} disabled={baClassId === "pal"} onChange={(e) => { setBaBody(e.target.value === "quad" ? "quad" : "humanoid"); }}>
+                    <option value="humanoid">Humanoid</option>
+                    <option value="quad">Quad</option>
+                  </select>
+                </div>
+              </>
             ) : aeroPicked && aeroRow ? (
               <>
                 <NumberField id="bt-new-aero-tons" label="Tonnage" value={aeroTons ?? startTons(aeroRow)} min={0} hint={weightHint(aeroRow.weight)} onValid={(tons) => { setAeroTons(tons ?? undefined); }} />
@@ -882,6 +938,8 @@ export default function HomePage() {
               "You start with the chassis and an engine for the walking speed, no jump jets, no heat sinks, no armor and no equipment. The ProtoMech editor's rules check shows what is left to do."
             ) : vehiclePicked ? (
               "You start with a standard fusion engine and its ten free heat sinks (an internal combustion engine gives none), no armor, no turret and no equipment. The vehicle editor's rules check shows what is left to do."
+            ) : baPicked ? (
+              "You start with the chassis, its free ground MP, no armor and no equipment. The battle armor editor's rules check shows what is left to do."
             ) : aeroPicked ? (
               "You start with a standard engine, no fuel, no armor, no heat sinks and no equipment. The AeroTech editor's rules check shows what is left to do."
             ) : (
