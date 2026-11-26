@@ -101,3 +101,15 @@ describe("a superheavy 'Mech", () => {
     expect(bv.defensive.structure).toBeCloseTo(227 * 1.5 * 0.75, 3);
   });
 });
+
+describe("a superheavy IndustrialMech and Mordel's prototype names", () => {
+  it("takes the superheavy gyro and cockpit without a unit-type error, which an IndustrialMech's own parts list would refuse", () => {
+    const record = newRecord({ chassis: "Digger", model: "SD-1", tons: 200, walk: 1, techBase: "inner-sphere", configuration: "biped", year: 3080, rulesLevel: "advanced", unitType: "industrialmech" }, "classic", "im");
+    expect(record.chassis).toMatchObject({ gyro: "superheavy", cockpit: "superheavy-industrial", structure: "industrial" });
+    expect(runChecks(record, catalog).filter((f) => f.check === "unit-type" && f.level === "error").map((f) => f.message)).toEqual([]);
+  });
+
+  it("matches Mordel's 'PPC (Prototype)' to the primitive prototype PPC", () => {
+    expect(catalog.match("PPC (Prototype)", "inner-sphere")?.id).toBe("primitive-prototype-ppc-is");
+  });
+});

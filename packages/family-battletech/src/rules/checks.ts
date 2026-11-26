@@ -949,7 +949,10 @@ function unitTypeCheck({ record, catalog }: CheckInput): Finding[] {
     ["armor", ARMOR, chassis.armorType, rules.parts.armor, "chassis.armorType", rules.cites.armor, rules.armorNames],
   ];
   for (const group of chassis.heatSinks.extra ?? []) parts.push(["heat sink", HEAT_SINKS, group.type, rules.parts.heatSink, "chassis.heatSinks", rules.cites.heatSinks]);
+  const heavy = superheavyOf(record) !== undefined;
   for (const [what, table, key, allowed, field, cite, renamed] of parts) {
+    // A superheavy IndustrialMech's gyro and cockpit are its own (the superheavy and configuration checks name them).
+    if (heavy && (what === "gyro" || what === "cockpit")) continue;
     if (own(table.types, key) && !allowed.includes(key)) {
       const name = renamed !== undefined && own(renamed, key) ? (renamed[key] ?? key) : partName(table, key);
       add(`${name} ${what} is not allowed on an ${unit}; it has ${names(table, allowed, renamed)}.`, cite, { field });
