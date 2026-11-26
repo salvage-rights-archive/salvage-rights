@@ -5,4 +5,7 @@ export const ACES_BASE = "/battletech/aces-preview";
 export const ACES_HOME = `${ACES_BASE}/home`;
 export const ACES_CARDS = `${ACES_BASE}/cards`;
 export const ACES_CARD = `${ACES_BASE}/card`;
-export const cardHref = (id: string): string => `${ACES_CARD}?id=${encodeURIComponent(id)}`;
+export const ACES_NEW_GAME = `${ACES_BASE}/new-game`;
+export const ACES_GAME = `${ACES_BASE}/game`;
+export const gameHref = (id: string): string => `${ACES_GAME}?id=${encodeURIComponent(id)}`;
+export const cardHref =(id: string): string => `${ACES_CARD}?id=${encodeURIComponent(id)}`;

@@ -175,3 +175,24 @@ test("the Classic home with Export all has no axe violations in either theme, fi
   expect(box?.width ?? 0).toBeGreaterThanOrEqual(44);
   await expectNoViolations(page, DEV, [`${CLASSIC}/home`]);
 });
+
+test("the Aces game setup, the game page and the home with a game in progress have no axe violations in either theme", async ({ page }) => {
+  test.setTimeout(150_000);
+  await saveAcesCard(page, DEV);
+  for (const name of ["Mine A", "Theirs A"]) await saveAsUnit(page, DEV, name, 20);
+  for (const theme of ["Light", "Dark"] as const) {
+    await chooseTheme(page, DEV, theme);
+    await page.goto(`${DEV}${ACES}/new-game`);
+    await page.getByLabel("Add a unit to your force").selectOption({ label: "Mine A (PV 20)" });
+    await page.getByRole("button", { name: "Add to your force", exact: true }).click();
+    await page.getByLabel("Add a unit to automated force").selectOption({ label: "Theirs A (PV 20)" });
+    await page.getByRole("button", { name: "Add to automated force", exact: true }).click();
+    await scan(page, theme, "the new game form");
+    await page.getByRole("button", { name: "Start the game" }).click();
+    await expect(page.getByRole("heading", { level: 2, name: "Automated force" })).toBeVisible();
+    await scan(page, theme, "the game page");
+    await page.goto(`${DEV}${ACES}/home`);
+    await expect(page.getByText("Turn 1").first()).toBeVisible();
+    await scan(page, theme, "the Aces home with games");
+  }
+});

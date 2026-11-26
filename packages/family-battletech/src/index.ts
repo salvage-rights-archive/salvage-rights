@@ -21,6 +21,8 @@ const acesPreviewRoutes: FamilyRoute[] = [
   { path: "aces-preview/home", label: "Aces", section: "workshop", load: () => import("./ui/aces/AcesHomePage") },
   { path: "aces-preview/cards", label: "Aces cards", section: "workshop", load: () => import("./ui/aces/CardLibraryPage") },
   { path: "aces-preview/card", label: "Aces card", section: "workshop", load: () => import("./ui/aces/CardEditorPage") },
+  { path: "aces-preview/new-game", label: "New Aces game", section: "workshop", load: () => import("./ui/aces/NewGamePage") },
+  { path: "aces-preview/game", label: "Aces game", section: "workshop", load: () => import("./ui/aces/GamePage") },
 ];
 
 function comingSoon(id: string, shortName: string, fullName: string): GameManifest {
