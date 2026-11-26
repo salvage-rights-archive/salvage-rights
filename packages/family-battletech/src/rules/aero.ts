@@ -5,7 +5,7 @@
 // written by a later version survives a round trip through this one.
 import { ENGINE_TYPES, RULES_LEVELS } from "../data/chassis";
 import type { RulesLevel } from "../data/chassis";
-import { AERO_LOCATION_NAMES, DEFAULT_AERO_EDITION, FIGHTER_ARMOR_TYPES, FIGHTER_FIGURES, aeroFigures, aeroTypesFor, fighterArmorPointsPerTon, fighterArmorTypes, figureOf, kindFigureOf } from "../data/aero";
+import { AERO_LOCATION_NAMES, DEFAULT_AERO_EDITION, FIGHTER_ARMOR_TYPES, FIGHTER_FIGURES, aeroFigures, aeroTypesFor, fighterArmorPointsPerTon, fighterArmorTypes, fighterPatchworkPointsPerTon, fighterPatchworkTypes, figureOf, kindFigureOf } from "../data/aero";
 import type { AeroShape, AeroType, FighterKind } from "../data/aero";
 import { CRAFT_FIGURES, craftArmorPointsPerTon, craftBayFigure } from "../data/aero";
 import type { CraftKind, CraftRound, CraftUse } from "../data/aero";
@@ -71,8 +71,9 @@ export interface AeroRecord {
   /** A vessel built to tow others: the edition that asks for it adds a share to the structure's mass (`towingSiShare`). */
   towing?: boolean;
   fuelTons: number;
-  /** `points` is keyed by the edition's armor locations (`locationsOf`); a key the edition lacks is kept. */
-  armor: { type: string; tons: number; points: Record<string, number> };
+  /** `points` is keyed by the edition's armor locations (`locationsOf`); a key the edition lacks is kept. `patchwork` (fighters, current rules) names the armor type of each
+   * location that differs from `type`; with it the tons are worked out from the points, location by location (`fighterArmorTons`), and `tons` is not read. */
+  armor: { type: string; tons: number; points: Record<string, number>; patchwork?: Record<string, string> };
   /** `count` is the heat sinks added beyond those the engine gives free; the free ones are derived per edition. */
   heatSinks: { type: string; count: number };
   mounts: AeroMount[];
@@ -182,6 +183,12 @@ function part<T>(v: unknown, known: readonly (keyof T & string)[], fill: (o: Rec
   return { ...unknownKeys(o, known), ...fill(o) };
 }
 
+/** The armor type of each location a saved record names, as the field to spread into `armor`; nothing when it names none. */
+function patchworkOf(v: unknown): { patchwork?: Record<string, string> } {
+  const entries = isObject(v) ? Object.entries(v).filter((entry): entry is [string, string] => isString(entry[1])) : [];
+  return entries.length === 0 ? {} : { patchwork: Object.fromEntries(entries) };
+}
+
 function numbers(v: unknown): Record<string, number> {
   return isObject(v) ? (Object.fromEntries(Object.entries(v).filter(([, n]) => isNumber(n))) as Record<string, number>) : {};
 }
@@ -240,7 +247,7 @@ export function withDefaults(value: unknown, fallbackId = ""): AeroRecord | unde
     thrust: part<AeroRecord["thrust"]>(v.thrust, ["safe"], (o) => ({ safe: num(o.safe, 0) })),
     engine: part<AeroRecord["engine"]>(v.engine, ["type"], (o) => ({ type: str(o.type, "standard") })),
     fuelTons: num(v.fuelTons, 0),
-    armor: part<AeroRecord["armor"]>(v.armor, ["type", "tons", "points"], (o) => ({ type: str(o.type, "standard"), tons: num(o.tons, 0), points: numbers(o.points) })),
+    armor: part<AeroRecord["armor"]>(v.armor, ["type", "tons", "points", "patchwork"], (o) => ({ type: str(o.type, "standard"), tons: num(o.tons, 0), points: numbers(o.points), ...patchworkOf(o.patchwork) })),
     heatSinks: part<AeroRecord["heatSinks"]>(v.heatSinks, ["type", "count"], (o) => ({ type: str(o.type, "single"), count: num(o.count, 0) })),
     mounts: Array.isArray(v.mounts) ? v.mounts.filter(isObject).map(mountOf) : [],
     notes: isObject(v.notes) ? (Object.fromEntries(Object.entries(v.notes).filter(([, n]) => isString(n))) as Record<string, string>) : {},
@@ -344,6 +351,36 @@ export function fighterArmorLimit(record: AeroRecord): { points: number; tons: n
   return { points: Math.floor(tidy(tons * perTon)), tons };
 }
 
+// ---- Patchwork armor on a fighter (Tactical Operations: AUE p. 189; Interstellar Operations: Alternate Eras p. 82) ----------------------------------------
+
+/** The armor type a fighter's location wears: its patchwork choice, else the record's armor type. */
+export function armorTypeAt(record: Pick<AeroRecord, "armor">, location: string): string {
+  const choice = record.armor.patchwork && Object.hasOwn(record.armor.patchwork, location) ? record.armor.patchwork[location] : undefined;
+  return choice ?? record.armor.type;
+}
+
+/** Whether the fighter's armor is patchwork: the edition offers it to a fighter and some location wears a type other than the record's. A record that holds the
+ * choices under another edition or unit type keeps them, and is read as one armor type. */
+export function fighterPatchworkActive(record: AeroRecord): boolean {
+  return fighterKind(record) !== undefined && fighterPatchworkTypes(record.editionId).length > 0 && Object.values(record.armor.patchwork ?? {}).some((t) => t !== record.armor.type);
+}
+
+/** The weapon slots a location's armor type takes from its arc when armor is patchwork; 0 for a type the list lacks. */
+export function patchworkSlotsAt(record: AeroRecord, location: string): number {
+  return fighterPatchworkTypes(record.editionId).find((t) => t.id === armorTypeAt(record, location))?.slots ?? 0;
+}
+
+/** The tons of armor on one location when armor is patchwork: its points over the type's points a ton, up to the half ton (TO:AUE p. 189). Null for a type with no figure. */
+export function patchworkTonsAt(record: AeroRecord, location: string): number | null {
+  const perTon = fighterPatchworkPointsPerTon(armorTypeAt(record, location), record.editionId);
+  return perTon === undefined ? null : ceilHalf((record.armor.points[location] ?? 0) / perTon);
+}
+
+/** The tons of armor on the fighter: the record's own figure, or with patchwork armor the sum of the locations' (a location of a type with no figure counts nothing). */
+export function fighterArmorTons(record: AeroRecord): number {
+  return fighterPatchworkActive(record) ? tidy(Object.keys(record.armor.points).reduce((sum, loc) => sum + (patchworkTonsAt(record, loc) ?? 0), 0)) : record.armor.tons;
+}
+
 export interface FighterArmor {
   /** Points the armor tons give. */
   bought: number | null;
@@ -356,6 +393,11 @@ export interface FighterArmor {
   over: number | null;
 }
 export function fighterArmor(record: AeroRecord): FighterArmor {
+  // Patchwork: the weight follows the points set, so none are bought and left unset, or set beyond what is bought.
+  if (fighterPatchworkActive(record)) {
+    const set = Object.values(record.armor.points).reduce((sum, n) => sum + n, 0);
+    return { bought: set, free: 0, available: set, allocated: set, over: 0 };
+  }
   const bought = fighterArmorPoints(record.armor.type, record.armor.tons, record.editionId);
   const free = figureOf(FIGHTER_FIGURES.cockpitArmor, record.editionId) ?? 0;
   const allocated = Object.values(record.armor.points).reduce((sum, n) => sum + n, 0);
@@ -412,12 +454,13 @@ export interface FighterArc {
 export function fighterArcs(record: AeroRecord, catalog?: Catalog): FighterArc[] {
   const arms = figureOf(FIGHTER_FIGURES.arms, record.editionId);
   const lost = FIGHTER_ARMOR_TYPES.find((t) => t.id === record.armor.type)?.lostSlots ?? [];
+  const patchwork = fighterPatchworkActive(record);
   if (!arms || fighterKind(record) === undefined) return [];
   return locationsOf(record).arcs.map((arc) => {
     const inArc = record.mounts.filter((m) => m.arc === arc);
     const counted = inArc.filter((m) => arms.countsAmmo === true || !isAmmoMount(m, catalog));
     const weaponTons = tidy(inArc.filter((m) => !isAmmoMount(m, catalog)).reduce((sum, m) => sum + (mountFacts(m, record.editionId, catalog)?.tons ?? 0), 0));
-    return { arc, items: counted.length, limit: arms.items - (lost.includes(arc) ? 1 : 0), weaponTons, ...(arc === "AF" && arms.aftTons !== undefined ? { tonsLimit: arms.aftTons } : {}) };
+    return { arc, items: counted.length, limit: arms.items - (patchwork ? patchworkSlotsAt(record, arc) : lost.includes(arc) ? 1 : 0), weaponTons, ...(arc === "AF" && arms.aftTons !== undefined ? { tonsLimit: arms.aftTons } : {}) };
   });
 }
 
@@ -478,7 +521,7 @@ export function fighterTally(record: AeroRecord, catalog?: Catalog): FighterTall
     { label: "Engine", tons: engine ?? 0 },
     { label: "Fuel", tons: record.fuelTons },
     { label: "Cockpit and controls", tons: controlTons(record) ?? 0 },
-    { label: "Armor", tons: record.armor.tons },
+    { label: "Armor", tons: fighterArmorTons(record) },
     { label: "Heat sinks", tons: record.heatSinks.count },
     { label: "Weapons and equipment", tons: weapons },
     { label: "Ammunition", tons: ammunition },

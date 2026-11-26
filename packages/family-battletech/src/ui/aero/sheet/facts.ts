@@ -1,12 +1,12 @@
 // What a fighter's record sheet prints, worked out once from the record: the data block, the weapons and equipment lines, the armor of each
 // area with its Damage Threshold, the heat sinks. Pure; nothing here throws on a record it does not understand (a figure we cannot work out
 // is an empty string, never a made-up one).
-import { aeroLocationName, fighterHeat, fighterSI, fuelPoints, maxThrust } from "../../../rules/aero";
+import { aeroLocationName, armorTypeAt, fighterHeat, fighterPatchworkActive, fighterSI, fuelPoints, maxThrust } from "../../../rules/aero";
 import type { AeroMount, AeroRecord } from "../../../rules/aero";
 import { aeroOfficialState } from "../../../rules/aero-checks";
 import { aeroCatalogFigures, aeroWeaponFigures } from "../../../data/aero-weapons";
 import type { AeroWeaponFigures } from "../../../data/aero-weapons";
-import { aeroEditionName } from "../../../data/aero";
+import { aeroEditionName, fighterPatchworkTypes } from "../../../data/aero";
 import { SHEET_HEAT_SINKS, TECH_BASE_NAMES } from "../../../data/sheet";
 import type { SheetProfile } from "../../../data/aero-sheet";
 import type { Catalog } from "../../../rules/catalog";
@@ -37,6 +37,8 @@ export interface ArmorArea {
   name: string;
   points: number;
   threshold: number;
+  /** The armor type of this area, set only when armor is patchwork (each area then says its own). */
+  type?: string;
 }
 
 export interface FighterFacts {
@@ -116,9 +118,12 @@ export function fighterFacts(record: AeroRecord, catalog: Catalog, profile: Shee
   const name = `${record.name.chassis} ${record.name.model}`.trim() || "Unnamed unit";
   const heat = fighterHeat(record);
   const sinkType = SHEET_HEAT_SINKS[record.heatSinks.type]?.label ?? record.heatSinks.type;
-  const armor = profile.armor.map((code) => {
+  const patchwork = fighterPatchworkActive(record);
+  const types = fighterPatchworkTypes(record.editionId);
+  const armor: ArmorArea[] = profile.armor.map((code) => {
     const points = record.armor.points[code] ?? 0;
-    return { code, name: aeroLocationName(code), points, threshold: Math.ceil(points / 10) };
+    const type = armorTypeAt(record, code);
+    return { code, name: aeroLocationName(code), points, threshold: Math.ceil(points / 10), ...(patchwork ? { type: types.find((t) => t.id === type)?.name ?? type } : {}) };
   });
   const stray = Object.entries(record.armor.points).filter(([code, n]) => !profile.armor.includes(code) && n !== 0).map(([code, points]) => ({ code, points }));
   const mark = officialLabel(aeroOfficialState(record));

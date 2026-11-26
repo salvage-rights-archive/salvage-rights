@@ -165,6 +165,15 @@ export function strayArcs(record: AeroRecord, known: string[]): string[] {
   return [...new Set(record.mounts.map((m) => m.arc).filter((arc) => !known.includes(arc)))];
 }
 
+/** Sets one location's patchwork armor type on a fighter (Tactical Operations: AUE p. 189); the record's own armor type, or none, takes the choice away. One edit. */
+export function setFighterPatchwork(draft: AeroRecord, location: string, type: string | null): void {
+  const next = { ...draft.armor.patchwork };
+  if (type === null || type === draft.armor.type) delete next[location];
+  else next[location] = type;
+  if (Object.keys(next).length === 0) delete draft.armor.patchwork;
+  else draft.armor.patchwork = next;
+}
+
 /** The armor locations to show: the edition's, then any other location that holds points (kept, and reported by the check). */
 export function armorLocations(record: AeroRecord, known: string[]): string[] {
   return [...known, ...Object.entries(record.armor.points).filter(([loc, n]) => !known.includes(loc) && n !== 0).map(([loc]) => loc)];

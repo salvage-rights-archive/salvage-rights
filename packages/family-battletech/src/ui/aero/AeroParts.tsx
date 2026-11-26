@@ -3,17 +3,20 @@
 // holds it, and then it stays listed and the rules check reports it. Every derived figure comes from rules/aero.ts and is left out where
 // the edition prints none.
 import { ENGINE_TYPES } from "../../data/chassis";
-import { CAPITAL_ARMOR_TYPES, CAPITAL_FIGURES, CRAFT_FIGURES, DEFAULT_AERO_EDITION, FIGHTER_FIGURES, aeroTypesFor, fighterArmorTypes, figureOf, kindFigureOf } from "../../data/aero";
+import { CAPITAL_ARMOR_TYPES, CAPITAL_FIGURES, CRAFT_FIGURES, DEFAULT_AERO_EDITION, FIGHTER_FIGURES, aeroTypesFor, fighterArmorTypes, fighterPatchworkTypes, figureOf, kindFigureOf } from "../../data/aero";
 import { ERAS } from "../../data/editions";
 import { setEra, setYear } from "../../rules/availability";
 import {
   aeroLocationName,
+  armorTypeAt,
   controlTons,
   engineRating,
   fighterArmor,
+  fighterArmorTons,
   fighterEngineTons,
   fighterHeat,
   fighterKind,
+  fighterPatchworkActive,
   fighterSI,
   fuelPoints,
   hardpoints,
@@ -21,16 +24,18 @@ import {
   kfDrive,
   locationsOf,
   maxThrust,
+  patchworkSlotsAt,
+  patchworkTonsAt,
   stationKeeping,
   vessel,
 } from "../../rules/aero";
 import type { AeroRecord } from "../../rules/aero";
-import { aeroLowestLevel } from "../../rules/aero-checks";
+import { aeroLowestLevel, fighterPatchworkOffered } from "../../rules/aero-checks";
 import type { Catalog } from "../../rules/catalog";
 import { DEFAULT_LEVEL, levelAtLeast, levelRow } from "../../rules/levels";
 import { own, tidy } from "../../rules/walk";
 import LevelSelect from "../editor/LevelSelect";
-import { armorLocations, syncArmorLocations, techBasesFor, typeReady, typeRow, weightHint } from "./edit";
+import { armorLocations, setFighterPatchwork, syncArmorLocations, techBasesFor, typeReady, typeRow, weightHint } from "./edit";
 import type { AeroOnEdit } from "./edit";
 import { NumberField, SelectField, TextField, fieldId } from "./fields";
 
@@ -340,6 +345,10 @@ export function ArmorPanel({ record, onEdit }: PartProps) {
     .map((t) => ({ value: t.id, label: t.name }));
   const armor = fighter ? fighterArmor(record) : (ship?.armor ?? null);
   const craftFigures = ship?.armor ?? null;
+  const patchwork = fighter !== undefined && fighterPatchworkActive(record);
+  const patchworkTypes = fighterPatchworkTypes(edition)
+    .filter((t) => record.techBase === "mixed" || t.techBase === "both" || t.techBase === record.techBase)
+    .map((t) => ({ value: t.id, label: t.name }));
   return (
     <section className="bt-panel" aria-labelledby="aero-armor">
       <h2 id="aero-armor">Armor</h2>
@@ -353,17 +362,42 @@ export function ArmorPanel({ record, onEdit }: PartProps) {
             onEdit((d) => void (d.armor.type = v));
           }}
         />
-        <NumberField
-          id="field-armor-tons"
-          label="Armor tons"
-          value={record.armor.tons}
-          min={0}
-          hint={armor?.bought === null || armor === null ? undefined : `${plural(armor.bought ?? 0, "point")}`}
-          onValid={(v) => {
-            onEdit((d) => void (d.armor.tons = v ?? 0), "armor-tons");
-          }}
-        />
+        {!patchwork && (
+          <NumberField
+            id="field-armor-tons"
+            label="Armor tons"
+            value={record.armor.tons}
+            min={0}
+            hint={armor?.bought === null || armor === null ? undefined : `${plural(armor.bought ?? 0, "point")}`}
+            onValid={(v) => {
+              onEdit((d) => void (d.armor.tons = v ?? 0), "armor-tons");
+            }}
+          />
+        )}
       </div>
+      {fighter !== undefined && fighterPatchworkOffered(record) && (
+        <details className="bt-patchwork" open={patchwork || undefined}>
+          <summary>Patchwork armor</summary>
+          <p className="bt-hint">
+            A different armor type on each location (Tactical Operations: Advanced Units and Equipment, p. 189; Interstellar Operations: Alternate Eras, p. 82). Each location weighs its own armor, rounded up to the half ton, and its type takes weapon slots from that arc. The armor type above is the one for any location left at it.
+          </p>
+          <div className="bt-grid">
+            {known.map((loc) => (
+              <SelectField
+                key={loc}
+                id={fieldId(`patchwork-${loc}`)}
+                label={`${aeroLocationName(loc)} armor type`}
+                value={armorTypeAt(record, loc)}
+                options={patchworkTypes}
+                hint={patchwork ? `${plural(patchworkSlotsAt(record, loc), "slot")}, ${plural(patchworkTonsAt(record, loc) ?? 0, "ton")}` : undefined}
+                onChange={(v) => {
+                  onEdit((d) => void setFighterPatchwork(d, loc, v));
+                }}
+              />
+            ))}
+          </div>
+        </details>
+      )}
       <fieldset className="bt-arm">
         <legend>Armor points on each location</legend>
         <div className="bt-grid">
@@ -375,7 +409,7 @@ export function ArmorPanel({ record, onEdit }: PartProps) {
               name={`${aeroLocationName(loc)} armor points`}
               value={record.armor.points[loc] ?? 0}
               min={0}
-              hint={known.includes(loc) ? undefined : "this edition has no such location"}
+              hint={known.includes(loc) ? (patchwork ? plural(patchworkTonsAt(record, loc) ?? 0, "ton") : undefined) : "this edition has no such location"}
               onValid={(v) => {
                 onEdit((d) => void (d.armor.points[loc] = v ?? 0), `armor-${loc}`);
               }}
@@ -385,6 +419,7 @@ export function ArmorPanel({ record, onEdit }: PartProps) {
       </fieldset>
       <Readout
         lines={[
+          patchwork ? `${plural(fighterArmorTons(record), "ton")} of armor in all, each location up to the half ton` : undefined,
           armor === null ? undefined : `${num(armor.allocated)} points set${armor.available === null ? "" : ` of ${num(armor.available)}`}${armor.free > 0 ? `, ${num(armor.free)} of them free` : ""}`,
           armor?.over !== null && armor?.over !== undefined && armor.over > 0 ? `${num(armor.over)} points over what the armor gives` : undefined,
           craftFigures?.limitTons == null ? undefined : `At most ${plural(craftFigures.limitTons, "ton")} of armor for this structure`,

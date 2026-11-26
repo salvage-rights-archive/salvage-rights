@@ -114,6 +114,8 @@ export function targetFor(where: AeroFinding["where"], record: AeroRecord): stri
   if (field === "thrust" || field === "fuelTons" || field === "si" || field === "crew") return fieldId(field);
   if (field === "heatSinks") return fieldId("heatSinks");
   if (field === "armor.type") return fieldId("armor-type");
+  if (field === "armor.patchwork") return fieldId(`patchwork-${locationsOf(record).armor[0] ?? "NO"}`);
+  if (field.startsWith("armor.patchwork.")) return fieldId(`patchwork-${field.slice("armor.patchwork.".length)}`);
   if (field === "armor.tons" || field === "armor.points") return fieldId("armor-tons");
   if (field.startsWith("armor.points.")) return fieldId(`armor-${field.slice("armor.points.".length)}`);
   return undefined;

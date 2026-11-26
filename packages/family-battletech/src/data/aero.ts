@@ -507,6 +507,46 @@ export function fighterArmorTypes(editionId: string): AeroArmorType[] {
   return FIGHTER_ARMOR_TYPES.filter((t) => t.editions.includes(editionId));
 }
 
+/**
+ * Patchwork armor for fighters, current rules only (AeroTech 2 and AeroTech 2: Revised print no such option). Tactical Operations: AUE
+ * printed p. 189 names fighters (aerospace and conventional) among the units that may mount it and excludes every other aerospace unit; its
+ * Patchwork Armor Table gives a fighter the figure right of the slash, in weapon slots taken from the arc that wears the type. The last two
+ * types are the Patchwork Armor Addendum (Interstellar Operations: Alternate Eras printed p. 82: one slot each on a fighter; Heat-Dissipating
+ * and Impact-Resistant are not for fighters). `like` is the 'Mech armor row whose multiplier gives the points a ton. Armor types the fighter
+ * tables do not offer a fighter (stealth, ferro-lamellor, laser-reflective, reactive) are left out although the table has a figure for them.
+ */
+export interface FighterPatchworkType {
+  id: string;
+  name: string;
+  techBase: "inner-sphere" | "clan" | "both";
+  like: string;
+  /** Weapon slots the type takes from each arc that wears it. */
+  slots: number;
+  cite: string;
+}
+const PATCHWORK_TO = cite("Tactical Operations: Advanced Units and Equipment", "189");
+const PATCHWORK_IO = cite("Interstellar Operations: Alternate Eras", "82");
+/** Slots by `like`, the Patchwork Armor Table's right-hand figures (printed p. 189). */
+const PATCHWORK_FIGHTER_SLOTS: Record<string, number> = { standard: 0, "light-ferro-fibrous": 1, "ferro-fibrous": 1, "ferro-fibrous-clan": 1, "heavy-ferro-fibrous": 2 };
+export const FIGHTER_PATCHWORK_TYPES: FighterPatchworkType[] = [
+  ...FIGHTER_ARMOR_TYPES.filter((t) => t.editions.includes(E.current) && Object.hasOwn(PATCHWORK_FIGHTER_SLOTS, t.like)).map((t) => ({ id: t.id, name: t.name, techBase: t.techBase, like: t.like, slots: PATCHWORK_FIGHTER_SLOTS[t.like] ?? 0, cite: PATCHWORK_TO })),
+  { id: "anti-penetrative-ablation", name: ARMOR.types["anti-penetrative-ablation"]?.name ?? "Anti-Penetrative Ablation", techBase: "inner-sphere", like: "anti-penetrative-ablation", slots: 1, cite: PATCHWORK_IO },
+  { id: "ballistic-reinforced", name: ARMOR.types["ballistic-reinforced"]?.name ?? "Ballistic-Reinforced", techBase: "inner-sphere", like: "ballistic-reinforced", slots: 1, cite: PATCHWORK_IO },
+];
+
+/** The patchwork armor types an edition offers a fighter: the current rules' list, none for any other edition. */
+export function fighterPatchworkTypes(editionId: string): FighterPatchworkType[] {
+  return editionId === E.current ? FIGHTER_PATCHWORK_TYPES : [];
+}
+
+/** Armor points a ton of a patchwork type gives a fighter (the base times its multiplier), or undefined for a type the list lacks. */
+export function fighterPatchworkPointsPerTon(typeId: string, editionId: string): number | undefined {
+  const type = FIGHTER_PATCHWORK_TYPES.find((t) => t.id === typeId);
+  const base = figureOf(FIGHTER_FIGURES.armorBasePoints, editionId);
+  const multiplier = type && Object.hasOwn(ARMOR.types, type.like) ? ARMOR.types[type.like]?.multiplier : undefined;
+  return base === undefined || multiplier === undefined ? undefined : Math.round(base * multiplier * 1e6) / 1e6;
+}
+
 /** Armor points a ton of the type gives a fighter in an edition (the base times the type's multiplier), or undefined when the type or the edition's base is unknown. */
 export function fighterArmorPointsPerTon(typeId: string, editionId: string): number | undefined {
   const type = FIGHTER_ARMOR_TYPES.find((t) => t.id === typeId);

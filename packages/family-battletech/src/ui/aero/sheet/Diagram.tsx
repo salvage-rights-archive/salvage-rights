@@ -49,7 +49,8 @@ export function bubblesIn(shapes: Shape[], count: number): { points: BubblePoint
 }
 
 function Label({ area, anchor, size, thresholds }: { area: ArmorArea; anchor: { x: number; y: number; anchor: "start" | "middle" | "end" }; size: number; thresholds: boolean }) {
-  const lines = thresholds ? [area.name, "Damage Threshold", `${String(area.threshold)} (${String(area.points)})`] : [area.name, String(area.points)];
+  const typeLine = area.type === undefined ? [] : [area.type];
+  const lines = thresholds ? [area.name, ...typeLine, "Damage Threshold", `${String(area.threshold)} (${String(area.points)})`] : [area.name, ...typeLine, String(area.points)];
   return (
     <g data-area={area.code}>
       {lines.map((line, index) => (

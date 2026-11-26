@@ -199,3 +199,40 @@ test("the Classic home offers an aerospace unit that opens the AeroTech editor, 
   await page.getByRole("link", { name: "Go to the AeroTech home" }).click();
   await expect(page.getByRole("heading", { level: 1, name: "BattleTech: AeroTech" })).toBeVisible();
 });
+
+test("patchwork armor on a fighter: hidden at Standard, offered at Advanced from 3075, an armor type on the aft arc shows in the editor and on the sheet; axe clean in both themes, no sideways scroll at 320 px", async ({ page }) => {
+  test.setTimeout(180_000);
+  const editor = await startUnit(page, "tw-tm-so", "Patch Sabre");
+  await expect(page.getByText("Patchwork armor", { exact: true })).toBeHidden();
+  await page.getByLabel("Rules level").selectOption("advanced");
+  await page.getByLabel("Year", { exact: true }).fill("3080");
+  await page.getByText("Patchwork armor", { exact: true }).click();
+  await page.getByLabel("Aft armor type").selectOption("anti-penetrative-ablation");
+  await page.getByLabel("Aft armor points").fill("12");
+  await expect(page.getByText("1 slot, 1 ton", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(page.getByText("Saved.")).toBeVisible();
+  await page.getByRole("link", { name: "Record sheet" }).click();
+  await expectPage(page.getByRole("heading", { level: 1 })).toHaveText("Patch Sabre record sheet");
+  const sheet = page.getByRole("img", { name: "Patch Sabre aerospace fighter record sheet" });
+  await expect(sheet.locator("text", { hasText: "Anti-Penetrative Ablation" })).toBeVisible();
+  const sheetPath = new URL(page.url()).pathname.replace(/^\/salvage-rights/, "") + new URL(page.url()).search;
+
+  for (const theme of ["Light", "Dark"] as const) {
+    await chooseTheme(page, theme);
+    for (const path of [editor, sheetPath]) {
+      await page.goto(`${DEV}${path}`);
+      await expectPage(page.getByRole("heading", { level: 1 })).toBeVisible();
+      if (path === editor) await expect(page.getByLabel("Aft armor type")).toHaveValue("anti-penetrative-ablation");
+      const results = await new AxeBuilder({ page }).analyze();
+      expect(results.violations, `${theme} theme, ${path}`).toEqual([]);
+    }
+  }
+  await page.setViewportSize({ width: 320, height: 700 });
+  for (const path of [editor, sheetPath]) {
+    await page.goto(`${DEV}${path}`);
+    await expectPage(page.getByRole("heading", { level: 1 })).toBeVisible();
+    const widths = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, client: document.documentElement.clientWidth }));
+    expect(widths.scroll, path).toBe(widths.client);
+  }
+});

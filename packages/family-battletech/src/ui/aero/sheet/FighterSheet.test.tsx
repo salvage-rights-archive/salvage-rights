@@ -81,6 +81,16 @@ describe("The fighter record sheets", () => {
     expect(counts).toEqual({ CP: 14, NO: 22, LW: 22, RW: 18, FU: 20, EN: 12 });
   });
 
+  it("names the armor type of each area on the current sheet when armor is patchwork, and no type when it is not", () => {
+    const profile = sheetProfileFor(DEFAULT_AERO_EDITION, "aerospace-fighter");
+    if (!profile) throw new Error("no current sheet");
+    const patched = fighterFor(profile);
+    patched.armor.patchwork = { AF: "anti-penetrative-ablation" };
+    const typed = (record: AeroRecord) => [...drawn(record, profile).svg.querySelectorAll('[data-area="AF"] text')].map((t) => t.textContent.trim());
+    expect(typed(patched)).toContain("Anti-Penetrative Ablation");
+    expect(typed(fighterFor(profile))).not.toContain("Standard");
+  });
+
   it("carries the flagged heat scale only on the flagged sheets and our own words on AeroTech (1986)", () => {
     const sources = SHEET_PROFILES.map((profile) => {
       const { svg, container } = drawn(fighterFor(profile), profile);

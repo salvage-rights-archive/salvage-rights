@@ -3,9 +3,9 @@
 // the WarShip's drive. These join the fighter checks in `AERO_CHECKS` (rules/aero-checks.ts). Every figure and page comes from data/aero.ts; a
 // message states the numbers and names the deciding page through its cite. Findings are advice, never refusals, and a unit this version does
 // not understand gets none from here.
-import { CAPITAL_FIGURES, CAPITAL_SYSTEMS, CRAFT_FIGURES, DEFAULT_AERO_EDITION, FIGHTER_ARMOR_TYPES, FIGHTER_EDITIONS, aeroEditionName } from "../data/aero";
+import { CAPITAL_FIGURES, CAPITAL_SYSTEMS, CRAFT_FIGURES, DEFAULT_AERO_EDITION, FIGHTER_ARMOR_TYPES, FIGHTER_EDITIONS, FIGHTER_PATCHWORK_TYPES, aeroEditionName } from "../data/aero";
 import type { FigureGroup } from "../data/aero";
-import { aeroLocationName, capitalKind, capitalSystems, craftAmmoShortfalls, craftKind, heatByArc, locationsOf, stationKeeping, towingShare, vessel } from "./aero";
+import { aeroLocationName, armorTypeAt, fighterPatchworkActive, capitalKind, capitalSystems, craftAmmoShortfalls, craftKind, heatByArc, locationsOf, stationKeeping, towingShare, vessel } from "./aero";
 import type { AeroRecord } from "./aero";
 import type { AeroCheck, AeroFinding } from "./aero-checks";
 import { tidy } from "./walk";
@@ -93,11 +93,17 @@ const vesselArmorCheck: AeroCheck = {
 const armorTechBaseCheck: AeroCheck = {
   id: "armor-tech",
   run({ record }) {
-    if (record.editionId !== DEFAULT_AERO_EDITION || record.techBase === "mixed" || record.armor.tons <= 0) return [];
-    const type = FIGHTER_ARMOR_TYPES.find((t) => t.id === record.armor.type);
-    if (!type || type.techBase === "both" || type.techBase === record.techBase) return [];
+    if (record.editionId !== DEFAULT_AERO_EDITION || record.techBase === "mixed") return [];
+    // With patchwork armor each type a location wears with points on it is read, once, and the field names the first such location.
+    const used: { id: string; field: string }[] = fighterPatchworkActive(record)
+      ? Object.entries(record.armor.points).filter(([, n]) => n > 0).map(([loc]) => ({ id: armorTypeAt(record, loc), field: `armor.patchwork.${loc}` })).filter((u, i, all) => all.findIndex((o) => o.id === u.id) === i)
+      : record.armor.tons > 0 ? [{ id: record.armor.type, field: "armor.type" }] : [];
     const side = (base: string) => (base === "clan" ? "Clan" : "Inner Sphere");
-    return [{ check: "armor-tech", level: "warning", message: `${type.name} armor is ${side(type.techBase)} armor on a${record.techBase === "clan" ? " Clan" : "n Inner Sphere"} unit.`, where: { field: "armor.type" }, cite: PAGE_TECH_ARMOR }];
+    return used.flatMap(({ id, field }) => {
+      const type = [...FIGHTER_ARMOR_TYPES, ...FIGHTER_PATCHWORK_TYPES].find((t) => t.id === id);
+      if (!type || type.techBase === "both" || type.techBase === record.techBase) return [];
+      return [{ check: "armor-tech", level: "warning" as const, message: `${type.name} armor is ${side(type.techBase)} armor on a${record.techBase === "clan" ? " Clan" : "n Inner Sphere"} unit.`, where: { field }, cite: PAGE_TECH_ARMOR }];
+    });
   },
 };
 
