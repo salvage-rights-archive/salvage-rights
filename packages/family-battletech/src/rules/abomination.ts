@@ -153,6 +153,82 @@ export function onlyCreatureLeft(fullStrength: number, eliminated: readonly numb
   return left.length === 1 ? left[0] : undefined;
 }
 
+// ---- The tracker's state (the play page, gothic-design s.7.5) ----------------------------------------------------------------------
+
+/** What the table keeps for one unit: pips marked per creature, launcher shots left, and the mount. Plain data, kept on the device. */
+export interface TrackerState {
+  schema: 1;
+  /** Pips marked on each creature, in creature order. */
+  marked: number[];
+  /** What each creature had marked when the phase began; the difference is this phase's damage. */
+  phaseStart: number[];
+  /** Shots left for each launcher the unit carries, in the order of `launcherSlots`. */
+  shotsLeft: number[];
+  mounted: "none" | "mob" | "hobble";
+  /** A note of our own: what the unit is mounted on. */
+  mountedOn: string;
+}
+
+/** One launcher carried by the unit (a weapon line of count 2 is two launchers), with the shots the sheet prints for it. */
+export interface LauncherSlot {
+  weaponId: string;
+  /** 1-based number among launchers of the same weapon. */
+  number: number;
+  shots: number;
+}
+
+export function launcherSlots(stats: Pick<AbomStats, "weapons">): LauncherSlot[] {
+  return stats.weapons.flatMap((w) =>
+    w.shots === undefined ? [] : Array.from({ length: w.count }, (_, i) => ({ weaponId: w.id, number: i + 1, shots: w.shots as number })),
+  );
+}
+
+export function newTracker(stats: Pick<AbomStats, "creatures" | "weapons">): TrackerState {
+  const zeros = Array.from({ length: stats.creatures }, () => 0);
+  return { schema: 1, marked: zeros, phaseStart: [...zeros], shotsLeft: launcherSlots(stats).map((l) => l.shots), mounted: "none", mountedOn: "" };
+}
+
+/** Reads stored tracker state against the unit's stats: wrong shapes fall back to a fresh one, and figures are held inside their limits. */
+export function trackerWithDefaults(value: unknown, stats: Pick<AbomStats, "creatures" | "weapons"> & { pipsEach: number }): TrackerState {
+  const fresh = newTracker(stats);
+  if (!isObject(value) || value.schema !== 1) return fresh;
+  const list = (v: unknown, fallback: number[], max: (i: number) => number) =>
+    fallback.map((d, i) => (Array.isArray(v) && isNumber(v[i]) ? Math.min(max(i), Math.max(0, Math.round(v[i]))) : d));
+  const slots = launcherSlots(stats);
+  const marked = list(value.marked, fresh.marked, () => stats.pipsEach);
+  return {
+    schema: 1,
+    marked,
+    phaseStart: list(value.phaseStart, fresh.phaseStart, (i) => marked[i] ?? 0),
+    shotsLeft: list(value.shotsLeft, fresh.shotsLeft, (i) => slots[i]?.shots ?? 0),
+    mounted: value.mounted === "mob" || value.mounted === "hobble" ? value.mounted : "none",
+    mountedOn: isString(value.mountedOn) ? value.mountedOn : "",
+  };
+}
+
+/** Marks a creature's pips up to `count` (held between 0 and `pipsEach`); damage past the last pip is lost, as the book says (p. 72). */
+export function markCreature(state: TrackerState, creature: number, count: number, pipsEach: number): TrackerState {
+  const marked = state.marked.map((m, i) => (i === creature - 1 ? Math.min(pipsEach, Math.max(0, count)) : m));
+  return { ...state, marked };
+}
+
+/** Creature numbers (1-based) with every pip marked. */
+export const eliminatedCreatures = (state: TrackerState, pipsEach: number): number[] =>
+  state.marked.flatMap((m, i) => (m >= pipsEach ? [i + 1] : []));
+
+export const activeCreatures = (state: TrackerState, pipsEach: number): number => state.marked.length - eliminatedCreatures(state, pipsEach).length;
+
+/** Pips marked since the phase began, over all creatures. */
+export const damageThisPhase = (state: TrackerState): number => state.marked.reduce((sum, m, i) => sum + Math.max(0, m - (state.phaseStart[i] ?? 0)), 0);
+
+/** End Phase: this phase's damage starts again from nothing. */
+export const endPhase = (state: TrackerState): TrackerState => ({ ...state, phaseStart: [...state.marked] });
+
+/** Spends one shot of a launcher (or gives one back with a negative `by`), held between none and what the sheet prints. */
+export function spendShot(state: TrackerState, slot: number, by: number, capacity: number): TrackerState {
+  return { ...state, shotsLeft: state.shotsLeft.map((s, i) => (i === slot ? Math.min(capacity, Math.max(0, s - by)) : s)) };
+}
+
 /** Packs units into pages of five, in order (the sheet has five unit blocks); the last page holds what is left. */
 export function paginate<T>(units: readonly T[], perPage = 5): T[][] {
   const pages: T[][] = [];

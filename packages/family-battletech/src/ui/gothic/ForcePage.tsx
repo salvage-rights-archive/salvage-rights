@@ -403,6 +403,11 @@ function ForceBuilder({ initial, roster, storage, catalog }: { initial: GothicFo
         <button type="button" className="bt-button bt-button--secondary" disabled={force.mechs.length + force.units.length === 0} onClick={() => { setPrinting(true); }}>
           Print all sheets
         </button>
+        {!dirty && force.units.length > 0 && (
+          <Link className="bt-button bt-button--secondary" to={`${GOTHIC_BASE}/play?force=${encodeURIComponent(force.id)}`}>
+            Play this force
+          </Link>
+        )}
       </p>
 
       <section className="bt-section" aria-labelledby="bt-force-summary">

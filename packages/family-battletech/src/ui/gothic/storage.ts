@@ -18,6 +18,8 @@ export interface ForceEntry {
   unreadable?: string;
   savedAt?: string;
 }
+/** The store prefix of a unit's tracker state on the play page (`gothic-play:<unit id>`). */
+export const PLAY_PREFIX = "gothic-play:";
 
 export interface AbomEntry {
   id: string;
@@ -37,6 +39,10 @@ export interface GothicStorage {
   getForce(id: string): Promise<ForceEntry | undefined>;
   saveForce(force: GothicForce): Promise<void>;
   removeForce(id: string): Promise<void>;
+  /** The tracker state kept for each unit on the table, by unit id, as stored (the page reads it against the unit). */
+  playStates(): Promise<Record<string, unknown>>;
+  savePlay(unitId: string, state: unknown): Promise<void>;
+  removePlay(unitId: string): Promise<void>;
 }
 
 /** One unit, or all of them, as a file (`*.abom.json`). */
@@ -103,6 +109,12 @@ function wrap(store: Store): GothicStorage {
     },
     saveForce: (force) => store.set(FORCE_PREFIX + force.id, { force, savedAt: new Date().toISOString() }),
     removeForce: (id) => store.delete(FORCE_PREFIX + id),
+    playStates: async () => {
+      const keys = (await store.keys()).filter((k) => k.startsWith(PLAY_PREFIX));
+      return Object.fromEntries(await Promise.all(keys.map(async (k) => [k.slice(PLAY_PREFIX.length), await store.get<unknown>(k)] as const)));
+    },
+    savePlay: (unitId, state) => store.set(PLAY_PREFIX + unitId, state),
+    removePlay: (unitId) => store.delete(PLAY_PREFIX + unitId),
   };
 }
 
