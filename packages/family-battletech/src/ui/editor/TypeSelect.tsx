@@ -23,6 +23,7 @@ export interface AeroTypeChoices {
 }
 
 const AERO_PREFIX = "aero:";
+const INFANTRY_PREFIX = "infantry:";
 
 export default function TypeSelect({
   record,
@@ -30,29 +31,39 @@ export default function TypeSelect({
   id = "field-unitType",
   className,
   aero,
+  infantry,
 }: {
   record: Subject;
   onChange: (type: MechType) => void;
   id?: string;
   className?: string;
   aero?: AeroTypeChoices;
+  /** Conventional infantry, a group of its own that opens the infantry editor (the same shape as `aero`). */
+  infantry?: AeroTypeChoices;
 }) {
   const choices = typeChoices(record);
   const current = mechTypeOf(record);
   const noteId = `${id}-note`;
   const waiting = choices.flatMap((choice) => (choice.disabled === undefined ? [] : [`${MECH_TYPES.find((t) => t.id === choice.id)?.label ?? choice.id} is not offered yet: ${choice.disabled}`]));
-  const picked = aero?.chosen === undefined ? undefined : aero.options.find((option) => option.id === aero.chosen);
+  const pickedInfantry = infantry?.chosen === undefined ? undefined : infantry.options.find((option) => option.id === infantry.chosen);
+  const picked = pickedInfantry ?? (aero?.chosen === undefined ? undefined : aero.options.find((option) => option.id === aero.chosen));
   return (
     <div className={className ? `bt-field bt-level ${className}` : "bt-field bt-level"}>
       <label htmlFor={id}>Type</label>
       <select
         id={id}
-        value={picked ? `${AERO_PREFIX}${picked.id}` : current.id}
+        value={pickedInfantry ? `${INFANTRY_PREFIX}${pickedInfantry.id}` : picked ? `${AERO_PREFIX}${picked.id}` : current.id}
         aria-describedby={noteId}
         onChange={(event) => {
           const value = event.target.value;
-          if (value.startsWith(AERO_PREFIX)) aero?.onChoose(value.slice(AERO_PREFIX.length));
-          else {
+          if (value.startsWith(INFANTRY_PREFIX)) {
+            aero?.onChoose(undefined);
+            infantry?.onChoose(value.slice(INFANTRY_PREFIX.length));
+          } else if (value.startsWith(AERO_PREFIX)) {
+            infantry?.onChoose(undefined);
+            aero?.onChoose(value.slice(AERO_PREFIX.length));
+          } else {
+            infantry?.onChoose(undefined);
             aero?.onChoose(undefined);
             onChange(value as MechType);
           }
@@ -67,6 +78,15 @@ export default function TypeSelect({
           <optgroup label="Aerospace (opens the AeroTech editor)">
             {aero.options.map((option) => (
               <option key={option.id} value={`${AERO_PREFIX}${option.id}`}>
+                {option.label}
+              </option>
+            ))}
+          </optgroup>
+        )}
+        {infantry && infantry.options.length > 0 && (
+          <optgroup label="Infantry (opens the infantry editor)">
+            {infantry.options.map((option) => (
+              <option key={option.id} value={`${INFANTRY_PREFIX}${option.id}`}>
                 {option.label}
               </option>
             ))}

@@ -8,6 +8,8 @@ const classicRoutes: FamilyRoute[] = [
   { path: "import", label: "Import from Mordel", section: "workshop", load: () => import("./ui/ImportPage") },
   { path: "editor", label: "'Mech editor", section: "workshop", load: () => import("./ui/EditorPage") },
   { path: "sheet", label: "Record sheet", section: "workshop", load: () => import("./ui/SheetPage") },
+  { path: "infantry-editor", label: "Infantry editor", section: "workshop", load: () => import("./ui/infantry/InfantryEditorPage") },
+  { path: "infantry-sheet", label: "Infantry record sheet", section: "workshop", load: () => import("./ui/infantry/InfantrySheetPage") },
 ];
 
 const alphaStrikeRoutes: FamilyRoute[] = [
