@@ -26,6 +26,7 @@ import {
 } from "../data/cost";
 import type { Price } from "../data/cost";
 import type { Catalog, EquipmentRow } from "./catalog";
+import { CLAN_CASE_IDS, clanStructure, explosiveLocations } from "./case";
 import { armsOf, configurationOf, industrialRulesOf } from "./mech";
 import type { LocationCode, MechRecord, Mount } from "./mech";
 import { equipmentItems, mascOf, own, stemOf, tsmOf, TSM_ROWS, weightLine } from "./walk";
@@ -241,6 +242,7 @@ export function unitCost(record: MechRecord, catalog: Catalog, options: CostOpti
       continue;
     }
     if (row.kind === "ammunition") continue; // ammunition is not bought for a unit's cost (p.282)
+    if (CLAN_CASE_IDS.includes(row.id) && clanStructure(record)) continue; // a Clan structure's CASE is automatic and priced by location, below (p.210)
     if (stemOf(row.id) === "umu") {
       jets.set("umu", [...(jets.get("umu") ?? []), mount]);
       continue;
@@ -282,6 +284,11 @@ export function unitCost(record: MechRecord, catalog: Catalog, options: CostOpti
       if (itemTons === undefined) skip(mount.name, "its weight could not be worked out", row.id);
       else add(equipment, mount.name, perTonCost(found.price.perTon, itemTons), `${money(found.price.perTon)} x ${Math.ceil(itemTons)} tons`, found);
     }
+  }
+  // Automatic CASE on a Clan internal structure: 50,000 for each location that holds ammunition or explosive equipment (TechManual p.210, price p.292).
+  if (clanStructure(record)) {
+    const price = priceOf({ id: "case-clan" } as EquipmentRow);
+    if (price && typeof price.price === "number") for (const loc of explosiveLocations(items)) add(equipment, `CASE (${loc})`, price.price, money(price.price), price);
   }
   const amplifiers = weightLine(record, catalog, "Power amplifiers");
   if (amplifiers !== null && amplifiers > 0) add(equipment, "Power amplifiers", INDUSTRIAL_COST.amplifierPerTon * amplifiers, `${money(INDUSTRIAL_COST.amplifierPerTon)} x ${amplifiers}`, INDUSTRIAL_COST);

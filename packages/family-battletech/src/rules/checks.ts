@@ -24,6 +24,7 @@ import {
 } from "../data/chassis";
 import type { Cite, PartFacts, Span } from "../data/chassis";
 import { configurationInTime, equipmentPhase, eraOfRecord, eraOfYear, partPhase, partSpans, typeInTime, windowOf } from "./availability";
+import { CLAN_CASE_IDS, clanCaseAllowed } from "./case";
 import { locationsFor, mountableOn, mountsRequired, podMountable } from "./catalog";
 import { heatSinkMixAllowed, levelAtLeast, levelIn, levelItems, levelRow, mixedPhase } from "./levels";
 import { datesText, partIsPrototypeOnly, partPrototype } from "./time";
@@ -965,6 +966,15 @@ function stealthCheck({ record }: CheckInput): Finding[] {
   return [finding("stealth", "error", "Stealth armor needs a Guardian ECM Suite on the same 'Mech, and none is mounted.", { where: { field: "chassis.armorType" }, cite: tm(STEALTH_ECM_PAGE) })];
 }
 
+/** Clan CASE belongs to a Clan internal structure, where it is automatic (TechManual p.210), or to a FrankenMech on Clan parts. An explicit Clan CASE
+ * on an Inner Sphere structure is reported; the picker hides it, but a record that already has one keeps it. A Clan engine alone grants nothing. */
+function clanCaseCheck({ record }: CheckInput): Finding[] {
+  if (clanCaseAllowed(record)) return [];
+  return record.mounts
+    .filter((m) => CLAN_CASE_IDS.includes(m.equipmentId ?? ""))
+    .map((m) => finding("clan-case", "error", "Clan CASE belongs only to a Clan internal structure, where it is automatic; this 'Mech's structure is not Clan, so the mount is not allowed.", { where: { mountId: m.id, ...(m.location ? { location: m.location } : {}) }, cite: tm(210) }));
+}
+
 /** The FrankenMech option (Campaign Operations p.213): what the page asks of a 'Mech built from donor parts, beyond the construction checks
  * every 'Mech gets. The engine, gyro, cockpit and armor limits are the ordinary checks reading the FrankenMech's own figures (walkMP, structurePoints,
  * weights). Where the page asks for one heat sink type, the owner ruled otherwise (2026-11-25): the kinds may mix, so the heat sink check says yes. */
@@ -1128,6 +1138,7 @@ export const CHECKS: Check[] = [
   { id: "artemis", editions: "all", run: artemisCheck },
   { id: "myomer", editions: "all", run: myomerCheck },
   { id: "stealth", editions: "all", run: stealthCheck },
+  { id: "clan-case", editions: "all", run: clanCaseCheck },
 ];
 
 const NO_LAYOUT: Layout = { supported: false, locations: [], slots: {}, unplaced: [], conflicts: [], overflow: [], partSlots: [] };
