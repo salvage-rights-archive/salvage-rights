@@ -15,8 +15,8 @@ import { officialLabel } from "../../../rules/official";
 /** Weapon and equipment lines printed before the rest wait for the text copy (the block has room for this many). */
 export const MAX_LINES_DRAWN = 14;
 
-/** How many inventory lines the sheet's block has room for: the current blank prints fourteen, the AeroTech 2 sheets twelve. */
-export const linesFor = (profile: Pick<SheetProfile, "layout">): number => (profile.layout === "current" ? MAX_LINES_DRAWN : MAX_LINES_DRAWN - 2);
+/** How many inventory lines the sheet's block has room for: the current blank prints fourteen, the AeroTech 2 sheets nine (as the flagged page does). */
+export const linesFor = (profile: Pick<SheetProfile, "layout">): number => (profile.layout === "current" ? MAX_LINES_DRAWN : 9);
 
 export interface WeaponLine {
   qty: number;
@@ -67,7 +67,7 @@ const isAmmo = (mount: AeroMount, catalog: Catalog): boolean => (mount.equipment
 const figuresOf = (mount: AeroMount, record: AeroRecord, catalog: Catalog): AeroWeaponFigures | undefined =>
   mount.equipmentId === null ? undefined : (aeroWeaponFigures(catalog, mount.equipmentId, record.editionId) ?? aeroCatalogFigures(catalog, mount.equipmentId));
 
-function lineOf(mount: AeroMount, record: AeroRecord, catalog: Catalog, qty: number): WeaponLine {
+export function lineOf(mount: AeroMount, record: AeroRecord, catalog: Catalog, qty: number): WeaponLine {
   const f = figuresOf(mount, record, catalog);
   const reach = f?.maxRange === undefined ? 0 : BANDS.indexOf(f.maxRange) + 1;
   const attack = f?.attack === undefined ? "" : String(f.attack);

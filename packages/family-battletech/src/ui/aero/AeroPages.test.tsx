@@ -149,9 +149,10 @@ describe("AeroTech pages", () => {
     expect(panel.queryByText(/changed from/)).toBeNull();
   });
 
-  it("the sheet page prints a fighter, says plainly when a unit has no sheet yet, and links the editor to it", async () => {
+  it("the sheet page prints a fighter and a DropShip, says plainly when a unit has no sheet, and links the editor to it", async () => {
     await save(fighter("a", "tw-tm-so"));
     await save({ ...newAeroRecord({ id: "d", chassis: "Leopard", model: "", unitType: "dropship", tons: 1900 }, "tw-tm-so") });
+    await save({ ...newAeroRecord({ id: "x", chassis: "Odd", model: "", unitType: "dropship", tons: 1900 }, "aerotech-1986") });
     const router = createMemoryRouter(
       [
         { path: AERO_SHEET, element: <AeroSheetPage /> },
@@ -165,13 +166,38 @@ describe("AeroTech pages", () => {
     expect(screen.getByRole("img", { name: "Sabre SB-27 aerospace fighter record sheet" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Print" })).toBeTruthy();
     await router.navigate(`${AERO_SHEET}?id=d`);
-    expect(await screen.findByText(/We have no record sheet yet for this unit type/)).toBeTruthy();
+    expect(await screen.findByRole("img", { name: "Leopard aerodyne civilian dropship record sheet" })).toBeTruthy();
+    await router.navigate(`${AERO_SHEET}?id=x`);
+    expect(await screen.findByText(/We have no record sheet for this unit type/)).toBeTruthy();
     expect(screen.queryByRole("img")).toBeNull();
-    // From the editor, a fighter links to its sheet and a DropShip does not.
+    // From the editor, a fighter and a DropShip link to their sheets and a unit with none does not.
     await router.navigate(`${AERO_EDITOR}?id=a`);
     expect(await screen.findByRole("link", { name: "Record sheet" })).toBeTruthy();
     await router.navigate(`${AERO_EDITOR}?id=d`);
     await screen.findByRole("heading", { level: 1, name: "Leopard" });
+    expect(screen.getByRole("link", { name: "Record sheet" })).toBeTruthy();
+    await router.navigate(`${AERO_EDITOR}?id=x`);
+    await screen.findByRole("heading", { level: 1, name: "Odd" });
     expect(screen.queryByRole("link", { name: "Record sheet" })).toBeNull();
+  });
+
+  it("a WarShip's editor offers the station-keeping drive and the ship systems only where the edition builds them, and the check speaks for the edition", async () => {
+    const user = userEvent.setup();
+    await save({ ...newAeroRecord({ id: "w", chassis: "Mjolnir", model: "", unitType: "warship", tons: 500000, year: 3070 }, "tw-tm-so") });
+    await save({ ...newAeroRecord({ id: "w2", chassis: "Old Mjolnir", model: "", unitType: "warship", tons: 500000, year: 3070 }, "aerotech2") });
+    openEditor("w");
+    await screen.findByRole("heading", { level: 1, name: "Mjolnir" });
+    expect(optionsOf("Drive")).toEqual(["Maneuvering drive", "Station-keeping drive"]);
+    expect(screen.getByLabelText("Docking hardpoint")).toBeTruthy();
+    await user.selectOptions(screen.getByLabelText("Drive"), "station-keeping");
+    // The drive gives no Safe Thrust to choose, and the check says what the book leaves out.
+    expect(screen.queryByLabelText("Safe Thrust")).toBeNull();
+    expect(screen.getByText("Max Thrust 1")).toBeTruthy();
+    expect(await screen.findByText(/gives this drive no Max Thrust/)).toBeTruthy();
+    cleanup();
+    openEditor("w2");
+    await screen.findByRole("heading", { level: 1, name: "Old Mjolnir" });
+    expect(screen.queryByLabelText("Drive")).toBeNull();
+    expect(screen.getByLabelText("Built to tow other vessels")).toBeTruthy();
   });
 });

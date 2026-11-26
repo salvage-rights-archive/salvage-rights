@@ -6,13 +6,14 @@
 // its cite. Older editions predate the seven rules levels and show none.
 import { ARMOR, ENGINE_TYPES, MIXED_TECHNOLOGY } from "../data/chassis";
 import type { RulesLevel } from "../data/chassis";
-import { DEFAULT_AERO_EDITION, FIGHTER_ARMOR_TYPES, FIGHTER_FIGURES, aeroEditionName, aeroTypesFor, figureOf, kindFigureOf } from "../data/aero";
+import { CAPITAL_FIGURES, CRAFT_FIGURES, DEFAULT_AERO_EDITION, FIGHTER_ARMOR_TYPES, FIGHTER_FIGURES, aeroEditionName, aeroTypesFor, figureOf, kindFigureOf } from "../data/aero";
 import type { AeroTypeRow, FigureGroup, FighterKind } from "../data/aero";
 import { AERO_WEAPON_EDITIONS, aeroWeaponOffered } from "../data/aero-weapons";
-import { fighterArcs, fighterArmor, fighterArmorLimit, energyWeaponHeat, fighterHeat, fighterKind, fighterPartsNotOffered, fighterTally, engineRating, fuelPoints, locationsOf, wingsMatch, aeroLocationName } from "./aero";
+import { fighterArcs, fighterArmor, fighterArmorLimit, energyWeaponHeat, fighterHeat, fighterKind, fighterPartsNotOffered, fighterTally, engineRating, fuelPoints, locationsOf, vessel, wingsMatch, aeroLocationName } from "./aero";
 import type { AeroRecord } from "./aero";
 import { partPhase } from "./availability";
 import type { Catalog } from "./catalog";
+import { VESSEL_CHECKS } from "./aero-vessel-checks";
 import { DEFAULT_LEVEL, LEVEL_ORDER, equipmentLevel, levelAtLeast, levelIn, levelRow, mixedPhase, partLevel } from "./levels";
 import { canon, officialLabel } from "./official";
 import type { OfficialState } from "./official";
@@ -60,8 +61,6 @@ const typeCheck: AeroCheck = {
     const { min, max, step } = row.weight;
     const out: AeroFinding[] = [];
     const where = { field: "tons" };
-    // Small craft and DropShips wait for their checks (see typeReady in ui/aero/edit.ts); say so rather than read "no problems".
-    if (record.unitType === "small-craft" || record.unitType === "dropship") out.push({ check: "type", level: "note", message: `The checks for a ${row.label.toLowerCase()} are not built yet, so nothing here has been checked beyond its weight range.`, where: { field: "unitType" } });
     if (min !== undefined && record.tons < min) out.push({ check: "type", level: "error", message: `At ${num(record.tons)} tons the unit is under the ${num(min)} tons ${edition} allows a ${row.label.toLowerCase()}.`, where, cite: row.cite });
     if (max !== undefined && record.tons > max) out.push({ check: "type", level: "error", message: `At ${num(record.tons)} tons the unit is over the ${num(max)} tons ${edition} allows a ${row.label.toLowerCase()}.`, where, cite: row.cite });
     if (step !== undefined && min !== undefined && tidy((record.tons - min) % step) !== 0) out.push({ check: "type", level: "warning", message: `${edition} builds a ${row.label.toLowerCase()} in steps of ${num(step)} tons; ${num(record.tons)} is not on a step.`, where, cite: row.cite });
@@ -73,11 +72,13 @@ const typeCheck: AeroCheck = {
 const weightCheck: AeroCheck = {
   id: "weight",
   run({ record, catalog }) {
-    if (!fighterKind(record) || !typeRow(record)) return [];
-    const tally = fighterTally(record, catalog);
+    if (!typeRow(record)) return [];
+    const ship = vessel(record, catalog);
+    if (!fighterKind(record) && !ship) return [];
+    const tally = ship ? ship.tally : fighterTally(record, catalog);
     const out: AeroFinding[] = [];
     if (tally.remaining < 0) out.push({ check: "weight", level: "error", message: `The parts weigh ${num(tally.total)} tons, ${num(-tally.remaining)} over the unit's ${num(record.tons)}.`, where: { field: "tons" } });
-    else if (tally.remaining > 0 && tally.unknown.length === 0) out.push({ check: "weight", level: "note", message: `${num(tally.remaining)} tons of the unit's ${num(record.tons)} are not used.`, where: { field: "tons" } });
+    else if (tally.remaining > 0 && tally.unknown.length === 0) out.push({ check: "weight", level: "note", message: ship ? `${num(tally.remaining)} tons of the unit's ${num(record.tons)} are left over, which the book counts as cargo space.` : `${num(tally.remaining)} tons of the unit's ${num(record.tons)} are not used.`, where: { field: "tons" } });
     const mounts = tally.unknown.filter((id) => id !== "engine");
     if (mounts.length > 0) out.push({ check: "weight", level: "note", message: `${String(mounts.length)} item${mounts.length === 1 ? "" : "s"} could not be weighed because we have no weight for ${mounts.length === 1 ? "it" : "them"}, so the total is short.`, where: { field: "mounts" } });
     return out;
@@ -89,7 +90,20 @@ const engineCheck: AeroCheck = {
   id: "engine",
   run({ record }) {
     const kind = fighterKind(record);
-    if (!kind) return [];
+    if (!kind) {
+      // A small craft, DropShip or capital ship: the parts its edition does not offer (the page is the engine step's).
+      const ship = vessel(record);
+      if (!ship) return [];
+      const name = aeroEditionName(record.editionId);
+      const page = ship.group === "capital" ? pageOf(CAPITAL_FIGURES.engine, record.editionId) : pageOf(CRAFT_FIGURES.engineShare, record.editionId);
+      const says: Record<string, string> = {
+        engine: `${name} does not offer a "${record.engine.type}" engine to this unit.`,
+        armor: `${name} does not offer "${record.armor.type}" armor to this unit.`,
+        "heat-sinks": `${name} does not offer ${record.heatSinks.type} heat sinks to this unit.`,
+      };
+      const fields: Record<string, string> = { engine: "engine", armor: "armor.type", "heat-sinks": "heatSinks" };
+      return ship.notOffered.map((part) => ({ check: "engine", level: "warning" as const, message: says[part] ?? "", where: { field: fields[part] ?? "" }, ...withCite(page) }));
+    }
     const out: AeroFinding[] = [];
     const rating = engineRating(record);
     const limits = figureOf(FIGHTER_FIGURES.ratingLimits, record.editionId);
@@ -209,7 +223,8 @@ const arcsCheck: AeroCheck = {
 // Which tech base's items an aerospace unit may mount: the Step 5 tech base paragraph says a Clan unit uses only Clan items and an Inner Sphere unit
 // only Inner Sphere items (printed p. 194, read against the page image); p. 183 (Choose Technology Base) gives the same for the whole unit. The
 // BattleMech chapter's p. 57 is not the fighter's rule. The fighter chapter states it itself, so nothing defers to a general rule.
-const PAGE_TECH_BASE = "TechManual, p. 194";
+const AT2_EDITION = "aerotech2";
+const TECH_BASE_PAGES: Record<string, string> = { [DEFAULT_AERO_EDITION]: "TechManual, p. 194", [AT2_EDITION]: "AeroTech 2, p. 46" };
 const hasTable = (editionId: string): boolean => (Object.values(AERO_WEAPON_EDITIONS) as string[]).includes(editionId);
 
 /** Equipment the edition does not list, items not in our table, and (current edition) equipment of the other tech base. */
@@ -231,8 +246,11 @@ const equipmentCheck: AeroCheck = {
       if (row.kind === "weapon" && hasTable(record.editionId) && !aeroWeaponOffered(record.editionId, mount.equipmentId)) {
         out.push({ check: "equipment", level: "warning", message: `${row.name} is not in ${edition}'s weapon list; it stays on the unit.`, where: { mountId: mount.id } });
       }
-      if (record.editionId === DEFAULT_AERO_EDITION && record.techBase !== "mixed" && row.techBase !== record.techBase && (row.kind === "weapon" || row.kind === "ammunition")) {
-        out.push({ check: "equipment", level: "warning", message: `${row.name} is ${row.techBase === "clan" ? "Clan" : "Inner Sphere"} equipment on a${record.techBase === "clan" ? " Clan" : "n Inner Sphere"} unit.`, where: { mountId: mount.id }, cite: PAGE_TECH_BASE });
+      const techPage = TECH_BASE_PAGES[record.editionId];
+      // AeroTech 2 lets capital weapons serve both tech bases (p. 46).
+      const bothBases = record.editionId === AT2_EDITION && row.bayClass?.startsWith("Capital") === true;
+      if (techPage !== undefined && !bothBases && record.techBase !== "mixed" && row.techBase !== record.techBase && (row.kind === "weapon" || row.kind === "ammunition")) {
+        out.push({ check: "equipment", level: "warning", message: `${row.name} is ${row.techBase === "clan" ? "Clan" : "Inner Sphere"} equipment on a${record.techBase === "clan" ? " Clan" : "n Inner Sphere"} unit.`, where: { mountId: mount.id }, cite: techPage });
       }
     }
     return out;
@@ -386,7 +404,7 @@ const officialCheck: AeroCheck = {
 // ---- Running them ---------------------------------------------------------------------------------------------------------------
 
 /** One table of checks. The small craft, DropShip and capital ship pieces add their checks here. */
-export const AERO_CHECKS: AeroCheck[] = [typeCheck, weightCheck, engineCheck, lotsCheck, fuelCheck, armorCheck, heatCheck, arcsCheck, equipmentCheck, datesCheck, levelCheck, officialCheck];
+export const AERO_CHECKS: AeroCheck[] = [typeCheck, weightCheck, engineCheck, lotsCheck, fuelCheck, armorCheck, heatCheck, arcsCheck, equipmentCheck, datesCheck, levelCheck, officialCheck, ...VESSEL_CHECKS];
 
 /** Every finding for the unit under its own edition. Never throws: a check that fails on a record it does not understand gives a note. */
 export function checkAero(record: AeroRecord, catalog: Catalog): AeroFinding[] {

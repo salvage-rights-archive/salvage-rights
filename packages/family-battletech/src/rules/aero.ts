@@ -68,6 +68,8 @@ export interface AeroRecord {
   engine: { type: string };
   /** The Structural Integrity chosen for a large craft; absent on fighters, which derive it. */
   si?: number;
+  /** A vessel built to tow others: the edition that asks for it adds a share to the structure's mass (`towingSiShare`). */
+  towing?: boolean;
   fuelTons: number;
   /** `points` is keyed by the edition's armor locations (`locationsOf`); a key the edition lacks is kept. */
   armor: { type: string; tons: number; points: Record<string, number> };
@@ -213,7 +215,7 @@ function officialOf(v: unknown): OfficialMark | undefined {
 
 const RECORD_KEYS = [
   "schema", "id", "editionId", "name", "unitType", "shape", "use", "techBase", "year", "era", "rulesLevel", "tons", "thrust", "engine", "si", "fuelTons",
-  "armor", "heatSinks", "mounts", "bays", "quarters", "systems", "crew", "fighterUnit", "omni", "official", "notes", "picture",
+  "armor", "heatSinks", "mounts", "bays", "quarters", "systems", "crew", "towing", "fighterUnit", "omni", "official", "notes", "picture",
 ] as const;
 
 /**
@@ -252,6 +254,7 @@ export function withDefaults(value: unknown, fallbackId = ""): AeroRecord | unde
   if (isObject(v.quarters)) record.quarters = numbers(v.quarters);
   if (isObject(v.systems)) record.systems = numbers(v.systems);
   if (isNumber(v.crew)) record.crew = v.crew;
+  if (v.towing === true) record.towing = true;
   if (isObject(v.fighterUnit)) {
     const fighters = Array.isArray(v.fighterUnit.fighters) ? v.fighterUnit.fighters.filter(isString) : [];
     record.fighterUnit = { ...unknownKeys(v.fighterUnit, ["fighters"]), fighters };
@@ -560,8 +563,10 @@ export function craftSiTons(record: AeroRecord): number | null {
   const divisors = figureOf(CRAFT_FIGURES.siMassDivisor, record.editionId);
   const si = craftSI(record);
   const rounding = craftRounding(record);
-  return !divisors || si === null || !rounding ? null : roundMass((si * record.tons) / divisors[craftShape(record)], rounding.si);
+  return !divisors || si === null || !rounding ? null : roundMass(((si * record.tons) / divisors[craftShape(record)]) * (1 + towingShare(record)), rounding.si);
 }
+/** The share a towing vessel adds to its structure's mass, where the edition prints one (and the record says it tows). */
+export const towingShare = (record: Pick<AeroRecord, "towing" | "editionId">): number => (record.towing === true ? (figureOf(CRAFT_FIGURES.towingSiShare, record.editionId) ?? 0) : 0);
 
 /** Control systems: 0.75 percent of the tons (a small craft's up to a half ton in TechManual, a DropShip's up to a whole ton). */
 export function craftControlTons(record: AeroRecord): number | null {
@@ -638,10 +643,10 @@ export function expandedFireControlTons(weapons: number, weaponTons: number, edi
 }
 
 /** A capital weapon (a gunner each and its own ammunition rule), as the catalog marks one. */
-const isCapitalRow = (row: EquipmentRow | undefined): boolean => row !== undefined && (row.bayClass?.startsWith("Capital") === true || row.tonsPerShot !== undefined);
+export const isCapitalRow = (row: EquipmentRow | undefined): boolean => row !== undefined && (row.bayClass?.startsWith("Capital") === true || row.tonsPerShot !== undefined);
 /** Whether the catalog prints the weapon's damage at the capital scale (the "-C" mark: naval weapons). Capital missiles print their Aero damage at the standard scale
  * ("40" for a Killer Whale whose capital Attack Value is 4, AeroTech 2 p. 101), so only the marked figures count tenfold in a bay. */
-const capitalScale = (row: EquipmentRow | undefined): boolean => {
+export const capitalScale = (row: EquipmentRow | undefined): boolean => {
   const damage = row?.by?.aero?.damage ?? row?.by?.dropship?.damage ?? row?.by?.ship?.damage ?? row?.damage;
   return typeof damage === "string" && /-C$/.test(damage);
 };
@@ -755,6 +760,22 @@ function baysOf(record: AeroRecord, catalog: Catalog | undefined, limit: number,
     attack = roundHalfUp(attack);
     return { bay, arc: weapons[0]?.mount.arc ?? "", weapons: weapons.length, classes: [...classes], sizes: [...sizes], attack, heat: tidy(heat), limit, over: attack > limit, mixedSizesAllowed: mixedAllowed, unknown };
   });
+}
+/** The heat each arc of the unit's edition makes when all its weapons fire (the figure a large craft's sheet lists for each arc, and the zero-heat rule weighs against the sinks). */
+export function heatByArc(record: AeroRecord, catalog?: Catalog): { arc: string; name: string; heat: number }[] {
+  return locationsOf(record).arcs.map((arc) => ({
+    arc,
+    name: aeroLocationName(arc),
+    heat: tidy(
+      record.mounts
+        .filter((m) => m.arc === arc && m.equipmentId !== null)
+        .reduce((sum, m) => {
+          const id = m.equipmentId ?? "";
+          const figures = catalog ? (aeroWeaponFigures(catalog, id, record.editionId) ?? aeroCatalogFigures(catalog, id)) : undefined;
+          return sum + (figures?.heat ?? 0);
+        }, 0),
+    ),
+  }));
 }
 /** The weapon bays: the weapons that share a `bay` id (on a mount without one, the arc), with their classes, sizes, attack and heat against the bay limit. */
 export function craftWeaponBays(record: AeroRecord, catalog?: Catalog): CraftWeaponBay[] {
@@ -903,6 +924,8 @@ export function craftTally(record: AeroRecord, catalog?: Catalog): CraftTally {
   const bays = craftBayTons(record);
   const quarters = craftQuarters(record, catalog);
   unknown.push(...bays.unknown, ...quarters.unknown);
+  // A towing adapter (AeroTech 2 p. 47: 100 tons) the record says the vessel carries.
+  const adapters = (record.systems?.["towing-adapter"] ?? 0) * (capitalSystemFigure("towing-adapter", record.editionId)?.tons ?? 0);
   const lines = [
     { label: "Engine", tons: engine ?? 0 },
     { label: "Fuel", tons: record.fuelTons },
@@ -916,6 +939,7 @@ export function craftTally(record: AeroRecord, catalog?: Catalog): CraftTally {
     { label: "Ammunition", tons: ammunition },
     { label: "Transport bays", tons: bays.tons },
     { label: "Quarters", tons: quarters.tons },
+    ...(adapters > 0 ? [{ label: "Towing adapter", tons: adapters }] : []),
   ].map((line) => ({ ...line, tons: tidy(line.tons) }));
   const total = tidy(lines.reduce((sum, line) => sum + line.tons, 0));
   return { lines, total, remaining: tidy(record.tons - total), unknown };
@@ -957,10 +981,14 @@ export function stationKeeping(record: Pick<AeroRecord, "unitType" | "editionId"
   return kind !== "warship" || (record.engine.type === "station-keeping" && figureOf(CAPITAL_FIGURES.warshipStationKeeping, record.editionId) === true);
 }
 
-/** A WarShip's Max Thrust: Safe Thrust times 1.5, rounded up. null for a station-keeping drive (it has none) and for any other unit. */
+/** A WarShip's Max Thrust: Safe Thrust times 1.5, rounded up. A WarShip on a station-keeping drive reads the drive's own Safe Thrust (0.2 x 1.5 = 0.3, up to 1). null for a JumpShip or station (their drive has none) and for any other unit. */
 export function capitalMaxThrust(record: AeroRecord): number | null {
   const factor = capitalFigureOf(CAPITAL_FIGURES.maxThrustFactor, record.editionId, FIGHTER_FIGURES.maxThrustFactor);
-  return factor === undefined || capitalKind(record) === undefined || stationKeeping(record) ? null : Math.ceil(tidy(record.thrust.safe * factor));
+  const kind = capitalKind(record);
+  if (factor === undefined || kind === undefined) return null;
+  if (!stationKeeping(record)) return Math.ceil(tidy(record.thrust.safe * factor));
+  const drive = figureOf(CAPITAL_FIGURES.stationKeepingThrust, record.editionId);
+  return kind === "warship" && drive !== undefined ? Math.ceil(tidy(drive * factor)) : null;
 }
 
 /** Engine tons: a station-keeping drive's fixed share of the tons (1.2 percent), or a WarShip's share per point of Safe Thrust (6 percent) times its Safe Thrust. */
@@ -991,7 +1019,7 @@ export function capitalSiTons(record: AeroRecord): number | null {
   const divisors = figureOf(CAPITAL_FIGURES.siMass, record.editionId);
   const rounding = capitalRounding(record);
   if (kind === undefined || si === null || !divisors || !rounding) return null;
-  return roundMass(kind === "warship" ? (si * record.tons) / divisors.warship : record.tons / divisors[kind], rounding.si);
+  return roundMass((kind === "warship" ? (si * record.tons) / divisors.warship : record.tons / divisors[kind]) * (1 + towingShare(record)), rounding.si);
 }
 
 export interface CapitalDrive {
@@ -1236,4 +1264,96 @@ export function capitalPartsNotOffered(record: AeroRecord): ("engine" | "armor" 
 /** The ship system kinds an edition prints (for the editor's list). */
 export function capitalSystemsFor(editionId: string): { kind: string; label: string }[] {
   return CAPITAL_SYSTEMS.filter((row) => figureOf(row.figures, editionId) !== undefined).map(({ kind, label }) => ({ kind, label }));
+}
+
+// ---- One reading for every vessel ---------------------------------------------------------------------------------------------
+// A small craft, DropShip, JumpShip, WarShip or station is built by the same steps with different figures. The editor, the rules check and the
+// record sheet read them through these, so each asks one question (what is the tally of this unit?) and never branches on the kind itself.
+
+export type VesselGroup = "craft" | "capital";
+/** Which family of figures the record is built by: the small craft and DropShip rows, the capital ship rows, or undefined (a fighter, an unknown type, an edition that builds neither). */
+export function vesselGroup(record: Pick<AeroRecord, "unitType" | "editionId">): VesselGroup | undefined {
+  return craftKind(record) !== undefined ? "craft" : capitalKind(record) !== undefined ? "capital" : undefined;
+}
+
+export interface VesselArmor {
+  perTon: number | null;
+  bought: number | null;
+  free: number;
+  available: number | null;
+  allocated: number;
+  over: number | null;
+  limitTons: number | null;
+  tonsOver: number | null;
+}
+
+/** Every derived figure of a small craft, DropShip or capital ship, read from the right group. */
+export interface Vessel {
+  group: VesselGroup;
+  maxThrust: number | null;
+  engineTons: number | null;
+  siRange: { min: number; max: number } | null;
+  si: number | null;
+  siTons: number | null;
+  controlTons: number | null;
+  fuelPoints: number | null;
+  pumpTons: number | null;
+  armor: VesselArmor | null;
+  heat: FighterHeat | null;
+  arcs: CraftArc[];
+  unmatched: string[];
+  bays: CraftWeaponBay[];
+  crew: CraftCrew | null;
+  doors: CraftDoors | null;
+  tally: CraftTally;
+  notOffered: ("engine" | "armor" | "heat-sinks")[];
+}
+/** The unit read as a vessel, or null for a fighter, an unknown type and an edition that builds neither group. */
+export function vessel(record: AeroRecord, catalog?: Catalog): Vessel | null {
+  const group = vesselGroup(record);
+  if (group === "craft") {
+    return {
+      group,
+      maxThrust: craftMaxThrust(record),
+      engineTons: craftEngineTons(record),
+      siRange: craftSiRange(record),
+      si: craftSI(record),
+      siTons: craftSiTons(record),
+      controlTons: craftControlTons(record),
+      fuelPoints: craftFuelPoints(record),
+      pumpTons: craftPumpTons(record),
+      armor: craftArmor(record),
+      heat: craftHeat(record),
+      arcs: craftArcs(record, catalog),
+      unmatched: craftArcsUnmatched(record, catalog),
+      bays: craftWeaponBays(record, catalog),
+      crew: craftCrew(record, catalog),
+      doors: craftDoors(record),
+      tally: craftTally(record, catalog),
+      notOffered: craftPartsNotOffered(record),
+    };
+  }
+  if (group === "capital") {
+    return {
+      group,
+      maxThrust: capitalMaxThrust(record),
+      engineTons: capitalEngineTons(record),
+      siRange: capitalSiRange(record),
+      si: capitalSI(record),
+      siTons: capitalSiTons(record),
+      controlTons: capitalControlTons(record),
+      fuelPoints: capitalFuelPoints(record),
+      pumpTons: capitalPumpTons(record),
+      armor: capitalArmor(record),
+      heat: capitalHeat(record),
+      arcs: capitalArcs(record, catalog),
+      unmatched: capitalArcsUnmatched(record, catalog),
+      bays: capitalWeaponBays(record, catalog),
+      crew: capitalCrew(record, catalog),
+      doors: capitalDoors(record),
+      tally: capitalTally(record, catalog),
+      notOffered: capitalPartsNotOffered(record),
+    };
+  }
+  return null;
 }

@@ -3,23 +3,12 @@
 // holds it, and then it stays listed and the rules check reports it. Every derived figure comes from rules/aero.ts and is left out where
 // the edition prints none.
 import { ENGINE_TYPES } from "../../data/chassis";
-import { DEFAULT_AERO_EDITION, FIGHTER_FIGURES, aeroTypesFor, fighterArmorTypes, figureOf, kindFigureOf } from "../../data/aero";
+import { CAPITAL_ARMOR_TYPES, CAPITAL_FIGURES, CRAFT_FIGURES, DEFAULT_AERO_EDITION, FIGHTER_FIGURES, aeroTypesFor, fighterArmorTypes, figureOf, kindFigureOf } from "../../data/aero";
 import { ERAS } from "../../data/editions";
 import { setEra, setYear } from "../../rules/availability";
 import {
   aeroLocationName,
   controlTons,
-  craftArmor,
-  craftControlTons,
-  craftEngineTons,
-  craftFuelPoints,
-  craftHeat,
-  craftKind,
-  craftMaxThrust,
-  craftPumpTons,
-  craftSI,
-  craftSiRange,
-  craftSiTons,
   engineRating,
   fighterArmor,
   fighterEngineTons,
@@ -28,8 +17,12 @@ import {
   fighterSI,
   fuelPoints,
   hardpoints,
+  jumpSail,
+  kfDrive,
   locationsOf,
   maxThrust,
+  stationKeeping,
+  vessel,
 } from "../../rules/aero";
 import type { AeroRecord } from "../../rules/aero";
 import { aeroLowestLevel } from "../../rules/aero-checks";
@@ -104,7 +97,7 @@ export function IdentityPanel({ record, catalog, onEdit }: PartProps & { catalog
           label="Type"
           value={record.unitType}
           options={types}
-          hint={row ? `${row.cite}.${typeReady(edition, record.unitType) ? "" : " The checks for this type are not built yet, so only its identity and weight range are checked."}` : undefined}
+          hint={row ? `${row.cite}.` : undefined}
           className="bt-level"
           onChange={(v) => {
             onEdit((d) => {
@@ -210,33 +203,44 @@ export function IdentityPanel({ record, catalog, onEdit }: PartProps & { catalog
 export function EnginePanel({ record, onEdit }: PartProps) {
   const edition = record.editionId;
   const fighter = fighterKind(record);
-  const craft = craftKind(record);
-  if (fighter === undefined && craft === undefined) return null;
+  const ship = vessel(record);
+  if (fighter === undefined && ship === null) return null;
   const at1 = edition === AT1;
+  const capital = ship?.group === "capital";
+  const warship = record.unitType === "warship";
+  // A JumpShip or station has a station-keeping drive with no thrust to choose; a WarShip chooses a maneuvering drive or, where the edition allows, a station-keeping one.
+  const kept = capital && stationKeeping(record);
+  const driveChoice = warship && (figureOf(CAPITAL_FIGURES.warshipStationKeeping, edition) === true || record.engine.type === "station-keeping");
   const rating = fighter ? engineRating(record) : null;
-  const engineTons = fighter ? fighterEngineTons(record) : craftEngineTons(record);
-  const max = fighter ? maxThrust(record) : craftMaxThrust(record);
-  const siRange = craft ? craftSiRange(record) : null;
-  const si = fighter ? fighterSI(record) : craftSI(record);
+  const engineTons = fighter ? fighterEngineTons(record) : (ship?.engineTons ?? null);
+  const max = fighter ? maxThrust(record) : (ship?.maxThrust ?? null);
+  const siRange = ship?.siRange ?? null;
+  const si = fighter ? fighterSI(record) : (ship?.si ?? null);
   const engines = fighter ? (kindFigureOf(FIGHTER_FIGURES.engineTypes, fighter, edition) ?? []) : [];
   const engineOptions = [...engines.filter((id) => record.techBase === "mixed" || !own(ENGINE_TYPES.types, id) || ENGINE_TYPES.types[id]?.techBase === undefined || ENGINE_TYPES.types[id]?.techBase === record.techBase), record.engine.type]
     .filter((id, index, all) => all.indexOf(id) === index)
     .map((id) => ({ value: id, label: ENGINE_TYPES.types[id]?.name ?? id }));
-  const points = fighter ? fuelPoints(record) : craftFuelPoints(record);
+  const driveOptions = [{ value: "standard", label: "Maneuvering drive" }, ...(driveChoice ? [{ value: "station-keeping", label: "Station-keeping drive" }] : [])];
+  const points = fighter ? fuelPoints(record) : (ship?.fuelPoints ?? null);
   const lot = figureOf(FIGHTER_FIGURES.fuelLot, edition);
+  const towable = ship !== null && figureOf(CRAFT_FIGURES.towingSiShare, edition) !== undefined;
+  const kf = capital ? kfDrive(record) : null;
+  const sail = capital ? jumpSail(record) : null;
   return (
     <section className="bt-panel" aria-labelledby="aero-engine">
       <h2 id="aero-engine">Engine, structure and fuel</h2>
       <div className="bt-grid">
-        <NumberField
-          id="field-thrust"
-          label={at1 ? "Thrust" : "Safe Thrust"}
-          value={record.thrust.safe}
-          min={0}
-          onValid={(v) => {
-            onEdit((d) => void (d.thrust.safe = v ?? 0), "thrust");
-          }}
-        />
+        {!kept && (
+          <NumberField
+            id="field-thrust"
+            label={at1 ? "Thrust" : "Safe Thrust"}
+            value={record.thrust.safe}
+            min={0}
+            onValid={(v) => {
+              onEdit((d) => void (d.thrust.safe = v ?? 0), "thrust");
+            }}
+          />
+        )}
         {fighter && (
           <SelectField
             id="field-engine"
@@ -248,7 +252,19 @@ export function EnginePanel({ record, onEdit }: PartProps) {
             }}
           />
         )}
-        {craft && siRange && (
+        {warship && driveChoice && (
+          <SelectField
+            id="field-engine"
+            label="Drive"
+            value={record.engine.type === "station-keeping" ? "station-keeping" : "standard"}
+            options={driveOptions}
+            hint="Station-keeping: Max Thrust 1, Structural Integrity 1 to 30; the book prints no range for it."
+            onChange={(v) => {
+              onEdit((d) => void (d.engine.type = v));
+            }}
+          />
+        )}
+        {siRange && (
           <NumberField
             id="field-si"
             label="Structural Integrity"
@@ -273,6 +289,21 @@ export function EnginePanel({ record, onEdit }: PartProps) {
             onEdit((d) => void (d.fuelTons = v ?? 0), "fuelTons");
           }}
         />
+        {towable && (
+          <label className="bt-check">
+            <input
+              type="checkbox"
+              checked={record.towing === true}
+              onChange={(event) => {
+                onEdit((d) => {
+                  if (event.target.checked) d.towing = true;
+                  else delete d.towing;
+                });
+              }}
+            />
+            Built to tow other vessels
+          </label>
+        )}
       </div>
       <Readout
         lines={[
@@ -280,9 +311,12 @@ export function EnginePanel({ record, onEdit }: PartProps) {
           rating === null ? undefined : `Engine rating ${num(rating)}`,
           engineTons === null ? undefined : `Engine weight ${plural(engineTons, "ton")}`,
           fighter && si !== null ? `Structural Integrity ${num(si)}, from the thrust and the tons` : undefined,
-          fighter ? (controlTons(record) === null ? undefined : `Cockpit and controls ${plural(controlTons(record) ?? 0, "ton")}`) : craftControlTons(record) === null ? undefined : `Controls ${plural(craftControlTons(record) ?? 0, "ton")}`,
-          craft && craftSiTons(record) !== null ? `Structure ${plural(craftSiTons(record) ?? 0, "ton")}` : undefined,
-          craft && craftPumpTons(record) !== null ? `Fuel pumps ${plural(craftPumpTons(record) ?? 0, "ton")}` : undefined,
+          !fighter && !siRange && si !== null ? `Structural Integrity ${num(si)}, fixed for this type` : undefined,
+          fighter ? (controlTons(record) === null ? undefined : `Cockpit and controls ${plural(controlTons(record) ?? 0, "ton")}`) : ship?.controlTons == null ? undefined : `Controls ${plural(ship.controlTons, "ton")}`,
+          ship?.siTons == null ? undefined : `Structure ${plural(ship.siTons, "ton")}`,
+          ship?.pumpTons == null ? undefined : `Fuel pumps ${plural(ship.pumpTons, "ton")}`,
+          kf ? `K-F drive ${plural(kf.tons, "ton")}, integrity ${num(kf.integrity)}` : undefined,
+          sail ? `Jump sail ${plural(sail.tons, "ton")}, integrity ${num(sail.integrity)}` : undefined,
           points === null ? undefined : `Fuel ${plural(points, "point")}`,
           fighter && hardpoints(record) !== undefined ? `External stores hardpoints ${num(hardpoints(record) ?? 0)}` : undefined,
         ]}
@@ -295,15 +329,17 @@ export function EnginePanel({ record, onEdit }: PartProps) {
 export function ArmorPanel({ record, onEdit }: PartProps) {
   const edition = record.editionId;
   const fighter = fighterKind(record);
-  const craft = craftKind(record);
-  if (fighter === undefined && craft === undefined) return null;
+  const ship = vessel(record);
+  if (fighter === undefined && ship === null) return null;
   const known = locationsOf(record).armor;
   const locations = armorLocations(record, known);
-  const types = fighterArmorTypes(edition)
-    .filter((t) => record.techBase === "mixed" || t.techBase === "both" || t.techBase === record.techBase || t.id === record.armor.type)
+  const types = (ship?.group === "capital"
+    ? CAPITAL_ARMOR_TYPES.filter((t) => t.editions.includes(edition)).map((t) => ({ id: t.id, name: t.name, techBase: "both" as const }))
+    : fighterArmorTypes(edition)
+  ).filter((t) => record.techBase === "mixed" || t.techBase === "both" || t.techBase === record.techBase || t.id === record.armor.type)
     .map((t) => ({ value: t.id, label: t.name }));
-  const armor = fighter ? fighterArmor(record) : craftArmor(record);
-  const craftFigures = craft ? craftArmor(record) : null;
+  const armor = fighter ? fighterArmor(record) : (ship?.armor ?? null);
+  const craftFigures = ship?.armor ?? null;
   return (
     <section className="bt-panel" aria-labelledby="aero-armor">
       <h2 id="aero-armor">Armor</h2>
@@ -351,7 +387,7 @@ export function ArmorPanel({ record, onEdit }: PartProps) {
         lines={[
           armor === null ? undefined : `${num(armor.allocated)} points set${armor.available === null ? "" : ` of ${num(armor.available)}`}${armor.free > 0 ? `, ${num(armor.free)} of them free` : ""}`,
           armor?.over !== null && armor?.over !== undefined && armor.over > 0 ? `${num(armor.over)} points over what the armor gives` : undefined,
-          craftFigures?.limitTons === null || craftFigures === null ? undefined : `At most ${plural(craftFigures.limitTons, "ton")} of armor for this structure`,
+          craftFigures?.limitTons == null ? undefined : `At most ${plural(craftFigures.limitTons, "ton")} of armor for this structure`,
         ]}
       />
     </section>
@@ -362,9 +398,9 @@ export function ArmorPanel({ record, onEdit }: PartProps) {
 export function HeatPanel({ record, onEdit }: PartProps) {
   const edition = record.editionId;
   const fighter = fighterKind(record);
-  const craft = craftKind(record);
-  if (fighter === undefined && craft === undefined) return null;
-  const heat = fighter ? fighterHeat(record) : craftHeat(record);
+  const ship = vessel(record);
+  if (fighter === undefined && ship === null) return null;
+  const heat = fighter ? fighterHeat(record) : (ship?.heat ?? null);
   const kinds = kindFigureOf(FIGHTER_FIGURES.heatSinkTypes, fighter ?? "aerospace", edition) ?? ["single", "double"];
   const options = [...kinds, record.heatSinks.type].filter((id, index, all) => all.indexOf(id) === index).map((id) => ({ value: id, label: `${titleCase(id)}` }));
   return (

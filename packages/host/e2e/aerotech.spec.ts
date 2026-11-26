@@ -5,13 +5,14 @@ import { DEV, expect, test } from "./fixtures";
 const AERO = "/battletech/aerotech";
 
 /** Builds a bare fighter under an edition (by id) from the home page and returns the editor's path. */
-async function startUnit(page: Page, edition: string, name: string): Promise<string> {
+async function startUnit(page: Page, edition: string, name: string, type?: string): Promise<string> {
   await page.goto(`${DEV}${AERO}/home`);
   // The file input is the last thing storage opens for: waiting for it is waiting for the page to be ready.
   await expect(page.getByLabel("Import a file")).toBeEnabled();
   const form = page.getByRole("form", { name: "Build a new unit" });
   await form.getByLabel("Name").fill(name);
   await form.getByLabel("Edition").selectOption(edition);
+  if (type !== undefined) await form.getByLabel("Type").selectOption(type);
   await form.getByRole("button", { name: "Start building" }).click();
   await expect(page.getByRole("heading", { level: 1, name })).toBeVisible();
   const url = new URL(page.url());
@@ -109,6 +110,47 @@ test("a fighter's sheet opens from the editor, prints as one page, has no axe vi
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   const widths = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, client: document.documentElement.clientWidth }));
   expect(widths.scroll).toBe(widths.client);
+});
+
+test("a DropShip and a WarShip are built, checked and printed: editor and sheet have no axe violations in either theme and fit 320 px", async ({ page }) => {
+  test.setTimeout(240_000);
+  const paths: string[] = [];
+  for (const [type, name, sheetName, weapon] of [
+    ["dropship", "Leopard Test", "Leopard Test aerodyne civilian dropship record sheet", "medium laser"],
+    ["warship", "Mjolnir Test", "Mjolnir Test warship record sheet", "NAC/10"],
+  ] as const) {
+    const editor = await startUnit(page, "tw-tm-so", name, type);
+    await page.getByRole("button", { name: "Add equipment to Nose" }).click();
+    await page.getByLabel("Search by name").fill(weapon);
+    await page.getByRole("button", { name: new RegExp(`^${weapon}`, "i") }).first().click();
+    await page.getByRole("button", { name: "Save", exact: true }).click();
+    await expect(page.getByText("Saved.")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Rules check" })).toBeVisible();
+    await page.getByRole("link", { name: "Record sheet" }).click();
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText(`${name} record sheet`);
+    await expect(page.getByRole("img", { name: sheetName })).toBeVisible();
+    paths.push(editor, new URL(page.url()).pathname.replace(/^\/salvage-rights/, "") + new URL(page.url()).search);
+  }
+  // Print: only the sheet, on one Letter page.
+  await page.emulateMedia({ media: "print" });
+  expect((await page.pdf({ format: "Letter", printBackground: true })).toString("latin1").match(/\/Type\s*\/Page[^s]/g)).toHaveLength(1);
+  await page.emulateMedia({ media: "screen" });
+  for (const theme of ["Light", "Dark"] as const) {
+    await chooseTheme(page, theme);
+    for (const path of paths) {
+      await page.goto(`${DEV}${path}`);
+      await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+      const results = await new AxeBuilder({ page }).analyze();
+      expect(results.violations, `${theme} theme, ${path}`).toEqual([]);
+    }
+  }
+  await page.setViewportSize({ width: 320, height: 700 });
+  for (const path of paths) {
+    await page.goto(`${DEV}${path}`);
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    const widths = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, client: document.documentElement.clientWidth }));
+    expect(widths.scroll, path).toBe(widths.client);
+  }
 });
 
 test("the Classic home offers an aerospace unit that opens the AeroTech editor, and links to the AeroTech home", async ({ page }) => {

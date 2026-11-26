@@ -7,7 +7,7 @@ import { Link, useBlocker, useSearchParams } from "react-router";
 import { aeroEditionName } from "../../data/aero";
 import { loadCatalog } from "../../rules/catalog";
 import type { Catalog } from "../../rules/catalog";
-import { craftKind, craftTally, fighterKind, fighterTally, locationsOf } from "../../rules/aero";
+import { fighterKind, fighterTally, locationsOf, vessel, vesselGroup } from "../../rules/aero";
 import type { AeroRecord } from "../../rules/aero";
 import { checkAero } from "../../rules/aero-checks";
 import type { AeroFinding } from "../../rules/aero-checks";
@@ -104,13 +104,13 @@ export function targetFor(where: AeroFinding["where"], record: AeroRecord): stri
   if (!where) return undefined;
   if (where.mountId !== undefined && record.mounts.some((m) => m.id === where.mountId)) return mountDomId(where.mountId);
   if (where.arc !== undefined && (locationsOf(record).arcs.includes(where.arc) || record.mounts.some((m) => m.arc === where.arc))) return arcDomId(where.arc);
-  const built = fighterKind(record) !== undefined || craftKind(record) !== undefined;
+  const built = fighterKind(record) !== undefined || vesselGroup(record) !== undefined;
   const field = where.field;
   if (field === undefined) return undefined;
   if (["unitType", "tons", "year", "techBase"].includes(field)) return fieldId(field);
   if (!built) return undefined;
-  if (field === "engine") return fighterKind(record) === undefined ? undefined : fieldId(field);
-  if (field === "thrust" || field === "fuelTons") return fieldId(field);
+  if (field === "engine") return fighterKind(record) === undefined && record.unitType !== "warship" ? undefined : fieldId(field);
+  if (field === "thrust" || field === "fuelTons" || field === "si" || field === "crew") return fieldId(field);
   if (field === "heatSinks") return fieldId("heatSinks");
   if (field === "armor.type") return fieldId("armor-type");
   if (field === "armor.tons" || field === "armor.points") return fieldId("armor-tons");
@@ -168,7 +168,7 @@ function Editor({ initial, catalog, storage }: { initial: AeroRecord; catalog: C
   };
 
   const findings = useMemo(() => checkAero(record, catalog), [record, catalog]);
-  const tally = useMemo(() => (fighterKind(record) !== undefined ? fighterTally(record, catalog) : craftKind(record) !== undefined ? craftTally(record, catalog) : undefined), [record, catalog]);
+  const tally = useMemo(() => (fighterKind(record) !== undefined ? fighterTally(record, catalog) : vessel(record, catalog)?.tally), [record, catalog]);
   const blocker = useBlocker(dirty);
   useEffect(() => {
     if (!dirty) return;

@@ -6,22 +6,20 @@ import { DEFAULT_AERO_EDITION, FIGHTER_FIGURES, aeroTypesFor, figureOf } from ".
 import type { AeroType, AeroTypeRow } from "../../data/aero";
 import { AERO_WEAPON_EDITIONS, aeroWeaponOffered, ammoRowOf } from "../../data/aero-weapons";
 import type { UnitId } from "../../data/units";
-import { fighterKind, locationsOf, newAeroRecord } from "../../rules/aero";
+import { fighterKind, locationsOf, newAeroRecord, vesselGroup } from "../../rules/aero";
 import type { AeroMount, AeroRecord } from "../../rules/aero";
 import { mountableOn } from "../../rules/catalog";
 import type { Catalog, EquipmentRow } from "../../rules/catalog";
 import { phaseIn, windowOf } from "../../rules/time";
 
 /**
- * Whether the app builds this unit type under the edition: the fighters today. Small craft and DropShips can be built in the editor but
- * wait here (and so are hidden from every new-unit list) until AERO-10 brings back their sheets together with their checks: the weight tally,
- * structural integrity range (TM p. 187), armor limit and allocation (TM p. 191), arcs and fire control (TM p. 196), matched arcs and bay
- * limits (TM p. 195), minimum ammunition (TM p. 194), crew (TM p. 189), doors (TM p. 196) and the DropShip zero-heat rule (TM p. 193).
- * The others (JumpShips, WarShips, stations) wait too. A saved record of a waiting type still opens.
+ * Whether the app builds this unit type under the edition: the fighters, small craft, DropShips, JumpShips, WarShips and space stations
+ * (each with its rules check and record sheet) where the edition prints their figures. A type it prints none for is hidden from every
+ * new-unit list; a saved record of one still opens.
  */
 export function typeReady(editionId: string, unitType: string): boolean {
   if (fighterKind({ unitType }) !== undefined) return figureOf(FIGHTER_FIGURES.maxThrustFactor, editionId) !== undefined;
-  return false;
+  return vesselGroup({ unitType, editionId }) !== undefined;
 }
 
 export const typeRow = (editionId: string, unitType: string): AeroTypeRow | undefined => aeroTypesFor(editionId).find((row) => row.type === unitType);
