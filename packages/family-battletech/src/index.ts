@@ -39,7 +39,16 @@ const gothicRoutes: FamilyRoute[] = [
 ];
 const gothicPreviewRoutes: FamilyRoute[] = gothicRoutes.map((route) => ({ ...route, path: `gothic-preview/${route.path}` }));
 
-function comingSoon(id: string, shortName: string, fullName: string): GameManifest {
+// AeroTech's pages are written as the game's own routes. The host serves them only once the game is ready (AERO-9), so until then they are
+// also reachable as family routes under aerotech-preview (ui/aero/routes.ts), where every link goes. The sheet joins in AERO-9.
+const aeroRoutes: FamilyRoute[] = [
+  { path: "home", label: "BattleTech: AeroTech", section: "workshop", load: () => import("./ui/aero/AeroHomePage") },
+  { path: "editor", label: "AeroTech unit editor", section: "workshop", load: () => import("./ui/aero/AeroEditorPage") },
+];
+const aeroPreviewRoutes: FamilyRoute[] = aeroRoutes.map((route) => ({ ...route, path: `aerotech-preview/${route.path}` }));
+
+function comingSoon(
+id: string, shortName: string, fullName: string): GameManifest {
   return { id, shortName, fullName, ready: false, routes: [], ...GAME_ART[id] };
 }
 
@@ -54,13 +63,13 @@ const manifest: FamilyManifest = {
     { id: "classic", shortName: "Classic", fullName: "Classic BattleTech", ready: true, routes: classicRoutes, ...GAME_ART["classic"] },
     { id: "alpha-strike", shortName: "Alpha Strike", fullName: "BattleTech: Alpha Strike", ready: true, routes: alphaStrikeRoutes, ...GAME_ART["alpha-strike"] },
     comingSoon("aces", "Aces", "BattleTech: Aces"),
-    comingSoon("aerotech", "AeroTech", "BattleTech: AeroTech"),
+    { id: "aerotech", shortName: "AeroTech", fullName: "BattleTech: AeroTech", ready: false, routes: aeroRoutes, ...GAME_ART["aerotech"] },
     { id: "gothic", shortName: "Gothic", fullName: "BattleTech: Gothic", ready: false, routes: gothicRoutes, ...GAME_ART["gothic"] },
   ],
   unitTypes: (EDITIONS[0]?.unitTypes ?? []).filter((unit) => unit.ready), // the types the edition can build (data/editions.ts)
   eras: ERAS, // the Master Unit List's twelve (data/editions.ts)
   measures: ["hexes"],
-  routes: [...acesPreviewRoutes, ...gothicPreviewRoutes],
+  routes: [...acesPreviewRoutes, ...aeroPreviewRoutes, ...gothicPreviewRoutes],
   credits: {
     owner:
       // The non-affiliation notice fan projects for this game commonly carry, word for word, then two lines of our own.
