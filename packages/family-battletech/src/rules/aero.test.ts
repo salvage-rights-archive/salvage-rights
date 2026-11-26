@@ -3,6 +3,8 @@ import { ENGINE_WEIGHTS } from "../data/chassis";
 import { aeroLocationName, controlTons, engineRating, fighterArcs, fighterArmor, fighterArmorLimit, fighterEngineTons, fighterHeat, fighterPartsNotOffered, fighterSI, fighterTally, fuelPoints, hardpoints, locationsOf, maxThrust, newAeroRecord, withDefaults, wingsMatch } from "./aero";
 import type { AeroRecord, AeroShape, AeroUse } from "./aero";
 import { craftAmmoShortfalls, craftArcs, craftArcsUnmatched, craftArmor, craftBayTons, craftControlTons, craftCrew, craftDoors, craftEngineTons, craftFuelPoints, craftHeat, craftMaxThrust, craftPartsNotOffered, craftPumpTons, craftSI, craftSiRange, craftSiTons, craftTally, craftWeaponBays, expandedFireControlTons } from "./aero";
+import { capitalArcs, capitalArcsUnmatched, capitalArmor, capitalControlTons, capitalCrew, capitalDoors, capitalEngineTons, capitalFuelPoints, capitalHeat, capitalMaxThrust, capitalPumpTons, capitalSI, capitalSiRange, capitalSiTons, capitalSystemLimit, capitalSystems, capitalTally, capitalWeaponBays, jumpSail, kfDrive } from "./aero";
+import { capitalArmorPointsPerTon } from "../data/aero";
 import { loadCatalog } from "./catalog";
 import { engineTons } from "./mech";
 
@@ -286,5 +288,137 @@ describe("small craft and DropShip construction", () => {
     expect(craftCrew(nekohonoo, catalog)).toEqual({ base: 8, standardWeapons: 60, capitalWeapons: 5, gunners: 15, minimum: 23 });
     for (const [editionId, base] of [["aerotech2", 4], ["aerotech2-revised", 4], ["tw-tm-so", 3]] as const) expect(craftCrew(craft(editionId, { unitType: "small-craft", shape: "aerodyne", use: "civilian", tons: 200, safe: 5 }))?.base).toBe(base);
     expect(craftCrew(craft("tw-tm-so", { unitType: "dropship", shape: "aerodyne", use: "civilian", tons: 1000, safe: 5 }))?.base).toBe(4);
+  });
+});
+
+// ---- JumpShip, WarShip and space station construction --------------------------------------------------------------------------
+
+type CapitalType = "jumpship" | "warship" | "space-station";
+function ship(editionId: string, f: { unitType: CapitalType; tons: number; safe?: number; si?: number; techBase?: "inner-sphere" | "clan" }, build: Partial<AeroRecord> = {}, mounts: CraftMounts = []): AeroRecord {
+  return craft(editionId, { unitType: "dropship", shape: "aerodyne", use: "military", tons: f.tons, safe: f.safe ?? 0, ...(f.si === undefined ? {} : { si: f.si }), ...(f.techBase === undefined ? {} : { techBase: f.techBase }) }, { unitType: f.unitType, shape: undefined, use: undefined, ...build }, mounts);
+}
+const SIX = ["NO", "FL", "FR", "AL", "AR", "AF"];
+const each = (arcs: string[], items: CraftMounts): CraftMounts => arcs.flatMap((arc) => items.map(([, id, bay, amount]) => [arc, id, bay, amount] as CraftMounts[number]));
+
+describe("JumpShip, WarShip and space station construction", () => {
+  it("AeroTech 2 Revised: Kit's 1,350,000-ton WarShip of pp. 61-70 by value (the book prints 360 as the top of its SI range; 30 x Max Thrust is 180)", () => {
+    const standard: CraftMounts = [...times(4, ["", "er-large-laser-is"] as CraftMounts[number]), ["", "lrm-20-is"], ["", "lrm-20-is"], ["", "srm-6-is"], ["", "srm-6-is"]];
+    const pair = (id: string): CraftMounts => times(2, ["", id] as CraftMounts[number]);
+    const mounts = [
+      ...each(["NO", "FL", "FR", "LB", "RB", "AL", "AR", "AF"], standard),
+      ...each(["NO"], [...pair("nac-30-is"), ...pair("nac-40-is"), ...pair("heavy-n-ppc-is"), ...pair("heavy-n-gauss-is"), ...pair("ar-10-launcher-is")]),
+      ...each(["FL", "FR", "AL", "AR"], [...pair("nac-35-is"), ...pair("medium-n-ppc-is"), ...pair("ar-10-launcher-is")]),
+      ...each(["LB", "RB"], [...pair("nac-30-is"), ...times(3, ["", "nac-40-is"] as CraftMounts[number]), ...pair("heavy-n-ppc-is")]),
+      ...each(["AF"], [...pair("nac-30-is"), ...pair("heavy-n-ppc-is"), ...pair("heavy-n-gauss-is"), ...pair("ar-10-launcher-is")]),
+    ];
+    const mjolnir = ship("aerotech2-revised", { unitType: "warship", tons: 1350000, safe: 4, si: 140 }, {
+      fuelTons: 2376,
+      armor: { type: "ferro-carbide", tons: 3500, points: { NO: 504, FL: 479, FR: 479, AL: 474, AR: 474, AF: 474 } },
+      heatSinks: { type: "double", count: 470 },
+      systems: { "docking-hardpoint": 4, "grav-deck-medium": 1 },
+    }, mounts);
+    expect([capitalMaxThrust(mjolnir), capitalEngineTons(mjolnir), capitalSiRange(mjolnir), capitalSI(mjolnir), capitalSiTons(mjolnir), capitalControlTons(mjolnir)]).toEqual([6, 324000, { min: 6, max: 180 }, 140, 189000, 3375]);
+    expect([kfDrive(mjolnir), jumpSail(mjolnir)]).toEqual([{ tons: 610875, integrity: 26 }, { tons: 98, integrity: 6 }]);
+    expect([capitalFuelPoints(mjolnir), capitalPumpTons(mjolnir)]).toEqual([5940, 48]);
+    expect(capitalArmor(mjolnir)).toEqual({ perTon: 0.8, bought: 2800, freePerFacing: 14, free: 84, available: 2884, allocated: 2884, over: 0, limitTons: 3780, tonsOver: -280 });
+    expect(capitalHeat(mjolnir)).toEqual({ free: 849, added: 470, total: 1319, capacity: 2638 });
+    expect(capitalCrew(mjolnir, catalog)).toEqual({ base: 315, standardWeapons: 64, capitalWeapons: 56, gunners: 67, minimum: 382 });
+    expect(capitalSystems(mjolnir)).toMatchObject({ tons: 4100, unknown: [], lines: [{ kind: "docking-hardpoint", count: 4, tons: 4000, limit: 27, allowed: true }, { kind: "grav-deck-medium", tons: 100, allowed: true }] });
+    expect(capitalArcs(mjolnir, catalog).map((a) => [a.arc, a.weapons, a.limit, a.fireControlTons])).toEqual([["NO", 18, 20, 0], ["FL", 14, 20, 0], ["FR", 14, 20, 0], ["LB", 15, 20, 0], ["RB", 15, 20, 0], ["AL", 14, 20, 0], ["AR", 14, 20, 0], ["AF", 16, 20, 0]]);
+    expect(capitalArcsUnmatched(mjolnir, catalog)).toEqual([]);
+  });
+
+  it.each([
+    ["aerotech2", 237500, 5.158333, 63.333333, 4.166667],
+    ["aerotech2-revised", 237500, 5, 63, 4],
+    ["tw-tm-so", 237500, 6, 64, 5],
+  ])("%s: a 250,000-ton JumpShip's standard K-F drive and sail, rounded as the book rounds (AeroTech 2 prints none, Revised to the nearest, Strategic Operations up)", (editionId, kf, kfIntegrity, sail, sailIntegrity) => {
+    const jumpship = ship(editionId, { unitType: "jumpship", tons: 250000 });
+    expect(kfDrive(jumpship)?.tons).toBe(kf);
+    expect(kfDrive(jumpship)?.integrity).toBeCloseTo(kfIntegrity, 5);
+    expect(jumpSail(jumpship)?.tons).toBeCloseTo(sail, 5);
+    expect(jumpSail(jumpship)?.integrity).toBeCloseTo(sailIntegrity, 5);
+    // A station-keeping drive: 1.2 percent of the tons, no Max Thrust and no SI to choose; the drive and sail belong to JumpShips and WarShips.
+    expect([capitalEngineTons(jumpship), capitalMaxThrust(jumpship), capitalSiRange(jumpship), capitalSI(jumpship)]).toEqual([3000, null, null, 1]);
+    expect([kfDrive({ ...jumpship, unitType: "space-station" }), kfDrive({ ...jumpship, unitType: "dropship" }), kfDrive({ ...jumpship, editionId: "battlespace" })]).toEqual([null, null, null]);
+  });
+
+  it("a space station's SI is fixed at 1 whatever the record holds: Strategic Operations' Alliance (pp. 134-143) by value, and the AeroTech 2 books' limits it lacks", () => {
+    const alliance = ship("tw-tm-so", { unitType: "space-station", tons: 100000, si: 50 }, { fuelTons: 10000, armor: { type: "standard", tons: 52.5, points: Object.fromEntries(SIX.map((loc) => [loc, 7])) }, bays: [{ kind: "small-craft", capacity: 8, doors: 1 }] });
+    expect([capitalSI(alliance), capitalSiTons(alliance), capitalEngineTons(alliance), capitalControlTons(alliance), capitalFuelPoints(alliance), capitalPumpTons(alliance)]).toEqual([1, 1000, 1200, 100, 100000, 200]);
+    expect(capitalArmor(alliance)).toMatchObject({ perTon: 0.8, bought: 42, freePerFacing: 0, free: 0, allocated: 42, over: 0, limitTons: 393 });
+    expect([capitalHeat(alliance)?.free, capitalCrew(alliance)?.base, capitalDoors(alliance)?.limit, capitalSystemLimit("docking-hardpoint", alliance), jumpSail(alliance)]).toEqual([93, 65, 10, 2, null]);
+    // The AeroTech 2 books print no station armor limit and no station fuel points; a station with energy storage batteries must carry a sail there.
+    const revised = { ...alliance, editionId: "aerotech2-revised", systems: { "energy-storage-battery": 1 } };
+    expect([capitalSI(revised), capitalArmor(revised)?.limitTons, capitalFuelPoints(revised), jumpSail(revised)]).toEqual([1, null, null, { tons: 43, integrity: 3 }]);
+    expect(capitalDoors({ ...alliance, bays: [{ kind: "cargo", capacity: 10, doors: 0 }] })?.withoutDoor).toEqual(["cargo"]);
+  });
+
+  it.each([
+    ["tw-tm-so", 149999, "inner-sphere", "standard", 0.8],
+    ["tw-tm-so", 150000, "inner-sphere", "standard", 0.6],
+    ["tw-tm-so", 249999, "clan", "standard", 0.7],
+    ["tw-tm-so", 250000, "clan", "standard", 0.5],
+    ["tw-tm-so", 2000, "inner-sphere", "lamellor-ferro-carbide", 1.4],
+    ["tw-tm-so", 150000, "clan", "lamellor-ferro-carbide", 1.3],
+    ["aerotech2-revised", 1350000, "inner-sphere", "ferro-carbide", 0.8],
+    ["aerotech2", 2000, "clan", "improved-ferro-aluminum", 1.2],
+    ["aerotech2", 1999, "inner-sphere", "standard", undefined],
+    ["tw-tm-so", 100000, "inner-sphere", "ferro-aluminum", undefined],
+  ] as const)("%s: %d tons, %s %s armor gives %s capital points a ton (Strategic Operations' columns are the standard column plus the AeroTech 2 bonus)", (editionId, tons, techBase, type, perTon) => {
+    expect(capitalArmorPointsPerTon(type, editionId, tons, techBase)).toBe(perTon);
+  });
+
+  it.each([
+    ["aerotech2-revised", 345000, 6],
+    ["tw-tm-so", 345000, 7],
+    ["aerotech2", 1930000, 38],
+    ["tw-tm-so", 1930000, 39],
+    ["aerotech2", 45000, 0],
+    ["tw-tm-so", 45000, 0],
+  ])("%s: a %d-ton unit may mount %d docking hardpoints (one per 50,000 tons; whole ones in the AeroTech 2 books, rounded up from 50,000 tons by the Strategic Operations errata)", (editionId, tons, limit) => {
+    expect(capitalSystemLimit("docking-hardpoint", { editionId, tons })).toBe(limit);
+    // A lithium-fusion battery: one at most, on a station only in AeroTech 2; an HPG has a mass only in the AeroTech 2 books.
+    const station = ship(editionId, { unitType: "space-station", tons }, { systems: { "lithium-fusion-battery": 1, hpg: 1 } });
+    expect(capitalSystems(station)).toMatchObject(editionId === "tw-tm-so" ? { lines: [{ kind: "lithium-fusion-battery", allowed: false }], unknown: ["hpg"] } : { lines: [{ allowed: editionId === "aerotech2" }, { kind: "hpg", tons: 50 }], unknown: [] });
+  });
+
+  it("a WarShip has the broadside arcs and 20 weapons an arc, a JumpShip six arcs and 12; fire control past the limit; matched sides and broadsides; bays count only naval damage tenfold", () => {
+    const warship = ship("tw-tm-so", { unitType: "warship", tons: 500000, safe: 2 }, {}, [...times(25, ["NO", "er-large-laser-is"] as CraftMounts[number]), ["LB", "nac-40-is", "b1"], ["LB", "nac-40-is", "b1"], ["RB", "nac-40-is", "b2"], ["AF", "killer-whale-is", "b3"], ["AF", "killer-whale-is", "b3"]]);
+    expect(capitalArcs(warship, catalog).map((a) => [a.arc, a.limit])).toEqual(["NO", "FL", "FR", "LB", "RB", "AL", "AR", "AF"].map((arc) => [arc, 20]));
+    expect(capitalArcs(warship, catalog).find((a) => a.arc === "NO")).toMatchObject({ weapons: 25, weaponTons: 125, fireControlTons: 12.5 });
+    expect(capitalArcsUnmatched(warship, catalog)).toEqual(["LB|RB"]);
+    // Two NAC/40s (40 capital each) are 800 standard points, over the 700 a bay holds; two Killer Whales (4 capital each) are 80.
+    expect(capitalWeaponBays(warship, catalog).map((b) => [b.bay, b.attack, b.over, b.heat])).toEqual([["arc:NO", 200, false, 300], ["b1", 800, true, 270], ["b2", 400, false, 135], ["b3", 80, false, 40]]);
+    const jumpship = ship("aerotech2", { unitType: "jumpship", tons: 200000 }, {}, [...times(13, ["NO", "er-large-laser-is"] as CraftMounts[number]), ["LB", "er-large-laser-is"]]);
+    expect(capitalArcs(jumpship, catalog).map((a) => [a.arc, a.limit, a.fireControlTons])).toEqual([["NO", 12, 6.5], ...SIX.slice(1).map((arc) => [arc, 12, 0])]);
+  });
+
+  it("Strategic Operations: Kate's Odyssey-class JumpShip (pp. 133-146) to its last ton, and Lynn's McKenna-class WarShip's figures (gunners by the rule: the example counts 26 weapons where it lists 22 that need one)", () => {
+    const odyssey = ship("tw-tm-so", { unitType: "jumpship", tons: 345000, techBase: "clan" }, {
+      fuelTons: 1000,
+      armor: { type: "standard", tons: 168, points: { NO: 15, FL: 14, FR: 14, AL: 14, AR: 14, AF: 13 } },
+      heatSinks: { type: "single", count: 1 },
+      quarters: { "second-class": 30, "first-class": 6 },
+      bays: [{ kind: "small-craft", capacity: 1, doors: 1 }, { kind: "battle-armor-clan", capacity: 2, doors: 2 }, { kind: "cargo", capacity: 418, doors: 1 }],
+      systems: { "docking-hardpoint": 4, "grav-deck-medium": 2, "lithium-fusion-battery": 1 },
+    }, [
+      ["NO", "gauss-rifle-clan"], ["NO", "gauss-rifle-clan"], ["NO", "ammo-gauss-rifle-clan", undefined, 3], ["NO", "er-large-laser-clan"], ["NO", "large-pulse-laser-clan"], ["NO", "medium-pulse-laser-clan"], ["NO", "medium-pulse-laser-clan"],
+      ...each(["FL", "FR"], [["", "er-large-laser-clan"], ["", "medium-pulse-laser-clan"], ["", "medium-pulse-laser-clan"], ["", "ams-clan"], ["", "ams-clan"], ["", "ammo-ams-clan", undefined, 2]]),
+      ...each(["AL", "AR"], [["", "large-pulse-laser-clan"], ["", "medium-pulse-laser-clan"], ["", "medium-pulse-laser-clan"], ["", "ams-clan"], ["", "ams-clan"], ["", "ammo-ams-clan", undefined, 2]]),
+      ["AF", "er-large-laser-clan"], ["AF", "large-pulse-laser-clan"], ["AF", "medium-pulse-laser-clan"], ["AF", "medium-pulse-laser-clan"],
+      ...times(3, ["", "lifeboat-aerospace-clan"] as CraftMounts[number]),
+    ]);
+    expect([kfDrive(odyssey), jumpSail(odyssey), capitalControlTons(odyssey), capitalFuelPoints(odyssey), capitalPumpTons(odyssey)]).toEqual([{ tons: 327750, integrity: 7 }, { tons: 76, integrity: 5 }, 863, 2500, 20]);
+    expect(capitalArmor(odyssey)).toMatchObject({ perTon: 0.5, bought: 84, free: 0, allocated: 84, over: 0, limitTons: 191.5 });
+    expect([capitalHeat(odyssey)?.total, capitalCrew(odyssey, catalog)?.base, capitalCrew(odyssey, catalog)?.gunners, capitalArcsUnmatched(odyssey, catalog)]).toEqual([136, 24, 4, []]);
+    expect(capitalDoors(odyssey)).toEqual({ doors: 4, counted: 4, limit: 14, launchRate: 2, withoutDoor: [] });
+    expect(capitalTally(odyssey, catalog)).toMatchObject({ total: 345000, remaining: 0, unknown: [] });
+
+    const mckenna = ship("tw-tm-so", { unitType: "warship", tons: 1930000, safe: 3, si: 95 }, { fuelTons: 1600, armor: { type: "ferro-carbide", tons: 1603.5, points: { NO: 200, FL: 250, FR: 250, AL: 250, AR: 250, AF: 142 } }, heatSinks: { type: "double", count: 5447 } });
+    expect([capitalEngineTons(mckenna), capitalMaxThrust(mckenna), capitalSiRange(mckenna), capitalSiTons(mckenna), capitalPumpTons(mckenna), capitalControlTons(mckenna)]).toEqual([347400, 5, { min: 5, max: 150 }, 183350, 32, 4825]);
+    expect([kfDrive(mckenna), jumpSail(mckenna), capitalCrew(mckenna)?.base]).toEqual([{ tons: 873325, integrity: 37 }, { tons: 127, integrity: 8 }, 431]);
+    expect(capitalArmor(mckenna)).toMatchObject({ perTon: 0.8, bought: 1282, freePerFacing: 10, available: 1342, allocated: 1342, limitTons: 3667 });
+    expect(capitalHeat(mckenna)).toEqual({ free: 878, added: 5447, total: 6325, capacity: 12650 });
   });
 });
