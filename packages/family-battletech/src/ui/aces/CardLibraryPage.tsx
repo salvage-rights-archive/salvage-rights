@@ -3,10 +3,11 @@
 import { useEffect, useRef, useState } from "react";
 import type { ChangeEvent } from "react";
 import { Link } from "react-router";
-import { cardLevel, completeness, deckKey } from "../../rules/aces-card";
-import type { AcesCard, AcesKind, AcesRecord, DeckCompleteness } from "../../rules/aces-card";
+import { ACES_SPECIAL_ORDERS } from "../../data/aces-vocab";
+import { cardLevel, commandCompleteness, completeness, deckKey } from "../../rules/aces-card";
+import type { AcesCard, AcesKind, AcesRecord, CommandCard, DeckCompleteness, SpecialOrderCard, SupportCard } from "../../rules/aces-card";
 import { STORAGE_READ_FAILED, STORAGE_WRITE_FAILED, downloadJson } from "../storage";
-import { ACES_CARD, ACES_HOME, cardHref } from "./routes";
+import { ACES_COMMAND, ACES_ORDER, ACES_SUPPORT, ACES_CARD, ACES_HOME, cardHref, commandHref, orderHref, supportHref } from "./routes";
 import { downloadLibrary, fromLibraryFile, libraryOf, openAcesStorage, planLibraryImport } from "./storage";
 import type { AcesEntry, AcesStorage } from "./storage";
 import "../classic.scss";
@@ -36,6 +37,25 @@ interface Target {
   kind: AcesKind;
   id: string;
   name: string;
+}
+
+function CardRow({ text, credit, name, to, onDelete }: { text: string; credit: string; name: string; to: string; onDelete: (opener: HTMLElement) => void }) {
+  return (
+    <li className="bt-row">
+      <span className="bt-row__text">
+        {text}
+        <span className="bt-row__credit">{credit}</span>
+      </span>
+      <span className="bt-row__actions">
+        <Link className="bt-button" aria-label={`Open ${name}`} to={to}>
+          Open
+        </Link>
+        <button type="button" className="bt-button bt-button--secondary" aria-label={`Delete ${name}`} onClick={(event) => { onDelete(event.currentTarget); }}>
+          Delete
+        </button>
+      </span>
+    </li>
+  );
 }
 
 export default function CardLibraryPage() {
@@ -97,7 +117,13 @@ export default function CardLibraryPage() {
 
   const records = entries.flatMap((e) => (e.record ? [e.record] : []));
   const cards = records.filter((r): r is AcesCard => r.kind === "aces-card");
-  const others = (["aces-command", "aces-order", "aces-support"] as const).map((k) => ({ kind: k, count: records.filter((r) => r.kind === k).length })).filter((o) => o.count > 0);
+  const commands = records.filter((r): r is CommandCard => r.kind === "aces-command");
+  const orders = records.filter((r): r is SpecialOrderCard => r.kind === "aces-order");
+  const supports = records.filter((r): r is SupportCard => r.kind === "aces-support");
+  const commandDecks = commandCompleteness(commands);
+  const commandKey = (c: CommandCard): string => (c.faction.trim() === "" ? c.commander.trim() : `${c.commander.trim()} (${c.faction.trim()})`);
+  const ordersHave = ACES_SPECIAL_ORDERS.filter((o) => orders.some((r) => r.order === o.id));
+  const ordersMissing = ACES_SPECIAL_ORDERS.filter((o) => !orders.some((r) => r.order === o.id));
   const decks = completeness(cards);
   const broken = entries.filter((e) => !e.record);
 
@@ -255,7 +281,6 @@ export default function CardLibraryPage() {
             ))}
           </ul>
         )}
-        {others.length > 0 && <p className="bt-hint">{`Also saved: ${others.map((o) => plural(o.count, KIND_WORDS[o.kind])).join(", ")}. They are in your library file; their pages come in a later step.`}</p>}
         {broken.length > 0 && (
           <ul className="bt-list">
             {broken.map((e) => (
@@ -308,11 +333,77 @@ export default function CardLibraryPage() {
         )}
       </section>
 
+      <section className="bt-section" aria-labelledby="aces-commands">
+        <h2 id="aces-commands">Command decks</h2>
+        {storage && commands.length === 0 ? (
+          <p>No command cards recorded yet.</p>
+        ) : (
+          <ul className="bt-list">
+            {commandDecks.map((d) => (
+              <li key={d.key} className="bt-row aces-deck">
+                <h3 className="aces-deck__name">{d.key}</h3>
+                <p className="aces-deck__words">{d.missing.length === 0 ? "All five cards, A to E, recorded." : `Recorded ${d.have.join(", ")}. Missing ${d.missing.join(", ")}.`}</p>
+                <ul className="bt-list aces-deck__cards">
+                  {commands
+                    .filter((c) => commandKey(c) === d.key)
+                    .sort((a, b) => a.letter.localeCompare(b.letter))
+                    .map((c) => {
+                      const name = `${d.key} card ${c.letter}`;
+                      return <CardRow key={c.id} text={`Card ${c.letter}, ${String(c.position)} of ${String(c.of)}`} credit={c.orders.length + c.strategy.length === 0 ? "Identity only" : "Recorded"} name={name} to={commandHref(c.id)} onDelete={(el) => { askDelete({ kind: "aces-command", id: c.id, name }, el); }} />;
+                    })}
+                </ul>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section className="bt-section" aria-labelledby="aces-orders">
+        <h2 id="aces-orders">Special orders</h2>
+        {orders.length === 0 ? (
+          <p>No special order cards recorded yet.</p>
+        ) : (
+          <>
+            <p>{`${String(ordersHave.length)} of 5 recorded${ordersMissing.length > 0 ? `. Missing ${ordersMissing.map((o) => o.label).join(", ")}` : ""}.`}</p>
+            <ul className="bt-list">
+              {orders.map((c) => {
+                const name = `${ACES_SPECIAL_ORDERS.find((o) => o.id === c.order)?.label ?? c.order} special order`;
+                return <CardRow key={c.id} text={name} credit={c.column || c.preFilters?.length || c.spotter?.length ? "Recorded" : "Order only"} name={name} to={orderHref(c.id)} onDelete={(el) => { askDelete({ kind: "aces-order", id: c.id, name }, el); }} />;
+              })}
+            </ul>
+          </>
+        )}
+      </section>
+
+      <section className="bt-section" aria-labelledby="aces-supports">
+        <h2 id="aces-supports">Support cards</h2>
+        {supports.length === 0 ? (
+          <p>No support cards recorded yet.</p>
+        ) : (
+          <ul className="bt-list">
+            {[...supports]
+              .sort((a, b) => a.name.localeCompare(b.name))
+              .map((c) => (
+                <CardRow key={c.id} text={c.name} credit={`Cost ${String(c.cost)}, target number ${String(c.tn)}, damage ${String(c.damage)}${c.area ? ", area" : ""}`} name={`${c.name} support card`} to={supportHref(c.id)} onDelete={(el) => { askDelete({ kind: "aces-support", id: c.id, name: `${c.name} support card` }, el); }} />
+              ))}
+          </ul>
+        )}
+      </section>
+
       <section className="bt-section" aria-labelledby="aces-add">
         <h2 id="aces-add">Add a card</h2>
         <p>
           <Link className="bt-button" to={ACES_CARD}>
             Add a behaviour card
+          </Link>{" "}
+          <Link className="bt-button" to={ACES_COMMAND}>
+            Add a command card
+          </Link>{" "}
+          <Link className="bt-button" to={ACES_ORDER}>
+            Add a special order card
+          </Link>{" "}
+          <Link className="bt-button" to={ACES_SUPPORT}>
+            Add a support card
           </Link>
         </p>
       </section>

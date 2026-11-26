@@ -57,7 +57,8 @@ const paramWord = (spec: ParamSpec): string => PARAM_WORDS[spec.name] ?? KIND_WO
 
 /** The tokens that may be placed in this slot on this side of a card. */
 export function tokensFor(slot: Slot, side: CardSide): VocabToken[] {
-  return ACES_TOKENS.filter((tok) => tok.slots.includes(slot) && tok.sides.includes(side));
+  // A strategy row takes the strategy tests and every ordinary condition, as checkUse reads it.
+  return ACES_TOKENS.filter((tok) => (tok.slots.includes(slot) || (slot === "strategy" && tok.slots.includes("condition"))) && tok.sides.includes(side));
 }
 
 const valuesOf = (kind: ParamKind): readonly { id: string; label: string }[] => (ACES_VALUES as Partial<Record<ParamKind, readonly { id: string; label: string }[]>>)[kind] ?? [];

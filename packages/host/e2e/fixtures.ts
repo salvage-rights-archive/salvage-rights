@@ -257,4 +257,27 @@ export async function saveAcesCard(page: Page, base: string): Promise<string> {
   return `${saved.pathname.replace(/^\/salvage-rights/, "")}${saved.search}`;
 }
 
+/**
+ * Saves an invented command card A (nothing from a printed card): an Initiative order, a key on the RED list, support spending, a
+ * strategy row. Returns the editor path for a later visit.
+ */
+export async function saveAcesCommand(page: Page, base: string): Promise<string> {
+  await page.goto(`${base}${ACES}/command`);
+  await page.getByLabel("Commander").fill("Invented Marshal");
+  await page.getByLabel("Faction").fill("Invented House");
+  await page.getByRole("button", { name: "2. Orders" }).click();
+  await pickToken(page, "Add an order", "initiative", "Initiative roll …");
+  await page.getByRole("button", { name: "3. Colour lists" }).click();
+  await pickToken(page, "Add a key to the RED list", "no armor", "no Armor left");
+  await page.getByRole("button", { name: "4. Support side" }).click();
+  await page.getByLabel("Support cards are").selectOption("spend-always");
+  await page.getByRole("button", { name: "5. Strategy rows" }).click();
+  await page.getByRole("button", { name: "Add a strategy row" }).click();
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(page.getByText("Saved.")).toBeVisible();
+  await page.waitForURL(/[?]id=/);
+  const saved = new URL(page.url());
+  return `${saved.pathname.replace(/^\/salvage-rights/, "")}${saved.search}`;
+}
+
 export { expect };

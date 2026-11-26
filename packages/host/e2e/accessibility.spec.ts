@@ -1,6 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import type { Page } from "@playwright/test";
-import { ACES, CLASSIC, DEV, FAKE_KEY, FREE, expect, importMech, saveAcesCard, saveAsUnit, test } from "./fixtures";
+import { ACES, CLASSIC, DEV, FAKE_KEY, FREE, expect, importMech, saveAcesCard, saveAcesCommand, saveAsUnit, test } from "./fixtures";
 
 async function chooseTheme(page: Page, base: string, theme: "Light" | "Dark") {
   await page.goto(`${base}/settings`);
@@ -174,4 +174,25 @@ test("the Classic home with Export all has no axe violations in either theme, fi
   expect(box?.height ?? 0).toBeGreaterThanOrEqual(44);
   expect(box?.width ?? 0).toBeGreaterThanOrEqual(44);
   await expectNoViolations(page, DEV, [`${CLASSIC}/home`]);
+});
+
+test("the Aces command card editor (each step), special order and support card pages have no axe violations in either theme", async ({ page }) => {
+  test.setTimeout(150_000);
+  const command = await saveAcesCommand(page, DEV);
+  await expectNoViolations(page, DEV, [`${ACES}/order`, `${ACES}/support`, `${ACES}/cards`]);
+  for (const theme of ["Light", "Dark"] as const) {
+    await chooseTheme(page, DEV, theme);
+    await page.goto(`${DEV}${command}`);
+    await scan(page, theme, "the command editor, identity");
+    for (const step of ["2. Orders", "3. Colour lists", "4. Support side", "5. Strategy rows"]) {
+      await page.getByRole("button", { name: step }).click();
+      await scan(page, theme, `the command editor, ${step}`);
+    }
+    await page.getByRole("button", { name: "Add a test to: Row 1 applies when" }).click();
+    await scan(page, theme, "the command editor, strategy picker open");
+    await page.goto(`${DEV}${ACES}/order`);
+    await page.getByLabel("Special order", { exact: true }).selectOption("fleeing");
+    await page.getByRole("button", { name: "Record the column" }).click();
+    await scan(page, theme, "the special order, column recorded");
+  }
 });

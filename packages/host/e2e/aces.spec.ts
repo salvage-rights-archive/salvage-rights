@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 import type { Page } from "@playwright/test";
-import { ACES, DEV, expect, pickToken, saveAcesCard, test } from "./fixtures";
+import { ACES, DEV, expect, pickToken, saveAcesCard, saveAcesCommand, test } from "./fixtures";
 
 // Every card here is invented. No printed card, photo or scan is used.
 
@@ -17,6 +17,16 @@ async function tabToControl(page: Page, name: string): Promise<void> {
     if (hit) return;
   }
   throw new Error(`Tab never reached "${name}"`);
+}
+
+/** The page does not scroll sideways, and every control is at least 44 px tall (a 320 px viewport is set by the caller). */
+async function fitsPhone(page: Page, where: string): Promise<void> {
+  const widths = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, client: document.documentElement.clientWidth }));
+  expect(widths.scroll, `scroll width: ${where}`).toBe(widths.client);
+  for (const control of await page.locator("button, select, textarea, input:not([type=file]):not([type=checkbox]):not([type=radio]), label:has(input[type=checkbox]), label:has(input[type=radio]), a.bt-button").all()) {
+    const box = await control.boundingBox();
+    if (box) expect(box.height, `${where}: ${(await control.textContent())?.slice(0, 30) ?? ""}`).toBeGreaterThanOrEqual(43.5);
+  }
 }
 
 test("enter an invented card, find it after a reload, see it in the library, and export the library without pictures", async ({ page }, testInfo) => {
@@ -59,14 +69,7 @@ test("the editor does not scroll sideways at 320 px at any step, and every contr
   test.setTimeout(60_000);
   const editor = await saveAcesCard(page, DEV);
   await page.setViewportSize({ width: 320, height: 700 });
-  const check = async (where: string) => {
-    const widths = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, client: document.documentElement.clientWidth }));
-    expect(widths.scroll, `scroll width: ${where}`).toBe(widths.client);
-    for (const control of await page.locator("button, select, textarea, input:not([type=file]):not([type=checkbox]):not([type=radio]), label:has(input[type=checkbox]), label:has(input[type=radio]), a.bt-button").all()) {
-      const box = await control.boundingBox();
-      if (box) expect(box.height, `${where}: ${(await control.textContent())?.slice(0, 30) ?? ""}`).toBeGreaterThanOrEqual(43.5);
-    }
-  };
+  const check = (where: string) => fitsPhone(page, where);
   for (const address of [`${DEV}${ACES}/home`, `${DEV}${ACES}/cards`]) {
     await page.goto(address);
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
@@ -116,4 +119,37 @@ test("a picker entry with numbers can be changed with the stepper buttons", asyn
   await page.getByRole("button", { name: "More: Inches" }).click();
   await expect(page.getByLabel("Inches", { exact: true })).toHaveValue("8");
   await expect(page.getByRole("region", { name: "Aggressive column" })).toContainText('keep 8" from the target');
+});
+
+test("an invented commander card A is entered at 320 px, with a special order and a support card", async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.setViewportSize({ width: 320, height: 700 });
+  await saveAcesCommand(page, DEV);
+  await fitsPhone(page, "command identity");
+  for (const step of ["2. Orders", "3. Colour lists", "4. Support side", "5. Strategy rows"]) {
+    await page.getByRole("button", { name: step }).click();
+    await fitsPhone(page, step);
+  }
+  await page.getByRole("button", { name: "Add a test to: Row 1 applies when" }).click();
+  await fitsPhone(page, "strategy picker open");
+
+  await page.goto(`${DEV}${ACES}/order`);
+  await page.getByLabel("Special order", { exact: true }).selectOption("fleeing");
+  await page.getByRole("button", { name: "Record the column" }).click();
+  await fitsPhone(page, "special order column");
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(page.getByText("Saved.")).toBeVisible();
+
+  await page.goto(`${DEV}${ACES}/support`);
+  await page.getByLabel("Name", { exact: true }).fill("Invented Barrage");
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(page.getByText("Saved.")).toBeVisible();
+  await fitsPhone(page, "support card");
+
+  await page.goto(`${DEV}${ACES}/cards`);
+  await expect(page.getByRole("heading", { name: "Invented Marshal (Invented House)" })).toBeVisible();
+  await expect(page.getByText("Recorded A. Missing B, C, D, E.")).toBeVisible();
+  await expect(page.getByText("1 of 5 recorded. Missing Forced withdrawal, Movement objective, Destroy objective, Indirect attacks.")).toBeVisible();
+  await expect(page.getByRole("link", { name: "Open Invented Barrage support card" })).toBeVisible();
+  await fitsPhone(page, "library with every kind");
 });
