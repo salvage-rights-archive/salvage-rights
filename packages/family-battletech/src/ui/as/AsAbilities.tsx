@@ -3,8 +3,9 @@
 import { useState } from "react";
 import { AS_SCAS, AS_SPAS } from "../../data/as-abilities";
 import { AS_EDITION } from "../../data/alpha-strike";
-import { findSpa, forceScas, memberSpas, spaCost, unitAllowsSpa } from "../../rules/as-force";
+import { findSpa, forceScas, forceSpas, memberSpas, spaCost, unitAllowsSpa } from "../../rules/as-force";
 import type { AsForce, AsMember, ForceTotals } from "../../rules/as-force";
+import { unitTitle } from "../../rules/as-unit";
 import type { AsUnit } from "../../rules/as-unit";
 
 /** One member's pilot abilities: those chosen with their cost and page, the points against the Skill limit, and a pick of the rest. */
@@ -29,7 +30,7 @@ export function MemberAbilities({ member, unit, index, setMember }: { member: As
                 <span>{`${spa.name}, ${String(spaCost(spa, pick))} ${spaCost(spa, pick) === 1 ? "point" : "points"}, p. ${String(spa.page)}${spa.cond ? ` (${spa.cond} only: your call)` : ""}`}</span>
                 {typeof spa.cost !== "number" && (
                   <span className="bt-field">
-                    <label htmlFor={`as-spa-pts-${id}-${spa.id}`}>{`${spa.name} points`}</label>
+                    <label htmlFor={`as-spa-pts-${id}-${spa.id}`}>{`${spa.name} points for ${unitTitle(unit) || "this unit"}`}</label>
                     <input
                       id={`as-spa-pts-${id}-${spa.id}`}
                       type="number"
@@ -40,7 +41,7 @@ export function MemberAbilities({ member, unit, index, setMember }: { member: As
                     />
                   </span>
                 )}
-                <button type="button" className="bt-button bt-button--secondary" aria-label={`Remove ${spa.name}`} onClick={() => { write(check.picks.filter((p) => p.id !== pick.id)); }}>
+                <button type="button" className="bt-button bt-button--secondary" aria-label={`Remove ${spa.name} from ${unitTitle(unit) || "this unit"}`} onClick={() => { write(check.picks.filter((p) => p.id !== pick.id)); }}>
                   Remove
                 </button>
               </li>
@@ -50,13 +51,13 @@ export function MemberAbilities({ member, unit, index, setMember }: { member: As
       )}
       <div className="bt-field">
         <label htmlFor={`as-spa-add-${id}`}>Add a pilot ability</label>
-        <select id={`as-spa-add-${id}`} value={choice} onChange={(e) => { setChoice(e.target.value); }}>
+        <select id={`as-spa-add-${id}`} aria-label={`Add a pilot ability for ${unitTitle(unit) || "this unit"}`} value={choice} onChange={(e) => { setChoice(e.target.value); }}>
           <option value="">Choose an ability</option>
           {options.map((s) => (
             <option key={s.id} value={s.id}>{`${s.name} (${typeof s.cost === "number" ? String(s.cost) : `${String(s.cost[0])}-${String(s.cost[1])}`})`}</option>
           ))}
         </select>
-        <button type="button" className="bt-button" disabled={choice === ""} onClick={() => { write([...check.picks, { id: choice }]); setChoice(""); }}>
+        <button type="button" className="bt-button" aria-label={`Add ability for ${unitTitle(unit) || "this unit"}`} disabled={choice === ""} onClick={() => { write([...check.picks, { id: choice }]); setChoice(""); }}>
           Add ability
         </button>
       </div>
@@ -64,6 +65,21 @@ export function MemberAbilities({ member, unit, index, setMember }: { member: As
         <p key={text} role="note" className="bt-hint as-advice">{text}</p>
       ))}
     </div>
+  );
+}
+
+/** Step 6 for the whole force: how many units hold pilot abilities against the one per 12 the book allows (pp. 92 and 112). */
+export function PilotAbilitiesNote({ force, totals }: { force: AsForce; totals: ForceTotals }) {
+  const check = forceSpas(force, totals);
+  return (
+    <section className="bt-section" aria-labelledby="as-force-pilot-abilities">
+      <h2 id="as-force-pilot-abilities">Pilot abilities in the force</h2>
+      <p className="bt-hint">{`Step 6 of force building, ${AS_EDITION.name} pp. 92-101 and p. 112. Give abilities in each unit's row above: the Skill sets how many and how many points, and not more than one unit in 12 should hold any.`}</p>
+      <p>{`${String(check.holders)} of ${String(totals.count)} units hold pilot abilities; ${String(check.allowed)} allowed.`}</p>
+      {check.problems.map((text) => (
+        <p key={text} role="note" className="bt-hint as-advice">{text}</p>
+      ))}
+    </section>
   );
 }
 

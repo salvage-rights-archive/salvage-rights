@@ -166,9 +166,11 @@ export function playFindings(unit: AsUnit, filter: PlayFilter): AsFinding[] {
 
 // ---- Groups and formations (ASCE pp. 113 and 115-124) ----------------------------------------------------------------------
 
-/** The groups of a force; entries that are not groups are ignored, so a damaged record never throws. */
+/** The groups of a force; entries that are not groups are ignored and a missing name reads as empty, so a damaged record never throws. */
 export const groupsOf = (force: Pick<AsForce, "groups">): AsGroup[] =>
-  (Array.isArray(force.groups) ? force.groups : []).filter((g): g is AsGroup => typeof g === "object" && g !== null && typeof g.id === "string");
+  (Array.isArray(force.groups) ? (force.groups as unknown[]) : [])
+    .filter((g): g is AsGroup => typeof g === "object" && g !== null && typeof (g as AsGroup).id === "string")
+    .map((g) => (typeof g.name === "string" ? g : { ...g, name: "" })); // a group saved with no usable name reads as unnamed
 
 export const newGroup = (id: string, name = "New group"): AsGroup => ({ id, name });
 
@@ -226,9 +228,6 @@ const roundUp = (x: number): number => Math.ceil(x - 1e-9);
 const shareNeed = (n: number, pct: number, over?: boolean, round?: "normal"): number =>
   over ? Math.floor((n * pct) / 100 + 1e-9) + 1 : round === "normal" ? Math.round((n * pct) / 100) : roundUp((n * pct) / 100);
 
-/** A count written for a four-unit lance, scaled up for a Star or a Level II (p. 117). */
-const countNeed = (n: number, size: number): number => (size > 4 ? roundUp((n * size) / 4) : n);
-
 const joinOr = (items: string[]): string => (items.length < 2 ? (items[0] ?? "") : `${items.slice(0, -1).join(", ")} or ${items[items.length - 1] ?? ""}`);
 
 /** One test as a phrase, in our words and from the structure. */
@@ -282,7 +281,7 @@ function checkReq(req: AsReq, entries: Entry[]): ReqResult {
   switch (req.k) {
     case "all": return gap(pass(req.test), n);
     case "share": return gap(pass(req.test), shareNeed(n, req.pct, req.over, req.round));
-    case "count": return gap(pass(req.test), countNeed(req.n, n));
+    case "count": return gap(pass(req.test), req.n);
     case "none": {
       const have = pass(req.test);
       return { ok: have === 0, text: have === 0 ? "" : `${describeReq(req)} (the group has ${String(have)})` };
@@ -406,7 +405,8 @@ export interface ForceSpas {
 
 export function forceSpas(force: AsForce, totals: ForceTotals): ForceSpas {
   const holders = force.members.filter((m) => picksOf(m).length > 0).length;
-  const allowed = Math.max(1, Math.ceil(totals.count / AS_SPA_UNITS_PER));
+  // Step 6 and p. 92 say not more than one unit for every 12: a whole 12 earns one, and a force under 12 still has its one.
+  const allowed = Math.max(1, Math.floor(totals.count / AS_SPA_UNITS_PER));
   return { holders, allowed, problems: holders > allowed ? [`Step 6 allows SPAs on ${String(allowed)} ${allowed === 1 ? "unit" : "units"} in a force of ${String(totals.count)} (p. 112); ${String(holders)} have them.`] : [] };
 }
 

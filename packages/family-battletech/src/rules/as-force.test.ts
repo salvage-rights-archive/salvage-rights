@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { checkFormation, duplicateForce, findFormation, findSpa, forceScas, forceSpas, forceTotals, groupFindings, groupTotals, inPlay, memberSpas, newAsForce, playFindings, pvStep, readFilter, skillAdjustedPv, unitAllowsSpa } from "./as-force";
+import { checkFormation, duplicateForce, findFormation, findSpa, forceScas, forceSpas, forceTotals, groupFindings, groupTotals, groupsOf, inPlay, memberSpas, newAsForce, playFindings, pvStep, readFilter, skillAdjustedPv, unitAllowsSpa } from "./as-force";
 import type { AsForce, AsMember } from "./as-force";
 import { newAsUnit, parseMove } from "./as-unit";
 import type { AsUnit } from "./as-unit";
@@ -134,14 +134,14 @@ describe("groups and formation types", () => {
     expect(checkFormation(findFormation("recon")!, group(scouts).totals.lines).waivedBy).toBe("Scout");
   });
 
-  it("scales a count to a Star and rounds a percentage up, and names what is missing", () => {
-    const star = group([...Array.from({ length: 4 }, () => ({ size: 3, role: "Sniper" })), { size: 1 }]);
-    expect(checkFormation(findFormation("battle")!, star.totals.lines).met).toBe(true); // 3 of 4 scales to 4 of 5
+  it("rounds a share up for a Star but leaves a fixed count alone, and names what is missing", () => {
+    const star = group([...Array.from({ length: 3 }, () => ({ size: 3, role: "Sniper" })), { size: 1 }, { size: 1 }]);
+    expect(checkFormation(findFormation("battle")!, star.totals.lines).met).toBe(true); // 50% of 5 is 3 units; "at least 3" stays 3
     const thin = group([{ size: 3, role: "Sniper" }, { size: 3, role: "Sniper" }, { size: 1 }, { size: 1 }, { size: 1 }]);
     const failed = checkFormation(findFormation("battle")!, thin.totals.lines);
     expect(failed.missing).toEqual([
       "At least 50% of the units: Size 3 or more (the group has 2, needs 3)",
-      "At least 3 units: role Brawler, Sniper or Skirmisher (the group has 2, needs 4)",
+      "At least 3 units: role Brawler, Sniper or Skirmisher (the group has 2, needs 3)",
     ]);
   });
 
@@ -163,6 +163,7 @@ describe("groups and formation types", () => {
     expect(by.groups.reduce((sum, x) => sum + x.total, 0)).toBe(g.totals.total);
     expect(groupFindings(two.groups[0]!, 3)[0]).toContain("4 ground units");
     expect(groupFindings(two.groups[0]!, 4)).toEqual([]);
+    expect(groupsOf({ groups: [{ id: "x" } as never, 7 as never] }).map((x) => x.name)).toEqual([""]); // a damaged record reads as unnamed
   });
 });
 
@@ -193,10 +194,10 @@ describe("pilot and command abilities", () => {
   });
 
   it("lets one unit per 12 hold SPAs, and one officer per 6 units with a single commander", () => {
-    const units = roster(13);
+    const units = roster(24);
     const spas = [{ id: "sniper" }];
     const two = forceOf(units, [{ spas }, { spas }]);
-    expect(forceSpas(two.force, two.totals)).toMatchObject({ holders: 2, allowed: 2 }); // 13 units is two companies
+    expect(forceSpas(two.force, two.totals)).toMatchObject({ holders: 2, allowed: 2 }); // 24 units is two companies; 13 would still be one
     const crowded = forceOf(roster(6), [{ spas }, { spas }]);
     expect(forceSpas(crowded.force, crowded.totals).problems).toHaveLength(1);
     const officers = forceOf(roster(6), [{ officer: "commander" }, { officer: "key" }]);

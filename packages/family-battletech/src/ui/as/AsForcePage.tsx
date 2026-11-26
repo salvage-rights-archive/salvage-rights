@@ -9,7 +9,7 @@ import { unitTitle } from "../../rules/as-unit";
 import { GlossSwitch, SpecialLinks } from "./AsSpecials";
 import type { AsUnit } from "../../rules/as-unit";
 import { STORAGE_READ_FAILED, STORAGE_WRITE_FAILED } from "../storage";
-import { CommandSection, MemberAbilities } from "./AsAbilities";
+import { CommandSection, MemberAbilities, PilotAbilitiesNote } from "./AsAbilities";
 import { GroupsSection } from "./AsGroups";
 import { forceHref, limitWords, printForceHref } from "./AsForces";
 import { downloadForce, openAsStorage } from "./storage";
@@ -280,7 +280,7 @@ function ForceEditor({ initial, roster, filter, storage }: { initial: AsForce; r
                         {(groups.length > 0 || line.member.group !== undefined) && (
                           <div className="bt-field">
                             <label htmlFor={`as-group-${String(index)}`}>Group</label>
-                            <select id={`as-group-${String(index)}`} value={groups.some((g) => g.id === line.member.group) ? line.member.group : ""} onChange={(e) => void setMember(index, { group: e.target.value || undefined })}>
+                            <select id={`as-group-${String(index)}`} aria-label={`Group for ${name || "this unit"}`} value={groups.some((g) => g.id === line.member.group) ? line.member.group : ""} onChange={(e) => void setMember(index, { group: e.target.value || undefined })}>
                               <option value="">No group</option>
                               {groups.map((g) => (
                                 <option key={g.id} value={g.id}>{g.name.trim() || "Unnamed group"}</option>
@@ -291,7 +291,7 @@ function ForceEditor({ initial, roster, filter, storage }: { initial: AsForce; r
                         {(building || line.member.officer !== undefined) && (
                           <div className="bt-field">
                             <label htmlFor={`as-officer-${String(index)}`}>Officer</label>
-                            <select id={`as-officer-${String(index)}`} value={line.member.officer ?? ""} onChange={(e) => void setMember(index, { officer: e.target.value === "commander" || e.target.value === "key" ? e.target.value : undefined })}>
+                            <select id={`as-officer-${String(index)}`} aria-label={`Officer for ${name || "this unit"}`} value={line.member.officer ?? ""} onChange={(e) => void setMember(index, { officer: e.target.value === "commander" || e.target.value === "key" ? e.target.value : undefined })}>
                               <option value="">Not an officer</option>
                               <option value="commander">Force commander</option>
                               <option value="key">Key officer</option>
@@ -322,6 +322,7 @@ function ForceEditor({ initial, roster, filter, storage }: { initial: AsForce; r
 
       {(building || groups.length > 0) && <GroupsSection force={force} totals={totals} change={change} headingRef={groupsRef} />}
 
+      {(building || force.members.some((m) => (m.spas?.length ?? 0) > 0)) && <PilotAbilitiesNote force={force} totals={totals} />}
       {(building || (force.commands?.length ?? 0) > 0) && <CommandSection force={force} totals={totals} change={change} />}
 
       <section className="bt-section" aria-labelledby="as-force-add">

@@ -56,7 +56,10 @@ test("build a Battle Lance and a Recon Lance from groups at 320 px, by keyboard 
   for (const theme of ["Light", "Dark"] as const) {
     await chooseTheme(page, theme);
     await page.goto(FORCE);
-    await expect(page.getByRole("heading", { name: "Groups and formations" })).toBeVisible();
+    await expectPage(page.getByRole("heading", { name: "Groups and formations" })).toBeVisible();
+    // The list of formation types a group meets is a closed details element until opened; scan it open.
+    for (const summary of await page.locator(".as-group summary").all()) await summary.click();
+    await expect(page.locator(".as-group details[open]")).toHaveCount(2);
     const results = await new AxeBuilder({ page }).analyze();
     expect(results.violations, `${theme} theme`).toEqual([]);
   }
@@ -79,6 +82,12 @@ test("give two pilots abilities and the force command abilities, see them on the
   await page.getByText("Choose command abilities").click();
   await page.getByLabel("Flankers, p. 105").check();
   await expect(page.getByText("Chosen: Flankers (p. 105).")).toBeVisible();
+  await expect(page.getByText("2 of 8 units hold pilot abilities; 1 allowed.")).toBeVisible();
+  // Every control of the ability steps, and the opened list of command abilities, is a 44 px target.
+  for (const control of await page.locator(".as-member__spas, #as-force-commands").locator("select, input:not([type=checkbox]), button, label:has(input[type=checkbox])").all()) {
+    const box = await control.boundingBox();
+    if (box) expect(box.height).toBeGreaterThanOrEqual(44);
+  }
 
   await page.goto(`${DEV}/battletech/alpha-strike/print?force=${id}`);
   await expect(page.getByRole("region", { name: "Force roster" })).toContainText("Sniper 3");
@@ -99,10 +108,27 @@ test("give two pilots abilities and the force command abilities, see them on the
   await page.goto(`${DEV}/battletech/alpha-strike/home`);
   await expectPage(page.getByLabel("Rules level")).toBeEnabled();
   await page.getByLabel("Rules level").selectOption("introductory");
-  await page.waitForTimeout(500);
-  await page.goto(FORCE);
-  await expectPage(page.getByRole("heading", { name: "Groups and formations" })).toHaveCount(0);
+  // Open the force from the home list, inside the app, so the setting just made is the one the force page reads.
+  await page.getByRole("link", { name: "Open Formation test" }).click();
+  await expectPage(page.getByRole("heading", { name: "Command abilities" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Groups and formations" })).toHaveCount(0);
   await expect(page.locator("#as-spa-add-2")).toHaveCount(0);
   await expect(page.locator("#as-spa-add-0")).toBeVisible();
-  await expectPage(page.getByRole("heading", { name: "Command abilities" })).toBeVisible();
+});
+
+test("the printed roster with pilot, group and pilot ability columns still fits its page for a twelve-unit force", async ({ page, browserName }) => {
+  test.skip(browserName !== "chromium", "page.pdf is Chromium only");
+  const id = await putAsFormationForce(page, true);
+  await page.goto(`${DEV}/battletech/alpha-strike/print?force=${id}`);
+  const roster = page.getByRole("region", { name: "Force roster" });
+  await expectPage(roster).toContainText("Total, 12 units");
+  for (const heading of ["Pilot", "Group", "Pilot abilities"]) await expect(roster.getByRole("columnheader", { name: heading, exact: true })).toBeVisible();
+  await expect(roster).toContainText("Alpha, Battle Lance");
+  await expect(roster).toContainText("Sniper 3");
+  await page.emulateMedia({ media: "print" });
+  const pdf = await page.pdf({ format: "Letter", preferCSSPageSize: true, printBackground: true });
+  // Twelve cards are two sheets and the roster is one more page, with every column on it.
+  expect((pdf.toString("latin1").match(/\/Type\s*\/Page[^s]/g) ?? []).length).toBe(3);
+  const widths = await roster.locator(".as-sheet__scroll").evaluate((el) => ({ scroll: el.scrollWidth, client: el.clientWidth }));
+  expect(widths.scroll).toBeLessThanOrEqual(widths.client);
 });

@@ -96,7 +96,7 @@ export interface AsUnitTest {
 
 /**
  * One requirement of a formation. Percentages round up to whole units (p. 116) unless `round` says "normal". `over` means more than that
- * share. A count written for a four-unit lance is scaled up for a Star or a Level II (p. 117). `vehicles` limits a requirement to a group
+ * share. Only shares scale with the size of the group (p. 116); a fixed count stays as written. `vehicles` limits a requirement to a group
  * made only of combat or support vehicles. A matched pair is two units with the same chassis and model (the book does not define it).
  */
 export type AsReq =
