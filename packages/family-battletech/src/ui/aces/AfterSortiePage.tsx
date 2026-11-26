@@ -191,7 +191,7 @@ function Steps({ loaded, number, onSaved }: { loaded: Loaded; number: number; on
       <p role="status">{`Sortie ${String(number)} is recorded${done.name ? `: ${done.name}` : ""}.`}</p>
       <ul>
         <li>{`Income ${money(done.income)}.`}</li>
-        <li>{`Expenses: reconnaissance ${money(done.recon.reduce((a, r) => a + r.sp, 0))} + waypoints ${money(done.waypointSp)} + rearming ${money(done.rearm)} + personnel ${money(done.personnel)} + repairs ${money(done.repairs)}.`}</li>
+        <li>{`Expenses, by kind: repairs ${money(done.repairs)}, rearming ${money(done.rearm)}, personnel ${money(done.personnel)}, waypoints ${money(done.waypointSp)}, reconnaissance ${money(done.recon.reduce((a, r) => a + r.sp, 0))}.`}</li>
         <li>{`Earnings ${money(done.earnings)}; the Named Pilots took ${money(done.shares)}.`}</li>
       </ul>
     </section>

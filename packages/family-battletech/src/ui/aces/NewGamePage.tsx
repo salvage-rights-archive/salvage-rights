@@ -147,7 +147,7 @@ export default function NewGamePage() {
             : `Your force is ${String(playerPv)} PV and the automated force ${String(automatedPv)} PV${aids.ratio === null ? "" : `, ${String(aids.ratio)}% of yours`}.`}
         </p>
         <p className="bt-hint">
-          {`For a game that is less challenging, build the automated force at about 80% of your PV (${String(aids.easierPv)}) and lower its Skill ratings by 1. For one that is more challenging, about 120% (${String(aids.harderPv)}) and raise them by 1. The PV total is not recalculated after a Skill change (Aces p. 38).`}
+          {`Easier: the automated force at about 80% of your PV (${String(aids.easierPv)}), each Skill number up by 1, so a Skill 4 unit becomes Skill 5. Harder: about 120% (${String(aids.harderPv)}), each Skill number down by 1. PV is not recalculated (Aces p. 38).`}
         </p>
         <div className="bt-field">
           <button type="button" className="bt-button bt-button--secondary" disabled={automated.rows.length === 0} onClick={() => { shift("easier"); }}>

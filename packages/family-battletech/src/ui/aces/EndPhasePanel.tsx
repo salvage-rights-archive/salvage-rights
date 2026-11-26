@@ -144,7 +144,7 @@ function CheckStep({ game, apply }: Pick<PanelProps, "game" | "apply">) {
   const limit = Number.parseInt(limitText, 10);
   return (
     <>
-      <p className="bt-hint">{`The sortie ends when its objectives are complete or the last turn has ended; most sorties also end when a side has no units on the board (${COMBAT_CITE.end.cite}).`}</p>
+      <p className="bt-hint">{`Step 4: objectives, last turn and units left on the table (${COMBAT_CITE.end.cite}).`}</p>
       <label className="bt-check" htmlFor="end-objectives">
         <input id="end-objectives" type="checkbox" checked={endOf(game).objectivesComplete === true} onChange={(e) => { apply((g) => setObjectivesComplete(g, e.target.checked), { undo: false }); }} />
         The objectives are complete and the sortie ends now
@@ -210,7 +210,7 @@ function StrategyStep({ game, records, apply }: Pick<PanelProps, "game" | "recor
   }
   return (
     <>
-      <p className="bt-hint">{`Read the rows one at a time; the first that is true gives the command card to put on top, and if none is true the card stays (${COMBAT_CITE.strategy.cite}).`}</p>
+      <p className="bt-hint">{`Strategy decision: the rows on the reverse of the current Command card (${COMBAT_CITE.strategy.cite}).`}</p>
       {"ask" in result && (
         <QuestionView
           key={result.ask.key + result.ask.kind}
@@ -253,7 +253,7 @@ function NextStep({ game, apply }: Pick<PanelProps, "game" | "apply">) {
   const marks = waypointsOn(game, next);
   return (
     <>
-      <p>{`Move the Initiative token forward one space, to turn ${String(next)}.`}</p>
+      <p>{`Step 6: the Initiative token goes on to turn ${String(next)}.`}</p>
       {marks.length === 0 ? (
         <p>No waypoint is on that space.</p>
       ) : (
@@ -298,7 +298,7 @@ export default function EndPhasePanel({ game, records, apply, touched }: PanelPr
       </ol>
       {end.step === 1 && (
         <>
-          <p className="bt-hint">{`If the sortie's special rules have any that begin "End Phase -", resolve them now in the order listed (${COMBAT_CITE.end.cite}).`}</p>
+          <p className="bt-hint">{`Step 1: the sortie's own End Phase rules (${COMBAT_CITE.end.cite}).`}</p>
           <button type="button" className="bt-button" onClick={() => { apply((g) => setEndStep(g, 2)); }}>
             Done with the sortie rules
           </button>
