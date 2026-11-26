@@ -251,7 +251,7 @@ test("patchwork armor on a fighter: hidden at Standard, offered at Advanced from
 test("fighter armor of the Advanced Armor Table: vehicular stealth is hidden at Standard and offered from 3084 at Experimental, asks for an ECM suite, and the editor is axe clean in both themes and fits 320 px", async ({ page }) => {
   test.setTimeout(180_000);
   const editor = await startUnit(page, "tw-tm-so", "Stealth Sabre");
-  const types = page.getByLabel("Armor type");
+  const types = page.getByLabel("Armor type", { exact: true });
   await expect(types.locator("option[value=vehicular-stealth]")).toHaveCount(0);
   await page.getByLabel("Rules level").selectOption("experimental");
   await page.getByLabel("Year", { exact: true }).fill("3090");
@@ -263,7 +263,7 @@ test("fighter armor of the Advanced Armor Table: vehicular stealth is hidden at 
     await chooseTheme(page, theme);
     await page.goto(`${DEV}${editor}`);
     await expectPage(page.getByRole("heading", { level: 1 })).toBeVisible();
-    await expect(page.getByLabel("Armor type")).toHaveValue("vehicular-stealth");
+    await expect(page.getByLabel("Armor type", { exact: true })).toHaveValue("vehicular-stealth");
     const results = await new AxeBuilder({ page }).analyze();
     expect(results.violations, `${theme} theme`).toEqual([]);
   }
