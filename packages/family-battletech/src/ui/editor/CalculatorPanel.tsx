@@ -3,6 +3,7 @@
 // OmniMech choice are the player's questions of the moment ("what would it be with a Gunnery 3 pilot?"), not facts of the unit.
 import { useDeferredValue, useEffect, useId, useMemo, useRef, useState } from "react";
 import { bookName, playCites } from "../../data/editions";
+import { rulesetOf } from "../../data/rulesets";
 import type { Catalog } from "../../rules/catalog";
 import { battleValue } from "../../rules/bv";
 import type { BvResult } from "../../rules/bv";
@@ -166,10 +167,13 @@ export default function CalculatorPanel({ record, catalog }: { record: MechRecor
   const incompleteCost = cost.unpriced.length > 0;
   const bvText = `${incompleteBv ? "at least " : ""}${number(bv.total)}`;
   const costText = `${incompleteCost ? "at least " : ""}${cbills(cost.total)}`;
-  const mordelBv = record.source?.values.battleValue;
+  const ruleset = rulesetOf(record.editionId);
+  const sourceBv = record.source?.values.battleValue;
+  const printedBook = record.source?.kind === "book";
+  const inferredBv = deferred.mounts.some((m) => (m.equipmentId ? catalog.byId(m.equipmentId)?.bvInferred : false));
 
   // A status line that is read out once the figures have settled for a moment, not on every key.
-  const summary = isBase ? `Cost of the base ${costText}.` : `Battle Value ${bvText}. Cost ${costText}.`;
+  const summary = !ruleset.cost ? `Battle Value ${bvText}.` : isBase ? `Cost of the base ${costText}.` : `Battle Value ${bvText}. Cost ${costText}.`;
   const [announced, setAnnounced] = useState("");
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -183,7 +187,7 @@ export default function CalculatorPanel({ record, catalog }: { record: MechRecor
   const ids = { gunnery: useId(), piloting: useId(), omni: useId() };
   return (
     <section ref={box} className="bt-panel bt-calc" aria-labelledby="bt-calc-heading" tabIndex={scrolls ? 0 : undefined}>
-      <h2 id="bt-calc-heading">Battle Value and cost</h2>
+      <h2 id="bt-calc-heading">{ruleset.cost ? "Battle Value and cost" : "Battle Value"}</h2>
       <p className="sr-visually-hidden" role="status">
         {announced}
       </p>
@@ -217,11 +221,17 @@ export default function CalculatorPanel({ record, catalog }: { record: MechRecor
       <p className="bt-calc__figure" data-testid="bv-total">
         {bvText}
       </p>
-      {mordelBv !== undefined && mordelBv !== bv.baseBv && (
+      {printedBook && sourceBv !== undefined && (
+        <p className="bt-calc__printed" data-testid="bv-printed">{`As printed on the sheet: ${number(sourceBv)}`}</p>
+      )}
+      {sourceBv !== undefined && sourceBv !== bv.baseBv && (
         <p className="bt-calc__differs">
-          {`Mordel gives ${number(mordelBv)}; we work out ${number(bv.baseBv)} at Gunnery 4, Piloting 5, a difference of ${number(Math.abs(mordelBv - bv.baseBv))}. The record sheet prints Mordel's figure.`}
+          {printedBook
+            ? `Differs from the printed Battle Value: the sheet prints ${number(sourceBv)}; we work out ${number(bv.baseBv)} at Gunnery 4, Piloting 5, a difference of ${number(Math.abs(sourceBv - bv.baseBv))}.${inferredBv ? " An item here has no printed Battle Value, so ours is inferred." : ""}`
+            : `Mordel gives ${number(sourceBv)}; we work out ${number(bv.baseBv)} at Gunnery 4, Piloting 5, a difference of ${number(Math.abs(sourceBv - bv.baseBv))}. The record sheet prints Mordel's figure.`}
         </p>
       )}
+      {inferredBv && !(printedBook && sourceBv !== bv.baseBv) && <p className="bt-hint">An item here has no printed Battle Value, so the figure is inferred.</p>}
       {incompleteBv && (
         <div className="bt-calc__incomplete">
           <p>{`Incomplete: ${plural(bv.unvalued.length, "item has", "items have")} no BV figure, so the total is at least this much.`}</p>
@@ -249,6 +259,8 @@ export default function CalculatorPanel({ record, catalog }: { record: MechRecor
       </>
       )}
 
+      {ruleset.cost && (
+      <>
       <h3>{isBase ? "Cost of the base" : "Cost"}</h3>
       <p className="bt-calc__figure" data-testid="cost-total">
         {costText}
@@ -283,9 +295,11 @@ export default function CalculatorPanel({ record, catalog }: { record: MechRecor
       <Disclosure label="cost breakdown">
         <CostBreakdown cost={cost} />
       </Disclosure>
+      </>
+      )}
 
       <p className="bt-calc__cite">
-        {`Battle Value: ${bookName("TechManual")}, Battle Value v4.1 (replaces pp. 302-314), tables pp. 315-317. Cost: ${bookName("TechManual")}, p. 285, errata v8.0. Pilot skill and OmniMech are not saved with the 'Mech. Play rules it counts, from the play book of this 'Mech's edition: ${playCites(record.editionId)}`}
+        {`Battle Value: ${bookName("TechManual")}, Battle Value v4.1 (replaces pp. 302-314), tables pp. 315-317. ${ruleset.cost ? `Cost: ${bookName("TechManual")}, p. 285, errata v8.0. ` : ""}Pilot skill${ruleset.cost ? " and OmniMech" : ""} are not saved with the 'Mech. Play rules it counts, from the play book of this 'Mech's edition: ${playCites(record.editionId)}`}
       </p>
     </section>
   );

@@ -31,3 +31,19 @@ test("the Gothic home fits a phone: nothing scrolls sideways and every control i
     if (box) expect(box.height, (await control.textContent())?.slice(0, 30) ?? "").toBeGreaterThanOrEqual(43.5);
   }
 });
+
+test("the Gothic editor on a phone: Gothic's choices, the printed Battle Value, no cost, and nothing scrolls sideways", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 700 });
+  await startGothicBox(page, DEV, "Firestarter FS9-HB");
+  await expect(page.getByLabel("Rules level")).toBeVisible();
+  await expect(page.getByLabel("Tech base")).toHaveCount(0);
+  await expect(page.getByLabel("Type", { exact: true })).toHaveCount(0);
+  await expect(page.getByTestId("bv-printed")).toContainText("As printed on the sheet");
+  await expect(page.getByTestId("cost-total")).toHaveCount(0);
+  const widths = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, client: document.documentElement.clientWidth }));
+  expect(widths.scroll).toBe(widths.client);
+  for (const control of await page.locator("button, select, input:not([type=file]):not([type=checkbox]), a.bt-button").all()) {
+    const box = await control.boundingBox();
+    if (box) expect(box.height, (await control.textContent())?.slice(0, 30) ?? "").toBeGreaterThanOrEqual(43.5);
+  }
+});

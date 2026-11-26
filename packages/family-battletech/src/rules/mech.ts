@@ -157,6 +157,8 @@ export interface MechRecord {
   frankenmech?: { donors?: Partial<Record<LocationCode, number>> };
   /** Present only on a configuration resolved from an OmniMech chassis (rules/omni.ts); absent on every other record. */
   omni?: OmniLink;
+  /** What only a BattleTech: Gothic 'Mech has. searchlight: the one searchlight any 'Mech may mount (rulebook p. 90); it has no weight and no slot. */
+  gothic?: { searchlight?: boolean };
   /** Whether the player marked this design as published by the game's publisher (rules/official.ts). Absent reads as not official. */
   official?: OfficialMark;
   tons: number;
