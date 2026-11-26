@@ -559,6 +559,16 @@ export const EQUIPMENT_COST: PriceGroup[] = [
     checked: "page",
     prices: { "bomb-high-explosive": 5_000, "bomb-cluster": 8_000, "bomb-laser-guided": 10_000, "bomb-inferno": 6_000, "bomb-mines": 12_000 },
   },
+  {
+    // TO:AUE p.227 (Heavy Weapons Ammunition Construction Data, Bombs; the book's dagger says the figure is per bomb, not per ton)
+    cite: { book: TO, page: 227 },
+    checked: "page",
+    prices: {
+      "bomb-air-to-air-arrow": 9_000, "bomb-anti-ship-missile": 15_000, "bomb-anti-ship-ew-missile": 20_000, "bomb-arrow-iv-homing": 3_000,
+      "bomb-arrow-iv-non-homing": 2_000, "bomb-light-air-to-air": 6_000, "bomb-thunder-fascam": 12_000, "bomb-thunder-active": 36_000,
+      "bomb-thunder-vibrabomb": 24_000, "bomb-torpedo": 7_000,
+    },
+  },
 ];
 
 /** Retractable blade (printed p.293, Industrial Equipment): the mechanism, plus the blade at a price per ton of its weight.

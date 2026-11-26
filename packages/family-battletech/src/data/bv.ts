@@ -273,6 +273,8 @@ const TORPEDO_UNFIXED: Record<string, string> = Object.fromEntries(
 );
 export const UNFIXED: Record<string, string> = {
   ...TORPEDO_UNFIXED,
+  ...Object.fromEntries(["is", "clan"].map((side) => [`bomb-arrow-iv-homing-${side}`, "the Aerospace BV Addendum (TO:AUE p. 197) prints a figure for the non-homing air-launched Arrow IV missile but none for the homing one"])),
+  ...Object.fromEntries(["is", "clan"].map((side) => [`bomb-thunder-fascam-${side}`, "its BV is seven 20-point minefields of the mine type named before play (TO:AUE p. 197), which the row does not fix"])),
   ...Object.fromEntries(["light-scc", "medium-scc", "heavy-scc", "scl-1", "scl-2", "scl-3"].map((n) => [`${n}-clan`, "the Clan capital Battle Value table prints no sub-capital cannon or laser line (TO:AUE p. 196)"])),
   "dropshuttle-bay-is": "a large-craft item: neither Alternate Eras Battle Value table (IO:AE pp. 189-191) prints a line for it",
   "docking-collar-pre-boom-is": "a large-craft item: neither Alternate Eras Battle Value table (IO:AE pp. 189-191) prints a line for it",
@@ -312,6 +314,13 @@ export const SPECIAL_MUNITIONS: Sourced & { stems: string[]; why: string } = {
     "ammo-mine-clearance-srm", "ammo-mine-clearance-lrm", "ammo-smoke-srm", "ammo-smoke-lrm", "ammo-tandem-charge-srm",
     "ammo-anti-tsm-lrm", "ammo-anti-tsm-srm", "ammo-listen-kill-lrm", "ammo-listen-kill-srm", "ammo-dead-fire-lrm", "ammo-dead-fire-srm",
     "ammo-retro-streak-srm", "ammo-shoot-and-sit-narc", "ammo-improved-magnetic-pulse-atm", "ammo-improved-inferno-atm",
+    // TO:AUE pp. 164-175 and 225-227: autocannon, artillery and flamer/fluid gun munitions. The Alternative Munitions Table (p. 198) prints a modifier for caseless (1.0),
+    // tracer (0.25), corrosive (2.0), inferno fuel (2.0) and Thunder/FASCAM (mine points per ton); the rest print none. Same reason as the missile munitions.
+    "ammo-caseless-ac", "ammo-flak-ac", "ammo-tracer-ac", "ammo-air-defense-arrow", "ammo-arrow-iv-cluster", "ammo-cluster-long-tom", "ammo-cluster-sniper",
+    "ammo-cluster-thumper", "ammo-flechette-artillery", "ammo-arrow-iv-illumination", "ammo-illumination-artillery", "ammo-arrow-iv-laser-inhibiting",
+    "ammo-inferno-iv", "ammo-arrow-iv-smoke", "ammo-smoke-artillery", "ammo-thunder-fascam-artillery", "ammo-thunder-active-iv", "ammo-thunder-vibrabomb-iv",
+    "ammo-flamer-coolant", "ammo-flamer-corrosive", "ammo-flamer-flame-retardant-foam", "ammo-flamer-inferno-fuel", "ammo-flamer-oil-slick",
+    "ammo-flamer-paint-obscurant", "ammo-flamer-water",
   ],
   why: "a special munition: its BV comes from its launcher's ammunition BV (TO:AUE p. 198), the row does not say which launcher, and the book does not say how its modifier is applied",
 };
@@ -561,6 +570,19 @@ export const WEAPON_BV: BvGroup[] = [
       ["screen-launcher-is", 160, 20, { defensive: true, defensiveAmmo: true }],
       ["bomb-high-explosive-is", 12], ["bomb-cluster-is", 13], ["bomb-laser-guided-is", 20], ["bomb-inferno-is", 16],
       ["bomb-high-explosive-clan", 12], ["bomb-cluster-clan", 13], ["bomb-laser-guided-clan", 20], ["bomb-inferno-clan", 16],
+    ],
+  },
+  {
+    // TO:AUE, Aerospace Weapons and Equipment BV Table [Addendum], External Stores, printed p. 197 (read against the page image): the figures are per
+    // missile or bomb ("each"), and the item BV prints a dash, so a bomb's figure is the item's here, as above. The Thunder Active and Thunder Vibrabomb
+    // bombs print a dash; the note under the table makes a Thunder bomb seven 20-point minefields of its mine type, and the Minefield BV Table (same page)
+    // gives 6 (active) and 5 (vibrabomb) per 5 points, so 7 x 4 x 6 = 168 and 7 x 4 x 5 = 140. The FASCAM bomb lays whichever mine is named before play (UNFIXED).
+    cite: { book: TO, page: 197 },
+    checked: "page",
+    rows: [
+      ["bomb-air-to-air-arrow-is", 57], ["bomb-anti-ship-missile-is", 114], ["bomb-anti-ship-ew-missile-is", 75], ["bomb-arrow-iv-non-homing-is", 34],
+      ["bomb-light-air-to-air-is", 17], ["bomb-torpedo-is", 10], ["bomb-thunder-active-is", 168], ["bomb-thunder-vibrabomb-is", 140],
+      ["bomb-air-to-air-arrow-clan", 57], ["bomb-arrow-iv-non-homing-clan", 34], ["bomb-light-air-to-air-clan", 17], ["bomb-torpedo-clan", 10],
     ],
   },
   {
