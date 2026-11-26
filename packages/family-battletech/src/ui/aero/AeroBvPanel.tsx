@@ -1,5 +1,5 @@
 // Battle Value and C-bill cost of the aerospace unit under its edition, worked out by rules/aero-bv.ts and shown with the lines they come from and
-// the edition's pages. Nothing here is stored on the record. An edition that prints neither (AeroTech, BattleSpace) shows no figure.
+// the edition's pages. Nothing here is stored on the record. An edition that prints neither (AeroTech, BattleSpace) has no panel.
 import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import type { Catalog } from "../../rules/catalog";
 import type { AeroRecord } from "../../rules/aero";
@@ -39,6 +39,13 @@ function BvBreakdown({ bv }: { bv: AeroBv }) {
           ...(bv.divisor === 1 ? [] : ([["Large vessel divisor", number(bv.divisor)]] as [string, string][])),
         ]}
       />
+      {bv.notes.length > 0 && (
+        <ul className="bt-calc__notes">
+          {bv.notes.map((note) => (
+            <li key={note}>{note}</li>
+          ))}
+        </ul>
+      )}
     </>
   );
 }
@@ -85,10 +92,15 @@ export default function AeroBvPanel({ record, catalog }: { record: AeroRecord; c
   const deferred = useDeferredValue(record);
   const bv = useMemo(() => aeroBattleValue(deferred, catalog), [deferred, catalog]);
   const cost = useMemo(() => aeroCost(deferred, catalog), [deferred, catalog]);
-  const bvText = bv ? `${bv.unvalued.length > 0 ? "at least " : ""}${number(bv.total)}` : "";
-  const costText = cost ? `${cost.unpriced.length > 0 ? "at least " : ""}${cbills(cost.total)}` : "";
+  // An edition that prints no Battle Value (AeroTech, BattleSpace) has no panel at all: hide, do not mark.
+  return bv ? <Figures bv={bv} cost={cost} /> : null;
+}
 
-  const summary = bv ? `Battle Value ${bvText}.${cost ? ` Cost ${costText}.` : ""}` : "";
+function Figures({ bv, cost }: { bv: AeroBv; cost: AeroCost | null }) {
+  const bvText = `${bv.unvalued.length > 0 ? "at least " : ""}${number(bv.total)}`;
+  const costText = cost ? `${cost.unpriced.length > 0 ? "at least " : ""}${cbills(cost.total)}` : "not worked out yet";
+
+  const summary = `Battle Value ${bvText}. Cost ${costText}.`;
   const [announced, setAnnounced] = useState("");
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -106,37 +118,34 @@ export default function AeroBvPanel({ record, catalog }: { record: AeroRecord; c
       <p className="sr-visually-hidden" role="status">
         {announced}
       </p>
-      {!bv ? (
-        <p className="bt-hint">This edition prints no Battle Value or cost, so we show none.</p>
-      ) : (
+      <h3>Battle Value</h3>
+      <p className="bt-calc__figure" data-testid="bv-total">
+        {bvText}
+      </p>
+      {bv.unvalued.length > 0 && <Missing items={bv.unvalued} what="BV figure" />}
+      <Disclosure label="Battle Value breakdown">
+        <BvBreakdown bv={bv} />
+      </Disclosure>
+
+      <h3>Cost</h3>
+      {cost ? (
         <>
-          <h3>Battle Value</h3>
-          <p className="bt-calc__figure" data-testid="bv-total">
-            {bvText}
+          <p className="bt-calc__figure" data-testid="cost-total">
+            {costText}
           </p>
-          {bv.unvalued.length > 0 && <Missing items={bv.unvalued} what="BV figure" />}
-          <Disclosure label="Battle Value breakdown">
-            <BvBreakdown bv={bv} />
+          {cost.unpriced.length > 0 && <Missing items={cost.unpriced} what="price" />}
+          <Disclosure label="cost breakdown">
+            <CostBreakdown cost={cost} />
           </Disclosure>
-
-          <h3>Cost</h3>
-          {cost ? (
-            <>
-              <p className="bt-calc__figure" data-testid="cost-total">
-                {costText}
-              </p>
-              {cost.unpriced.length > 0 && <Missing items={cost.unpriced} what="price" />}
-              <Disclosure label="cost breakdown">
-                <CostBreakdown cost={cost} />
-              </Disclosure>
-            </>
-          ) : (
-            <p className="bt-hint">We do not price JumpShips, WarShips and space stations yet.</p>
-          )}
-
-          <p className="bt-calc__cite">{`Battle Value: ${bv.cite}, at Gunnery 4, Piloting 5.${cost ? ` Cost: ${cost.cite}.` : ""}`}</p>
         </>
+      ) : (
+        // JumpShips, WarShips and stations: the Battle Value alone is not the whole answer.
+        <p className="bt-calc__differs" data-testid="cost-total">
+          Cost: not worked out yet
+        </p>
       )}
+
+      <p className="bt-calc__cite">{`Battle Value: ${bv.cite}, at Gunnery 4, Piloting 5.${cost ? ` Cost: ${cost.cite}.` : ""}`}</p>
     </section>
   );
 }

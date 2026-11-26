@@ -1,6 +1,6 @@
 // Battle Value and C-bill cost of an aerospace unit, edition by edition (figures in data/aero-bv.ts, data/bv.ts and data/cost.ts). AeroTech (1986)
 // and BattleSpace print neither, so both functions give null there. Nothing here throws: an item no table values or prices is left out and listed,
-// and the total then says "at least". Where the book's text leaves a choice, the line says which reading we took.
+// and the total then says "at least". Where the book leaves a choice to the table (two sides that tie), the breakdown notes the one we took.
 import { AERO_BV_METHOD, AERO_BV_OVERLAYS, AERO_COST, AERO_PRICE_OVERLAYS, AT2_BV_RULES, TM_AERO_BV_RULES } from "../data/aero-bv";
 import type { AeroBvMethod, AeroCostFigures } from "../data/aero-bv";
 import { figureOf } from "../data/aero";
@@ -40,6 +40,8 @@ export interface AeroBv {
   offensive: { weapons: AeroBvWeapon[]; lines: AeroBvLine[]; weaponRating: number; thrust: number; speedFactor: number; rating: number };
   /** AeroTech 2 books: the large-vessel divisor applied to the subtotal (1 for fighters). */
   divisor: number;
+  /** Where the book leaves a choice to the table (a tie between two sides), the reading we took. */
+  notes: string[];
   unvalued: AeroUnvalued[];
   /** The pages the method and its figures come from, as the panel shows them. */
   cite: string;
@@ -253,6 +255,7 @@ function at2Bv(record: AeroRecord, catalog: Catalog, method: AeroBvMethod, frame
       rating: offRating,
     },
     divisor,
+    notes: [],
     unvalued: parts.unvalued,
     cite: AT2_BV_RULES.cite[record.editionId as keyof typeof AT2_BV_RULES.cite] ?? "",
   };
@@ -285,6 +288,7 @@ function applyArtemis(record: AeroRecord, weapons: Weapon[]): void {
 function tmBv(record: AeroRecord, catalog: Catalog, method: AeroBvMethod, frame: Frame, parts: Parts): AeroBv {
   const capital = frame.kind === "capital";
   const smallUnit = frame.kind === "fighter" || frame.kind === "craft";
+  const notes: string[] = [];
   applyArtemis(record, parts.weapons);
   const shares = ammoShares(parts);
   const defensiveAmmo = Math.min(
@@ -359,22 +363,37 @@ function tmBv(record: AeroRecord, catalog: Catalog, method: AeroBvMethod, frame:
     const i = ring.indexOf(front);
     const leftOf = ring[(i - 1 + ring.length) % ring.length] ?? front;
     const rightOf = ring[(i + 1) % ring.length] ?? front;
-    const [side, other] = (arcBv.get(rightOf) ?? 0) > (arcBv.get(leftOf) ?? 0) ? [rightOf, leftOf] : [leftOf, rightOf];
     const efficiency = frame.capacity;
     const value = (a: string) => tidy((arcBv.get(a) ?? 0) + (arcAmmo.get(a) ?? 0));
     const heat = (a: string) => arcHeat.get(a) ?? 0;
-    let running = heat(front);
-    // DropShips weigh the heat fired before the arc; SO:AA weighs it with the arc ("would be exceeded by firing this arc").
-    const sideOver = capital ? running + heat(side) > efficiency : running > efficiency;
-    running += heat(side);
-    const otherOver = capital ? running + heat(other) > efficiency : running > efficiency;
-    const shares2: [string, number][] = [
-      [front, 1],
-      [side, sideOver ? TM_AERO_BV_RULES.arcs.side[1] : TM_AERO_BV_RULES.arcs.side[0]],
-      [other, otherOver ? TM_AERO_BV_RULES.arcs.otherSide[1] : TM_AERO_BV_RULES.arcs.otherSide[0]],
-      ...ring.filter((a) => a !== front && a !== side && a !== other).map((a): [string, number] => [a, TM_AERO_BV_RULES.arcs.rear]),
-    ];
-    for (const [a, share] of front === side ? shares2.slice(0, 1) : shares2) {
+    // The arcs' shares with a given side taken second.
+    const sharesWith = (side: string, other: string): [string, number][] => {
+      let running = heat(front);
+      // The front counts in full even when its own heat is over capacity. The first side: a DropShip weighs the heat fired before it
+      // (TechManual Battle Value v4.1 p. 312); a capital ship weighs it with the side's own heat, "would be exceeded by firing this arc"
+      // (Strategic Operations: Advanced Aerospace Rules p. 149). "Exceeded" is strictly over capacity.
+      const sideOver = capital ? running + heat(side) > efficiency : running > efficiency;
+      running += heat(side);
+      // The opposite side, for both: the front and first side's heat only, not its own (TechManual p. 312 step 7, which SO:AA p. 149 leaves
+      // standing "except as noted"; panel reading, CONFLICTS 81).
+      const otherOver = running > efficiency;
+      const all: [string, number][] = [
+        [front, 1],
+        [side, sideOver ? TM_AERO_BV_RULES.arcs.side[1] : TM_AERO_BV_RULES.arcs.side[0]],
+        [other, otherOver ? TM_AERO_BV_RULES.arcs.otherSide[1] : TM_AERO_BV_RULES.arcs.otherSide[0]],
+        ...ring.filter((a) => a !== front && a !== side && a !== other).map((a): [string, number] => [a, TM_AERO_BV_RULES.arcs.rear]),
+      ];
+      return front === side ? all.slice(0, 1) : all;
+    };
+    const sumOf = (list: [string, number][]) => tidy(list.reduce((s, [a, share]) => s + tidy(value(a) * share), 0));
+    const left = arcBv.get(leftOf) ?? 0;
+    const right = arcBv.get(rightOf) ?? 0;
+    const chosen = right > left ? sharesWith(rightOf, leftOf) : sharesWith(leftOf, rightOf);
+    // On a tie the book picks a side at random; we always take the left, and say so where the other choice would change the figure.
+    if (left === right && leftOf !== rightOf && sumOf(chosen) !== sumOf(sharesWith(rightOf, leftOf))) {
+      notes.push(`Sides tie: we took the left (the book picks at random, ${capital ? "Strategic Operations: Advanced Aerospace Rules p. 149" : "TechManual Battle Value v4.1 p. 313"}).`);
+    }
+    for (const [a, share] of chosen) {
       const v = tidy(value(a) * share);
       weaponRating += v;
       offLines.push({ label: `${a.replace("*", " (aft)")} x ${String(share)}`, value: v });
@@ -393,6 +412,7 @@ function tmBv(record: AeroRecord, catalog: Catalog, method: AeroBvMethod, frame:
     defensive: { lines, subtotal, modifier, rating: defRating },
     offensive: { weapons, lines: offLines, weaponRating, thrust, speedFactor: factor, rating: offRating },
     divisor: 1,
+    notes,
     unvalued: parts.unvalued,
     cite: capital ? "Strategic Operations: Advanced Aerospace Rules pp. 148-149, TechManual Battle Value v4.1 pp. 312-313" : "TechManual Battle Value v4.1 pp. 312-313, TechManual pp. 316-318",
   };

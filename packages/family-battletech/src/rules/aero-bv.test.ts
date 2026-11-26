@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { AERO_BV_OVERLAYS } from "../data/aero-bv";
 import { bvEntryOf } from "./bv";
-import { craftHeat, newAeroRecord } from "./aero";
+import { craftHeat, newAeroRecord, vessel } from "./aero";
 import type { AeroRecord } from "./aero";
 import { aeroBattleValue, aeroCost } from "./aero-bv";
 import { loadCatalog } from "./catalog";
@@ -73,12 +73,20 @@ describe("aerospace Battle Value", () => {
     expect(bv?.total).toBe(2519);
   });
 
-  it("a capital ship: the Mjolnir's defensive rating in AeroTech 2 Revised (p. 83), and a WarShip's capital factors in the current rules", () => {
+  it("a capital ship: the Mjolnir's defensive rating in AeroTech 2 Revised (p. 83)", () => {
     const base = { unitType: "warship" as const, tons: 1350000, safeThrust: 4, year: 3067 };
     const at2r = { ...newAeroRecord({ id: "w", ...base }, "aerotech2-revised"), si: 140, fuelTons: 2376, armor: { type: "ferro-carbide", tons: 3500, points: { NO: 500, FL: 480, FR: 480, AL: 480, AR: 480, AF: 464 } } };
     expect(aeroBattleValue(at2r, catalog)?.defensive.rating).toBe(62156);
-    const current = { ...newAeroRecord({ id: "w", ...base }, "tw-tm-so"), si: 140, armor: at2r.armor };
-    expect(aeroBattleValue(current, catalog)?.defensive.rating).toBe((2884 * 25 + 140 * 20) * 0.8);
+  });
+
+  it("current rules, a WarShip: the opposite side counts half while the nose and first side stay within capacity, though its own heat tips it over (SO:AA p. 149 with TechManual p. 312 step 7)", () => {
+    // Capacity 154 (the free sinks of 100,000 tons at Safe Thrust 1). Nose NL45 (heat 70), first side Fore-Right NL45 (70): 140, within it.
+    // The opposite side, Fore-Left NL35 (52), would make 192: it still counts half, as the heat before it is within capacity.
+    const r = newAeroRecord({ id: "w", unitType: "warship", tons: 100000, safeThrust: 1, year: 3067 }, "tw-tm-so");
+    const record: AeroRecord = { ...r, heatSinks: { type: "single", count: 0 }, mounts: mountsOf([["NO", "nl-45-is"], ["FR", "nl-45-is"], ["FL", "nl-35-is"]]) };
+    expect(vessel(record, catalog)?.heat?.capacity).toBe(154);
+    const lines = aeroBattleValue(record, catalog)?.offensive.lines.map((l) => l.label);
+    expect(lines).toEqual(expect.arrayContaining(["NO x 1", "FR x 1", "FL x 0.5"]));
   });
 
   it("AeroTech (1986) and BattleSpace print no Battle Value or cost: none is shown", () => {

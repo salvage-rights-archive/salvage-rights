@@ -97,6 +97,10 @@ interface LayoutProps {
   profile: SheetProfile;
 }
 
+// The BV and Cost lines end together, as on the flagged page, where the Cost line runs about 1.5 times the BV line: room for an eight-digit cost
+// at full size or nearly.
+const FIELD_END = 570;
+
 const siOf = (facts: FighterFacts) => ({ label: "Structural Integrity", value: facts.si });
 
 function At1({ facts, profile }: LayoutProps & { record: AeroRecord }) {
@@ -130,15 +134,15 @@ function At2({ facts, profile }: LayoutProps) {
           <text x={380} y={1700} fontSize={22} fill={INK}>
             BV:
           </text>
-          <line x1={440} x2={540} y1={1704} y2={1704} stroke={INK} strokeWidth={2} />
-          <text x={444} y={1698} fontSize={22} fill={INK} data-testid="sheet-bv" {...squeeze(facts.bv, 22, 94)}>
+          <line x1={440} x2={FIELD_END} y1={1704} y2={1704} stroke={INK} strokeWidth={2} />
+          <text x={444} y={1698} fontSize={22} fill={INK} data-testid="sheet-bv" {...squeeze(facts.bv, 22, FIELD_END - 448)}>
             {facts.bv}
           </text>
           <text x={380} y={1750} fontSize={22} fill={INK}>
             Cost:
           </text>
-          <line x1={450} x2={540} y1={1754} y2={1754} stroke={INK} strokeWidth={2} />
-          <text x={452} y={1748} fontSize={22} fill={INK} data-testid="sheet-cost" {...squeeze(facts.cost, 22, 86)}>
+          <line x1={450} x2={FIELD_END} y1={1754} y2={1754} stroke={INK} strokeWidth={2} />
+          <text x={452} y={1748} fontSize={22} fill={INK} data-testid="sheet-cost" {...squeeze(facts.cost, 22, FIELD_END - 456)}>
             {facts.cost}
           </text>
           <VelocityBlock rect={AT2.velocityAcross} profile={profile} fuel={facts.fuel} />
