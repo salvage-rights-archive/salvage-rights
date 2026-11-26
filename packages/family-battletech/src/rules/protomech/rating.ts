@@ -89,18 +89,10 @@ export function protoBattleValue(record: ProtoRecord, catalog: Catalog): ProtoBv
   const factor = 1 + tmm / 10 + PROTO_BV.defensiveBonus;
   const defensive = { armor, structure, equipment, subtotal, targetModifier: tmm, factor: tidy(factor), rating: subtotal * factor };
 
-  // Offensive Battle Rating: weapons (rear-facing ones at half; if the forward torso weapons are worth less than the rear ones, those are halved instead), plus
-  // ammunition by the kilogram, never more than the BV of the weapons it is for, times the Speed Factor.
+  // Offensive Battle Rating: the weapons at their printed BV (the ProtoMech method prints no rear-facing step), plus ammunition by the kilogram, never more
+  // than the BV of the weapons it is for, times the Speed Factor.
   const weapons = valued.filter((v) => !v.defensive);
-  const front = weapons.filter((v) => v.mount.location === "t" && v.mount.rear !== true).reduce((sum, v) => sum + v.bv, 0);
-  const rear = weapons.filter((v) => v.mount.location === "t" && v.mount.rear === true).reduce((sum, v) => sum + v.bv, 0);
-  const halveFront = front < rear;
-  const lines: ProtoBvLine[] = weapons.map((v) => {
-    const torso = v.mount.location === "t";
-    const isRear = v.mount.rear === true;
-    const half = torso && (halveFront ? !isRear : isRear);
-    return { mountId: v.mount.id, name: v.name, bv: v.bv, counted: half ? v.bv * PROTO_BV.rearFactor : v.bv, ammoBv: (ammoKg(v.mount) / 1000) * v.ammoPerTon };
-  });
+  const lines: ProtoBvLine[] = weapons.map((v) => ({ mountId: v.mount.id, name: v.name, bv: v.bv, counted: v.bv, ammoBv: (ammoKg(v.mount) / 1000) * v.ammoPerTon }));
   const byModel = new Map<string, { weapons: number; ammo: number }>();
   weapons.forEach((v, i) => {
     const line = lines[i];

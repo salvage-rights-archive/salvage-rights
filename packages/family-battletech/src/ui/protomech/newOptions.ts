@@ -3,7 +3,8 @@
 import type { RulesLevel } from "../../data/chassis";
 import { levelAtLeast } from "../../rules/levels";
 import { newProtoRecord } from "../../rules/protomech/record";
-import { unitInTime } from "../../rules/protomech/offered";
+import { PROTO_DATES } from "../../data/protomech";
+import { datesPhase } from "../../rules/protomech/offered";
 
 export interface ProtoNewOption {
   id: string;
@@ -14,6 +15,8 @@ export interface ProtoNewOption {
 export function protoNewOptions(form: { rulesLevel: RulesLevel | undefined; year: number | null; era: string | undefined; clanOffered: boolean }): ProtoNewOption[] {
   if (!form.clanOffered || !levelAtLeast(form.rulesLevel ?? "standard", "standard")) return [];
   const probe = newProtoRecord({ year: form.year, ...(form.era === undefined ? {} : { era: form.era }), ...(form.rulesLevel === undefined ? {} : { rulesLevel: form.rulesLevel }) });
-  if (!unitInTime(probe)) return [];
+  const phase = datesPhase(probe, PROTO_DATES.unit);
+  // Hide, do not mark: in its prototype years (before production) a ProtoMech needs Experimental rules.
+  if (phase === null || (phase === "prototype" && !levelAtLeast(form.rulesLevel ?? "standard", "experimental"))) return [];
   return [{ id: "protomech", label: "ProtoMech", note: "ProtoMech: a Clan unit of 2 to 9 tons, built under TechManual construction and opened in the ProtoMech editor. TechManual, p. 80." }];
 }

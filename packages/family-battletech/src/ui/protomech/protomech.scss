@@ -104,3 +104,11 @@
 .bt-editor__wide {
   grid-column: 1 / -1;
 }
+
+// A checkbox and its words: the whole label is the target.
+.pm-check {
+  display: flex;
+  gap: var(--sr-space-2);
+  align-items: center;
+  min-height: 44px;
+}

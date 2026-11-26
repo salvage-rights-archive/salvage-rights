@@ -22,15 +22,15 @@ export interface ProtoDiagramProps {
 }
 
 const WIDTH = 640;
-const HEIGHT = 410;
+const HEIGHT = 426;
 /** The boxes, sized for the most points each location can hold (TechManual p. 82: 6 head, 18 torso, 4 arm, 10 legs, 3 main gun). */
 const BOXES: Record<string, { x: number; y: number; w: number; h: number }> = {
-  hd: { x: 240, y: 8, w: 160, h: 100 },
-  la: { x: 8, y: 124, w: 126, h: 140 },
-  t: { x: 150, y: 124, w: 340, h: 140 },
-  ra: { x: 506, y: 124, w: 126, h: 140 },
-  mg: { x: 8, y: 282, w: 126, h: 120 },
-  lg: { x: 190, y: 282, w: 260, h: 120 },
+  hd: { x: 240, y: 8, w: 160, h: 116 },
+  la: { x: 8, y: 140, w: 126, h: 140 },
+  t: { x: 150, y: 140, w: 340, h: 140 },
+  ra: { x: 506, y: 140, w: 126, h: 140 },
+  mg: { x: 8, y: 298, w: 126, h: 120 },
+  lg: { x: 190, y: 298, w: 260, h: 120 },
 };
 const STEP = 26;
 const RADIUS = 9;

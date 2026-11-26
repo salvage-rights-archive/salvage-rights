@@ -204,7 +204,7 @@ export interface ProtoDates {
 export const PROTO_DATES: Record<"unit" | "jumpJets" | "armor" | "booster", ProtoDates> = {
   unit: { prototype: 3055, production: 3059, cite: { book: IO, page: 44 }, checked: "page" },
   jumpJets: { prototype: 3055, production: 3060, cite: { book: IO, page: 29 }, checked: "page" },
-  armor: { prototype: 3055, production: 3060, cite: { book: IO, page: 44 }, checked: "page" },
+  armor: { prototype: 3055, production: 3060, cite: { book: IO, page: 30 }, checked: "page" },
   booster: { prototype: 3066, production: 3068, cite: { book: IO, page: 29 }, checked: "page" },
 };
 /** The rules level of the ProtoMech rules in play: Total Warfare's standard rules (TechManual p. 80). */
@@ -247,13 +247,12 @@ export const PROTO_COST: Sourced & {
   tonsDivisor: 100,
 };
 
-export const PROTO_BV: Sourced & { armorFactor: number; structureFactor: number; defensiveBonus: number; rearFactor: number; jumpTargetBonus: number } = {
+export const PROTO_BV: Sourced & { armorFactor: number; structureFactor: number; defensiveBonus: number; jumpTargetBonus: number } = {
   cite: { book: TM_BV, page: 306 },
   checked: "page",
   armorFactor: 2.5,
   structureFactor: 1.5,
   defensiveBonus: 0.1,
-  rearFactor: 0.5,
   jumpTargetBonus: 1,
 };
 /** Where the BV tables print the launcher figures above (the Clan Weapons and Equipment BV Table). */

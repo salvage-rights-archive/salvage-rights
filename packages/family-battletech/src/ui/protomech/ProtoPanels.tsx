@@ -95,14 +95,14 @@ export function ChassisPanel({ record, onEdit }: PartProps) {
         <NumberField id="field-jump" label="Jumping MP" value={record.jump} min={0} hint="At most the Walking MP." onValid={(v) => { onEdit((d) => void (d.jump = v ?? 0), "jump"); }} />
         <NumberField id="field-heatSinks" label="Heat sinks" value={record.heatSinks} min={0} hint="One for each point of energy weapon heat." onValid={(v) => { onEdit((d) => void (d.heatSinks = v ?? 0), "heatSinks"); }} />
         <div className="bt-field">
-          <label>
+          <label className="pm-check">
             <input id="field-booster" type="checkbox" checked={record.booster} onChange={(e) => { onEdit((d) => void (d.booster = e.target.checked)); }} />
             {" Myomer Booster"}
           </label>
           <span className="bt-hint">Running MP of twice the Walking MP.</span>
         </div>
         <div className="bt-field">
-          <label>
+          <label className="pm-check">
             <input id="field-mainGun" type="checkbox" checked={record.mainGun} onChange={(e) => { onEdit((d) => void (d.mainGun = e.target.checked)); }} />
             {" Main gun mount"}
           </label>
@@ -199,7 +199,7 @@ export function WeaponsPanel({ record, catalog, onEdit }: PartProps & { catalog:
                       )}
                       {PROTO_REAR_LOCATIONS.includes(code) && (
                         <div className="bt-field">
-                          <label>
+                          <label className="pm-check">
                             <input type="checkbox" checked={mount.rear === true} onChange={(e) => { onEdit((d) => { const m = d.mounts.find((x) => x.id === mount.id); if (m) { if (e.target.checked) m.rear = true; else delete m.rear; } }); }} />
                             {" Fires to the rear"}
                           </label>

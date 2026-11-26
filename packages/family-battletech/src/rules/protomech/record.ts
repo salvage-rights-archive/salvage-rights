@@ -147,9 +147,9 @@ export function withDefaults(value: unknown, fallbackId = ""): ProtoRecord | und
     booster: v.booster === true,
     mainGun: v.mainGun === true,
     heatSinks: num(v.heatSinks, 0),
-    armor: isObject(v.armor) ? (Object.fromEntries(Object.entries(v.armor).filter(([, n]) => isNumber(n))) as Record<string, number>) : {},
+    armor: isObject(v.armor) ? ({ ...v.armor } as Record<string, number>) : {},
     mounts: Array.isArray(v.mounts) ? v.mounts.filter(isObject).map(mountOf) : [],
-    notes: isObject(v.notes) ? (Object.fromEntries(Object.entries(v.notes).filter(([, n]) => isString(n))) as Record<string, string>) : {},
+    notes: isObject(v.notes) ? ({ ...v.notes } as Record<string, string>) : {},
   };
   for (const code of PROTO_CODES) record.armor[code] ??= 0;
   if (isString(v.era)) record.era = v.era;

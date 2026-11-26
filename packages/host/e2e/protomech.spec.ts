@@ -44,6 +44,11 @@ test("build a ProtoMech at 320 px, save it, and open the Point sheet", async ({ 
   await expect(page.getByText("Saved.")).toBeVisible();
   const widths = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, client: document.documentElement.clientWidth }));
   expect(widths.scroll).toBe(widths.client);
+  // Every control is at least 44 px tall (the bare checkbox labels and the diagram's buttons included).
+  for (const control of await page.locator("button, select, input:not([type=file]):not([type=checkbox]), a.bt-button, label.pm-check, svg [role=button]").all()) {
+    const box = await control.boundingBox();
+    if (box) expect(box.height, (await control.textContent())?.slice(0, 30) ?? (await control.getAttribute("aria-label")) ?? "").toBeGreaterThanOrEqual(43.5);
+  }
 
   await page.getByRole("link", { name: "Record sheet" }).first().click();
   await expectPage(page.getByRole("heading", { level: 1, name: "ProtoMech record sheet" })).toBeVisible();
