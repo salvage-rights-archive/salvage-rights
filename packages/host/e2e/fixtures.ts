@@ -4,6 +4,15 @@ import type { Locator, Page, Route } from "@playwright/test";
 import { BASE_PATH, DEV_ORIGIN, FREE_ORIGIN } from "./urls";
 
 export const DEV = `${DEV_ORIGIN}${BASE_PATH}`;
+
+/**
+ * Assertions for a page that loads its code on demand. Opening a family page shows "Loading…" until its chunks arrive, and a page that
+ * opens the on-device store needs a moment more; on a machine running many browsers that takes longer than an assertion's 5 seconds, and the
+ * wait ended on the "Loading…" page (no heading, no enabled input). This waits for the page itself: it costs nothing when the page is
+ * quick, and a page that never arrives still fails, only later. The test's own timeout and the global defaults are unchanged.
+ */
+export const LAZY_PAGE_MS = 25_000;
+export const expectPage = expect.configure({ timeout: LAZY_PAGE_MS });
 export const FREE = `${FREE_ORIGIN}${BASE_PATH}`;
 
 /** Every test fails on a console error or an uncaught page error. */
@@ -231,7 +240,7 @@ export const GOTHIC = "/battletech/gothic";
 export async function startGothicBox(page: Page, base: string, name: string): Promise<string> {
   await page.goto(`${base}${GOTHIC}/home`);
   await page.getByRole("button", { name: `Start from ${name}` }).click();
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText(name);
+  await expectPage(page.getByRole("heading", { level: 1 })).toHaveText(name);
   const editor = new URL(page.url());
   return `${editor.pathname.replace(/^\/salvage-rights/, "")}${editor.search}`;
 }
@@ -244,16 +253,16 @@ export async function buildGothicForce(page: Page, base: string): Promise<string
   await startGothicBox(page, base, "UrbanMech UM-R60B");
   await startGothicBox(page, base, "Phoenix Hawk PXH-1T");
   await page.goto(`${base}${GOTHIC}/abominations`);
-  await expect(page.getByLabel("Import a file")).toBeEnabled();
+  await expectPage(page.getByLabel("Import a file")).toBeEnabled();
   for (const label of ["Gnat One", "Gnat Two", "Gnat Three"]) {
     await page.getByRole("button", { name: "Add Gnat" }).click();
     await page.getByLabel("Label").fill(label);
     await page.getByRole("button", { name: "Save", exact: true }).click();
-    await expect(page.getByText(`${label} (Gnat) saved.`)).toBeVisible();
+    await expectPage(page.getByText(`${label} (Gnat) saved.`)).toBeVisible();
   }
   await page.goto(`${base}${GOTHIC}/home`);
   await page.getByRole("link", { name: "Forces" }).click();
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Gothic forces");
+  await expectPage(page.getByRole("heading", { level: 1 })).toHaveText("Gothic forces");
   await page.getByRole("button", { name: "Start a new force" }).click();
   await page.getByLabel("Force name").fill("Test Lance");
   await page.getByLabel("Add a 'Mech").selectOption({ label: "UrbanMech UM-R60B, 30 tons" });
@@ -271,7 +280,7 @@ export async function buildGothicForce(page: Page, base: string): Promise<string
     await page.getByLabel(`Handler bonus for ${label} (Gnat)`).check();
   }
   await page.getByRole("button", { name: "Save", exact: true }).click();
-  await expect(page.getByText("Saved.")).toBeVisible();
+  await expectPage(page.getByText("Saved.")).toBeVisible();
   const saved = new URL(page.url());
   return `${saved.pathname.replace(/^\/salvage-rights/, "")}${saved.search}`;
 }
@@ -302,7 +311,7 @@ export async function saveAcesCard(page: Page, base: string): Promise<string> {
   await pickToken(page, "Add a way to choose", "no armor", "no Armor left");
   await page.getByRole("button", { name: "Add an overheat row" }).click();
   await page.getByRole("button", { name: "Save", exact: true }).click();
-  await expect(page.getByText("Saved.")).toBeVisible();
+  await expectPage(page.getByText("Saved.")).toBeVisible();
   await page.waitForURL(/[?]id=/);
   const saved = new URL(page.url());
   return `${saved.pathname.replace(/^\/salvage-rights/, "")}${saved.search}`;
@@ -325,7 +334,7 @@ export async function saveAcesCommand(page: Page, base: string): Promise<string>
   await page.getByRole("button", { name: "5. Strategy rows" }).click();
   await page.getByRole("button", { name: "Add a strategy row" }).click();
   await page.getByRole("button", { name: "Save", exact: true }).click();
-  await expect(page.getByText("Saved.")).toBeVisible();
+  await expectPage(page.getByText("Saved.")).toBeVisible();
   await page.waitForURL(/[?]id=/);
   const saved = new URL(page.url());
   return `${saved.pathname.replace(/^\/salvage-rights/, "")}${saved.search}`;
@@ -405,7 +414,7 @@ export async function answerQuestions(page: Page, done: RegExp | string): Promis
     }
     await page.waitForTimeout(150);
   }
-  await expect(target).toBeVisible();
+  await expectPage(target).toBeVisible();
 }
 
 export { expect };
