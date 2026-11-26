@@ -13,6 +13,7 @@ const alphaStrikeRoutes: FamilyRoute[] = [
   { path: "home", label: "Alpha Strike", section: "workshop", load: () => import("./ui/as/AsHomePage") },
   { path: "unit", label: "Alpha Strike unit", section: "workshop", load: () => import("./ui/as/AsUnitPage") },
   { path: "force", label: "Alpha Strike force", section: "workshop", load: () => import("./ui/as/AsForcePage") },
+  { path: "table", label: "Alpha Strike table", section: "workshop", load: () => import("./ui/as/AsTablePage") },
   { path: "aids", label: "Alpha Strike play aids", section: "workshop", load: () => import("./ui/as/AsAidsPage") },
 ];
 

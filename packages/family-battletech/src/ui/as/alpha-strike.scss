@@ -167,3 +167,37 @@
 .as-aids__result {
   margin: var(--sr-space-3) 0;
 }
+
+.as-table__list {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--sr-space-3);
+  padding: 0;
+  list-style: none;
+
+  @media (min-width: 60rem) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.as-table__unit {
+  padding: var(--sr-space-3);
+  background: var(--sr-surface);
+  border: var(--sr-border) solid var(--sr-line-strong);
+  border-radius: var(--sr-radius);
+
+  h2 {
+    margin-top: 0;
+    overflow-wrap: anywhere;
+  }
+
+  &--down {
+    opacity: .6;
+  }
+}
+
+.as-table__controls {
+  display: grid;
+  gap: var(--sr-space-2);
+  margin: var(--sr-space-2) 0 0;
+}

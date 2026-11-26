@@ -150,6 +150,9 @@ function ForceEditor({ initial, roster, storage }: { initial: AsForce; roster: A
         </p>
         <h1>{force.name.trim() || "Unnamed force"}</h1>
         <div className="bt-actions">
+          <Link className="bt-button" to={`/battletech/alpha-strike/table?force=${encodeURIComponent(force.id)}`}>
+            Play at the table
+          </Link>
           <button type="button" className="bt-button bt-button--secondary" onClick={() => { downloadForce(force, roster); setStatus("Export started."); }}>
             Export
           </button>
