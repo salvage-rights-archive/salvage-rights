@@ -2,11 +2,12 @@
 import { AS_EDITION, AS_EDITIONS, AS_PV_STEPS, AS_UNIT_TYPES, ARTX_FAMILY, DEFAULT_SKILL } from "../data/alpha-strike";
 import { AS_OFFICERS_PER, AS_SCAS, AS_SCA_BY_AVERAGE_SKILL, AS_SPAS, AS_SPA_BY_SKILL, AS_SPA_UNITS_PER } from "../data/as-abilities";
 import type { AsSca, AsSpa } from "../data/as-abilities";
-import { AS_FORMATIONS, AS_GROUND_TYPES, AS_ORGANISATIONS, AS_ORGANISATION_PAGE } from "../data/as-formations";
-import type { AsFormationType, AsOrganisation, AsReq, AsUnitTest } from "../data/as-formations";
+import { AS_FORMATIONS, AS_GROUND_TYPES, AS_ORGANISATIONS, AS_ORGANISATION_PAGE, AS_OVERLAYS } from "../data/as-formations";
+import type { AsFormationType, AsOrganisation, AsOverlay, AsReq, AsUnitTest } from "../data/as-formations";
 import { RULES_LEVELS } from "../data/chassis";
 import type { RulesLevel } from "../data/chassis";
 import { DEFAULT_LEVEL, LEVEL_ORDER, levelAtLeast } from "./levels";
+import { unitTitle } from "./as-unit";
 import type { AsDamage, AsFinding, AsMove, AsUnit } from "./as-unit";
 
 export interface AsMember {
@@ -42,6 +43,10 @@ export interface AsGroup {
   formation?: string;
   /** The bonus ability picked, where the formation's bonus is one pick from a list. */
   bonus?: string;
+  /** The id (in `force.groups`) of the group this one is part of: a lance in a company, a Star in a Binary. None means it stands alone. */
+  parent?: string;
+  /** A formation built on top of the formation type (`AS_OVERLAYS`): Mechanized, Nova or Air Lance. */
+  overlay?: string;
 }
 
 export interface AsForce {
@@ -176,24 +181,56 @@ export const newGroup = (id: string, name = "New group"): AsGroup => ({ id, name
 
 export const findOrganisation = (id: string | undefined): AsOrganisation | undefined => AS_ORGANISATIONS.find((o) => o.id === id);
 export const findFormation = (id: string | undefined): AsFormationType | undefined => AS_FORMATIONS.find((f) => f.id === id);
+export const findOverlay = (id: string | undefined): AsOverlay | undefined => AS_OVERLAYS.find((o) => o.id === id);
 
 export interface GroupTotals {
   group: AsGroup;
+  /** Every unit of the group, those of the groups inside it included. */
   lines: ForceLine[];
+  /** The units set directly on this group. */
+  direct: ForceLine[];
+  /** How many groups deep it sits (0 for one that stands alone). */
+  depth: number;
+  /** The ids of the groups inside it. */
+  childIds: string[];
   /** Units in the group that are still in the roster. */
   count: number;
   total: number;
 }
 
-/** Totals for each group, and for the units in no group (a unit naming a group that is gone counts as in none). */
+/**
+ * Totals for each group, and for the units in no group (a unit naming a group that is gone counts as in none). A group holds the units of
+ * the groups inside it; the groups come out with each one followed by those inside it. A parent that is gone, or a loop of parents, never
+ * throws: the group simply stands alone.
+ */
 export function groupTotals(force: AsForce, totals: ForceTotals): { groups: GroupTotals[]; ungrouped: GroupTotals } {
   const groups = groupsOf(force);
   const ids = new Set(groups.map((g) => g.id));
-  const make = (group: AsGroup, lines: ForceLine[]): GroupTotals => ({ group, lines, count: lines.filter((l) => l.unit).length, total: lines.reduce((sum, l) => sum + l.adjusted, 0) });
-  return {
-    groups: groups.map((g) => make(g, totals.lines.filter((l) => l.member.group === g.id))),
-    ungrouped: make({ id: "", name: "Not in a group" }, totals.lines.filter((l) => l.member.group === undefined || !ids.has(l.member.group))),
+  const make = (group: AsGroup, lines: ForceLine[], direct: ForceLine[], depth: number, childIds: string[]): GroupTotals => ({ group, lines, direct, depth, childIds, count: lines.filter((l) => l.unit).length, total: lines.reduce((sum, l) => sum + l.adjusted, 0) });
+  const hasParent = (g: AsGroup): boolean => typeof g.parent === "string" && g.parent !== g.id && ids.has(g.parent);
+  const inside = new Map<string, AsGroup[]>();
+  for (const g of groups) if (hasParent(g) && g.parent !== undefined) inside.set(g.parent, [...(inside.get(g.parent) ?? []), g]);
+  const out: GroupTotals[] = [];
+  const seen = new Set<string>();
+  const visit = (g: AsGroup, depth: number): ForceLine[] => {
+    seen.add(g.id);
+    const at = out.length;
+    const direct = totals.lines.filter((l) => l.member.group === g.id);
+    let lines = direct;
+    const childIds: string[] = [];
+    out.push(make(g, direct, direct, depth, childIds));
+    for (const child of inside.get(g.id) ?? []) {
+      if (seen.has(child.id)) continue;
+      childIds.push(child.id);
+      lines = [...lines, ...visit(child, depth + 1)];
+    }
+    out[at] = make(g, lines, direct, depth, childIds);
+    return lines;
   };
+  for (const g of groups) if (!seen.has(g.id) && !hasParent(g)) visit(g, 0);
+  for (const g of groups) if (!seen.has(g.id)) visit(g, 0); // a loop of parents: the first of it stands alone
+  const none = totals.lines.filter((l) => l.member.group === undefined || !ids.has(l.member.group));
+  return { groups: out, ungrouped: make({ id: "", name: "Not in a group" }, none, none, 0, []) };
 }
 
 /** A damage figure for a comparison: none is 0 and minimal damage (0*) is a half point, as the damage aids count it. */
@@ -251,15 +288,20 @@ export function describeTest(test: AsUnitTest): string {
   return parts.join(", ");
 }
 
-/** One requirement as a sentence, from its structure. */
-export function describeReq(req: AsReq): string {
+/** One requirement as a sentence, from its structure; `scale` is the number of lances, Stars or Level IIs a group above the first level holds. */
+export function describeReq(req: AsReq, scale = 1): string {
   switch (req.k) {
     case "all": return `Every unit: ${describeTest(req.test)}`;
     case "share": return `${req.over ? "More than" : "At least"} ${String(req.pct)}% of the units: ${describeTest(req.test)}`;
-    case "count": return `At least ${String(req.n)} ${req.n === 1 ? "unit" : "units"}: ${describeTest(req.test)}`;
+    case "count": {
+      const n = req.n * scale;
+      return `${req.max !== undefined && req.max === req.n ? "Exactly" : "At least"} ${String(n)} ${n === 1 ? "unit" : "units"}: ${describeTest(req.test)}`;
+    }
     case "none": return `No unit: ${describeTest(req.test)}`;
-    case "pairs": return `In an all-vehicle group, at least ${String(req.n)} matched pairs (same chassis and model): ${describeTest(req.test)}`;
-    case "any": return req.of.map(describeReq).join(", or ");
+    case "pairs": return `In an all-vehicle group, at least ${String(req.n * scale)} matched pairs (same chassis and model): ${describeTest(req.test)}`;
+    case "same": return `At least ${String(req.n)} units of one chassis and model: ${describeTest(req.test)}`;
+    case "carry": return "Every infantry unit has a carrier among the other units: a unit with OMNI takes one MEC or XMEC battle armor unit, XMEC rides any ground unit, and IT space covers a CAR figure (pp. 38, 77-78)";
+    case "any": return req.of.map((r) => describeReq(r, scale)).join(", or ");
   }
 }
 
@@ -274,14 +316,56 @@ interface ReqResult {
   text: string;
 }
 
-function checkReq(req: AsReq, entries: Entry[]): ReqResult {
+const INFANTRY_TYPES = ["BA", "CI"];
+const specialNumber = (unit: AsUnit, code: string): number | undefined => {
+  const found = unit.card.specials.find((s) => s.code.toUpperCase() === code);
+  return found === undefined ? undefined : Math.max(0, Number(found.values[0] ?? 0) || 0);
+};
+
+/** The infantry units that no other unit of the group can carry (p. 38: OMNI takes one MEC battle armor unit, XMEC any ground unit, IT the CAR of what it holds). */
+function uncarried(entries: Entry[]): Entry[] {
+  const carriers = entries.filter((e) => !INFANTRY_TYPES.includes(e.unit.card.type)).map((e) => ({ unit: e.unit, taken: false, room: specialNumber(e.unit, "IT") ?? 0, omni: specialNumber(e.unit, "OMNI") !== undefined }));
+  const has = (e: Entry, code: string): boolean => specialNumber(e.unit, code) !== undefined;
+  const infantry = entries.filter((e) => INFANTRY_TYPES.includes(e.unit.card.type));
+  const order = [...infantry.filter((e) => has(e, "MEC") && !has(e, "XMEC")), ...infantry.filter((e) => has(e, "XMEC")), ...infantry.filter((e) => !has(e, "MEC") && !has(e, "XMEC"))];
+  return order.filter((e) => {
+    const omni = has(e, "MEC") ? carriers.find((c) => !c.taken && c.omni) : undefined;
+    const mount = omni ?? (has(e, "XMEC") ? [...carriers].sort((x, y) => Number(x.omni) - Number(y.omni)).find((c) => !c.taken && unitIsKind(c.unit, "ground")) : undefined);
+    if (mount) {
+      mount.taken = true;
+      return false;
+    }
+    const need = specialNumber(e.unit, "CAR");
+    const seat = need === undefined ? undefined : carriers.find((c) => c.room >= need);
+    if (seat && need !== undefined) {
+      seat.room -= need;
+      return false;
+    }
+    return true;
+  });
+}
+
+/** How many of the units share the chassis and model that most of them share. */
+function mostAlike(entries: Entry[]): number {
+  const counts = new Map<string, number>();
+  for (const e of entries) {
+    const key = `${e.unit.name.chassis}|${e.unit.name.model}`.toLowerCase();
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+  return Math.max(0, ...counts.values());
+}
+
+function checkReq(req: AsReq, entries: Entry[], scale = 1): ReqResult {
   const n = entries.length;
   const pass = (test: AsUnitTest): number => entries.filter((e) => unitPasses(e.unit, e.member, test)).length;
-  const gap = (have: number, need: number): ReqResult => ({ ok: have >= need, text: have >= need ? "" : `${describeReq(req)} (the group has ${String(have)}, needs ${String(need)})` });
+  const gap = (have: number, need: number): ReqResult => ({ ok: have >= need, text: have >= need ? "" : `${describeReq(req, scale)} (the group has ${String(have)}, needs ${String(need)})` });
   switch (req.k) {
     case "all": return gap(pass(req.test), n);
     case "share": return gap(pass(req.test), shareNeed(n, req.pct, req.over, req.round));
-    case "count": return gap(pass(req.test), req.n);
+    case "count": {
+      const have = pass(req.test);
+      return req.max !== undefined && have > req.max * scale ? { ok: false, text: `${describeReq(req, scale)} (the group has ${String(have)})` } : gap(have, req.n * scale);
+    }
     case "none": {
       const have = pass(req.test);
       return { ok: have === 0, text: have === 0 ? "" : `${describeReq(req)} (the group has ${String(have)})` };
@@ -293,10 +377,15 @@ function checkReq(req: AsReq, entries: Entry[]): ReqResult {
         const key = `${e.unit.name.chassis}|${e.unit.name.model}`.toLowerCase();
         counts.set(key, (counts.get(key) ?? 0) + 1);
       }
-      return gap([...counts.values()].reduce((sum, c) => sum + Math.floor(c / 2), 0), req.n);
+      return gap([...counts.values()].reduce((sum, c) => sum + Math.floor(c / 2), 0), req.n * scale);
+    }
+    case "same": return gap(mostAlike(entries.filter((e) => unitPasses(e.unit, e.member, req.test))), req.n);
+    case "carry": {
+      const left = uncarried(entries);
+      return { ok: left.length === 0, text: left.length === 0 ? "" : `${describeReq(req)} (not carried: ${left.map((e) => unitTitle(e.unit) || "unnamed unit").join(", ")})` };
     }
     case "any": {
-      const results = req.of.map((r) => checkReq(r, entries));
+      const results = req.of.map((r) => checkReq(r, entries, scale));
       return results.some((r) => r.ok) ? { ok: true, text: "" } : { ok: false, text: `Either ${results.map((r) => r.text).join(", or ")}` };
     }
   }
@@ -317,17 +406,26 @@ export interface FormationCheck {
   missing: string[];
 }
 
-/** Whether the members meet a formation type. A group with no unit in the roster meets nothing. */
-export function checkFormation(type: AsFormationType, lines: readonly ForceLine[]): FormationCheck {
+/** What of these requirements the members do not meet, in our words with the group's own figures; none when all are met. */
+export function checkRequirements(reqs: readonly AsReq[], lines: readonly ForceLine[], scale = 1): string[] {
+  const entries = lines.flatMap((l) => (l.unit ? [{ unit: l.unit, member: l.member }] : []));
+  return reqs.map((r) => checkReq(r, entries, scale)).filter((r) => !r.ok).map((r) => r.text);
+}
+
+/**
+ * Whether the members meet a formation type. A group with no unit in the roster meets nothing. `scale` is how many lances, Stars or
+ * Level IIs the group holds above the first level: counts and pair counts are multiplied by it, shares already follow the group's size.
+ */
+export function checkFormation(type: AsFormationType, lines: readonly ForceLine[], scale = 1): FormationCheck {
   const entries = lines.flatMap((l) => (l.unit ? [{ unit: l.unit, member: l.member }] : []));
   if (entries.length === 0) return { type, met: false, missing: ["The group has no units."] };
   if (type.ideal && entries.every((e) => (e.unit.card.role ?? "").toLowerCase() === type.ideal?.toLowerCase())) return { type, met: true, waivedBy: type.ideal, missing: [] };
-  const missing = requirementsOf(type).map((r) => checkReq(r, entries)).filter((r) => !r.ok).map((r) => r.text);
+  const missing = checkRequirements(requirementsOf(type), lines, scale);
   return { type, met: missing.length === 0, missing };
 }
 
 /** Every formation type the group meets, in the book's order. */
-export const formationsMet = (lines: readonly ForceLine[]): AsFormationType[] => AS_FORMATIONS.filter((f) => checkFormation(f, lines).met);
+export const formationsMet = (lines: readonly ForceLine[], scale = 1): AsFormationType[] => AS_FORMATIONS.filter((f) => checkFormation(f, lines, scale).met);
 
 /** What the bonus of a formation gives, as a figure the group's size decides: the Battle Lance's Lucky ability is its unit count plus two points (p. 117). */
 export function bonusFigure(type: AsFormationType, unitCount: number): string | undefined {

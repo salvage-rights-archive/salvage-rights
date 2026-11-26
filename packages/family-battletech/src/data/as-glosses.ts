@@ -184,4 +184,7 @@ export const AS_FORMATION_GLOSSES: Record<string, string> = {
   strike: "Speed Demon for up to half the fighters, Golden Goose for the rest.",
   ew: "The Communications Disruption command ability.",
   transport: "One of three SPAs, picked at the start, for Transport-role units.",
+  mechanized: "Transports may unload their infantry mid-move on the ground and keep any Move left.",
+  nova: "Mounted infantry may fire from the transport, at its move modifier and TN +2.",
+  "air-lance": "No bonus; the two fighters take no part in the ground formation.",
 };

@@ -3,7 +3,7 @@
 // Pure; nothing here throws on a unit it does not understand (an unknown type is drawn with no critical boxes).
 import { AS_CARD_AIR, AS_CARD_CRITS, AS_CARD_LAYOUT_OF, AS_UNIT_TYPES } from "../data/alpha-strike";
 import type { CardCritRow, CardLayout } from "../data/alpha-strike";
-import { findFormation, findSpa, forceTotals, groupsOf, memberSpas, skillAdjustedPv, spaCost } from "./as-force";
+import { findFormation, findOverlay, findSpa, forceTotals, groupsOf, memberSpas, skillAdjustedPv, spaCost } from "./as-force";
 import type { AsForce, AsMember } from "./as-force";
 import { formatDamage, formatMove, formatSpecials, unitTitle } from "./as-unit";
 import type { AsUnit } from "./as-unit";
@@ -204,7 +204,7 @@ function groupLabel(force: AsForce, member: AsMember): string {
   const group = groupsOf(force).find((g) => g.id === member.group);
   if (!group) return member.formation?.trim() ?? "";
   const type = findFormation(group.formation)?.name;
-  return [group.name.trim() || "Unnamed group", type].filter(Boolean).join(", ");
+  return [group.name.trim() || "Unnamed group", type, findOverlay(group.overlay)?.name].filter(Boolean).join(", ");
 }
 
 /** The one-page roster: a row per unit with its adjusted PV, the total, and how many members the roster no longer holds. */
