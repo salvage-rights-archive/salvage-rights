@@ -36,7 +36,7 @@ import { renderFilter, renderUse } from "./aces-card";
 import type { AcesCard, Column, CommandCard, Condition, Filter, Key, OvRow, SpecialOrderCard, SupportCard, TargetRule, TokenUse } from "./aces-card";
 import { physicalDamage, rangeBracket, targetNumber } from "./as-attack";
 import type { AttackerMove, AttackResult, TargetMove } from "./as-attack";
-import { crippled, currentDamage, currentMove, currentOv, isImmobile, newPlayState, tracksHeat } from "./as-play";
+import { crippled, currentDamage, currentIf, currentMove, currentOv, isImmobile, newPlayState, tracksHeat } from "./as-play";
 import type { PlayState } from "./as-play";
 import type { AsCard, AsDamage } from "./as-unit";
 
@@ -197,7 +197,7 @@ export interface AttackDecision {
   phase: "combat";
   attack: "weapon" | "physical" | "indirect" | "none";
   /** Why there is no attack. */
-  reason?: "no-target" | "shutdown" | "sprinted" | "heat" | "hold-fire" | "indirect-unprepared" | "indirect-destroyed" | "read-card";
+  reason?: "no-target" | "shutdown" | "stunned" | "sprinted" | "heat" | "hold-fire" | "indirect-unprepared" | "indirect-destroyed" | "read-card";
   /** The physical attack kind, when it is one. */
   physical?: AsPhysicalType;
   target: string | null;
@@ -863,6 +863,25 @@ const isInfantry = (c: AsCard): boolean => c.type === "CI" || c.type === "BA";
 const physicalRange = (c: AsCard): number | null => (c.type === "CV" || c.type === "SV" ? null : isInfantry(c) ? (has(c, "AM") ? 0 : null) : has(c, "MEL") ? 2 : 1);
 export const physicalKind = (c: AsCard): AsPhysicalType => (c.type === "CI" || c.type === "BA" ? "anti-mech" : has(c, "MEL") ? "melee" : "standard");
 
+/**
+ * The physical attacks a unit may choose by hand. Infantry: Anti-'Mech only, and only with AM (Aces p. 5). ProtoMechs: Standard, or Melee
+ * with MEL. 'Mechs: Standard (Melee instead with MEL), Charge and Death from Above. Vehicles: Charge, and Melee with MEL.
+ *
+ * The vehicle line follows the later ruling. Aces pp. 4-5 (first printing, (c) 2025, no month printed) say a vehicle's only physical
+ * attack is a Charge; ASCE errata v7.02 (dated 10 August 2025, "Physical Attacks", p. 45, marked as a change from earlier errata) says
+ * Charge or Melee, and ASCE p. 46 gives Melee only to units with MEL. The Aces book prints no day, so the two cannot be ordered by
+ * date from the books; the errata is the newer ruling by its own words and the only difference is Melee for a vehicle with MEL, so
+ * we follow it (conflicts ledger: owner to confirm).
+ */
+export function physicalOptions(c: AsCard): AsPhysicalType[] {
+  const mel = has(c, "MEL");
+  if (c.type === "BD") return [];
+  if (isInfantry(c)) return has(c, "AM") ? ["anti-mech"] : [];
+  if (c.type === "CV" || c.type === "SV") return mel ? ["charge", "melee"] : ["charge"];
+  if (c.type === "PM") return [mel ? "melee" : "standard"];
+  return [mel ? "melee" : "standard", "charge", "dfa"];
+}
+
 /** The Target Number for this unit attacking `target`; `spotter` is the unit that spots an indirect attack (p. 3). */
 function attackTn(run: Run, target: TableUnit, kind: "weapon" | "physical" | "indirect", spotter?: TableUnit): AttackResult {
   const u = run.unit;
@@ -900,7 +919,8 @@ function heatStopped(u: TableUnit): boolean {
 function inAttackRange(run: Run, units: TableUnit[]): TableUnit[] {
   const self = run.unit.card;
   const touching = (u: TableUnit): boolean => inches(run, u) <= 0;
-  const reach = units.filter((u) => (self.type === "BD" ? touching(u) : touching(u) ? isInfantry(self) || physicalCase(run, u) !== null : physicalCase(run, u) !== null));
+  // An emplacement is no infantry and makes no physical attack, so a unit in base contact is out of its reach (ASCE errata v7.02, p. 43 change).
+  const reach = self.type === "BD" ? [] : units.filter((u) => (touching(u) ? isInfantry(self) || physicalCase(run, u) !== null : physicalCase(run, u) !== null));
   const seen = bySight(run, units.filter((u) => !reach.includes(u) && !touching(u) && damageAt(run.unit, inches(run, u)) > 0), true);
   return units.filter((u) => reach.includes(u) || seen.includes(u));
 }
@@ -983,7 +1003,9 @@ function chooseOv(run: Run, rows: readonly OvRow[], tn: number, target: TableUni
     return { ov: indirect ? 0 : currentOv(u.play, u.card), hold: false };
   }
   const external = Math.min(AS_HEAT.externalCap, u.play.staged.reduce((sum, h) => sum + (h.heat ?? 0), 0));
-  const room = Math.max(0, AS_HEAT.max - 1 - u.play.heat - external);
+  // An engine hit adds 1 heat to a unit that attacks (ASCE pp. 50, 53; Aces p. 19), so that point comes off the room too.
+  const engine = u.play.crits.engine >= 1 ? 1 : 0;
+  const room = Math.max(0, AS_HEAT.max - 1 - u.play.heat - external - engine);
   const available = Math.min(currentOv(u.play, u.card), room);
   const bracket = rangeBracket(distance);
   // OV adds at Short and Medium, and at Long too with OVL (ASCE p. 53, Overheat Long).
@@ -1016,6 +1038,10 @@ function decideAttack(run: Run, ctx: CombatContext): AttackDecision {
   if (u.play.shutdown) {
     note(run, "combat-shutdown", { unit: u.name });
     return done({ reason: "shutdown" });
+  }
+  if (u.play.stunned) {
+    note(run, "combat-stunned", { unit: u.name });
+    return done({ reason: "stunned" });
   }
   if (u.play.moved?.mode === "sprint") {
     note(run, "combat-sprinted", { unit: u.name });
@@ -1105,7 +1131,12 @@ function decideIndirect(run: Run, ctx: CombatContext, rows: readonly OvRow[], do
     return done({ reason: "no-target", target: target.id, tn });
   }
   note(run, "indirect-target", { target: target.name, tn: String(tn.total) });
-  const damage = specialValue(u.card, "IF");
+  const iff = currentIf(u.play, u.card);
+  const damage = iff === null ? 0 : iff.minimal ? 0.5 : iff.value;
+  if (damage === 0) {
+    note(run, "no-attack-target");
+    return done({ reason: "no-target", target: target.id, tn });
+  }
   if (chooseOv(run, rows, tn.total, target, inches(run, target), true).hold) {
     note(run, "hold-fire");
     return done({ reason: "hold-fire", target: target.id, tn, damage });

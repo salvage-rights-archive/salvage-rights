@@ -20,13 +20,17 @@ import { chipOf, unitFacts } from "./UnitsDrawer";
 const NO_ATTACK_WORDS: Record<NonNullable<AttackDecision["reason"]>, string> = {
   "no-target": "No enemy is in its attack range, or every one would need 13 or more.",
   shutdown: "It is shut down.",
+  stunned: "Its crew is stunned, so it cannot attack.",
   sprinted: "It sprinted, so it cannot attack.",
   heat: "Heat has cut its Move to 0, so it makes no weapon attack and cools in the End Phase.",
   "hold-fire": "Its overheat rows say to hold fire.",
-  "indirect-unprepared": "It would fire indirectly, but no target and spotter were chosen at the start of the phase.",
-  "indirect-destroyed": "The indirect target has already taken enough damage to be destroyed.",
+  "indirect-unprepared": "It would fire indirectly, but the Indirect Attacks order has not set a target and spotter.",
+  "indirect-destroyed": "The indirect target is already as good as destroyed.",
   "read-card": "Its combat side is not recorded.",
 };
+
+/** Reasons that mean the unit truly cannot attack; any other no-attack result can still be recorded by hand. */
+const HARD_STOPS: readonly string[] = ["shutdown", "stunned", "sprinted", "heat"];
 
 function AutomatedAttack({ game, records, apply, unit, headingRef }: Pick<PanelProps, "game" | "records" | "apply"> & { unit: GameUnit; headingRef: React.RefObject<HTMLHeadingElement | null> }) {
   const result = step(combatContext(game, unit, records), game.sight);
@@ -50,7 +54,7 @@ function AutomatedAttack({ game, records, apply, unit, headingRef }: Pick<PanelP
           <p className="aces-pinned" role="status">
             {`${unit.name} makes no attack. ${decision.reason ? NO_ATTACK_WORDS[decision.reason] : ""}`}
           </p>
-          {decision.readCard && (
+          {!HARD_STOPS.includes(decision.reason ?? "no-target") && !manual && (
             <p>
               <button type="button" className="bt-button" onClick={() => { setManual(true); }}>
                 Record its attack myself
@@ -71,7 +75,8 @@ function AutomatedAttack({ game, records, apply, unit, headingRef }: Pick<PanelP
       const kind = decision.attack;
       const hit = kind === "physical" && decision.physical ? physicalHit(unit, target, decision.physical) : undefined;
       const wd = weaponDamage(unit, distance, decision.ov);
-      const damage = kind === "physical" ? (hit?.toTarget ?? 0) : kind === "indirect" ? decision.damage : wd.total;
+      const minimal = kind === "weapon" ? wd.rollsMinimal : kind === "indirect" && decision.damage === 0.5;
+      const damage = kind === "physical" ? (hit?.toTarget ?? 0) : kind === "indirect" ? (decision.damage === 0.5 ? 1 : decision.damage) : wd.total;
       const flags = (terrain[target.id] ?? []) as AsAttackFlag[];
       body = (
         <>
@@ -105,6 +110,7 @@ function AutomatedAttack({ game, records, apply, unit, headingRef }: Pick<PanelP
             {...(kind === "physical" && decision.physical ? { physical: decision.physical } : {})}
             tn={decision.tn.total}
             damage={damage}
+            minimal={minimal}
             ov={decision.ov}
             attackerOnHit={hit?.toAttackerOnHit ?? 0}
             attackerOnMiss={hit?.toAttackerOnMiss ?? 0}
@@ -258,5 +264,5 @@ export default function CombatPanel({ game, records, apply, touched }: PanelProp
 
 function EmplacementHint({ game }: { game: AcesGame }) {
   const any = game.sides.automated.units.some((u) => !u.play.destroyed && !u.play.escaped && u.card.type === "BD") || game.supports.some((s) => !s.used);
-  return any ? <p className="bt-hint">{`The automated force has emplacements or support cards. They attack after the units (${COMBAT_CITE.support.cite}); we do not run them on this page yet, so resolve them by hand.`}</p> : null;
+  return any ? <p className="bt-hint">{`The automated force has emplacements or support cards. They attack after the units (${COMBAT_CITE.support.cite}); we do not run them on this page yet. Enter the damage they deal with Damage by hand in the units list.`}</p> : null;
 }

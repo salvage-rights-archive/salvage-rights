@@ -93,6 +93,15 @@ export function currentDamage(state: PlayState, card: AsCard): AsCard["damage"] 
   return d;
 }
 
+/** The Indirect Fire value now: the card's IF number with Weapon Hits taken off it (Aces p. 3); `IF0*` is minimal damage. Null with no IF. */
+export function currentIf(state: PlayState, card: AsCard): AsDamage {
+  const raw = card.specials.find((s) => s.code === "IF")?.values[0];
+  if (raw === undefined) return null;
+  let d: AsDamage = raw.trim().endsWith("*") ? { value: 0, minimal: true } : { value: Number.parseInt(raw, 10) || 0 };
+  for (let i = 0; i < state.crits.weapon; i += 1) d = oneLess(d);
+  return d;
+}
+
 /** The target number added to every weapon attack by Fire Control Hits: +2 each, not on physical attacks (ASCE p. 50). */
 export const fireControlModifier = (state: PlayState): number => 2 * state.crits.fireControl;
 

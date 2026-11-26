@@ -66,6 +66,16 @@ describe("Aces deck engine", () => {
     expect(r.state.decks.flatMap((d) => d.cards).every((c) => !c.flipped)).toBe(true);
   });
 
+  it("re-deals a split deck only among the units still using it (Aces p. 38)", () => {
+    let state = buildDecks(units(3), sets("A", 1), 9);
+    const gone = ids(state, "u2");
+    state = cycle(flipTop(state, "u0"), "u0", (id) => id !== "u2").state;
+    const r = cycle(flipTop(state, "u0"), "u0", (id) => id !== "u2");
+    expect(r.reshuffled).toBe(true);
+    expect(ids(r.state, "u2")).toEqual(gone);
+    expect(ids(r.state, "u0").length + ids(r.state, "u1").length).toBe(4);
+  });
+
   it("picks by priority, with tokens as 000 and 1000 and withdrawal as minus 500 without tokens", () => {
     const pick = (list: Parameters<typeof nextAutomated>[0]) => nextAutomated(list);
     const base = [
