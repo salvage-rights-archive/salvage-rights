@@ -131,7 +131,8 @@ test("the Alpha Strike force page and the home with forces have no axe violation
   await page.getByRole("button", { name: "Add to force" }).click();
   await expect(page.getByRole("region", { name: "Totals" })).toContainText("over the limit");
   const forcePage = new URL(page.url());
-  await expectNoViolations(page, DEV, ["/battletech/alpha-strike/home", `${forcePage.pathname.replace(/^\/salvage-rights/, "")}${forcePage.search}`]);
+  const tablePage = `/battletech/alpha-strike/table?force=${new URLSearchParams(forcePage.search).get("id") ?? ""}`;
+  await expectNoViolations(page, DEV, ["/battletech/alpha-strike/home", `${forcePage.pathname.replace(/^\/salvage-rights/, "")}${forcePage.search}`, "/battletech/alpha-strike/aids", tablePage]);
 });
 
 test("the Aces home, library and card editor (each step and the picker) have no axe violations in either theme", async ({ page }) => {

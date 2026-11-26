@@ -4,6 +4,7 @@ import { Link } from "react-router";
 import { AS_EDITION } from "../../data/alpha-strike";
 import { asOfficialMark } from "../../rules/as-mul";
 import { unitTitle } from "../../rules/as-unit";
+import { eraOfYear } from "../../rules/time";
 import { STORAGE_READ_FAILED, STORAGE_WRITE_FAILED, downloadJson } from "../storage";
 import { downloadUnit, fromUnitFile, openAsStorage } from "./storage";
 import type { AsEntry, AsStorage } from "./storage";
@@ -11,6 +12,8 @@ import AsForces from "./AsForces";
 import AsMordelImport from "./AsMordelImport";
 import AsMulImport from "./AsMulImport";
 import AsMordelFile from "./AsMordelFile";
+import AsConvert from "./AsConvert";
+import AsPlayFilter from "./AsPlayFilter";
 import GamePicture from "../GamePicture";
 import { ACES_HEADING, ACES_HOME } from "../aces/routes";
 import "../classic.scss";
@@ -151,7 +154,8 @@ export default function AsHomePage() {
       <section className="bt-section" aria-labelledby="as-rules">
         <h2 id="as-rules">Played under</h2>
         <p>{`${AS_EDITION.name} (${AS_EDITION.publisher}).`}</p>
-        <p className="bt-hint">It is the only edition for now. The rules level and the errata we follow come with a later step.</p>
+        <p className="bt-hint">It is the only edition for now, so there is nothing to choose. The year and tech base below narrow the units you can add to a force.</p>
+        <AsPlayFilter />
       </section>
 
       <section className="bt-section" aria-labelledby="as-saved">
@@ -187,6 +191,7 @@ export default function AsHomePage() {
                   <span className="bt-row__text">
                     <strong>{name}</strong>
                     {` ${unit.card.type}, size ${String(unit.card.size)}, PV ${String(unit.card.pv)}`}
+                    {typeof unit.year === "number" && <span className="bt-row__credit">{`${String(unit.year)}${eraOfYear(unit.year) ? `, ${eraOfYear(unit.year)?.name ?? ""}` : ""}`}</span>}
                     {unit.source.kind !== "manual" && unit.source.credit && <span className="bt-row__credit">{unit.source.credit}</span>}
                     <span className="bt-row__credit">{asOfficialMark(unit).text}</span>
                   </span>
@@ -241,6 +246,15 @@ export default function AsHomePage() {
         </div>
       </section>
 
+      <section className="bt-section" aria-labelledby="as-aids">
+        <h2 id="as-aids">Play aids</h2>
+        <p>
+          <Link className="bt-button bt-button--secondary" to="/battletech/alpha-strike/aids">
+            To-hit calculator
+          </Link>
+        </p>
+      </section>
+
       <section className="bt-section" aria-labelledby="as-aces">
         <h2 id="as-aces">{ACES_HEADING}</h2>
         <p>
@@ -254,6 +268,7 @@ export default function AsHomePage() {
       <AsMordelImport />
       <AsMulImport />
       <AsMordelFile />
+      <AsConvert />
     </div>
   );
 }

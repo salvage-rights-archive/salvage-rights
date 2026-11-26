@@ -85,3 +85,23 @@ describe("Alpha Strike force pages", () => {
     expect((await storage.get("a"))?.unit?.card.pv).toBe(35);
   });
 });
+
+describe("the game year and tech base", () => {
+  it("leave a later unit and the other tech base out of the unit list for a force, and the home shows the era", async () => {
+    const user = userEvent.setup();
+    const storage = await openAsStorage();
+    await storage.save({ ...unit("a", "Archer", 35), year: 3025, techBase: "inner-sphere" });
+    await storage.save({ ...unit("b", "Banshee", 39), year: 3060, techBase: "inner-sphere" });
+    await storage.save({ ...unit("c", "Cougar", 30), year: 3000, techBase: "clan" });
+    await storage.saveForce(newAsForce("f1", "Lance"));
+    renderAt("/battletech/alpha-strike/home");
+    expect(await screen.findByText("3025, Late Succession War - Renaissance")).toBeTruthy();
+    await user.type(await screen.findByLabelText("Game year"), "3040");
+    await user.selectOptions(screen.getByLabelText("Tech base"), "inner-sphere");
+    await waitFor(async () => { expect(await storage.getFilter()).toEqual({ year: 3040, techBase: "inner-sphere" }); });
+    cleanup();
+    renderAt("/battletech/alpha-strike/force?id=f1");
+    const picker = await screen.findByLabelText("Unit");
+    expect([...picker.querySelectorAll("option")].map((o) => o.textContent)).toEqual(["Choose a unit", "Archer (PV 35)"]);
+  });
+});
