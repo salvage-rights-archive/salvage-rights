@@ -15,17 +15,17 @@
 // Light Blazer: its weight is inferred (1.5 tons, conflict 37) and no Battle Value is printed for it; see the catalog row. The three
 // designs that carry it keep their printed Battle Value regardless.
 //
-// KGC-0000: each AC/20 is split across a torso and an arm on its sheet (rows LT/LA and RT/RA), and our mounts have one location with
-// no split support (split mounts are Classic construction work). Each AC/20 is placed in the arm, where eight of its ten slots sit, so
-// the rules check reports the slots it overflows there. That finding is expected until split mounts are built.
+// KGC-0000: each AC/20 is split across a torso and an arm on its sheet (rows LT/LA and RT/RA): eight of its ten slots are the arm's
+// slots 5 to 12 and two are the side torso's slots 1 and 2. It is placed as a split mount (the arm from slot 4, the torso from slot 0,
+// zero-based), as the sheet draws it, and the rules check finds nothing.
 import type { Catalog } from "../rules/catalog";
 import type { LocationCode, MechRecord, Mount, SourceBaseline } from "../rules/mech";
 import type { RulesLevel } from "./chassis";
 import { STRUCTURE_TYPES } from "./chassis";
 import { GOTHIC_SHEETS } from "./gothic";
 
-/** [catalog id, first slot, count (default 1), slots each (default 1), rear (default false)]. */
-type Place = readonly [id: string, slot: number, count?: number, step?: number, rear?: true];
+/** [catalog id, first slot, count (default 1), slots each (default 1), rear (default false), second part of a split weapon]. */
+type Place = readonly [id: string, slot: number, count?: number, step?: number, rear?: true, split?: NonNullable<Mount["split"]>];
 
 export interface BoxSpec {
   /** The sheet's PDF page index. */
@@ -373,10 +373,10 @@ export const GOTHIC_BOX_SPECS: BoxSpec[] = [
     armor: { HD: { front: 9 }, CT: { front: 39, rear: 12 }, LT: { front: 29, rear: 10 }, RT: { front: 29, rear: 10 }, LA: { front: 33 }, RA: { front: 33 }, LL: { front: 34 }, RL: { front: 34 } },
     mounts: {
       CT: [["heat-sink-is", 10]],
-      LA: [["ac-20-is", 4]],
+      LA: [["ac-20-is", 4, 1, 1, undefined, { location: "LT", slot: 0, slots: 2 }]],
       LT: [["lrm-15-is", 2], ["ammo-lrm-15-is", 5], ["ammo-ac-20-is", 6]],
       LL: [["heat-sink-is", 4]],
-      RA: [["ac-20-is", 4]],
+      RA: [["ac-20-is", 4, 1, 1, undefined, { location: "RT", slot: 0, slots: 2 }]],
       RT: [["large-laser-is", 2], ["ammo-ac-20-is", 4]],
       RL: [["heat-sink-is", 4]],
     },
@@ -414,13 +414,13 @@ export function gothicBoxMechs(catalog: Catalog): MechRecord[] {
     const mounts: Mount[] = [];
     const made = new Map<string, number>();
     for (const [location, places] of Object.entries(spec.mounts) as [LocationCode, readonly Place[]][]) {
-      for (const [id, first, count = 1, step = 1, rear] of places) {
+      for (const [id, first, count = 1, step = 1, rear, split] of places) {
         for (let i = 0; i < count; i++) {
           const n = (made.get(id) ?? 0) + 1;
           made.set(id, n);
           const at = { location, slot: first + i * step, techBase: "inner-sphere" as const };
           if (id === "endo") mounts.push({ id: `structure-${n}`, equipmentId: null, part: "structure", name: STRUCTURE_TYPES.types["endo-steel"]?.name ?? "Endo Steel", ...at });
-          else mounts.push({ id: `${id}-${n}`, equipmentId: id, name: catalog.byId(id)?.name ?? id, ...at, ...(rear ? { rear } : {}) });
+          else mounts.push({ id: `${id}-${n}`, equipmentId: id, name: catalog.byId(id)?.name ?? id, ...at, ...(rear ? { rear } : {}), ...(split ? { split: { ...split } } : {}) });
         }
       }
     }
