@@ -24,6 +24,16 @@ describe("aerospace locations", () => {
     expect(locationsOf({ ...spheroid, shape: undefined })).toMatchObject({ arcs: WINGS, wingsFireAft: true });
   });
 
+  it.each([
+    ["aerotech2", "small-craft", "spheroid", ["NO", "LS", "RS", "AF"]],
+    ["aerotech2-revised", "small-craft", "spheroid", WINGS],
+    ["aerotech2", "dropship", "aerodyne", WINGS],
+    ["aerotech2-revised", "dropship", "aerodyne", WINGS],
+    ["battlespace", "dropship", "aerodyne", ["FO", "LS", "RS", "AF"]],
+  ] as const)("under %s a %s of the %s shape is armored on the locations its own sheets name", (editionId, unitType, shape, armor) => {
+    expect(locationsOf({ editionId, unitType, shape }).armor).toEqual(armor);
+  });
+
   it("keeps a mount on an arc and armor on a location the edition lacks", () => {
     const at1 = newAeroRecord({ id: "v", unitType: "aerospace-fighter", tons: 80 }, "aerotech-1986");
     const stored = JSON.parse(JSON.stringify({ ...at1, armor: { ...at1.armor, points: { ...at1.armor.points, LBS: 12 } }, mounts: [{ id: "m1", equipmentId: "medium-laser", name: "Medium Laser", arc: "FL" }] })) as unknown;
