@@ -122,7 +122,8 @@ test("build a four-unit force, change skills and watch the totals, copy it, and 
   await page.setViewportSize({ width: 320, height: 700 });
   const widths = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, client: document.documentElement.clientWidth }));
   expect(widths.scroll).toBe(widths.client);
-  for (const control of await page.locator("button, input, select").all()) {
+  for (const control of await page.locator("button, input:not([type=checkbox]), select, label:has(input[type=checkbox])").all()) {
+    // A checkbox is a small box inside a label; the label is the 44 px target.
     const box = await control.boundingBox();
     if (box) expect(box.height).toBeGreaterThanOrEqual(44);
   }

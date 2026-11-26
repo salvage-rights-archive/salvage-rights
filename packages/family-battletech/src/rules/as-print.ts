@@ -3,8 +3,8 @@
 // Pure; nothing here throws on a unit it does not understand (an unknown type is drawn with no critical boxes).
 import { AS_CARD_AIR, AS_CARD_CRITS, AS_CARD_LAYOUT_OF, AS_UNIT_TYPES } from "../data/alpha-strike";
 import type { CardCritRow, CardLayout } from "../data/alpha-strike";
-import { forceTotals, skillAdjustedPv } from "./as-force";
-import type { AsForce } from "./as-force";
+import { findFormation, findSpa, forceTotals, groupsOf, memberSpas, skillAdjustedPv, spaCost } from "./as-force";
+import type { AsForce, AsMember } from "./as-force";
 import { formatDamage, formatMove, formatSpecials, unitTitle } from "./as-unit";
 import type { AsUnit } from "./as-unit";
 
@@ -182,6 +182,8 @@ export interface RosterRow {
   skill: number;
   pilot: string;
   formation: string;
+  /** The pilot abilities with their points, as "Name 2, Name 1". */
+  abilities: string;
   basePv: number;
   pv: number;
   specials: string;
@@ -195,6 +197,14 @@ export interface PrintRoster {
   /** Positive while under the limit, negative over it; absent with no limit (from the force totals). */
   room?: number;
   missing: number;
+}
+
+/** The group column of the roster: the group's name and its formation type, else the label typed before groups existed. */
+function groupLabel(force: AsForce, member: AsMember): string {
+  const group = groupsOf(force).find((g) => g.id === member.group);
+  if (!group) return member.formation?.trim() ?? "";
+  const type = findFormation(group.formation)?.name;
+  return [group.name.trim() || "Unnamed group", type].filter(Boolean).join(", ");
 }
 
 /** The one-page roster: a row per unit with its adjusted PV, the total, and how many members the roster no longer holds. */
@@ -211,7 +221,8 @@ export function printRoster(force: AsForce, roster: ReadonlyMap<string, AsUnit>)
             role: line.unit.card.role ?? "",
             skill: line.member.skill,
             pilot: line.member.pilot?.trim() ?? "",
-            formation: line.member.formation?.trim() ?? "",
+            formation: groupLabel(force, line.member),
+            abilities: memberSpas(line.member, line.unit).picks.flatMap((p) => { const spa = findSpa(p.id); return spa ? [`${spa.name} ${String(spaCost(spa, p))}`] : []; }).join(", "),
             basePv: line.base,
             pv: line.adjusted,
             specials: formatSpecials(line.unit.card.specials),

@@ -417,6 +417,28 @@ export async function putAsTableForce(page: Page): Promise<string> {
   return force.id;
 }
 
+/** Saves a force of eight invented 'Mechs for the formation checks (four meant for a Battle Lance, four for a Recon Lance); returns the force id. */
+export async function putAsFormationForce(page: Page, full = false): Promise<string> {
+  const base = inventedUnit("x", "x").card;
+  const kinds: [string, string, Record<string, unknown>][] = [
+    ["fm-a", "Anvil", { size: 3, role: "Brawler" }],
+    ["fm-b", "Bulwark", { size: 3, role: "Sniper" }],
+    ["fm-c", "Citadel", { size: 2, role: "Skirmisher" }],
+    ["fm-d", "Dagger", { size: 1, role: "Scout" }],
+    ["fm-e", "Eyrie", { size: 1, role: "Scout", move: [{ inches: 12, mode: "" }] }],
+    ["fm-f", "Falcon", { size: 1, role: "Scout", move: [{ inches: 12, mode: "" }] }],
+    ["fm-g", "Gadfly", { size: 2, role: "Striker", move: [{ inches: 10, mode: "" }] }],
+    ["fm-h", "Harrier", { size: 2, role: "Striker", move: [{ inches: 10, mode: "" }] }],
+  ];
+  const units = kinds.map(([id, chassis, card]) => ({ ...inventedUnit(id, chassis), card: { ...base, ...card } }));
+  // `full` is twelve units (the eight, then four again) with a pilot, a group and a pilot ability on every one, for the printed roster.
+  const picked = full ? [...units, ...units.slice(0, 4)] : units;
+  const members = picked.map((u, i) => (full ? { unitId: u.id, skill: 4, pilot: `Pilot ${String(i + 1)}`, group: "g1", spas: [{ id: "sniper" }] } : { unitId: u.id, skill: 4 }));
+  const force = { schema: 1, kind: "as-force", id: "formation-force", editionId: "asce", name: "Formation test", members, ...(full ? { groups: [{ id: "g1", name: "Alpha", formation: "battle" }] } : {}) };
+  await putRecords(page, [...units.map((u): [string, unknown] => [`as-unit:${u.id}`, { unit: u }]), ["as-force:formation-force", { force }]]);
+  return force.id;
+}
+
 /**
  * Answers an Aces game's resolver questions until the given text shows: every distance as 10 inches, yes and no as No, a pick of
  * units as none. For the invented games of the tests only.

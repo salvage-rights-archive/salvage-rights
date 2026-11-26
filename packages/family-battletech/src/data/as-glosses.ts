@@ -151,3 +151,37 @@ export const AS_GLOSSES: Record<string, string> = {
 };
 // No note, on purpose: CAP, SCAP, SDS-C, SDS-CM, SDS-SC and MSL (the capital-scale weapons, which the book sends to its own chapter, p. 156),
 // where a line from us would say only what the name already says.
+
+// Short notes on the formation bonuses (data/as-formations.ts), in our own words, keyed by the formation id: a figure and a word of framing,
+// never the book's paragraph. Shown only behind the same switch; without a line the formation shows its name, bonus names and page.
+export const AS_FORMATION_GLOSSES: Record<string, string> = {
+  battle: "A shared Lucky pool worth the unit count plus 2.",
+  "battle-light": "Same Lucky pool as the Battle Lance.",
+  "battle-medium": "Same Lucky pool as the Battle Lance.",
+  "battle-heavy": "Same Lucky pool as the Battle Lance.",
+  assault: "One of two SPAs, picked at the start, for up to half the units each turn.",
+  "assault-fast": "The Assault Lance bonus, plus a Stand-Aside for 2 units a turn.",
+  striker: "Speed Demon for 75% of the units.",
+  "striker-light": "Same bonus as the Striker/Cavalry Lance.",
+  "striker-heavy": "Same bonus as the Striker/Cavalry Lance.",
+  fire: "Sniper for up to half the units each turn.",
+  "fire-support": "Oblique Attacker for up to half the units each turn.",
+  "fire-artillery": "Oblique Artilleryman for up to half the units each turn.",
+  "fire-direct": "Weapon Specialist for up to half the units each turn.",
+  "fire-antiair": "The Anti-Aircraft Specialists command ability for up to half the units each turn.",
+  recon: "One of three SPAs, picked at the start, for every unit.",
+  "recon-light": "As the Recon Lance, with a different pick allowed per unit.",
+  "recon-heavy": "As the Recon Lance, for up to half the units.",
+  pursuit: "Blood Stalker for 75% of the units.",
+  "pursuit-probe": "Same bonus as the Pursuit Lance.",
+  "pursuit-sweep": "Same bonus as the Pursuit Lance.",
+  command: "Free SPAs for half the units, and Tactical Genius for the commander.",
+  "command-vehicle": "Same bonus as the Command Lance.",
+  support: "Borrows SPAs from the formation it supports.",
+  interceptor: "Speed Demon for slower fighters, Range Master (Long) for 2.",
+  superiority: "Up to 2 of three SPAs for up to half the fighters.",
+  "fire-support-squadron": "A different one of four SPAs for each of 2 pairs.",
+  strike: "Speed Demon for up to half the fighters, Golden Goose for the rest.",
+  ew: "The Communications Disruption command ability.",
+  transport: "One of three SPAs, picked at the start, for Transport-role units.",
+};
