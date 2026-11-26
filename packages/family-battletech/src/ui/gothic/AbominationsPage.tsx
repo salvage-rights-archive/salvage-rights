@@ -22,7 +22,6 @@ import Silhouette from "./Silhouette";
 import { downloadUnits, fromAbomFile, openGothicStorage } from "./storage";
 import type { AbomEntry, GothicStorage } from "./storage";
 import { useGothicTheme } from "./theme";
-import "../classic.scss";
 
 const EDITION = "gothic";
 const CUSTOM_LEVEL: RulesLevel = "fan-made";

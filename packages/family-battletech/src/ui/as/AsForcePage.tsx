@@ -10,8 +10,6 @@ import { STORAGE_READ_FAILED, STORAGE_WRITE_FAILED } from "../storage";
 import { forceHref, limitWords } from "./AsForces";
 import { downloadForce, openAsStorage } from "./storage";
 import type { AsStorage } from "./storage";
-import "../classic.scss";
-import "./alpha-strike.scss";
 
 const HOME = "/battletech/alpha-strike/home";
 

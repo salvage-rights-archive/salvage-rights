@@ -35,7 +35,7 @@ import { openCampaignStorage } from "./campaign-storage";
 import type { CampaignStorage } from "./campaign-storage";
 import { openGameStorage } from "./game-storage";
 import { ACES_HOME } from "./routes";
-import "./styles";
+import "./aces.scss";
 
 const STEPS = [
   { id: "casualties", name: "1. Casualties" },

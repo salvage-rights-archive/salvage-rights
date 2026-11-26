@@ -21,7 +21,7 @@ import { openGameStorage } from "./game-storage";
 import type { GameStorage } from "./game-storage";
 import { ACES_HOME } from "./routes";
 import { libraryOf, openAcesStorage } from "./storage";
-import "./styles";
+import "./aces.scss";
 
 type Loaded = { state: "loading" } | { state: "failed" } | { state: "missing" } | { state: "unreadable"; message: string } | { state: "ready"; game: AcesGame };
 

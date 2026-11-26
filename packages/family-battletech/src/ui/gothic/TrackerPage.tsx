@@ -35,7 +35,6 @@ import Silhouette from "./Silhouette";
 import { openGothicStorage } from "./storage";
 import type { AbomEntry, GothicStorage } from "./storage";
 import { useGothicTheme } from "./theme";
-import "../classic.scss";
 import "./tracker.scss";
 
 const EDITION = "gothic";

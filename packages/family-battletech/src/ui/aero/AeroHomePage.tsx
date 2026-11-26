@@ -15,7 +15,6 @@ import { sheetProfileFor } from "../../data/aero-sheet";
 import { editorHref, sheetHref } from "./routes";
 import { downloadAero, fromAeroFile, openAeroStorage } from "./storage";
 import type { AeroEntry, AeroStorage } from "./storage";
-import "../classic.scss";
 import "./aero.scss";
 
 const nameOf = (entry: AeroEntry): string => `${entry.record?.name.chassis ?? ""} ${entry.record?.name.model ?? ""}`.trim() || "Unnamed unit";

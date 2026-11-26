@@ -25,7 +25,7 @@ import { downloadCampaigns } from "./campaign-file";
 import { openCampaignStorage } from "./campaign-storage";
 import type { CampaignStorage } from "./campaign-storage";
 import { ACES_CAMPAIGNS, afterHref, gameHref, sortieHref } from "./routes";
-import "./styles";
+import "./aces.scss";
 
 const SECTIONS = [
   { id: "overview", name: "Overview" },

@@ -20,7 +20,6 @@ import GamePicture from "../GamePicture";
 import { MAX_LIBRARY_BYTES, STORAGE_READ_FAILED, STORAGE_WRITE_FAILED, downloadLibrary, downloadMech, fileGame, fromLibraryFile, fromMechFile, openFamilyStorage, wrongGameMessage } from "../storage";
 import type { FamilyStorage, SavedEntry } from "../storage";
 import { useGothicTheme } from "./theme";
-import "../classic.scss";
 
 const TONNAGES = Object.keys(INTERNAL_STRUCTURE.rows).map(Number);
 const MAX_RATING = Math.max(...Object.keys(ENGINE_WEIGHTS.rows).map(Number));

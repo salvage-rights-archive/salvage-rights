@@ -14,7 +14,7 @@ import { ColumnEditor, ColumnPreview, emptyColumn } from "./ColumnEditor";
 import { ACES_CARDS, cardHref } from "./routes";
 import { openAcesStorage } from "./storage";
 import type { AcesStorage } from "./storage";
-import "./styles";
+import "./aces.scss";
 
 const SUBTYPES = ["Hover", "Infantry", "JMPS"];
 const COLUMNS: { id: ColumnId; name: string }[] = ACES_VALUES.column.map((c) => ({ id: c.id, name: c.label }));

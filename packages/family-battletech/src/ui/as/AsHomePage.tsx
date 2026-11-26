@@ -16,8 +16,6 @@ import AsConvert from "./AsConvert";
 import AsPlayFilter from "./AsPlayFilter";
 import GamePicture from "../GamePicture";
 import { ACES_HEADING, ACES_HOME } from "../aces/routes";
-import "../classic.scss";
-import "./alpha-strike.scss";
 
 const MAX_IMPORT_BYTES = 1024 * 1024 * 4;
 const unitHref = (id: string) => `/battletech/alpha-strike/unit?id=${encodeURIComponent(id)}`;

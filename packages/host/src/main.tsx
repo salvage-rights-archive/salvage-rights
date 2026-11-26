@@ -1,7 +1,6 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { RouterProvider, createBrowserRouter } from "react-router";
-import { editionId, families } from "virtual:families";
 import { App } from "./App";
 import { startPwa } from "./pwa";
 import { restoredPath } from "./restore-path";
@@ -9,6 +8,7 @@ import { startupProblems } from "./startup";
 import "./styles/tokens.scss";
 import "./styles/shell.scss";
 import "./styles/landing.scss";
+import { editionId, families } from "virtual:families";
 
 // public/404.html leaves the address the visitor asked for here before sending them to the base path.
 const REDIRECT_KEY = "sr-redirect";

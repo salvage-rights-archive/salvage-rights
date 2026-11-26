@@ -14,8 +14,6 @@ import { formatDamage, formatMove, newAsUnit, unitTitle } from "../../rules/as-u
 import type { AsCard, AsUnit } from "../../rules/as-unit";
 import { STORAGE_READ_FAILED, STORAGE_WRITE_FAILED } from "../storage";
 import { openAsStorage } from "./storage";
-import "../classic.scss";
-import "./alpha-strike.scss";
 
 const HOME = "/battletech/alpha-strike/home";
 const KEY = (forceId: string) => `as-table:${forceId}`;

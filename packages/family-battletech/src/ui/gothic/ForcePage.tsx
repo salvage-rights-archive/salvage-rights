@@ -19,7 +19,6 @@ import { AbominationSheets } from "./AbominationSheet";
 import { openGothicStorage } from "./storage";
 import type { ForceEntry, GothicStorage } from "./storage";
 import { useGothicTheme } from "./theme";
-import "../classic.scss";
 
 const FORCES = `${GOTHIC_BASE}/force`;
 const mechName = (record: MechRecord) => `${record.name.chassis} ${record.name.model}`.trim();

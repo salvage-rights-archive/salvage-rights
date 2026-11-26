@@ -1,5 +1,6 @@
 import type { FamilyManifest, FamilyRoute } from "@salvage-rights/shared";
 import { EDITIONS, ERAS } from "./data/editions";
+import "./ui/shared-styles";
 import { FAMILY_ART, GAME_ART } from "./artwork/games";
 
 const classicRoutes: FamilyRoute[] = [

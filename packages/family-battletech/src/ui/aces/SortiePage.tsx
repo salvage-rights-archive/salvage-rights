@@ -34,7 +34,7 @@ import type { CampaignStorage } from "./campaign-storage";
 import { openGameStorage } from "./game-storage";
 import { ACES_CARDS, ACES_HOME, gameHref } from "./routes";
 import { openAcesStorage } from "./storage";
-import "./styles";
+import "./aces.scss";
 
 interface Loaded {
   storage: CampaignStorage;
