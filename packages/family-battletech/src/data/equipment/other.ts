@@ -1138,6 +1138,22 @@ export const OTHER: EquipmentGroup[] = [
       { id: "vtol-mast-mount-clan", name: "VTOL Mast Mount", techBase: "clan", tons: 0.5, slots: 0, type: "PE", availability: [{ from: 1950 }], yearsInferred: true, units: ["vehicle"] },
     ],
   },
+  {
+    // Reusable vehicular drop chutes (TO:AUE printed p. 223 construction data, p. 222 play table, rules pp. 160-161, read against the page images; book panel
+    // ruling). A chute that is not reusable adds no tonnage and no slot to the unit (p. 160: it rides as strapped-on cargo), so it has no row. A reusable one is mounted
+    // equipment: the chosen chute's own weight (2, 2 or 2.2 tons) plus half a ton, up to the half ton, so 2.5, 2.5 and 3 tons, and twice its price (2,000, 6,000 and
+    // 10,000); 2 slots on a 'Mech (torsos), 1 on a ProtoMech (body) and combat vehicle (rear), 2 on a support vehicle; introduced 2353; Advanced (p. 161). Only wheeled,
+    // tracked, hover and WiGE vehicles may use one, none over 100 tons (p. 160); the vehicle check says so. Battle armor chutes are not catalog items.
+    defaults: { kind: "other", cite: { book: TO, page: 223 }, playCite: { book: TO, page: 222 }, checked: "page", slots: 2, availability: [{ from: 2353 }], rulesLevel: "advanced", units: ["mech", "industrialmech", "protomech", "vehicle"], locations: ["CT", "LT", "RT"], by: { protomech: { slots: 1 }, vehicle: { slots: 1, note: "Support vehicle: 2 slots" } } },
+    items: [
+      { id: "reusable-vdc-standard-is", name: "Reusable VDC (Standard)", aliases: ["Reusable Vehicular DropChute"], techBase: "inner-sphere", tons: 2.5 },
+      { id: "reusable-vdc-standard-clan", name: "Reusable VDC (Standard)", aliases: ["Reusable Vehicular DropChute"], techBase: "clan", tons: 2.5 },
+      { id: "reusable-vdc-camouflage-is", name: "Reusable VDC (Camouflage)", techBase: "inner-sphere", tons: 2.5 },
+      { id: "reusable-vdc-camouflage-clan", name: "Reusable VDC (Camouflage)", techBase: "clan", tons: 2.5 },
+      { id: "reusable-vdc-stealth-is", name: "Reusable VDC (Stealth)", techBase: "inner-sphere", tons: 3, availability: [{ from: 2355 }] },
+      { id: "reusable-vdc-stealth-clan", name: "Reusable VDC (Stealth)", techBase: "clan", tons: 3, availability: [{ from: 2355 }] },
+    ],
+  },
   // Aerospace and ship items from the Industrial Equipment table (TechManual, printed p. 344, read against the page image; item entries on pp. 209
   // and 227; dates from the Industrial Equipment cost table, printed p. 293: both "PS / -", so the Clan rows take the Inner Sphere year and are
   // marked inferred). The bay door weighs nothing and takes no space on a small craft or DropShip ("0*": the construction rules, p. 209, say how

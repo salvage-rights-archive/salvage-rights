@@ -90,13 +90,13 @@ export const AMMUNITION: EquipmentGroup[] = [
       { id: "ammo-artemis-capable-is", feeds: ["lrm", "srm", "mml"], name: "Artemis-Capable Missile Ammo", availability: [{ from: 2598, to: 2855 }, { from: 3035 }], units: ["mech", "industrialmech", "vehicle"] },
       { id: "ammo-narc-capable-is", feeds: ["lrm", "srm", "mml"], name: "Narc-Capable Missile Ammo", availability: [{ from: 2597, to: 2795 }, { from: 3035 }], units: ["mech", "industrialmech", "vehicle"] },
       { id: "ammo-fragmentation-is", feeds: ["lrm", "srm", "mml"], name: "Fragmentation Missile Ammo", availability: [{ from: 2385, to: 2810 }, { from: 3050 }], units: ["mech", "industrialmech", "vehicle"] },
-      { id: "ammo-harpoon-is", feeds: ["srm"], name: "Harpoon SRM Ammo", availability: [{ from: 2400 }], units: ["mech", "industrialmech", "vehicle"] },
+      { id: "ammo-harpoon-is", feeds: ["srm"], name: "Harpoon SRM Ammo", availability: [{ from: 2400 }], prototypeYear: 2395, units: ["mech", "industrialmech", "vehicle"] },
       { id: "ammo-inferno-is", feeds: ["srm"], name: "Inferno SRM Ammo", availability: [{ from: 2380 }], units: ["mech", "industrialmech", "vehicle"] },
-      { id: "ammo-tear-gas-is", feeds: ["srm"], name: "Tear Gas SRM Ammo", availability: [{ from: 2375 }], units: ["mech", "industrialmech", "vehicle"] },
+      { id: "ammo-tear-gas-is", feeds: ["srm"], name: "Tear Gas SRM Ammo", availability: [{ from: 2375 }], prototypeYear: 2370, units: ["mech", "industrialmech", "vehicle"] },
       { id: "ammo-semi-guided-is", feeds: ["lrm"], name: "Semi-Guided LRM Ammo", availability: [{ from: 3057 }], units: ["mech", "industrialmech", "vehicle"] },
-      { id: "ammo-swarm-is", feeds: ["lrm"], name: "Swarm LRM Ammo", availability: [{ from: 2621, to: 2840 }, { from: 3053 }], units: ["mech", "industrialmech", "vehicle"] },
+      { id: "ammo-swarm-is", feeds: ["lrm"], name: "Swarm LRM Ammo", availability: [{ from: 2621, to: 2833 }, { from: 3053 }], prototypeYear: 2615, units: ["mech", "industrialmech", "vehicle"] },
       { id: "ammo-swarm-i-is", feeds: ["lrm"], name: "Swarm-I LRM Ammo", availability: [{ from: 3057 }], units: ["mech", "industrialmech", "vehicle"] },
-      { id: "ammo-thunder-is", feeds: ["lrm"], name: "Thunder LRM Ammo", availability: [{ from: 2620, to: 2840 }, { from: 3052 }], units: ["mech", "industrialmech", "vehicle"] },
+      { id: "ammo-thunder-is", feeds: ["lrm"], name: "Thunder LRM Ammo", availability: [{ from: 2620, to: 2840 }, { from: 3052 }], prototypeYear: 2618, units: ["mech", "industrialmech", "vehicle"] },
       { id: "ammo-thunder-augmented-is", feeds: ["lrm"], shotsFactor: 0.5, name: "Thunder-Augmented LRM Ammo", availability: [{ from: 3057 }], units: ["mech", "industrialmech", "vehicle"] },
       { id: "ammo-thunder-inferno-is", feeds: ["lrm"], shotsFactor: 0.5, name: "Thunder-Inferno LRM Ammo", availability: [{ from: 3056 }], units: ["mech", "industrialmech", "vehicle"] },
       { id: "ammo-thunder-vibrabomb-is", feeds: ["lrm"], shotsFactor: 0.5, name: "Thunder-Vibrabomb LRM Ammo", availability: [{ from: 3057 }], units: ["mech", "industrialmech", "vehicle"] },
@@ -372,12 +372,12 @@ export const AMMUNITION: EquipmentGroup[] = [
   {
     defaults: { kind: "ammunition", techBase: "inner-sphere", cite: { book: TO, page: 229 }, checked: "page", tons: 1, slots: 1, rulesLevel: "advanced" },
     items: [
-      { id: "ammo-mortar-airburst-is", name: "Mortar Airburst Ammo", availability: [{ from: 2544 }], playCite: { book: TO, page: 228 } },
-      { id: "ammo-mortar-anti-personnel-is", name: "Mortar Anti-Personnel Ammo", availability: [{ from: 2531 }], playCite: { book: TO, page: 228 } },
-      { id: "ammo-mortar-armor-piercing-shaped-charge-is", name: "Mortar Armor-Piercing (Shaped-Charge) Ammo", availability: [{ from: 2531 }], playCite: { book: TO, page: 228 } },
-      { id: "ammo-mortar-flare-is", name: "Mortar Flare Ammo", availability: [{ from: 2536 }], playCite: { book: TO, page: 228 } },
-      { id: "ammo-mortar-semi-guided-is", name: "Mortar Semi-Guided Ammo", availability: [{ from: 3064 }], playCite: { book: TO, page: 228 } },
-      { id: "ammo-mortar-smoke-is", name: "Mortar Smoke Ammo", availability: [{ from: 2531 }], playCite: { book: TO, page: 228 } },
+      { id: "ammo-mortar-airburst-is", name: "Mortar Airburst Ammo", availability: [{ from: 2544 }], prototypeYear: 2540, playCite: { book: TO, page: 228 } },
+      { id: "ammo-mortar-anti-personnel-is", name: "Mortar Anti-Personnel Ammo", availability: [{ from: 2531 }], prototypeYear: 2526, playCite: { book: TO, page: 228 } },
+      { id: "ammo-mortar-armor-piercing-shaped-charge-is", name: "Mortar Armor-Piercing (Shaped-Charge) Ammo", availability: [{ from: 2531, to: 2819 }, { from: 3043 }], prototypeYear: 2526, playCite: { book: TO, page: 228 } },
+      { id: "ammo-mortar-flare-is", name: "Mortar Flare Ammo", availability: [{ from: 2536 }], prototypeYear: 2533, playCite: { book: TO, page: 228 } },
+      { id: "ammo-mortar-semi-guided-is", name: "Mortar Semi-Guided Ammo", availability: [{ from: 3064 }], prototypeYear: 3055, playCite: { book: TO, page: 228 } },
+      { id: "ammo-mortar-smoke-is", name: "Mortar Smoke Ammo", availability: [{ from: 2531 }], prototypeYear: 2526, playCite: { book: TO, page: 228 } },
       { id: "ammo-remote-sensor-dispenser-is", name: "Remote Sensor Dispenser Ammo", availability: [{ from: 2590 }], playCite: { book: TO, page: 228 }, units: ["mech", "industrialmech", "vehicle"] },
       { id: "ammo-copperhead-long-tom-is", name: "Copperhead (Long Tom) Ammo", availability: [{ from: 3051 }], cite: { book: TO, page: 226 }, checked: "text" },
       { id: "ammo-copperhead-sniper-is", name: "Copperhead (Sniper) Ammo", availability: [{ from: 3051 }], cite: { book: TO, page: 226 }, checked: "text" },
@@ -404,6 +404,13 @@ export const AMMUNITION: EquipmentGroup[] = [
   // there. Where that table's older dates differ from this newer printing, this printing's are used (conflict 90 in the archive).
   // Magnetic-Pulse SRM and LRM: TO:AUE prints "3057X" (extinct and not recovered); the span 3057 to 3065 and the 3055 prototype year are the Universal Technology
   // Advancement Table (IO:AE printed p. 56: prototype 3055, production 3057, "Ext: 3065").
+  // Book panel ruling on conflict 90: the TO:AUE item entries (pp. 180-184) give per-launcher, per-stage years that the table merges, so the SRM rows (Heat-Seeking
+  // 2370, Smoke 2370), Incendiary, Tandem-Charge (prototype 2757, production 3062 from IO:AE p. 55) and Follow-the-Leader follow the entries, and IO:AE (pp. 55-56) fills
+  // the stages TO:AUE leaves silent (prototype years of Heat-Seeking SRM, Incendiary, Mine-Clearance, Harpoon, Tear Gas, Swarm, Thunder and the mortar rounds;
+  // the Armor-Piercing mortar's 2819 extinction and 3043 return). Follow-the-Leader (IS) is prototype-only throughout: 2755 to about 2770, then from 3053.
+  // Three rows stay on TO:AUE's later printing while the owner decides whether "later" means printing or compilation: Heat-Seeking LRM 2340 (the alternative is IO:AE's
+  // 2430, prototype 2390), Smoke LRM 2333 (2342, prototype 2341) and Follow-the-Leader's modern year 3053 (3046).
+  // The Swarm LRM (IS) extinction is 2833 (TO:AUE p. 183, IO:AE p. 55); the 2840 the row had came from the TechManual prose (p. 231: factories gone "by 2840"), an older book.
   // A ton carries the launcher's standard shots times `shotsFactor` (the Ammo column: x0.5 or x1). The tables give weight x1: the bin is a
   // ton in a slot. Not added here: Anti-Ship and other bomb and artillery munitions, the grenade-launcher, flamer and mine munitions.
   {
@@ -413,17 +420,17 @@ export const AMMUNITION: EquipmentGroup[] = [
       { id: "ammo-anti-radiation-srm-is", feeds: ["srm", "mml"], name: "Anti-Radiation SRM Ammo", availability: [{ from: 3066 }], rulesLevel: "experimental" },
       { id: "ammo-anti-radiation-lrm-is", feeds: ["lrm", "mml"], name: "Anti-Radiation LRM Ammo", availability: [{ from: 3066 }], rulesLevel: "experimental" },
       { id: "ammo-bola-narc-pods-is", name: "Bola Narc Pod Ammo", availability: [{ from: 3056 }], rulesLevel: "experimental" },
-      { id: "ammo-follow-the-leader-lrm-is", feeds: ["lrm", "mml"], shotsFactor: 0.5, name: "Follow-the-Leader LRM Ammo", availability: [{ from: 3053 }], rulesLevel: "experimental" },
-      { id: "ammo-heat-seeking-srm-is", feeds: ["srm", "mml"], shotsFactor: 0.5, name: "Heat-Seeking SRM Ammo", availability: [{ from: 2340 }] },
+      { id: "ammo-follow-the-leader-lrm-is", feeds: ["lrm", "mml"], shotsFactor: 0.5, name: "Follow-the-Leader LRM Ammo", availability: [{ from: 2755, to: 2770 }, { from: 3053 }], rulesLevel: "experimental" },
+      { id: "ammo-heat-seeking-srm-is", feeds: ["srm", "mml"], shotsFactor: 0.5, name: "Heat-Seeking SRM Ammo", availability: [{ from: 2370 }], prototypeYear: 2365 },
       { id: "ammo-heat-seeking-lrm-is", feeds: ["lrm", "mml"], shotsFactor: 0.5, name: "Heat-Seeking LRM Ammo", availability: [{ from: 2340 }] },
-      { id: "ammo-incendiary-lrm-is", feeds: ["lrm", "mml"], name: "Incendiary LRM Ammo", availability: [{ from: 2342 }] },
+      { id: "ammo-incendiary-lrm-is", feeds: ["lrm", "mml"], name: "Incendiary LRM Ammo", availability: [{ from: 2342 }], prototypeYear: 2341 },
       { id: "ammo-magnetic-pulse-srm-is", feeds: ["srm", "mml"], name: "Magnetic-Pulse SRM Ammo", availability: [{ from: 3057, to: 3065 }], prototypeYear: 3055, rulesLevel: "experimental" },
       { id: "ammo-magnetic-pulse-lrm-is", feeds: ["lrm", "mml"], name: "Magnetic-Pulse LRM Ammo", availability: [{ from: 3057, to: 3065 }], prototypeYear: 3055, rulesLevel: "experimental" },
-      { id: "ammo-mine-clearance-srm-is", feeds: ["srm", "mml"], name: "Mine-Clearance SRM Ammo", availability: [{ from: 3069 }] },
-      { id: "ammo-mine-clearance-lrm-is", feeds: ["lrm", "mml"], name: "Mine-Clearance LRM Ammo", availability: [{ from: 3069 }], cite: { book: TO, page: 229 }, playCite: { book: TO, page: 228 } },
-      { id: "ammo-smoke-srm-is", feeds: ["srm", "mml"], name: "Smoke SRM Ammo", availability: [{ from: 2333 }], cite: { book: TO, page: 229 }, playCite: { book: TO, page: 228 } },
+      { id: "ammo-mine-clearance-srm-is", feeds: ["srm", "mml"], name: "Mine-Clearance SRM Ammo", availability: [{ from: 3069 }], prototypeYear: 3065 },
+      { id: "ammo-mine-clearance-lrm-is", feeds: ["lrm", "mml"], name: "Mine-Clearance LRM Ammo", availability: [{ from: 3069 }], prototypeYear: 3065, cite: { book: TO, page: 229 }, playCite: { book: TO, page: 228 } },
+      { id: "ammo-smoke-srm-is", feeds: ["srm", "mml"], name: "Smoke SRM Ammo", availability: [{ from: 2370 }], cite: { book: TO, page: 229 }, playCite: { book: TO, page: 228 } },
       { id: "ammo-smoke-lrm-is", feeds: ["lrm", "mml"], name: "Smoke LRM Ammo", availability: [{ from: 2333 }], cite: { book: TO, page: 229 }, playCite: { book: TO, page: 228 } },
-      { id: "ammo-tandem-charge-srm-is", feeds: ["srm", "mml"], shotsFactor: 0.5, name: "Tandem-Charge SRM Ammo", availability: [{ from: 2757 }], rulesLevel: "experimental", cite: { book: TO, page: 229 }, playCite: { book: TO, page: 228 } },
+      { id: "ammo-tandem-charge-srm-is", feeds: ["srm", "mml"], shotsFactor: 0.5, name: "Tandem-Charge SRM Ammo", availability: [{ from: 3062 }], prototypeYear: 2757, rulesLevel: "experimental", cite: { book: TO, page: 229 }, playCite: { book: TO, page: 228 } },
     ],
   },
   {
@@ -432,10 +439,10 @@ export const AMMUNITION: EquipmentGroup[] = [
       { id: "ammo-anti-radiation-srm-clan", feeds: ["srm", "mml"], name: "Anti-Radiation SRM Ammo", availability: [{ from: 3057 }], rulesLevel: "experimental" },
       { id: "ammo-anti-radiation-lrm-clan", feeds: ["lrm", "mml"], name: "Anti-Radiation LRM Ammo", availability: [{ from: 3057 }], rulesLevel: "experimental" },
       { id: "ammo-follow-the-leader-lrm-clan", feeds: ["lrm", "mml"], shotsFactor: 0.5, name: "Follow-the-Leader LRM Ammo", availability: [{ from: 2755 }], rulesLevel: "experimental" },
-      { id: "ammo-heat-seeking-srm-clan", feeds: ["srm", "mml"], shotsFactor: 0.5, name: "Heat-Seeking SRM Ammo", availability: [{ from: 2340 }] },
+      { id: "ammo-heat-seeking-srm-clan", feeds: ["srm", "mml"], shotsFactor: 0.5, name: "Heat-Seeking SRM Ammo", availability: [{ from: 2370 }] },
       { id: "ammo-heat-seeking-lrm-clan", feeds: ["lrm", "mml"], shotsFactor: 0.5, name: "Heat-Seeking LRM Ammo", availability: [{ from: 2340 }] },
       { id: "ammo-incendiary-lrm-clan", feeds: ["lrm", "mml"], name: "Incendiary LRM Ammo", availability: [{ from: 2825 }] },
-      { id: "ammo-smoke-srm-clan", feeds: ["srm", "mml"], name: "Smoke SRM Ammo", availability: [{ from: 2333 }], cite: { book: TO, page: 229 }, playCite: { book: TO, page: 228 } },
+      { id: "ammo-smoke-srm-clan", feeds: ["srm", "mml"], name: "Smoke SRM Ammo", availability: [{ from: 2370 }], cite: { book: TO, page: 229 }, playCite: { book: TO, page: 228 } },
       { id: "ammo-smoke-lrm-clan", feeds: ["lrm", "mml"], name: "Smoke LRM Ammo", availability: [{ from: 2825 }], cite: { book: TO, page: 229 }, playCite: { book: TO, page: 228 } },
     ],
   },

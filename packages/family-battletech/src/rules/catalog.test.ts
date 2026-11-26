@@ -325,13 +325,33 @@ describe("missile munitions from TO:AUE pp. 226-229 and IO:AE p. 213", () => {
   it.each([
     ["ammo-heat-seeking-lrm-is", "inner-sphere", 2340, "advanced", ["lrm", "mml"], 0.5],
     ["ammo-smoke-lrm-clan", "clan", 2825, "advanced", ["lrm", "mml"], undefined],
-    ["ammo-tandem-charge-srm-is", "inner-sphere", 2757, "experimental", ["srm", "mml"], 0.5],
+    ["ammo-tandem-charge-srm-is", "inner-sphere", 3062, "experimental", ["srm", "mml"], 0.5],
     ["ammo-dead-fire-srm-is", "inner-sphere", 3052, "experimental", ["srm", "mml"], undefined],
   ])("%s is a one-ton bin of the launcher's ammunition at the printed date and level", async (id, techBase, from, rulesLevel, feeds, shotsFactor) => {
     const row = (await loadCatalog()).byId(id);
     expect(row).toMatchObject({ kind: "ammunition", techBase, rulesLevel, feeds, tons: 1, slots: 1 });
     expect(row?.availability[0]?.from).toBe(from);
     expect(row?.shotsFactor).toBe(shotsFactor);
+  });
+
+  // The book panel's staged years (TO:AUE entries pp. 180-184 over the merged table, IO:AE pp. 55-56 for stages TO:AUE leaves out): id, spans, prototype year
+  it.each([
+    ["ammo-heat-seeking-srm-is", [{ from: 2370 }], 2365],
+    ["ammo-heat-seeking-srm-clan", [{ from: 2370 }], undefined],
+    ["ammo-smoke-srm-clan", [{ from: 2370 }], undefined],
+    ["ammo-tandem-charge-srm-is", [{ from: 3062 }], 2757],
+    ["ammo-follow-the-leader-lrm-is", [{ from: 2755, to: 2770 }, { from: 3053 }], undefined],
+    ["ammo-swarm-is", [{ from: 2621, to: 2833 }, { from: 3053 }], 2615],
+    ["ammo-mortar-armor-piercing-shaped-charge-is", [{ from: 2531, to: 2819 }, { from: 3043 }], 2526],
+  ])("%s has the ruled years", async (id, availability, prototypeYear) => {
+    const row = (await loadCatalog()).byId(id);
+    expect(row?.availability).toEqual(availability);
+    expect(row?.prototypeYear).toBe(prototypeYear);
+  });
+
+  it("a reusable drop chute weighs its chute plus half a ton and takes the slots of the unit type (TO:AUE p. 223)", async () => {
+    const row = (await loadCatalog()).byId("reusable-vdc-stealth-is");
+    expect(row).toMatchObject({ tons: 3, slots: 2, rulesLevel: "advanced", availability: [{ from: 2355 }], by: { protomech: { slots: 1 }, vehicle: { slots: 1 } } });
   });
 
   it.each([

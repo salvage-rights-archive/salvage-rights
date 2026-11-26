@@ -255,6 +255,8 @@ export const EQUIPMENT_COST: PriceGroup[] = [
       "armored-component": { perWeight: 300_000 }, "armored-motive-system": { perWeight: 100_000 },
       // p.223: the satellite imagers and the VTOL mast mount
       "hi-res-imager": 150_000, "hyperspectral-imager": 550_000, "infrared-imager": 250_000, "vtol-mast-mount": 50_000,
+      // p.223: a reusable drop chute costs twice the chute it is made from (1,000, 3,000 and 5,000)
+      "reusable-vdc-standard": 2_000, "reusable-vdc-camouflage": 6_000, "reusable-vdc-stealth": 10_000,
     },
   },
   {
