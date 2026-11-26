@@ -1,5 +1,6 @@
 import { cleanup, render } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
+import { gothicBoxMechs } from "../../data/gothic-units";
 import { battleValue } from "../../rules/bv";
 import { loadCatalog } from "../../rules/catalog";
 import { makeClean, mordelBiped, mordelQuad, mordelWith, tripodRecord } from "../../rules/fixtures";
@@ -240,5 +241,67 @@ describe("Printed sheet conventions", () => {
     const { svg } = await drawn(record);
     expect(svg.querySelectorAll("[data-location='RT'] [data-fixed]")).toHaveLength(7);
     expect(svg.querySelectorAll("[data-location='LA'] [data-fixed]")).toHaveLength(0);
+  });
+});
+
+
+describe("The Gothic record sheet", () => {
+  const box = async (model: string) => {
+    const catalog = await loadCatalog();
+    const record = gothicBoxMechs(catalog).find((r) => r.name.model === model);
+    if (!record) throw new Error(model);
+    return { record, catalog };
+  };
+  const draw = (record: MechRecord, catalog: Awaited<ReturnType<typeof loadCatalog>>, dazzle = false) => {
+    const { container } = render(<RecordSheet record={record} catalog={catalog} dazzle={dazzle} />);
+    const svg = container.querySelector<SVGSVGElement>("svg.bt-sheet");
+    if (!svg) throw new Error("no sheet");
+    return { svg, lines: [...svg.querySelectorAll("text")].map((t) => t.textContent.replace(/\s+/g, " ").trim()) };
+  };
+
+  it("names the game, prints Unofficial for the FS9-HB and has no cost line", async () => {
+    const { record, catalog } = await box("FS9-HB");
+    const { lines } = draw(record, catalog);
+    expect(lines).toContain("GOTHIC");
+    expect(lines).toContain("Rules level: Unofficial");
+    expect(lines.some((line) => /cost|c-bill/i.test(line))).toBe(false);
+    expect(lines).toContain("Frayed");
+  });
+
+  it("prints a Handler line on a 45-ton 'Mech and none on a 35-ton one", async () => {
+    const heavy = await box("PXH-1");
+    expect(draw(heavy.record, heavy.catalog).svg.querySelector("[data-box='handler']")).not.toBeNull();
+    cleanup();
+    const light = await box("FS9-H");
+    expect(draw(light.record, light.catalog).svg.querySelector("[data-box='handler']")).toBeNull();
+  });
+
+  it("prints a Searchlight box only when the record has one", async () => {
+    const { record, catalog } = await box("FS9-H");
+    expect(draw(record, catalog).svg.querySelector("[data-searchlight]")).toBeNull();
+    cleanup();
+    const lit = editRecord(record, (d) => {
+      (d as { gothic?: { searchlight: boolean } }).gothic = { searchlight: true };
+    });
+    expect(draw(lit, catalog).svg.querySelector("[data-searchlight]")).not.toBeNull();
+  });
+
+  it("adds Dazzle lines under each laser only when switched on", async () => {
+    const { record, catalog } = await box("FS9-HB");
+    const withBlazer = editRecord(record, (d) => {
+      d.mounts.push({ id: "bl", equipmentId: "binary-laser-is", name: "Blazer", techBase: "inner-sphere", location: "CT", slot: null });
+      d.mounts.push({ id: "sl", equipmentId: "small-laser-is", name: "Small Laser", techBase: "inner-sphere", location: "HD", slot: null });
+    });
+    const rows = (dazzle: boolean) => {
+      const { svg } = draw(withBlazer, catalog, dazzle);
+      const out = [...svg.querySelectorAll("[data-line]")].map((g) => [...g.querySelectorAll("text")].map((t) => t.textContent.replace(/\s+/g, " ").trim()));
+      cleanup();
+      return out;
+    };
+    expect(rows(false).some((r) => r.includes("Dazzle"))).toBe(false);
+    const on = rows(true);
+    const after = (name: string) => on[on.findIndex((r) => r.includes(name)) + 1]?.slice(0, 3);
+    expect(after("Binary Laser (Blazer) Cannon")).toEqual(["Dazzle", "8", "6"]);
+    expect(after("Small Laser")).toEqual(["Dazzle", "0", "1"]);
   });
 });

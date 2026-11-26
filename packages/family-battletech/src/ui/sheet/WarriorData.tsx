@@ -4,7 +4,8 @@ import Frame from "./Frame";
 import type { Rect } from "./Frame";
 import { INK } from "./text";
 
-export default function WarriorData({ rect }: { rect: Rect }) {
+/** With `gothic`, Gothic's check boxes: Frayed always, Handler only where the unit may carry one. */
+export default function WarriorData({ rect, gothic }: { rect: Rect; gothic?: { handler: boolean } }) {
   const { x, y } = rect;
   const rule = (x1: number, x2: number, ry: number) => <line x1={x1} x2={x2} y1={ry} y2={ry} stroke={INK} strokeWidth={2} />;
   const cells = CONSCIOUSNESS.length;
@@ -24,6 +25,14 @@ export default function WarriorData({ rect }: { rect: Rect }) {
       ))}
     </g>
   );
+  const box = (label: string, top: number, name: string) => (
+    <g data-box={name}>
+      <text x={x + 256} y={top} fontSize={20} fontWeight={700} fill={INK}>
+        {label}
+      </text>
+      <rect x={x + rect.w - 50} y={top - 24} width={30} height={30} fill="#fff" stroke={INK} strokeWidth={2} />
+    </g>
+  );
   return (
     <Frame rect={rect} title="WARRIOR DATA">
       <text x={x + 24} y={y + 84} fontSize={24} fontWeight={700} fill={INK}>
@@ -38,6 +47,8 @@ export default function WarriorData({ rect }: { rect: Rect }) {
         Piloting Skill:
       </text>
       {rule(x + 186, x + 250, y + 190)}
+      {gothic && box("Frayed", y + 138, "frayed")}
+      {gothic?.handler === true && box("Handler", y + 188, "handler")}
       {row("Hits Taken", ["1", "2", "3", "4", "5", "6"], y + 232)}
       {row("Consciousness #", CONSCIOUSNESS, y + 296)}
     </Frame>

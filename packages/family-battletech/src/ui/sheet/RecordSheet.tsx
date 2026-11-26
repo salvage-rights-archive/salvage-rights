@@ -34,8 +34,9 @@ export const TRADEMARK_LINE =
   "BattleTech, 'Mech, BattleMech, and MechWarrior are registered trademarks and/or trademarks of The Topps Company, Inc. Unofficial, non-commercial fan project, not affiliated with or endorsed by Topps or Catalyst Game Labs.";
 
 /** `checkedOn` is the date the verified line names (year-month-day); it defaults to today on this device. */
-export default function RecordSheet({ record, catalog, checkedOn }: { record: MechRecord; catalog: Catalog; checkedOn?: string }) {
-  const facts = sheetFacts(record, catalog);
+/** `dazzle` (Gothic only) adds the Dazzle Mode lines under each laser. */
+export default function RecordSheet({ record, catalog, checkedOn, dazzle = false }: { record: MechRecord; catalog: Catalog; checkedOn?: string; dazzle?: boolean }) {
+  const facts = sheetFacts(record, catalog, { dazzle });
   const name = facts.title;
   const nameSize = Math.min(84, Math.floor(1020 / (Math.max(name.length, 1) * 0.62)));
   const official = officialLabel(officialState(record));
@@ -59,6 +60,11 @@ export default function RecordSheet({ record, catalog, checkedOn }: { record: Me
         <text x={42} y={170} fontSize={34} fontWeight={700} fill={INK}>
           {`${mechTypeOf(record).label}${record.omni?.isBase ? " base chassis" : ""} record sheet`}
         </text>
+        {facts.game === "gothic" && (
+          <text className="bt-sheet__head" x={560} y={170} fontSize={34} fontWeight={700} letterSpacing={4} fill={INK}>
+            GOTHIC
+          </text>
+        )}
         <text className="bt-sheet__head" x={1090} y={170} fontSize={24} textAnchor="end" letterSpacing={3} fill={INK}>
           SALVAGE RIGHTS
         </text>
@@ -68,7 +74,7 @@ export default function RecordSheet({ record, catalog, checkedOn }: { record: Me
         </text>
 
         <MechData rect={RECTS.mech} facts={facts} />
-        <WarriorData rect={RECTS.warrior} />
+        <WarriorData rect={RECTS.warrior} {...(facts.gothic ? { gothic: facts.gothic } : {})} />
         <UnitPicture rect={RECTS.picture} record={record} label={`${name}, unit picture`} />
         <ArmorDiagram rect={RECTS.armor} record={record} catalog={catalog} points={facts.points} />
         <CriticalTable rect={RECTS.critical} record={record} layout={facts.layout} labels={facts.ammoSlots} fixed={facts.fixedMounts} />

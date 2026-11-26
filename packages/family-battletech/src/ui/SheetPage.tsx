@@ -7,7 +7,7 @@ import { runChecks } from "../rules/checks";
 import type { MechRecord } from "../rules/mech";
 import { BASE, configurationTitle, primaryOf, resolveBase, resolveConfiguration } from "../rules/omni";
 import type { OmniChassis } from "../rules/omni";
-import { baseOf, gameBase, gameOfPath, RULESETS } from "../data/rulesets";
+import { baseOf, gameBase, gameOfPath, RULESETS, rulesetOf } from "../data/rulesets";
 import RecordBoundary from "./RecordBoundary";
 import RecordSheet from "./sheet/RecordSheet";
 import { sheetTitle } from "./sheet/facts";
@@ -88,6 +88,8 @@ function SheetLoader() {
 
 function Sheet({ record, catalog, chassis }: { record: MechRecord; catalog: Catalog; chassis?: OmniChassis }) {
   const base = gameBase(record);
+  const gothic = rulesetOf(record.editionId).game === "gothic";
+  const [dazzle, setDazzle] = useState(false);
   const errors = useMemo(() => runChecks(record, catalog).filter((f) => f.level === "error").length, [record, catalog]);
   return (
     <div className="sr-page bt-sheetpage">
@@ -125,9 +127,21 @@ function Sheet({ record, catalog, chassis }: { record: MechRecord; catalog: Cata
             ))}
           </nav>
         )}
+        {gothic && (
+          <label className="bt-check">
+            <input
+              type="checkbox"
+              checked={dazzle}
+              onChange={(event) => {
+                setDazzle(event.target.checked);
+              }}
+            />
+            Show Dazzle Mode lines under each laser
+          </label>
+        )}
         {errors > 0 && <p role="status">{`This 'Mech has ${String(errors)} rules ${errors === 1 ? "error" : "errors"}. The sheet shows it as saved.`}</p>}
       </div>
-      <RecordSheet record={record} catalog={catalog} />
+      <RecordSheet record={record} catalog={catalog} dazzle={gothic && dazzle} />
     </div>
   );
 }
