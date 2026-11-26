@@ -87,7 +87,7 @@ export interface EquipmentRow {
   /** Special munitions only: the launcher families the munition fits. A ton of it carries the shots a ton of that launcher's standard
    * ammunition does (Total Warfare p. 140: all of the slot's shots go to the special munition, except the half-count ones, which are
    * autocannon rounds), so it has no `shotsPerTon` of its own; see `ammoLines`. */
-  feeds?: ("lrm" | "srm" | "mml")[];
+  feeds?: ("lrm" | "srm" | "mml" | "atm")[];
   /** A multi-mode launcher (MML) only: what each mode fires, as its own line under the weapon on the record sheet. `range` is as above. */
   modes?: { name: string; damage: string; range: [min: number, short: number, medium: number, long: number] }[];
   /** The page the play figures came from, when it is not `cite`. */
@@ -396,8 +396,8 @@ export function ammoLines(record: MechRecord, catalog: Catalog): AmmoLine[] {
 function launcherShots(record: MechRecord, catalog: Catalog, feeds: NonNullable<EquipmentRow["feeds"]>): { launcher: string; perTon: number }[] {
   const found = new Map<string, { launcher: string; perTon: number }>();
   for (const mount of record.mounts) {
-    const match = /^(lrm|srm|mml)-(\d+)-(is|clan)$/.exec(mount.equipmentId ?? "");
-    const family = match?.[1] as "lrm" | "srm" | "mml" | undefined;
+    const match = /^(lrm|srm|mml|atm)-(\d+)-(is|clan)$/.exec(mount.equipmentId ?? "");
+    const family = match?.[1] as "lrm" | "srm" | "mml" | "atm" | undefined;
     if (!match || !family || !feeds.includes(family)) continue;
     const size = match[2] ?? "";
     const side = match[3] ?? "";

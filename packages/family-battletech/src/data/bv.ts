@@ -293,13 +293,21 @@ export const SPECIAL_MUNITIONS: Sourced & { stems: string[]; why: string } = {
   cite: { book: TO, page: 198 },
   checked: "page",
   stems: [
-    "ammo-armor-piercing", "ammo-flechette", "ammo-precision", "ammo-artemis-capable", "ammo-narc-capable", "ammo-fragmentation",
+    "ammo-armor-piercing", "ammo-flechette", "ammo-precision", "ammo-narc-capable", "ammo-fragmentation",
     "ammo-harpoon", "ammo-inferno", "ammo-tear-gas", "ammo-semi-guided", "ammo-swarm", "ammo-swarm-i", "ammo-thunder",
     "ammo-thunder-augmented", "ammo-thunder-inferno", "ammo-thunder-vibrabomb", "ammo-thunder-active", "ammo-narc-explosive",
     "ammo-improved-narc-ecm", "ammo-improved-narc-explosive", "ammo-improved-narc-haywire", "ammo-improved-narc-nemesis",
-    "ammo-er-atm", "ammo-he-atm",
   ],
   why: "a special munition: its BV comes from its launcher's ammunition BV (TO:AUE p. 198), the row does not say which launcher, and the book does not say how its modifier is applied",
+};
+/** Munitions the Battle Value rules give no figure of their own: a bin of one counts as a bin of the standard ammunition of the launcher it feeds.
+ * Artemis-capable ammunition is standard ammunition: the Artemis IV increase of 20 percent is on the launcher and "does not apply to the launcher's
+ * ammunition" (v4.1 printed p. 303; note B of the BV table, p. 317). The Technical Manual's ammunition table prints ER and HE ATM ammunition at
+ * the standard ammunition's weight and shots (x 1, printed p. 345) and its BV table has no line for either, so the ATM's own ammunition figure is used. */
+export const LAUNCHER_MUNITIONS: Sourced & { stems: string[] } = {
+  cite: { book: TM, page: 303 },
+  checked: "page",
+  stems: ["ammo-artemis-capable", "ammo-er-atm", "ammo-he-atm"],
 };
 /** Equipment introduced in TechManual or in Tactical Operations: Advanced Units and Equipment that is in none of their BV tables counts as 0 (TO:AUE printed p. 192). */
 export const UNLISTED_IS_ZERO: Sourced & { books: string[] } = { cite: { book: TO, page: 192 }, checked: "page", books: [TM, TO] };
