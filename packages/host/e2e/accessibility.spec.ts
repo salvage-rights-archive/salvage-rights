@@ -138,7 +138,17 @@ test("the Alpha Strike force page and the home with forces have no axe violation
 
 test("the Aces home, library and card editor (each step and the picker) have no axe violations in either theme", async ({ page }) => {
   test.setTimeout(150_000);
+  // Nothing saved yet: the quartermaster picture shows, fits 320 px, and is clean in both themes.
+  await page.setViewportSize({ width: 320, height: 700 });
+  await expectNoViolations(page, DEV, [`${ACES}/home`]);
+  await expect(page.getByRole("img", { name: /quartermaster/ })).toBeVisible();
+  const widths = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, client: document.documentElement.clientWidth }));
+  expect(widths.scroll).toBe(widths.client);
+  await page.setViewportSize({ width: 1280, height: 720 });
   const editor = await saveAcesCard(page, DEV);
+  await page.goto(`${DEV}${ACES}/home`);
+  await expect(page.getByText("1 behaviour card recorded.")).toBeVisible();
+  await expect(page.getByRole("img", { name: /quartermaster/ })).toHaveCount(0);
   await expectNoViolations(page, DEV, [`${ACES}/home`, `${ACES}/cards`]);
   for (const theme of ["Light", "Dark"] as const) {
     await chooseTheme(page, DEV, theme);

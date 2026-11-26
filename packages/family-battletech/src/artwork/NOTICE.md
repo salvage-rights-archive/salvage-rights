@@ -95,6 +95,13 @@ picture and shares its prompt.
   the Classic BattleTech page when no 'Mech is saved, with a label saying it is AI-generated.
 - Prompt: not recorded yet.
 
+## aces-empty-quartermaster.jpg
+
+- Made by the Salvage Rights team with an AI image tool (creen.ai) on 2026-11-26, and resized. It is shown on the
+  Aces home while no Aces card and no campaign is saved, with a label saying it is AI-generated. creen.ai's terms of
+  service (effective 2025-10-11) say the user keeps ownership of what they generate, and ask for no attribution.
+- Prompt: not recorded yet.
+
 ## All files
 
 - The game this package supports belongs to its owners. None of these pictures is official artwork.
