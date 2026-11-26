@@ -298,6 +298,8 @@ describe("TechManual weapons table: the other unit types' columns (printed pp. 3
     ["lrm-5-is", ["mech", "industrialmech", "vehicle", "aero", "smallcraft", "dropship", "abomination"], { aero: { damage: "3", rangeClass: "Long" } }],
     ["ultra-ac-5-is", ["mech", "industrialmech", "vehicle", "aero", "smallcraft", "dropship"], { vehicle: { slots: 1 }, aero: { slots: 1, heat: 2, damage: "7", rangeClass: "Long" } }],
     ["lb-2-x-ac-clan", ["mech", "industrialmech", "vehicle", "protomech", "aero", "smallcraft", "dropship"], { protomech: { slots: 1 } }],
+    ["bay-door-is", ["vehicle", "smallcraft", "dropship"], {}], // Industrial Equipment table, printed p. 344: CV, SV, SC and DS columns
+    ["cargo-container-is", ["industrialmech", "vehicle", "aero", "smallcraft", "dropship"], { aero: { slots: 0 }, dropship: { slots: 0 } }], // the table's F, SC and DS columns print 0
   ])("%s", async (id, units, by) => {
     const row = (await loadCatalog()).byId(id);
     expect(row?.units).toEqual(units);

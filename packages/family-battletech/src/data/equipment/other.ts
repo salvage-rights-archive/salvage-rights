@@ -489,7 +489,7 @@ export const OTHER: EquipmentGroup[] = [
       // Dumper (p. 243): 5 percent of the cargo it empties, so a formula that reads the cargo mount it is linked to; paramedic equipment (p. 233): a quarter ton; container bay (p. 239): one 10-ton container to a slot, IndustrialMechs only.
       { id: "dumper-is", name: "Dumper", tons: "dumper-tons", slots: 1, availability: [{ from: 1950 }], units: ["industrialmech", "vehicle"] },
       { id: "paramedic-equipment-is", name: "Paramedic Equipment", tons: 0.25, slots: 1, availability: [{ from: 1950 }], units: ["industrialmech", "vehicle"] },
-      { id: "cargo-container-is", name: "Cargo Container", aliases: ["Cargo, Container"], tons: 10, slots: 1, availability: [{ from: 1950 }], units: ["industrialmech", "vehicle"] },
+      { id: "cargo-container-is", name: "Cargo Container", aliases: ["Cargo, Container"], tons: 10, slots: 1, availability: [{ from: 1950 }], units: ["industrialmech", "vehicle", "aero", "smallcraft", "dropship"], by: { aero: { slots: 0 }, smallcraft: { slots: 0 }, dropship: { slots: 0 } } },
       { id: "ladder-is", name: "Ladder", tons: "ladder-tons", slots: 1, availability: [{ from: 1950 }], locations: ["CT", "LT", "RT"], amount: { unit: "meters", min: 1, max: 100, step: 1 }, cite: { book: "TechManual", page: 245 }, units: ["mech", "industrialmech", "vehicle"] },
     ],
   },
@@ -506,7 +506,7 @@ export const OTHER: EquipmentGroup[] = [
       // Dumper (p. 243): 5 percent of the cargo it empties, so a formula that reads the cargo mount it is linked to; paramedic equipment (p. 233): a quarter ton; container bay (p. 239): one 10-ton container to a slot, IndustrialMechs only.
       { id: "dumper-clan", name: "Dumper", tons: "dumper-tons", slots: 1, availability: [{ from: 1950 }], units: ["industrialmech", "vehicle"] },
       { id: "paramedic-equipment-clan", name: "Paramedic Equipment", tons: 0.25, slots: 1, availability: [{ from: 1950 }], units: ["industrialmech", "vehicle"] },
-      { id: "cargo-container-clan", name: "Cargo Container", aliases: ["Cargo, Container"], tons: 10, slots: 1, availability: [{ from: 1950 }], units: ["industrialmech", "vehicle"] },
+      { id: "cargo-container-clan", name: "Cargo Container", aliases: ["Cargo, Container"], tons: 10, slots: 1, availability: [{ from: 1950 }], units: ["industrialmech", "vehicle", "aero", "smallcraft", "dropship"], by: { aero: { slots: 0 }, smallcraft: { slots: 0 }, dropship: { slots: 0 } } },
       { id: "ladder-clan", name: "Ladder", tons: "ladder-tons", slots: 1, availability: [{ from: 1950 }], locations: ["CT", "LT", "RT"], amount: { unit: "meters", min: 1, max: 100, step: 1 }, cite: { book: "TechManual", page: 245 }, units: ["mech", "industrialmech", "vehicle"] },
     ],
   },
@@ -1091,8 +1091,8 @@ export const OTHER: EquipmentGroup[] = [
   {
     defaults: { kind: "other", cite: { book: "TechManual", page: 344 }, checked: "page", slots: 0, availability: [{ from: 1950 }] },
     items: [
-      { id: "bay-door-is", name: "Bay Door", techBase: "inner-sphere", tons: 0, units: ["smallcraft", "dropship"] },
-      { id: "bay-door-clan", name: "Bay Door", techBase: "clan", tons: 0, units: ["smallcraft", "dropship"], yearsInferred: true },
+      { id: "bay-door-is", name: "Bay Door", techBase: "inner-sphere", tons: 0, units: ["vehicle", "smallcraft", "dropship"] },
+      { id: "bay-door-clan", name: "Bay Door", techBase: "clan", tons: 0, units: ["vehicle", "smallcraft", "dropship"], yearsInferred: true },
       { id: "look-down-radar-is", name: "Look-Down Radar", techBase: "inner-sphere", tons: 5, units: ["vehicle", "aero", "smallcraft", "dropship", "ship", "building"], by: { vehicle: { slots: 1 }, aero: { slots: 1 }, smallcraft: { slots: 1 }, dropship: { slots: 1 }, ship: { slots: 1 }, building: { slots: 1 } } },
       { id: "look-down-radar-clan", name: "Look-Down Radar", techBase: "clan", tons: 5, yearsInferred: true, units: ["vehicle", "aero", "smallcraft", "dropship", "ship", "building"], by: { vehicle: { slots: 1 }, aero: { slots: 1 }, smallcraft: { slots: 1 }, dropship: { slots: 1 }, ship: { slots: 1 }, building: { slots: 1 } } },
     ],

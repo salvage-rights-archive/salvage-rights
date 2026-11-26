@@ -78,7 +78,7 @@ describe("the aerospace weapon tables", () => {
   it("the bombs, bay doors and look-down radars the books print are catalog rows an aerospace unit may mount", () => {
     for (const id of ["bomb-high-explosive-is", "bomb-cluster-clan", "bomb-mines-is", "bomb-inferno-clan"]) expect(catalog.byId(id)?.units).toEqual(["aero"]);
     expect(catalog.byId("bomb-laser-guided-is")?.availability).toEqual([{ from: 1950, to: 2800 }, { from: 3060 }]);
-    expect(catalog.byId("bay-door-is")).toMatchObject({ tons: 0, units: ["smallcraft", "dropship"] });
+    expect(catalog.byId("bay-door-is")).toMatchObject({ tons: 0, units: ["vehicle", "smallcraft", "dropship"] });
     expect(catalog.byId("look-down-radar-clan")).toMatchObject({ tons: 5, units: expect.arrayContaining(["aero", "smallcraft", "dropship"]) });
   });
 
