@@ -1,9 +1,12 @@
-import { NavLink } from "react-router";
+import { Link, NavLink } from "react-router";
 
 export function Header() {
   return (
     <header className="sr-header">
-      <span className="sr-header__name">SALVAGE RIGHTS</span>
+      {/* The name always leads back to the games, from any page. */}
+      <Link className="sr-header__name" to="/" aria-label="Salvage Rights, back to Games">
+        SALVAGE RIGHTS
+      </Link>
       <nav aria-label="Site" className="sr-header__nav">
         <NavLink to="/" end>
           Games

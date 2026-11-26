@@ -58,9 +58,19 @@ h1:focus {
   }
 
   &__name {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    color: inherit;
     font-family: var(--sr-font-stencil);
     font-size: 1.5rem;
     letter-spacing: .08em;
+    text-decoration: none;
+    border-radius: var(--sr-radius);
+
+    &:hover {
+      text-decoration: underline;
+    }
   }
 
   &__nav {

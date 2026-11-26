@@ -41,12 +41,13 @@ test.describe("dev edition", () => {
     const families = page.getByRole("checkbox", { name: /^Show / });
     await expect(families).toHaveCount(2);
     await families.first().uncheck();
-    await page.getByRole("link", { name: "Games" }).click();
+    await page.getByRole("link", { name: "Games", exact: true }).click();
     await expect(page.getByTestId("family-tile")).toHaveCount(1);
     await expect(page.getByTestId("family-tile")).toHaveAttribute("data-size", "single");
     await page.getByRole("link", { name: "Settings" }).click();
     await families.last().uncheck();
-    await page.getByRole("link", { name: "Games" }).click();
+    // The site name leads back to the games too.
+    await page.getByRole("link", { name: "Salvage Rights, back to Games" }).click();
     await expect(page.getByText("You have hidden every game.")).toBeVisible();
     // Reload at once: a change just made must not be lost.
     await page.reload();
@@ -101,7 +102,7 @@ test.describe("dev edition", () => {
     await expect(page.getByTestId("family-tile")).toHaveCount(2);
     // Every link in the page's own content, in document order: a tile that is one link, then the links inside the other.
     const contentLinks = page.getByRole("main").getByRole("link");
-    const expected = ["Games", "About", "Settings"].map((name) => ({
+    const expected = ["Salvage Rights, back to Games", "Games", "About", "Settings"].map((name) => ({
       name,
       link: page.getByRole("link", { name, exact: true }),
       token: "--sr-header-focus",

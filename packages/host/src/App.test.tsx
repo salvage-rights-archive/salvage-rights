@@ -63,10 +63,12 @@ afterEach(() => {
 });
 
 describe("host frame", () => {
-  it("shows the site name and the three navigation links in the header", () => {
-    renderAt("/");
+  it("shows the site name as a link back to the games, and the three navigation links in the header", () => {
+    renderAt("/about");
     const header = screen.getByRole("banner");
-    expect(within(header).getByText("SALVAGE RIGHTS")).toBeTruthy();
+    const name = within(header).getByRole("link", { name: "Salvage Rights, back to Games" });
+    expect(name.textContent).toBe("SALVAGE RIGHTS");
+    expect(name.getAttribute("href")).toBe("/");
     const nav = within(header).getByRole("navigation", { name: "Site" });
     for (const name of ["Games", "About", "Settings"]) {
       expect(within(nav).getByRole("link", { name })).toBeTruthy();

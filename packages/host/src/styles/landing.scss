@@ -12,22 +12,27 @@
     overflow-wrap: anywhere;
   }
 
+  // Centred, like the game pictures: the tag, the title and the opening words sit in the middle of the page.
   &__who {
     display: flex;
     flex-direction: column;
+    align-items: center;
     gap: var(--sr-space-3);
     padding: var(--sr-space-5) 0 var(--sr-space-4);
+    text-align: center;
 
     h1 {
       margin: 0;
       max-width: 28ch;
       font-size: clamp(2.1rem, 5vw, 3.5rem);
       line-height: 1.08;
+      text-wrap: balance;
     }
 
     p {
       margin: 0;
       max-width: 80ch;
+      text-wrap: pretty;
     }
   }
 
