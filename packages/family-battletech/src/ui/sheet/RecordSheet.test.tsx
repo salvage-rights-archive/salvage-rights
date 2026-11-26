@@ -264,6 +264,7 @@ describe("The Gothic record sheet", () => {
     const { lines } = draw(record, catalog);
     expect(lines).toContain("GOTHIC");
     expect(lines).toContain("Rules level: Unofficial");
+    expect(lines.some((line) => /^BV: [\d,]+ \(as printed on the sheet\)$/.test(line))).toBe(true);
     expect(lines.some((line) => /cost|c-bill/i.test(line))).toBe(false);
     expect(lines).toContain("Frayed");
   });

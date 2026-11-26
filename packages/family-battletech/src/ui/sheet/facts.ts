@@ -167,7 +167,7 @@ export function sheetFacts(record: MechRecord, catalog: Catalog, options: { dazz
     inventory: gothic && options.dazzle === true ? withDazzle(inventoryLines(record, catalog)) : inventoryLines(record, catalog),
     ammo,
     battleValue: isBase ? DASH : imported !== undefined ? imported.toLocaleString("en-US") : `${computed?.complete === false ? "at least " : ""}${(computed?.total ?? 0).toLocaleString("en-US")}`,
-    battleValueFrom: isBase ? (total === null ? "the base has none" : `the base has none; pod space ${String(Math.round((record.tons - total) * 1000) / 1000)} tons`) : imported !== undefined ? "mordel.net" : "calculated, pilot 4/5",
+    battleValueFrom: isBase ? (total === null ? "the base has none" : `the base has none; pod space ${String(Math.round((record.tons - total) * 1000) / 1000)} tons`) : imported !== undefined ? (record.source?.kind === "book" ? "as printed on the sheet" : "mordel.net") : "calculated, pilot 4/5",
     heatSinks: {
       line: `${label} Heat Sinks: ${counts} (${dissipation})`,
       summary: `${label}, ${counts} (${dissipation})`,
