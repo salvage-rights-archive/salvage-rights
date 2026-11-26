@@ -6,7 +6,6 @@ import { Link } from "react-router";
 import { downloadJson } from "../storage";
 import { AERO_HOME } from "./routes";
 import { openAeroStorage } from "./storage";
-import "../classic.scss";
 
 function Failure({ id, message }: { id: string; message: string }) {
   const [status, setStatus] = useState("");

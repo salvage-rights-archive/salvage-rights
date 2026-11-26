@@ -15,7 +15,7 @@ import type { ImportPlan, ImportRead } from "./campaign-file";
 import { openCampaignStorage } from "./campaign-storage";
 import type { CampaignEntry, CampaignStorage } from "./campaign-storage";
 import { ACES_HOME, campaignHref } from "./routes";
-import "./styles";
+import "./aces.scss";
 
 const plural = (n: number, one: string): string => `${String(n)} ${one}${n === 1 ? "" : "s"}`;
 

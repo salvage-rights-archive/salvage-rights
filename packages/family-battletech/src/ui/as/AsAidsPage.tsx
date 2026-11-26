@@ -4,8 +4,6 @@ import { AS_ATTACK_FLAGS, AS_PHYSICAL_TYPES, AS_RANGE_BRACKETS, AS_UNIT_TYPES, A
 import type { AsAttackFlag, AsPhysicalType } from "../../data/alpha-strike";
 import { odds2d6, targetNumber } from "../../rules/as-attack";
 import type { AttackerMove, TargetMove } from "../../rules/as-attack";
-import "../classic.scss";
-import "./alpha-strike.scss";
 
 const ATTACKER_MOVES: [AttackerMove, string][] = [
   ["standstill", "Stood still"],

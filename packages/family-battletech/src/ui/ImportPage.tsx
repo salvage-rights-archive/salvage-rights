@@ -11,7 +11,6 @@ import { createMordelClient } from "./mordel-client";
 import type { MordelClient, MordelListRow } from "./mordel-client";
 import { STORAGE_READ_FAILED, STORAGE_WRITE_FAILED, openFamilyStorage } from "./storage";
 import type { FamilyStorage } from "./storage";
-import "./classic.scss";
 
 export interface ImportPageProps {
   /** How a client is made from a key. Tests pass their own; the page uses the real one. */

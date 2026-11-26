@@ -13,7 +13,6 @@ import RecordSheet from "./sheet/RecordSheet";
 import { sheetTitle } from "./sheet/facts";
 import { STORAGE_READ_FAILED, openFamilyStorage } from "./storage";
 import { useGothicTheme } from "./gothic/theme";
-import "./classic.scss";
 
 type Loaded =
   | { state: "loading" }

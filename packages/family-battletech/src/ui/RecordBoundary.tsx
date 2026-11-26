@@ -5,7 +5,6 @@ import type { ErrorInfo, ReactNode } from "react";
 import { Link, useLocation, useNavigate } from "react-router";
 import { baseOf, gameOfPath, RULESETS } from "../data/rulesets";
 import { downloadJson, openFamilyStorage } from "./storage";
-import "./classic.scss";
 
 function Failure({ id, message }: { id: string; message: string }) {
   const [status, setStatus] = useState("");

@@ -11,7 +11,7 @@ import { STORAGE_READ_FAILED, STORAGE_WRITE_FAILED } from "../storage";
 import { ACES_CARDS } from "./routes";
 import { openAcesStorage } from "./storage";
 import type { AcesStorage } from "./storage";
-import "./styles";
+import "./aces.scss";
 
 type Loaded<R> = { state: "loading" } | { state: "failed" } | { state: "missing" } | { state: "unreadable"; message: string } | { state: "ready"; storage: AcesStorage; record: R; isNew: boolean };
 

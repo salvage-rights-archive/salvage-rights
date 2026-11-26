@@ -47,7 +47,6 @@ import RecordBoundary from "./RecordBoundary";
 import { STORAGE_READ_FAILED, STORAGE_WRITE_FAILED, downloadMech, downloadOmni, isMechRecord, openFamilyStorage } from "./storage";
 import type { FamilyStorage } from "./storage";
 import { useGothicTheme } from "./gothic/theme";
-import "./classic.scss";
 
 export type Change = (draft: MechRecord) => void;
 /** Applies an edit. Edits with the same `field` in a row (one visit to a field) are one Undo step. */

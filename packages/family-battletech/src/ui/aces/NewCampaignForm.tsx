@@ -11,7 +11,7 @@ import { LeaveGuard } from "../editor/LeaveConfirm";
 import { STORAGE_WRITE_FAILED } from "../storage";
 import type { CampaignStorage } from "./campaign-storage";
 import { campaignHref } from "./routes";
-import "./styles";
+import "./aces.scss";
 
 interface PilotRow {
   key: number;

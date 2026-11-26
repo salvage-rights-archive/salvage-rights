@@ -6,7 +6,7 @@ import { STORAGE_READ_FAILED } from "../storage";
 import GamesInProgress from "./GamesInProgress";
 import { ACES_CAMPAIGNS, ACES_CARDS, ACES_NEW_GAME } from "./routes";
 import { openAcesStorage } from "./storage";
-import "./styles";
+import "./aces.scss";
 
 export default function AcesHomePage() {
   const [cards, setCards] = useState<number>();

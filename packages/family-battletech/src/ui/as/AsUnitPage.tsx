@@ -10,8 +10,6 @@ import { readPicture } from "../picture";
 import { STORAGE_READ_FAILED, STORAGE_WRITE_FAILED } from "../storage";
 import { downloadUnit, isAsUnit, openAsStorage } from "./storage";
 import type { AsStorage } from "./storage";
-import "../classic.scss";
-import "./alpha-strike.scss";
 
 const HOME = "/battletech/alpha-strike/home";
 

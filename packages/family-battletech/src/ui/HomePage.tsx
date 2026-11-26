@@ -30,7 +30,6 @@ import { MAX_LIBRARY_BYTES, STORAGE_READ_FAILED, STORAGE_WRITE_FAILED, downloadL
 import type { FamilyStorage, SavedEntry } from "./storage";
 import emptyBay from "../artwork/empty-bay.jpg";
 import GamePicture from "./GamePicture";
-import "./classic.scss";
 
 const MAX_IMPORT_BYTES = 1024 * 1024;
 /** This page lists the Classic designs only; Gothic ones are on the Gothic home. */
