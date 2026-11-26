@@ -3,11 +3,12 @@
 // (data/bv.ts keys them by catalog id; data/cost.ts prices them); a launcher built by the tube has its own table (data/protomech.ts). Pure functions; nothing throws.
 import { bvEntryOf, speedFactor } from "../bv";
 import { TARGET_MODIFIER } from "../../data/bv";
-import { PROTO_BV, PROTO_COST, PROTO_LAUNCHER_SIZES, PROTO_MELEE, PROTO_WING } from "../../data/protomech";
+import { PROTO_BV, PROTO_COST, PROTO_LAUNCHER_SIZES, PROTO_MELEE, PROTO_QUAD_MELEE, PROTO_WING } from "../../data/protomech";
 import type { Catalog } from "../catalog";
 import { priceOf, roundUpCents } from "../cost";
-import { armorPoints, ammoKg, engineKg, engineRating, launcherOf, mountName, plainRun, rowOf, structurePoints, tubesOf } from "./build";
-import { armorTypeOf, cockpitOf, jumpMP, jumpSystemOf, wingKg } from "./options";
+import { armorPoints, ammoKg, engineKg, engineRating, launcherOf, mountName, plainRun, rowOf, runMP, structurePoints, tubesOf } from "./build";
+import { isGlider, isQuad } from "./config";
+import { armorTypeOf, cockpitCost, cockpitOf, jumpMP, jumpSystemOf, wingKg } from "./options";
 import type { ProtoMount, ProtoRecord } from "./record";
 import { PROTO_PARTS } from "../../data/protomech";
 import { roundHalfUp, tidy } from "../walk";
@@ -63,6 +64,7 @@ function figuresOf(mount: ProtoMount, catalog: Catalog, record: ProtoRecord): Om
   const row = rowOf(catalog, record, mount);
   if (!row) return "an item not in our equipment table";
   if (row.id === PROTO_MELEE.row) return { bv: Math.ceil(record.tons / PROTO_MELEE.tonsPerDamage) * PROTO_MELEE.bvFactor, ammoPerTon: 0, defensive: false, defensiveAmmo: false };
+  if (row.id === PROTO_QUAD_MELEE.row) return { bv: Math.ceil(record.tons / PROTO_QUAD_MELEE.tonsPerStep) * PROTO_QUAD_MELEE.damagePerStep * PROTO_QUAD_MELEE.bvFactor, ammoPerTon: 0, defensive: false, defensiveAmmo: false };
   const entry = bvEntryOf(row.id);
   if (!entry) return "an item with no Battle Value in our tables";
   return { bv: entry.options.none === true ? 0 : entry.bv, ammoPerTon: entry.ammoBv ?? 0, defensive: entry.options.defensive === true, defensiveAmmo: entry.options.defensiveAmmo === true };
@@ -86,8 +88,10 @@ export function protoBattleValue(record: ProtoRecord, catalog: Catalog): ProtoBv
   const armor = armorPoints(record) * PROTO_BV.armorFactor;
   const structure = (structurePoints(record) ?? 0) * PROTO_BV.structureFactor;
   const subtotal = armor + structure + equipment;
-  const running = record.booster ? record.walk * 2 : plainRun(record.walk);
-  const jumping = jumpMP(record);
+  // A glider is read by its WiGE Flanking MP for the defensive and the speed factor (IO:AE p. 186); it has no jump jets or booster to count.
+  const glider = isGlider(record);
+  const running = runMP(record);
+  const jumping = glider ? 0 : jumpMP(record);
   const tmm = Math.max(targetModifier(running, false), jumping > 0 ? targetModifier(jumping, true) : 0);
   const factor = 1 + tmm / 10 + PROTO_BV.defensiveBonus;
   const defensive = { armor, structure, equipment, subtotal, targetModifier: tmm, factor: tidy(factor), rating: subtotal * factor };
@@ -107,7 +111,7 @@ export function protoBattleValue(record: ProtoRecord, catalog: Catalog): ProtoBv
   const armorWeapon = armorPoints(record) > 0 ? (armorTypeOf(record)?.bvAsWeapon ?? 0) : 0;
   if (armorWeapon > 0) lines.push({ mountId: "", name: armorTypeOf(record)?.label ?? "Armor", bv: armorWeapon, counted: armorWeapon, ammoBv: 0 });
   const weaponBv = lines.reduce((sum, line) => sum + line.counted, 0) + ammunition;
-  const speed = plainRun(record.walk) + Math.ceil(jumping / 2) + (record.booster ? 1 : 0);
+  const speed = plainRun(record.walk) + Math.ceil(jumping / 2) + (record.booster && !glider ? 1 : 0);
   const sf = speedFactor(speed);
   const offensive = { weapons: weaponBv, ammunition, speed, speedFactor: sf, rating: weaponBv * sf };
 
@@ -155,13 +159,14 @@ export function protoCost(record: ProtoRecord, catalog: Catalog): ProtoCost {
   const jump = jumpSystemOf(record);
   const armorType = armorTypeOf(record);
   const unpriced: Unvalued[] = [];
-  if (cockpit) add(cockpit.label, cockpit.cost);
+  if (cockpit) add(cockpit.label, cockpitCost(record) ?? cockpit.cost);
   else unpriced.push({ name: "Cockpit", why: "a cockpit we do not know" });
   add("Life support", C.lifeSupport);
   add("Sensors", C.sensorsPerTon * tons);
   add("Musculature", C.musculaturePerTon * tons);
-  add("Internal structure", C.structurePerTon * tons);
-  add("Arm actuators, both arms", 2 * C.armActuatorPerTon * tons);
+  // A quad and a glider have a structure cost of their own per ton, whatever their weight (IO:AE p. 180); a quad has no arms to put actuators in.
+  add("Internal structure", (Object.hasOwn(C.structurePerTonBy, record.configuration ?? "") ? (C.structurePerTonBy[record.configuration ?? ""] ?? C.structurePerTon) : C.structurePerTon) * tons);
+  if (!isQuad(record)) add("Arm actuators, both arms", 2 * C.armActuatorPerTon * tons);
   add("Leg actuators, both legs", C.legActuatorPerTon * tons);
   const rating = engineRating(record);
   if (rating !== null && engineKg(record) !== null) add(`Engine, rating ${String(rating)}`, (C.engineFactor * rating * tons) / C.engineDivisor);
