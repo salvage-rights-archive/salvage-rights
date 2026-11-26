@@ -278,7 +278,7 @@ describe("Classic BattleTech home", () => {
       names.push(this.download);
     });
     renderHome();
-    await user.click(await screen.findByRole("button", { name: /^Export/ }));
+    await user.click(await screen.findByRole("button", { name: /^Export Test Walker/ }));
     expect(names).toEqual(["Test-Walker-TW-1-b.mech.json"]);
     expect(JSON.parse((await blob?.text()) ?? "null")).toEqual(toMechFile(bipedRecord({ id: "a", name: { chassis: "Test Walker", model: "TW-1/b" } })));
     expect(screen.getByRole("status").textContent).toBe("Export started.");

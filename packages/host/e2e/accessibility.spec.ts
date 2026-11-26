@@ -152,3 +152,26 @@ test("the Aces home, library and card editor (each step and the picker) have no 
     await scan(page, theme, "the card editor, combat side");
   }
 });
+
+test("the Classic home with Export all has no axe violations in either theme, fits 320 px, and its file imports back", async ({ page }) => {
+  test.setTimeout(120_000);
+  await importMech(page, DEV);
+  await page.goto(`${DEV}${CLASSIC}/home`);
+  const exportAll = page.getByRole("button", { name: "Export all" });
+  await expect(exportAll).toBeVisible();
+  const downloading = page.waitForEvent("download");
+  await exportAll.click();
+  const download = await downloading;
+  expect(download.suggestedFilename()).toBe("salvage-rights-mechs.library.json");
+  await expect(page.getByRole("status")).toHaveText("Export started.");
+  const file = await download.path();
+  await page.getByLabel("Import a file", { exact: true }).setInputFiles(file);
+  await expect(page.getByRole("status")).toHaveText("1 design imported.");
+  await page.setViewportSize({ width: 320, height: 700 });
+  const widths = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, client: document.documentElement.clientWidth }));
+  expect(widths.scroll).toBe(widths.client);
+  const box = await exportAll.boundingBox();
+  expect(box?.height ?? 0).toBeGreaterThanOrEqual(44);
+  expect(box?.width ?? 0).toBeGreaterThanOrEqual(44);
+  await expectNoViolations(page, DEV, [`${CLASSIC}/home`]);
+});

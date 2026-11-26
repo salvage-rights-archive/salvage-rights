@@ -561,7 +561,7 @@ function Editor({ initial, unsaved, startAt, catalog, storage }: { initial: Doc;
   const applyTo = (d: Doc, change: Change): Doc => {
     if (!isChassis(d)) return editRecord(d, change);
     const edited = editRecord(resolveConfiguration(d, activeId) ?? resolveBase(d), change);
-    return activeId === BASE ? applyBaseEdit(d, edited) : applyConfigurationEdit(d, activeId, edited);
+    return activeId === BASE ? applyBaseEdit(d, edited, catalog) : applyConfigurationEdit(d, activeId, edited);
   };
   const push = (h: History, next: Doc, field?: string): History => {
     if (sameRecord(next, h.present)) return h; // nothing changed: no step, and no run of edits begins
