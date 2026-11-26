@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import AxeBuilder from "@axe-core/playwright";
 import type { Page } from "@playwright/test";
-import { ACES, DEV, expect, test } from "./fixtures";
+import { ACES, DEV, expect, expectPage, test } from "./fixtures";
 
 // Units, campaigns and the backup are invented for the test.
 
@@ -257,6 +257,6 @@ test("the campaign pages at 320 px, in both themes, without axe violations", asy
   await expect(page.getByRole("heading", { name: "Aces: Campaign Log" })).toBeVisible();
   await noViolations(page, "print page, dark");
   await page.goto(list);
-  await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+  await expectPage(page.getByRole("heading", { level: 1 })).toBeVisible();
   await noViolations(page, "campaigns, dark");
 });

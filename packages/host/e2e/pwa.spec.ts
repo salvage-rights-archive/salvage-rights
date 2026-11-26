@@ -1,6 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import type { Page } from "@playwright/test";
-import { ACES, CLASSIC, FREE, LAZY_PAGE_MS, expect, test } from "./fixtures";
+import { ACES, CLASSIC, FREE, LAZY_PAGE_MS, expect, expectPage, test } from "./fixtures";
 
 // Service workers and offline emulation behave the same way in Chromium only, so the other browsers skip these.
 test.beforeEach(({ browserName }) => {
@@ -19,13 +19,14 @@ test("a deep link reloads with no connection, and the offline notices show", asy
 
   await context.setOffline(true);
   await page.goto(`${FREE}${CLASSIC}/home`);
-  await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+  await expectPage(page.getByRole("heading", { level: 1 })).toBeVisible();
   await expect(page.getByText("You are offline.")).toBeVisible();
   await page.reload();
+  await expectPage(page.getByRole("heading", { level: 1 })).toBeVisible();
   await expect(page.getByRole("heading", { level: 1 })).not.toHaveText("Nothing here");
 
   await page.goto(`${FREE}${CLASSIC}/import`);
-  await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+  await expectPage(page.getByRole("heading", { level: 1 })).toBeVisible();
   await context.setOffline(false);
 });
 
@@ -35,7 +36,7 @@ test("the Aces pages, the game page among them, open with no connection once the
   await context.setOffline(true);
   for (const path of ["home", "new-game", "game?id=none"]) {
     await page.goto(`${FREE}${ACES}/${path}`);
-    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    await expectPage(page.getByRole("heading", { level: 1 })).toBeVisible();
   }
   await expect(page.getByText("That game is not saved on this device.")).toBeVisible();
   await context.setOffline(false);
@@ -86,7 +87,7 @@ test("a new version applies on request", async ({ page, context }) => {
   await expect(page.getByText("A new version is ready.")).toBeVisible();
   await page.getByRole("button", { name: "Reload" }).click();
   await expect(page.getByText("A new version is ready.")).toHaveCount(0);
-  await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+  await expectPage(page.getByRole("heading", { level: 1 })).toBeVisible();
 });
 
 test("resetting the app cache clears this app's caches and keeps the saved data", async ({ page }) => {
@@ -105,7 +106,7 @@ test("resetting the app cache clears this app's caches and keeps the saved data"
     page.waitForEvent("load"),
     page.getByRole("button", { name: "Reset the app cache" }).click(),
   ]);
-  await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+  await expectPage(page.getByRole("heading", { level: 1 })).toBeVisible();
   await expect.poll(() => page.evaluate(async () => (await caches.keys()).includes("sr-shell-stale"))).toBe(false);
   await expect.poll(databases).toContain("salvage-rights:host");
   await expect(page.locator("body")).toHaveClass("dark");

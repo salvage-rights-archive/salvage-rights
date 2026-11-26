@@ -1,6 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import type { Page } from "@playwright/test";
-import { ACES, DEV, expect, test } from "./fixtures";
+import { ACES, DEV, expect, expectPage, test } from "./fixtures";
 
 // The campaign, units and pilots are invented for the test; only the opposing unit names are the book's.
 
@@ -113,7 +113,7 @@ test("set up sortie 1 with invented units at 320 px, in both themes without axe 
   await page.goto(`${DEV}/settings`);
   await page.getByRole("radio", { name: "Dark" }).check();
   await page.goto(url);
-  await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+  await expectPage(page.getByRole("heading", { level: 1 })).toBeVisible();
   await noViolations(page, "sortie, dark");
 
   await page.getByLabel("Bolt BT-2 (BM, 30 PV)").check();
