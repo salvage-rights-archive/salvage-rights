@@ -1,13 +1,13 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { ERAS } from "../data/editions";
 import type { Span } from "../data/chassis";
-import { configurationAvailable, configurationChoices, equipmentAvailable, eraOfRecord, partAvailable, partChoices, setEra, setYear, typeAvailable } from "./availability";
+import { configurationAvailable, configurationChoices, equipmentAvailable, eraOfRecord, erasOfYear, partAvailable, partChoices, setEra, setYear, typeAvailable } from "./availability";
 import type { PartKind } from "./availability";
 import { expand, groupOf, loadCatalog } from "./catalog";
 import type { Catalog } from "./catalog";
 import { runChecks } from "./checks";
 import { bipedRecord, mount } from "./fixtures";
-import { lowestLevelFor } from "./levels";
+import { lowestLevelFor, techBaseChoices } from "./levels";
 import type { MechRecord } from "./mech";
 import { datesText, phaseIn } from "./time";
 
@@ -26,13 +26,13 @@ describe("equipment availability", () => {
   });
 
   it("offers a Clan unit Clan rows and an Inner Sphere unit Inner Sphere rows, and a mixed unit both", () => {
-    expect([offers("lrm-5-clan", { techBase: "inner-sphere", year: 3060 }), offers("lrm-5-clan", { techBase: "clan", year: 3060 }), offers("lrm-5-is", { techBase: "clan", year: 3060 }), offers("lrm-5-is", { techBase: "mixed", year: 3060 })]).toEqual([false, true, false, true]);
+    expect([offers("lrm-5-clan", { techBase: "inner-sphere", year: 3060 }), offers("lrm-5-clan", { techBase: "clan", year: 3060 }), offers("ultra-ac-20-is", { techBase: "clan", year: 3060 }), offers("ultra-ac-20-is", { techBase: "mixed", year: 3060 })]).toEqual([false, true, false, true]);
   });
 
   it("hides an item above the unit's level, and Show everything lifts the tech base and the years but never the level", () => {
     const patch = { techBase: "clan", year: 3025, rulesLevel: "standard" } as const;
     expect([offers("ppc-capacitor-is", { year: 3065 }), offers("ppc-capacitor-is", { year: 3065, rulesLevel: "experimental" })]).toEqual([false, true]);
-    expect([offers("lrm-5-is", patch), offers("lrm-5-is", patch, true), offers("ppc-capacitor-is", patch, true)]).toEqual([false, true, false]);
+    expect([offers("ultra-ac-20-is", patch), offers("ultra-ac-20-is", patch, true), offers("ppc-capacitor-is", patch, true)]).toEqual([false, true, false]);
   });
 
   it("limits a unit with an era and no year to the whole era: introduced by its last year and not extinct before its first", () => {
@@ -106,7 +106,7 @@ describe("the rules check", () => {
   it("reports what the record uses that its era or year does not allow, and an era the year is not in", () => {
     const found = (patch: Partial<MechRecord>) => runChecks(record(patch), catalog).filter((f) => f.check === "availability" || f.check === "parts").map((f) => f.message);
     expect(found({ year: 3025, chassis: { ...record().chassis, engine: { type: "xl", rating: 200 } } })).toEqual([expect.stringContaining("XL Fusion engine is not available in 3025; its prototype appears in 2556 and it is available 2579 to 2865 and from 3035")]);
-    expect(found({ year: null, era: "age-of-war", configuration: "quad", chassis: { ...record().chassis, gyro: "xl" } })).toEqual([expect.stringContaining("XL gyro is not available in the Age of War era")]);
+    expect(found({ year: null, era: "age-of-war", configuration: "quad", chassis: { ...record().chassis, gyro: "xl" } })).toContainEqual(expect.stringContaining("XL gyro is not available in the Age of War era"));
     expect(found({ year: 3025, era: "star-league" })).toEqual([expect.stringContaining("The era is star-league, but the year 3025 is in the Late Succession War - Renaissance era")]);
   });
 });
@@ -240,5 +240,29 @@ describe("prototype and production dates", () => {
     const defaults = { kind: "other", techBase: "clan", tons: 1, slots: 1, cite: { book: "TechManual", page: 1 }, checked: "page" } as const;
     expect(() => expand([{ defaults, items: [{ id: "a", name: "A", availability: [{ from: 3000 }], prototypeYear: 3000 }] }])).toThrow("the prototype year is not before the production year");
     expect(expand([{ defaults, items: [{ id: "a", name: "A", availability: [{ from: 3000 }], prototypeYear: 2990 }] }])[0]?.prototypeYear).toBe(2990);
+  });
+});
+
+describe("the year decides the era, and a dual year the tech base", () => {
+  it("offers Clan from 2800 and not 2799, and a year in two eras lets the picked era decide Inner Sphere or Clan", () => {
+    const bases = (year: number, era?: string) => techBaseChoices("standard", era === "clan-golden-years" ? "clan" : "inner-sphere", { year, era }).map(([value]) => value);
+    expect([bases(2799).includes("clan"), bases(2800).includes("clan")]).toEqual([false, true]);
+    expect(erasOfYear(2900).map((e) => e.id)).toEqual(["early-succession-war", "clan-golden-years"]);
+    expect(erasOfYear(3060).map((e) => e.id)).toEqual(["clan-invasion"]); // one era: shown as text, no choice
+    expect([bases(2900, "clan-golden-years").includes("clan"), bases(2900, "clan-golden-years").includes("inner-sphere")]).toEqual([true, false]);
+    expect([bases(2900, "early-succession-war").includes("clan"), bases(2900, "early-succession-war").includes("inner-sphere")]).toEqual([false, true]);
+  });
+
+  it("needs a year above Introductory, with an error on the year field, and a yearless record still loads", () => {
+    const errors = (patch: Partial<MechRecord>) => runChecks(record({ year: null, ...patch }), catalog).filter((f) => f.where?.field === "year" && f.level === "error");
+    expect(errors({ rulesLevel: "standard" })).toHaveLength(1);
+    expect(errors({ rulesLevel: "introductory" })).toHaveLength(0);
+  });
+
+  it("gives a Clan unit Star League Inner Sphere items as its own, not later ones, and does not flag them as mixed", () => {
+    const clan = { techBase: "clan", year: 2900, era: "clan-golden-years" } as const;
+    expect([offers("medium-laser-is", clan), offers("ultra-ac-20-is", { ...clan, year: 3060, era: undefined })]).toEqual([true, false]);
+    const flagged = (id: string, patch: Partial<MechRecord>) => runChecks(record({ ...patch, mounts: [mount("m", id, "RA", 0)] }), catalog).some((f) => f.check === "availability" && f.level === "error" && f.message.includes("equipment, which a Clan"));
+    expect([flagged("medium-laser-is", clan), flagged("ultra-ac-20-is", { ...clan, year: 3060, era: undefined })]).toEqual([false, true]);
   });
 });

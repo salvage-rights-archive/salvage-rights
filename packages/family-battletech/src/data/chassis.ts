@@ -1200,6 +1200,19 @@ export const MIXED_TECHNOLOGY: {
  * Clan technology only among Clan factions). Equipment and parts carry their own, later, dates; this only gates the choice of the tech base. */
 export const CLAN_TECHNOLOGY: { firstYear: number; cite: Cite; checked: Checked } = { firstYear: 2800, cite: { book: IO_AE, page: 17 }, checked: "page" };
 /**
+ * Star League technology is Inner Sphere technology that existed before the Succession Wars, not a tech base of its own (owner's ruling of
+ * 2026-11-26). A Clan record may use it as its own, with no Mixed option: Interstellar Operations: Alternate Eras printed p.17 says that among
+ * Clan forces only Inner Sphere units built before 2781 may appear, and that the same limit applies to equipment selections. 2781 is where the
+ * Early Succession Wars begin (the era table, p.16), so the Star League ends in 2780. An item counts when its first production year is
+ * before 2781. Inner Sphere items from later stay Mixed-only for a Clan record (the Clan Invasion, 3050, is when Clan forces first meet
+ * Inner Sphere developments; the era table on p.16 ends the Clan Golden Years in 3049).
+ */
+export const STAR_LEAGUE_TECH: { endsBefore: number; cite: Cite; checked: Checked } = { endsBefore: 2781, cite: { book: IO, page: 17 }, checked: "page" };
+/** Whether an Inner Sphere row, by its production spans, is Star League technology: first available before 2781. No dates printed: not known to be. */
+export const isStarLeagueTech = (base: "inner-sphere" | "clan" | "both" | undefined, spans: Span[] | undefined): boolean =>
+  base === "inner-sphere" && spans !== undefined && spans.length > 0 && Math.min(...spans.map((s) => s.from)) < STAR_LEAGUE_TECH.endsBefore;
+
+/**
  * The FrankenMech option (Campaign Operations, corrected fourth printing, printed p.213; the v5.0 errata of 22 August 2024 only adds the
  * line barring heavier jump jets, which the fourth printing's text already holds). Campaign Operations calls all its rules optional and
  * advanced (introduction, p.7), so the option is Advanced. The page builds a 'Mech from the eight body locations of donors: the center torso

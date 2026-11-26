@@ -14,9 +14,9 @@ import type { Finding } from "../rules/checks";
 import { changedSinceImport } from "../rules/mordel";
 import { ARM_FULL, armorTypeAt, bodyOf, configurationOf, donorTons, editRecord, layout as buildLayout, locationName, mechTypeOf, partMountBase, patchworkActive, patchworkSlotsFor, setConfiguration, setMyomer, structurePoints, weights as buildWeights } from "../rules/mech";
 import type { Layout, LocationCode, MechRecord } from "../rules/mech";
-import { configurationChoices, eraOfRecord, partChoices, setEra, setYear } from "../rules/availability";
+import { configurationChoices, eraNeedsPick, eraOfRecord, erasOfYear, partChoices, setEra, setYear } from "../rules/availability";
 import type { PartKind } from "../rules/availability";
-import { frankenMechOffered, heatSinkMixAllowed, heatSinkMixPossible, techBaseChoices, withLevel } from "../rules/levels";
+import { frankenMechOffered, heatSinkMixAllowed, heatSinkMixPossible, levelRow, techBaseChoices, withLevel } from "../rules/levels";
 import {
   BASE,
   applyBaseEdit,
@@ -115,6 +115,7 @@ export function NumberField({
   name,
   className,
   disabled,
+  needs,
 }: {
   id: string;
   label: string;
@@ -130,6 +131,8 @@ export function NumberField({
   onFocus?: () => void;
   /** Read-only: a part fixed in an OmniMech base, seen from a configuration. */
   disabled?: boolean;
+  /** Said when the field is empty and has to have a value (the year above Introductory): shown as its hint, and the field is marked invalid. */
+  needs?: string;
 }) {
   const [draft, setDraft] = useState<string>();
   const parse = (text: string): number | null | undefined => {
@@ -144,7 +147,7 @@ export function NumberField({
   const showDraft = draft !== undefined && (invalid || parsed === value);
   const shown = showDraft ? draft : value === null ? "" : String(value);
   return (
-    <Field id={id} label={label} className={className} changed={changed} hint={invalid ? "Enter a number." : undefined}>
+    <Field id={id} label={label} className={className} changed={changed} hint={invalid ? "Enter a number." : value === null ? needs : undefined}>
       {(describedBy) => (
         <>
           <input
@@ -153,7 +156,7 @@ export function NumberField({
             type="text"
             inputMode="decimal"
             value={shown}
-            aria-invalid={invalid || undefined}
+            aria-invalid={invalid || (value === null && needs !== undefined) || undefined}
             aria-describedby={describedBy}
             disabled={disabled}
             onFocus={onFocus}
@@ -770,6 +773,7 @@ function Editor({ initial, unsaved, startAt, catalog, storage }: { initial: Doc;
     : [];
   const base = gameBase(record);
   const ruleset = rulesetOf(record.editionId);
+  const yearEras = erasOfYear(record.year, ruleset);
   const gothic = ruleset.game === "gothic";
   const open = listsOpen(ruleset, record.rulesLevel); // Unlimited opens the whole catalog, Clan rows and every unit type included
   // Items whose weight we worked out because no book prints it (the Light Blazer), each named once for the weight list.
@@ -1018,6 +1022,37 @@ function Editor({ initial, unsaved, startAt, catalog, storage }: { initial: Doc;
                 onChange={(v) => { edit((d) => { setConfiguration(d, v); if (d.patchwork) syncArmorMounts(d); }); }}
               />
               <LevelSelect record={record} ruleset={ruleset} onChange={(level) => { edit((d) => void (d.rulesLevel = level)); }} />
+              <NumberField
+                id="field-year"
+                label="Year"
+                value={record.year}
+                allowEmpty
+                changed={mark("year")}
+                needs={ruleset.dated && (record.rulesLevel ?? "standard") !== "introductory" ? `Needs a year at ${levelRow(record.rulesLevel ?? "standard", ruleset).label} rules.` : undefined}
+                onValid={(v) => { edit((d) => { setYear(d, v); }, "year"); }}
+              />
+              <div className="bt-grid__wide">
+              {(chassis !== undefined && !inBase) || (ruleset.dated && record.year !== null && yearEras.length === 1) ? (
+                <div className="bt-field">
+                  <span id="field-era-label" className="bt-label">
+                    Era
+                  </span>
+                  <span id="field-era" tabIndex={-1} aria-labelledby="field-era-label">
+                    {eraOfRecord(record)?.name ?? "Any era"}
+                  </span>
+                  <span className="bt-hint">{chassis !== undefined && !inBase ? "A configuration's era follows its year. Set the year here, or the base's era in the base." : "The era follows the year."}</span>
+                </div>
+              ) : (
+              <SelectField
+                id="field-era"
+                label="Era"
+                value={ruleset.dated && record.year !== null && eraNeedsPick(record) ? "" : (eraOfRecord(record)?.id ?? "")}
+                options={ruleset.dated && record.year !== null && yearEras.length > 1 ? [["", "Choose an era"], ...yearEras.map((era): [string, string] => [era.id, `${era.name} (${String(era.startYear)}${era.endYear === undefined ? " on" : `-${String(era.endYear)}`})`])] : eraChoices(ruleset.eras)}
+                changed={mark("era")}
+                onChange={(v) => { edit((d) => { setEra(d, v); }, "era"); }}
+              />
+              )}
+              </div>
               {(!gothic || open) && (
               <SelectField
                 id="field-techBase"
@@ -1043,29 +1078,6 @@ function Editor({ initial, unsaved, startAt, catalog, storage }: { initial: Doc;
                   Searchlight (no weight, no slot; rulebook p. 90)
                 </label>
               )}
-              <NumberField id="field-year" label="Year" value={record.year} allowEmpty changed={mark("year")} onValid={(v) => { edit((d) => { setYear(d, v); }, "year"); }} />
-              <div className="bt-grid__wide">
-              {chassis !== undefined && !inBase ? (
-                <div className="bt-field">
-                  <span id="field-era-label" className="bt-label">
-                    Era
-                  </span>
-                  <span id="field-era" tabIndex={-1} aria-labelledby="field-era-label">
-                    {eraOfRecord(record)?.name ?? "Any era"}
-                  </span>
-                  <span className="bt-hint">A configuration's era follows its year. Set the year here, or the base's era in the base.</span>
-                </div>
-              ) : (
-              <SelectField
-                id="field-era"
-                label="Era"
-                value={eraOfRecord(record)?.id ?? ""}
-                options={eraChoices(ruleset.eras)}
-                changed={mark("era")}
-                onChange={(v) => { edit((d) => { setEra(d, v); }, "era"); }}
-              />
-              )}
-              </div>
               <NumberField id="field-tons" label={record.frankenmech ? "Tons (center torso donor)" : "Tons"} value={record.tons} changed={mark("tons")} disabled={fixedHere} onValid={(v) => { edit((d) => void (d.tons = v ?? d.tons), "tons"); }} />
             </div>
             {record.frankenmech && (

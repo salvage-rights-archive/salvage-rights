@@ -188,6 +188,8 @@ export interface EraRow {
   name: string;
   startYear: number;
   endYear?: number;
+  /** A Clan-only sub-era: it overlaps the Master Unit List era that holds its years, and picking it means the Clan technology base. */
+  techBase?: "clan";
   /** The page that prints the era's name and years, where the table has no one source for all its rows (Gothic's eras). */
   cite?: { book: string; page: number };
   checked?: "page" | "text";
@@ -205,4 +207,13 @@ export const ERAS: EraRow[] = [
   { id: "late-republic", name: "Late Republic", startYear: 3101, endYear: 3130 },
   { id: "dark-ages", name: "Dark Ages", startYear: 3131, endYear: 3150 },
   { id: "ilclan", name: "ilClan", startYear: 3151 },
+];
+/** The Clan sub-eras of Interstellar Operations: Alternate Eras (era table printed p.16, text pp.17 and 24, read against the page images).
+ * They overlap the eras above, so a year in 2800-3049 or 3086-3150 belongs to two eras, one Inner Sphere and one Clan, and the player picks
+ * which: it decides the tech base. They are not in `ERAS` (the Master Unit List's twelve, which other tiles read by name). */
+const IO_AE = "Interstellar Operations: Alternate Eras";
+export const CLAN_SUB_ERAS: EraRow[] = [
+  { id: "clan-founding-years", name: "Clan Founding Years", startYear: 2800, endYear: 2840, techBase: "clan", cite: { book: IO_AE, page: 16 }, checked: "page" },
+  { id: "clan-golden-years", name: "Clan Golden Years", startYear: 2841, endYear: 3049, techBase: "clan", cite: { book: IO_AE, page: 16 }, checked: "page" },
+  { id: "clan-post-reaving", name: "Clan Post-Reaving", startYear: 3086, endYear: 3150, techBase: "clan", cite: { book: IO_AE, page: 24 }, checked: "page" },
 ];

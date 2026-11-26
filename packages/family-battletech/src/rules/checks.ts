@@ -15,6 +15,7 @@ import {
   HEAT_SINK_RULES,
   HEAT_SINKS,
   INTERNAL_STRUCTURE,
+  isStarLeagueTech,
   LAM,
   CLAN_TECHNOLOGY,
   MIXED_TECHNOLOGY,
@@ -25,11 +26,11 @@ import {
   STRUCTURE_TYPES,
 } from "../data/chassis";
 import type { Cite, PartFacts, Span } from "../data/chassis";
-import { configurationInTime, equipmentPhase, eraOfRecord, eraOfYear, partPhase, partSpans, typeInTime, windowOf } from "./availability";
+import { configurationInTime, equipmentPhase, eraNeedsPick, eraOfRecord, erasOfYear, partPhase, partSpans, typeInTime, windowOf } from "./availability";
 import { listed, RULESETS, rulesetOf } from "../data/rulesets";
 import { CLAN_CASE_IDS, clanCaseAllowed } from "./case";
 import { locationsFor, mountableOn, mountsRequired, podMountable } from "./catalog";
-import { heatSinkMixAllowed, levelAtLeast, levelIn, levelItems, levelRow, mixedPhase } from "./levels";
+import { heatSinkMixAllowed, levelAtLeast, levelIn, levelItems, levelOfRecord, levelRow, mixedPhase } from "./levels";
 import { clanInTime, datesText, partIsPrototypeOnly, partPrototype } from "./time";
 import type { Catalog, EquipmentRow } from "./catalog";
 import { ARM_FULL, armorSpread, armorTypeAt, armorTypesUsed, armsOf, canSplitBetween, configurationOf, donorTons, engineTons, freeHeatSinks, industrialRulesOf, layout as buildLayout, maxArmor, mechTypeOf, mountCanFireRear, patchworkActive, patchworkSlotsFor, slotsTaken, splitOf, structurePoints, walkMP, weights } from "./mech";
@@ -548,7 +549,7 @@ function availabilityCheck({ record, catalog }: CheckInput): Finding[] {
       const owners = (row.games ?? []).map((game) => RULESETS[game].name).join(" or ");
       out.push(finding("availability", "error", `${mount.name} is ${owners} equipment, which a ${ruleset.name} 'Mech may not use.`, { where, cite: row.cite }));
     }
-    if (record.techBase !== "mixed" && row.techBase !== record.techBase) {
+    if (record.techBase !== "mixed" && row.techBase !== record.techBase && !(record.techBase === "clan" && isStarLeagueTech(row.techBase, row.availability))) {
       out.push(
         finding("availability", "error", `${mount.name} is ${techBaseName(row.techBase)} equipment, which ${record.techBase === "clan" ? "a" : "an"} ${techBaseName(record.techBase)} 'Mech may not use.`, {
           where,
@@ -587,11 +588,29 @@ function availabilityCheck({ record, catalog }: CheckInput): Finding[] {
 }
 
 /** The era and the year disagree, or the body type is not one this tech base and time had. */
-function eraCheck({ record }: CheckInput): Finding[] {
+function eraCheck({ record, catalog }: CheckInput): Finding[] {
   const out: Finding[] = [];
-  const holds = eraOfYear(record.year, rulesetOf(record.editionId));
-  if (record.era !== undefined && record.year !== null && holds?.id !== record.era) {
-    out.push(finding("availability", "warning", `The era is ${record.era}, but the year ${record.year} is ${holds ? `in the ${holds.name} era` : "in no era we list"}. Choose the era again or change the year.`, { where: { field: "era" } }));
+  const ruleset = rulesetOf(record.editionId);
+  const holding = erasOfYear(record.year, ruleset);
+  // Above Introductory a year is needed: it sets the era and the dates the books give each item (IO:AE p.27). Introductory is 3025 technology
+  // (Total Warfare p.275), so it may go without one. A record with none still loads; this is its error.
+  const level = levelOfRecord(record, catalog);
+  if (ruleset.dated && record.year === null && level !== "introductory") {
+    out.push(finding("availability", "error", `This 'Mech needs a year at ${levelRow(level, ruleset).label} rules: the year sets the era, and the era and year decide the technology offered.`, { where: { field: "year" }, cite: IO_UTA }));
+  }
+  if (record.era !== undefined && record.year !== null && !holding.some((era) => era.id === record.era)) {
+    out.push(finding("availability", "warning", `The era is ${record.era}, but the year ${record.year} is ${holding[0] ? `in the ${holding[0].name} era` : "in no era we list"}. Choose the era again or change the year.`, { where: { field: "era" } }));
+  }
+  // The pick only matters where the tech base does not already say which era the year means: an Inner Sphere or Clan record is in its own era.
+  if (record.year !== null && record.techBase === "mixed" && eraNeedsPick(record) && level !== "introductory") {
+    out.push(finding("availability", "error", `The year ${record.year} is in two eras (${holding.map((era) => era.name).join(" and ")}); pick one, since it decides the technology base.`, { where: { field: "era" }, cite: holding.find((era) => era.cite)?.cite }));
+  }
+  const pickedEra = eraOfRecord(record);
+  if (pickedEra?.techBase === "clan" && record.techBase === "inner-sphere" && holding.length > 1) {
+    out.push(finding("availability", "error", `The era is ${pickedEra.name}, a Clan sub-era, but the tech base is Inner Sphere.`, { where: { field: "techBase" }, cite: pickedEra.cite }));
+  }
+  if (pickedEra && pickedEra.techBase !== "clan" && record.techBase === "clan" && holding.length > 1) {
+    out.push(finding("availability", "error", `The era is ${pickedEra.name}, an Inner Sphere era, but the tech base is Clan.`, { where: { field: "techBase" }, cite: holding.find((era) => era.techBase === "clan")?.cite }));
   }
   const type = mechTypeOf(record);
   const row = configurationOf(record.configuration);
@@ -772,7 +791,7 @@ function partsCheck({ record, catalog }: CheckInput): Finding[] {
     const where = { field };
     const cite = part.cite ?? table.cite;
     const clanOnly = part.techBase === "clan" && record.techBase === "inner-sphere";
-    const isOnly = part.techBase === "inner-sphere" && record.techBase === "clan";
+    const isOnly = part.techBase === "inner-sphere" && record.techBase === "clan" && !isStarLeagueTech(part.techBase, partSpans(part, "inner-sphere"));
     if (clanOnly || isOnly) {
       out.push(finding("parts", "error", `${part.name} ${what} is ${clanOnly ? "Clan" : "Inner Sphere"} technology; this is ${record.techBase === "clan" ? "a Clan" : "an Inner Sphere"} 'Mech.`, { where, cite }));
     }

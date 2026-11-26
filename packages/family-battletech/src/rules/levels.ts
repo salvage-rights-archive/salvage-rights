@@ -8,7 +8,7 @@ import type { Ruleset } from "../data/rulesets";
 import type { Catalog, EquipmentRow } from "./catalog";
 import { armorTypesUsed, configurationOf, mechTypeOf, patchworkActive } from "./mech";
 import type { LocationCode, MechRecord } from "./mech";
-import { clanInTime, datesText, partPrototype, partSpans, phaseIn, rowPhase, windowOf } from "./time";
+import { clanInTime, datesText, erasOfYear, partPrototype, partSpans, phaseIn, rowPhase, windowOf } from "./time";
 import type { Phase, When } from "./time";
 
 export const LEVEL_ORDER: RulesLevel[] = RULES_LEVELS.map((row) => row.id);
@@ -78,7 +78,12 @@ export function techBaseChoices(level: RulesLevel | undefined, current: string, 
   const clanFits = levelAtLeast(at, DEFAULT_LEVEL) && clanInTime(when);
   const ruleset = rulesetOf(when.editionId);
   const offered = (value: string) => listsOpen(ruleset, at) || ruleset.techBases.some((base) => base === value);
-  return all.filter(([value]) => value === current || (offered(value) && (value === "inner-sphere" || (value === "clan" ? clanFits : mixedFits))));
+  // A year in two eras (an Inner Sphere era and a Clan sub-era): the era picked decides the base, a Clan era offering Clan and an Inner Sphere
+  // era Inner Sphere, and Mixed by its own dates in both.
+  const inYear = erasOfYear(when.year, ruleset);
+  const picked = inYear.length > 1 ? inYear.find((era) => era.id === when.era) : undefined;
+  const eraFits = (value: string) => picked === undefined || (picked.techBase === "clan" ? value !== "inner-sphere" : value !== "clan");
+  return all.filter(([value]) => value === current || (offered(value) && eraFits(value) && (value === "inner-sphere" || (value === "clan" ? clanFits : mixedFits))));
 }
 
 /** The level's row (label, description, cite), with the label the game shows where it has its own (Gothic's "Unofficial"). */

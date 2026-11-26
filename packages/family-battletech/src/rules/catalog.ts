@@ -2,6 +2,7 @@
 // itself is plain data in data/equipment/*, written in groups whose `defaults` carry what the items share; `expand`
 // turns the groups into rows and `createCatalog` indexes them. Nothing here is specific to a book except the formula
 // table, which holds the few items the book scales with the 'Mech.
+import { isStarLeagueTech } from "../data/chassis";
 import type { RulesLevel, Span } from "../data/chassis";
 import { AMMO_GROUPS, AMMO_OTHER_GROUP, EQUIPMENT_GROUPS, GROUP_ORDER, OTHER_GROUP } from "../data/equipment/groups";
 import { inGame, rulesetOf } from "../data/rulesets";
@@ -293,7 +294,7 @@ export function createCatalog(rows: EquipmentRow[], overlays: Overlays = {}): Ca
     offered: (editionId, { techBase, year, unit = "mech", level }) => {
       const ruleset = rulesetOf(editionId);
       return rows
-        .filter((r) => inGame(r.games, ruleset, level) && mountableOn(r, unit) && (techBase === "mixed" || r.techBase === techBase) && available(r, editionId, year))
+        .filter((r) => inGame(r.games, ruleset, level) && mountableOn(r, unit) && (techBase === "mixed" || r.techBase === techBase || (techBase === "clan" && isStarLeagueTech(r.techBase, r.availability))) && available(r, editionId, year))
         .map((r) => inEdition(r, editionId));
     },
     available,

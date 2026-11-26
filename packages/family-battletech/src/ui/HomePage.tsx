@@ -3,10 +3,10 @@ import type { ChangeEvent } from "react";
 import { Link, useNavigate } from "react-router";
 import { ENGINE_WEIGHTS, INTERNAL_STRUCTURE, MECH_TYPES } from "../data/chassis";
 import type { MechType } from "../data/chassis";
-import { baseOf } from "../data/rulesets";
+import { baseOf, CLASSIC } from "../data/rulesets";
 import { DEFAULT_EDITION, EDITIONS, bookName, editionName } from "../data/editions";
-import { configurationAvailable, configurationChoices, setYear, typeAvailable } from "../rules/availability";
-import { levelAtLeast, techBaseChoices, withLevel } from "../rules/levels";
+import { configurationAvailable, configurationChoices, erasOfYear, setYear, typeAvailable } from "../rules/availability";
+import { levelAtLeast, levelRow, techBaseChoices, withLevel } from "../rules/levels";
 import { DEFAULT_AERO_EDITION } from "../data/aero";
 import { newAeroRecord } from "../rules/aero";
 import type { AeroType } from "../data/aero";
@@ -95,6 +95,8 @@ export default function HomePage() {
   const [aeroThrust, setAeroThrust] = useState(5);
   /** The year typed in the build form, as text; empty or not a year means no year, and nothing is hidden by time. */
   const [yearText, setYearText] = useState("");
+  /** The era picked when the typed year is in two eras (an Inner Sphere era and a Clan sub-era). */
+  const [eraPick, setEraPick] = useState("");
   const keepRef = useRef<HTMLButtonElement>(null);
   const openerRef = useRef<HTMLElement | null>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
@@ -196,9 +198,16 @@ export default function HomePage() {
   // What the form offers follows the rules level and tech base: a choice that no longer fits gives way to the first that does, so the Type
   // and Configuration lists re-filter as those fields change and nothing offered is out of the rules.
   const yearTyped = /^\d{4}$/.test(yearText.trim()) ? Number(yearText.trim()) : null;
-  const when = { year: yearTyped };
-  const techBase = techBaseChoices(draft.rulesLevel, "inner-sphere", when).some(([value]) => value === draft.techBase) ? draft.techBase : "inner-sphere"; // a year that rules the chosen tech base out gives way to Inner Sphere
-  const subject = { techBase, year: yearTyped, rulesLevel: draft.rulesLevel };
+  // The year sets the era: one era holding it is the era, two (an Inner Sphere era and a Clan sub-era) are a choice the player makes, and the choice
+  // decides the tech bases offered. Above Introductory the year is needed (and so the pick); Introductory is 3025 technology and may go without.
+  const yearEras = erasOfYear(yearTyped, CLASSIC);
+  const eraChosen = yearEras.length === 1 ? yearEras[0] : yearEras.find((era) => era.id === eraPick);
+  const aboveIntroductory = (draft.rulesLevel ?? "standard") !== "introductory";
+  const missing = aboveIntroductory && yearTyped === null ? `A year is needed at ${levelRow(draft.rulesLevel ?? "standard").label} rules: it sets the era, and the era and year decide what is offered.` : aboveIntroductory && yearEras.length > 1 && eraChosen === undefined ? `The year ${String(yearTyped)} is in two eras; choose one, since it decides the tech base.` : "";
+  const when = { year: yearTyped, era: eraChosen?.id };
+  const offeredBases = techBaseChoices(draft.rulesLevel, "", when); // the current choice is not kept here: one the year or era rules out gives way to the first offered
+  const techBase = (offeredBases.some(([value]) => value === draft.techBase) ? draft.techBase : (offeredBases[0]?.[0] ?? "inner-sphere")) as NewMechOptions["techBase"];
+  const subject = { techBase, year: yearTyped, era: eraChosen?.id, rulesLevel: draft.rulesLevel };
   const usable = (id: MechType) => MECH_TYPES.find((t) => t.id === id)?.ready === true && typeAvailable(id, subject);
   const unitType: MechType = draft.unitType !== undefined && usable(draft.unitType) ? draft.unitType : (MECH_TYPES.find((t) => usable(t.id))?.id ?? "mech");
   const typed = { ...subject, unitType };
@@ -222,7 +231,7 @@ export default function HomePage() {
 
   const buildAero = async () => {
     const aeroTonnage = aeroTons ?? startTons(aeroRow ?? undefined);
-    if (!storage || !aeroPicked || !aeroRow || !draft.chassis.trim() || aeroTonnage <= 0) return;
+    if (!storage || !aeroPicked || !aeroRow || !draft.chassis.trim() || aeroTonnage <= 0 || missing !== "") return;
     const made = newAeroRecord(
       {
         id: crypto.randomUUID(),
@@ -243,11 +252,14 @@ export default function HomePage() {
 
   const build = async () => {
     if (aeroPicked) return buildAero();
-    if (!storage || !draft.chassis.trim()) return;
+    if (!storage || !draft.chassis.trim() || missing !== "") return;
     const options = { ...draft, techBase, configuration, tons, chassis: draft.chassis.trim(), model: draft.model.trim(), walk: Math.min(draft.walk, walks.at(-1) ?? 1), year: yearTyped };
     // An OmniMech is a chassis (its fixed base and a Prime to start) and is saved as one.
     const made = unitType === "omnimech" ? newOmniChassis(options, edition, crypto.randomUUID()) : newRecord({ ...options, unitType }, edition, crypto.randomUUID());
-    if ("mounts" in made) setYear(made, yearTyped);
+    if ("mounts" in made) {
+      setYear(made, yearTyped);
+      if (eraChosen) made.era = eraChosen.id;
+    }
     if (!(await attempt(STORAGE_WRITE_FAILED, () => ("base" in made ? storage.saveOmni(made) : storage.save(made))))) return;
     void navigate(`/battletech/classic/editor?id=${encodeURIComponent(made.id)}`);
   };
@@ -672,6 +684,38 @@ export default function HomePage() {
               }}
             />
             <div className="bt-field">
+              <label htmlFor="bt-new-year">Year</label>
+              <input
+                id="bt-new-year"
+                inputMode="numeric"
+                maxLength={4}
+                value={yearText}
+                aria-invalid={aboveIntroductory && yearTyped === null ? true : undefined}
+                aria-describedby="bt-new-year-hint"
+                onChange={(e) => { setYearText(e.target.value); }}
+              />
+              <span id="bt-new-year-hint" className="bt-hint">
+                {aboveIntroductory ? "Needed. The year sets the era and hides the body types, parts and tech bases that did not exist yet." : "Optional at Introductory, which is 3025 technology. A year sets the era and hides what did not exist yet."}
+              </span>
+            </div>
+            {yearEras.length === 1 && (
+              <div className="bt-field">
+                <span id="bt-new-era-label" className="bt-label">Era</span>
+                <span id="bt-new-era" aria-labelledby="bt-new-era-label">{yearEras[0]?.name}</span>
+              </div>
+            )}
+            {yearEras.length > 1 && (
+              <div className="bt-field">
+                <label htmlFor="bt-new-era-pick">Era</label>
+                <select id="bt-new-era-pick" value={eraChosen?.id ?? ""} onChange={(e) => { setEraPick(e.target.value); }}>
+                  <option value="">Choose an era</option>
+                  {yearEras.map((era) => (
+                    <option key={era.id} value={era.id}>{era.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+            <div className="bt-field">
               <label htmlFor="bt-new-tech">Tech base</label>
               <select id="bt-new-tech" value={techBase} onChange={(e) => setDraft({ ...draft, techBase: e.target.value as NewMechOptions["techBase"] })}>
                 {techBaseChoices(draft.rulesLevel, techBase, when).map(([value, label]) => (
@@ -680,11 +724,6 @@ export default function HomePage() {
                   </option>
                 ))}
               </select>
-            </div>
-            <div className="bt-field">
-              <label htmlFor="bt-new-year">Year</label>
-              <input id="bt-new-year" inputMode="numeric" maxLength={4} value={yearText} onChange={(e) => { setYearText(e.target.value); }} />
-              <span className="bt-hint">Optional. A year hides the body types, parts and tech bases that did not exist yet, and sets the era.</span>
             </div>
             {aeroPicked && aeroRow ? (
               <>
@@ -720,7 +759,8 @@ export default function HomePage() {
             {aeroPicked ? "You start with a standard engine, no fuel, no armor, no heat sinks and no equipment. The AeroTech editor's rules check shows what is left to do." : unitType === "industrialmech" ? "You start with an industrial frame and cockpit, a standard fusion engine" : "You start with standard parts"}, ten
             heat sinks, no armor and no equipment. {unitType === "omnimech" && "An OmniMech starts as a base chassis with an empty Prime configuration. "}The editor's rules check shows what is left to do.
           </p>
-          <button type="submit" className="bt-button" disabled={!storage || (aeroPicked !== undefined && (aeroTons ?? startTons(aeroRow)) <= 0)}>
+          {missing !== "" && <p id="bt-new-missing" className="bt-hint">{missing}</p>}
+          <button type="submit" className="bt-button" disabled={!storage || missing !== "" || (aeroPicked !== undefined && (aeroTons ?? startTons(aeroRow)) <= 0)} aria-describedby={missing === "" ? undefined : "bt-new-missing"}>
             Start building
           </button>
         </form>

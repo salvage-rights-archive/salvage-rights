@@ -90,6 +90,7 @@ describe("Classic BattleTech home", () => {
     expect([...configuration.options].map((o) => o.text)).toEqual(["Biped", "Quad", "Tripod", "Land-Air 'Mech", "Bimodal Land-Air 'Mech"]);
     await user.selectOptions(within(form).getByLabelText("Rules level"), "standard");
     await user.selectOptions(configuration, "quad");
+    await user.type(within(form).getByLabelText("Year"), "3060");
     await waitFor(() => expect(within(form).getByRole<HTMLButtonElement>("button", { name: "Start building" }).disabled).toBe(false));
     await user.click(within(form).getByRole("button", { name: "Start building" }));
     await waitFor(async () => {
@@ -113,6 +114,7 @@ describe("Classic BattleTech home", () => {
     expect([...config.options].map((o) => o.text)).toEqual(["Biped", "Quad", "Tripod", "Land-Air 'Mech", "Bimodal Land-Air 'Mech"]);
     await user.type(within(form).getByLabelText("Name"), "Hawk");
     await user.selectOptions(config, "lam");
+    await user.type(within(form).getByLabelText("Year"), "3060");
     await waitFor(() => expect(within(form).getByRole<HTMLButtonElement>("button", { name: "Start building" }).disabled).toBe(false));
     await user.click(within(form).getByRole("button", { name: "Start building" }));
     await waitFor(async () => {
@@ -126,7 +128,7 @@ describe("Classic BattleTech home", () => {
     const user = userEvent.setup();
     renderHome();
     const form = await screen.findByRole("form", { name: "Build a new one" });
-    expect([...form.querySelectorAll("label")].map((l) => l.textContent).slice(0, 9)).toEqual(["Name", "Model", "Type", "Configuration", "Rules level", "Tech base", "Year", "Tonnage", "Walking MP"]);
+    expect([...form.querySelectorAll("label")].map((l) => l.textContent).slice(0, 9)).toEqual(["Name", "Model", "Type", "Configuration", "Rules level", "Year", "Tech base", "Tonnage", "Walking MP"]);
     const type = within(form).getByLabelText<HTMLSelectElement>("Type");
     const config = within(form).getByLabelText<HTMLSelectElement>("Configuration");
     const texts = (select: HTMLSelectElement) => [...select.options].map((o) => o.text);
@@ -146,6 +148,7 @@ describe("Classic BattleTech home", () => {
     expect(tons.options[0]?.value).toBe("10");
     await user.type(within(form).getByLabelText("Name"), "Hauler");
     await user.selectOptions(tons, "10");
+    await user.type(within(form).getByLabelText("Year"), "3060");
     await user.click(within(form).getByRole("button", { name: "Start building" }));
     await waitFor(async () => {
       const [entry] = await (await openFamilyStorage()).list();
@@ -170,6 +173,7 @@ describe("Classic BattleTech home", () => {
     expect(within(form).getByRole<HTMLButtonElement>("button", { name: "Start building" }).disabled).toBe(true);
     await user.clear(tons);
     await user.type(tons, "30");
+    await user.type(within(form).getByLabelText("Year"), "3060");
     await user.click(within(form).getByRole("button", { name: "Start building" }));
     await waitFor(async () => {
       const [entry] = await (await openAeroStorage()).list();
@@ -229,11 +233,39 @@ describe("Classic BattleTech home", () => {
     await user.selectOptions(within(form).getByLabelText("Type"), "omnimech");
     expect([...within(form).getByLabelText<HTMLSelectElement>("Configuration").options].map((o) => o.text)).toEqual(["Biped", "Quad"]); // no Land-Air 'Mech or tripod at Standard level
     await user.type(within(form).getByLabelText("Name"), "Falcon");
+    await user.type(within(form).getByLabelText("Year"), "3060");
     await user.click(within(form).getByRole("button", { name: "Start building" }));
     await waitFor(async () => {
       const made = (await (await openFamilyStorage()).list()).find((e) => e.chassis?.name.chassis === "Falcon");
       expect(made?.chassis?.configurations.map((c) => c.code)).toEqual(["Prime"]);
     });
+  });
+
+  it("needs a year above Introductory and says so, shows one era as text, and makes a year in two eras pick one, which decides the tech base", async () => {
+    const user = userEvent.setup();
+    renderHome();
+    const form = await screen.findByRole("form", { name: "Build a new one" });
+    await user.type(within(form).getByLabelText("Name"), "Hawk");
+    const start = () => within(form).getByRole<HTMLButtonElement>("button", { name: "Start building" });
+    expect(start().disabled).toBe(true);
+    expect(within(form).getByText(/A year is needed at Standard rules/)).toBeTruthy();
+    const year = within(form).getByLabelText("Year");
+    await user.type(year, "3060");
+    expect(within(form).getByText("Clan Invasion")).toBeTruthy(); // one era: text, no choice
+    expect(within(form).queryByRole("combobox", { name: "Era" })).toBeNull();
+    expect(start().disabled).toBe(false);
+    await user.clear(year);
+    await user.type(year, "2900");
+    expect(start().disabled).toBe(true); // two eras: pick one
+    const era = within(form).getByLabelText<HTMLSelectElement>("Era");
+    expect([...era.options].map((o) => o.text)).toEqual(["Choose an era", "Early Succession War", "Clan Golden Years"]);
+    const bases = () => [...within(form).getByLabelText<HTMLSelectElement>("Tech base").options].map((o) => o.text);
+    await user.selectOptions(era, "clan-golden-years");
+    expect(bases()).toContain("Clan");
+    expect(bases()).not.toContain("Inner Sphere");
+    await user.selectOptions(era, "early-succession-war");
+    expect(bases()).not.toContain("Clan");
+    expect(start().disabled).toBe(false);
   });
 
   it("cancels a delete on Escape and returns focus to its button; focus goes to the empty line after the last delete", async () => {
