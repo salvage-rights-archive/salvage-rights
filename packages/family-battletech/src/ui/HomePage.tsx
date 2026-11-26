@@ -25,6 +25,7 @@ import { startTons, typeReady, typeRow, weightHint } from "./aero/edit";
 import { NumberField } from "./aero/fields";
 import { AERO_HOME, editorHref } from "./aero/routes";
 import { openAeroStorage } from "./aero/storage";
+import { INFANTRY_CHOICE, InfantrySaved, startInfantry } from "./infantry/HomePart";
 import type { MechRecord, NewMechOptions } from "../rules/mech";
 import { MAX_LIBRARY_BYTES, STORAGE_READ_FAILED, STORAGE_WRITE_FAILED, downloadLibrary, downloadMech, downloadOmni, fileGame, fromLibraryFile, fromMechFile, fromOmniFile, openFamilyStorage, wrongGameMessage } from "./storage";
 import type { FamilyStorage, SavedEntry } from "./storage";
@@ -93,6 +94,8 @@ export default function HomePage() {
   const [aeroType, setAeroType] = useState<string>();
   const [aeroTons, setAeroTons] = useState<number>();
   const [aeroThrust, setAeroThrust] = useState(5);
+  /** True when conventional infantry is the choice in the new-unit list: it opens the infantry editor. */
+  const [infantryPicked, setInfantryPicked] = useState(false);
   /** The year typed in the build form, as text; empty or not a year means no year, and nothing is hidden by time. */
   const [yearText, setYearText] = useState("");
   /** The era picked when the typed year is in two eras (an Inner Sphere era and a Clan sub-era). */
@@ -256,6 +259,13 @@ export default function HomePage() {
 
   const build = async () => {
     if (aeroPicked) return buildAero();
+    if (infantryPicked) {
+      if (missing !== "" || !draft.chassis.trim()) return;
+      const id = await startInfantry({ name: draft.chassis.trim(), model: draft.model.trim(), techBase, year: yearTyped, era: eraChosen?.id, rulesLevel: draft.rulesLevel }).catch(() => undefined);
+      if (id === undefined) setProblem(STORAGE_WRITE_FAILED);
+      else void navigate(`/battletech/classic/infantry-editor?id=${encodeURIComponent(id)}`);
+      return;
+    }
     if (!storage || !draft.chassis.trim() || missing !== "") return;
     const options = { ...draft, techBase, configuration, tons, chassis: draft.chassis.trim(), model: draft.model.trim(), walk: Math.min(draft.walk, walks.at(-1) ?? 1), year: yearTyped };
     // An OmniMech is a chassis (its fixed base and a Prime to start) and is saved as one.
@@ -586,6 +596,7 @@ export default function HomePage() {
             })}
           </ul>
         )}
+        <InfantrySaved />
         {entries.some((e) => e.record !== undefined || e.chassis !== undefined) && (
           <p>
             <button
@@ -661,8 +672,9 @@ export default function HomePage() {
                   setAeroTons(undefined);
                 },
               }}
+              infantry={{ options: [INFANTRY_CHOICE], chosen: infantryPicked ? INFANTRY_CHOICE.id : undefined, onChoose: (id) => { setInfantryPicked(id !== undefined); if (id !== undefined) setAeroType(undefined); } }}
             />
-            {!aeroPicked && (
+            {!aeroPicked && !infantryPicked && (
             <div className="bt-field">
               <label htmlFor="bt-new-config">Configuration</label>
               <select
@@ -734,7 +746,7 @@ export default function HomePage() {
                 <NumberField id="bt-new-aero-tons" label="Tonnage" value={aeroTons ?? startTons(aeroRow)} min={0} hint={weightHint(aeroRow.weight)} onValid={(tons) => { setAeroTons(tons ?? undefined); }} />
                 <NumberField id="bt-new-aero-thrust" label="Safe Thrust" value={aeroThrust} min={0} onValid={(thrust) => { setAeroThrust(thrust ?? 0); }} />
               </>
-            ) : (
+            ) : infantryPicked ? null : (
             <>
             <div className="bt-field">
               <label htmlFor="bt-new-tons">Tonnage</label>
