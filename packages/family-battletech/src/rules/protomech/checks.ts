@@ -128,7 +128,7 @@ const mountsCheck: Check = (record, catalog, out) => {
       });
     }
     const only = mount.equipmentId === null ? undefined : own(PROTO_PLACEMENT.only, mount.equipmentId);
-    if (only && !only.includes(mount.location)) out.push({ check: "location", level: "error", message: `${name} goes in ${only.map(nameOf).join(" or ")}, not in ${nameOf(mount.location)}.`, where, cite: page(PROTO_PLACEMENT.cite) });
+    if (only && !only.includes(mount.location)) out.push({ check: "location", level: "error", message: `${name} goes in ${only.map(nameOf).join(" or ")}, not in ${nameOf(mount.location)}.`, where, cite: page(own(PROTO_PLACEMENT.cites, mount.equipmentId ?? "") ?? PROTO_PLACEMENT.cite) });
     if (!Object.hasOwn(PROTO_LIMITS.rows, mount.location)) out.push({ check: "location", level: "error", message: `${name} is in "${mount.location}", which is not a ProtoMech location.`, where, cite: limitCite });
     if (mount.rear === true && !PROTO_REAR_LOCATIONS.includes(mount.location)) out.push({ check: "rear", level: "error", message: `${name} faces the rear, which only a torso weapon may.`, where, cite: TM(80) });
     const launch = launcherOf(mount);

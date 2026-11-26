@@ -185,6 +185,7 @@ export const PROTO_AMMO_KG: Sourced & { rows: Record<string, number> } = {
     "hyper-assault-gauss-20-clan": 166.66,
     "vehicle-flamer-clan": 50,
     "plasma-cannon-clan": 100,
+    // The three ProtoMech autocannons are not on the p. 88 table: 1,000 kg / shots per ton (TO:AUE pp. 96 and 216).
     "protomech-ac-2-clan": 25,
     "protomech-ac-4-clan": 50,
     "protomech-ac-8-clan": 100,
@@ -203,10 +204,12 @@ export const PROTO_BANDED_KG: Sourced & { rows: Record<string, { fromTons: numbe
 };
 
 /** Where an item may go, where the book names the place (the clamp takes a weapon slot in the torso, IO:AE p. 60; the melee weapon one on an arm, TO:AUE p. 148), and the items of which a ProtoMech may carry one. */
-export const PROTO_PLACEMENT: Sourced & { only: Record<string, string[]>; one: string[] } = {
+export const PROTO_PLACEMENT: Sourced & { only: Record<string, string[]>; one: string[]; cites: Record<string, ProtoCite> } = {
   cite: { book: TO, page: 148 },
   checked: "page",
   only: { "magnetic-clamp-system-clan": ["t"], "protomech-melee-weapon-clan": ["la", "ra"] },
+  /** Items whose placement rule is in another book than the melee weapon's. */
+  cites: { "magnetic-clamp-system-clan": { book: IO, page: 60 } },
   one: ["protomech-melee-weapon-clan"],
 };
 
