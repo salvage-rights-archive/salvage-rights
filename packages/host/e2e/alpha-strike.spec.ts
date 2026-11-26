@@ -1,5 +1,5 @@
 import { readFile, writeFile } from "node:fs/promises";
-import { AS_UNIT_ID, DEV, FAKE_KEY, expect, saveAsUnit, test } from "./fixtures";
+import { AS_UNIT_ID, DEV, FAKE_KEY, expect, expectPage, saveAsUnit, test } from "./fixtures";
 
 const ALPHA = "/battletech/alpha-strike";
 
@@ -152,5 +152,64 @@ test("the play aids and the table work at 320 px: the calculator answers, a stag
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
     const widths = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, client: document.documentElement.clientWidth }));
     expect(widths.scroll, address).toBe(widths.client);
+  }
+});
+
+test("the rules level and game year narrow the force picker and the aids, and the era shows", async ({ page }) => {
+  test.setTimeout(120_000);
+  for (const [name, level, year] of [["Archer", "Standard", "3025"], ["Banshee", "Advanced", "3025"], ["Cougar", "Standard", "3060"]] as const) {
+    await page.goto(`${DEV}${ALPHA}/unit`);
+    await expectPage(page.getByLabel("Rules level")).toBeVisible();
+    await page.getByLabel("Name").fill(name);
+    await page.getByLabel("Rules level").selectOption({ label: level });
+    await page.getByLabel("Year").fill(year);
+    await page.getByRole("button", { name: "Save", exact: true }).click();
+    await expect(page.getByText("Saved.")).toBeVisible();
+  }
+  await page.goto(`${DEV}${ALPHA}/home`);
+  await page.getByRole("button", { name: "Start a new force" }).click();
+  const picker = async () => (await page.getByLabel("Unit", { exact: true }).locator("option").allTextContents()).filter((t) => t !== "Choose a unit").map((t) => t.replace(/ \(PV \d+\)$/, "")).sort();
+  await expectPage(page.getByLabel("Unit", { exact: true })).toBeVisible();
+  // Standard is the level until one is chosen: the Advanced unit is left out of the list, not marked.
+  await expect.poll(picker).toEqual(["Archer", "Cougar"]);
+
+  await page.goto(`${DEV}${ALPHA}/home`);
+  await expectPage(page.getByLabel("Rules level")).toBeEnabled();
+  await page.getByLabel("Rules level").selectOption("advanced");
+  await page.getByLabel("Game year").fill("3040");
+  await expect(page.getByText(/The Late Succession War - Renaissance era/)).toBeVisible();
+  await expect(page.getByText(/Units dated after 3040 are left out/)).toBeVisible();
+  // The setting is kept on the device: a reload still shows it.
+  await page.waitForTimeout(500);
+  await page.reload();
+  await expectPage(page.getByLabel("Game year")).toHaveValue("3040");
+  await expect(page.getByLabel("Rules level")).toHaveValue("advanced");
+  // Back to the force page inside the app, which reads the level and year from the device.
+  await page.goBack();
+  await expectPage(page.getByLabel("Unit", { exact: true })).toBeVisible();
+  await expect.poll(picker).toEqual(["Archer", "Banshee"]);
+
+  // The aids follow the same setting: Extreme range is offered at Advanced and not at Standard.
+  await page.goto(`${DEV}${ALPHA}/aids`);
+  await expectPage(page.getByLabel("Extreme range is in play")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Ranges" })).toBeVisible();
+  await expect(page.getByText(/past 60" to the board edge/)).toBeVisible();
+  await page.getByLabel("Rules level").selectOption("standard");
+  await expect(page.getByLabel("Extreme range is in play")).toHaveCount(0);
+  await expect(page.getByText(/past 60" to the board edge/)).toHaveCount(0);
+});
+
+test("the aids page at 320 px: one column, every aid listed, no sideways scroll, expected damage beside the odds", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 700 });
+  await page.goto(`${DEV}${ALPHA}/aids`);
+  await expectPage(page.getByRole("heading", { name: "Critical hits" })).toBeVisible();
+  for (const name of ["To-hit calculator", "Ranges", "Heat", "Turn sequence", "Movement costs"]) await expect(page.getByRole("heading", { name })).toBeVisible();
+  await page.getByLabel("Damage at medium range (from the card)").fill("3");
+  await expect(page.getByText(/Expected damage 1\.25/)).toBeVisible();
+  const widths = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, client: document.documentElement.clientWidth }));
+  expect(widths.scroll).toBe(widths.client);
+  for (const control of await page.locator("#as-tohit input, #as-tohit select, #as-aids-rules select").all()) {
+    const box = await control.boundingBox();
+    if (box) expect(box.height).toBeGreaterThanOrEqual(44);
   }
 });

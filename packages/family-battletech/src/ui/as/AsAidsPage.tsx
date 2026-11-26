@@ -129,7 +129,7 @@ export default function AsAidsPage() {
       </p>
 
       <section className="bt-section" aria-labelledby="as-aids-rules">
-        <h2 id="as-aids-rules">Rules level and edition</h2>
+        <h2 id="as-aids-rules">Play setting</h2>
         <p className="bt-hint">
           The same setting as on the Alpha Strike page. Optional rules (Extreme range, a second target) and the optional special abilities show from Advanced up.
         </p>
