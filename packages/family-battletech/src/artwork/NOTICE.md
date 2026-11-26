@@ -6,7 +6,7 @@ Every picture is shown in the app with a label saying it is AI-generated. We wil
 gives us artwork made by a person that we can legally use. To offer a piece, start a thread in Discussions on the
 GitHub repository, or open an issue there.
 
-The game pictures below were made with DeviantArt DreamUp, except Nova Combat's, which says its own tool. Each entry reads: "Made by the Salvage Rights team with an
+The game pictures below were made with DeviantArt DreamUp, except Nova Combat's and MechWarrior RPG's, which say their own tools. Each entry reads: "Made by the Salvage Rights team with an
 AI image tool (DeviantArt DreamUp) on or before 2026-11-25, cropped and resized." The prompt is given as DeviantArt
 saved it in the picture's file name, which cuts it off after about 100 characters; "..." marks where it stops. Two
 pairs of pictures came from the same prompt, so they share one. Each icon comes from the same original as its game
@@ -63,6 +63,17 @@ picture and shares its prompt.
   ownership of what they generate, and ask for no attribution.
 - Prompt: "A cinematic, first-person ground-level perspective looking across a vast, arid rocky desert canyon at a
   massive 70-ton BattleMech..." (cut off here; the prompt goes on)
+
+## mechwarrior-rpg-bench-repair.jpg and mechwarrior-rpg-icon.jpg
+
+- The MechWarrior RPG tile entry (coming soon) and its icon. Made by the Salvage Rights team with an AI image tool
+  (freegen.app) on 2026-11-26, cropped and resized. The team photographed its screen, so the crop keeps only the
+  picture area and the shrink smooths out the screen grid. freegen.app's terms of service (last updated 2025-09-15)
+  say the user keeps all rights to the images they generate, allow personal and commercial use, and ask for no
+  attribution.
+- Prompt: "Tight over-the-shoulder close-up of a rugged sci-fi salvage technician in a worn leather vest over a
+  sweat-stained jumpsuit, squinting through flipped-down magnifying lenses while soldering..." (cut off here; the
+  prompt goes on)
 
 ## empty-bay.jpg
 

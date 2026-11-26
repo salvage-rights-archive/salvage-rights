@@ -14,6 +14,8 @@ import gothic from "./gothic-skull-mech.jpg";
 import gothicIcon from "./gothic-icon.jpg";
 import nova from "./nova-combat-desert-salvo.jpg";
 import novaIcon from "./nova-combat-icon.jpg";
+import rpg from "./mechwarrior-rpg-bench-repair.jpg";
+import rpgIcon from "./mechwarrior-rpg-icon.jpg";
 
 // Every picture here is AI-generated. Terms and source: ./NOTICE.md.
 const DREAMUP = "DeviantArt DreamUp";
@@ -50,7 +52,7 @@ export const GAME_ART: Record<string, { artwork: Artwork; icon: string }> = {
     artwork: picture(gothic, "A spiked, skull-faced walking war machine standing over a fanged beast under a blood-red sky."),
     icon: gothicIcon,
   },
-  // Coming soon: the tile has no pages yet. The MechWarrior RPG tile goes in the same way once its picture arrives.
+  // Coming soon: these tiles have no pages yet.
   "nova-combat": {
     artwork: picture(
       nova,
@@ -58,6 +60,14 @@ export const GAME_ART: Record<string, { artwork: Artwork; icon: string }> = {
       "creen.ai",
     ),
     icon: novaIcon,
+  },
+  "mechwarrior-rpg": {
+    artwork: picture(
+      rpg,
+      "A grease-stained technician in a leather jacket, magnifier lenses down, soldering a circuit board while another mechanic passes him a wrench, the legs of a giant war machine behind them.",
+      "freegen.app",
+    ),
+    icon: rpgIcon,
   },
 };
 
