@@ -36,13 +36,13 @@ describe("IO:AE large-craft items (pp. 210-215)", () => {
 describe("IO:AE cockpit and pilot-interface items (pp. 62-64, 110, 212-213)", () => {
   it.each([
     ["damage-interrupt-circuit-is", "inner-sphere", 0, 0, [{ from: 3055, to: 3060 }], undefined],
-    ["direct-neural-interface-modification-is", "inner-sphere", 0, 0, [{ from: 3055 }], 3052],
-    ["sldf-advanced-neurohelmet-fighter-is", "inner-sphere", 0, 0, [{ from: 2761, to: 2770 }], 2758],
+    ["direct-neural-interface-modification-is", "inner-sphere", 0, 0, [{ from: 3055 }], 3052, "advanced"],
+    ["sldf-advanced-neurohelmet-fighter-is", "inner-sphere", 0, 0, [{ from: 2761, to: 2770 }], 2758, "advanced"],
     ["enhanced-imaging-interface-clan", "clan", 0, 0, [{ from: 3048 }], undefined],
     ["battlemech-neural-interface-unit-clan", "clan", 0.1, 2, [{ from: 3083 }], undefined],
-  ])("%s has its printed figures", async (id, techBase, tons, slots, availability, prototypeYear) => {
+  ])("%s has its printed figures", async (id, techBase, tons, slots, availability, prototypeYear, level = "experimental") => {
     const row = (await loadCatalog()).byId(id);
-    expect(row).toMatchObject({ techBase, tons, slots, availability, rulesLevel: "experimental" });
+    expect(row).toMatchObject({ techBase, tons, slots, availability, rulesLevel: level });
     expect(row?.prototypeYear).toBe(prototypeYear);
   });
 
@@ -57,5 +57,18 @@ describe("units the table does not offer (TO:AUE pp. 216-223)", () => {
     const catalog = await loadCatalog();
     for (const id of ["light-scc-is", "scl-2-is", "piranha-clan", "mobile-hpg-is", "small-ncss-is", "space-mine-dispenser-is"]) expect(mountableOn(catalog.byId(id)!, "vehicle")).toBe(false);
     expect([isCapitalRow(catalog.byId("scl-2-is")), isCapitalRow(catalog.byId("cruise-missile-70-is"))]).toEqual([true, false]);
+  });
+});
+
+describe("pre-boom docking collar and Clan sub-capital weapons (IO:AE pp. 33, 211-214)", () => {
+  it.each([
+    ["docking-collar-pre-boom-is", [{ from: 2350, to: 2520 }], 2304],
+    ["light-scc-is", [{ from: 3073 }], 3070],
+    ["scl-2-clan", [{ from: 3091 }], undefined],
+    ["piranha-is", [{ from: 3072 }], 3066],
+  ])("%s has its staged years", async (id, availability, prototypeYear) => {
+    const row = (await loadCatalog()).byId(id);
+    expect(row?.availability).toEqual(availability);
+    expect(row?.prototypeYear).toBe(prototypeYear);
   });
 });

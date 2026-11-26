@@ -273,7 +273,9 @@ const TORPEDO_UNFIXED: Record<string, string> = Object.fromEntries(
 );
 export const UNFIXED: Record<string, string> = {
   ...TORPEDO_UNFIXED,
+  ...Object.fromEntries(["light-scc", "medium-scc", "heavy-scc", "scl-1", "scl-2", "scl-3"].map((n) => [`${n}-clan`, "the Clan capital Battle Value table prints no sub-capital cannon or laser line (TO:AUE p. 196)"])),
   "dropshuttle-bay-is": "a large-craft item: neither Alternate Eras Battle Value table (IO:AE pp. 189-191) prints a line for it",
+  "docking-collar-pre-boom-is": "a large-craft item: neither Alternate Eras Battle Value table (IO:AE pp. 189-191) prints a line for it",
   "docking-collar-post-boom-is": "a large-craft item: neither Alternate Eras Battle Value table (IO:AE pp. 189-191) prints a line for it",
   "radical-heat-sink-is": "the book prints two rules that disagree: its table adds the unit's heat sink count x 0.4 to Heat Efficiency, its text multiplies the capacity by 1.4, and the worked example gives both 42 and 36 (IO:AE pp.185, 190)",
   // Items whose BV is a modifier or a figure that depends on the unit, which the BV rules here do not compute (TO:AUE pp.192-197).
@@ -747,3 +749,13 @@ export const BATTLE_ARMOR_BV: BvGroup[] = [
     ],
   },
 ];
+
+/** Pilot interfaces that improve the crew's skills for the BV Skill Multiplier lookup (IO:AE printed pp. 183, 189 and 190; the Technical Manual's multiplier table, p. 315
+ * for the lookup). Each is a number of steps taken off the Gunnery and Piloting skills before the lookup, never below 0. An item counts once per unit however many crew
+ * the cockpit seats; the pod's -2 Piloting and -1 Gunnery are the table's form of the text's flat 1.4 (conflict ruled by the book panel). */
+export const SKILL_MODIFIERS: Sourced & { items: Record<string, { gunnery: number; piloting: number }>; cockpits: Record<string, { gunnery: number; piloting: number }> } = {
+  cite: { book: IO, page: 190 },
+  checked: "page",
+  items: { "sldf-advanced-neurohelmet-mech-is": { gunnery: 0, piloting: 1 } },
+  cockpits: { vrpp: { gunnery: 1, piloting: 2 } },
+};

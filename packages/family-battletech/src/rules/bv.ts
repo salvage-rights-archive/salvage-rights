@@ -30,6 +30,7 @@ import {
   TARGET_MODIFIER,
   TARGETING_COMPUTER_IDS,
   TORSO_COCKPIT_BV,
+  SKILL_MODIFIERS,
   UNFIXED,
   UNLISTED_IS_ZERO,
   WEAPON_BV,
@@ -543,14 +544,17 @@ export function battleValue(record: MechRecord, catalog: Catalog, pilot: PilotSk
 
   // ---- Final ----------------------------------------------------------------------------------------------------
   const smallCockpit = chassis.cockpit === "small";
-  // The Virtual Reality Piloting Pod: the BV table (IO:AE printed p. 190) gives it a skill modifier adjustment (-2 Piloting, -1 Gunnery) and the book does not say
-  // whether the torso-mounted cockpit's armor and final factors apply to it, so its BV is left open.
-  if (chassis.cockpit === "vrpp") note(undefined, "Virtual Reality Piloting Pod", "its BV skill modifier adjustment (-2 Piloting, -1 Gunnery) and whether the torso-mounted cockpit factors apply are not computed here (IO:AE p. 190)");
+  // The Virtual Reality Piloting Pod is a torso-mounted cockpit by construction, but the book does not say whether the torso-mounted cockpit's armor and final factors
+  // apply to it (the pod's own BV effect is its skill modifier, SKILL_MODIFIERS), so that part of its BV is left open.
+  if (chassis.cockpit === "vrpp") note(undefined, "Virtual Reality Piloting Pod", "whether the torso-mounted cockpit's armor and final factors apply to it is not stated (IO:AE p. 190)");
   const kits = items.reduce((product, i) => product * (own(BV_RULE_ITEMS.finalMultiplier.multipliers, i.row.id) ?? 1), 1);
   // A drone operating system: the final BV is multiplied by 0.95 and no cockpit modifier applies (TO:AUE p. 193).
   const sum = (defensiveRating + offensiveRating) * (drone ? BV_RULE_ITEMS.drone.finalFactor : (smallCockpit ? BV_METHOD.smallCockpit : 1) * (torsoCockpit ? TORSO_COCKPIT_BV.finalFactor : 1)) * kits;
   const baseBv = roundHalfUp(sum);
-  const multiplier = skillMultiplier(pilot);
+  // Pilot interfaces take steps off the skills for the lookup (once per unit), never below 0.
+  const steps = [SKILL_MODIFIERS.cockpits[chassis.cockpit], ...[...new Set(items.map((i) => i.row.id))].map((id) => SKILL_MODIFIERS.items[id])].filter((x) => x !== undefined);
+  const effective: PilotSkills = { gunnery: Math.max(0, pilot.gunnery - steps.reduce((n, x) => n + x.gunnery, 0)), piloting: Math.max(0, pilot.piloting - steps.reduce((n, x) => n + x.piloting, 0)) };
+  const multiplier = skillMultiplier(effective);
   return {
     total: roundHalfUp(baseBv * multiplier),
     baseBv,

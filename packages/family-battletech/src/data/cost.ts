@@ -390,7 +390,7 @@ export const EQUIPMENT_COST: PriceGroup[] = [
       // p.213: cockpit and pilot-interface items (the SLDF neurohelmets 5,000 a pilot)
       "damage-interrupt-circuit": 150, "direct-neural-interface-modification": 500_000, "enhanced-imaging-interface": 400_000,
       // pp.211, 213 and 215: large-craft items
-      "dropshuttle-bay": 150_000_000, "docking-collar-post-boom": 100_000, "sldf-sds-jammer-system": 800_000_000, "wob-super-jump-drive": 25_000_000,
+      "dropshuttle-bay": 150_000_000, "docking-collar-post-boom": 100_000, "docking-collar-pre-boom": 500_000, "sldf-sds-jammer-system": 800_000_000, "wob-super-jump-drive": 25_000_000,
       "dragons-breath-launch-system": 15_000_000,
       "sldf-advanced-neurohelmet-mech": 5_000, "sldf-advanced-neurohelmet-fighter": 5_000, "battlemech-neural-interface-unit": 650_000,
       "fusillade-launcher": 100_000, "magnetic-clamp-system": 25_000, "protomech-quad-melee-weapon-system": 70_000,
