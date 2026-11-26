@@ -30,7 +30,7 @@ const RECTS = {
   critical: { x: 30, y: 1150, w: 1060, h: 981 },
 };
 
-const TRADEMARK_LINE =
+export const TRADEMARK_LINE =
   "BattleTech, 'Mech, BattleMech, and MechWarrior are registered trademarks and/or trademarks of The Topps Company, Inc. Unofficial, non-commercial fan project, not affiliated with or endorsed by Topps or Catalyst Game Labs.";
 
 /** `checkedOn` is the date the verified line names (year-month-day); it defaults to today on this device. */
