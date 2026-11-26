@@ -8,8 +8,8 @@ import aces from "./aces-dust-battle.jpg";
 import acesIcon from "./aces-icon.jpg";
 import aerotech from "./aerotech-fighter-dropship.jpg";
 import aerotechIcon from "./aerotech-icon.jpg";
-import aerotech2 from "./aerotech2-broken-warship.jpg";
-import aerotech2Icon from "./aerotech2-icon.jpg";
+import battlespace from "./battlespace-broken-warship.jpg";
+import battlespaceIcon from "./battlespace-icon.jpg";
 import gothic from "./gothic-skull-mech.jpg";
 import gothicIcon from "./gothic-icon.jpg";
 
@@ -44,13 +44,20 @@ export const GAME_ART: Record<string, { artwork: Artwork; icon: string }> = {
     artwork: picture(aerotech, "A winged fighter craft flying beside a round, armoured spacecraft high above a cloudy planet."),
     icon: aerotechIcon,
   },
-  aerotech2: {
-    artwork: picture(aerotech2, "A long, broken spaceship adrift in orbit above a planet, trailing wreckage, with small craft among the debris."),
-    icon: aerotech2Icon,
-  },
   gothic: {
     artwork: picture(gothic, "A spiked, skull-faced walking war machine standing over a fanged beast under a blood-red sky."),
     icon: gothicIcon,
+  },
+};
+
+/**
+ * The pictures of AeroTech's editions that have their own card on the AeroTech home, and the home's picture while no
+ * unit is saved. Only BattleSpace has one so far.
+ */
+export const AERO_EDITION_ART: Record<string, { artwork: Artwork; icon: string }> = {
+  battlespace: {
+    artwork: picture(battlespace, "A long, broken spaceship adrift in orbit above a planet, trailing wreckage, with small craft among the debris."),
+    icon: battlespaceIcon,
   },
 };
 

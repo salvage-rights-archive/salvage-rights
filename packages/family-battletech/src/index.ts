@@ -31,7 +31,6 @@ const manifest: FamilyManifest = {
     { id: "alpha-strike", shortName: "Alpha Strike", fullName: "BattleTech: Alpha Strike", ready: true, routes: alphaStrikeRoutes, ...GAME_ART["alpha-strike"] },
     comingSoon("aces", "Aces", "BattleTech: Aces"),
     comingSoon("aerotech", "AeroTech", "BattleTech: AeroTech"),
-    comingSoon("aerotech2", "AeroTech 2", "BattleTech: AeroTech 2"),
     comingSoon("gothic", "Gothic", "BattleTech: Gothic"),
   ],
   unitTypes: (EDITIONS[0]?.unitTypes ?? []).filter((unit) => unit.ready), // the types the edition can build (data/editions.ts)

@@ -30,8 +30,8 @@ DeviantArt saved it in the file name, is in that notice.
 - `aces-icon.jpg`: Aces' icon.
 - `aerotech-fighter-dropship.jpg`: AeroTech.
 - `aerotech-icon.jpg`: AeroTech's icon.
-- `aerotech2-broken-warship.jpg`: AeroTech 2.
-- `aerotech2-icon.jpg`: AeroTech 2's icon.
+- `battlespace-broken-warship.jpg`: AeroTech's BattleSpace edition card.
+- `battlespace-icon.jpg`: BattleSpace's icon.
 - `gothic-skull-mech.jpg`: Gothic.
 - `gothic-icon.jpg`: Gothic's icon.
 
