@@ -6,9 +6,11 @@ import { GOTHIC_BASE } from "../../data/rulesets";
 import { loadCatalog } from "../../rules/catalog";
 import type { Catalog } from "../../rules/catalog";
 import { aidTables, citeText } from "./aidTables";
+import { useGothicTheme } from "./theme";
 import "../classic.scss";
 
 export default function AidsPage() {
+  useGothicTheme();
   const [catalog, setCatalog] = useState<Catalog>();
   const [failed, setFailed] = useState(false);
   useEffect(() => {

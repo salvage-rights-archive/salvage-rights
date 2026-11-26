@@ -12,7 +12,7 @@ async function chooseTheme(page: Page, base: string, theme: "Light" | "Dark") {
  * evaluate: with Playwright's locator assertion here, Firefox crashes the page during the axe run. */
 async function scan(page: Page, theme: string, where: string) {
   await expect
-    .poll(() => page.evaluate(() => document.body.className), { message: `${theme} theme kept on ${where}` })
+    .poll(() => page.evaluate(() => document.body.className.split(" ").filter((c) => c !== "bt-gothic").join(" ")), { message: `${theme} theme kept on ${where}` })
     .toBe(theme.toLowerCase());
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   const results = await new AxeBuilder({ page }).analyze();

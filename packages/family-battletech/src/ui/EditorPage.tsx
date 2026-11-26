@@ -46,6 +46,7 @@ import { mordelPicture, readPicture } from "./picture";
 import RecordBoundary from "./RecordBoundary";
 import { STORAGE_READ_FAILED, STORAGE_WRITE_FAILED, downloadMech, downloadOmni, isMechRecord, openFamilyStorage } from "./storage";
 import type { FamilyStorage } from "./storage";
+import { useGothicTheme } from "./gothic/theme";
 import "./classic.scss";
 
 export type Change = (draft: MechRecord) => void;
@@ -439,6 +440,8 @@ function EditorLoader() {
   const draftState = (location.state as { draft?: unknown } | null)?.draft;
   const game = gameOfPath(location.pathname);
   const [loaded, setLoaded] = useState<Loaded>({ state: "loading" });
+  // Until the record is in hand the address says which game this is; then the record decides (the Editor itself).
+  useGothicTheme(game === "gothic" && loaded.state !== "ready");
 
   useEffect(() => {
     let live = true;
@@ -554,6 +557,7 @@ function Editor({ initial, unsaved, startAt, catalog, storage }: { initial: Doc;
     const primary = primaryOf(chassis);
     return resolveConfiguration(chassis, selected) ?? (primary && resolveConfiguration(chassis, primary.id)) ?? resolveBase(chassis);
   }, [doc, chassis, selected]);
+  useGothicTheme(rulesetOf(record.editionId).game === "gothic");
   const activeId = chassis ? (record.omni?.configurationId ?? BASE) : "";
   const inBase = record.omni?.isBase === true;
   /** Seen from a configuration, the base's parts are shown but not edited. */

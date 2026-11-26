@@ -1,0 +1,171 @@
+// The Gothic look (GPL-3.0-or-later, with the family). Our own: nothing here comes from the Gothic books' art, logos, fonts or pages.
+//
+// Cosmic horror in two moods that follow the light/dark setting, as the shell's tokens do:
+//   dark   the abyss: a sea-green dark, deep teal panels, bone-pale ink and a faint sickly glow
+//   light  a drowned archive: stained vellum with tide-mark rings, dark ink, verdigris and rust
+//
+// theme.ts puts `bt-gothic` on <body> while a Gothic page is mounted. The overrides sit on <body> like the Settings classes do,
+// and `body.bt-gothic.light` / `body.bt-gothic.dark` out-rank `body.light` / `body.dark`, so the Settings choice beats the device.
+//
+// Contrast: text and links are at least 4.5:1 on every surface they are used on; the pairs are checked in gothic-theme.test.ts.
+// Ratios below are text on `bg`, then on `surface` (or the named surface).
+//
+// Ornaments (the sigil, the rippling rule, the coiling border) are drawn in ornaments.scss from --bt-gothic-glow and
+// --bt-gothic-ornament.
+
+@font-face {
+  font-family: "IM Fell English";
+  src: url("./fonts/IMFellEnglish-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+// The abyss.
+@mixin bt-gothic-dark {
+  color-scheme: dark;
+  --sr-bg: #08110f;                  // the sea floor, near-black green
+  --sr-surface: #0f1f1d;             // a panel: deep teal
+  --sr-surface-alt: #17302d;         // every other table row, raised bits
+  --sr-surface-sunk: #050b0a;        // panel headings, table heads, modal bars
+  --sr-ink: #e6e0cb;                 // bone: 14.5:1 on bg, 12.9:1 on surface, 10.6:1 on surface-alt
+  --sr-ink-muted: #a9b8ad;           // 9.2:1 on bg, 8.2:1 on surface, 6.8:1 on surface-alt
+  --sr-ink-disabled: #6f8179;
+  --sr-line: #24504a;
+  --sr-line-strong: #3f7a70;
+  --sr-accent: #5fe0bb;              // links, the glow: 11.7:1 on bg, 10.4:1 on surface, 8.6:1 on surface-alt
+  --sr-accent-hover: #9cf0d6;
+  --sr-accent-bg: #1b5a55;           // primary buttons, current tabs: drowned teal
+  --sr-accent-bg-hover: #25736c;
+  --sr-on-accent: #eef5ec;           // 7.2:1 on accent-bg
+  --sr-secondary-bg: #3d3868;        // secondary buttons: deep violet-blue
+  --sr-secondary-bg-hover: #4d477f;
+  --sr-on-secondary: #eeecf6;        // 9.1:1 on secondary-bg
+  --sr-patina: #6cc7b6;              // 9.6:1 on bg, 7.0:1 on surface-alt
+  --sr-hazard: #cdb560;              // 9.5:1 on bg, 6.9:1 on surface-alt
+  --sr-danger: #f08e80;              // bruised coral: 8.1:1 on bg, 5.9:1 on surface-alt
+  --sr-ok: #8fd69a;                  // 11.2:1 on bg, 8.2:1 on surface-alt
+  --sr-info: #92b4ea;                // 9.1:1 on bg, 6.6:1 on surface-alt
+  --sr-field-bg: #dde2d0;            // inputs stay pale, so a filled-in field reads at once
+  --sr-field-bg-focus: #f1f4e8;
+  --sr-field-ink: #0d1412;           // 14.1:1 on field-bg
+  --sr-field-line: #02070a;
+  --sr-focus: #ffe27a;               // focus ring: 15.0:1 on bg
+  --sr-shadow: 0 0 0 1px rgba(95, 224, 187, .07) inset, 0 2px 10px rgba(0, 0, 0, .65);
+  --sr-grain-opacity: .22;
+  --sr-paper-ink: #d9d6c4;
+  --bt-gothic-glow: #52e0b8;         // the sigil and the header's accent line: 11.6:1 on bg
+  --bt-gothic-ornament: #2f8f7e;     // rules and borders, not text
+  --sr-header-line: #52e0b8;
+
+  // The ground: a pool of pale light high up, a dark weight below and faint rings from the deep.
+  background-color: var(--sr-bg);
+  background-image:
+    radial-gradient(ellipse 70% 38% at 50% -6%, rgba(82, 224, 184, .20), transparent 70%),
+    radial-gradient(ellipse 55% 45% at 100% 62%, rgba(61, 56, 104, .32), transparent 70%),
+    radial-gradient(ellipse 60% 40% at 0 100%, rgba(27, 90, 85, .34), transparent 70%),
+    repeating-radial-gradient(circle at 78% 112%, transparent 0 46px, rgba(82, 224, 184, .06) 47px 48px);
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+}
+
+// The drowned archive.
+@mixin bt-gothic-light {
+  color-scheme: light;
+  --sr-bg: #d3cfb0;                  // stained vellum with a green cast
+  --sr-surface: #e8e4cc;
+  --sr-surface-alt: #dcd8bc;
+  --sr-surface-sunk: #c4bfa0;
+  --sr-ink: #17211e;                 // 10.5:1 on bg, 12.9:1 on surface, 11.5:1 on surface-alt
+  --sr-ink-muted: #434e48;           // 5.5:1 on bg, 6.8:1 on surface, 6.0:1 on surface-alt
+  --sr-ink-disabled: #6c7468;
+  --sr-line: #a6a284;
+  --sr-line-strong: #6d6f58;
+  --sr-accent: #115748;              // verdigris links: 5.4:1 on bg, 6.6:1 on surface, 5.9:1 on surface-alt
+  --sr-accent-hover: #0a3c32;
+  --sr-accent-bg: #1a6453;           // primary buttons, current tabs
+  --sr-accent-bg-hover: #124a3d;
+  --sr-on-accent: #f4f1e0;           // 6.2:1 on accent-bg
+  --sr-secondary-bg: #3b3a5c;
+  --sr-secondary-bg-hover: #2e2d49;
+  --sr-on-secondary: #f3f1f8;        // 9.6:1 on secondary-bg
+  --sr-patina: #145548;              // 5.5:1 on bg, 6.0:1 on surface-alt
+  --sr-hazard: #6a4e04;              // 4.9:1 on bg, 5.4:1 on surface-alt
+  --sr-danger: #86301a;              // rust-brown: 5.4:1 on bg, 6.0:1 on surface-alt
+  --sr-ok: #1d561d;                  // 5.5:1 on bg, 6.1:1 on surface-alt
+  --sr-info: #1f3c90;                // 6.3:1 on bg, 6.9:1 on surface-alt
+  --sr-field-bg: #f6f3e2;
+  --sr-field-bg-focus: #fffdf2;
+  --sr-field-ink: #14181a;           // 16.0:1 on field-bg
+  --sr-field-line: #5a5f50;
+  --sr-focus: #6b2f00;               // focus ring: 6.6:1 on bg
+  --sr-shadow: 0 1px 0 rgba(255, 255, 255, .5) inset, 0 1px 5px rgba(40, 50, 30, .3);
+  --sr-grain-opacity: .35;
+  --sr-paper-ink: #17211e;
+  --bt-gothic-glow: #1f7d69;         // the sigil and the header's accent line: 3.2:1 on bg (not text)
+  --bt-gothic-ornament: #6f8a77;     // rules and borders, not text
+  --sr-header-line: #1f7d69;
+
+  // The ground: tea stains, tide-mark rings left by a flood, and a green water-line creeping up from the bottom.
+  background-color: var(--sr-bg);
+  background-image:
+    repeating-radial-gradient(circle at 18% 22%, transparent 0 58px, rgba(90, 78, 36, .07) 59px 60px, transparent 61px 94px),
+    repeating-radial-gradient(circle at 86% 64%, transparent 0 74px, rgba(60, 86, 66, .08) 75px 77px, transparent 78px 120px),
+    radial-gradient(ellipse 30% 18% at 22% 30%, rgba(120, 92, 40, .17), transparent 70%),
+    radial-gradient(ellipse 36% 24% at 80% 12%, rgba(120, 92, 40, .15), transparent 70%),
+    linear-gradient(to top, rgba(40, 96, 80, .28), transparent 30%);
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+}
+
+// Device setting: dark unless the device says light; then the Settings classes beat the device either way.
+body.bt-gothic {
+  @include bt-gothic-dark;
+}
+
+@media (prefers-color-scheme: light) {
+  body.bt-gothic:not(.dark) {
+    @include bt-gothic-light;
+  }
+}
+
+body.bt-gothic.dark {
+  @include bt-gothic-dark;
+}
+
+body.bt-gothic.light {
+  @include bt-gothic-light;
+}
+
+// Headings in an old-print serif; the shell's stencil stands in until the font loads and in any browser that blocks it.
+// Screen only: a printed page keeps the shell's own type.
+@media screen {
+  body.bt-gothic {
+    h1,
+    h2,
+    h3 {
+      font-family: "IM Fell English", var(--sr-font-stencil);
+      font-weight: 400;
+      letter-spacing: .01em;
+    }
+
+    // The steel header stays; its accent line takes the glow.
+    .sr-header {
+      border-bottom-color: var(--bt-gothic-glow);
+    }
+  }
+}
+
+// Print stays plain: no ground, no glow, black on white, whatever the mood. The class is repeated so that this beats every
+// mood selector above, the device-setting one included.
+@media print {
+  body.bt-gothic.bt-gothic.bt-gothic {
+    background: #fff;
+    color: #000;
+    --bt-gothic-glow: #000;
+    --bt-gothic-ornament: #000;
+    --sr-header-line: #000;
+    --sr-shadow: none;
+  }
+}
+

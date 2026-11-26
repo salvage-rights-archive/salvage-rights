@@ -157,3 +157,30 @@ test("play a Tyrant through two phases on a phone: 44 px pips, nothing scrolls s
     if (box) expect(box.width, (await control.getAttribute("aria-label")) ?? "").toBeGreaterThanOrEqual(43.5);
   }
 });
+
+test("the Gothic look: heading font, Settings beating the device, plain print, and gone again in Classic", async ({ page }) => {
+  await page.emulateMedia({ colorScheme: "dark" });
+  await page.goto(HOME);
+  const h1 = page.getByRole("heading", { level: 1 });
+  await expect(h1).toHaveText("BattleTech: Gothic");
+  await expect(page.locator("body")).toHaveClass(/bt-gothic/);
+  expect(await h1.evaluate((el) => getComputedStyle(el).fontFamily)).toContain("IM Fell English");
+  const ground = () => page.evaluate(() => ({ image: getComputedStyle(document.body).backgroundImage, colour: getComputedStyle(document.body).backgroundColor }));
+  const abyss = await ground();
+  expect(abyss.image).not.toBe("none");
+
+  // The class the Settings page puts on the body for a light choice beats a dark device.
+  await page.evaluate(() => document.body.classList.add("light"));
+  expect((await ground()).colour).not.toBe(abyss.colour);
+  await page.evaluate(() => document.body.classList.remove("light"));
+
+  // Print is plain: white, no ground.
+  await page.emulateMedia({ media: "print" });
+  expect(await ground()).toEqual({ image: "none", colour: "rgb(255, 255, 255)" });
+  await page.emulateMedia({ media: "screen" });
+
+  // Going to Classic in the app, with no reload, takes the look off.
+  await page.getByRole("link", { name: "Games", exact: true }).click();
+  await page.getByRole("link", { name: "Classic, BattleTech" }).click();
+  await expect(page.locator("body")).not.toHaveClass(/bt-gothic/);
+});

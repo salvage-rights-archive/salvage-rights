@@ -19,6 +19,7 @@ import LevelSelect from "../editor/LevelSelect";
 import GamePicture from "../GamePicture";
 import { MAX_LIBRARY_BYTES, STORAGE_READ_FAILED, STORAGE_WRITE_FAILED, downloadLibrary, downloadMech, fileGame, fromLibraryFile, fromMechFile, openFamilyStorage, wrongGameMessage } from "../storage";
 import type { FamilyStorage, SavedEntry } from "../storage";
+import { useGothicTheme } from "./theme";
 import "../classic.scss";
 
 const TONNAGES = Object.keys(INTERNAL_STRUCTURE.rows).map(Number);
@@ -48,6 +49,7 @@ const BOX_GROUPS = GOTHIC_BOX_SPECS.reduce<{ chassis: string; specs: typeof GOTH
 }, []);
 
 export default function GothicHomePage() {
+  useGothicTheme();
   const [storage, setStorage] = useState<FamilyStorage>();
   const [entries, setEntries] = useState<SavedEntry[]>([]);
   const [catalog, setCatalog] = useState<Catalog>();

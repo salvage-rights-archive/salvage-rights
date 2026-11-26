@@ -44,6 +44,7 @@ export default defineConfig(({ mode }) => {
         [
           join(import.meta.dirname, "CREDITS.md"),
           join(import.meta.dirname, "src/fonts/OFL.txt"),
+          join(import.meta.dirname, "../family-battletech/src/ui/gothic/fonts/OFL.txt"),
           join(import.meta.dirname, "LICENSE"),
         ],
         ocr ? [ocrNotice(nodeModules)] : [],
