@@ -833,6 +833,29 @@ export const OTHER: EquipmentGroup[] = [
       { id: "ba-light-tag-clan", techBase: "clan", name: "Light TAG (Battle Armor)", tons: 0.035, slots: 1, type: "E", range: [0, 3, 6, 9], availability: [{ from: 3054 }], cite: { book: "TechManual", page: 348 } },
     ],
   },
+  {
+    // Battle armor versions of Tactical Operations: AUE items (Battle Armor Construction Data, printed p. 225, read against the page image; the combat figures
+    // of the weapons are the 'Mech weapon's, p. 218, which the battle armor rules take over unchanged: heavy flamer p. 124, ER pulse lasers p. 132, variable
+    // speed pulse lasers p. 133, Taser p. 158, Angel ECM p. 91, BC3 and BC3i p. 109). A date printed with a P is the prototype year of an item never produced, so
+    // it is the item's first year (the catalog's rule for prototype-only items). The single date of the heavy flamer and the Taser is printed once for both tech
+    // bases; the Clan heavy flamer carries it marked inferred. Not rows: the mine dispenser (a mine type is chosen), the myomer booster (price and effect follow
+    // the Ground MP), the mechanical jump booster (weight and price follow the jump jets), the detachable weapon pack (a modifier), the BA LB-X autocannon and
+    // the BA tube artillery (their play figures were not read), the disposable weapon (as its weapon) and the battle armor drop chutes (reusable only, a design decision).
+    defaults: { kind: "weapon", checked: "page", units: ["battlearmor"], cite: { book: TO, page: 225 } },
+    items: [
+      { id: "ba-heavy-flamer-is", techBase: "inner-sphere", name: "Heavy Flamer (Battle Armor)", tons: 0.35, slots: 2, type: "DE, H, AI", damage: "4", range: [0, 2, 3, 4], availability: [{ from: 3073 }], rulesLevel: "advanced" },
+      { id: "ba-heavy-flamer-clan", techBase: "clan", name: "Heavy Flamer (Battle Armor)", tons: 0.35, slots: 2, type: "DE, H, AI", damage: "4", range: [0, 2, 3, 4], availability: [{ from: 3073 }], yearsInferred: true, rulesLevel: "advanced" },
+      { id: "ba-er-pulse-laser-small-clan", techBase: "clan", name: "ER Pulse Laser, Small (Battle Armor)", tons: 0.55, slots: 2, type: "P, AI", damage: "5", range: [0, 2, 4, 6], availability: [{ from: 3059 }], rulesLevel: "experimental" },
+      { id: "ba-er-pulse-laser-medium-clan", techBase: "clan", name: "ER Pulse Laser, Medium (Battle Armor)", tons: 0.8, slots: 4, type: "P", damage: "7", range: [0, 5, 9, 14], availability: [{ from: 3059 }], rulesLevel: "experimental" },
+      { id: "ba-variable-speed-laser-small-is", techBase: "inner-sphere", name: "Variable Speed Laser, Small (Battle Armor)", tons: 0.5, slots: 2, type: "P, V, AI", damage: "5/4/3", range: [0, 2, 4, 6], availability: [{ from: 3071 }], rulesLevel: "advanced" },
+      { id: "ba-variable-speed-laser-medium-is", techBase: "inner-sphere", name: "Variable Speed Laser, Medium (Battle Armor)", tons: 0.9, slots: 4, type: "P, V, AI", damage: "9/7/5", range: [0, 2, 5, 9], availability: [{ from: 3072 }], rulesLevel: "advanced" },
+      { id: "ba-taser-is", techBase: "inner-sphere", name: "Taser (Battle Armor)", tons: 0.3, slots: 3, type: "DB, X", damage: "Special", availability: [{ from: 3067 }], rulesLevel: "advanced" },
+      { id: "ba-angel-ecm-is", techBase: "inner-sphere", name: "Angel ECM Suite (Battle Armor)", kind: "other", tons: 0.25, slots: 3, availability: [{ from: 3063 }], rulesLevel: "experimental" },
+      { id: "ba-angel-ecm-clan", techBase: "clan", name: "Angel ECM Suite (Battle Armor)", kind: "other", tons: 0.15, slots: 3, availability: [{ from: 3059 }], rulesLevel: "experimental" },
+      { id: "ba-c3-is", techBase: "inner-sphere", name: "BC3 System (Battle Armor)", kind: "other", tons: 0.25, slots: 1, availability: [{ from: 3073 }], rulesLevel: "experimental" },
+      { id: "ba-c3i-is", techBase: "inner-sphere", name: "BC3i System (Battle Armor)", kind: "other", tons: 0.35, slots: 1, availability: [{ from: 3063 }], rulesLevel: "experimental" },
+    ],
+  },
   // Conventional infantry weapons (TechManual, Conventional Infantry Weapons Table printed pp. 349-352, read against the page images;
   // costs and dates pp. 298-301). One row per weapon and tech base (the table's "IS / Clan" is two rows, as elsewhere), `units: ["infantry"]`,
   // so no BattleMech picker offers them. `tons` is the weapon's own weight (kg / 1000; the book says it does not enter platoon construction but is

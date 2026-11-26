@@ -524,6 +524,12 @@ export const EQUIPMENT_COST: PriceGroup[] = [
     prices: { "ba-parafoil": 3_000, "ba-partial-wing": 50_000, "ba-power-pack": 1_000, "ba-remote-sensor-dispenser": 7_500, "ba-searchlight": 500, "ba-shotgun-microphone": 750, "ba-space-operations-adaptation": 50_000, "ba-light-tag": 40_000 },
   },
   {
+    // TO:AUE p.225 (Battle Armor Construction Data): the battle armor versions; the ammunition price beside the item price is not kept. Per suit, per trooper for the BC3 systems.
+    cite: { book: TO, page: 225 },
+    checked: "page",
+    prices: { "ba-heavy-flamer": 11_250, "ba-er-pulse-laser-small": 30_000, "ba-er-pulse-laser-medium": 150_000, "ba-variable-speed-laser-small": 60_000, "ba-variable-speed-laser-medium": 200_000, "ba-taser": 10_000, "ba-angel-ecm": 750_000, "ba-c3": 62_500, "ba-c3i": 125_000 },
+  },
+  {
     // TO:AUE p.221 (Heavy Weapons and Equipment Construction Data: the weapon price of the naval weapons and mass drivers; the ammunition price beside it is not kept)
     cite: { book: TO, page: 221 },
     checked: "page",

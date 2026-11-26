@@ -28,6 +28,22 @@ describe("battle armor fixed-weight items (TechManual pp. 298, 346-348)", () => 
   });
 });
 
+// Battle armor versions of TO:AUE items (printed p. 225): id, tons, slots, price, first year, rules level.
+describe("battle armor versions of Tactical Operations items (TO:AUE p. 225)", () => {
+  it.each([
+    ["ba-heavy-flamer-is", 0.35, 2, 11_250, 3073, "advanced"],
+    ["ba-er-pulse-laser-medium-clan", 0.8, 4, 150_000, 3059, "experimental"],
+    ["ba-variable-speed-laser-small-is", 0.5, 2, 60_000, 3071, "advanced"],
+    ["ba-taser-is", 0.3, 3, 10_000, 3067, "advanced"],
+    ["ba-angel-ecm-clan", 0.15, 3, 750_000, 3059, "experimental"],
+    ["ba-c3i-is", 0.35, 1, 125_000, 3063, "experimental"],
+  ])("%s weighs, costs and dates as the table prints", (id, tons, slots, price, from, rulesLevel) => {
+    const row = catalog.byId(id);
+    expect(row).toMatchObject({ tons, slots, units: ["battlearmor"], availability: [{ from }], rulesLevel });
+    expect(row && priceOf(row)?.price).toBe(price);
+  });
+});
+
 // Conventional infantry weapons where IO:AE (third printing, printed pp. 48-49, Production column) is later than the TechManual table (sixth printing): id, availability.
 describe("infantry weapon years follow the later printing (IO:AE pp. 48-49 over TechManual p. 299)", () => {
   it.each([
