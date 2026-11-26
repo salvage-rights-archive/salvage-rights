@@ -216,7 +216,7 @@ export default function GothicHomePage() {
     <div className="sr-page">
       <h1>BattleTech: Gothic</h1>
       <GamePicture game="gothic" />
-      <p>Build Gothic 'Mechs and print their record sheets.</p>
+      <p>Build Gothic 'Mechs and Abomination units, and print their record sheets.</p>
       {storage && !storage.persistent && <p className="bt-warning">This browser is not letting us save. Your 'Mechs last until you close this tab.</p>}
       <div role="status">{status}</div>
       <div role="alert" className="bt-problem">
@@ -473,6 +473,15 @@ export default function GothicHomePage() {
             One Gothic 'Mech, or the file Export all makes here. Designs whose id you already have are added as new ones.
           </p>
         </div>
+      </section>
+
+      <section className="bt-section" aria-labelledby="bt-abom">
+        <h2 id="bt-abom">Abomination units</h2>
+        <p>
+          <Link className="bt-button" to={`${GOTHIC_BASE}/abominations`}>
+            Abomination units
+          </Link>
+        </p>
       </section>
 
       <p className="bt-hint">{books}</p>

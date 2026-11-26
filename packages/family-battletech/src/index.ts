@@ -35,6 +35,7 @@ const gothicRoutes: FamilyRoute[] = [
   { path: "home", label: "BattleTech: Gothic", section: "workshop", load: () => import("./ui/gothic/GothicHomePage") },
   { path: "editor", label: "Gothic 'Mech editor", section: "workshop", load: () => import("./ui/EditorPage") },
   { path: "sheet", label: "Gothic record sheet", section: "workshop", load: () => import("./ui/SheetPage") },
+  { path: "abominations", label: "Gothic Abomination units", section: "workshop", load: () => import("./ui/gothic/AbominationsPage") },
 ];
 const gothicPreviewRoutes: FamilyRoute[] = gothicRoutes.map((route) => ({ ...route, path: `gothic-preview/${route.path}` }));
 
