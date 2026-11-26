@@ -1,6 +1,7 @@
 // The vehicle's armor and structure diagram: a labelled box for each location with one bubble for each point. A plain placeholder until the
 // paper doll replaces this one component (brief-classic-dolls.md): the props are the doll's seam. With `onSelect` each box is a button named by
 // its location and points; without it the whole drawing is one labelled image.
+import { useState } from "react";
 import type { KeyboardEvent } from "react";
 
 export interface DiagramLocation {
@@ -44,6 +45,7 @@ function pack(count: number): { radius: number; columns: number } {
 }
 
 export default function VehicleDiagram({ locations, use, onSelect, selected, inError = [], label, ink = "currentColor", paper = "none", rect }: VehicleDiagramProps) {
+  const [focused, setFocused] = useState<string>();
   const strays = locations.filter((l) => !Object.hasOwn(CELL, l.code));
   const placed = locations.map((l) => {
     const known = Object.hasOwn(CELL, l.code);
@@ -75,10 +77,10 @@ export default function VehicleDiagram({ locations, use, onSelect, selected, inE
           <g
             key={l.code}
             data-location={l.code}
-            {...(onSelect ? { role: "button", tabIndex: 0, "aria-label": text, "aria-pressed": selected === l.code, onClick: activate, onKeyDown: key } : {})}
+            {...(onSelect ? { role: "button", tabIndex: 0, "aria-label": text, "aria-pressed": selected === l.code, onClick: activate, onKeyDown: key, onFocus: () => { setFocused(l.code); }, onBlur: () => { setFocused(undefined); } } : {})}
             className={onSelect ? "bt-vehicle-diagram__box bt-vehicle-diagram__box--button" : "bt-vehicle-diagram__box"}
           >
-            <rect x={l.x} y={l.y} width={BOX_W} height={BOX_H} rx={10} fill={paper} stroke={bad ? "#b3261e" : ink} strokeWidth={selected === l.code ? 5 : 2.5} />
+            <rect x={l.x} y={l.y} width={BOX_W} height={BOX_H} rx={10} fill={paper} stroke={bad ? "var(--sr-danger, #b3261e)" : ink} strokeWidth={selected === l.code || focused === l.code ? 6 : 2.5} strokeDasharray={focused === l.code ? "14 6" : undefined} />
             <text x={l.x + 10} y={l.y + 24} fontSize={17} fontWeight={700} fill={ink}>
               {`${l.name} ${String(count)}`}
             </text>

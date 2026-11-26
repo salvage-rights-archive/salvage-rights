@@ -2,7 +2,7 @@
 // arithmetic on the figures in data/vehicle.ts. One record serves every motive type. A record is plain data; nothing here throws on a record it
 // does not understand: a motive type, engine, armor type or location it does not know is kept as it is, and keys this version does not know are
 // kept too, so a record written by a later version survives a round trip through this one.
-import { ARMOR, RULES_LEVELS } from "../../data/chassis";
+import { ARMOR } from "../../data/chassis";
 import type { RulesLevel } from "../../data/chassis";
 import { DEFAULT_EDITION } from "../../data/editions";
 import { VEHICLE_ARMOR, VEHICLE_ENGINES, VEHICLE_RULES, motiveOf } from "../../data/vehicle";
@@ -165,7 +165,7 @@ export function withDefaults(value: unknown, fallbackId = ""): VehicleRecord | u
     editionId: str(v.editionId, DEFAULT_EDITION),
     name: part<VehicleRecord["name"]>(v.name, ["chassis", "model"], (o) => ({ chassis: str(o.chassis, ""), model: str(o.model, "") })),
     motive: str(v.motive, "tracked"),
-    techBase: v.techBase === "clan" || v.techBase === "mixed" ? v.techBase : "inner-sphere",
+    techBase: isString(v.techBase) ? (v.techBase as VehicleRecord["techBase"]) : "inner-sphere",
     year: isNumber(v.year) ? v.year : null,
     tons: num(v.tons, 0),
     cruise: num(v.cruise, 0),
@@ -181,7 +181,7 @@ export function withDefaults(value: unknown, fallbackId = ""): VehicleRecord | u
     notes: isObject(v.notes) ? (Object.fromEntries(Object.entries(v.notes).filter(([, n]) => isString(n))) as Record<string, string>) : {},
   };
   if (isString(v.era)) record.era = v.era;
-  if (RULES_LEVELS.some((l) => l.id === v.rulesLevel)) record.rulesLevel = v.rulesLevel as RulesLevel;
+  if (isString(v.rulesLevel)) record.rulesLevel = v.rulesLevel as RulesLevel; // one this version does not know is kept, and read as Standard
   if (v.omni !== undefined) record.omni = v.omni;
   const official = officialOf(v.official);
   if (official) record.official = official;

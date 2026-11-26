@@ -6,7 +6,7 @@ import {
   armorLocations, armorPointsFor, baseSlots, controlTons, crewOf, engineRating, engineWeight, flankMP, itemFacts, liftTons, maxArmorPoints, newVehicleRecord, slotTally, structurePoints, structureTons, turretTons, vehicleTally, withDefaults,
 } from "./vehicle";
 import type { MotiveId, VehicleRecord } from "./vehicle";
-import { vehicleBv } from "./bv";
+import { targetModifier, vehicleBv } from "./bv";
 import { vehicleCost } from "./cost";
 
 const catalog = await loadCatalog();
@@ -84,7 +84,8 @@ describe("what a record offers", () => {
     expect(engineChoices(r).map(([id]) => id)).toContain("ice");
     expect(engineChoices(r).map(([id]) => id)).not.toContain("compact");
     expect(equipmentOffered(catalog.byId("er-ppc-clan")!, r, catalog)).toBe(false);
-    expect(motiveChoices({ rulesLevel: "introductory", motive: "tracked" })).toHaveLength(8);
+    expect(motiveChoices({ rulesLevel: "introductory", motive: "tracked" }).map(([id]) => id)).toEqual(["tracked"]);
+    expect(motiveChoices({ rulesLevel: "standard", motive: "tracked" })).toHaveLength(8);
   });
 });
 
@@ -99,6 +100,19 @@ describe("Battle Value and cost, the book's Hephaestus (Primary)", () => {
   });
   it("cost is 1,995,000 C-bills (TechManual p. 285, worked example)", () => {
     expect(vehicleCost(prime, catalog).total).toBe(1_995_000);
+  });
+});
+
+describe("airborne motion and the class dates", () => {
+  it("a VTOL or a WiGE is one harder to hit than a hover vehicle at the same speed (Total Warfare pp. 55 and 117)", () => {
+    expect([targetModifier({ motive: "hover", cruise: 6 }), targetModifier({ motive: "vtol", cruise: 6 }), targetModifier({ motive: "wige", cruise: 6 })]).toEqual([3, 4, 4]);
+  });
+  it("combat vehicles are prototypes from 2460 (Experimental) and in production from 2470 (Interstellar Operations: Alternate Eras p. 44)", () => {
+    const base = { motive: "tracked" as const, tons: 20, cruise: 3 };
+    expect(checks(build({ ...base, year: 2400 }))).toContain("time:warning");
+    expect(checks(build({ ...base, year: 2465 }))).toContain("time:warning");
+    expect(checks(build({ ...base, year: 2465, rulesLevel: "experimental" }))).not.toContain("time:warning");
+    expect(checks(build({ ...base, year: 2470 }))).not.toContain("time:warning");
   });
 });
 

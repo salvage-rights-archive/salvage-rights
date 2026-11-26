@@ -2,7 +2,7 @@
 // never refusals: nothing is removed from a record and nothing throws on one this version does not understand. They share the 'Mech check's
 // `Finding` shape, so the same panel shows them. Messages are our own words and state the numbers.
 import { ARMOR, ENGINE_TYPES } from "../../data/chassis";
-import { VEHICLE_ARMOR, VEHICLE_ENGINES, VEHICLE_RULES, ENGINE_SLOTS_CITE, ARMOR_CITE, MOTIVE_CITE, SUSPENSION_CITE } from "../../data/vehicle";
+import { VEHICLE_ARMOR, VEHICLE_CLASS_DATES, VEHICLE_ENGINES, VEHICLE_RULES, ENGINE_SLOTS_CITE, ARMOR_CITE, MOTIVE_CITE, SUSPENSION_CITE } from "../../data/vehicle";
 import type { Catalog } from "../catalog";
 import { mountableOn } from "../catalog";
 import { DEFAULT_LEVEL, equipmentLevel, levelAtLeast, levelIn, levelRow } from "../levels";
@@ -11,6 +11,7 @@ import type { Finding } from "../checks";
 import { canon } from "../official";
 import type { OfficialState } from "../official";
 import { officialLabel } from "../official";
+import { phaseIn, windowOf } from "../time";
 import { own, tidy } from "../walk";
 import { enginePossible, equipmentOffered, armorPossible } from "./availability";
 import {
@@ -212,6 +213,10 @@ const timeCheck: VehicleCheck = {
     const out: Finding[] = [];
     if (level !== "introductory" && record.year === null) out.push(finding("time", "warning", `A year is needed at ${levelRow(level).label} rules: it decides which parts and equipment are available.`, { where: { field: "year" } }));
     else if (record.year !== null && eraNeedsPick(record)) out.push(finding("time", "note", `The year ${num(record.year)} falls in two eras; pick one, since it decides the tech base.`, { where: { field: "era" } }));
+    const dates = VEHICLE_CLASS_DATES;
+    const phase = phaseIn([{ from: dates.production }], dates.prototype, windowOf(record));
+    if (phase === null) out.push(finding("time", "warning", `Combat vehicles are not built before ${String(dates.prototype)} (prototypes) and ${String(dates.production)} (production).`, { where: { field: "year" }, cite: dates.cite }));
+    else if (phase === "prototype" && !levelAtLeast(level, "experimental")) out.push(finding("time", "warning", `Before ${String(dates.production)} a combat vehicle is a prototype, which needs Experimental rules.`, { where: { field: "year" }, cite: dates.cite }));
     const row = motiveRowOf(record);
     if (row && !levelAtLeast(level, row.level)) out.push(finding("level", "warning", `A ${row.label} vehicle needs ${levelRow(row.level).label} rules.`, { where: { field: "motive" }, cite: MOTIVE_CITE }));
     return out;

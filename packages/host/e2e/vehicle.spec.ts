@@ -36,8 +36,22 @@ test("build a tracked vehicle at 320 px, give it armor and a weapon, save it and
   await page.getByLabel("Search by name").fill("machine gun");
   await page.getByRole("button", { name: /^Machine Gun/ }).first().click();
   await expect(page.getByRole("button", { name: /^Remove Machine Gun/ })).toBeVisible();
+  // The armor drawing is keyboard-operable: Enter and Space on a location go to its field.
+  const front = page.getByRole("button", { name: /^Front, 30 armor points/ });
+  await front.focus();
+  await page.getByLabel("Left Side armor").focus();
+  await front.focus();
+  await page.keyboard.press("Enter");
+  await expect(page.getByLabel("Front armor")).toBeFocused();
+  await page.getByRole("button", { name: /^Rear, 0 armor points/ }).focus();
+  await page.keyboard.press("Space");
+  await expect(page.getByLabel("Rear armor")).toBeFocused();
   await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.getByText("Saved.")).toBeVisible();
+  for (const control of await page.locator("button, select, input:not([type=file]):not([type=checkbox]), a.bt-button").all()) {
+    const box = await control.boundingBox();
+    if (box) expect(box.height, `${(await control.textContent())?.slice(0, 30) ?? ""}`).toBeGreaterThanOrEqual(43.5);
+  }
   const widths = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, client: document.documentElement.clientWidth }));
   expect(widths.scroll).toBe(widths.client);
   await page.getByRole("link", { name: "Record sheet" }).click();

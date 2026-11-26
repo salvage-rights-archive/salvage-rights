@@ -2,7 +2,7 @@
 // Type Modifiers, Defensive Factors and Speed Factor tables (printed pp. 315-316) and the item values in data/bv.ts, which the 'Mech method
 // shares. Nothing here throws: an item the book prints no BV for is left out of the total and listed in `unvalued`, and `complete` says so.
 import { ARTEMIS_IDS, TARGET_MODIFIER, TARGETING_COMPUTER_IDS } from "../../data/bv";
-import { VEHICLE_BV, motiveOf } from "../../data/vehicle";
+import { AIRBORNE_MOTIVES, VEHICLE_BV, motiveOf } from "../../data/vehicle";
 import { ammoBvEntryOf, bvEntryOf, skillMultiplier, speedFactor } from "../bv";
 import type { PilotSkills } from "../bv";
 import type { Catalog } from "../catalog";
@@ -27,11 +27,11 @@ export interface VehicleBvResult {
   complete: boolean;
 }
 
-/** Target Movement Modifier for the hexes moved at flank (Total Warfare p. 117), and 1 more for a VTOL (the Defensive Factors Table's note, p. 316). */
+/** Target Movement Modifier for the hexes moved at flank (Total Warfare p. 117), and 1 more for a VTOL or WiGE (Total Warfare pp. 55 and 117; TechManual p. 316 note). */
 export function targetModifier(record: Pick<VehicleRecord, "cruise" | "motive">): number {
   const hexes = flankMP(record);
   const band = TARGET_MODIFIER.bands.find(([most]) => hexes <= most)?.[1] ?? 0;
-  return band + (record.motive === "vtol" ? TARGET_MODIFIER.jumpBonus : 0);
+  return band + (AIRBORNE_MOTIVES.includes(record.motive as never) ? TARGET_MODIFIER.jumpBonus : 0);
 }
 /** Defensive Factor: 1 + the modifier over 10 (the table's rows run 1.0 to 1.8, then 1 + modifier / 10). */
 export const defensiveFactor = (record: Pick<VehicleRecord, "cruise" | "motive">): number => 1 + targetModifier(record) / 10;

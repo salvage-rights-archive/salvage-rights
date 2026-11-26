@@ -24,9 +24,9 @@
   &__box--button {
     cursor: pointer;
 
-    &:focus-visible {
-      outline: 3px solid currentColor;
-      outline-offset: 2px;
+    // Focus shows as a heavier dashed stroke on the box (VehicleDiagram), not as an outline on the group.
+    &:focus {
+      outline: none;
     }
   }
 }

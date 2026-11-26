@@ -810,8 +810,16 @@ export default function HomePage() {
             )}
           </div>
           <p className="bt-hint">
-            {vehiclePicked ? "You start with a standard fusion engine, no armor, no turret and no equipment. The vehicle editor's rules check shows what is left to do." : aeroPicked ? "You start with a standard engine, no fuel, no armor, no heat sinks and no equipment. The AeroTech editor's rules check shows what is left to do." : unitType === "industrialmech" ? "You start with an industrial frame and cockpit, a standard fusion engine" : "You start with standard parts"}, ten
-            heat sinks, no armor and no equipment. {unitType === "omnimech" && "An OmniMech starts as a base chassis with an empty Prime configuration. "}The editor's rules check shows what is left to do.
+            {vehiclePicked ? (
+              "You start with a standard fusion engine and its ten free heat sinks (an internal combustion engine gives none), no armor, no turret and no equipment. The vehicle editor's rules check shows what is left to do."
+            ) : aeroPicked ? (
+              "You start with a standard engine, no fuel, no armor, no heat sinks and no equipment. The AeroTech editor's rules check shows what is left to do."
+            ) : (
+              <>
+                {unitType === "industrialmech" ? "You start with an industrial frame and cockpit, a standard fusion engine" : "You start with standard parts"}, ten heat sinks, no armor and no equipment.{" "}
+                {unitType === "omnimech" && "An OmniMech starts as a base chassis with an empty Prime configuration. "}The editor's rules check shows what is left to do.
+              </>
+            )}
           </p>
           {missing !== "" && <p id="bt-new-missing" className="bt-hint">{missing}</p>}
           <button type="submit" className="bt-button" disabled={!storage || missing !== "" || (aeroPicked !== undefined && (aeroTons ?? startTons(aeroRow)) <= 0) || (vehiclePicked !== undefined && vehicleTonnage < 1)} aria-describedby={missing === "" ? undefined : "bt-new-missing"}>

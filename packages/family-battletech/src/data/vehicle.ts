@@ -31,7 +31,7 @@ export interface MotiveRow {
   costDivisor: number;
   /** TM p. 316, Unit Type Modifiers Table. */
   bvModifier: number;
-  /** The least rules level that offers the motive type. Introductory for all: Total Warfare p. 275 speaks of 3025 (introductory) technology for vehicles, and no book names a motive type left out of it. */
+  /** The least rules level that offers the motive type: Standard for all. The BattleTech Master Rules, Revised Edition p. 6 puts Level One at BattleMechs only, with vehicles added at Level Two, and Total Warfare p. 9 says the old levels are gone and names A Game of Armored Combat (no vehicles) as the introductory game. */
   level: RulesLevel;
   /** True for the motive types whose hit locations and Record Sheet belong to the book's Naval sheet. */
   naval?: true;
@@ -40,14 +40,14 @@ export interface MotiveRow {
 const bands = (factors: number[], step: number): [number, number][] => factors.map((factor, i) => [(i + 1) * step, factor]);
 
 export const MOTIVES: MotiveRow[] = [
-  { id: "tracked", label: "Tracked", maxTons: 100, sheet: "ground", suspension: [[100, 0]], costDivisor: 100, bvModifier: 0.9, level: "introductory" },
-  { id: "wheeled", label: "Wheeled", maxTons: 80, sheet: "ground", suspension: [[80, 20]], costDivisor: 200, bvModifier: 0.8, level: "introductory" },
-  { id: "hover", label: "Hover", maxTons: 50, sheet: "ground", suspension: bands([40, 85, 130, 175, 235], 10), lift: "lift", costDivisor: 50, bvModifier: 0.7, level: "introductory" },
-  { id: "wige", label: "Wing-in-Ground Effect (WiGE)", maxTons: 80, sheet: "ground", suspension: [[15, 45], [30, 80], [45, 115], [80, 140]], lift: "lift", minCruise: 5, costDivisor: 25, bvModifier: 0.7, level: "introductory" },
-  { id: "vtol", label: "VTOL", maxTons: 30, sheet: "vtol", suspension: bands([50, 95, 140], 10), lift: "rotor", costDivisor: 30, bvModifier: 0.7, level: "introductory" },
-  { id: "naval", label: "Naval (displacement hull)", maxTons: 300, sheet: "naval", suspension: [[300, 30]], costDivisor: 200, bvModifier: 0.6, level: "introductory", naval: true },
-  { id: "hydrofoil", label: "Naval (hydrofoil)", maxTons: 100, sheet: "naval", suspension: bands([60, 105, 150, 195, 255, 300, 345, 390, 435, 480], 10), lift: "lift", costDivisor: 75, bvModifier: 0.6, level: "introductory", naval: true },
-  { id: "submarine", label: "Naval (submarine)", maxTons: 300, sheet: "naval", suspension: [[300, 30]], lift: "dive", costDivisor: 50, bvModifier: 0.6, level: "introductory", naval: true },
+  { id: "tracked", label: "Tracked", maxTons: 100, sheet: "ground", suspension: [[100, 0]], costDivisor: 100, bvModifier: 0.9, level: "standard" },
+  { id: "wheeled", label: "Wheeled", maxTons: 80, sheet: "ground", suspension: [[80, 20]], costDivisor: 200, bvModifier: 0.8, level: "standard" },
+  { id: "hover", label: "Hover", maxTons: 50, sheet: "ground", suspension: bands([40, 85, 130, 175, 235], 10), lift: "lift", costDivisor: 50, bvModifier: 0.7, level: "standard" },
+  { id: "wige", label: "Wing-in-Ground Effect (WiGE)", maxTons: 80, sheet: "ground", suspension: [[15, 45], [30, 80], [45, 115], [80, 140]], lift: "lift", minCruise: 5, costDivisor: 25, bvModifier: 0.7, level: "standard" },
+  { id: "vtol", label: "VTOL", maxTons: 30, sheet: "vtol", suspension: bands([50, 95, 140], 10), lift: "rotor", costDivisor: 30, bvModifier: 0.7, level: "standard" },
+  { id: "naval", label: "Naval (displacement hull)", maxTons: 300, sheet: "naval", suspension: [[300, 30]], costDivisor: 200, bvModifier: 0.6, level: "standard", naval: true },
+  { id: "hydrofoil", label: "Naval (hydrofoil)", maxTons: 100, sheet: "naval", suspension: bands([60, 105, 150, 195, 255, 300, 345, 390, 435, 480], 10), lift: "lift", costDivisor: 75, bvModifier: 0.6, level: "standard", naval: true },
+  { id: "submarine", label: "Naval (submarine)", maxTons: 300, sheet: "naval", suspension: [[300, 30]], lift: "dive", costDivisor: 50, bvModifier: 0.6, level: "standard", naval: true },
 ];
 export const MOTIVE_CITE: BookPage = { book: TM, page: 96 };
 export const SUSPENSION_CITE: BookPage = { book: TM, page: 100 };
@@ -130,3 +130,12 @@ export const VEHICLE_BV = {
   artemis: 1.2,
   targetingComputer: 1.25,
 };
+
+/** Combat vehicles as a class, all motive types (Interstellar Operations: Alternate Eras, Universal Technology Advancement Table, printed p. 44, read against the
+ * page image: "Standard Combat Vehicles (All Motive Types)"): production 2470, common 2490. The prototype year is the one the structure, controls, lift and
+ * rotor rows print (about 2460). Between the two a vehicle is Experimental; before the prototype year it does not exist. */
+export const VEHICLE_CLASS_DATES = { prototype: 2460, production: 2470, common: 2490, cite: { book: "Interstellar Operations: Alternate Eras", page: 44 } };
+
+/** Target Movement Modifier added for a vehicle that is airborne (Total Warfare p. 55: WiGE, like jumping and VTOL movement, is harder to hit; p. 117, Attack Modifiers Table:
+ * "Jumped/Airborne (non-aerospace units) +1 additional"). The Defensive Factors Table note (TechManual p. 316) counts "any VTOL movement modifier". Our reading for WiGE: the owner may overrule it. */
+export const AIRBORNE_MOTIVES: MotiveId[] = ["vtol", "wige"];

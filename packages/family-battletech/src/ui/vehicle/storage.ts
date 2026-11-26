@@ -50,7 +50,7 @@ export function toVehicleFile(record: VehicleRecord): VehicleFile {
 export function fromVehicleFile(file: unknown, newId: () => string = () => crypto.randomUUID()): { ok: true; record: VehicleRecord } | { ok: false; message: string } {
   if (!isObject(file)) return { ok: false, message: "This is not a Salvage Rights file." };
   if (file.app !== "salvage-rights") return { ok: false, message: "This file was not made by Salvage Rights." };
-  if (file.kind !== "vehicle-unit") return { ok: false, message: "This file does not hold an vehicle." };
+  if (file.kind !== "vehicle-unit") return { ok: false, message: "This file does not hold a vehicle." };
   if (file.version !== 1) return { ok: false, message: "This file is from a version this app cannot read." };
   const record = read(file.record, newId());
   if (!record) return { ok: false, message: "The vehicle in this file is damaged or from a later version." };
