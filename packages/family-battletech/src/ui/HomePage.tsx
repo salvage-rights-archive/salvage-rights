@@ -219,7 +219,8 @@ export default function HomePage() {
   const aeroRow = aeroPicked?.row;
 
   const buildAero = async () => {
-    if (!storage || !aeroPicked || !aeroRow || !draft.chassis.trim()) return;
+    const aeroTonnage = aeroTons ?? startTons(aeroRow ?? undefined);
+    if (!storage || !aeroPicked || !aeroRow || !draft.chassis.trim() || aeroTonnage <= 0) return;
     const made = newAeroRecord(
       {
         id: crypto.randomUUID(),
@@ -227,7 +228,7 @@ export default function HomePage() {
         model: draft.model.trim(),
         unitType: aeroPicked.id as AeroType,
         techBase: draft.techBase,
-        tons: aeroTons ?? startTons(aeroRow),
+        tons: aeroTonnage,
         safeThrust: aeroThrust,
         rulesLevel: draft.rulesLevel,
       },
@@ -711,7 +712,7 @@ export default function HomePage() {
             {aeroPicked ? "You start with a standard engine, no fuel, no armor, no heat sinks and no equipment. The AeroTech editor's rules check shows what is left to do." : unitType === "industrialmech" ? "You start with an industrial frame and cockpit, a standard fusion engine" : "You start with standard parts"}, ten
             heat sinks, no armor and no equipment. {unitType === "omnimech" && "An OmniMech starts as a base chassis with an empty Prime configuration. "}The editor's rules check shows what is left to do.
           </p>
-          <button type="submit" className="bt-button" disabled={!storage}>
+          <button type="submit" className="bt-button" disabled={!storage || (aeroPicked !== undefined && (aeroTons ?? startTons(aeroRow)) <= 0)}>
             Start building
           </button>
         </form>

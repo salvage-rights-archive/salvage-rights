@@ -141,7 +141,7 @@ export default function AeroHomePage() {
     <div className="sr-page">
       <h1>BattleTech: AeroTech</h1>
       <GamePicture game="aerotech" />
-      <p>Build aerospace fighters, small craft and DropShips under the edition of the rules you play. Each unit is built under one edition and keeps its own figures.</p>
+      <p>Build aerospace and conventional fighters under the edition of the rules you play. Each unit is built under one edition and keeps its own figures.</p>
       {storage && !storage.persistent && <p className="bt-warning">This browser is not letting us save. Your units last until you close this tab.</p>}
       <div role="status">{status}</div>
       <div role="alert" className="bt-problem">
@@ -165,7 +165,7 @@ export default function AeroHomePage() {
                   </p>
                 )}
                 <p className="bt-hint">{bookLines(edition).join("; ")}</p>
-                <p>{`Builds: ${edition.types.map((t) => t.label).join(", ")}.`}</p>
+                <p>{`Builds: ${edition.types.filter((t) => typeReady(edition.id, t.type)).map((t) => t.label).join(", ")}.`}</p>
                 <p className="bt-hint">{count === 0 ? "No units saved." : `${String(count)} ${count === 1 ? "unit" : "units"} saved.`}</p>
                 <button
                   type="button"
@@ -343,7 +343,7 @@ export default function AeroHomePage() {
               id="bt-new-type"
               label="Type"
               value={draft.unitType}
-              options={types.map((t) => ({ value: t.type, label: typeReady(draft.editionId, t.type) ? t.label : `${t.label} (not built yet)`, disabled: !typeReady(draft.editionId, t.type) }))}
+              options={types.filter((t) => typeReady(draft.editionId, t.type)).map((t) => ({ value: t.type, label: t.label }))}
               hint={row?.cite}
               onChange={(unitType) => {
                 setDraft(settle({ ...draft, unitType }));

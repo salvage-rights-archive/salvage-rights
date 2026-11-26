@@ -34,7 +34,7 @@ import {
 import type { AeroRecord } from "../../rules/aero";
 import { aeroLowestLevel } from "../../rules/aero-checks";
 import type { Catalog } from "../../rules/catalog";
-import { levelRow } from "../../rules/levels";
+import { DEFAULT_LEVEL, levelAtLeast, levelRow } from "../../rules/levels";
 import { own, tidy } from "../../rules/walk";
 import LevelSelect from "../editor/LevelSelect";
 import { armorLocations, syncArmorLocations, techBasesFor, typeReady, typeRow, weightHint } from "./edit";
@@ -71,7 +71,11 @@ interface PartProps {
 export function IdentityPanel({ record, catalog, onEdit }: PartProps & { catalog: Catalog }) {
   const edition = record.editionId;
   const row = typeRow(edition, record.unitType);
-  const types = aeroTypesFor(edition).map((t) => ({ value: t.type, label: typeReady(edition, t.type) || t.type === record.unitType ? t.label : `${t.label} (not built yet)`, disabled: !typeReady(edition, t.type) && t.type !== record.unitType }));
+  const level = record.rulesLevel ?? DEFAULT_LEVEL;
+  // Hide, do not mark: what the rules level or the app leaves out is not listed; the unit's own type always is.
+  const types = aeroTypesFor(edition)
+    .filter((t) => t.type === record.unitType || (typeReady(edition, t.type) && (edition !== DEFAULT_AERO_EDITION || levelAtLeast(level, t.level ?? DEFAULT_LEVEL))))
+    .map((t) => ({ value: t.type, label: t.label }));
   const hasShape = record.unitType === "small-craft" || record.unitType === "dropship";
   const current = edition === DEFAULT_AERO_EDITION;
   const lowest = current ? aeroLowestLevel(record, catalog) : undefined;
@@ -100,7 +104,7 @@ export function IdentityPanel({ record, catalog, onEdit }: PartProps & { catalog
           label="Type"
           value={record.unitType}
           options={types}
-          hint={row ? `${row.cite}.${typeReady(edition, record.unitType) ? "" : " The construction steps for this type are not in the app yet, so only its identity is kept."}` : undefined}
+          hint={row ? `${row.cite}.${typeReady(edition, record.unitType) ? "" : " The checks for this type are not built yet, so only its identity and weight range are checked."}` : undefined}
           className="bt-level"
           onChange={(v) => {
             onEdit((d) => {

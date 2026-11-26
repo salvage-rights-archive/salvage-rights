@@ -2,12 +2,14 @@ import { cleanup, render } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { SHEET_PROFILES, sheetProfileFor } from "../../../data/aero-sheet";
 import type { SheetProfile } from "../../../data/aero-sheet";
+import { DEFAULT_AERO_EDITION } from "../../../data/aero";
 import { newAeroRecord } from "../../../rules/aero";
 import type { AeroRecord } from "../../../rules/aero";
 import { loadCatalog } from "../../../rules/catalog";
 import { MAX_SINKS_DRAWN } from "../../sheet/HeatData";
 import { MAX_BUBBLES_DRAWN, MAX_SI_DRAWN } from "./Diagram";
 import FighterSheet from "./FighterSheet";
+import { weaponLines } from "./facts";
 
 afterEach(cleanup);
 const catalog = await loadCatalog();
@@ -52,6 +54,13 @@ describe("The fighter record sheets", () => {
       expect([...svg.querySelectorAll("[textLength]")].every((t) => Number(t.getAttribute("textLength")) > 0), profile.id).toBe(true);
       cleanup();
     }
+  });
+
+  it("splits an attack value that changes with range across the brackets, one figure each", () => {
+    const profile = SHEET_PROFILES.find((p) => p.editionId === DEFAULT_AERO_EDITION && p.kind === "aerospace");
+    if (!profile) throw new Error("no current profile");
+    const record = fighterFor(profile, { mounts: [{ id: "p", equipmentId: "snub-nose-ppc-is", name: "Snub-Nose PPC", arc: "NO" }, { id: "h", equipmentId: "hyper-assault-gauss-20-clan", name: "HAG/20", arc: "NO" }] });
+    expect(weaponLines(record, catalog).map((l) => l.av)).toEqual([["10", "8", "", ""], ["16", "12", "12", ""]]);
   });
 
   it("draws one bubble for each armor point of each area", () => {

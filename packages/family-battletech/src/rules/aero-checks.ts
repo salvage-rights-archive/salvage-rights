@@ -60,6 +60,8 @@ const typeCheck: AeroCheck = {
     const { min, max, step } = row.weight;
     const out: AeroFinding[] = [];
     const where = { field: "tons" };
+    // Small craft and DropShips wait for their checks (see typeReady in ui/aero/edit.ts); say so rather than read "no problems".
+    if (record.unitType === "small-craft" || record.unitType === "dropship") out.push({ check: "type", level: "note", message: `The checks for a ${row.label.toLowerCase()} are not built yet, so nothing here has been checked beyond its weight range.`, where: { field: "unitType" }, cite: row.cite });
     if (min !== undefined && record.tons < min) out.push({ check: "type", level: "error", message: `At ${num(record.tons)} tons the unit is under the ${num(min)} tons ${edition} allows a ${row.label.toLowerCase()}.`, where, cite: row.cite });
     if (max !== undefined && record.tons > max) out.push({ check: "type", level: "error", message: `At ${num(record.tons)} tons the unit is over the ${num(max)} tons ${edition} allows a ${row.label.toLowerCase()}.`, where, cite: row.cite });
     if (step !== undefined && min !== undefined && tidy((record.tons - min) % step) !== 0) out.push({ check: "type", level: "warning", message: `${edition} builds a ${row.label.toLowerCase()} in steps of ${num(step)} tons; ${num(record.tons)} is not on a step.`, where, cite: row.cite });
