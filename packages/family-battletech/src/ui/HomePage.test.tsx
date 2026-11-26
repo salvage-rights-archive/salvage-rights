@@ -134,9 +134,9 @@ describe("Classic BattleTech home", () => {
     const texts = (select: HTMLSelectElement) => [...select.options].map((o) => o.text);
     expect([type.value, config.value]).toEqual(["mech", "biped"]); // a new unit starts as a BattleMech biped
     // The aerospace units come after the 'Mechs, and go (with the level they need) when the rules level is below Standard.
-    expect(texts(type)).toEqual(["BattleMech", "IndustrialMech", "OmniMech", "Aerospace fighter", "Conventional fighter", "Small craft", "DropShip"]);
+    expect(texts(type)).toEqual(["BattleMech", "IndustrialMech", "OmniMech", "Aerospace fighter", "Conventional fighter", "Small craft", "DropShip", "Conventional infantry"]);
     await user.selectOptions(within(form).getByLabelText("Rules level"), "introductory");
-    expect(texts(type)).toEqual(["BattleMech"]);
+    expect(texts(type)).toEqual(["BattleMech", "Conventional infantry"]);
     await user.selectOptions(within(form).getByLabelText("Rules level"), "experimental");
     expect(texts(config)).toEqual(["Biped", "Quad", "Tripod", "Land-Air 'Mech", "Bimodal Land-Air 'Mech"]);
     await user.selectOptions(config, "tripod");

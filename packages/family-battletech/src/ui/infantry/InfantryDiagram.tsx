@@ -25,15 +25,9 @@ const BOX_W = PER_ROW * CELL + 16;
 export default function InfantryDiagram({ locations, use, onSelect, selected, inError = [] }: InfantryDiagramProps) {
   const points = (l: DiagramLocation): number => (use === "structure" ? (l.structure ?? 0) : l.armor);
   const rows = (n: number) => Math.max(1, Math.ceil(n / PER_ROW));
-  let y = 4;
-  const boxes = locations.map((l) => {
-    const n = points(l);
-    const height = 30 + rows(n) * CELL + 8;
-    const box = { l, n, y, height };
-    y += height + 8;
-    return box;
-  });
-  const total = y;
+  const heights = locations.map((l) => 30 + rows(points(l)) * CELL + 8);
+  const boxes = locations.map((l, i) => ({ l, n: points(l), y: 4 + heights.slice(0, i).reduce((sum, h) => sum + h + 8, 0), height: heights[i] ?? 0 }));
+  const total = 4 + heights.reduce((sum, h) => sum + h + 8, 0);
   const label = `Platoon diagram: ${locations.map((l) => `${l.name}, ${String(points(l))} troopers`).join("; ")}`;
   return (
     <svg className="bt-infantry-diagram" viewBox={`0 0 ${String(BOX_W + 8)} ${String(total)}`} role={onSelect ? "group" : "img"} aria-label={label} width="100%" style={{ maxWidth: BOX_W + 8 }}>

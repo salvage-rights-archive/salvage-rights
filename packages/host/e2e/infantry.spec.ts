@@ -19,7 +19,7 @@ test("build an infantry platoon at 320 px, save it, open its record sheet and fi
   await form.getByLabel("Type", { exact: true }).selectOption({ label: "Conventional infantry" });
   await form.getByRole("button", { name: "Start building" }).click();
   await expect(page.getByRole("heading", { level: 1, name: "Rifle Platoon" })).toBeVisible();
-  await page.getByLabel("Primary weapon").selectOption({ label: /^Auto-Rifle/ });
+  await page.getByLabel("Primary weapon").selectOption({ label: "Auto-Rifle: 0.52 damage, range 1, crew 1" });
   await expect(page.getByText(/Damage \d+ at full strength/)).toBeVisible();
   await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.getByText("Saved.")).toBeVisible();
