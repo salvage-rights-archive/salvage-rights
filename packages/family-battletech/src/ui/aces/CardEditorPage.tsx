@@ -1,5 +1,6 @@
 // The behaviour card editor (design 6.1): identity, then the movement side with one tab per column, then the combat side. The
 // player builds the card from our own vocabulary; nothing is saved until Save, and a card with only its identity saves too.
+import { withoutSample } from "../../rules/aces-samples";
 import { useEffect, useId, useRef, useState } from "react";
 import { Link, useBlocker, useNavigate, useSearchParams } from "react-router";
 import { AS_GROUND_ROLES } from "../../data/alpha-strike";
@@ -166,7 +167,7 @@ function CardForm({ initial, isNew, storage }: { initial: AcesCard; isNew: boole
   const save = async () => {
     if (invalid) return;
     try {
-      await storage.save(built);
+      await storage.save(withoutSample(built));
     } catch {
       setStatus("");
       setProblem(STORAGE_WRITE_FAILED);

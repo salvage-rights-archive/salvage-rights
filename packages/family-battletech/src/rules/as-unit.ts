@@ -72,6 +72,8 @@ export interface AsUnit {
   era?: string;
   notes?: string;
   picture?: { dataUrl: string };
+  /** Set on our own sample units (rules/aces-samples.ts); they are never exported as the player's own. */
+  sample?: true;
   source: AsSource;
 }
 

@@ -11,7 +11,11 @@ export interface ExportFile {
 export async function exportStore(store: Store): Promise<ExportFile> {
   const entries: Record<string, unknown> = {};
   for (const key of await store.keys()) {
-    entries[key] = await store.get(key);
+    const value = await store.get(key);
+    // Our own sample cards (a saved card or unit flagged `sample`) are not the player's, so a backup leaves them out.
+    const held = isRecord(value) ? (value.record ?? value.unit) : undefined;
+    if (isRecord(held) && held.sample === true) continue;
+    entries[key] = value;
   }
   return {
     app: "salvage-rights",

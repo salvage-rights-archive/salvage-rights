@@ -2,8 +2,10 @@
 // file. A saved card that cannot be read is listed with its raw value, never thrown or dropped.
 import { openStore } from "@salvage-rights/shared";
 import type { Store } from "@salvage-rights/shared";
-import { ACES_KINDS, isAcesRecord } from "../../rules/aces-card";
+import { ACES_KINDS, isAcesRecord, isSample } from "../../rules/aces-card";
 import type { AcesCard, AcesKind, AcesRecord, CommandCard, SpecialOrderCard, SupportCard } from "../../rules/aces-card";
+import { acesSamples, sampleUnits, withoutSample } from "../../rules/aces-samples";
+import { openAsStorage } from "../as/storage";
 import { downloadJson, isPicture } from "../storage";
 
 /** Store prefixes by record kind. A backup of everything picks Aces records up by these. */
@@ -33,7 +35,16 @@ export interface AcesStorage {
   /** What is stored under the id, exactly as it is. */
   raw(kind: AcesKind, id: string): Promise<unknown>;
   remove(kind: AcesKind, id: string): Promise<void>;
+  /** Saves our sample cards and the sample lance, leaving any the player already has under the same id. */
+  addSamples(): Promise<void>;
+  /** Deletes every card and roster unit still flagged as a sample, and remembers that the player does not want them offered again. */
+  removeSamples(): Promise<void>;
+  /** Whether the player has said no to the offer of samples. */
+  samplesDeclined(): Promise<boolean>;
+  declineSamples(): Promise<void>;
 }
+
+const SAMPLES_DECLINED = "aces-samples-declined";
 
 export interface AcesLibrary {
   cards: AcesCard[];
@@ -73,9 +84,10 @@ export function libraryOf(records: readonly AcesRecord[]): AcesLibrary {
 
 const recordsOf = (lib: AcesLibrary): AcesRecord[] => [...lib.cards, ...lib.commands, ...lib.orders, ...lib.supports];
 
-/** The library as a file; photos only when the player asked for them. */
+/** The library as a file; photos only when the player asked for them. Our own sample cards are never in it. */
 export function toLibraryFile(lib: AcesLibrary, photos?: readonly AcesPhoto[]): AcesLibraryFile {
-  return { app: "salvage-rights", kind: "aces-library", version: 1, ...structuredClone(lib), ...(photos?.length ? { photos: structuredClone([...photos]) } : {}) };
+  const own = libraryOf(recordsOf(lib).filter((r) => !isSample(r)));
+  return { app: "salvage-rights", kind: "aces-library", version: 1, ...structuredClone(own), ...(photos?.length ? { photos: structuredClone([...photos]) } : {}) };
 }
 
 export function fromLibraryFile(file: unknown): { ok: true; library: AcesLibrary; photos: AcesPhoto[] } | { ok: false; message: string } {
@@ -96,7 +108,7 @@ export function fromLibraryFile(file: unknown): { ok: true; library: AcesLibrary
   if (!Array.isArray(photos) || !photos.every((ph) => isObject(ph) && typeof ph.cardId === "string" && ph.dataUrl !== undefined && isPicture(ph))) {
     return { ok: false, message: "A picture in this file is damaged." };
   }
-  return { ok: true, library: libraryOf(lists.flatMap(([list]) => list as AcesRecord[])), photos: photos as AcesPhoto[] };
+  return { ok: true, library: libraryOf(lists.flatMap(([list]) => (list as AcesRecord[]).map(withoutSample))), photos: photos as AcesPhoto[] };
 }
 
 /** Hands the library to the browser as a file. */
@@ -133,7 +145,7 @@ function entryOf(kind: AcesKind, id: string, stored: unknown): AcesEntry {
 }
 
 function wrap(store: Store): AcesStorage {
-  return {
+  const api: AcesStorage = {
     persistent: store.persistent,
     list: async (kinds = ACES_KINDS) => {
       const keys = await store.keys();
@@ -151,7 +163,32 @@ function wrap(store: Store): AcesStorage {
     },
     raw: (kind, id) => store.get<unknown>(ACES_PREFIXES[kind] + id),
     remove: (kind, id) => store.delete(ACES_PREFIXES[kind] + id),
+    addSamples: async () => {
+      const have = new Set((await api.list()).map((e) => `${e.kind}:${e.id}`));
+      for (const r of acesSamples(new Date().toISOString())) if (!have.has(`${r.kind}:${r.id}`)) await api.save(r);
+      const roster = await openAsStorage();
+      const owned = new Set((await roster.list()).map((e) => e.id));
+      for (const u of sampleUnits()) if (!owned.has(u.id)) await roster.save(u);
+    },
+    removeSamples: async () => {
+      for (const e of await api.list()) if (e.record && isSample(e.record)) await api.remove(e.kind, e.id);
+      const roster = await openAsStorage();
+      const gone = new Set<string>();
+      for (const e of await roster.list()) {
+        if (e.unit?.sample !== true) continue;
+        await roster.remove(e.id);
+        gone.add(e.id);
+      }
+      // A saved force that named a removed sample unit loses that member rather than keeping a name with nothing behind it.
+      for (const f of await roster.listForces()) {
+        if (f.force?.members.some((m) => gone.has(m.unitId))) await roster.saveForce({ ...f.force, members: f.force.members.filter((m) => !gone.has(m.unitId)) });
+      }
+      await api.declineSamples();
+    },
+    samplesDeclined: async () => (await store.get<boolean>(SAMPLES_DECLINED)) === true,
+    declineSamples: () => store.set(SAMPLES_DECLINED, true),
   };
+  return api;
 }
 
 export async function openAcesStorage(): Promise<AcesStorage> {

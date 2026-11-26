@@ -86,6 +86,8 @@ export interface AcesCard {
   combat: { priority: number | null; target?: TargetRule & { keys: Key[] }; overheat?: OvRow[] };
   /** The player's own words; kept on the device and in their own library file. */
   note?: string;
+  /** Set on our own sample cards (rules/aces-samples.ts); they are never exported as the player's own. */
+  sample?: true;
   source: Source;
 }
 
@@ -113,6 +115,7 @@ export interface CommandCard {
   /** In printed order; the first that holds names the next card, `letter: null` keeps the current one (p. 21). */
   strategy: { letter: CommandLetter | null; when: Condition }[];
   note?: string;
+  sample?: true;
   source: Source;
 }
 
@@ -128,6 +131,7 @@ export interface SpecialOrderCard {
   /** How the indirect attack spotter is chosen (p. 20). */
   spotter?: Key[];
   note?: string;
+  sample?: true;
   source: Source;
 }
 
@@ -143,6 +147,7 @@ export interface SupportCard {
   /** Area-effect damage. */
   area: boolean;
   note?: string;
+  sample?: true;
   source: Source;
 }
 
@@ -177,7 +182,7 @@ const isOvRow = (v: unknown): boolean =>
   isTokenUse(v.action);
 const isSource = (v: unknown): boolean => isObject(v) && (v.kind === "entered" || v.kind === "scan") && isString(v.at) && optional(v.style, isString);
 const isPriority = (v: unknown): boolean => v === null || isNumber(v);
-const head = (v: Record<string, unknown>, kind: AcesKind): boolean => v.schema === 1 && v.kind === kind && isString(v.id) && optional(v.note, isString) && isSource(v.source);
+const head = (v: Record<string, unknown>, kind: AcesKind): boolean => v.schema === 1 && v.kind === kind && isString(v.id) && optional(v.note, isString) && optional(v.sample, (x) => x === true) && isSource(v.source);
 
 export function isAcesCard(v: unknown): v is AcesCard {
   if (!isObject(v) || !head(v, "aces-card")) return false;
@@ -246,6 +251,9 @@ const CHECKS: Record<AcesKind, (v: unknown) => boolean> = {
   "aces-order": isSpecialOrderCard,
   "aces-support": isSupportCard,
 };
+
+/** Whether the record is one of our own samples rather than the player's. */
+export const isSample = (r: AcesRecord): boolean => r.sample === true;
 
 /** A record of one of our four kinds whose shape we can read. */
 export function isAcesRecord(v: unknown): v is AcesRecord {

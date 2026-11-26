@@ -1,3 +1,4 @@
+import { withoutSample } from "../../rules/aces-samples";
 import { useEffect, useId, useRef, useState } from "react";
 import type { ChangeEvent, ReactNode } from "react";
 import { printUnitHref } from "./AsForces";
@@ -310,7 +311,7 @@ function UnitForm({ initial, isNew, review, storage }: { initial: AsUnit; isNew:
   const save = async () => {
     if (invalid) return;
     try {
-      await storage.save(unit);
+      await storage.save(withoutSample(unit));
     } catch {
       setStatus("");
       setProblem(STORAGE_WRITE_FAILED);
