@@ -1,9 +1,12 @@
 // The editions the tool knows. An edition names the books it follows: which one the play rules come from and which one the
 // construction rules and equipment tables come from. Plain data; nothing here runs.
 import { MECH_TYPES } from "./chassis";
+import type { GameId } from "./rulesets";
 
 export interface Edition {
   id: string;
+  /** The game the edition belongs to (data/rulesets.ts): it decides what a record built under it is offered. */
+  game: GameId;
   name: string;
   books: { role: "play" | "construction"; title: string; printing: string; errata?: string }[];
   unitTypes: { id: string; name: string; ready: boolean }[];
@@ -27,17 +30,34 @@ const TECHMANUAL = { role: "construction", title: "TechManual", printing: "corre
 export const EDITIONS: Edition[] = [
   {
     id: "total-warfare",
+    game: "classic",
     name: "Total Warfare / TechManual",
     books: [{ role: "play", title: "Total Warfare", printing: "corrected eleventh printing" }, TECHMANUAL],
     unitTypes: UNIT_TYPES,
   },
   {
     id: "bcr-tm",
+    game: "classic",
     name: "Core Rulebook (BCR) / TechManual",
     books: [{ role: "play", title: "BattleTech Core Rulebook", printing: "2026, first printing", errata: "v0.1 (10 August 2026)" }, TECHMANUAL],
     unitTypes: UNIT_TYPES,
   },
 ];
+
+// BattleTech: Gothic is a game of its own (gothic-design s.1): its edition is kept out of EDITIONS, which stays the list the Classic
+// pages offer, so nothing of Gothic shows in Classic. Its play book is the box rulebook; construction and Battle Value go to
+// TechManual, as the rulebook sends them (p. 6). BattleMechs only.
+export const GOTHIC_EDITIONS: Edition[] = [
+  {
+    id: "gothic",
+    game: "gothic",
+    name: "BattleTech: Gothic / TechManual",
+    books: [{ role: "play", title: "BattleTech: Gothic", printing: "2025 box set rulebook" }, TECHMANUAL],
+    unitTypes: UNIT_TYPES.filter((u) => u.id === "mech"),
+  },
+];
+/** Every edition of every game, for lookups by id. */
+export const ALL_EDITIONS: Edition[] = [...EDITIONS, ...GOTHIC_EDITIONS];
 
 export const DEFAULT_EDITION = "total-warfare";
 
@@ -52,7 +72,7 @@ export function currentEditionId(id: string): string {
 
 /** An edition's name as screens and the record sheet show it; an id the tool does not know shows as it is. */
 export function editionName(id: string): string {
-  return EDITIONS.find((e) => e.id === currentEditionId(id))?.name ?? id;
+  return ALL_EDITIONS.find((e) => e.id === currentEditionId(id))?.name ?? id;
 }
 
 /** The play rules the tool encodes and the printed page of each in each edition's play book (Total Warfare, corrected eleventh
@@ -72,11 +92,11 @@ export const PLAY_RULES: { id: string; what: string; pages: Record<string, strin
 
 /** A citation line for the edition's play book: its title and each play rule's page, as `Core Rulebook: movement heat p. 102; ...`. */
 export function playCites(id: string): string {
-  const edition = EDITIONS.find((e) => e.id === currentEditionId(id));
+  const edition = ALL_EDITIONS.find((e) => e.id === currentEditionId(id));
   const play = edition?.books.find((b) => b.role === "play");
   if (!edition || !play) return "";
   const parts = PLAY_RULES.flatMap((rule) => (rule.pages[edition.id] === undefined ? [] : [`${rule.what} p. ${rule.pages[edition.id] ?? ""}`]));
-  return `${bookName(play.title)}: ${parts.join("; ")}.`;
+  return parts.length === 0 ? `${bookName(play.title)}.` : `${bookName(play.title)}: ${parts.join("; ")}.`;
 }
 
 /** Every book and printing the tool cites, with when each was published and when its errata is dated; ISO dates, a month where only
@@ -108,6 +128,11 @@ export const BOOKS: Record<string, BookDates> = {
   "AeroTech 2: Revised Edition": { printing: "FanPro 35011", printed: "2004-01", approx: true },
   "AeroTech 2: Record Sheets": { printing: "FanPro 10973", printed: "2002-01", approx: true },
   "Strategic Operations: Advanced Aerospace Rules": { printing: "third printing", printed: "2021-01", approx: true, errata: "v5.0", errataDated: "2024-11-15" },
+  // BattleTech: Gothic, dated from the library copies' creation dates (rulebook and sheets 2025-11-29, Primer 2025-03-24). Gothic values
+  // apply only inside Gothic, so these dates never decide a conflict with a Classic book (conflict 33).
+  "BattleTech: Gothic": { printing: "2025 box set rulebook", printed: "2025-11", approx: true },
+  "BattleTech: Gothic Deluxe Record Sheets": { printing: "2025", printed: "2025-11", approx: true },
+  "BattleTech: Gothic Primer": { printing: "2025 spreads", printed: "2025-03", approx: true },
 };
 
 /** The later of a book's printing and errata dates; undefined for a book not in BOOKS. */
@@ -143,6 +168,10 @@ const PUBLISHERS: Record<string, string> = {
   "AeroTech 2: Revised Edition": "FanPro",
   "AeroTech 2: Record Sheets": "FanPro",
   "Strategic Operations: Advanced Aerospace Rules": "Catalyst Game Labs",
+  "BattleTech: Gothic": "Catalyst Game Labs",
+  // The sheets print no page numbers: a cite to them gives the PDF page index (index 0 is the cover).
+  "BattleTech: Gothic Deluxe Record Sheets": "Catalyst Game Labs",
+  "BattleTech: Gothic Primer": "Catalyst Game Labs",
 };
 
 /** A book's title with its publisher, as citations show it: `TechManual (Catalyst Game Labs)`. */
@@ -159,6 +188,9 @@ export interface EraRow {
   name: string;
   startYear: number;
   endYear?: number;
+  /** The page that prints the era's name and years, where the table has no one source for all its rows (Gothic's eras). */
+  cite?: { book: string; page: number };
+  checked?: "page" | "text";
 }
 export const ERAS: EraRow[] = [
   { id: "age-of-war", name: "Age of War", startYear: 2005, endYear: 2570 },

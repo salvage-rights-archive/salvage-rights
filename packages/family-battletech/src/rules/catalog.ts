@@ -4,6 +4,8 @@
 // table, which holds the few items the book scales with the 'Mech.
 import type { RulesLevel, Span } from "../data/chassis";
 import { AMMO_GROUPS, AMMO_OTHER_GROUP, EQUIPMENT_GROUPS, GROUP_ORDER, OTHER_GROUP } from "../data/equipment/groups";
+import { inGame, rulesetOf } from "../data/rulesets";
+import type { GameId } from "../data/rulesets";
 import type { UnitId } from "../data/units";
 import { DEFAULT_UNITS } from "../data/units";
 import { SHEET_ALIASES, sheetNameVariants } from "../data/equipment/names";
@@ -56,6 +58,14 @@ export interface EquipmentRow {
    * printed for both tech bases). The availability check reports such rows as notes, not errors. `false` on a row whose group says
    * `true` where another book does print its year (the Universal Technology Advancement Table prints the Clan TAG's). */
   yearsInferred?: boolean;
+  /** True when `tons` is not printed in any book and was worked out from the published designs that carry the item (the Light Blazer). */
+  tonsInferred?: true;
+  /** The games that offer the item (data/rulesets.ts); absent means Classic only. */
+  games?: GameId[];
+  /** The page that gives the item's rules level, where it is not `cite` (a game's overlay sets it), and whether that level is our
+   * inference rather than printed. */
+  levelCite?: { book: string; page: number };
+  levelInferred?: true;
   /** The 'Mech carries exactly this many of the item, each one a separate mount of `slots` slots, placed anywhere or, where
    * `locations` names exactly that many, one in each. `perMechQuad` is the count on a quad where it differs (talons: a slot pair on each of four legs). */
   perMech?: number;
@@ -189,12 +199,14 @@ export function expand(groups: EquipmentGroup[]): EquipmentRow[] {
 export interface Catalog {
   all(): EquipmentRow[];
   byId(id: string): EquipmentRow | undefined;
-  /** The row as the edition sees it: its own values with that edition's overrides applied. */
+  /** The row as the edition sees it: its own values with that edition's overrides applied, then its game's overlay. */
   rowFor(id: string, editionId: string): EquipmentRow | undefined;
   /** Exact name, then alias, within the tech base; case, spacing, hyphens, slashes and periods are ignored. */
   match(name: string, techBase: TechBase): EquipmentRow | undefined;
-  /** The rows an edition offers a unit of the type (a BattleMech when no `unit` is given) in a tech base and year. */
-  offered(editionId: string, want: { techBase: TechBase | "mixed"; year: number | null; unit?: UnitId }): EquipmentRow[];
+  /** The rows an edition offers a unit of the type (a BattleMech when no `unit` is given) in a tech base and year: those on its game's
+   * list, or every row where `level` reaches the level at which the game lifts its list. */
+  offered(editionId: string, want: { techBase: TechBase | "mixed"; year: number | null; unit?: UnitId; level?: RulesLevel }): EquipmentRow[];
+  /** In a game without dates (data/rulesets.ts `dated`) every row is available whatever the year. */
   available(row: EquipmentRow, editionId: string, year: number | null): boolean;
   /** True when the item can be had at some time from `from` to `to`, inclusive: one of its spans overlaps the window. A year is the window [year, year]. */
   availableBetween(row: EquipmentRow, editionId: string, from: number, to: number): boolean;
@@ -202,15 +214,23 @@ export interface Catalog {
   factsOf: FactsOf;
 }
 
-/** The row as one edition sees it: its own values with that edition's overrides on top. */
-function inEdition(row: EquipmentRow, editionId: string): EquipmentRow {
+/** A game's values that differ from the catalog: for each catalog id, only the fields whose value in that game is not the row's as
+ * Classic reads it (data/equipment/gothic.ts). A test fails on any field that repeats the row. */
+export type GameOverlay = Record<string, Partial<Omit<EquipmentRow, "id" | "games">>>;
+export type Overlays = Partial<Record<GameId, GameOverlay>>;
+
+/** The row as one edition sees it: its own values, that edition's overrides on top, then its game's overlay. */
+function seenIn(row: EquipmentRow, editionId: string, overlays: Overlays): EquipmentRow {
   const override = row.editions && Object.hasOwn(row.editions, editionId) ? row.editions[editionId] : undefined;
-  return override ? { ...row, ...override } : row;
+  const overlay = overlays[rulesetOf(editionId).game];
+  const ours = overlay && Object.hasOwn(overlay, row.id) ? overlay[row.id] : undefined;
+  return override || ours ? { ...row, ...override, ...ours } : row;
 }
 
 const normalize = (name: string) => name.toLowerCase().replace(/[\s\-/.]/g, "");
 
-export function createCatalog(rows: EquipmentRow[]): Catalog {
+export function createCatalog(rows: EquipmentRow[], overlays: Overlays = {}): Catalog {
+  const inEdition = (row: EquipmentRow, editionId: string) => seenIn(row, editionId, overlays);
   const byId = new Map(rows.map((r) => [r.id, r]));
   const names = new Map<string, EquipmentRow>();
   const aliases = new Map<string, EquipmentRow>();
@@ -230,7 +250,7 @@ export function createCatalog(rows: EquipmentRow[]): Catalog {
   }
 
   const availableBetween: Catalog["availableBetween"] = (row, editionId, from, to) =>
-    inEdition(row, editionId).availability.some((s) => s.from <= to && (s.to === undefined || s.to >= from));
+    !rulesetOf(editionId).dated || inEdition(row, editionId).availability.some((s) => s.from <= to && (s.to === undefined || s.to >= from));
   const available: Catalog["available"] = (row, editionId, year) => year === null || availableBetween(row, editionId, year, year);
 
   const resolve = (value: number | string, row: EquipmentRow, record: MechRecord, mount: Mount): number | undefined => {
@@ -266,10 +286,12 @@ export function createCatalog(rows: EquipmentRow[]): Catalog {
       }
       return undefined;
     },
-    offered: (editionId, { techBase, year, unit = "mech" }) =>
-      rows
-        .filter((r) => mountableOn(r, unit) && (techBase === "mixed" || r.techBase === techBase) && available(r, editionId, year))
-        .map((r) => inEdition(r, editionId)),
+    offered: (editionId, { techBase, year, unit = "mech", level }) => {
+      const ruleset = rulesetOf(editionId);
+      return rows
+        .filter((r) => inGame(r.games, ruleset, level) && mountableOn(r, unit) && (techBase === "mixed" || r.techBase === techBase) && available(r, editionId, year))
+        .map((r) => inEdition(r, editionId));
+    },
     available,
     availableBetween,
     factsOf,
@@ -282,12 +304,13 @@ let loading: Promise<Catalog> | undefined;
 /** The real table, loaded on first use so it is not part of a page's first load; expanded once and cached. */
 export function loadCatalog(): Promise<Catalog> {
   loading ??= (async () => {
-    const [weapons, ammunition, other] = await Promise.all([
+    const [weapons, ammunition, other, gothic] = await Promise.all([
       import("../data/equipment/weapons"),
       import("../data/equipment/ammunition"),
       import("../data/equipment/other"),
+      import("../data/equipment/gothic"),
     ]);
-    return createCatalog(expand([...weapons.WEAPONS, ...ammunition.AMMUNITION, ...other.OTHER]));
+    return createCatalog(expand([...weapons.WEAPONS, ...ammunition.AMMUNITION, ...other.OTHER, ...gothic.GOTHIC_EQUIPMENT]), { gothic: gothic.GOTHIC_OVERLAY });
   })().catch((error: unknown) => {
     loading = undefined; // let a later call try again
     throw error;

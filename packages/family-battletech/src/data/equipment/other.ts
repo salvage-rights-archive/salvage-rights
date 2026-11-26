@@ -63,7 +63,7 @@ export const OTHER: EquipmentGroup[] = [
     defaults: { kind: "heat-sink", techBase: "inner-sphere", cite: { book: "TechManual", page: 54 }, checked: "page", tons: 0 },
     items: [
       // Heat sinks (Inner Sphere)
-      { id: "heat-sink-is", name: "Heat Sink", aliases: ["Single Heat Sink", "Standard Heat Sink"], slots: 1, availability: [{ from: 2022 }] },
+      { id: "heat-sink-is", games: ["classic", "gothic"], name: "Heat Sink", aliases: ["Single Heat Sink", "Standard Heat Sink"], slots: 1, availability: [{ from: 2022 }] },
       { id: "double-heat-sink-is", name: "Double Heat Sink", aliases: ["Double Heat Sinks"], slots: 3, availability: [{ from: 2567, to: 2865 }, { from: 3040 }], prototypeYear: 2559 },
     ],
   },
@@ -71,7 +71,7 @@ export const OTHER: EquipmentGroup[] = [
     defaults: { kind: "jump-jet", techBase: "inner-sphere", cite: { book: "TechManual", page: 51 }, checked: "page" },
     items: [
       // Jump jets (Inner Sphere)
-      { id: "jump-jet-is", name: "Jump Jet", aliases: ["Jump Jets"], tons: "jump-jet", slots: 1, availability: [{ from: 2471 }], prototypeYear: 2464, locations: ["CT", "LT", "RT", "LL", "RL", "FLL", "FRL", "RLL", "RRL"] },
+      { id: "jump-jet-is", games: ["classic", "gothic"], name: "Jump Jet", aliases: ["Jump Jets"], tons: "jump-jet", slots: 1, availability: [{ from: 2471 }], prototypeYear: 2464, locations: ["CT", "LT", "RT", "LL", "RL", "FLL", "FRL", "RLL", "RRL"] },
     ],
   },
   {
@@ -398,7 +398,7 @@ export const OTHER: EquipmentGroup[] = [
       // Claws, lance, mace (pp. 99-102): a ton and a slot for every 15, 20 or 10 tons of the 'Mech
       { id: "claws-is", name: "Claws", aliases: ["Claw"], tons: "ceil-tons-15", slots: "ceil-tons-15", availability: [{ from: 3060 }], prototypeYear: 3050, locations: ["LA", "RA"], locationsQuad: [], rulesLevel: "advanced" },
       { id: "lance-is", name: "Lance", tons: "ceil-tons-20", slots: "ceil-tons-20", availability: [{ from: 3083 }], prototypeYear: 3064, locations: ["LA", "RA"], locationsQuad: [] },
-      { id: "mace-is", name: "Mace", tons: "ceil-tons-10", slots: "ceil-tons-10", availability: [{ from: 3079 }], prototypeYear: 3061, prototypeLevel: "advanced", locations: ["LA", "RA"], locationsQuad: [], rulesLevel: "advanced" },
+      { id: "mace-is", games: ["classic", "gothic"], name: "Mace", tons: "ceil-tons-10", slots: "ceil-tons-10", availability: [{ from: 3079 }], prototypeYear: 3061, prototypeLevel: "advanced", locations: ["LA", "RA"], locationsQuad: [], rulesLevel: "advanced" },
       // Mechanical jump boosters (p. 104): 5 percent of the 'Mech for each Jumping MP chosen, two slots in each leg
       { id: "mechanical-jump-booster-is", name: "Mechanical Jump Booster", aliases: ["Mechanical Jump Boosters", "Jump Booster"], tons: "jump-booster", slots: 2, availability: [{ from: 3083 }], prototypeYear: 3060, locations: ["LL", "RL"], locationsQuad: ["FLL", "FRL", "RLL", "RRL"], perMech: 2, perMechQuad: 4, splitWeight: true, amount: { unit: "Jumping MP", min: 1, step: 1 } },
       // Partial wing (p. 104): 7 percent of the 'Mech, four slots in each side torso

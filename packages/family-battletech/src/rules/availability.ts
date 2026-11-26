@@ -12,7 +12,7 @@
 // the level its `prototypeLevel` names, where the books print it lower); before its prototype year it does not exist.
 import { ARMOR, COCKPITS, ENGINE_TYPES, GYROS, HEAT_SINKS, MECH_TYPES, MYOMER, SHEET, STRUCTURE_TYPES } from "../data/chassis";
 import type { ConfigurationRow, MechType, MechTypeRow, PartFacts, RulesLevel } from "../data/chassis";
-import { ERAS } from "../data/editions";
+import { inGame, listsOpen, rulesetOf } from "../data/rulesets";
 import { CLAN_CASE_IDS, clanCaseAllowed } from "./case";
 import { mountableOn } from "./catalog";
 import type { Catalog, EquipmentRow } from "./catalog";
@@ -20,41 +20,43 @@ import { DEFAULT_LEVEL, equipmentLevel, levelAtLeast, levelIn, partLevel } from 
 import { industrialRulesOf, mechTypeOf } from "./mech";
 import type { MechRecord } from "./mech";
 import { datesText, eraOfYear, partPrototype, partSpans, phaseIn, rowPhase, windowOf } from "./time";
-import type { Phase } from "./time";
+import type { Phase, When } from "./time";
 
 export { eraOfRecord, eraOfYear, partSpans, spansFit, windowOf } from "./time";
-export type { Phase, Window } from "./time";
+export type { Phase, When, Window } from "./time";
 
 // ---------------------------------------------------------------------------------------------------------------
-// Eras and years: kept consistent
+// Eras and years: kept consistent, in the era table of the draft's game (its edition's; none: Classic)
 // ---------------------------------------------------------------------------------------------------------------
 
 /** Set the year on a draft; the era follows it. A cleared year leaves the era as it was. */
-export function setYear(draft: Pick<MechRecord, "era" | "year">, year: number | null): void {
+export function setYear(draft: When, year: number | null): void {
   draft.year = year;
   if (year === null) return;
-  const era = eraOfYear(year);
+  const era = eraOfYear(year, rulesetOf(draft.editionId));
   if (era) draft.era = era.id;
   else delete draft.era;
 }
 
 /** Set the era on a draft (an empty or unknown id clears it). A year the new era does not hold is cleared, since a year and an era that
  * disagree is the one state this keeps out; the era then limits what is offered by its whole span. */
-export function setEra(draft: Pick<MechRecord, "era" | "year">, id: string): void {
-  const era = ERAS.find((row) => row.id === id);
+export function setEra(draft: When, id: string): void {
+  const ruleset = rulesetOf(draft.editionId);
+  const era = ruleset.eras.find((row) => row.id === id);
   if (!era) {
     delete draft.era;
     return;
   }
   draft.era = era.id;
-  if (draft.year !== null && eraOfYear(draft.year)?.id !== era.id) draft.year = null;
+  if (draft.year !== null && eraOfYear(draft.year, ruleset)?.id !== era.id) draft.year = null;
 }
 
 // ---------------------------------------------------------------------------------------------------------------
 // The rule
 // ---------------------------------------------------------------------------------------------------------------
 
-type Subject = Pick<MechRecord, "techBase" | "year" | "era" | "rulesLevel" | "unitType" | "frankenmech"> & { configuration?: string; chassis?: Pick<MechRecord["chassis"], "structure"> };
+// `editionId` names the game whose lists, levels and dates apply (data/rulesets.ts); a subject without one is Classic.
+type Subject = Pick<MechRecord, "techBase" | "year" | "era" | "rulesLevel" | "unitType" | "frankenmech"> & { configuration?: string; chassis?: Pick<MechRecord["chassis"], "structure">; editionId?: string };
 // `everything`, where a function takes it, lifts the tech base and time limits (the picker's "Show everything") and never the rules level.
 const recordLevel = (record: Subject): RulesLevel => record.rulesLevel ?? DEFAULT_LEVEL;
 
@@ -69,11 +71,13 @@ export function equipmentPhase(row: EquipmentRow, record: Subject & Pick<MechRec
   return phaseIn(adjusted.availability, row.prototypeYear, windowOf(record));
 }
 
-/** An equipment row: at or below the level, the record's tech base, and in the record's time (read through the record's edition). */
+/** An equipment row: on the record's game's list, at or below the level, the record's tech base, and in the record's time (read through
+ * the record's edition, so a game's own level for the row counts). */
 export function equipmentAvailable(row: EquipmentRow, record: Subject & Pick<MechRecord, "editionId">, catalog: Catalog, everything = false): boolean {
   if (!mountableOn(row, mechTypeOf(record).unit)) return false; // a row whose `units` leaves out the unit's type is never offered to it, not even with Show everything
   if (CLAN_CASE_IDS.includes(row.id) && !clanCaseAllowed(record)) return false; // Clan CASE is for a Clan structure (TM p.210); hidden, never marked, even with Show everything
-  const level = equipmentLevel(row);
+  if (!inGame(row.games, rulesetOf(record.editionId), record.rulesLevel)) return false; // another game's row: hidden, never marked, even with Show everything
+  const level = equipmentLevel(catalog.rowFor(row.id, record.editionId) ?? row);
   if (!levelAtLeast(recordLevel(record), level)) return false;
   if (everything) return true;
   if (!baseFits(row.techBase, record.techBase)) return false;
@@ -96,7 +100,7 @@ const PART_TABLES: Record<PartKind, { types: Record<string, PartRow> }> = {
 const partRow = (kind: PartKind, key: string): PartRow | undefined => (Object.hasOwn(PART_TABLES[kind].types, key) ? PART_TABLES[kind].types[key] : undefined);
 
 /** A chassis part's phase for a record: production, prototype or neither. A part with no dates printed is always in production. */
-export function partPhase(part: PartFacts, record: Pick<Subject, "techBase" | "year" | "era">): Phase | null {
+export function partPhase(part: PartFacts, record: Pick<Subject, "techBase" | "year" | "era" | "editionId">): Phase | null {
   return phaseIn(partSpans(part, record.techBase), partPrototype(part, record.techBase), windowOf(record));
 }
 
@@ -107,6 +111,7 @@ export function partAvailable(kind: PartKind, key: string, record: Subject, ever
   // The type decides first: an IndustrialMech takes the parts its rules name, and any other 'Mech none printed for IndustrialMechs.
   const industrial = industrialRulesOf(record);
   if (industrial ? !industrial.parts[kind].includes(key) : part.industrial) return false;
+  if (!inGame(part.games, rulesetOf(record.editionId), record.rulesLevel)) return false; // another game's part: hidden, even with Show everything
   const level = partLevel(kind, key, part);
   if (!levelAtLeast(recordLevel(record), level)) return false;
   if (part.only !== undefined && part.only !== record.configuration) return false;
@@ -119,14 +124,14 @@ export function partAvailable(kind: PartKind, key: string, record: Subject, ever
 const configurationRow = (key: string): ConfigurationRow | undefined => (Object.hasOwn(SHEET.configurations, key) ? (SHEET.configurations as Record<string, ConfigurationRow>)[key] : undefined);
 
 /** A body configuration's phase for a record: production, prototype or neither. A key we do not know is in production. */
-export function configurationPhase(key: string, record: Pick<Subject, "techBase" | "year" | "era">): Phase | null {
+export function configurationPhase(key: string, record: Pick<Subject, "techBase" | "year" | "era" | "editionId">): Phase | null {
   const row = configurationRow(key);
   if (!row) return "production";
   return baseFits(row.techBase, record.techBase) ? rowPhase(row, record.techBase, windowOf(record)) : null;
 }
 
 /** A body configuration's tech base and years against the record (not its level, which the level check reports); its prototype years count. */
-export function configurationInTime(key: string, record: Pick<Subject, "techBase" | "year" | "era">): boolean {
+export function configurationInTime(key: string, record: Pick<Subject, "techBase" | "year" | "era" | "editionId">): boolean {
   return configurationPhase(key, record) !== null;
 }
 
@@ -139,6 +144,7 @@ export function configurationAvailable(key: string, record: Subject, everything 
   // An OmniMech takes the bodies the books allow: not a Land-Air 'Mech (IO:AE p.108); the tripod's tech base is its own row's.
   const omni = mechTypeOf(record).omni;
   if (omni && !omni.bodies.includes(key)) return false;
+  if (!inGame(row.games, rulesetOf(record.editionId), record.rulesLevel)) return false; // another game's body type: hidden, even with Show everything
   const level = partLevel("configuration", key, row);
   if (!levelAtLeast(recordLevel(record), level)) return false;
   if (everything) return true;
@@ -176,21 +182,23 @@ export function partChoices(kind: PartKind, record: Subject, current: string): [
 // ---------------------------------------------------------------------------------------------------------------
 
 /** A 'Mech type's phase for a record: through the production years of its row, the Clan ones where the row has them; a mixed record takes either. */
-export function typePhase(id: MechType, record: Pick<Subject, "techBase" | "year" | "era">): Phase | null {
+export function typePhase(id: MechType, record: Pick<Subject, "techBase" | "year" | "era" | "editionId">): Phase | null {
   const row = MECH_TYPES.find((r) => r.id === id);
   return row ? rowPhase(row, record.techBase, windowOf(record)) : null;
 }
 
 /** A type's years against the record: its production years (the Clan ones where the row has them) and its prototype years count; a mixed record takes either. */
-export function typeInTime(row: MechTypeRow, record: Pick<Subject, "techBase" | "year" | "era">): boolean {
+export function typeInTime(row: MechTypeRow, record: Pick<Subject, "techBase" | "year" | "era" | "editionId">): boolean {
   return rowPhase(row, record.techBase, windowOf(record)) !== null;
 }
 
-/** A 'Mech type for a record: at or below its rules level (raised to the prototype's in its prototype years), and (unless `everything`) in
- * its tech base and time. A key we do not know fits nothing. */
+/** A 'Mech type for a record: one its game offers (or every type where the game lifts its lists), at or below its rules level (raised to
+ * the prototype's in its prototype years), and (unless `everything`) in its tech base and time. A key we do not know fits nothing. */
 export function typeAvailable(id: MechType, record: Subject, everything = false): boolean {
   const row = MECH_TYPES.find((r) => r.id === id);
   if (!row) return false;
+  const ruleset = rulesetOf(record.editionId);
+  if (!ruleset.unitTypes.includes(id) && !listsOpen(ruleset, record.rulesLevel)) return false;
   if (!levelAtLeast(recordLevel(record), row.rulesLevel)) return false;
   if (row.industrial && !row.industrial.techBases.some((base) => base === record.techBase)) return false;
   if (everything) return true;

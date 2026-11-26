@@ -8,7 +8,12 @@
 // the functions in rules/mech.ts must cope with that.
 
 import type { LocationCode } from "../rules/mech";
+import type { GameId } from "./rulesets";
 import type { UnitId } from "./units";
+
+/** The `games` of a part or body type that BattleTech: Gothic also offers (gothic-design s.4: the parts every Introductory Gothic sheet
+ * is built from, endo steel from the PXH-1T, sheets PDF index 8, and the quad from rulebook p. 6). A row without `games` is Classic's only. */
+const WITH_GOTHIC: GameId[] = ["classic", "gothic"];
 
 export interface Cite {
   book: "TechManual" | "Interstellar Operations: Alternate Eras" | "Tactical Operations: Advanced Units and Equipment" | "Campaign Operations";
@@ -58,6 +63,8 @@ export interface PartFacts {
   primitive?: true;
   cite?: Cite;
   checked?: Checked;
+  /** The games that offer the part (data/rulesets.ts); absent means Classic only. */
+  games?: GameId[];
 }
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -133,8 +140,8 @@ export const STRUCTURE_TYPES: Sourced & { types: Record<string, StructureType> }
   cite: { book: "TechManual", page: 47 },
   checked: "page",
   types: {
-    standard: { name: "Standard", weightFactor: 1, slots: 0, availability: [{ from: 2439 }], prototypeYear: 2430, availabilityCite: UTA(42) },
-    "endo-steel": { name: "Endo Steel", weightFactor: 0.5, slots: 14, techBase: "inner-sphere", availability: [{ from: 2487, to: 2850 }, { from: 3035 }], prototypeYear: 2480, availabilityCite: UTA(42) },
+    standard: { name: "Standard", weightFactor: 1, slots: 0, availability: [{ from: 2439 }], prototypeYear: 2430, availabilityCite: UTA(42), games: WITH_GOTHIC },
+    "endo-steel": { name: "Endo Steel", weightFactor: 0.5, slots: 14, techBase: "inner-sphere", availability: [{ from: 2487, to: 2850 }, { from: 3035 }], prototypeYear: 2480, availabilityCite: UTA(42), games: WITH_GOTHIC },
     "endo-steel-clan": { name: "Endo Steel (Clan)", weightFactor: 0.5, slots: 7, techBase: "clan", availability: [{ from: 2827 }], prototypeYear: 2825, availabilityCite: UTA(42) },
     composite: {
       name: "Composite",
@@ -338,7 +345,7 @@ export const ENGINE_TYPES: Sourced & { types: Record<string, EngineType> } = {
   cite: { book: "TechManual", page: 50 },
   checked: "page",
   types: {
-    standard: { name: "Standard Fusion", label: "Fusion Engine", weightFactor: 1, ct: 6, side: 0 },
+    standard: { name: "Standard Fusion", label: "Fusion Engine", weightFactor: 1, ct: 6, side: 0, games: WITH_GOTHIC },
     xl: { name: "XL Fusion", label: "XL Fusion Engine", weightFactor: 0.5, factorCite: P214, factorChecked: "text", ct: 6, side: 3, techBase: "inner-sphere", availability: [{ from: 2579, to: 2865 }, { from: 3035 }], prototypeYear: 2556, availabilityCite: UTA(38) },
     "xl-clan": { name: "XL Fusion (Clan)", label: "XL Fusion Engine", weightFactor: 0.5, factorCite: P214, factorChecked: "text", ct: 6, side: 2, techBase: "clan", availability: [{ from: 2827 }], prototypeYear: 2824, availabilityCite: UTA(38) },
     light: { name: "Light Fusion", label: "Light Fusion Engine", weightFactor: 0.75, factorCite: P214, factorChecked: "text", ct: 6, side: 2, techBase: "inner-sphere", availability: [{ from: 3062 }], prototypeYear: 3055, availabilityCite: UTA(38) },
@@ -432,7 +439,7 @@ export const GYROS: Sourced & { types: Record<string, GyroType> } = {
   cite: { book: "TechManual", page: 50 },
   checked: "page",
   types: {
-    standard: { name: "Standard", label: "Gyro", multiplier: 1.0, slots: 4, availability: [{ from: 2350 }], prototypeYear: 2300, availabilityCite: UTA(42) },
+    standard: { name: "Standard", label: "Gyro", multiplier: 1.0, slots: 4, availability: [{ from: 2350 }], prototypeYear: 2300, availabilityCite: UTA(42), games: WITH_GOTHIC },
     compact: { name: "Compact", label: "Compact Gyro", multiplier: 1.5, slots: 2, techBase: "inner-sphere", availability: [{ from: 3068 }], prototypeYear: 3055, availabilityCite: UTA(42) },
     "heavy-duty": { name: "Heavy-Duty", label: "Heavy Duty Gyro", multiplier: 2.0, slots: 4, techBase: "inner-sphere", availability: [{ from: 3067 }], prototypeYear: 3055, availabilityCite: UTA(42) },
     xl: { name: "XL", label: "XL Gyro", multiplier: 0.5, slots: 6, techBase: "inner-sphere", availability: [{ from: 3067 }], prototypeYear: 3055, availabilityCite: UTA(42) },
@@ -466,7 +473,7 @@ export const COCKPITS: Sourced & { types: Record<string, CockpitType> } = {
   cite: { book: "TechManual", page: 52 },
   checked: "page",
   types: {
-    standard: { name: "Standard", tons: 3, cockpit: [3], sensors: [2, 5], lifeSupport: [1, 6], availability: [{ from: 2470 }], prototypeYear: 2468, availabilityCite: UTA(33) },
+    standard: { name: "Standard", tons: 3, cockpit: [3], sensors: [2, 5], lifeSupport: [1, 6], availability: [{ from: 2470 }], prototypeYear: 2468, availabilityCite: UTA(33), games: WITH_GOTHIC },
     // The Small Cockpit row prints 3067 (Federated Suns) for the Inner Sphere and "Clan Intro: 3080".
     small: { name: "Small", tons: 2, cockpit: [3], sensors: [2, 4], lifeSupport: [1], techBase: "both", introduced: { is: 3067, clan: 3080 }, prototypeYear: { is: 3060 }, availabilityCite: UTA(33) },
     // The tripod's special cockpit weighs 4 tons up to 100 tons and takes the same slots as the standard one (Interstellar
@@ -560,7 +567,7 @@ export const HEAT_SINKS: Sourced & { types: Record<string, HeatSinkType> } = {
   cite: { book: "TechManual", page: 54 },
   checked: "page",
   types: {
-    single: { name: "Single", slots: 1 },
+    single: { name: "Single", slots: 1, games: WITH_GOTHIC },
     double: { name: "Double", slots: 3, techBase: "inner-sphere", availability: [{ from: 2567, to: 2865 }, { from: 3040 }], prototypeYear: 2559, availabilityCite: UTA(36) },
     "double-clan": { name: "Double (Clan)", slots: 2, techBase: "clan", availability: [{ from: 2827 }], prototypeYear: 2825, availabilityCite: UTA(36) },
     // Tactical Operations: Advanced Units and Equipment: compact sinks (rules p.128, table p.217) weigh 1.5 tons and go two to a slot; laser
@@ -595,7 +602,7 @@ export const ARMOR: Sourced & { basePointsPerTon: number; types: Record<string, 
   checked: "page",
   basePointsPerTon: 16,
   types: {
-    standard: { name: "Standard", multiplier: 1.0, slots: 0, availability: [{ from: 2470 }], prototypeYear: 2460, availabilityCite: UTA(29) },
+    standard: { name: "Standard", multiplier: 1.0, slots: 0, availability: [{ from: 2470 }], prototypeYear: 2460, availabilityCite: UTA(29), games: WITH_GOTHIC },
     // Inner Sphere BattleMechs only (TechManual printed p.55, table p.56). Dates from the Universal Technology Advancement Table (IO:AE printed
     // p.29, read against the page image): prototype about 3051, production 3063, common 3072. IO:AE is the newer book, so its dates stand.
     stealth: {
@@ -825,7 +832,7 @@ export const MYOMER: Sourced & { types: Record<string, MyomerType> } = {
   cite: { book: "TechManual", page: 52 },
   checked: "page",
   types: {
-    standard: { name: "Standard", percentOfTons: 0, slots: 0 },
+    standard: { name: "Standard", percentOfTons: 0, slots: 0, games: WITH_GOTHIC },
     masc: { name: "MASC", catalogId: "masc-is", percentOfTons: 5, slots: "percent", techBase: "inner-sphere", availability: [{ from: 2740, to: 2795 }, { from: 3035 }], prototypeYear: 2730, availabilityCite: UTA(29) },
     // RISC super-cooled myomer (Interstellar Operations: Alternate Eras printed p.88): six slots, one in each arm, leg and side torso; BattleMechs only.
     "super-cooled": { name: "Super-Cooled Myomer", catalogId: "super-cooled-myomer-is", percentOfTons: 0, slots: 6, techBase: "inner-sphere", rulesLevel: "experimental", introduced: { is: 3132, prototype: ["is"] }, cite: { book: IO, page: 88 }, checked: "page" },
@@ -990,6 +997,8 @@ export interface ConfigurationRow {
   cockpit?: string;
   size: Spread;
   fixed: Partial<Record<LocationCode, readonly string[]>>;
+  /** The games that offer the body type (data/rulesets.ts); absent means Classic only. */
+  games?: GameId[];
 }
 const BIPED_SIZE = { HD: 6, CT: 12, LT: 12, RT: 12, LA: 12, RA: 12, LL: 6, RL: 6 } as const;
 const LEG = ["Hip", "Upper Leg Actuator", "Lower Leg Actuator", "Foot Actuator"];
@@ -1015,6 +1024,7 @@ export const SHEET = {
       prototypeYear: 2460,
       size: BIPED_SIZE,
       fixed: { LA: ARM, RA: ARM, LL: LEG, RL: LEG },
+      games: WITH_GOTHIC,
     },
     quad: {
       name: "Quad",
@@ -1023,6 +1033,7 @@ export const SHEET = {
       prototypeYear: 2460,
       size: { HD: 6, CT: 12, LT: 12, RT: 12, FLL: 6, FRL: 6, RLL: 6, RRL: 6 },
       fixed: { FLL: LEG, FRL: LEG, RLL: LEG, RRL: LEG },
+      games: WITH_GOTHIC,
     },
     tripod: {
       name: "Tripod",

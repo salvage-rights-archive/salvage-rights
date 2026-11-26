@@ -4,29 +4,36 @@
 // before its production year it is a prototype (Experimental level unless the books say otherwise), and before that it does not exist.
 // Pure functions over plain data; nothing here throws on a record it does not understand.
 import type { PartFacts, Span } from "../data/chassis";
-import { ERAS } from "../data/editions";
 import type { EraRow } from "../data/editions";
+import { CLASSIC, rulesetOf } from "../data/rulesets";
+import type { Ruleset } from "../data/rulesets";
 import type { MechRecord } from "./mech";
 
-/** The era a year belongs to; none for a missing year or one before the first era. */
-export function eraOfYear(year: number | null): EraRow | undefined {
+/** A record's time: its era and year, and the edition whose game's era table and dates apply (none: Classic). */
+export type When = Pick<MechRecord, "era" | "year"> & { editionId?: string };
+
+/** The era a year belongs to in a game's era table (Classic's by default); none for a missing year or one before the first era. */
+export function eraOfYear(year: number | null, ruleset: Ruleset = CLASSIC): EraRow | undefined {
   if (year === null || !Number.isFinite(year)) return undefined;
-  return ERAS.find((era) => year >= era.startYear && (era.endYear === undefined || year <= era.endYear));
+  return ruleset.eras.find((era) => year >= era.startYear && (era.endYear === undefined || year <= era.endYear));
 }
 
 /** The record's era: the one it names when that era exists and holds its year, else the era its year falls in, else none. */
-export function eraOfRecord(record: Pick<MechRecord, "era" | "year">): EraRow | undefined {
-  const named = record.era === undefined ? undefined : ERAS.find((era) => era.id === record.era);
-  if (named && (record.year === null || eraOfYear(record.year)?.id === named.id)) return named;
-  return eraOfYear(record.year);
+export function eraOfRecord(record: When): EraRow | undefined {
+  const ruleset = rulesetOf(record.editionId);
+  const named = record.era === undefined ? undefined : ruleset.eras.find((era) => era.id === record.era);
+  if (named && (record.year === null || eraOfYear(record.year, ruleset)?.id === named.id)) return named;
+  return eraOfYear(record.year, ruleset);
 }
 
-/** The stretch of years the record's technology may come from: its year, else its era's span, else none. */
+/** The stretch of years the record's technology may come from: its year, else its era's span, else none. None too in a game that prints
+ * no item dates (Gothic): there every item the game offers is in production whatever the year. */
 export interface Window {
   from: number;
   to: number;
 }
-export function windowOf(record: Pick<MechRecord, "era" | "year">): Window | null {
+export function windowOf(record: When): Window | null {
+  if (!rulesetOf(record.editionId).dated) return null;
   if (record.year !== null && Number.isFinite(record.year)) return { from: record.year, to: record.year };
   const era = eraOfRecord(record);
   return era ? { from: era.startYear, to: era.endYear ?? Number.POSITIVE_INFINITY } : null;
