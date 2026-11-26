@@ -204,6 +204,7 @@ export const AMMUNITION: EquipmentGroup[] = [
       { id: "ammo-prototype-arrow-iv-is", name: "Prototype Arrow IV Ammo", tons: 1, slots: 1, shotsPerTon: 3, availability: [{ from: 2593 }], units: ["mech", "industrialmech", "vehicle"] },
       { id: "ammo-prototype-lb-10-x-ac-is", name: "Prototype LB 10-X Autocannon Ammo", tons: 1, slots: 1, shotsPerTon: 10, availability: [{ from: 2590 }], units: ["mech", "industrialmech", "vehicle"] },
       { id: "ammo-prototype-narc-missile-beacon-is", name: "Prototype Narc Missile Beacon Ammo", tons: 1, slots: 1, shotsPerTon: 5, availability: [{ from: 2580 }], units: ["mech", "industrialmech", "vehicle"] },
+      { id: "ammo-prototype-remote-sensors-is", name: "Prototype Remote Sensors Ammo", tons: 1, slots: 1, shotsPerTon: 60, availability: [{ from: 2586 }], units: ["mech", "industrialmech", "vehicle"] },
     ],
   },
   {

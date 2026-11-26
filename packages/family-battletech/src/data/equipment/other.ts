@@ -65,6 +65,12 @@ export const OTHER: EquipmentGroup[] = [
       // Heat sinks (Inner Sphere)
       { id: "heat-sink-is", games: ["classic", "gothic"], name: "Heat Sink", aliases: ["Single Heat Sink", "Standard Heat Sink"], slots: 1, availability: [{ from: 2022 }] },
       { id: "double-heat-sink-is", name: "Double Heat Sink", aliases: ["Double Heat Sinks"], slots: 3, availability: [{ from: 2567, to: 2865 }, { from: 3040 }], prototypeYear: 2559 },
+      // Prototype double heat sink (IO:AE printed p. 211 construction data, p. 210 play table, entry p. 65; the Late Succession Wars table, pp. 213 and 212,
+      // prints it again, 3022P, 30,000 C-bills, after the extinction): the same weight and slots as a production double (3 slots, 2 heat each, tons counted from the
+      // chassis), Experimental, but never mounted "in" an engine. 18,000 C-bills at the first date. The record's heat sink type, cost and capacity do not carry
+      // the prototype yet: this row is the item, so the editors and importers can name it. Its span is the two prototype windows (before 2567; 3022 to the 3040
+      // recovery).
+      { id: "prototype-double-heat-sink-is", name: "Prototype Double Heat Sink", aliases: ["Double Heat Sink (Prototype)", "DHS-P"], slots: 3, availability: [{ from: 2559, to: 2566 }, { from: 3022, to: 3039 }], rulesLevel: "experimental", cite: { book: IO, page: 211 }, playCite: { book: IO, page: 210 } },
     ],
   },
   {
