@@ -1,9 +1,12 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import { isAcesRecord } from "../../rules/aces-card";
+import { isAcesGame } from "../../rules/aces-game";
 import { newCampaign, newPilot } from "../../rules/aces-campaign";
 import type { AcesCampaign } from "../../rules/aces-campaign";
 import { newAsUnit } from "../../rules/as-unit";
 import { isAsUnit } from "../as/storage";
-import { isReadableCampaign, keepBoth, planCampaignImport, readImport, toCampaignFile } from "./campaign-file";
+import { isReadableCampaign, keepBoth, planCampaignImport, planExtras, readImport, toCampaignFile } from "./campaign-file";
 
 // Invented campaign and units; no printed card.
 const unit = (id: string) => ({ ...newAsUnit(id), name: { chassis: "Anvil", model: id } });
@@ -68,5 +71,18 @@ describe("campaign file", () => {
     expect(result.read.units.every(isAsUnit)).toBe(true);
     expect(result.read.notes.join(" ")).toMatch(/card library/);
     expect(through({ acesCampaigns: [] }).ok).toBe(false);
+  });
+
+  it("reads an Aces export through the same door, with cards and the game, and plans them against what is here", () => {
+    const result = readImport(JSON.parse(readFileSync("packages/family-battletech/src/rules/testdata/AcesExport.json", "utf8")) as unknown, []);
+    expect(result.ok && result.read.source).toBe("jbt-export");
+    if (!result.ok) return;
+    expect(result.read.campaigns.every(isReadableCampaign) && result.read.units.every(isAsUnit) && result.read.cards.every(isAcesRecord) && result.read.games.every(isAcesGame)).toBe(true);
+    expect(result.read.notes.join(" ")).toMatch(/other entries/);
+    const later = readImport(JSON.parse(readFileSync("packages/family-battletech/src/rules/testdata/AcesExport.json", "utf8")) as unknown, [], "2027-01-01T00:00:00.000Z");
+    const again = later.ok ? planExtras(result.read, { cards: later.read.cards, games: later.read.games }) : planExtras({ cards: [], games: [] }, { cards: [], games: [] });
+    expect([again.addCards.length, again.sameCards, again.sameGames, again.conflictCards.length]).toEqual([0, result.read.cards.length, 1, 0]);
+    const changed = planExtras(result.read, { cards: [{ ...result.read.cards[0]!, note: "changed here" }], games: [] });
+    expect([changed.conflictCards.length, changed.addCards.length, changed.addGames.length]).toEqual([1, result.read.cards.length - 1, 1]);
   });
 });
