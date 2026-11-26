@@ -46,6 +46,12 @@ describe("patchwork armor on a fighter", () => {
     expect(items.map((i) => [i.name, i.level])).toEqual([["Patchwork armor", "advanced"], ["Anti-Penetrative Ablation", "advanced"]]);
   });
 
+  it("lists a type for its level and date only where armor sits on it", () => {
+    const bare = fighter({ AF: "anti-penetrative-ablation" }, { armor: { type: "standard", tons: 5, points: { NO: 17, LW: 20, RW: 20, AF: 0 }, patchwork: { AF: "anti-penetrative-ablation", NO: "ferro-aluminum" } } });
+    expect(aeroLevelItems(bare, catalog).some((i) => i.name === "Anti-Penetrative Ablation")).toBe(false);
+    expect(aeroLevelItems(bare, catalog).some((i) => i.name.startsWith("Ferro-Aluminum"))).toBe(true);
+  });
+
   it("is read as one armor type, with a warning, under an edition without it, and a record without patchwork loads unchanged", () => {
     const old = fighter({ NO: "ferro-aluminum" }, {}, "aerotech2-revised");
     expect(fighterArmorTons(old)).toBe(5);

@@ -261,7 +261,7 @@ const equipmentCheck: AeroCheck = {
 /** The patchwork armor types a fighter's locations wear (each once, in the order met), as the edition lists them; a type the list lacks is left out (the patchwork check reports it). */
 function patchworkTypesUsed(record: AeroRecord): FighterPatchworkType[] {
   const list = fighterPatchworkTypes(record.editionId);
-  const ids = [...new Set(Object.keys(record.armor.points).map((loc) => armorTypeAt(record, loc)))];
+  const ids = [...new Set(Object.entries(record.armor.points).filter(([, n]) => n > 0).map(([loc]) => armorTypeAt(record, loc)))];
   return ids.flatMap((id) => list.filter((t) => t.id === id));
 }
 

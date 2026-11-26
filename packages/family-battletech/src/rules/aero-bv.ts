@@ -289,7 +289,7 @@ function tmBv(record: AeroRecord, catalog: Catalog, method: AeroBvMethod, frame:
   const capital = frame.kind === "capital";
   const smallUnit = frame.kind === "fighter" || frame.kind === "craft";
   const notes: string[] = [];
-  if (fighterPatchworkActive(record)) notes.push("Patchwork armor: the aerospace method gives no armor type a modifier, so every armor point counts the same wherever it sits (TechManual Battle Value pp. 312-313; Tactical Operations: AUE p. 194 works the armor location by location, which here changes nothing).");
+  if (fighterPatchworkActive(record)) notes.push("Patchwork armor: the aerospace method gives no armor type a modifier, so every armor point counts the same wherever it sits (TechManual Battle Value v4.1 p. 313, step 1; Tactical Operations: AUE p. 194 works the armor location by location, which here changes nothing).");
   applyArtemis(record, parts.weapons);
   const shares = ammoShares(parts);
   const defensiveAmmo = Math.min(
