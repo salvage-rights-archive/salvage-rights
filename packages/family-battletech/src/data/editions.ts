@@ -16,9 +16,9 @@ export interface Edition {
 // other unit families wait here until their rules are built.
 const UNIT_TYPES: Edition["unitTypes"] = [
   ...MECH_TYPES.map(({ id, label, ready }) => ({ id, name: label, ready })),
-  { id: "vehicle", name: "Vehicle", ready: false },
+  { id: "vehicle", name: "Vehicle", ready: true },
   { id: "protomech", name: "ProtoMech", ready: false },
-  { id: "infantry", name: "Infantry", ready: false },
+  { id: "infantry", name: "Infantry", ready: true },
 ];
 
 // What a unit can be built under: the book its play rules come from, plus its construction book. Both editions build from
