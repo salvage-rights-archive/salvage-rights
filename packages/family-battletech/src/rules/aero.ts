@@ -4,11 +4,12 @@
 // armor location the edition does not know is kept as it is, and keys this version does not know are kept too, so a record
 // written by a later version survives a round trip through this one.
 import { RULES_LEVELS } from "../data/chassis";
-import type { Checked, RulesLevel } from "../data/chassis";
+import type { RulesLevel } from "../data/chassis";
+import { AERO_LOCATION_NAMES, DEFAULT_AERO_EDITION, aeroFigures, aeroTypesFor } from "../data/aero";
+import type { AeroShape, AeroType } from "../data/aero";
 import type { OfficialMark, TechBase } from "./mech";
 
-export type AeroType = "conventional-fighter" | "aerospace-fighter" | "small-craft" | "dropship" | "jumpship" | "warship" | "space-station";
-export type AeroShape = "aerodyne" | "spheroid";
+export type { AeroShape, AeroType };
 export type AeroUse = "civilian" | "military";
 
 /** One weapon or item on the unit. `arc` is a code from the edition's arc set (`locationsOf`); one the edition lacks is kept. */
@@ -73,83 +74,8 @@ export interface AeroRecord {
   picture?: { dataUrl: string };
 }
 
-/** The edition a record without one is read under: the current rules, the AeroTech default (design 2.1). */
-const DEFAULT_EDITION = "tw-tm-so";
-
 // ---- Locations ----------------------------------------------------------------------------------------------------------------
-// Armor locations and weapon arcs of each unit type in each edition, as codes. A code names the location the way the edition's own
-// record sheet or rules name it (a DropShip's left facing is "Left Side" in AeroTech 2 and "Left Wing" on AeroTech 2 Revised's
-// aerodyne sheet), so a code always means one name. Read against the page images 2026-11-25 (AERO-2). Page numbers are printed
-// pages; AeroTech 2 Revised's blank sheets are cited by their PDF index, which equals the printed page in that book.
-//
-// PROVISIONAL HOME: AERO-1 owns the unit type rows in data/aero.ts (armor locations and arcs among them). When they land,
-// locationsOf reads them and this table moves there.
-
-interface LocationRow {
-  editions: readonly string[];
-  types: readonly AeroType[];
-  /** Absent: any shape. */
-  shape?: AeroShape;
-  armor: readonly string[];
-  arcs: readonly string[];
-  wingsFireAft?: true;
-  cite: { book: string; pages: string }[];
-  checked: Checked;
-}
-
-const FIGHTER_ARMOR = ["NO", "LW", "RW", "AF"] as const;
-const WING_ARCS = ["NO", "LW", "RW", "AF"] as const;
-const SIDE_ARMOR = ["NO", "LS", "RS", "AF"] as const;
-const QUARTER_ARCS = ["NO", "FL", "FR", "AL", "AR", "AF"] as const;
-const BROADSIDE_ARCS = ["NO", "FL", "FR", "LBS", "RBS", "AL", "AR", "AF"] as const;
-const AT2 = ["aerotech2", "aerotech2-revised"] as const;
-const FIGHTERS = ["conventional-fighter", "aerospace-fighter"] as const;
-
-const LOCATION_ROWS: readonly LocationRow[] = [
-  // AeroTech (1986): the cockpit's own armor and five hit locations (p. 32); four equipment areas, the rear one aft-firing (p. 33).
-  { editions: ["aerotech-1986"], types: ["aerospace-fighter"], armor: ["CP", "NO", "LW", "RW", "FU", "EN"], arcs: WING_ARCS, cite: [{ book: "AeroTech", pages: "32-33" }], checked: "page" },
-  // AeroTech 2: weapon arcs p. 16, armor facings p. 18 and the blank sheets pp. 102-104 (wings on the fighter sheet, sides on the
-  // DropShip sheet). Aerodyne DropShips and small craft may mount wing weapons firing aft (p. 16); fighters may not.
-  { editions: AT2, types: FIGHTERS, armor: FIGHTER_ARMOR, arcs: WING_ARCS, cite: [{ book: "AeroTech 2", pages: "16, 18, 104" }, { book: "AeroTech 2: Revised Edition", pages: "23, 157-158" }], checked: "page" },
-  { editions: ["aerotech2"], types: ["small-craft"], armor: FIGHTER_ARMOR, arcs: WING_ARCS, wingsFireAft: true, cite: [{ book: "AeroTech 2", pages: "16, 18, 104" }], checked: "page" },
-  { editions: ["aerotech2"], types: ["dropship"], shape: "aerodyne", armor: SIDE_ARMOR, arcs: WING_ARCS, wingsFireAft: true, cite: [{ book: "AeroTech 2", pages: "16, 18, 103" }], checked: "page" },
-  { editions: ["aerotech2"], types: ["dropship"], shape: "spheroid", armor: SIDE_ARMOR, arcs: QUARTER_ARCS, cite: [{ book: "AeroTech 2", pages: "16, 18, 103" }], checked: "page" },
-  // AeroTech 2 Revised: the same arcs (p. 23); its sheets give both small craft and the aerodyne DropShip wings (159-161) and the
-  // spheroid DropShip sides (162).
-  { editions: ["aerotech2-revised"], types: ["small-craft"], armor: FIGHTER_ARMOR, arcs: WING_ARCS, wingsFireAft: true, cite: [{ book: "AeroTech 2: Revised Edition", pages: "23, 159-160" }], checked: "page" },
-  { editions: ["aerotech2-revised"], types: ["dropship"], shape: "aerodyne", armor: FIGHTER_ARMOR, arcs: WING_ARCS, wingsFireAft: true, cite: [{ book: "AeroTech 2: Revised Edition", pages: "23, 161" }], checked: "page" },
-  { editions: ["aerotech2-revised"], types: ["dropship"], shape: "spheroid", armor: SIDE_ARMOR, arcs: QUARTER_ARCS, cite: [{ book: "AeroTech 2: Revised Edition", pages: "23, 162" }], checked: "page" },
-  // Large craft in both AeroTech 2 editions: six facings (AT2 p. 18, AT2R p. 23); broadside arcs for WarShips only (AT2 p. 16, AT2R
-  // p. 23; the AT2R JumpShip sheet's broadside heat lines are conflict 49).
-  { editions: AT2, types: ["jumpship", "space-station"], armor: QUARTER_ARCS, arcs: QUARTER_ARCS, cite: [{ book: "AeroTech 2", pages: "16, 18" }, { book: "AeroTech 2: Revised Edition", pages: "23" }], checked: "page" },
-  { editions: AT2, types: ["warship"], armor: QUARTER_ARCS, arcs: BROADSIDE_ARCS, cite: [{ book: "AeroTech 2", pages: "16, 18" }, { book: "AeroTech 2: Revised Edition", pages: "23" }], checked: "page" },
-  // Current rules: TechManual p. 182 (arcs; wing weapons may face forward or aft) and p. 191 (armor facings); Strategic Operations:
-  // Advanced Aerospace Rules p. 133 (arcs) and p. 140 (armor facings). JumpShips have no broadsides (conflict 49).
-  { editions: ["tw-tm-so"], types: FIGHTERS, armor: FIGHTER_ARMOR, arcs: WING_ARCS, wingsFireAft: true, cite: [{ book: "TechManual", pages: "182, 191" }], checked: "page" },
-  { editions: ["tw-tm-so"], types: ["small-craft", "dropship"], shape: "aerodyne", armor: FIGHTER_ARMOR, arcs: WING_ARCS, wingsFireAft: true, cite: [{ book: "TechManual", pages: "182, 191" }], checked: "page" },
-  { editions: ["tw-tm-so"], types: ["small-craft", "dropship"], shape: "spheroid", armor: SIDE_ARMOR, arcs: QUARTER_ARCS, cite: [{ book: "TechManual", pages: "182, 191" }], checked: "page" },
-  { editions: ["tw-tm-so"], types: ["jumpship", "space-station"], armor: QUARTER_ARCS, arcs: QUARTER_ARCS, cite: [{ book: "Strategic Operations: Advanced Aerospace Rules", pages: "133, 140" }], checked: "page" },
-  { editions: ["tw-tm-so"], types: ["warship"], armor: QUARTER_ARCS, arcs: BROADSIDE_ARCS, cite: [{ book: "Strategic Operations: Advanced Aerospace Rules", pages: "133, 140" }], checked: "page" },
-  // BattleSpace builds no fighters; its large craft locations come with its construction (AERO-13). Until then it offers none.
-];
-
-export const AERO_LOCATION_NAMES: Record<string, string> = {
-  CP: "Cockpit",
-  NO: "Nose",
-  LW: "Left Wing",
-  RW: "Right Wing",
-  FU: "Fuselage",
-  EN: "Engine",
-  LS: "Left Side",
-  RS: "Right Side",
-  FL: "Fore-Left",
-  FR: "Fore-Right",
-  AL: "Aft-Left",
-  AR: "Aft-Right",
-  LBS: "Left Broadside",
-  RBS: "Right Broadside",
-  AF: "Aft",
-};
+// The armor locations, arcs and names live in data/aero.ts (one table for every edition, each row with its page); this reads them.
 
 /** A location's or arc's display name; a code we do not know prints as itself in quotes, never as "undefined". */
 export function aeroLocationName(code: string): string {
@@ -165,9 +91,10 @@ export interface AeroLocations {
 
 /** The armor locations and weapon arcs the record's edition gives its unit type (and shape); empty where the edition builds no such unit. */
 export function locationsOf(record: Pick<AeroRecord, "editionId" | "unitType" | "shape">): AeroLocations {
-  const shape = record.shape ?? "aerodyne";
-  const row = LOCATION_ROWS.find((r) => r.editions.includes(record.editionId) && (r.types as readonly string[]).includes(record.unitType) && (r.shape === undefined || r.shape === shape));
-  return row ? { armor: [...row.armor], arcs: [...row.arcs], wingsFireAft: row.wingsFireAft === true } : { armor: [], arcs: [], wingsFireAft: false };
+  const row = aeroTypesFor(record.editionId).find((r) => r.type === record.unitType);
+  if (!row) return { armor: [], arcs: [], wingsFireAft: false };
+  const figures = aeroFigures(row, record.shape ?? "aerodyne");
+  return { armor: [...figures.armor], arcs: [...figures.arcs], wingsFireAft: figures.wingsFireAft === true };
 }
 
 // ---- New record ---------------------------------------------------------------------------------------------------------------
@@ -216,7 +143,7 @@ export function newAeroRecord(fields: NewAeroFields, editionId: string): AeroRec
   if (HAS_SHAPE.includes(fields.unitType)) record.shape = fields.shape ?? "aerodyne";
   if (fields.use !== undefined) record.use = fields.use;
   if (fields.era !== undefined) record.era = fields.era;
-  if (fields.rulesLevel !== undefined && editionId === DEFAULT_EDITION) record.rulesLevel = fields.rulesLevel;
+  if (fields.rulesLevel !== undefined && editionId === DEFAULT_AERO_EDITION) record.rulesLevel = fields.rulesLevel;
   for (const loc of locationsOf(record).armor) record.armor.points[loc] = 0;
   return record;
 }
@@ -289,7 +216,7 @@ export function withDefaults(value: unknown, fallbackId = ""): AeroRecord | unde
     ...unknownKeys(v, RECORD_KEYS),
     schema: 1,
     id: str(v.id, fallbackId),
-    editionId: str(v.editionId, DEFAULT_EDITION),
+    editionId: str(v.editionId, DEFAULT_AERO_EDITION),
     name: part<AeroRecord["name"]>(v.name, ["chassis", "model"], (o) => ({ chassis: str(o.chassis, ""), model: str(o.model, "") })),
     unitType: str(v.unitType, "aerospace-fighter"),
     techBase: v.techBase === "clan" || v.techBase === "mixed" ? v.techBase : "inner-sphere",

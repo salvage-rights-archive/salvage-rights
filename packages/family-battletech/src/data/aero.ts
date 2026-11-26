@@ -15,8 +15,8 @@ export interface WeightBand {
 }
 
 /** What one unit type (or one shape of it) is built with. Location codes: CP cockpit, NO nose, LW and RW left and right wing, LS and
- * RS left and right side, FU fuselage, EN engine, FL and FR fore-left and fore-right, AL and AR aft-left and aft-right, AF aft,
- * LB and RB left and right broadside. */
+ * RS left and right side, FU fuselage, EN engine, FO fore (BattleSpace's name for the nose), FL and FR fore-left and fore-right,
+ * AL and AR aft-left and aft-right, AF aft, LB and RB left and right broadside. One code is one name in every edition. */
 export interface AeroFigures {
   weight: WeightBand;
   /** The kind of record sheet the edition's books print for it. */
@@ -25,6 +25,8 @@ export interface AeroFigures {
   armor: string[];
   /** Firing arcs (the equipment areas on AeroTech's sheet). */
   arcs: string[];
+  /** Wing arcs may hold weapons that fire aft. */
+  wingsFireAft?: true;
 }
 
 export interface AeroTypeRow extends AeroFigures {
@@ -54,6 +56,28 @@ export interface AeroEdition {
   types: AeroTypeRow[];
 }
 
+/** The edition a record without one is read under: the current rules, the AeroTech default. */
+export const DEFAULT_AERO_EDITION = "tw-tm-so";
+
+export const AERO_LOCATION_NAMES: Record<string, string> = {
+  CP: "Cockpit",
+  NO: "Nose",
+  FO: "Fore",
+  LW: "Left Wing",
+  RW: "Right Wing",
+  FU: "Fuselage",
+  EN: "Engine",
+  LS: "Left Side",
+  RS: "Right Side",
+  FL: "Fore-Left",
+  FR: "Fore-Right",
+  AL: "Aft-Left",
+  AR: "Aft-Right",
+  LB: "Left Broadside",
+  RB: "Right Broadside",
+  AF: "Aft",
+};
+
 const AT1 = "AeroTech";
 const BS = "BattleSpace";
 const AT2 = "AeroTech 2";
@@ -71,6 +95,12 @@ const WING_ARCS = ["NO", "LW", "RW", "AF"];
 const SIX_ARCS = ["NO", "FL", "FR", "AL", "AR", "AF"];
 const BROADSIDE_ARCS = ["NO", "FL", "FR", "LB", "RB", "AL", "AR", "AF"];
 const LARGE_ARMOR = ["NO", "FL", "FR", "AL", "AR", "AF"];
+// BattleSpace names the front "Fore" where the other books say "Nose" (BattleSpace p. 6 and the p. 78 weapon location table).
+const BS_SIDE_ARMOR = ["FO", "LS", "RS", "AF"];
+const BS_SIX_ARCS = ["FO", "FL", "FR", "AL", "AR", "AF"];
+const BS_LARGE_ARMOR = BS_SIX_ARCS;
+const BS_BROADSIDE_ARCS = ["FO", "FL", "FR", "LB", "RB", "AL", "AR", "AF"];
+const AFT = { wingsFireAft: true } as const;
 
 const band = (min: number | undefined, max: number | undefined, step: number | undefined): WeightBand => ({
   ...(min === undefined ? {} : { min }),
@@ -89,10 +119,14 @@ const AT2_TYPES: AeroTypeRow[] = [
     weight: band(100, 200, 5),
     sheet: "dropship",
     armor: SIDE_ARMOR,
-    arcs: SIX_ARCS,
-    shapes: { aerodyne: { weight: band(100, 200, 5), sheet: "dropship", armor: WING_ARMOR, arcs: SIX_ARCS }, spheroid: { weight: band(100, 200, 5), sheet: "dropship", armor: SIDE_ARMOR, arcs: SIX_ARCS } },
-    note: "built as a civilian DropShip; the DropShip sheet serves it",
-    cite: cite(AT2, "42, 50, 103"),
+    arcs: WING_ARCS,
+    ...AFT,
+    shapes: {
+      aerodyne: { weight: band(100, 200, 5), sheet: "dropship", armor: WING_ARMOR, arcs: WING_ARCS, ...AFT },
+      spheroid: { weight: band(100, 200, 5), sheet: "dropship", armor: SIDE_ARMOR, arcs: WING_ARCS, ...AFT },
+    },
+    note: "built as a civilian DropShip; the DropShip sheet serves it; wing arcs for both shapes (p. 16), the sheets book names the spheroid's armor sides and the aerodyne's wings",
+    cite: `${cite(AT2, "16, 42, 50, 103")}; AeroTech 2: Record Sheets, PDF index 188, 196`,
     checked: "page",
   },
   {
@@ -102,8 +136,12 @@ const AT2_TYPES: AeroTypeRow[] = [
     sheet: "dropship",
     armor: SIDE_ARMOR,
     arcs: SIX_ARCS,
-    shapes: { aerodyne: { weight: band(200, 35000, 100), sheet: "dropship", armor: WING_ARMOR, arcs: SIX_ARCS }, spheroid: { weight: band(200, 100000, 100), sheet: "dropship", armor: SIDE_ARMOR, arcs: SIX_ARCS } },
-    cite: cite(AT2, "42, 50, 103"),
+    shapes: {
+      aerodyne: { weight: band(200, 35000, 100), sheet: "dropship", armor: WING_ARMOR, arcs: WING_ARCS, ...AFT },
+      spheroid: { weight: band(200, 100000, 100), sheet: "dropship", armor: SIDE_ARMOR, arcs: SIX_ARCS },
+    },
+    note: "the aerodyne's armor facings are its wings on the sheets book (conflict 50); the core sheet says sides",
+    cite: `${cite(AT2, "16, 42, 50, 103")}; AeroTech 2: Record Sheets, PDF index 199`,
     checked: "page",
   },
   { type: "jumpship", label: "JumpShip", weight: band(50000, 500000, 1000), sheet: "large-craft", armor: LARGE_ARMOR, arcs: SIX_ARCS, cite: cite(AT2, "42, 50, 102"), checked: "page" },
@@ -124,10 +162,23 @@ const AT2_TYPES: AeroTypeRow[] = [
 /** The sheet kind of a type in the editions that print one sheet per kind and shape (Revised index 157-166; the current blank sheets). */
 const sheetOf = (type: AeroType, shape?: AeroShape): string => (shape === undefined ? type : `${shape}-${type === "small-craft" ? "small-craft" : "dropship"}`);
 
-/** Revised prints the same classes, weights and tables (pp. 60, 71) and its own sheets, one per kind. */
+/** Revised prints the same classes, weights and tables (pp. 60, 71) and its own sheets, one per kind. Its sheets give both small craft
+ * shapes and the aerodyne DropShip wings for armor (pp. 159-161) and the spheroid DropShip sides (p. 162); arcs as AeroTech 2 (p. 23). */
+const AT2R_WINGS: Partial<Record<AeroType, Partial<Record<AeroShape, Pick<AeroFigures, "armor">>>>> = {
+  "small-craft": { aerodyne: { armor: WING_ARMOR }, spheroid: { armor: WING_ARMOR } },
+  dropship: { aerodyne: { armor: WING_ARMOR } },
+};
 const AT2R_TYPES: AeroTypeRow[] = AT2_TYPES.map((row) => {
-  const shapes = Object.fromEntries(Object.entries(row.shapes ?? {}).map(([shape, figures]) => [shape, { ...figures, sheet: sheetOf(row.type, shape as AeroShape) }]));
-  return { ...row, cite: cite(AT2R, "60, 71"), sheet: sheetOf(row.type, row.shapes === undefined ? undefined : "spheroid"), ...(row.shapes === undefined ? {} : { shapes }) };
+  const shapes = Object.fromEntries(Object.entries(row.shapes ?? {}).map(([shape, figures]) => [shape, { ...figures, ...AT2R_WINGS[row.type]?.[shape as AeroShape], sheet: sheetOf(row.type, shape as AeroShape) }]));
+  const { note, ...rest } = row;
+  return {
+    ...rest,
+    ...(note !== undefined && row.shapes === undefined ? { note } : {}),
+    ...(row.type === "small-craft" ? { armor: WING_ARMOR } : {}),
+    cite: cite(AT2R, row.shapes === undefined ? "23, 60, 71" : "23, 60, 71, 159-162"),
+    sheet: sheetOf(row.type, row.shapes === undefined ? undefined : "spheroid"),
+    ...(row.shapes === undefined ? {} : { shapes }),
+  };
 });
 
 export const AERO_EDITIONS: AeroEdition[] = [
@@ -155,11 +206,11 @@ export const AERO_EDITIONS: AeroEdition[] = [
         label: "DropShip",
         weight: band(100, 100000, undefined),
         sheet: "battlespace",
-        armor: SIDE_ARMOR,
-        arcs: SIX_ARCS,
-        shapes: { aerodyne: { weight: band(100, 35000, undefined), sheet: "battlespace", armor: WING_ARMOR, arcs: SIX_ARCS }, spheroid: { weight: band(100, 100000, undefined), sheet: "battlespace", armor: SIDE_ARMOR, arcs: SIX_ARCS } },
-        note: "arcs and facings as AeroTech 2 prints them for BattleSpace craft",
-        cite: `${cite(BS, "64")}; ${cite(AT2, "50")}`,
+        armor: BS_SIDE_ARMOR,
+        arcs: BS_SIX_ARCS,
+        shapes: { aerodyne: { weight: band(100, 35000, undefined), sheet: "battlespace", armor: BS_SIDE_ARMOR, arcs: BS_SIX_ARCS }, spheroid: { weight: band(100, 100000, undefined), sheet: "battlespace", armor: BS_SIDE_ARMOR, arcs: BS_SIX_ARCS } },
+        note: "four armor facings and six arcs for both shapes; the front is Fore, not Nose",
+        cite: cite(BS, "6, 64, 78"),
         checked: "page",
       },
       {
@@ -167,22 +218,22 @@ export const AERO_EDITIONS: AeroEdition[] = [
         label: "JumpShip",
         weight: band(undefined, 500000, undefined),
         sheet: "battlespace",
-        armor: LARGE_ARMOR,
-        arcs: SIX_ARCS,
+        armor: BS_LARGE_ARMOR,
+        arcs: BS_SIX_ARCS,
         note: "no minimum mass is printed; the drive may not be under 2,500 t",
-        cite: `${cite(BS, "72")}; ${cite(AT2, "50")}`,
+        cite: cite(BS, "6, 14, 72"),
         checked: "page",
       },
-      { type: "warship", label: "WarShip", weight: band(undefined, 2500000, undefined), sheet: "battlespace", armor: LARGE_ARMOR, arcs: BROADSIDE_ARCS, cite: `${cite(BS, "72")}; ${cite(AT2, "50")}`, checked: "page" },
+      { type: "warship", label: "WarShip", weight: band(undefined, 2500000, undefined), sheet: "battlespace", armor: BS_LARGE_ARMOR, arcs: BS_BROADSIDE_ARCS, cite: cite(BS, "6, 14, 72"), checked: "page" },
       {
         type: "space-station",
         label: "Space station",
         weight: band(undefined, undefined, undefined),
         sheet: "battlespace",
-        armor: LARGE_ARMOR,
-        arcs: SIX_ARCS,
+        armor: BS_LARGE_ARMOR,
+        arcs: BS_SIX_ARCS,
         note: "built by the JumpShip and WarShip steps; no weight range is printed",
-        cite: cite(BS, "76"),
+        cite: cite(BS, "6, 14, 76"),
         checked: "page",
       },
     ],
@@ -215,8 +266,8 @@ export const AERO_EDITIONS: AeroEdition[] = [
       { role: "construction", title: SOAA, printing: "third printing, 2021", errata: "v5.0 (15 November 2024)" },
     ],
     types: [
-      { type: "conventional-fighter", label: "Conventional fighter", weight: band(5, 50, 5), level: "standard", sheet: "conventional-fighter", armor: WING_ARMOR, arcs: WING_ARCS, cite: cite(TM, "182, 184, 191"), checked: "page" },
-      { type: "aerospace-fighter", label: "Aerospace fighter", weight: band(5, 100, 5), level: "standard", sheet: "aerospace-fighter", armor: WING_ARMOR, arcs: WING_ARCS, cite: cite(TM, "182, 184, 191"), checked: "page" },
+      { type: "conventional-fighter", label: "Conventional fighter", weight: band(5, 50, 5), level: "standard", sheet: "conventional-fighter", armor: WING_ARMOR, arcs: WING_ARCS, ...AFT, cite: cite(TM, "182, 184, 191"), checked: "page" },
+      { type: "aerospace-fighter", label: "Aerospace fighter", weight: band(5, 100, 5), level: "standard", sheet: "aerospace-fighter", armor: WING_ARMOR, arcs: WING_ARCS, ...AFT, cite: cite(TM, "182, 184, 191"), checked: "page" },
       {
         type: "small-craft",
         label: "Small craft",
@@ -225,7 +276,7 @@ export const AERO_EDITIONS: AeroEdition[] = [
         sheet: "spheroid-small-craft",
         armor: SIDE_ARMOR,
         arcs: SIX_ARCS,
-        shapes: { aerodyne: { weight: band(100, 200, 5), sheet: "aerodyne-small-craft", armor: WING_ARMOR, arcs: WING_ARCS } },
+        shapes: { aerodyne: { weight: band(100, 200, 5), sheet: "aerodyne-small-craft", armor: WING_ARMOR, arcs: WING_ARCS, ...AFT } },
         cite: cite(TM, "182, 184, 191"),
         checked: "page",
       },
@@ -237,7 +288,7 @@ export const AERO_EDITIONS: AeroEdition[] = [
         sheet: "spheroid-dropship",
         armor: SIDE_ARMOR,
         arcs: SIX_ARCS,
-        shapes: { aerodyne: { weight: band(200, 35000, 100), sheet: "aerodyne-dropship", armor: WING_ARMOR, arcs: WING_ARCS }, spheroid: { weight: band(200, 100000, 100), sheet: "spheroid-dropship", armor: SIDE_ARMOR, arcs: SIX_ARCS } },
+        shapes: { aerodyne: { weight: band(200, 35000, 100), sheet: "aerodyne-dropship", armor: WING_ARMOR, arcs: WING_ARCS, ...AFT }, spheroid: { weight: band(200, 100000, 100), sheet: "spheroid-dropship", armor: SIDE_ARMOR, arcs: SIX_ARCS } },
         cite: cite(TM, "182, 184, 191"),
         checked: "page",
       },
