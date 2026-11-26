@@ -532,7 +532,7 @@ export function renderCondition(c: Condition): string {
   return c.clauses.map(renderUse).join(c.join === "all" ? " and " : " or ");
 }
 
-function renderFilter(f: Filter): string {
+export function renderFilter(f: Filter): string {
   return f.when ? `if ${renderCondition(f.when)}: ${renderUse(f)}` : renderUse(f);
 }
 
