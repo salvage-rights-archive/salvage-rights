@@ -23,6 +23,7 @@ export interface AeroTypeChoices {
 }
 
 const AERO_PREFIX = "aero:";
+const PROTO_PREFIX = "protomech:";
 
 export default function TypeSelect({
   record,
@@ -30,30 +31,36 @@ export default function TypeSelect({
   id = "field-unitType",
   className,
   aero,
+  protomech,
 }: {
   record: Subject;
   onChange: (type: MechType) => void;
   id?: string;
   className?: string;
   aero?: AeroTypeChoices;
+  /** The ProtoMech, when the rules level, year and era offer it: the same shape as `aero`; it opens the ProtoMech editor. */
+  protomech?: AeroTypeChoices;
 }) {
   const choices = typeChoices(record);
   const current = mechTypeOf(record);
   const noteId = `${id}-note`;
   const waiting = choices.flatMap((choice) => (choice.disabled === undefined ? [] : [`${MECH_TYPES.find((t) => t.id === choice.id)?.label ?? choice.id} is not offered yet: ${choice.disabled}`]));
   const picked = aero?.chosen === undefined ? undefined : aero.options.find((option) => option.id === aero.chosen);
+  const protoPicked = protomech?.chosen === undefined ? undefined : protomech.options.find((option) => option.id === protomech.chosen);
   return (
     <div className={className ? `bt-field bt-level ${className}` : "bt-field bt-level"}>
       <label htmlFor={id}>Type</label>
       <select
         id={id}
-        value={picked ? `${AERO_PREFIX}${picked.id}` : current.id}
+        value={protoPicked ? `${PROTO_PREFIX}${protoPicked.id}` : picked ? `${AERO_PREFIX}${picked.id}` : current.id}
         aria-describedby={noteId}
         onChange={(event) => {
           const value = event.target.value;
-          if (value.startsWith(AERO_PREFIX)) aero?.onChoose(value.slice(AERO_PREFIX.length));
+          if (value.startsWith(PROTO_PREFIX)) protomech?.onChoose(value.slice(PROTO_PREFIX.length));
+          else if (value.startsWith(AERO_PREFIX)) aero?.onChoose(value.slice(AERO_PREFIX.length));
           else {
             aero?.onChoose(undefined);
+            protomech?.onChoose(undefined);
             onChange(value as MechType);
           }
         }}
@@ -72,10 +79,19 @@ export default function TypeSelect({
             ))}
           </optgroup>
         )}
+        {protomech && protomech.options.length > 0 && (
+          <optgroup label="ProtoMech (opens the ProtoMech editor)">
+            {protomech.options.map((option) => (
+              <option key={option.id} value={`${PROTO_PREFIX}${option.id}`}>
+                {option.label}
+              </option>
+            ))}
+          </optgroup>
+        )}
       </select>
       <span id={noteId} className="bt-hint bt-level__note">
-        {picked ? picked.note : `${current.description} ${bookName(current.cite.book)}, p. ${String(current.cite.page)}.`}
-        {!picked && waiting.length > 0 && ` ${waiting.join(" ")}`}
+        {protoPicked ? protoPicked.note : picked ? picked.note : `${current.description} ${bookName(current.cite.book)}, p. ${String(current.cite.page)}.`}
+        {!picked && !protoPicked && waiting.length > 0 && ` ${waiting.join(" ")}`}
       </span>
     </div>
   );
