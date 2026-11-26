@@ -4,7 +4,7 @@ import { IDBFactory } from "fake-indexeddb";
 import { RouterProvider, createMemoryRouter } from "react-router";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { newAsForce } from "../../rules/as-force";
-import { printCard, printRoster } from "../../rules/as-print";
+import { bubbleLayout, fitSpecials, printCard, printRoster } from "../../rules/as-print";
 import { newAsUnit, parseSpecials } from "../../rules/as-unit";
 import type { AsUnit } from "../../rules/as-unit";
 import AsCardFace from "./AsCardFace";
@@ -58,11 +58,62 @@ describe("Alpha Strike printed card", () => {
     expect(count(m, ".as-cardface__bubble--structure")).toBe(5);
     cleanup();
     const big = mech();
-    big.card.armor = 60;
-    big.card.structure = 45;
+    big.card.armor = 40;
+    big.card.structure = 30;
     const b = render(<AsCardFace card={printCard(big, 4)} />).container;
-    expect(count(b, ".as-cardface__bubble--armor")).toBe(60);
-    expect(count(b, ".as-cardface__bubble--structure")).toBe(45);
+    expect(count(b, ".as-cardface__bubble--armor")).toBe(40);
+    expect(count(b, ".as-cardface__bubble--structure")).toBe(30);
+    cleanup();
+    // Past what a pencil can mark, the card prints the figures in two boxes, as the book's DropShip card does.
+    big.card.armor = 150;
+    big.card.structure = 120;
+    const n = render(<AsCardFace card={printCard(big, 4)} />).container;
+    expect(count(n, ".as-cardface__bubble")).toBe(0);
+    expect([...n.querySelectorAll(".as-cardface__figure")].map((t) => t.textContent)).toEqual(["150", "120"]);
+  });
+
+  it("gives a unit with no armor a row of its own, so the A: and S: labels do not meet", () => {
+    const layout = bubbleLayout(0, 5, 156, 26);
+    expect(layout.rows.armor).toBe(1);
+    expect(layout.structure[0]?.y).toBeGreaterThan(layout.pitch);
+    const none = mech();
+    none.card.armor = 0;
+    const labels = [...render(<AsCardFace card={printCard(none, 4)} />).container.querySelectorAll("text")].filter((t) => t.textContent === "A:" || t.textContent === "S:");
+    expect(new Set(labels.map((t) => t.getAttribute("y"))).size).toBe(2);
+  });
+
+  it("squeezes a long all-capitals name, the stats row and the role to their boxes, and fits special abilities by shrinking, then by pointing to the roster", () => {
+    const wide = mech();
+    wide.name = { chassis: "WARHAMMER HEAVY ASSAULT WALKER", model: "WHM-6R-PROTOTYPE" };
+    wide.card.move = [{ inches: 12, mode: "" }, { inches: 10, mode: "j" }, { inches: 8, mode: "t" }, { inches: 6, mode: "h" }];
+    wide.card.role = "MISSILE BOAT SKIRMISHER";
+    const c = render(<AsCardFace card={printCard(wide, 4)} />).container;
+    const guarded = [...c.querySelectorAll("text[data-fit]")].map((t) => t.textContent);
+    expect(guarded.some((t) => t?.includes("WARHAMMER"))).toBe(true);
+    expect(guarded.some((t) => t?.startsWith("TP:"))).toBe(true);
+    expect(guarded.some((t) => t?.startsWith("ROLE:"))).toBe(true);
+    // Few abilities keep the large type; more shrink it; too many name the roster and cut no ability in half.
+    expect(fitSpecials("IF1, CASE").size).toBe(6.8);
+    const some = fitSpecials(Array.from({ length: 20 }, (_, i) => `AB${String(i).padStart(2, "0")}1`).join(", "));
+    expect(some.more).toBe(false);
+    expect(some.size).toBeLessThan(6.8);
+    const lots = fitSpecials(Array.from({ length: 40 }, (_, i) => `ABIL${String(i)}(1/2/3)`).join(", "));
+    expect(lots.more).toBe(true);
+    expect(lots.lines.at(-1)).toBe("more on the roster");
+    expect(lots.lines.slice(0, -1).join(" ")).toMatch(/\),$/);
+  });
+
+  it("leaves the OV line off the ProtoMech and large-unit cards and writes both Crew effects", () => {
+    const proto = mech();
+    proto.card.type = "PM";
+    expect(printCard(proto, 4).ov).toBeNull();
+    const ship = mech();
+    ship.card.type = "DS";
+    const s = render(<AsCardFace card={printCard(ship, 4)} />).container;
+    expect(printCard(ship, 4).ov).toBeNull();
+    expect(textOf(s)).toContain("+2 weapon TN");
+    expect(textOf(s)).toContain("+2 control roll");
+    expect(textOf(s)).toContain("DS only");
   });
 
   it("totals the roster at each member's Skill and leaves out a unit the roster no longer holds", () => {

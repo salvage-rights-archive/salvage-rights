@@ -280,6 +280,8 @@ export interface CardCritRow {
   label: string;
   groups: number[];
   effects: string[];
+  /** A second effect that goes with the same boxes, drawn on a line of its own (the Crew boxes carry two). */
+  also?: string;
 }
 
 /** The boxes each blank card prints (counts read from the page images; the short effects are our own words and figures). */
@@ -308,11 +310,11 @@ export const AS_CARD_CRITS: Record<CardLayout, CardCritRow[]> = {
     { label: "Weapons", groups: [4], effects: ["-1 dmg each"] },
   ],
   "large-air": [
-    { label: "Crew", groups: [2], effects: ["+2 TN each"] },
-    { label: "Engine", groups: [3], effects: ["-25/50/100%"] },
+    { label: "Crew", groups: [2], effects: ["+2 weapon TN"], also: "+2 control roll" },
+    { label: "Engine THR %", groups: [1, 1, 1], effects: ["-25", "-50", "-100"] },
     { label: "Fire control", groups: [4], effects: ["+2 TN each"] },
     { label: "KF boom", groups: [1], effects: ["no jump carry"] },
-    { label: "Dock collar", groups: [1], effects: ["no dock"] },
+    { label: "Dock collar", groups: [1], effects: ["DS only, no dock"] },
     { label: "Thruster", groups: [1], effects: ["-1 THR"] },
     { label: "Weapons", groups: [4], effects: ["-25% each"] },
   ],

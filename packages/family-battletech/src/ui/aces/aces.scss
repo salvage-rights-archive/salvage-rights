@@ -519,10 +519,15 @@
   }
 }
 
+// A named page, so the landscape size belongs to the Aces sheets alone and never reaches the printed page of another game.
+@page aces-print {
+  size: landscape;
+  margin: 0.4in;
+}
+
 @media print {
-  @page {
-    size: landscape;
-    margin: 0.4in;
+  .aces-print {
+    page: aces-print;
   }
 
   .aces-print__bar {

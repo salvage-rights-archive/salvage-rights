@@ -1,7 +1,7 @@
 import { writeFile } from "node:fs/promises";
 import AxeBuilder from "@axe-core/playwright";
 import type { Page } from "@playwright/test";
-import { DEV, expect, putAsPrintForce, test } from "./fixtures";
+import { DEV, MECH_NAME, expect, importMech, putAsPrintForce, test } from "./fixtures";
 
 const ALPHA = "/battletech/alpha-strike";
 
@@ -70,4 +70,27 @@ test("on paper only the sheets print: cards 3.5 by 2.5 inches, nine to a sheet, 
     // Nine cards fill a sheet on either paper: ten cards and the roster make three pages.
     expect((pdf.toString("latin1").match(/\/Type\s*\/Page[^s]/g) ?? []).length, format).toBe(3);
   }
+});
+
+test("no print rule leaks across games: after an Aces print page has loaded, a Classic sheet still prints portrait", async ({ page, browserName }) => {
+  test.skip(browserName !== "chromium", "page.pdf is Chromium only");
+  await importMech(page, DEV);
+  await page.getByRole("link", { name: "Record sheet" }).click();
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(`${MECH_NAME} record sheet`);
+  const here = new URL(page.url());
+  // Move between pages inside the running app (no reload), so the styles of the Aces chunk stay loaded, as they do for a player.
+  const go = async (path: string) => {
+    await page.evaluate((to) => {
+      window.history.pushState({}, "", to);
+      window.dispatchEvent(new PopStateEvent("popstate"));
+    }, path);
+  };
+  await go(`${here.pathname.replace(/\/battletech\/.*$/, "")}/battletech/aces/print?id=none`);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Print campaign sheets");
+  await go(`${here.pathname}${here.search}`);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(`${MECH_NAME} record sheet`);
+  await page.emulateMedia({ media: "print" });
+  const pdf = (await page.pdf({ preferCSSPageSize: true, printBackground: true })).toString("latin1");
+  const media = /\/MediaBox\s*\[\s*0\s+0\s+([\d.]+)\s+([\d.]+)/.exec(pdf);
+  expect(Number(media?.[1])).toBeLessThan(Number(media?.[2]));
 });

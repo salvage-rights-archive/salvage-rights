@@ -381,11 +381,11 @@ export async function putAsUnits(page: Page, names: string[]): Promise<void> {
 export async function putAsPrintForce(page: Page, rounds = 1): Promise<string> {
   const base = inventedUnit("x", "x").card;
   const kinds: [string, string, Record<string, unknown>][] = [
-    ["mech", "Thunderbolt", { type: "BM", size: 3, pv: 36, armor: 7, structure: 5 }],
+    ["mech", "Thunderbolt", { type: "BM", size: 3, pv: 36, armor: 7, structure: 5, specials: ["CASE", "ECM", "OMNI", "TSM"].map((code) => ({ code, values: [], raw: code })) }],
     ["tank", "Test Tank", { type: "CV", size: 2, pv: 20, move: [{ inches: 6, mode: "t" }] }],
-    ["foot", "Test Foot Platoon", { type: "CI", size: 1, pv: 8, armor: 2, structure: 2 }],
+    ["foot", "Test Foot Platoon", { type: "CI", size: 1, pv: 8, armor: 2, structure: 2, specials: Array.from({ length: 30 }, (_, i) => ({ code: "IF", values: [String(i)], raw: `IF${String(i)}` })) }],
     ["wing", "Test Fighter", { type: "AF", size: 2, pv: 28, tmm: null, move: [], thrust: 6, threshold: 2 }],
-    ["ship", "Test Lander", { type: "DS", size: 4, pv: 70, tmm: null, move: [], thrust: 3, threshold: 6, armor: 40, structure: 30 }],
+    ["ship", "Test Lander", { type: "DS", size: 4, pv: 70, tmm: null, move: [], thrust: 3, threshold: 6, armor: 150, structure: 120 }],
   ];
   const units = kinds.map(([id, chassis, card]) => ({ ...inventedUnit(id, chassis), card: { ...base, ...card } }));
   const force = { schema: 1, kind: "as-force", id: "print-force", editionId: "asce", name: "Print test lance", pvLimit: 150, members: Array.from({ length: rounds }, () => units).flat().map((u, i) => ({ unitId: u.id, skill: 2 + (i % 5), ...(i === 0 ? { pilot: "Ash" } : {}) })) };

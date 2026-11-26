@@ -1,8 +1,8 @@
 // One printed Alpha Strike card, drawn by us in SVG (3.5 by 2.5 inches, 100 units to the inch) in the arrangement and with the field labels
 // of the blank card on ASCE p. 213 (the publisher marks pp. 213-215 for personal copying). No logo, no art. Black on white whatever the
 // theme, so it prints the same in both.
-import { AS_CARD_FOOT } from "../../data/alpha-strike";
-import { bubbleLayout, wrapLines } from "../../rules/as-print";
+import { AS_CARD_FOOT, DEFAULT_SKILL } from "../../data/alpha-strike";
+import { bubbleLayout } from "../../rules/as-print";
 import type { PrintCard } from "../../rules/as-print";
 
 export const CARD_WIDTH = 350;
@@ -14,15 +14,35 @@ const STRUCTURE_FILL = "#b4b4b4";
 const GAP = "   ";
 const HEAT = ["1", "2", "3", "S"];
 
-/** An estimated width in card units for text at a font size, so a long name is squeezed to its space rather than run over. */
-const estimate = (text: string, size: number): number => text.length * size * 0.58;
+/**
+ * An estimated width in card units for text at a font size. Bold and all-capital text is wider (about 0.7 em a letter) than plain
+ * text (0.58), so a long name is squeezed to its space rather than run over.
+ */
+export function estimate(text: string, size: number, bold = false, mixed = false): number {
+  const caps = text === text.toUpperCase() && /[A-Z]/.test(text);
+  return text.length * size * (mixed ? 0.62 : bold || caps ? 0.7 : 0.58);
+}
+
+/**
+ * Text kept inside `max` card units. `measure` is the text as it will read; the children may mix bold and plain. Too wide, it first
+ * shrinks (down to 60 percent of its size, so it stays legible, and never stretches); only past that is it squeezed to the width.
+ */
+function Guard({ measure, x, y, size, max, anchor = "start", weight = 400, bold = false, mixed = false, children }: { measure: string; x: number; y: number; size: number; max: number; anchor?: "start" | "end" | "middle"; weight?: number; bold?: boolean; mixed?: boolean; children: React.ReactNode }) {
+  const wide = estimate(measure, size, bold || weight >= 600, mixed);
+  const shrunk = wide > max ? size * Math.max(0.6, max / wide) : size;
+  const squeeze = wide * (shrunk / size) > max;
+  return (
+    <text x={x} y={y} fontSize={shrunk} fontWeight={weight} textAnchor={anchor} data-fit={wide > max ? "shrunk" : undefined} {...(squeeze ? { textLength: max, lengthAdjust: "spacingAndGlyphs" } : {})}>
+      {children}
+    </text>
+  );
+}
 
 function Fit({ text, x, y, size, max, anchor = "start", weight = 400 }: { text: string; x: number; y: number; size: number; max: number; anchor?: "start" | "end" | "middle"; weight?: number }) {
-  const squeeze = estimate(text, size) > max;
   return (
-    <text x={x} y={y} fontSize={size} fontWeight={weight} textAnchor={anchor} {...(squeeze ? { textLength: max, lengthAdjust: "spacingAndGlyphs" } : {})}>
+    <Guard measure={text} x={x} y={y} size={size} max={max} anchor={anchor} weight={weight}>
       {text}
-    </text>
+    </Guard>
   );
 }
 
@@ -40,14 +60,16 @@ function Crits({ card }: { card: PrintCard }) {
   const x = 218;
   const width = 124;
   const pitch = 10.5;
-  const height = 21 + card.crits.length * pitch;
+  const lines = card.crits.reduce((n, row) => n + 1 + (row.also === undefined ? 0 : 1), 0);
+  const height = 21 + lines * pitch;
   const top = 216 - height;
+  const linesBefore = (i: number): number => card.crits.slice(0, i).reduce((n, row) => n + 1 + (row.also === undefined ? 0 : 1), 0);
   return (
     <g className="as-cardface__crits">
       <rect x={x} y={top} width={width} height={height} rx={7} fill={PANEL} stroke="#000" strokeWidth={1.2} />
       <text x={x + width / 2} y={top + 12} fontSize={9} fontWeight={700} textAnchor="middle">CRITICAL HITS</text>
-      {card.crits.map((row, i) => {
-        const y = top + 25 + i * pitch;
+      {card.crits.map((row, index) => {
+        const y = top + 25 + linesBefore(index) * pitch;
         let at = x + 47;
         return (
           <g key={row.label}>
@@ -66,6 +88,7 @@ function Crits({ card }: { card: PrintCard }) {
                 </g>
               );
             })}
+            {row.also !== undefined && <text x={x + 47} y={y + pitch} fontSize={6.2}>{row.also}</text>}
           </g>
         );
       })}
@@ -78,7 +101,7 @@ export default function AsCardFace({ card }: { card: PrintCard }) {
   const bubbleWidth = card.air ? 130 : 156;
   const bubbles = bubbleLayout(card.armor, card.structure, bubbleWidth, 26);
   const rowY = (row: number) => 148 + row * bubbles.pitch + bubbles.diameter / 2;
-  const lines = wrapLines(card.specials, 48, 3);
+  const fit = card.specialsFit;
   const label = `${title}: PV ${String(card.pv)} at Skill ${String(card.skill)}, armor ${String(card.armor)}, structure ${String(card.structure)}`;
   return (
     <svg className="as-cardface" viewBox={`0 0 ${String(CARD_WIDTH)} ${String(CARD_HEIGHT)}`} role="img" aria-label={label} data-unit={card.unitId}>
@@ -91,7 +114,7 @@ export default function AsCardFace({ card }: { card: PrintCard }) {
       <text x={254} y={34} fontSize={13} fontWeight={800}>PV:</text>
       <text x={334} y={36} fontSize={26} fontWeight={800} textAnchor="end" className="as-cardface__pv">{String(card.pv)}</text>
 
-      {card.pv !== card.basePv && <text x={334} y={52} fontSize={6.5} textAnchor="end" className="as-cardface__base">{`base PV ${String(card.basePv)} at Skill 4`}</text>}
+      {card.pv !== card.basePv && <text x={334} y={52} fontSize={6.5} textAnchor="end" className="as-cardface__base">{`base PV ${String(card.basePv)} at Skill ${String(DEFAULT_SKILL)}`}</text>}
       {card.pilot !== "" && (
         <g>
           <text x={226} y={68} fontSize={6} fontWeight={700} letterSpacing={0.6}>PILOT</text>
@@ -100,7 +123,7 @@ export default function AsCardFace({ card }: { card: PrintCard }) {
       )}
 
       <rect x={10} y={54} width={206} height={30} rx={8} fill={PANEL} stroke="#000" strokeWidth={1.2} />
-      <text x={16} y={66} fontSize={8.5}>
+      <Guard measure={`TP: ${card.type}${GAP}SZ: ${String(card.size)}${GAP}${card.air ? `THR: ${card.thrust}` : `TMM: ${card.tmm}${GAP}MV: ${card.move}`}`} x={16} y={66} size={8.5} max={196} mixed>
         <Field label="TP:" value={card.type} />
         <Field label="SZ:" value={String(card.size)} />
         {card.air ? <Field label="THR:" value={card.thrust} /> : (
@@ -109,10 +132,10 @@ export default function AsCardFace({ card }: { card: PrintCard }) {
             <Field label="MV:" value={card.move} />
           </>
         )}
-      </text>
-      <text x={16} y={79} fontSize={8.5}>
+      </Guard>
+      <Guard measure={`ROLE: ${card.role}`} x={16} y={79} size={8.5} max={108} mixed>
         <Field label="ROLE:" value={card.role} />
-      </text>
+      </Guard>
       <text x={130} y={79} fontSize={8.5}>
         <Field label="SKILL:" value={String(card.skill)} />
       </text>
@@ -148,16 +171,29 @@ export default function AsCardFace({ card }: { card: PrintCard }) {
       )}
 
       <rect x={10} y={144} width={186} height={32} rx={8} fill={PANEL} stroke="#000" strokeWidth={1.2} />
-      <text x={14} y={rowY(0) + 3} fontSize={8} fontWeight={700}>A:</text>
-      <text x={14} y={rowY(bubbles.rows.armor) + 3} fontSize={8} fontWeight={700}>S:</text>
-      <g transform="translate(29 0)" className="as-cardface__bubbles">
-        {bubbles.armor.map((b, i) => (
-          <circle key={`a${String(i)}`} className="as-cardface__bubble as-cardface__bubble--armor" cx={b.x} cy={148 + b.y} r={bubbles.diameter / 2} fill="#fff" stroke="#000" strokeWidth={0.9} />
-        ))}
-        {bubbles.structure.map((b, i) => (
-          <circle key={`s${String(i)}`} className="as-cardface__bubble as-cardface__bubble--structure" cx={b.x} cy={148 + b.y} r={bubbles.diameter / 2} fill={STRUCTURE_FILL} stroke="#000" strokeWidth={0.9} />
-        ))}
-      </g>
+      {bubbles.mode === "bubbles" ? (
+        <>
+          <text x={14} y={rowY(0) + 3} fontSize={8} fontWeight={700}>A:</text>
+          <text x={14} y={rowY(bubbles.rows.armor) + 3} fontSize={8} fontWeight={700}>S:</text>
+          <g transform="translate(29 0)" className="as-cardface__bubbles">
+            {bubbles.armor.map((b, i) => (
+              <circle key={`a${String(i)}`} className="as-cardface__bubble as-cardface__bubble--armor" cx={b.x} cy={148 + b.y} r={bubbles.diameter / 2} fill="#fff" stroke="#000" strokeWidth={0.9} />
+            ))}
+            {bubbles.structure.map((b, i) => (
+              <circle key={`s${String(i)}`} className="as-cardface__bubble as-cardface__bubble--structure" cx={b.x} cy={148 + b.y} r={bubbles.diameter / 2} fill={STRUCTURE_FILL} stroke="#000" strokeWidth={0.9} />
+            ))}
+          </g>
+        </>
+      ) : (
+        <g className="as-cardface__figures">
+          <text x={14} y={157} fontSize={8} fontWeight={700}>A:</text>
+          <rect x={29} y={148} width={card.air ? 100 : 120} height={12} rx={3} fill="#fff" stroke="#000" strokeWidth={0.9} />
+          <text x={card.air ? 79 : 89} y={157.5} fontSize={9} fontWeight={700} textAnchor="middle" className="as-cardface__figure">{String(card.armor)}</text>
+          <text x={14} y={171} fontSize={8} fontWeight={700}>S:</text>
+          <rect x={29} y={162} width={card.air ? 100 : 120} height={12} rx={3} fill={STRUCTURE_FILL} stroke="#000" strokeWidth={0.9} />
+          <text x={card.air ? 79 : 89} y={171.5} fontSize={9} fontWeight={700} textAnchor="middle" className="as-cardface__figure">{String(card.structure)}</text>
+        </g>
+      )}
       {card.air && (
         <g>
           <text x={176} y={158} fontSize={7} fontWeight={700} textAnchor="middle">TH</text>
@@ -167,8 +203,8 @@ export default function AsCardFace({ card }: { card: PrintCard }) {
 
       <rect x={10} y={180} width={198} height={38} rx={8} fill={PANEL} stroke="#000" strokeWidth={1.2} />
       <text x={16} y={189} fontSize={7.5} fontWeight={700}>SPECIAL:</text>
-      {lines.map((line, i) => (
-        <text key={i} x={16} y={198 + i * 8} fontSize={6.8} className="as-cardface__special">{line}</text>
+      {fit.lines.map((line, i) => (
+        <text key={i} x={16} y={198 + i * (fit.size + 1.2)} fontSize={fit.size} className="as-cardface__special">{line}</text>
       ))}
 
       <Crits card={card} />

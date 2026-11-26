@@ -4,7 +4,8 @@
 import { useEffect, useId, useState } from "react";
 import { Link, useSearchParams } from "react-router";
 import { AS_CARD_FOOT } from "../../data/alpha-strike";
-import { forceCards, printCard, printRoster, sheetsOf } from "../../rules/as-print";
+import { newAsForce } from "../../rules/as-force";
+import { fitSpecials, forceCards, printCard, printRoster, sheetsOf } from "../../rules/as-print";
 import type { PrintCard, PrintRoster } from "../../rules/as-print";
 import { STORAGE_READ_FAILED } from "../storage";
 import { TRADEMARK_LINE } from "../sheet/RecordSheet";
@@ -18,7 +19,7 @@ type Loaded =
   | { state: "loading" }
   | { state: "failed" }
   | { state: "missing"; what: string }
-  | { state: "ready"; heading: string; back: { to: string; text: string }; cards: PrintCard[]; roster?: PrintRoster };
+  | { state: "ready"; heading: string; back: { to: string; text: string }; cards: PrintCard[]; roster?: PrintRoster; single?: true };
 
 async function load(unitId: string | null, forceId: string | null): Promise<Loaded> {
   const storage = await openAsStorage();
@@ -32,13 +33,15 @@ async function load(unitId: string | null, forceId: string | null): Promise<Load
   const entry = unitId === null ? undefined : await storage.get(unitId);
   if (!entry?.unit) return { state: "missing", what: "unit" };
   const card = printCard(entry.unit, entry.unit.skill);
-  return { state: "ready", heading: card.title || "Unnamed unit", back: { to: HOME, text: "Alpha Strike" }, cards: [card] };
+  // One unit has no roster page of its own; the same page carries the full special abilities when they did not fit on the card.
+  const single = { ...newAsForce(entry.unit.id, card.title), members: [{ unitId: entry.unit.id, skill: entry.unit.skill }] };
+  return { state: "ready", heading: card.title || "Unnamed unit", back: { to: HOME, text: "Alpha Strike" }, cards: [card], roster: printRoster(single, new Map([[entry.unit.id, entry.unit]])), single: true };
 }
 
 const Foot = () => <p className="as-sheet__foot">{`${TRADEMARK_LINE} Card layout: ${AS_CARD_FOOT}.`}</p>;
 
 function Roster({ roster }: { roster: PrintRoster }) {
-  const over = roster.pvLimit !== undefined && roster.total > roster.pvLimit;
+  const long = roster.rows.filter((r) => fitSpecials(r.specials).more);
   const pilots = roster.rows.some((r) => r.pilot !== "");
   const groups = roster.rows.some((r) => r.formation !== "");
   return (
@@ -84,7 +87,22 @@ function Roster({ roster }: { roster: PrintRoster }) {
           </tfoot>
         </table>
       </div>
-      {roster.pvLimit !== undefined && <p className="as-sheet__note">{`PV limit ${String(roster.pvLimit)}: ${over ? `${String(roster.total - roster.pvLimit)} over` : `${String(roster.pvLimit - roster.total)} to spare`}.`}</p>}
+      {roster.pvLimit !== undefined && roster.room !== undefined && (
+        <p className="as-sheet__note">{`PV limit ${String(roster.pvLimit)}: ${roster.room < 0 ? `${String(-roster.room)} over` : `${String(roster.room)} to spare`}.`}</p>
+      )}
+      {long.length > 0 && (
+        <>
+          <h3>Special abilities in full</h3>
+          <ul className="as-sheet__long">
+            {long.map((r, i) => (
+              <li key={i}>
+                <strong>{r.title}</strong>
+                {`: ${r.specials}`}
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
       {roster.missing > 0 && <p className="as-sheet__note">{`${String(roster.missing)} ${roster.missing === 1 ? "unit is" : "units are"} no longer in the roster and left out.`}</p>}
       <Foot />
     </section>
@@ -125,6 +143,8 @@ export default function AsPrintPage() {
     );
   }
   const sheets = withCards ? sheetsOf(loaded.cards) : [];
+  const moreCards = loaded.cards.filter((c) => c.specialsFit.more).length;
+  const showRoster = loaded.single ? moreCards > 0 : withRoster;
   return (
     <div className="sr-page as-print">
       <div className="as-print__bar">
@@ -134,7 +154,7 @@ export default function AsPrintPage() {
           </Link>
         </p>
         <h1>{`Print: ${loaded.heading}`}</h1>
-        {loaded.roster && (
+        {loaded.roster && !loaded.single && (
           <fieldset className="as-print__fieldset">
             <legend>What to print</legend>
             <label className="bt-check" htmlFor={`${uid}-cards`}>
@@ -148,6 +168,9 @@ export default function AsPrintPage() {
           </fieldset>
         )}
         <p className="bt-hint">{`${String(loaded.cards.length)} ${loaded.cards.length === 1 ? "card" : "cards"}. Cards are 3.5 by 2.5 inches, nine to a sheet on Letter or A4 (landscape). In the print dialog, choose the paper and turn off headers and footers.`}</p>
+        {moreCards > 0 && (
+          <p className="bt-hint">{`${String(moreCards)} ${moreCards === 1 ? "card has" : "cards have"} more special abilities than fit in the box. The card says so, and the roster page lists them in full.`}</p>
+        )}
         <p>
           <button type="button" className="bt-button" onClick={() => { window.print(); }}>
             Print
@@ -164,7 +187,7 @@ export default function AsPrintPage() {
           <Foot />
         </section>
       ))}
-      {loaded.roster && withRoster && <Roster roster={loaded.roster} />}
+      {loaded.roster && showRoster && <Roster roster={loaded.roster} />}
     </div>
   );
 }
