@@ -3,10 +3,11 @@
 // (data/bv.ts keys them by catalog id; data/cost.ts prices them); a launcher built by the tube has its own table (data/protomech.ts). Pure functions; nothing throws.
 import { bvEntryOf, speedFactor } from "../bv";
 import { TARGET_MODIFIER } from "../../data/bv";
-import { PROTO_BV, PROTO_COST, PROTO_LAUNCHER_SIZES, PROTO_MELEE } from "../../data/protomech";
+import { PROTO_BV, PROTO_COST, PROTO_LAUNCHER_SIZES, PROTO_MELEE, PROTO_WING } from "../../data/protomech";
 import type { Catalog } from "../catalog";
 import { priceOf, roundUpCents } from "../cost";
 import { armorPoints, ammoKg, engineKg, engineRating, launcherOf, mountName, plainRun, rowOf, structurePoints, tubesOf } from "./build";
+import { armorTypeOf, cockpitOf, jumpMP, jumpSystemOf, wingKg } from "./options";
 import type { ProtoMount, ProtoRecord } from "./record";
 import { PROTO_PARTS } from "../../data/protomech";
 import { roundHalfUp, tidy } from "../walk";
@@ -86,7 +87,8 @@ export function protoBattleValue(record: ProtoRecord, catalog: Catalog): ProtoBv
   const structure = (structurePoints(record) ?? 0) * PROTO_BV.structureFactor;
   const subtotal = armor + structure + equipment;
   const running = record.booster ? record.walk * 2 : plainRun(record.walk);
-  const tmm = Math.max(targetModifier(running, false), record.jump > 0 ? targetModifier(record.jump, true) : 0);
+  const jumping = jumpMP(record);
+  const tmm = Math.max(targetModifier(running, false), jumping > 0 ? targetModifier(jumping, true) : 0);
   const factor = 1 + tmm / 10 + PROTO_BV.defensiveBonus;
   const defensive = { armor, structure, equipment, subtotal, targetModifier: tmm, factor: tidy(factor), rating: subtotal * factor };
 
@@ -101,8 +103,11 @@ export function protoBattleValue(record: ProtoRecord, catalog: Catalog): ProtoBv
     byModel.set(v.key, { weapons: have.weapons + v.bv, ammo: have.ammo + (line?.ammoBv ?? 0) });
   });
   const ammunition = [...byModel.values()].reduce((sum, m) => sum + Math.min(m.ammo, m.weapons), 0);
+  // Electric Discharge armor counts its armor points as standard armor and adds its own Battle Value as a weapon (IO:AE p. 191).
+  const armorWeapon = armorPoints(record) > 0 ? (armorTypeOf(record)?.bvAsWeapon ?? 0) : 0;
+  if (armorWeapon > 0) lines.push({ mountId: "", name: armorTypeOf(record)?.label ?? "Armor", bv: armorWeapon, counted: armorWeapon, ammoBv: 0 });
   const weaponBv = lines.reduce((sum, line) => sum + line.counted, 0) + ammunition;
-  const speed = plainRun(record.walk) + Math.ceil(record.jump / 2) + (record.booster ? 1 : 0);
+  const speed = plainRun(record.walk) + Math.ceil(jumping / 2) + (record.booster ? 1 : 0);
   const sf = speedFactor(speed);
   const offensive = { weapons: weaponBv, ammunition, speed, speedFactor: sf, rating: weaponBv * sf };
 
@@ -146,7 +151,12 @@ export function protoCost(record: ProtoRecord, catalog: Catalog): ProtoCost {
   const tons = record.tons;
   const lines: ProtoCostLine[] = [];
   const add = (label: string, cost: number) => lines.push({ label, cost });
-  add("Cockpit", C.cockpit);
+  const cockpit = cockpitOf(record);
+  const jump = jumpSystemOf(record);
+  const armorType = armorTypeOf(record);
+  const unpriced: Unvalued[] = [];
+  if (cockpit) add(cockpit.label, cockpit.cost);
+  else unpriced.push({ name: "Cockpit", why: "a cockpit we do not know" });
   add("Life support", C.lifeSupport);
   add("Sensors", C.sensorsPerTon * tons);
   add("Musculature", C.musculaturePerTon * tons);
@@ -155,14 +165,20 @@ export function protoCost(record: ProtoRecord, catalog: Catalog): ProtoCost {
   add("Leg actuators, both legs", C.legActuatorPerTon * tons);
   const rating = engineRating(record);
   if (rating !== null && engineKg(record) !== null) add(`Engine, rating ${String(rating)}`, (C.engineFactor * rating * tons) / C.engineDivisor);
-  if (record.jump > 0) add("Jump jets", C.jumpJetPerJetSquaredTon * record.jump * record.jump * tons);
+  if (record.jump > 0) {
+    if (jump) add(jump.label, jump.costPerTonSquared * record.jump * record.jump * tons);
+    else unpriced.push({ name: "Jump system", why: "a jump system we do not know" });
+  }
+  if (record.partialWing === true) add(PROTO_WING.label, (PROTO_WING.costPerTon * wingKg(record)) / 1000);
   if (record.booster && rating !== null) add("Myomer Booster", C.boosterPerRatingTon * rating * ((tons * PROTO_PARTS.boosterKgPerTon) / 1000));
   if (record.heatSinks > 0) add("Heat sinks", C.heatSink * record.heatSinks);
   const points = armorPoints(record);
-  if (points > 0) add("Armor", C.armorPoint * points);
+  if (points > 0) {
+    if (armorType) add(armorType.label, armorType.costPerPoint * points);
+    else unpriced.push({ name: "Armor", why: "an armor type we do not know" });
+  }
   const structural = lines.reduce((sum, line) => sum + line.cost, 0);
 
-  const unpriced: Unvalued[] = [];
   let equipment = 0;
   for (const mount of record.mounts) {
     const price = priceOfMount(mount, catalog, record);

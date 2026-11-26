@@ -42,6 +42,13 @@ export interface ProtoRecord {
   booster: boolean;
   /** The optional main gun mount: it gives structure and armor locations of its own. */
   mainGun: boolean;
+  /** Part options by id (data/protomech.ts); absent is the TechManual part. An id we do not know is kept and the rules check reports it. */
+  cockpit?: string;
+  armorType?: string;
+  /** What the Jumping MP are: ProtoMech jump jets (absent), extended jump jets ("xjj") or UMUs ("umu"). */
+  jumpType?: string;
+  /** The partial wing (TO:AUE p. 104). */
+  partialWing?: true;
   heatSinks: number;
   /** Armor points by location code. */
   armor: Record<string, number>;
@@ -121,7 +128,7 @@ function officialOf(v: unknown): OfficialMark | undefined {
   return mark;
 }
 
-const RECORD_KEYS = ["schema", "id", "editionId", "name", "unitType", "techBase", "year", "era", "rulesLevel", "tons", "walk", "jump", "booster", "mainGun", "heatSinks", "armor", "mounts", "official", "notes", "picture"] as const;
+const RECORD_KEYS = ["schema", "id", "editionId", "name", "unitType", "techBase", "year", "era", "rulesLevel", "tons", "walk", "jump", "booster", "mainGun", "cockpit", "armorType", "jumpType", "partialWing", "heatSinks", "armor", "mounts", "official", "notes", "picture"] as const;
 
 /**
  * Reads a record from storage, a file or an import. Every field this version knows is filled with its default where it is missing or not
@@ -152,6 +159,10 @@ export function withDefaults(value: unknown, fallbackId = ""): ProtoRecord | und
     notes: isObject(v.notes) ? ({ ...v.notes } as Record<string, string>) : {},
   };
   for (const code of PROTO_CODES) record.armor[code] ??= 0;
+  if (isString(v.cockpit)) record.cockpit = v.cockpit;
+  if (isString(v.armorType)) record.armorType = v.armorType;
+  if (isString(v.jumpType)) record.jumpType = v.jumpType;
+  if (v.partialWing === true) record.partialWing = true;
   if (isString(v.era)) record.era = v.era;
   if (RULES_LEVELS.some((l) => l.id === v.rulesLevel)) record.rulesLevel = v.rulesLevel as RulesLevel;
   const official = officialOf(v.official);

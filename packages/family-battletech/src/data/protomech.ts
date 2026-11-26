@@ -11,8 +11,10 @@
 // cost line. Where the printed page and its extract disagreed (the internal structure cost, 400 a ton, p. 279) the page image decided.
 //
 // Left for later pieces (not built here): quad, glider and ultraheavy ProtoMechs (Interstellar Operations: Alternate Eras printed pp. 92-99, Advanced
-// rules: prototype 3075, production about 3083 to 3084), the ProtoMech melee weapons, the extended jump jet system, UMUs, partial wings and the
-// Electric Discharge armor (all Advanced or Experimental), and the Inner Sphere ProtoMech interface.
+// rules: prototype 3075, production about 3083 to 3084) and the ultraheavy cockpit. The part options (the Inner Sphere interface cockpit, Electric Discharge
+// armor, the extended jump jet system, UMUs and the partial wing) are below, after the dates. Not built yet, so not handled here: glider ProtoMechs (they may have no jump jets, XJJ, wing, UMUs or booster:
+// IO:AE pp. 59, 95) and ultraheavy ones (jets and UMUs 150 kg per MP, the interface cockpit 750 kg over 9 tons: IO:AE pp. 95-96); the editor builds standard bipeds of 2 to 9 tons.
+import type { RulesLevel } from "./chassis";
 
 export interface ProtoCite {
   book: string;
@@ -98,9 +100,7 @@ export const PROTO_MAX_ARMOR_FACTOR: Record<number, [number, number]> = { 2: [15
 // ---------------------------------------------------------------------------------------------------------------
 export const PROTO_PARTS: Sourced & {
   structureKgPerTon: number;
-  cockpitKg: number;
   heatSinkKg: number;
-  armorKgPerPoint: number;
   boosterKgPerTon: number;
   engineMaxRating: number;
   /** Below this rating the engine weighs `smallEngineKgPerRating` for each point of rating; from it, the Master Engine Table (p. 49) at the rating rounded up to a multiple of 5. */
@@ -111,9 +111,7 @@ export const PROTO_PARTS: Sourced & {
   cite: { book: TM, page: 84 },
   checked: "page",
   structureKgPerTon: 100,
-  cockpitKg: 500,
   heatSinkKg: 250,
-  armorKgPerPoint: 50,
   boosterKgPerTon: 25,
   engineMaxRating: 400,
   smallEngineBelow: 40,
@@ -229,15 +227,27 @@ export const PROTO_MELEE: Sourced & { row: string; tonsPerDamage: number; bvFact
 // ---------------------------------------------------------------------------------------------------------------
 export interface ProtoDates {
   prototype: number;
-  production: number;
+  /** Absent for a part that was only ever a prototype: it is then on offer from `prototype` to `extinct`, at the part's own rules level. */
+  production?: number;
+  /** The last year the part is on offer (the table's "Ext" year less one). */
+  extinct?: number;
   cite: ProtoCite;
   checked: ProtoChecked;
 }
-export const PROTO_DATES: Record<"unit" | "jumpJets" | "armor" | "booster", ProtoDates> = {
+export const PROTO_DATES: Record<"unit" | "jumpJets" | "armor" | "booster" | "interface" | "edp" | "xjj" | "umu" | "wing", ProtoDates> = {
   unit: { prototype: 3055, production: 3059, cite: { book: IO, page: 44 }, checked: "page" },
   jumpJets: { prototype: 3055, production: 3060, cite: { book: IO, page: 29 }, checked: "page" },
   armor: { prototype: 3055, production: 3060, cite: { book: IO, page: 30 }, checked: "page" },
   booster: { prototype: 3066, production: 3068, cite: { book: IO, page: 29 }, checked: "page" },
+  // IO:AE third printing, printed pp. 29-30 and 33 (the Universal Technology Advancement Table). The Inner Sphere interface and the Electric Discharge armor have no
+  // production year (prototype only, about 3071, extinct 3085); the extended jump jet is prototype about 3071, production 3075 and common 3085. The ProtoMech UMU's
+  // prototype year is TO:AUE's (seventh printing, 2024, p. 217: 3061, the later printing) where IO:AE's table says about 3065; its production year, about 3075, is IO:AE's alone.
+  // "Ext: 3085" is read as gone in 3085, so the last year on offer is 3084 (book panel, interface ruling).
+  interface: { prototype: 3071, extinct: 3084, cite: { book: IO, page: 33 }, checked: "page" },
+  edp: { prototype: 3071, extinct: 3084, cite: { book: IO, page: 30 }, checked: "page" },
+  xjj: { prototype: 3071, production: 3075, cite: { book: IO, page: 29 }, checked: "page" },
+  umu: { prototype: 3061, production: 3075, cite: { book: TO, page: 217 }, checked: "page" },
+  wing: { prototype: 3070, production: 3085, cite: { book: IO, page: 29 }, checked: "page" },
 };
 /** The rules level of the ProtoMech rules in play: Total Warfare's standard rules (TechManual p. 80). */
 export const PROTO_LEVEL = "standard" as const;
@@ -246,7 +256,6 @@ export const PROTO_LEVEL = "standard" as const;
 // Cost (p. 279, structural costs; p. 285, final cost) and Battle Value (TechManual Battle Value v4.1, ProtoMech method; the Delphyne-2 example).
 // ---------------------------------------------------------------------------------------------------------------
 export const PROTO_COST: Sourced & {
-  cockpit: number;
   lifeSupport: number;
   sensorsPerTon: number;
   musculaturePerTon: number;
@@ -255,15 +264,12 @@ export const PROTO_COST: Sourced & {
   legActuatorPerTon: number;
   engineDivisor: number;
   engineFactor: number;
-  jumpJetPerJetSquaredTon: number;
   boosterPerRatingTon: number;
   heatSink: number;
-  armorPoint: number;
   tonsDivisor: number;
 } = {
   cite: { book: TM, page: 279 },
   checked: "page",
-  cockpit: 500_000,
   lifeSupport: 75_000,
   sensorsPerTon: 2_000,
   musculaturePerTon: 2_000,
@@ -272,10 +278,8 @@ export const PROTO_COST: Sourced & {
   legActuatorPerTon: 540,
   engineDivisor: 75,
   engineFactor: 5_000,
-  jumpJetPerJetSquaredTon: 200,
   boosterPerRatingTon: 1_000,
   heatSink: 2_000,
-  armorPoint: 625,
   tonsDivisor: 100,
 };
 
@@ -289,5 +293,78 @@ export const PROTO_BV: Sourced & { armorFactor: number; structureFactor: number;
 };
 /** Where the BV tables print the launcher figures above (the Clan Weapons and Equipment BV Table). */
 export const PROTO_BV_TABLE_CITE: ProtoCite = { book: TM, page: 318 };
+
+// ---------------------------------------------------------------------------------------------------------------
+// Part options. A record names its option by id (absent or "standard" is the TechManual part); an id this version does not know is kept and reported.
+// `level` is the option's rules level from its rules box (the play table agrees on every row here); in its prototype years any option needs Experimental.
+// Figures: IO:AE third printing, rules pp. 59 (Electric Discharge armor, extended jump jets) and 96 (Inner Sphere interface), construction and cost table p. 213,
+// Battle Value table p. 190 and its notes p. 191; TO:AUE seventh printing (2024), rules pp. 104-105 and 107, construction data p. 217, cost footnote p. 223,
+// Battle Value p. 192. All read against the page images.
+// ---------------------------------------------------------------------------------------------------------------
+export interface ProtoCockpit extends Sourced {
+  label: string;
+  kg: number;
+  /** C-bills; for the interface it replaces the standard cockpit's cost (IO:AE p. 180). */
+  cost: number;
+  level: RulesLevel;
+  dates?: ProtoDates;
+  /** The interface makes the unit a Mixed Technology unit (IO:AE p. 96). */
+  mixed?: true;
+}
+export const PROTO_COCKPITS: Record<string, ProtoCockpit> = {
+  standard: { label: "Standard ProtoMech cockpit", kg: 500, cost: 500_000, level: "standard", cite: { book: TM, page: 85 }, checked: "page" },
+  // Inner Sphere technology (IO:AE pp. 96, 213) offered in this Clan-only editor: held for the book panel, which rules whether the interface makes the unit Mixed Technology.
+  // Weighs as much as a standard cockpit, takes no space on the record sheet, costs 1,000,000, and does not change the Battle Value.
+  interface: { label: "Inner Sphere ProtoMech interface cockpit", kg: 500, cost: 1_000_000, level: "experimental", dates: PROTO_DATES.interface, mixed: true, cite: { book: IO, page: 96 }, checked: "page" },
+};
+
+export interface ProtoArmorType extends Sourced {
+  label: string;
+  kgPerPoint: number;
+  costPerPoint: number;
+  level: RulesLevel;
+  dates?: ProtoDates;
+  /** Torso items the armor takes away (IO:AE p. 59). */
+  torsoItems: number;
+  /** Battle Value added as a weapon, with the armor points counted as standard armor (IO:AE p. 191, note to the table). */
+  bvAsWeapon: number;
+}
+export const PROTO_ARMOR_TYPES: Record<string, ProtoArmorType> = {
+  standard: { label: "Standard ProtoMech armor", kgPerPoint: 50, costPerPoint: 625, level: "standard", dates: PROTO_DATES.armor, torsoItems: 0, bvAsWeapon: 0, cite: { book: TM, page: 86 }, checked: "page" },
+  edp: { label: "Electric Discharge ProtoMech (EDP) armor", kgPerPoint: 75, costPerPoint: 1_250, level: "experimental", dates: PROTO_DATES.edp, torsoItems: 1, bvAsWeapon: 32, cite: { book: IO, page: 59 }, checked: "page" },
+};
+
+/** The ways a ProtoMech jumps or moves under water. `kgFactor` multiplies the jump jet weight table; `costPerTonSquared` is C-bills per ton of unit per square of the count (TO:AUE p. 223 footnote; IO:AE p. 213); `reach` is what the count may not pass. */
+export interface ProtoJumpSystem extends Sourced {
+  label: string;
+  /** What the count is called on the sheet. */
+  unit: string;
+  kgFactor: number;
+  costPerTonSquared: number;
+  reach: "walk" | "run";
+  level: RulesLevel;
+  dates?: ProtoDates;
+  /** The count is underwater movement, not jumping. */
+  underwater?: true;
+}
+export const PROTO_JUMP_SYSTEMS: Record<string, ProtoJumpSystem> = {
+  standard: { label: "ProtoMech jump jets", unit: "Jumping MP", kgFactor: 1, costPerTonSquared: 200, reach: "walk", level: "standard", dates: PROTO_DATES.jumpJets, cite: { book: TM, page: 85 }, checked: "page" },
+  xjj: { label: "Extended jump jets (XJJ)", unit: "Jumping MP", kgFactor: 2, costPerTonSquared: 500, reach: "run", level: "standard", dates: PROTO_DATES.xjj, cite: { book: IO, page: 59 }, checked: "page" },
+  umu: { label: "Underwater maneuvering units (UMU)", unit: "UMU MP", kgFactor: 1, costPerTonSquared: 200, reach: "walk", level: "experimental", dates: PROTO_DATES.umu, underwater: true, cite: { book: TO, page: 104 }, checked: "page" },
+};
+
+/** The partial wing (TO:AUE pp. 104-105, 107, 217): 20 percent of the ProtoMech's weight, one of the torso's items, 50,000 C-bills for each ton it weighs, and a Jumping MP bonus by atmosphere. */
+export const PROTO_WING: Sourced & { label: string; kgPerTon: number; costPerTon: number; level: RulesLevel; dates: ProtoDates; torsoItems: number; bonus: Record<string, number>; bonusAtStandard: number } = {
+  label: "Partial wing",
+  kgPerTon: 200,
+  costPerTon: 50_000,
+  level: "experimental",
+  dates: PROTO_DATES.wing,
+  torsoItems: 1,
+  bonus: { vacuum: 0, trace: 1, thin: 2, standard: 2, high: 3, "very-high": 3 },
+  bonusAtStandard: 2,
+  cite: { book: TO, page: 105 },
+  checked: "page",
+};
 
 export const PROTO_NAME = "ProtoMech";

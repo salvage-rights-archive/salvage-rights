@@ -2,13 +2,14 @@
 // on one this version does not understand. Messages are our own words and state the numbers; a finding's `cite` names the deciding book and page. Standard construction
 // is TechManual pp. 80-89 (errata v8.0); the dates are Interstellar Operations: Alternate Eras (printed pp. 29 and 44). Rules levels follow the 'Mech side: ProtoMechs are
 // Standard rules in production, Experimental in their prototype years (IO:AE printed p. 27), and not part of Introductory (Inner Sphere, 3025 technology).
-import { PROTO_CODES, PROTO_DATES, PROTO_LIMITS, PROTO_LOCATION_NAMES, PROTO_PART_PAGES, PROTO_PLACEMENT, PROTO_PARTS, PROTO_REAR_LOCATIONS, PROTO_WEIGHT } from "../../data/protomech";
-import type { ProtoCite } from "../../data/protomech";
+import { PROTO_CODES, PROTO_COCKPITS, PROTO_DATES, PROTO_LIMITS, PROTO_LOCATION_NAMES, PROTO_PART_PAGES, PROTO_PLACEMENT, PROTO_PARTS, PROTO_REAR_LOCATIONS, PROTO_WEIGHT, PROTO_WING } from "../../data/protomech";
+import type { ProtoCite, ProtoDates } from "../../data/protomech";
 import { LEVEL_ORDER, levelAtLeast, levelIn, levelRow } from "../levels";
 import type { RulesLevel } from "../../data/chassis";
 import type { Catalog } from "../catalog";
 import { own, tidy } from "../walk";
-import { armorKg, engineKg, engineRating, energyHeat, holdsAt, launcherOf, locationsOf, mountName, rowOf, structureRow, tally, usesAmmo } from "./build";
+import { engineKg, engineRating, energyHeat, holdsAt, launcherOf, limitOf, locationsOf, mountName, rowOf, structureRow, tally, usesAmmo } from "./build";
+import { armorTypeOf, cockpitOf, jumpReach, jumpSystemOf, usedOptions } from "./options";
 import { datesPhase, itemAvailable, itemLevel, itemPhase, levelOfRecord, protoMountable } from "./offered";
 import type { ProtoRecord } from "./record";
 import { eraNeedsPick } from "../time";
@@ -33,11 +34,11 @@ export function protoLowestLevel(record: ProtoRecord, catalog: Catalog): RulesLe
   const needs: RulesLevel[] = ["standard"];
   const timed: [boolean, keyof typeof PROTO_DATES][] = [
     [true, "unit"],
-    [record.jump > 0, "jumpJets"],
-    [PROTO_CODES.some((code) => (record.armor[code] ?? 0) > 0), "armor"],
     [record.booster, "booster"],
   ];
   for (const [used, key] of timed) if (used && datesPhase(record, PROTO_DATES[key]) === "prototype") needs.push("experimental");
+  if (record.techBase === "mixed" && record.cockpit !== "interface") needs.push("advanced");
+  for (const option of usedOptions(record)) needs.push(levelIn(option.level, option.dates ? datesPhase(record, option.dates) : "production"));
   for (const mount of record.mounts) {
     const row = rowOf(catalog, record, mount);
     if (row) needs.push(itemLevel(row, record, catalog));
@@ -55,7 +56,10 @@ const typeCheck: Check = (record, _catalog, out) => {
   if (!Number.isInteger(record.tons) || record.tons < min || record.tons > max) {
     out.push({ check: "weight", level: "error", message: `A ProtoMech weighs ${String(min)} to ${String(max)} tons in steps of ${String(step)}; this one is ${num(record.tons)}.`, where: { field: "tons" }, cite });
   }
-  if (record.techBase !== "clan") out.push({ check: "tech-base", level: "error", message: `ProtoMechs are built with Clan technology only; this unit says "${record.techBase}".`, where: { field: "techBase" }, cite });
+  const mixedOk = record.techBase === "mixed" && (record.cockpit === "interface" || levelAtLeast(levelOfRecord(record), "advanced"));
+  if (record.cockpit === "interface" && record.techBase !== "mixed") {
+    out.push({ check: "tech-base", level: "error", message: `The Inner Sphere interface cockpit makes the unit Mixed Technology; this unit says "${record.techBase}".`, where: { field: "techBase" }, cite: page(PROTO_COCKPITS.interface?.cite ?? PROTO_WEIGHT.cite) });
+  } else if (record.techBase !== "clan" && !mixedOk) out.push({ check: "tech-base", level: "error", message: `ProtoMechs are built with Clan technology, or Mixed Technology with the Inner Sphere interface cockpit or at Advanced rules (Tactical Operations: Advanced Units and Equipment, p. 189); this unit says "${record.techBase}".`, where: { field: "techBase" }, cite });
   const level = levelOfRecord(record);
   if (level === "introductory") out.push({ check: "level", level: "error", message: "Introductory rules are Inner Sphere, 3025 technology; ProtoMechs are Clan units and not part of it.", where: { field: "rulesLevel" }, cite: TM(80) });
   if (record.year === null && level !== "introductory") {
@@ -84,8 +88,16 @@ const movementCheck: Check = (record, _catalog, out) => {
   }
   if (!Number.isInteger(record.jump) || record.jump < 0) {
     out.push({ check: "jump", level: "error", message: "The Jumping MP must be a whole number, 0 or more.", where: { field: "jump" }, cite: TM(PROTO_PART_PAGES.jumpJets) });
-  } else if (record.jump > record.walk) {
-    out.push({ check: "jump", level: "error", message: `Jumping MP (${String(record.jump)}) may not be more than Walking MP (${String(record.walk)}).`, where: { field: "jump" }, cite: TM(PROTO_PART_PAGES.jumpJets) });
+  } else if (record.jump > jumpReach(record)) {
+    const system = jumpSystemOf(record);
+    const extended = system?.reach === "run";
+    out.push({
+      check: "jump",
+      level: "error",
+      message: extended ? `Jumping MP (${String(record.jump)}) may not be more than Running MP (${String(jumpReach(record))}), which is the most extended jump jets reach.` : `${system?.unit ?? "Jumping MP"} (${String(record.jump)}) may not be more than Walking MP (${String(record.walk)}).`,
+      where: { field: "jump" },
+      cite: extended && system ? page(system.cite) : TM(PROTO_PART_PAGES.jumpJets),
+    });
   }
 };
 
@@ -108,6 +120,8 @@ const armorCheck: Check = (record, _catalog, out) => {
 /** Items by location: what each may hold, rear facing, launcher size, and what the unit can carry at all (TechManual pp. 87-89). */
 const mountsCheck: Check = (record, catalog, out) => {
   const limitCite = page(PROTO_LIMITS.cite);
+  const armorType = armorTypeOf(record);
+  const torsoCite = [limitCite, armorType && armorType.torsoItems > 0 ? page(armorType.cite) : undefined, record.partialWing === true ? page(PROTO_WING.cite) : undefined].filter((c) => c !== undefined).join("; ");
   for (const mount of record.mounts) {
     const name = mountName(mount) || "An item";
     const where = { mountId: mount.id, location: mount.location };
@@ -147,19 +161,20 @@ const mountsCheck: Check = (record, catalog, out) => {
   }
   const known = new Set(PROTO_CODES as string[]);
   for (const code of [...PROTO_CODES, ...new Set(record.mounts.map((m) => m.location).filter((c) => !known.has(c)))]) {
-    const limit = own(PROTO_LIMITS.rows, code);
+    const limit = limitOf(record, code);
     if (!limit) continue;
+    const placeCite = code === "t" ? torsoCite : limitCite;
     const held = holdsAt(record, catalog, code);
     if (held.items === 0) continue;
     const where = { location: code };
     if (code === "mg" && !record.mainGun) {
-      out.push({ check: "location", level: "error", message: `The main gun holds an item, but the unit has no main gun mount.`, where, cite: limitCite });
+      out.push({ check: "location", level: "error", message: `The main gun holds an item, but the unit has no main gun mount.`, where, cite: placeCite });
       continue;
     }
     if (held.items > limit.items) {
-      out.push({ check: "location", level: "error", message: limit.items === 0 ? `${nameOf(code)} may hold no weapons or equipment; it has ${String(held.items)}.` : `${nameOf(code)} may hold ${String(limit.items)} ${limit.items === 1 ? "item" : "items"}; it has ${String(held.items)}.`, where, cite: limitCite });
+      out.push({ check: "location", level: "error", message: limit.items === 0 ? `${nameOf(code)} may hold no weapons or equipment; it has ${String(held.items)}.` : `${nameOf(code)} may hold ${String(limit.items)} ${limit.items === 1 ? "item" : "items"}; it has ${String(held.items)}.`, where, cite: placeCite });
     }
-    if (limit.kg !== null && limit.items > 0 && held.kg > limit.kg) out.push({ check: "location", level: "error", message: `${nameOf(code)} may hold ${kg(limit.kg)} of equipment; it has ${kg(held.kg)}.`, where, cite: limitCite });
+    if (limit.kg !== null && limit.items > 0 && held.kg > limit.kg) out.push({ check: "location", level: "error", message: `${nameOf(code)} may hold ${kg(limit.kg)} of equipment; it has ${kg(held.kg)}.`, where, cite: placeCite });
   }
 };
 
@@ -180,21 +195,42 @@ const weightCheck: Check = (record, catalog, out) => {
   if (t.unknown.length > 0) out.push({ check: "weight", level: "warning", message: `We could not weigh: ${t.unknown.join(", ")}.` });
 };
 
-/** The parts with dates of their own: ProtoMech jump jets and armor (about 3055 to 3060) and the Myomer Booster (about 3066 to 3068), at the record's time and level. */
+/** The parts with dates or a rules level of their own at the record's time and level: the Myomer Booster (about 3066 to 3068) and every option the unit uses (cockpit, armor type,
+ * jump system, partial wing). An option we do not know is reported, not refused. */
 const partsCheck: Check = (record, _catalog, out) => {
-  const parts: [boolean, keyof typeof PROTO_DATES, string, string][] = [
-    [record.jump > 0, "jumpJets", "ProtoMech jump jets", "jump"],
-    [PROTO_CODES.some((code) => (record.armor[code] ?? 0) > 0) || armorKg(record) > 0, "armor", "ProtoMech armor", "armor"],
-    [record.booster, "booster", "The Myomer Booster", "booster"],
-  ];
   const level = levelOfRecord(record);
-  for (const [used, key, label, field] of parts) {
-    if (!used || record.year === null) continue;
-    const dates = PROTO_DATES[key];
-    const phase = datesPhase(record, dates);
-    if (phase === null) out.push({ check: "part", level: "error", message: `${label} do${label.startsWith("The") ? "es" : ""} not exist in ${String(record.year)}: prototypes appear about ${String(dates.prototype)}.`, where: { field }, cite: page(dates.cite) });
-    else if (phase === "prototype" && !levelAtLeast(level, "experimental")) out.push({ check: "part", level: "error", message: `${label} are prototypes in ${String(record.year)} (production starts in ${String(dates.production)}), which needs Experimental rules.`, where: { field }, cite: page(dates.cite) });
+  const parts: { label: string; field: string; dates?: ProtoDates; level: RulesLevel }[] = [...usedOptions(record), ...(record.booster ? [{ label: "The Myomer Booster", field: "booster", dates: PROTO_DATES.booster, level: "standard" as RulesLevel }] : [])];
+  for (const part of parts) {
+    const { dates } = part;
+    const phase = dates ? datesPhase(record, dates) : "production";
+    const needed = levelIn(part.level, phase);
+    if (record.year !== null && phase === null && dates) {
+      out.push({
+        check: "part",
+        level: "error",
+        message: `${part.label}: not available in ${String(record.year)}: its prototypes appear about ${String(dates.prototype)}${dates.production === undefined ? "" : ` and it is in production from ${String(dates.production)}`}${dates.extinct === undefined ? "" : `, and it is extinct from ${String(dates.extinct)}`}.`,
+        where: { field: part.field },
+        cite: page(dates.cite),
+      });
+    } else if (phase !== null && !levelAtLeast(level, needed)) {
+      out.push({
+        check: "part",
+        level: "error",
+        message: phase === "prototype" && dates ? `${part.label}: a prototype in ${String(record.year)}${dates.production === undefined ? "" : ` (production starts in ${String(dates.production)})`}, which needs Experimental rules.` : `${part.label}: needs ${levelRow(needed).label} rules.`,
+        where: { field: part.field },
+        cite: page(dates?.cite ?? PROTO_DATES.unit.cite),
+      });
+    }
   }
+  const unknown: [string | undefined, boolean, string, string][] = [
+    [record.cockpit, cockpitOf(record) === undefined, "cockpit", "cockpit"],
+    [record.armorType, armorTypeOf(record) === undefined, "armor type", "armorType"],
+    [record.jumpType, jumpSystemOf(record) === undefined, "jump system", "jumpType"],
+  ];
+  for (const [id, missing, label, field] of unknown) if (missing) out.push({ check: "part", level: "warning", message: `This unit names a ${label} ("${String(id)}") we do not know, so its weight, cost and rules are not checked.`, where: { field } });
+  if (record.partialWing === true && (record.jump === 0 || jumpSystemOf(record)?.underwater === true)) out.push({ check: "part", level: "note", message: "The partial wing adds nothing without Jumping MP (UMU MP are not Jumping MP).", where: { field: "partialWing" }, cite: page(PROTO_WING.cite) });
+  const cockpit = cockpitOf(record);
+  if (cockpit?.mixed === true) out.push({ check: "part", level: "note", message: `${cockpit.label}: the ProtoMech is Mixed Technology with it, and has no ejection or escape system.`, where: { field: "cockpit" }, cite: page(cockpit.cite) });
 };
 
 export const PROTO_CHECKS: { id: string; run: Check }[] = [
