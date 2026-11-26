@@ -24,6 +24,12 @@ test("year and era: a year in the new-unit form hides types that did not exist, 
   await expect(types.filter({ hasText: "OmniMech" })).toHaveCount(1);
   await form.getByLabel("Year").fill("3025");
   await expect(types.filter({ hasText: "OmniMech" })).toHaveCount(0);
+  // The Clan tech base exists from 2800 (IO:AE p. 17): a typed year before that drops it from the list and from a choice already made.
+  await form.getByLabel("Tech base").selectOption("clan");
+  await form.getByLabel("Year").fill("2700");
+  await expect(form.getByLabel("Tech base")).toHaveValue("inner-sphere");
+  await expect(form.getByLabel("Tech base").locator("option[value=clan]")).toHaveCount(0);
+  await form.getByLabel("Year").fill("3025");
   await form.getByLabel("Name").fill("Era Walker");
   await form.getByRole("button", { name: "Start building" }).click();
   await expect(page.getByLabel("Year")).toHaveValue("3025");

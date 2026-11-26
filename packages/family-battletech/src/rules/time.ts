@@ -3,6 +3,7 @@
 // dates, a prototype's and a production's: in production it is available as its book prints it, from its prototype year to the year
 // before its production year it is a prototype (Experimental level unless the books say otherwise), and before that it does not exist.
 // Pure functions over plain data; nothing here throws on a record it does not understand.
+import { CLAN_TECHNOLOGY } from "../data/chassis";
 import type { PartFacts, Span } from "../data/chassis";
 import type { EraRow } from "../data/editions";
 import { CLASSIC, rulesetOf } from "../data/rulesets";
@@ -38,6 +39,12 @@ export function windowOf(record: When): Window | null {
   const era = eraOfRecord(record);
   return era ? { from: era.startYear, to: era.endYear ?? Number.POSITIVE_INFINITY } : null;
 }
+
+/** Whether the Clan technology base exists anywhere in the record's window (IO:AE printed p.17: from 2800). No year or era is no limit. */
+export const clanInTime = (when: When): boolean => {
+  const window = windowOf(when);
+  return window === null || window.to >= CLAN_TECHNOLOGY.firstYear;
+};
 
 /** True when any span overlaps the window; no spans, or no window, means no limit. */
 export function spansFit(spans: Span[] | undefined, window: Window | null): boolean {

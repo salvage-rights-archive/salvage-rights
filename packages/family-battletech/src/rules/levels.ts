@@ -8,7 +8,7 @@ import type { Ruleset } from "../data/rulesets";
 import type { Catalog, EquipmentRow } from "./catalog";
 import { configurationOf, mechTypeOf } from "./mech";
 import type { LocationCode, MechRecord } from "./mech";
-import { datesText, partPrototype, partSpans, phaseIn, rowPhase, windowOf } from "./time";
+import { clanInTime, datesText, partPrototype, partSpans, phaseIn, rowPhase, windowOf } from "./time";
 import type { Phase, When } from "./time";
 
 export const LEVEL_ORDER: RulesLevel[] = RULES_LEVELS.map((row) => row.id);
@@ -53,7 +53,7 @@ export const heatSinkMixPossible = (record: Pick<MechRecord, "frankenmech" | "te
 export const mixedPhase = (when: When): Phase | null => rowPhase(MIXED_TECHNOLOGY, "mixed", windowOf(when));
 
 /** The tech bases a unit at `level` and in `when` may choose, the ones that do not fit hidden: at Introductory only Inner Sphere (3025
- * technology); Mixed (an Advanced option, Experimental in its prototype years) only from its prototype year and at the level its phase
+ * technology); Clan only once the Clan Sub-Eras begin (2800, IO:AE p.17); Mixed (an Advanced option, Experimental in its prototype years) only from its prototype year and at the level its phase
  * needs; and only the tech bases the game of `when`'s edition offers, unless it lifts its lists at that level. The current choice is
  * kept so a selector never blanks. */
 export function techBaseChoices(level: RulesLevel | undefined, current: string, when: When): [string, string][] {
@@ -61,7 +61,7 @@ export function techBaseChoices(level: RulesLevel | undefined, current: string, 
   const at = level ?? DEFAULT_LEVEL;
   const phase = mixedPhase(when);
   const mixedFits = phase !== null && levelAtLeast(at, levelIn(MIXED_TECHNOLOGY.rulesLevel, phase));
-  const clanFits = levelAtLeast(at, DEFAULT_LEVEL);
+  const clanFits = levelAtLeast(at, DEFAULT_LEVEL) && clanInTime(when);
   const ruleset = rulesetOf(when.editionId);
   const offered = (value: string) => listsOpen(ruleset, at) || ruleset.techBases.some((base) => base === value);
   return all.filter(([value]) => value === current || (offered(value) && (value === "inner-sphere" || (value === "clan" ? clanFits : mixedFits))));
