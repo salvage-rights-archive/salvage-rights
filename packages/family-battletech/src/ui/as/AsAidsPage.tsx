@@ -4,6 +4,7 @@ import { AS_ATTACK_FLAGS, AS_PHYSICAL_TYPES, AS_RANGE_BRACKETS, AS_UNIT_TYPES, A
 import type { AsAttackFlag, AsPhysicalType } from "../../data/alpha-strike";
 import { odds2d6, targetNumber } from "../../rules/as-attack";
 import type { AttackerMove, TargetMove } from "../../rules/as-attack";
+import { SpecialsAid } from "./AsSpecials";
 
 const ATTACKER_MOVES: [AttackerMove, string][] = [
   ["standstill", "Stood still"],
@@ -143,6 +144,8 @@ export default function AsAidsPage() {
           <p role="status">{`Expected damage ${(chance * damageValue).toFixed(2)} (the chance to hit times ${String(damageValue)}).`}</p>
         )}
       </section>
+
+      <SpecialsAid />
     </div>
   );
 }

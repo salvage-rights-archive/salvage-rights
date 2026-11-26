@@ -5,6 +5,7 @@ import { clampSkill, duplicateForce, forceTotals, inPlay } from "../../rules/as-
 import type { AsForce, PlayFilter } from "../../rules/as-force";
 import { asOfficialMark } from "../../rules/as-mul";
 import { unitTitle } from "../../rules/as-unit";
+import { GlossSwitch, SpecialLinks } from "./AsSpecials";
 import type { AsUnit } from "../../rules/as-unit";
 import { STORAGE_READ_FAILED, STORAGE_WRITE_FAILED } from "../storage";
 import { forceHref, limitWords } from "./AsForces";
@@ -233,6 +234,8 @@ function ForceEditor({ initial, roster, filter, storage }: { initial: AsForce; r
         {force.members.length === 0 ? (
           <p>No units yet. Add one from your roster below.</p>
         ) : (
+          <>
+            {totals.lines.some((l) => l.unit && l.unit.card.specials.length > 0) && <GlossSwitch id="as-force-gloss" />}
           <ul className="bt-list">
             {totals.lines.map((line, index) => {
               const name = line.unit ? unitTitle(line.unit) || "Unnamed unit" : "";
@@ -265,10 +268,17 @@ function ForceEditor({ initial, roster, filter, storage }: { initial: AsForce; r
                   <button type="button" className="bt-button bt-button--secondary" aria-label={name ? `Remove ${name}` : "Remove this unit"} onClick={() => { remove(index); }}>
                     Remove
                   </button>
+                  {line.unit && line.unit.card.specials.length > 0 && (
+                    <div className="as-member__specials">
+                      <strong>Specials</strong>
+                      <SpecialLinks specials={line.unit.card.specials} />
+                    </div>
+                  )}
                 </li>
               );
             })}
           </ul>
+          </>
         )}
       </section>
 
