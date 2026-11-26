@@ -129,3 +129,28 @@ test("build a four-unit force, change skills and watch the totals, copy it, and 
   await page.goto(`${DEV}${ALPHA}/home`);
   await expect(page.getByRole("list").getByText("Strike lance copy")).toBeVisible();
 });
+
+test("the play aids and the table work at 320 px: the calculator answers, a staged hit lands at the End Phase", async ({ page }) => {
+  test.setTimeout(90_000);
+  await page.setViewportSize({ width: 320, height: 700 });
+  await saveAsUnit(page, DEV, "Archer", 35);
+  await page.goto(`${DEV}${ALPHA}/home`);
+  await page.getByRole("button", { name: "Start a new force" }).click();
+  await page.getByLabel("Unit", { exact: true }).selectOption({ label: "Archer (PV 35)" });
+  await page.getByRole("button", { name: "Add to force" }).click();
+  await page.getByRole("link", { name: "Play at the table" }).click();
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("turn 1");
+  await page.getByLabel("Damage taken").fill("2");
+  await page.getByRole("button", { name: "Stage the hit" }).click();
+  await expect(page.getByText("Waiting for the End Phase: 2 = 2.")).toBeVisible();
+  await page.getByRole("button", { name: "End the turn" }).click();
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("turn 2");
+  await page.goto(`${DEV}${ALPHA}/aids`);
+  await expect(page.getByRole("status").first()).toContainText("Target Number 8");
+  for (const address of [`${DEV}${ALPHA}/aids`, `${DEV}${ALPHA}/home`]) {
+    await page.goto(address);
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    const widths = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, client: document.documentElement.clientWidth }));
+    expect(widths.scroll, address).toBe(widths.client);
+  }
+});

@@ -102,22 +102,6 @@ export default function AsAidsPage() {
           {physical === "" && number("aid-heat", "Attacker heat (0 to 4)", heat, setHeat, 0, 4)}
           {physical === "" && number("aid-fc", "Fire control hits", fireControl, setFireControl, 0, 4)}
         </div>
-        <fieldset className="as-aids__flags">
-          <legend>Terrain and situation</legend>
-          {shown.map((flag) => (
-            <label key={flag} className="as-aids__flag">
-              <input type="checkbox" checked={flags.includes(flag)} onChange={(event) => { toggle(flag, event.target.checked); }} />
-              {AS_ATTACK_FLAGS[flag].label}
-            </label>
-          ))}
-          {physical === "" && (
-            <label className="as-aids__flag">
-              <input type="checkbox" checked={extreme} onChange={(event) => { setExtreme(event.target.checked); }} />
-              Extreme range is in play
-            </label>
-          )}
-        </fieldset>
-
         <div role="status" aria-live="polite" className="as-aids__result">
           {result.blocked ? (
             <p>
@@ -138,6 +122,21 @@ export default function AsAidsPage() {
             </>
           )}
         </div>
+        <fieldset className="as-aids__flags">
+          <legend>Terrain and situation</legend>
+          {shown.map((flag) => (
+            <label key={flag} className="as-aids__flag">
+              <input type="checkbox" checked={flags.includes(flag)} onChange={(event) => { toggle(flag, event.target.checked); }} />
+              {AS_ATTACK_FLAGS[flag].label}
+            </label>
+          ))}
+          {physical === "" && (
+            <label className="as-aids__flag">
+              <input type="checkbox" checked={extreme} onChange={(event) => { setExtreme(event.target.checked); }} />
+              Extreme range is in play
+            </label>
+          )}
+        </fieldset>
         <div className="bt-field">
           <label htmlFor="aid-damage">Damage at this range (from the card)</label>
           <input id="aid-damage" type="number" inputMode="decimal" min={0} step="any" value={damage} onChange={(event) => { setDamage(event.target.value); }} />
