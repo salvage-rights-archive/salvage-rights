@@ -194,7 +194,7 @@ export function ArmorPanel({ record, onEdit }: PartProps) {
             />
           ))}
       </div>
-      <BattleArmorDiagram locations={troopersOf(record)} use="armor" />
+      <BattleArmorDiagram locations={troopersOf(record)} use="armor" body={record.body} />
     </section>
   );
 }

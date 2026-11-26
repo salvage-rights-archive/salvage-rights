@@ -218,7 +218,11 @@ test("the campaign pages at 320 px, in both themes, without axe violations", asy
   const url = page.url();
   for (const name of ["Overview", "Roster", "Named Pilots", "Sorties", "Keywords", "Memorial"]) {
     await page.getByRole("button", { name, exact: true }).click();
-    if (name === "Named Pilots") await hireWithEdgeAbility(page);
+    if (name === "Named Pilots") {
+      await hireWithEdgeAbility(page);
+      // A link drawn as a button keeps its own text colour on hover (the site's link hover colour once made it 1:1).
+      await page.getByRole("link", { name: "Print the sheets" }).hover();
+    }
     await fitsPhone(page, `campaign ${name}, light`);
     await noViolations(page, `campaign ${name}, light`);
   }
@@ -242,7 +246,11 @@ test("the campaign pages at 320 px, in both themes, without axe violations", asy
   await page.goto(url);
   for (const name of ["Overview", "Roster", "Named Pilots"]) {
     await page.getByRole("button", { name, exact: true }).click();
-    if (name === "Named Pilots") await hireWithEdgeAbility(page);
+    if (name === "Named Pilots") {
+      await hireWithEdgeAbility(page);
+      // A link drawn as a button keeps its own text colour on hover (the site's link hover colour once made it 1:1).
+      await page.getByRole("link", { name: "Print the sheets" }).hover();
+    }
     await noViolations(page, `campaign ${name}, dark`);
   }
   await page.goto(printUrl);

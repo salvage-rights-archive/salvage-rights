@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 import type { Page } from "@playwright/test";
-import { ACES, DEV, expect, pickToken, saveAcesCard, saveAcesCommand, saveAsUnit, test } from "./fixtures";
+import { ACES, DEV, expect, expectPage, pickToken, saveAcesCard, saveAcesCommand, saveAsUnit, test } from "./fixtures";
 
 // Every card here is invented. No printed card, photo or scan is used.
 
@@ -122,7 +122,7 @@ test("the editor does not scroll sideways at 320 px at any step, and every contr
   const check = (where: string) => fitsPhone(page, where);
   for (const address of [`${DEV}${ACES}/home`, `${DEV}${ACES}/cards`]) {
     await page.goto(address);
-    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    await expectPage(page.getByRole("heading", { level: 1 })).toBeVisible();
     await check(address);
   }
   await page.goto(`${DEV}${editor}`);

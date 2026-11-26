@@ -37,13 +37,13 @@ test("build a tracked vehicle at 320 px, give it armor and a weapon, save it and
   await page.getByRole("button", { name: /^Machine Gun/ }).first().click();
   await expect(page.getByRole("button", { name: /^Remove Machine Gun/ })).toBeVisible();
   // The armor drawing is keyboard-operable: Enter and Space on a location go to its field.
-  const front = page.getByRole("button", { name: /^Front, 30 armor points/ });
+  const front = page.getByRole("button", { name: /^Front, 30 armor/ });
   await front.focus();
   await page.getByLabel("Left Side armor").focus();
   await front.focus();
   await page.keyboard.press("Enter");
   await expect(page.getByLabel("Front armor")).toBeFocused();
-  await page.getByRole("button", { name: /^Rear, 0 armor points/ }).focus();
+  await page.getByRole("button", { name: /^Rear, 0 armor/ }).focus();
   await page.keyboard.press("Space");
   await expect(page.getByLabel("Rear armor")).toBeFocused();
   await page.getByRole("button", { name: "Save", exact: true }).click();
