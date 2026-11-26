@@ -439,7 +439,8 @@ export const FIGHTER_FIGURES: FighterFigures = {
   /** A cockpit and controls weigh this many tons (aerospace) or this share of the tonnage, rounded up to a half ton (conventional). */
   controls: {
     aerospace: [share(ALL("32", "44", "62", "189"), 3)],
-    conventional: [share(LATER("44", "62", "189"), 0.1, "AeroTech 2 Revised prints 10 tons in a percent column; read as 10 percent like the other two (conflict 46)")],
+    // Conflict 46 in the archive ledger.
+    conventional: [share(LATER("44", "62", "189"), 0.1, "AeroTech 2 Revised prints 10 tons in a percent column; read as 10 percent like the other two")],
   },
   /** Armor points the cockpit gives free, on the cockpit location (AeroTech only; its six armor areas include the cockpit). */
   cockpitArmor: [share({ [E.at1]: "32" }, 10)],
