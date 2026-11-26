@@ -1,6 +1,6 @@
 // The rules check for battle armor: findings with the printed page they rest on. Findings are advice, never refusals: nothing is removed from a
 // record and nothing throws on one this version does not understand. Messages are our own words and state the numbers.
-import { ARMOR_TYPES, MANIPULATORS, MOTIVE, SQUAD, WEIGHT_CLASSES, armorTypeOf, isMotive, manipulatorOf, weightClassOf } from "../../data/battlearmor";
+import { ARMOR_TYPES, BA_BOOSTERS, MANIPULATORS, MOTIVE, SQUAD, WEIGHT_CLASSES, armorTypeOf, isMotive, manipulatorOf, weightClassOf } from "../../data/battlearmor";
 import type { Cite, Dated } from "../../data/battlearmor";
 import type { RulesLevel } from "../../data/chassis";
 import type { Catalog } from "../catalog";
@@ -165,6 +165,12 @@ const equipmentCheck: Check = (record, catalog) => {
   if (myomer.length > 1) out.push({ check: "equipment", level: "error", message: "A suit may mount only one myomer booster.", where: { mountId: myomer[1]?.id }, cite: toAue(98) });
   if (mechanical.length > 0 && myomer.length > 0) out.push({ check: "equipment", level: "error", message: "A mechanical jump booster and a myomer booster cannot be combined.", where: { mountId: myomer[0]?.id }, cite: toAue(98) });
   if (myomer.length > 0 && (record.armor.type.startsWith("stealth") || record.armor.type === "mimetic")) out.push({ check: "equipment", level: "error", message: "A suit with a myomer booster may not wear stealth or mimetic armor.", where: { mountId: myomer[0]?.id }, cite: toAue(98) });
+  for (const m of record.mounts.filter((x) => x.pack === true)) {
+    const weapon = rowOf(m);
+    if (!BA_BOOSTERS.dwp.classes.includes(record.weightClass)) out.push({ check: "equipment", level: "error", message: "Only medium, heavy and assault suits may mount a detachable weapon pack.", where: { mountId: m.id }, cite: toAue(99) });
+    else if (weapon?.kind !== "weapon" || carriesShots(weapon)) out.push({ check: "equipment", level: "error", message: "A detachable weapon pack carries a weapon that is not a missile launcher, Narc or ammunition-carrying artillery piece.", where: { mountId: m.id }, cite: toAue(99) });
+    if (record.motive.kind === "jump" && record.motive.mp > 0) out.push({ check: "equipment", level: "note", message: "A suit carrying a detachable weapon pack cannot use its Jump MP until the pack is jettisoned.", where: { mountId: m.id }, cite: toAue(99) });
+  }
   const tube = record.mounts.find((m) => isTubeArtillery(rowOf(m)) && m.location !== "body");
   if (tube) out.push({ check: "equipment", level: "error", message: "Tube artillery can only be mounted in the Body.", where: { mountId: tube.id }, cite: toAue(96) });
   if (camo.length > 0 && record.armor.type === "mimetic") out.push({ check: "equipment", level: "error", message: "A suit may mount only one camo system, and mimetic armor is one.", where: { mountId: camo[0]?.id }, cite: TM(253) });

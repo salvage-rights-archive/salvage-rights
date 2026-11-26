@@ -366,8 +366,8 @@ export const AMMUNITION: EquipmentGroup[] = [
   // Alternative munitions from the Heavy Weapons Ammunition Construction Data table (Tactical Operations: Advanced Units and Equipment, printed
   // p. 229, read against the page image; the rules level and rules pages are the Alternative Munitions play table, p. 228): the mortar munitions,
   // the remote sensor dispenser sensors and the Copperhead artillery rounds. Like the other special munitions here they carry no shots per ton:
-  // the table gives them "x1" of the standard munition of the weapon, and the bin is a ton in a slot. Not added: the mine types (the table leaves
-  // their shots and weight to the special rules, "**"), and "HPC" ammunition, which none of the
+  // the table gives them "x1" of the standard munition of the weapon, and the bin is a ton in a slot. The mine types are choices for a dispenser (the
+  // end of this file), not bins; "HPC" ammunition is not added, since none of the
   // rulebook extracts in the archive names.
   {
     defaults: { kind: "ammunition", techBase: "inner-sphere", cite: { book: TO, page: 229 }, checked: "page", tons: 1, slots: 1, rulesLevel: "advanced", units: ["mech", "industrialmech", "vehicle"] },
@@ -404,13 +404,13 @@ export const AMMUNITION: EquipmentGroup[] = [
   // serve (caseless carries twice the shots, laser-inhibiting Arrow IV half), and the bin is a ton in a slot. Years: the item entry's staged years
   // (introduced, extinct, recovered) where it prints them, the table's where it does not; a stage the entry omits comes from IO:AE printed pp. 53-54
   // (prototype year, and the production year of an item whose Latest Intro Date here is a "P"): caseless 3056 / 3079, air-defense arrow 3068 / 3080,
-  // laser-inhibiting 3053 / 3083. "PS" is 1950 and "ES" 2200 (marked inferred), as elsewhere. Not added: the Anti-Ship and other bombs (weapons.ts), the mines
-  // and the grenade-launcher munitions, which are not bins (a dispenser or one-shot launcher takes its type, TO:AUE pp. 137, 175-179), and Arrow IV Homing,
+  // laser-inhibiting 3053 / 3083. "PS" is 1950 and "ES" 2200 (marked inferred), as elsewhere. Not here: the Anti-Ship and other bombs (weapons.ts), the mines
+  // and the grenade-launcher munitions, which are choices for a dispenser or one-shot launcher and have rows at the end of this file (TO:AUE pp. 137, 175-179), and Arrow IV Homing,
   // which is the standard Arrow IV ammunition above. The IS Copperhead years above follow the same entry (introduced 2645, extinct 2825, recovered 3051).
   // Two entries disagree with their table: Tracer (entry circa 2310, table 2300; IO:AE ~2300) and Smoke Arrow IV (entry circa 2620, table Clan 2600; IO:AE
   // 2600). The Inner Sphere rows take the entry (the panel method for munitions); the Clan rows take their own Clan column (2300, 2600). Both go to the next
   // book panel. IO:AE fills a Clan introduction where TO:AUE gives none, as it does for the sub-capital weapons: Clan caseless 3109, Clan armor-piercing and
-  // flechette autocannon rounds 3105 (printed p. 53). The Clan chaff grenade (3063) and inferno mine (3066) have no row (grenade and mine types are not bins);
+  // flechette autocannon rounds 3105 (printed p. 53). The Clan chaff grenade and inferno mine rows follow TO:AUE's 3065 (IO:AE 3063 and 3066);
   // the Clan anti-ship missile (3076) is in weapons.ts. Caseless carries twice, and laser-inhibiting half, the shots of the standard round (`shotsFactor`).
   {
     defaults: { kind: "ammunition", techBase: "inner-sphere", cite: { book: TO, page: 225 }, playCite: { book: TO, page: 224 }, checked: "page", tons: 1, slots: 1, rulesLevel: "advanced", units: ["mech", "industrialmech", "vehicle"] },
@@ -483,7 +483,7 @@ export const AMMUNITION: EquipmentGroup[] = [
   // 2430, prototype 2390), Smoke LRM 2333 (2342, prototype 2341) and Follow-the-Leader's modern year 3053 (3046).
   // The Swarm LRM (IS) extinction is 2833 (TO:AUE p. 183, IO:AE p. 55); the 2840 the row had came from the TechManual prose (p. 231: factories gone "by 2840"), an older book.
   // A ton carries the launcher's standard shots times `shotsFactor` (the Ammo column: x0.5 or x1). The tables give weight x1: the bin is a
-  // ton in a slot. Not added here: Anti-Ship and other bomb and artillery munitions, the grenade-launcher, flamer and mine munitions.
+  // ton in a slot. Not added here: Anti-Ship and other bomb and artillery munitions (other groups below), the grenade-launcher and mine munitions (the choices at the end of the file).
   {
     defaults: { kind: "ammunition", techBase: "inner-sphere", cite: { book: TO, page: 227 }, playCite: { book: TO, page: 226 }, checked: "page", tons: 1, slots: 1, rulesLevel: "advanced", units: ["mech", "industrialmech", "vehicle"] },
     items: [

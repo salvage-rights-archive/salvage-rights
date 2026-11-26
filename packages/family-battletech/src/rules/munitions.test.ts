@@ -122,6 +122,18 @@ describe("a battle armor suit with a mine dispenser and the new battle armor ite
     expect([fast(false), fast(true)]).toEqual([true, false]);
   });
 
+  it("a weapon in a detachable weapon pack weighs three quarters (to 5 kg) in one slot and costs 18,000 more; a light suit may not mount a pack, nor a missile launcher go in one", () => {
+    const packed = suit([mount("ba-heavy-flamer-is", { pack: true })]);
+    expect(baBuild(packed, catalog).lines.find((l) => l.label === "Heavy Flamer")?.kg).toBe(265);
+    expect(baBuild(packed, catalog).slots.body?.items).toBe(1);
+    const cost = (r: BaRecord) => baCost(r, catalog).lines.find((l) => l.label === "Weapons and equipment")?.cost;
+    expect([cost(packed), cost(suit([mount("ba-heavy-flamer-is")]))]).toEqual([29_250, 11_250]);
+    const messages = (r: BaRecord) => checkBa(r, catalog).map((f) => f.message);
+    expect(messages(suit([mount("ba-heavy-flamer-is", { pack: true })], { weightClass: "light" }))).toContain("Only medium, heavy and assault suits may mount a detachable weapon pack.");
+    expect(messages(suit([mount("ba-srm-2-is", { pack: true, shots: 4 })]))).toContain("A detachable weapon pack carries a weapon that is not a missile launcher, Narc or ammunition-carrying artillery piece.");
+    expect(baWithDefaults(JSON.parse(JSON.stringify(packed)))?.mounts[0]?.pack).toBe(true);
+  });
+
   it("prices a reusable drop chute as twice the chute it is fitted to", () => {
     const cost = (extra: string[]) => baCost(suit([mount("ba-drop-chute-stealth-is"), ...extra.map((id) => mount(id))]), catalog).lines.find((l) => l.label === "Weapons and equipment")?.cost;
     expect([cost([]), cost(["ba-drop-chute-reusable-is"])]).toEqual([5_000, 15_000]);

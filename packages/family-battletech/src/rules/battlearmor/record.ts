@@ -21,6 +21,8 @@ export interface BaMount {
   shots?: number;
   /** The munition chosen for a mine dispenser: a catalog row id (rules/munitions.ts). Absent reads as the standard mine. */
   munition?: string;
+  /** The weapon is carried in a detachable weapon pack (TO:AUE p. 99): weighed at three quarters, taking one slot, and 18,000 more. */
+  pack?: true;
 }
 
 export interface BaRecord {
@@ -113,7 +115,7 @@ function part<T>(v: unknown, known: readonly (keyof T & string)[], fill: (o: Rec
   return { ...unknownKeys(o, known), ...fill(o) };
 }
 
-const MOUNT_KEYS = ["id", "equipmentId", "name", "location", "shots", "munition"] as const;
+const MOUNT_KEYS = ["id", "equipmentId", "name", "location", "shots", "munition", "pack"] as const;
 function mountOf(v: Record<string, unknown>, index: number): BaMount {
   const mount: BaMount = {
     ...unknownKeys(v, MOUNT_KEYS),
@@ -124,6 +126,7 @@ function mountOf(v: Record<string, unknown>, index: number): BaMount {
   };
   if (isNumber(v.shots)) mount.shots = v.shots;
   if (isString(v.munition)) mount.munition = v.munition;
+  if (v.pack === true) mount.pack = true;
   return mount;
 }
 

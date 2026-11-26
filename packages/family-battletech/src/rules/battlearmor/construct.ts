@@ -42,10 +42,11 @@ export const ammoSlots = (shots: number): number => Math.ceil(shots / SHOTS_PER_
 
 export interface MountFigures {
   row: EquipmentRow;
-  /** The item's own weight and ammunition weight, in kilograms, and its slots including ammunition. */
+  /** The item's own weight and ammunition weight, in kilograms, and its slots including ammunition (`baseSlots` without it). */
   itemKg: number;
   ammoKg: number;
   slots: number;
+  baseSlots: number;
 }
 /** `weightClass` is the suit's, for the one item whose weight follows it: the mechanical jump booster weighs twice a jump jet of the class (TO:AUE p. 225). */
 export function figuresOf(mount: BaMount, catalog: Catalog, editionId: string, weightClass?: string): MountFigures | undefined {
@@ -53,8 +54,11 @@ export function figuresOf(mount: BaMount, catalog: Catalog, editionId: string, w
   if (!row || typeof row.tons !== "number" || typeof row.slots !== "number") return undefined;
   const shots = carriesShots(row) ? shotsOf(mount) : 0;
   const cls = isMechanicalBooster(row) && weightClass !== undefined ? weightClassOf(weightClass) : undefined;
-  const itemKg = cls ? tidy(BA_BOOSTERS.mechanicalJumpWeightFactor * cls.jump.kgPerMp) : kgOfTons(row.tons);
-  return { row, itemKg, ammoKg: tidy(shots * (row.ammoKgPerShot ?? 0)), slots: row.slots + (shots > 0 ? ammoSlots(shots) : 0) };
+  const whole = cls ? tidy(BA_BOOSTERS.mechanicalJumpWeightFactor * cls.jump.kgPerMp) : kgOfTons(row.tons);
+  const ammoKg = tidy(shots * (row.ammoKgPerShot ?? 0));
+  // A weapon in a detachable weapon pack: three quarters of its weight, to the next 5 kg; the pack takes the one slot (TO:AUE p. 99).
+  if (mount.pack === true && row.kind === "weapon" && !carriesShots(row)) return { row, itemKg: Math.ceil(tidy(whole * BA_BOOSTERS.dwp.weightFactor) / BA_BOOSTERS.dwp.roundKg) * BA_BOOSTERS.dwp.roundKg, ammoKg, slots: 1, baseSlots: 1 };
+  return { row, itemKg: whole, ammoKg, slots: row.slots + (shots > 0 ? ammoSlots(shots) : 0), baseSlots: row.slots };
 }
 
 export interface SlotUse {
@@ -194,7 +198,7 @@ export function build(record: BaRecord, catalog: Catalog): BaBuild {
   const weapons: Partial<Record<BaLocation, number>> = {};
   for (const { mount, figures } of used) {
     const use = slots[mount.location as BaLocation];
-    const base = figures.row.slots as number;
+    const base = figures.baseSlots;
     const ammo = figures.slots - base;
     if (use) {
       use.items += base;

@@ -2,7 +2,7 @@
 // pp. 315-317 (the shared Speed Factor and Target Modifier tables of data/bv.ts, the unit size modifiers below); cost follows TechManual p. 281 for the
 // structure, pp. 296-297 for equipment (data/cost.ts) and p. 285 for the final formula. Fractions are kept to the end, then rounded half up.
 import { BATTLE_ARMOR_BV, TARGET_MODIFIER } from "../../data/bv";
-import { COST_FIGURES, GROUND_MP_COST, armorTypeOf, isMotive, manipulatorOf, weightClassOf } from "../../data/battlearmor";
+import { BA_BOOSTERS, COST_FIGURES, GROUND_MP_COST, armorTypeOf, isMotive, manipulatorOf, weightClassOf } from "../../data/battlearmor";
 import type { Catalog, EquipmentRow } from "../catalog";
 import { priceOf } from "../cost";
 import { skillMultiplier, speedFactor } from "../bv";
@@ -136,6 +136,10 @@ export function unitCost(record: BaRecord, catalog: Catalog): BaCost {
     // chute costs twice the drop chute it is fitted to (TO:AUE p. 225; a standard one if the suit carries none).
     if (row && isMyomerBooster(row) && typeof price?.price === "object" && "perAmount" in price.price) {
       equipment += price.price.perAmount * myomerBonus(record.weightClass);
+      continue;
+    }
+    if (row && mount.pack === true && typeof price?.price === "number") {
+      equipment += price.price + BA_BOOSTERS.dwp.extraCost;
       continue;
     }
     if (row && isMechanicalBooster(row) && cls) {

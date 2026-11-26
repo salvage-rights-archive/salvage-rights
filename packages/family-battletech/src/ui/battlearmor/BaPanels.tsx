@@ -272,6 +272,12 @@ export function EquipmentPanel({ record, catalog, onEdit }: PartProps & { catalo
                         {chosen !== undefined && <span className="bt-row__credit">{`${munitionShort(chosen)}${reload === undefined ? "" : `: two shots cost ${reload.toLocaleString("en-US")} C-bills to replace, not counted in the unit's cost`}.`}</span>}
                       </span>
                       <span className="bt-row__actions">
+                        {figures?.row.kind === "weapon" && !carriesShots(figures.row) && ["medium", "heavy", "assault"].includes(record.weightClass) && (
+                          <label className="bt-check" htmlFor={`ba-pack-${mount.id}`}>
+                            <input id={`ba-pack-${mount.id}`} type="checkbox" checked={mount.pack === true} onChange={(e) => { onEdit((d) => { const m = d.mounts.find((x) => x.id === mount.id); if (m) { if (e.target.checked) m.pack = true; else delete m.pack; } }); }} />
+                            In a detachable weapon pack
+                          </label>
+                        )}
                         {choices.length > 0 && (
                           <SelectField
                             id={`ba-munition-${mount.id}`}
