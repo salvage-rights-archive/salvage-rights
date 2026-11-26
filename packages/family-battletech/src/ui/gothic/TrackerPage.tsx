@@ -31,6 +31,7 @@ import { loadCatalog } from "../../rules/catalog";
 import type { Catalog } from "../../rules/catalog";
 import GamePicture from "../GamePicture";
 import { STORAGE_READ_FAILED, STORAGE_WRITE_FAILED } from "../storage";
+import Silhouette from "./Silhouette";
 import { openGothicStorage } from "./storage";
 import type { AbomEntry, GothicStorage } from "./storage";
 import "../classic.scss";
@@ -93,7 +94,12 @@ function UnitTracker({ unit, stats, state, catalog, onChange, onRemove }: UnitTr
 
   return (
     <section className="bt-section bt-track" aria-labelledby={`bt-track-${unit.id}`}>
-      <h2 id={`bt-track-${unit.id}`}>{name}</h2>
+      <h2 id={`bt-track-${unit.id}`}>
+        <span className="bt-silhouetted">
+          <Silhouette typeId={unit.typeId} classId={stats.classId} size={48} />
+          <span>{name}</span>
+        </span>
+      </h2>
       {active === 0 && <p className="bt-problem">All creatures are out: the unit is destroyed.</p>}
       <dl className="bt-track__facts">
         <div>

@@ -1,0 +1,21 @@
+// An Abomination silhouette beside a unit's name: the drawing keeps its size and the name wraps beside it.
+.bt-silhouetted {
+  display: flex;
+  align-items: center;
+  gap: var(--sr-space-2);
+
+  > :last-child {
+    min-width: 0;
+  }
+}
+
+.bt-silhouette {
+  flex: none;
+}
+
+// Paper gets the name alone.
+@media print {
+  .bt-silhouette {
+    display: none;
+  }
+}
