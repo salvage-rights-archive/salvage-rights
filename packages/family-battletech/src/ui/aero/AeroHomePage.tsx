@@ -11,7 +11,8 @@ import { MAX_LIBRARY_BYTES, STORAGE_READ_FAILED, STORAGE_WRITE_FAILED } from "..
 import { newDraft, recordFromDraft, settle, typeReady, weightHint } from "./edit";
 import type { AeroDraft } from "./edit";
 import { NumberField, SelectField, TextField } from "./fields";
-import { editorHref } from "./routes";
+import { sheetProfileFor } from "../../data/aero-sheet";
+import { editorHref, sheetHref } from "./routes";
 import { downloadAero, fromAeroFile, openAeroStorage } from "./storage";
 import type { AeroEntry, AeroStorage } from "./storage";
 import "../classic.scss";
@@ -212,6 +213,11 @@ export default function AeroHomePage() {
                         <Link className="bt-button" aria-label={`Open ${name}`} to={editorHref(record.id)}>
                           Open
                         </Link>
+                        {sheetProfileFor(record.editionId, record.unitType) && (
+                          <Link className="bt-button bt-button--secondary" aria-label={`Record sheet of ${name}`} to={sheetHref(record.id)}>
+                            Sheet
+                          </Link>
+                        )}
                         <button
                           type="button"
                           className="bt-button bt-button--secondary"
