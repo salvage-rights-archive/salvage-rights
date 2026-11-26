@@ -4,7 +4,8 @@ import userEvent from "@testing-library/user-event";
 import { IDBFactory } from "fake-indexeddb";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { bipedRecord } from "../../rules/fixtures";
+import { bipedRecord, mount } from "../../rules/fixtures";
+import { splitRecord } from "../../rules/omni";
 import { openFamilyStorage } from "../storage";
 import AsAidsPage from "./AsAidsPage";
 import AsConvert from "./AsConvert";
@@ -56,5 +57,27 @@ describe("Convert a Classic 'Mech", () => {
     await user.click(screen.getByRole("button", { name: "Convert" }));
     await user.click(await screen.findByRole("button", { name: "Open the card to review" }));
     expect(JSON.parse((await screen.findByTestId("draft")).textContent)).toEqual({ kind: "converted", ref: record.id, type: "BM" });
+  });
+
+  it("lists each configuration of a saved OmniMech chassis and converts it directly", async () => {
+    const user = userEvent.setup();
+    const chassis = splitRecord(bipedRecord({ id: "omni-1", mounts: [{ ...mount("m1", "medium-laser-is", "RA", null), name: "Medium Laser" }] }), []);
+    const configurationId = chassis.configurations[0]?.id ?? "";
+    await (await openFamilyStorage()).saveOmni(chassis);
+    render(
+      <MemoryRouter initialEntries={["/home"]}>
+        <Routes>
+          <Route path="/home" element={<AsConvert />} />
+          <Route path="*" element={<Where />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+    const pick = await screen.findByLabelText("Classic 'Mech");
+    await waitFor(() => { expect(pick.querySelectorAll("option").length).toBe(2); });
+    await user.selectOptions(pick, `omni-1:${configurationId}`);
+    await user.click(screen.getByRole("button", { name: "Convert" }));
+    expect(await screen.findByText(/Point Value \d+/)).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Open the card to review" }));
+    expect(JSON.parse((await screen.findByTestId("draft")).textContent)).toMatchObject({ kind: "converted", ref: `omni-1:${configurationId}` });
   });
 });

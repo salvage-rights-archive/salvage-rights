@@ -66,7 +66,7 @@ export function convertSpecials(record: MechRecord, catalog: Catalog, conversion
     earned.set(special.code, { special, because, cite });
     working.push({ step: "special", rule: `${special.raw}: ${because}`, detail: "", cite });
   };
-  const { items } = equipmentItems(record, catalog);
+  const { items, unknown } = equipmentItems(record, catalog);
   const count = (ids: string[]) => items.filter((i) => ids.includes(i.row.id)).length;
   const hasAny = (ids: string[]) => count(ids) > 0;
   const card = conversion.unit.card;
@@ -134,7 +134,8 @@ export function convertSpecials(record: MechRecord, catalog: Catalog, conversion
     add(make("CASE"), "it lists CASE", CASE_RULE.cite);
     if (record.techBase === "mixed") findings.push({ code: "case-mixed", part: "mixed technology", message: "A mixed-technology 'Mech might also get CASE for Clan explosive components; the book does not say how to tell, so we gave it only for a CASE item.", cite: CASE_RULE.cite });
   }
-  if (explosive.length === 0) add(make("ENE"), "no explosive components", ENE_CITE);
+  // An item our catalog does not know might be explosive, so no ENE is claimed for it.
+  if (explosive.length === 0 && unknown.length === 0) add(make("ENE"), "no explosive components", ENE_CITE);
 
   // ---- Heat (HT) from the heat-generating weapons table ----
   const lines = conversion.weapons?.all ?? [];
