@@ -6,7 +6,7 @@ import { ERAS, SUB_ERAS, eraLabel } from "../../data/editions";
 import type { EraRow } from "../../data/editions";
 import { eraNeedsPick, eraOfRecord, erasOfYear, setEra, setYear } from "../../rules/availability";
 import { armorChoices, equipmentChoices, manipulatorChoices, motiveChoices, weightClassChoices } from "../../rules/battlearmor/availability";
-import { LOCATION_NAMES, build, carriesShots, figuresOf, locationName, locationsOf, shotsOf } from "../../rules/battlearmor/construct";
+import { LOCATION_NAMES, build, carriesShots, figuresOf, isMissileWeapon, locationName, locationsOf, shotsOf } from "../../rules/battlearmor/construct";
 import type { BaRecord } from "../../rules/battlearmor/record";
 import type { Catalog, EquipmentRow } from "../../rules/catalog";
 import { DEFAULT_LEVEL, levelRow, techBaseChoices } from "../../rules/levels";
@@ -272,19 +272,19 @@ export function EquipmentPanel({ record, catalog, onEdit }: PartProps & { catalo
                         {chosen !== undefined && <span className="bt-row__credit">{`${munitionShort(chosen)}${reload === undefined ? "" : `: two shots cost ${reload.toLocaleString("en-US")} C-bills to replace, not counted in the unit's cost`}.`}</span>}
                       </span>
                       <span className="bt-row__actions">
-                        {figures?.row.kind === "weapon" && !carriesShots(figures.row) && ["medium", "heavy", "assault"].includes(record.weightClass) && (
+                        {figures?.row.kind === "weapon" && !isMissileWeapon(figures.row) && (["medium", "heavy", "assault"].includes(record.weightClass) || mount.pack === true) && (
                           <label className="bt-check" htmlFor={`ba-pack-${mount.id}`}>
                             <input id={`ba-pack-${mount.id}`} type="checkbox" checked={mount.pack === true} onChange={(e) => { onEdit((d) => { const m = d.mounts.find((x) => x.id === mount.id); if (m) { if (e.target.checked) m.pack = true; else delete m.pack; } }); }} />
-                            In a detachable weapon pack
+                            {`${shortName(figures.row.name)} in a detachable weapon pack`}
                           </label>
                         )}
                         {choices.length > 0 && (
                           <SelectField
                             id={`ba-munition-${mount.id}`}
-                            label="Mine type"
+                            label={`Mine type of ${shortName(figures?.row.name ?? mount.name)}`}
                             value={chosen?.id ?? ""}
-                            options={choices.map((c) => ({ value: c.id, label: munitionShort(c) }))}
-                            onChange={(v) => { onEdit((d) => { const m = d.mounts.find((x) => x.id === mount.id); if (m) m.munition = v; }); }}
+                            options={[...(figures && defaultMunitionId(figures.row, catalog, record.editionId) === undefined ? [{ value: "", label: "Ordinary load" }] : []), ...choices.map((c) => ({ value: c.id, label: munitionShort(c) }))]}
+                            onChange={(v) => { onEdit((d) => { const m = d.mounts.find((x) => x.id === mount.id); if (m) { if (v === "") delete m.munition; else m.munition = v; } }); }}
                           />
                         )}
                         {figures && carriesShots(figures.row) && (

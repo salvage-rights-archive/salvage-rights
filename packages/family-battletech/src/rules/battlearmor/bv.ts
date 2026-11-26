@@ -7,7 +7,7 @@ import type { Catalog, EquipmentRow } from "../catalog";
 import { priceOf } from "../cost";
 import { skillMultiplier, speedFactor } from "../bv";
 import { roundHalfUp, tidy } from "../walk";
-import { dispenserBv, chosenMunition } from "../munitions";
+import { dispenserBv, chosenMunition, grenadeExtraBv } from "../munitions";
 import { build, carriesShots, figuresOf, isMyomerBooster, isMechanicalBooster, myomerBonus, shotsOf } from "./construct";
 import type { BaRecord } from "./record";
 
@@ -16,7 +16,7 @@ export const SIZE_MODIFIER = [1.0, 2.2, 3.6, 5.2, 7.0, 9.0];
 /** Claws that aid a Swarm attack add to the weapon rating (v4.1 p. 310): magnets 3 a pair, vibro-claws 1 each (table p. 317). */
 const SWARM_CLAW_BV: Record<string, number> = { "battle-claw-magnets": 1.5, "heavy-claw-magnets": 1.5, "battle-claw-vibro": 1, "heavy-claw-vibro": 1 };
 /** Missile systems, which the direct-fire rating leaves out. */
-const MISSILE = /^ba-(lrm|srm|mrm|advanced-srm|rocket-launcher)-|^ba-compact-narc-|^ba-pop-up-mine-|^ba-tube-artillery-/;
+const MISSILE = /^ba-(lrm|srm|mrm|advanced-srm|rocket-launcher)-|^ba-compact-narc-|^ba-pop-up-mine-/;
 /** The Defensive Factor Modifier Table adds for a Camo System item (the armor types add theirs: data/battlearmor.ts). */
 const CAMO_ITEM_FACTOR = 0.2;
 const BATTLE_ARMOR_FACTOR = 0.1;
@@ -64,7 +64,9 @@ export function battleValue(record: BaRecord, catalog: Catalog): BaBv {
     return figures ? [{ mount, row: figures.row, entry: mine === undefined ? ENTRIES.get(figures.row.id) : { bv: mine } }] : [];
   });
   for (const m of mounts) if (m.entry?.defensive) defensive += 1;
-  const tmm = Math.max(targetModifier(b.moves.ground, 0), b.moves.jump > 0 ? targetModifier(b.moves.jump, TARGET_MODIFIER.jumpBonus) : 0, b.moves.vtol > 0 ? targetModifier(b.moves.vtol, 1) : 0, b.moves.umu > 0 ? targetModifier(b.moves.umu, 0) : 0);
+  // The mechanical jump booster adds 1 Ground MP, counted in the Defensive and Speed Factors (TO:AUE pp. 98, 192).
+  const ground = b.moves.ground + (mounts.some((m) => isMechanicalBooster(m.row)) ? 1 : 0);
+  const tmm = Math.max(targetModifier(ground, 0), b.moves.jump > 0 ? targetModifier(b.moves.jump, TARGET_MODIFIER.jumpBonus) : 0, b.moves.vtol > 0 ? targetModifier(b.moves.vtol, 1) : 0, b.moves.umu > 0 ? targetModifier(b.moves.umu, 0) : 0);
   const camoItem = mounts.some((m) => m.row.id.startsWith("ba-camo-system"));
   const factor = 1 + tmm / 10 + BATTLE_ARMOR_FACTOR + (armor?.bvFactor ?? 0) + (camoItem ? CAMO_ITEM_FACTOR : 0);
   const defensiveRating = defensive * factor;
@@ -89,15 +91,18 @@ export function battleValue(record: BaRecord, catalog: Catalog): BaBv {
   const claws = record.body === "humanoid" ? (SWARM_CLAW_BV[record.manipulators.la] ?? 0) + (SWARM_CLAW_BV[record.manipulators.ra] ?? 0) : 0;
   const antiMech = b.capabilities.swarm ? direct + claws : 0;
   const weaponRating = direct + missile + antiMech + other;
-  const speed = speedFactor(Math.max(b.moves.ground, b.moves.jump, b.moves.vtol, b.moves.umu));
+  const speed = speedFactor(Math.max(ground, b.moves.jump, b.moves.vtol, b.moves.umu));
   const offensiveRating = weaponRating * speed;
   steps.push({ label: "Weapon rating", value: tidy(weaponRating) }, { label: "Speed factor", value: speed }, { label: "Offensive rating", value: tidy(offensiveRating) });
 
   const perSuit = defensiveRating + offensiveRating;
   const size = SIZE_MODIFIER[Math.min(6, Math.max(1, Math.round(record.troopers))) - 1] ?? 1;
-  const base = roundHalfUp(perSuit * size);
+  // Incendiary grenades: half the launcher's BV for each trooper, added to the unit's base BV before the skill multiplier (TO:AUE p. 198, book panel; a doubtful reading).
+  const grenades = mounts.reduce((sum, m) => sum + (m.entry && /^ba-(heavy|micro)-grenade-launcher-/.test(m.row.id) ? grenadeExtraBv(chosenMunition(m.row, m.mount.munition, catalog, record.editionId), m.entry.bv) : 0), 0) * Math.min(6, Math.max(1, Math.round(record.troopers)));
+  if (grenades > 0) steps.push({ label: "Incendiary grenades (a doubtful reading of TO:AUE p. 198)", value: tidy(grenades) });
+  const base = roundHalfUp(perSuit * size + grenades);
   const skill = skillMultiplier({ gunnery: record.skills.gunnery, piloting: record.skills.antiMech });
-  return { defensive: tidy(defensiveRating), offensive: tidy(offensiveRating), perSuit: tidy(perSuit), base, total: roundHalfUp(perSuit * size * skill), steps, unvalued };
+  return { defensive: tidy(defensiveRating), offensive: tidy(offensiveRating), perSuit: tidy(perSuit), base, total: roundHalfUp((perSuit * size + grenades) * skill), steps, unvalued };
 }
 
 export interface BaCostLine {
@@ -133,7 +138,7 @@ export function unitCost(record: BaRecord, catalog: Catalog): BaCost {
     const row = mount.equipmentId === null ? undefined : catalog.rowFor(mount.equipmentId, record.editionId);
     const price = row ? priceOf(row) : undefined;
     // The items whose price follows the suit: a myomer booster is 75,000 for each Ground MP it gives, a mechanical jump booster costs a jump jet of the class, and a reusable drop
-    // chute costs twice the drop chute it is fitted to (TO:AUE p. 225; a standard one if the suit carries none).
+    // chute makes the drop chute it is fitted to cost twice as much in all (TO:AUE p. 225; a standard one if the suit carries none).
     if (row && isMyomerBooster(row) && typeof price?.price === "object" && "perAmount" in price.price) {
       equipment += price.price.perAmount * myomerBonus(record.weightClass);
       continue;
@@ -149,8 +154,9 @@ export function unitCost(record: BaRecord, catalog: Catalog): BaCost {
     if (row?.id.startsWith("ba-drop-chute-reusable")) {
       const fitted = record.mounts.map((m) => (m.equipmentId === null ? undefined : catalog.rowFor(m.equipmentId, record.editionId))).find((r) => r !== undefined && /^ba-drop-chute-(standard|camouflage|stealth)-/.test(r.id));
       const chute = fitted ? priceOf(fitted) : priceOf({ id: "ba-drop-chute-standard-is" } as EquipmentRow);
+      // The reusable chute makes the chute it is fitted to cost twice as much in all (book panel, TO:AUE p. 225): it adds one more chute price, or two standard ones if none is fitted.
       if (typeof chute?.price === "number") {
-        equipment += 2 * chute.price;
+        equipment += (fitted ? 1 : 2) * chute.price;
         continue;
       }
     }

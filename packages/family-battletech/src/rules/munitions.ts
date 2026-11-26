@@ -19,6 +19,8 @@ export const stemOf = (id: string): string => id.replace(/-(is|clan)$/, "");
 
 /** What a dispenser or launcher fires when no type is named: a standard mine, a space mine for the space dispenser (the only type it takes), a fragmentation grenade (TO:AUE p. 175). */
 const DEFAULT_CHOICE: Record<string, string> = {
+  "ba-heavy-grenade-launcher": "",
+  "ba-micro-grenade-launcher": "",
   "vehicular-mine-dispenser": "mine-standard",
   "ba-mine-dispenser": "mine-standard",
   "space-mine-dispenser": "mine-space",
@@ -40,6 +42,8 @@ export function chosenMunition(host: EquipmentRow | undefined, id: string | unde
   const choices = choicesFor(host, catalog, editionId);
   const stem = host === undefined ? undefined : DEFAULT_CHOICE[stemOf(host.id)];
   const side = host?.techBase === "clan" ? "clan" : "is";
+  // A battle armor grenade launcher fires its ordinary load unless a type is named, so it has no default type.
+  if (stem === "") return choices.find((c) => c.id === id);
   return choices.find((c) => c.id === id) ?? choices.find((c) => c.id === `${stem ?? ""}-${side}`) ?? choices[0];
 }
 
@@ -79,11 +83,10 @@ export function grenadeExtraBv(choice: EquipmentRow | undefined, launcherBv: num
   return modifier === undefined ? 0 : modifier * launcherBv;
 }
 
-/** The Battle Value of an item once its munition is known: the dispenser's by mine type, the launcher's plus the grenade's addition; `base` for any other item. */
-export function bvWithMunition(host: EquipmentRow, choice: EquipmentRow | undefined, base: number | undefined): number | undefined {
-  const mine = dispenserBv(choice);
-  if (mine !== undefined) return mine;
-  return base === undefined ? undefined : base + grenadeExtraBv(choice, base);
+/** The Battle Value of an item once its munition is known: the dispenser's by mine type; `base` for any other item. A grenade's addition is not the launcher's: it is added to the unit's base
+ * BV at the Alternative Munitions step (TO:AUE p. 198, book panel), so `grenadeExtraBv` is summed by the unit. */
+export function bvWithMunition(choice: EquipmentRow | undefined, base: number | undefined): number | undefined {
+  return dispenserBv(choice) ?? base;
 }
 
 /** What the dispenser's two shots of the mine cost to replace: the type's price for each 5 points, for the shots at 10 points each. Not part of the unit's cost (TechManual p. 282). */

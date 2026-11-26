@@ -5,7 +5,7 @@ import { battleValue as baBattleValue, unitCost as baCost } from "./battlearmor/
 import { build as baBuild } from "./battlearmor/construct";
 import { newBaRecord, withDefaults as baWithDefaults } from "./battlearmor/record";
 import type { BaMount, BaRecord } from "./battlearmor/record";
-import { bvWithMunition, chosenMunition, choicesFor, dispenserBv, offeredChoices, reloadCost } from "./munitions";
+import { bvWithMunition, chosenMunition, choicesFor, dispenserBv, grenadeExtraBv, offeredChoices, reloadCost } from "./munitions";
 import { vehicleBv } from "./vehicle/bv";
 import { checkVehicle } from "./vehicle/checks";
 import { equipmentOffered } from "./vehicle/availability";
@@ -48,10 +48,10 @@ describe("mine types and grenade munitions chosen for a dispenser or launcher", 
     expect([reloadCost(row("mine-standard-is")), reloadCost(row("mine-active-is")), reloadCost(row("mine-emp-vibrabomb-clan"))]).toEqual([5_000, 20_000, 100_000]);
   });
 
-  it("an incendiary grenade adds half the launcher's BV; the other grenades add nothing", () => {
-    const launcher = row("vehicular-grenade-launcher-is");
-    expect(bvWithMunition(launcher, row("grenade-incendiary-is"), 15)).toBe(22.5);
-    expect(bvWithMunition(launcher, row("grenade-smoke-is"), 15)).toBe(15);
+  it("an incendiary grenade adds half the launcher's BV to the unit's base BV, not to the launcher; the other grenades add nothing", () => {
+    expect(grenadeExtraBv(row("grenade-incendiary-is"), 15)).toBe(7.5);
+    expect(grenadeExtraBv(row("grenade-smoke-is"), 15)).toBe(0);
+    expect(bvWithMunition(row("grenade-incendiary-is"), 15)).toBe(15);
   });
 
   it("with no type named a dispenser is a standard-mine one and a launcher fires fragmentation; a type it does not take is kept but read as the default", () => {
@@ -73,6 +73,15 @@ describe("a vehicle with a mine dispenser", () => {
     expect(standard.unvalued).toEqual([]);
     expect(active.total).toBeGreaterThan(standard.total);
     expect(vehicleBv(vehicle(), catalog).total).toBe(standard.total);
+  });
+
+  it("an incendiary grenade launcher adds 7.5 to the base BV as its own line, so a fragmentation one differs by about that", () => {
+    const launcher = (munition: string): VehicleRecord => ({ ...vehicle(), mounts: [{ id: "g", equipmentId: "vehicular-grenade-launcher-is", name: "g", location: "f", munition }] });
+    const incendiary = vehicleBv(launcher("grenade-incendiary-is"), catalog);
+    const fragmentation = vehicleBv(launcher("grenade-fragmentation-is"), catalog);
+    expect(incendiary.lines.find((l) => l.label === "Incendiary grenades")?.value).toBe(7.5);
+    expect(incendiary.total - fragmentation.total).toBeGreaterThanOrEqual(7);
+    expect(incendiary.total - fragmentation.total).toBeLessThanOrEqual(8);
   });
 
   it("keeps the chosen type through a save and a load, and hides a type the rules level does not reach unless the unit holds it", () => {
@@ -99,6 +108,8 @@ describe("a battle armor suit with a mine dispenser and the new battle armor ite
     const standard = suit([mount("ba-mine-dispenser-is", { munition: "mine-standard-is" })]);
     const emp = suit([mount("ba-mine-dispenser-is", { munition: "mine-emp-vibrabomb-is" })]);
     expect(baBuild(standard, catalog).slots.body?.items).toBe(2);
+    // It counts as one anti-'Mech weapon in its location (TO:AUE p. 136).
+    expect(baBuild(standard, catalog).weapons.body).toBe(1);
     expect(baBattleValue(emp, catalog).offensive).toBeGreaterThan(baBattleValue(standard, catalog).offensive);
     expect(baWithDefaults(JSON.parse(JSON.stringify(emp)))?.mounts[0]?.munition).toBe("mine-emp-vibrabomb-is");
   });
@@ -118,8 +129,12 @@ describe("a battle armor suit with a mine dispenser and the new battle armor ite
     expect(messages(both)).toContain("A mechanical jump booster and a myomer booster cannot be combined.");
     expect(messages(suit([mount("ba-myomer-booster-clan")], { techBase: "clan", armor: { type: "stealth-standard", points: 4 } }))).toContain("A suit with a myomer booster may not wear stealth or mimetic armor.");
     expect(messages(suit([mount("ba-tube-artillery-is", { shots: 4 }, "ra")]))).toContain("Tube artillery can only be mounted in the Body.");
-    const fast = (booster: boolean) => messages(suit(booster ? [mount("ba-myomer-booster-clan")] : [], { techBase: "clan", ground: 5 })).some((m) => m.startsWith("Ground MP is 5"));
-    expect([fast(false), fast(true)]).toEqual([true, false]);
+    const fast = (booster: string | undefined, ground = 5) => messages(suit(booster ? [mount(booster)] : [], { techBase: booster === "ba-myomer-booster-clan" ? "clan" : "inner-sphere", ground })).some((m) => m.startsWith(`Ground MP is ${String(ground)}`));
+    expect([fast(undefined), fast("ba-myomer-booster-clan")]).toEqual([true, false]);
+    // A mechanical jump booster lifts the limit by 1 (3 to 4) and counts in the BV speed factor.
+    expect([fast("ba-mechanical-jump-booster-is", 4), fast("ba-mechanical-jump-booster-is", 5)]).toEqual([false, true]);
+    const bv = (booster: boolean) => baBattleValue(suit(booster ? [mount("ba-mechanical-jump-booster-is")] : [], { ground: 3 }), catalog).steps.find((s) => s.label === "Speed factor")?.value;
+    expect(bv(true)).toBeGreaterThan(bv(false) ?? 0);
   });
 
   it("a weapon in a detachable weapon pack weighs three quarters (to 5 kg) in one slot and costs 18,000 more; a light suit may not mount a pack, nor a missile launcher go in one", () => {
@@ -130,12 +145,13 @@ describe("a battle armor suit with a mine dispenser and the new battle armor ite
     expect([cost(packed), cost(suit([mount("ba-heavy-flamer-is")]))]).toEqual([29_250, 11_250]);
     const messages = (r: BaRecord) => checkBa(r, catalog).map((f) => f.message);
     expect(messages(suit([mount("ba-heavy-flamer-is", { pack: true })], { weightClass: "light" }))).toContain("Only medium, heavy and assault suits may mount a detachable weapon pack.");
-    expect(messages(suit([mount("ba-srm-2-is", { pack: true, shots: 4 })]))).toContain("A detachable weapon pack carries a weapon that is not a missile launcher, Narc or ammunition-carrying artillery piece.");
+    expect(messages(suit([mount("ba-srm-2-is", { pack: true, shots: 4 })]))).toContain("A detachable weapon pack may carry any battle armor weapon except a missile launcher or a Narc.");
+    expect(messages(suit([mount("ba-parafoil-is", { pack: true })]))).toContain("A detachable weapon pack carries a weapon, and this item is not one.");
     expect(baWithDefaults(JSON.parse(JSON.stringify(packed)))?.mounts[0]?.pack).toBe(true);
   });
 
-  it("prices a reusable drop chute as twice the chute it is fitted to", () => {
+  it("prices a reusable drop chute so the chute costs twice as much in all", () => {
     const cost = (extra: string[]) => baCost(suit([mount("ba-drop-chute-stealth-is"), ...extra.map((id) => mount(id))]), catalog).lines.find((l) => l.label === "Weapons and equipment")?.cost;
-    expect([cost([]), cost(["ba-drop-chute-reusable-is"])]).toEqual([5_000, 15_000]);
+    expect([cost([]), cost(["ba-drop-chute-reusable-is"])]).toEqual([5_000, 10_000]);
   });
 });

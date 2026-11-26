@@ -600,8 +600,8 @@ export const AMMUNITION: EquipmentGroup[] = [
       { id: "mine-vibrabomb-is", name: "Vibrabomb Mine", availability: [{ from: 2445 }], cite: { book: TO, page: 179 } },
       { id: "grenade-chaff-is", name: "Chaff Grenade", availability: [{ from: 3052 }], prototypeYear: 3050, cite: { book: TO, page: 175 }, choiceFor: ["vehicular-grenade-launcher"] },
       { id: "grenade-fragmentation-is", name: "Fragmentation Grenade", availability: [{ from: 1950 }], yearsInferred: true, cite: { book: TO, page: 175 }, choiceFor: ["vehicular-grenade-launcher"] },
-      { id: "grenade-incendiary-is", name: "Incendiary Grenade", availability: [{ from: 1950 }], yearsInferred: true, cite: { book: TO, page: 176 }, choiceFor: ["vehicular-grenade-launcher"] },
-      { id: "grenade-smoke-is", name: "Smoke Grenade", availability: [{ from: 1950 }], yearsInferred: true, cite: { book: TO, page: 176 }, choiceFor: ["vehicular-grenade-launcher"] },
+      { id: "grenade-incendiary-is", name: "Incendiary Grenade", availability: [{ from: 1950 }], yearsInferred: true, cite: { book: TO, page: 176 }, choiceFor: ["vehicular-grenade-launcher", "ba-heavy-grenade-launcher", "ba-micro-grenade-launcher"] },
+      { id: "grenade-smoke-is", name: "Smoke Grenade", availability: [{ from: 1950 }], yearsInferred: true, cite: { book: TO, page: 176 }, choiceFor: ["vehicular-grenade-launcher", "ba-heavy-grenade-launcher", "ba-micro-grenade-launcher"] },
     ],
   },
   {
@@ -617,8 +617,8 @@ export const AMMUNITION: EquipmentGroup[] = [
       { id: "mine-vibrabomb-clan", name: "Vibrabomb Mine", availability: [{ from: 2445 }], cite: { book: TO, page: 179 } },
       { id: "grenade-chaff-clan", name: "Chaff Grenade", availability: [{ from: 3065 }], cite: { book: TO, page: 175 }, choiceFor: ["vehicular-grenade-launcher"] },
       { id: "grenade-fragmentation-clan", name: "Fragmentation Grenade", availability: [{ from: 1950 }], yearsInferred: true, cite: { book: TO, page: 175 }, choiceFor: ["vehicular-grenade-launcher"] },
-      { id: "grenade-incendiary-clan", name: "Incendiary Grenade", availability: [{ from: 1950 }], yearsInferred: true, cite: { book: TO, page: 176 }, choiceFor: ["vehicular-grenade-launcher"] },
-      { id: "grenade-smoke-clan", name: "Smoke Grenade", availability: [{ from: 1950 }], yearsInferred: true, cite: { book: TO, page: 176 }, choiceFor: ["vehicular-grenade-launcher"] },
+      { id: "grenade-incendiary-clan", name: "Incendiary Grenade", availability: [{ from: 1950 }], yearsInferred: true, cite: { book: TO, page: 176 }, choiceFor: ["vehicular-grenade-launcher", "ba-heavy-grenade-launcher", "ba-micro-grenade-launcher"] },
+      { id: "grenade-smoke-clan", name: "Smoke Grenade", availability: [{ from: 1950 }], yearsInferred: true, cite: { book: TO, page: 176 }, choiceFor: ["vehicular-grenade-launcher", "ba-heavy-grenade-launcher", "ba-micro-grenade-launcher"] },
     ],
   },
   // Fuel-air munitions (IO:AE printed pp. 159-161 rules, p. 217 construction data, p. 216 play table and rules level, p. 54 dates, read against the page images): the shells and

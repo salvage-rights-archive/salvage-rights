@@ -88,3 +88,19 @@ test("a battle armor mine dispenser takes a mine type chosen on its row, and the
   await expectPage(page.getByRole("heading", { level: 1 })).toBeVisible();
   await expect(page.getByText("Mine Dispenser, Vibrabomb").first()).toBeAttached();
 });
+
+test("a weapon in a battle armor suit can go in a detachable weapon pack, and the checkbox has no axe violations", async ({ page }) => {
+  test.setTimeout(120_000);
+  await buildSuit(page, "Pack Suit");
+  await page.getByLabel("Weight class").selectOption("medium");
+  const pack = page.getByLabel("Small Laser in a detachable weapon pack");
+  await pack.check();
+  await expect(pack).toBeChecked();
+  const results = await new AxeBuilder({ page }).analyze();
+  expect(results.violations).toEqual([]);
+  // A light suit keeps the box while the record holds it, so it can be unticked.
+  await page.getByLabel("Weight class").selectOption("light");
+  await expect(pack).toBeChecked();
+  await pack.uncheck();
+  await expect(pack).toHaveCount(0);
+});

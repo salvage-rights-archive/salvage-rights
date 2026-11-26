@@ -3,8 +3,8 @@
 // shares. Nothing here throws: an item the book prints no BV for is left out of the total and listed in `unvalued`, and `complete` says so.
 import { ADVANCED_BV_MODIFIERS, ARMOR_BV_MODIFIER, ARTEMIS_IDS, TARGET_MODIFIER, TARGETING_COMPUTER_IDS } from "../../data/bv";
 import { AIRBORNE_MOTIVES, VEHICLE_BV, motiveOf } from "../../data/vehicle";
-import { ammoBvEntryOf, bvEntryOf, defensiveMunitionBv, munitionAmmoEntry, skillMultiplier, speedFactor } from "../bv";
-import { bvWithMunition, chosenMunition } from "../munitions";
+import { ammoBvEntryOf, bvEntryOf, defensiveMunitionBv, munitionAmmoEntry, retroStreakCap, skillMultiplier, speedFactor } from "../bv";
+import { bvWithMunition, chosenMunition, grenadeExtraBv } from "../munitions";
 import type { PilotSkills } from "../bv";
 import type { Catalog } from "../catalog";
 import { own, tidy, roundHalfUp } from "../walk";
@@ -53,6 +53,8 @@ export function vehicleBv(record: VehicleRecord, catalog: Catalog, pilot: PilotS
   const artemis: Record<string, number> = {};
   let targetingComputer = false;
   let otherEquipment = 0;
+  let retroStreak = 0;
+  let grenades = 0;
   // The weapons on the unit, for a munition that takes its figure from the launcher that fires it.
   const launcherRows = record.mounts.flatMap((m) => {
     const r = rowOf(m, record, catalog);
@@ -69,7 +71,7 @@ export function vehicleBv(record: VehicleRecord, catalog: Catalog, pilot: PilotS
       // Retro-Streak ammunition adds to the Defensive Battle Value; the Dead-Fire, improved ATM and fuel-air munitions count as the ammunition of the launcher that fires them (IO:AE p. 190).
       const defensiveMunition = defensiveMunitionBv(row);
       if (defensiveMunition !== undefined) {
-        defensiveEquipment += defensiveMunition * (facts.tons ?? 0);
+        retroStreak += defensiveMunition * (facts.tons ?? 0);
         continue;
       }
       const special = munitionAmmoEntry(row, launcherRows);
@@ -98,7 +100,9 @@ export function vehicleBv(record: VehicleRecord, catalog: Catalog, pilot: PilotS
     }
     const entry = bvEntryOf(row.id);
     // A mine dispenser is worth a minefield of its mine type, a grenade launcher its own BV and what its grenade adds (rules/munitions.ts).
-    const bv = bvWithMunition(row, chosenMunition(row, m.munition, catalog, record.editionId), entry?.bv);
+    const chosen = chosenMunition(row, m.munition, catalog, record.editionId);
+    const bv = bvWithMunition(chosen, entry?.bv);
+    if (entry !== undefined) grenades += grenadeExtraBv(chosen, entry.bv);
     if (bv === undefined) {
       unvalued.push(row.name);
       continue;
@@ -134,6 +138,7 @@ export function vehicleBv(record: VehicleRecord, catalog: Catalog, pilot: PilotS
   for (const bin of ammoBins) ammoByModel.set(bin.weapon, (ammoByModel.get(bin.weapon) ?? 0) + bin.bv);
   let ammoBv = 0;
   for (const [weapon, value] of ammoByModel) ammoBv += Math.min(value, unmodifiedByModel.get(weapon) ?? 0);
+  defensiveEquipment += Math.min(retroStreak, retroStreakCap(launcherRows));
   const amsCap = defensiveEquipment; // anti-missile ammunition counts up to the systems themselves
   const defensiveAmmoCounted = Math.min(defensiveAmmo, amsCap);
 
@@ -161,6 +166,8 @@ export function vehicleBv(record: VehicleRecord, catalog: Catalog, pilot: PilotS
     { label: "Offensive Battle Rating", value: tidy(offensive) },
   );
   const multiplier = skillMultiplier(pilot);
-  const total = roundHalfUp((defensive + offensive) * multiplier);
+  // Incendiary grenades add half the launcher's BV to the unit's base BV, before the skill multiplier (TO:AUE p. 198: a doubtful reading, the book names one-shot weapons).
+  if (grenades > 0) lines.push({ label: "Incendiary grenades", value: tidy(grenades), note: "half each launcher's BV, added to the base BV (a doubtful reading of TO:AUE p. 198)" });
+  const total = roundHalfUp((defensive + offensive + grenades) * multiplier);
   return { total, defensive: tidy(defensive), offensive: tidy(offensive), skillMultiplier: multiplier, lines, unvalued, complete: unvalued.length === 0 };
 }

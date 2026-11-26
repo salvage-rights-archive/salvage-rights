@@ -12,7 +12,7 @@ import { datesText } from "../time";
 import { tidy } from "../walk";
 import { baseFits, itemOffered, itemPhase, phaseOf, suitOffered } from "./availability";
 import { asEquipment, chosenMunition, choicesFor } from "../munitions";
-import { build, carriesShots, isBooster, isMechanicalBooster, isMyomerBooster, isTubeArtillery, isWing, locationName, locationsOf, myomerBonus, shotsOf, weaponLimit } from "./construct";
+import { build, carriesShots, isBooster, isMissileWeapon, isMechanicalBooster, isMyomerBooster, isTubeArtillery, isWing, locationName, locationsOf, myomerBonus, shotsOf, weaponLimit } from "./construct";
 import type { BaRecord } from "./record";
 
 export interface BaFinding {
@@ -70,7 +70,9 @@ const motiveCheck: Check = (record, catalog) => {
   const quad = record.body === "quad";
   const free = quad ? (cls.ground.free.quad ?? cls.ground.free.humanoid) : cls.ground.free.humanoid;
   // A myomer booster raises the most Ground MP, beyond the normal limit (TO:AUE p. 99).
-  const boost = record.mounts.some((m) => isMyomerBooster(m.equipmentId === null ? undefined : catalog.byId(m.equipmentId))) ? myomerBonus(record.weightClass) : 0;
+  const has = (is: (r: ReturnType<Catalog["byId"]>) => boolean) => record.mounts.some((m) => is(m.equipmentId === null ? undefined : catalog.byId(m.equipmentId)));
+  // The mechanical jump booster adds 1 Ground MP even beyond the normal limit (TO:AUE p. 98); a myomer booster raises the limit (p. 99).
+  const boost = has(isMyomerBooster) ? myomerBonus(record.weightClass) : has(isMechanicalBooster) ? 1 : 0;
   const normal = quad ? cls.ground.max.quad : cls.ground.max.humanoid;
   const max = normal === undefined ? undefined : normal + boost;
   if (max !== undefined && record.ground > max) out.push({ check: "motive", level: "error", message: `Ground MP is ${num(record.ground)}; a ${cls.label} ${record.body} suit has at most ${num(max)}.`, where: { field: "ground" }, cite: TM(164) });
@@ -168,7 +170,8 @@ const equipmentCheck: Check = (record, catalog) => {
   for (const m of record.mounts.filter((x) => x.pack === true)) {
     const weapon = rowOf(m);
     if (!BA_BOOSTERS.dwp.classes.includes(record.weightClass)) out.push({ check: "equipment", level: "error", message: "Only medium, heavy and assault suits may mount a detachable weapon pack.", where: { mountId: m.id }, cite: toAue(99) });
-    else if (weapon?.kind !== "weapon" || carriesShots(weapon)) out.push({ check: "equipment", level: "error", message: "A detachable weapon pack carries a weapon that is not a missile launcher, Narc or ammunition-carrying artillery piece.", where: { mountId: m.id }, cite: toAue(99) });
+    else if (weapon?.kind !== "weapon") out.push({ check: "equipment", level: "error", message: "A detachable weapon pack carries a weapon, and this item is not one.", where: { mountId: m.id }, cite: toAue(99) });
+    else if (isMissileWeapon(weapon)) out.push({ check: "equipment", level: "error", message: "A detachable weapon pack may carry any battle armor weapon except a missile launcher or a Narc.", where: { mountId: m.id }, cite: toAue(99) });
     if (record.motive.kind === "jump" && record.motive.mp > 0) out.push({ check: "equipment", level: "note", message: "A suit carrying a detachable weapon pack cannot use its Jump MP until the pack is jettisoned.", where: { mountId: m.id }, cite: toAue(99) });
   }
   const tube = record.mounts.find((m) => isTubeArtillery(rowOf(m)) && m.location !== "body");

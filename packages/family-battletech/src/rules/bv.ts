@@ -204,6 +204,9 @@ export function munitionAmmoEntry(row: EquipmentRow, launchers: EquipmentRow[]):
 }
 /** What a bin of the munition adds to the unit's Defensive Battle Value for each ton, where the tables print that (Retro-Streak ammunition, IO:AE p. 190), else undefined. */
 export const defensiveMunitionBv = (row: EquipmentRow): number | undefined => own(DEFENSIVE_MUNITIONS.rows, stemOf(row.id));
+/** The most Retro-Streak ammunition may add: the BV of the Streak SRM launchers on the unit that can fire it, as ammunition BV is held to its weapons (book panel, IO:AE p. 187: the
+ * "other appropriate rules" of the Battle Value method apply). `launchers` are the catalog rows of the unit's weapons. */
+export const retroStreakCap = (launchers: EquipmentRow[]): number => launchers.reduce((sum, r) => sum + (/^streak-srm-\d+-(is|clan)$/.test(r.id) ? (WEAPONS.get(r.id)?.bv ?? 0) : 0), 0);
 
 /** The bands of the Target Movement Modifier table. */
 function movementModifier(hexes: number, jumped: boolean): number {
@@ -322,6 +325,7 @@ export function battleValue(record: MechRecord, catalog: Catalog, pilot: PilotSk
 
   // Defensive equipment: the items marked with a dagger, and the anti-missile ammunition up to the systems' own BV.
   let defensiveEquipment = 0;
+  let retroStreak = 0;
   const defensiveAmmo = new Map<string, { systems: number; ammo: number }>();
   for (const { row, tons } of items) {
     const entry = EQUIPMENT.get(row.id) ?? WEAPONS.get(row.id);
@@ -331,7 +335,7 @@ export function battleValue(record: MechRecord, catalog: Catalog, pilot: PilotSk
     }
     // Retro-Streak ammunition adds its figure to the Defensive Battle Value (IO:AE p. 190).
     const defensiveMunition = row.kind === "ammunition" ? defensiveMunitionBv(row) : undefined;
-    if (defensiveMunition !== undefined) defensiveEquipment += defensiveMunition * binTons(tons);
+    if (defensiveMunition !== undefined) retroStreak += defensiveMunition * binTons(tons);
     const ammoEntry = row.kind === "ammunition" ? AMMO.get(row.id) : undefined;
     if (ammoEntry?.options.defensiveAmmo) {
       const seen = defensiveAmmo.get(ammoEntry.id) ?? { systems: 0, ammo: 0 };
@@ -339,6 +343,7 @@ export function battleValue(record: MechRecord, catalog: Catalog, pilot: PilotSk
     }
   }
   for (const { systems, ammo } of defensiveAmmo.values()) defensiveEquipment += Math.min(systems, ammo);
+  defensiveEquipment += Math.min(retroStreak, retroStreakCap(items.map((i) => i.row)));
 
   // Explosive ammunition and Gauss weapons: points per critical slot, by where the slot is.
   // A Clan 'Mech with an XXL engine loses points for explosive slots as an Inner Sphere XL does, and so does an Inner Sphere XXL (TO:AUE p. 193).

@@ -202,9 +202,14 @@ describe("the method's rules", () => {
   it("Retro-Streak ammunition adds 15 a ton to the Defensive Battle Value; the improved ATM munitions are x2.0 and x1.3 of their launcher's ammunition, the fuel-air shells x1.4 (x1.0 for Arrow IV) (IO:AE p. 190)", () => {
     const retro = battleValue(biped([m("streak-srm-4-is", "RA"), m("ammo-retro-streak-srm-is", "RT")]), catalog);
     expect([retro.defensive.equipment, retro.offensive.ammunition, retro.complete]).toEqual([15, 0, true]);
+    // The total is held to the BV of the Streak launchers that can fire it.
+    const many100 = battleValue(biped([m("streak-srm-4-is", "RA"), ...many(100, "ammo-retro-streak-srm-is", "RT")]), catalog);
+    expect(many100.defensive.equipment).toBeGreaterThan(15);
+    expect(many100.defensive.equipment).toBeLessThan(1500);
     const factored: [string, string, number][] = [
       ["improved-atm-6-clan", "ammo-improved-magnetic-pulse-atm-clan", 78], ["improved-atm-6-clan", "ammo-improved-inferno-atm-clan", 50.7],
       ["arrow-iv-is", "ammo-fuel-air-arrow-iv-is", 30], ["thumper-artillery-is", "ammo-fuel-air-thumper-is", 7], ["sniper-artillery-clan", "ammo-fuel-air-sniper-clan", 15.4],
+      ["thumper-cannon-is", "ammo-fuel-air-thumper-cannon-is", 7], ["sniper-cannon-clan", "ammo-fuel-air-sniper-cannon-clan", 14], ["long-tom-cannon-is", "ammo-fuel-air-long-tom-cannon-is", 57.4],
     ];
     for (const [launcher, ammo, perTon] of factored) {
       const bv = battleValue(biped([m(launcher, "RA"), m(ammo, "RT")]), catalog);

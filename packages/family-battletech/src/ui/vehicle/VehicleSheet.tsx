@@ -4,12 +4,12 @@
 import { ARMOR } from "../../data/chassis";
 import { bookName } from "../../data/editions";
 import type { Catalog } from "../../rules/catalog";
-import { nameWithMunition } from "../../rules/munitions";
+import { chosenMunition, nameWithMunition } from "../../rules/munitions";
 import { officialLabel } from "../../rules/official";
 import { vehicleBv } from "../../rules/vehicle/bv";
 import { vehicleOfficialState } from "../../rules/vehicle/checks";
 import { vehicleCost } from "../../rules/vehicle/cost";
-import { armorLocations, crewOf, engineRating, flankMP, itemFacts, motiveRowOf, structurePoints, vehicleLocationName, vehicleTally } from "../../rules/vehicle/vehicle";
+import { armorLocations, crewOf, engineRating, flankMP, itemFacts, motiveRowOf, rowOf, structurePoints, vehicleLocationName, vehicleTally } from "../../rules/vehicle/vehicle";
 import type { VehicleRecord } from "../../rules/vehicle/vehicle";
 import { own } from "../../rules/walk";
 import { TRADEMARK_LINE } from "../sheet/RecordSheet";
@@ -44,7 +44,7 @@ export function inventoryRows(record: VehicleRecord, catalog: Catalog): Inventor
   for (const m of record.mounts) {
     const facts = itemFacts(m, record, catalog);
     if (facts.ammo) continue;
-    const key = `${m.equipmentId ?? m.name}|${m.location}|${m.munition ?? ""}`;
+    const key = `${m.equipmentId ?? m.name}|${m.location}|${chosenMunition(rowOf(m, record, catalog), m.munition, catalog, record.editionId)?.id ?? ""}`;
     const found = rows.get(key);
     if (found) {
       found.count += 1;

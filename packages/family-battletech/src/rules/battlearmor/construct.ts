@@ -30,6 +30,8 @@ export const isClamps = (row: EquipmentRow | undefined): boolean => row?.id.star
 export const isMechanicalBooster = (row: EquipmentRow | undefined): boolean => row?.id.startsWith("ba-mechanical-jump-booster") === true;
 export const isMyomerBooster = (row: EquipmentRow | undefined): boolean => row?.id.startsWith("ba-myomer-booster") === true;
 export const isTubeArtillery = (row: EquipmentRow | undefined): boolean => row?.id.startsWith("ba-tube-artillery") === true;
+/** A missile launcher or Narc, which a detachable weapon pack may not carry (TO:AUE p. 99). */
+export const isMissileWeapon = (row: EquipmentRow | undefined): boolean => row !== undefined && /^ba-(lrm|srm|mrm|advanced-srm|rocket-launcher)-|narc/.test(row.id);
 /** The Ground MP a myomer booster gives a suit of the weight class (0 for a class the book does not name). */
 export const myomerBonus = (weightClass: string): number => (Object.hasOwn(BA_BOOSTERS.myomerGroundBonus, weightClass) ? (BA_BOOSTERS.myomerGroundBonus[weightClass] ?? 0) : 0);
 
@@ -52,12 +54,13 @@ export interface MountFigures {
 export function figuresOf(mount: BaMount, catalog: Catalog, editionId: string, weightClass?: string): MountFigures | undefined {
   const row = mount.equipmentId === null ? undefined : catalog.rowFor(mount.equipmentId, editionId);
   if (!row || typeof row.tons !== "number" || typeof row.slots !== "number") return undefined;
+  // A "shot" of ammunition is what the book weighs per shot: for a missile launcher one missile, for the tube artillery one two-round clip (TO:AUE p. 96).
   const shots = carriesShots(row) ? shotsOf(mount) : 0;
   const cls = isMechanicalBooster(row) && weightClass !== undefined ? weightClassOf(weightClass) : undefined;
   const whole = cls ? tidy(BA_BOOSTERS.mechanicalJumpWeightFactor * cls.jump.kgPerMp) : kgOfTons(row.tons);
   const ammoKg = tidy(shots * (row.ammoKgPerShot ?? 0));
   // A weapon in a detachable weapon pack: three quarters of its weight, to the next 5 kg; the pack takes the one slot (TO:AUE p. 99).
-  if (mount.pack === true && row.kind === "weapon" && !carriesShots(row)) return { row, itemKg: Math.ceil(tidy(whole * BA_BOOSTERS.dwp.weightFactor) / BA_BOOSTERS.dwp.roundKg) * BA_BOOSTERS.dwp.roundKg, ammoKg, slots: 1, baseSlots: 1 };
+  if (mount.pack === true && row.kind === "weapon" && !isMissileWeapon(row)) return { row, itemKg: Math.ceil(tidy((whole + ammoKg) * BA_BOOSTERS.dwp.weightFactor) / BA_BOOSTERS.dwp.roundKg) * BA_BOOSTERS.dwp.roundKg, ammoKg: 0, slots: 1 + (shots > 0 ? ammoSlots(shots) : 0), baseSlots: 1 };
   return { row, itemKg: whole, ammoKg, slots: row.slots + (shots > 0 ? ammoSlots(shots) : 0), baseSlots: row.slots };
 }
 
@@ -204,7 +207,8 @@ export function build(record: BaRecord, catalog: Catalog): BaBuild {
       use.items += base;
       use.ammo += ammo;
     }
-    if (figures.row.kind === "weapon" && use) weapons[mount.location as BaLocation] = (weapons[mount.location as BaLocation] ?? 0) + 1;
+    // A mine dispenser counts as an anti-'Mech weapon in its location: its standard weapon-mounting rules apply (TO:AUE p. 136, TM p. 170; book panel).
+    if ((figures.row.kind === "weapon" || figures.row.id.startsWith("ba-mine-dispenser")) && use) weapons[mount.location as BaLocation] = (weapons[mount.location as BaLocation] ?? 0) + 1;
   }
   for (const loc of here) {
     const use = slots[loc];
