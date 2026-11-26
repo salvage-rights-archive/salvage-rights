@@ -3,7 +3,7 @@ import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { IDBFactory } from "fake-indexeddb";
 import { MemoryRouter } from "react-router";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { openStore } from "@salvage-rights/shared";
 import { newAsForce } from "../../rules/as-force";
 import { newAsUnit } from "../../rules/as-unit";
@@ -13,10 +13,14 @@ import { openAsStorage } from "./storage";
 beforeEach(() => {
   globalThis.indexedDB = new IDBFactory();
 });
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.restoreAllMocks();
+});
 
 describe("Alpha Strike table", () => {
   it("stages a hit until the turn ends, then applies it, keeps it across a reload and resets on request", async () => {
+    vi.spyOn(Math, "random").mockReturnValue(0.75); // every critical roll is a 10, a fire control hit, which leaves structure alone
     const user = userEvent.setup();
     const storage = await openAsStorage();
     const unit = newAsUnit("u1");
