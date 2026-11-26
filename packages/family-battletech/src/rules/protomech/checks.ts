@@ -2,7 +2,7 @@
 // on one this version does not understand. Messages are our own words and state the numbers; a finding's `cite` names the deciding book and page. Standard construction
 // is TechManual pp. 80-89 (errata v8.0); the dates are Interstellar Operations: Alternate Eras (printed pp. 29 and 44). Rules levels follow the 'Mech side: ProtoMechs are
 // Standard rules in production, Experimental in their prototype years (IO:AE printed p. 27), and not part of Introductory (Inner Sphere, 3025 technology).
-import { PROTO_CODES, PROTO_DATES, PROTO_LIMITS, PROTO_LOCATION_NAMES, PROTO_PART_PAGES, PROTO_PLACEMENT, PROTO_PARTS, PROTO_REAR_LOCATIONS, PROTO_WEIGHT, PROTO_WING } from "../../data/protomech";
+import { PROTO_CODES, PROTO_COCKPITS, PROTO_DATES, PROTO_LIMITS, PROTO_LOCATION_NAMES, PROTO_PART_PAGES, PROTO_PLACEMENT, PROTO_PARTS, PROTO_REAR_LOCATIONS, PROTO_WEIGHT, PROTO_WING } from "../../data/protomech";
 import type { ProtoCite, ProtoDates } from "../../data/protomech";
 import { LEVEL_ORDER, levelAtLeast, levelIn, levelRow } from "../levels";
 import type { RulesLevel } from "../../data/chassis";
@@ -37,6 +37,7 @@ export function protoLowestLevel(record: ProtoRecord, catalog: Catalog): RulesLe
     [record.booster, "booster"],
   ];
   for (const [used, key] of timed) if (used && datesPhase(record, PROTO_DATES[key]) === "prototype") needs.push("experimental");
+  if (record.techBase === "mixed" && record.cockpit !== "interface") needs.push("advanced");
   for (const option of usedOptions(record)) needs.push(levelIn(option.level, option.dates ? datesPhase(record, option.dates) : "production"));
   for (const mount of record.mounts) {
     const row = rowOf(catalog, record, mount);
@@ -55,7 +56,10 @@ const typeCheck: Check = (record, _catalog, out) => {
   if (!Number.isInteger(record.tons) || record.tons < min || record.tons > max) {
     out.push({ check: "weight", level: "error", message: `A ProtoMech weighs ${String(min)} to ${String(max)} tons in steps of ${String(step)}; this one is ${num(record.tons)}.`, where: { field: "tons" }, cite });
   }
-  if (record.techBase !== "clan") out.push({ check: "tech-base", level: "error", message: `ProtoMechs are built with Clan technology only; this unit says "${record.techBase}".`, where: { field: "techBase" }, cite });
+  const mixedOk = record.techBase === "mixed" && (record.cockpit === "interface" || levelAtLeast(levelOfRecord(record), "advanced"));
+  if (record.cockpit === "interface" && record.techBase !== "mixed") {
+    out.push({ check: "tech-base", level: "error", message: `The Inner Sphere interface cockpit makes the unit Mixed Technology; this unit says "${record.techBase}".`, where: { field: "techBase" }, cite: page(PROTO_COCKPITS.interface?.cite ?? PROTO_WEIGHT.cite) });
+  } else if (record.techBase !== "clan" && !mixedOk) out.push({ check: "tech-base", level: "error", message: `ProtoMechs are built with Clan technology, or Mixed Technology with the Inner Sphere interface cockpit or at Advanced rules (Tactical Operations: Advanced Units and Equipment, p. 189); this unit says "${record.techBase}".`, where: { field: "techBase" }, cite });
   const level = levelOfRecord(record);
   if (level === "introductory") out.push({ check: "level", level: "error", message: "Introductory rules are Inner Sphere, 3025 technology; ProtoMechs are Clan units and not part of it.", where: { field: "rulesLevel" }, cite: TM(80) });
   if (record.year === null && level !== "introductory") {
@@ -224,8 +228,9 @@ const partsCheck: Check = (record, _catalog, out) => {
     [record.jumpType, jumpSystemOf(record) === undefined, "jump system", "jumpType"],
   ];
   for (const [id, missing, label, field] of unknown) if (missing) out.push({ check: "part", level: "warning", message: `This unit names a ${label} ("${String(id)}") we do not know, so its weight, cost and rules are not checked.`, where: { field } });
+  if (record.partialWing === true && (record.jump === 0 || jumpSystemOf(record)?.underwater === true)) out.push({ check: "part", level: "note", message: "The partial wing adds nothing without Jumping MP (UMU MP are not Jumping MP).", where: { field: "partialWing" }, cite: page(PROTO_WING.cite) });
   const cockpit = cockpitOf(record);
-  if (cockpit?.mixed === true) out.push({ check: "part", level: "note", message: `${cockpit.label}: the ProtoMech counts as a Mixed Technology unit with it, and has no ejection or escape system.`, where: { field: "cockpit" }, cite: page(cockpit.cite) });
+  if (cockpit?.mixed === true) out.push({ check: "part", level: "note", message: `${cockpit.label}: the ProtoMech is Mixed Technology with it, and has no ejection or escape system.`, where: { field: "cockpit" }, cite: page(cockpit.cite) });
 };
 
 export const PROTO_CHECKS: { id: string; run: Check }[] = [

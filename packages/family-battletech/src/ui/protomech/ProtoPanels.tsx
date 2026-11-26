@@ -7,7 +7,7 @@ import { CLASSIC } from "../../data/rulesets";
 import { erasOfYear, setEra, setYear } from "../../rules/availability";
 import { groupOf } from "../../rules/catalog";
 import type { Catalog } from "../../rules/catalog";
-import { DEFAULT_LEVEL, levelRow } from "../../rules/levels";
+import { DEFAULT_LEVEL, levelAtLeast, levelRow } from "../../rules/levels";
 import { officialLabel } from "../../rules/official";
 import { armorPoints, ammoKg, engineKg, engineRating, holdsAt, launcherOf, limitOf, locationsOf, mountKg, mountName, plainRun, rowOf, runMP, structurePoints, structureRow, tally, tubesOf, usesAmmo } from "../../rules/protomech/build";
 import { armorChoices, armorTypeOf, cockpitChoices, jumpChoices, jumpMP, jumpReach, jumpSystemOf, wingBonus, wingOffered } from "../../rules/protomech/options";
@@ -77,11 +77,24 @@ export function IdentityPanel({ record, catalog, onEdit }: PartProps & { catalog
             onChange={(v) => { onEdit((d) => { setEra(d, v); }); }}
           />
         )}
-        <div className="bt-field">
-          <span className="bt-label">Tech base</span>
-          <span id="field-techBase">Clan</span>
-          <span className="bt-hint">ProtoMechs are built with Clan technology only (TechManual, p. 80).</span>
-        </div>
+        {record.cockpit !== "interface" && (levelAtLeast(record.rulesLevel ?? DEFAULT_LEVEL, "advanced") || record.techBase === "mixed") ? (
+          <SelectField id="field-techBase" label="Tech base" value={record.techBase} options={[{ value: "clan", label: "Clan" }, { value: "mixed", label: "Mixed" }]} onChange={(v) => { onEdit((d) => void (d.techBase = v)); }} hint="Clan, or Mixed Technology at Advanced rules (Tactical Operations: Advanced Units and Equipment, p. 189)." />
+        ) : (
+          <div className="bt-field">
+            <span className="bt-label">Tech base</span>
+            {record.cockpit === "interface" ? (
+              <>
+                <span id="field-techBase">Mixed</span>
+                <span className="bt-hint">The Inner Sphere interface cockpit makes the unit Mixed Technology (Interstellar Operations: Alternate Eras, p. 96).</span>
+              </>
+            ) : (
+              <>
+                <span id="field-techBase">Clan</span>
+                <span className="bt-hint">ProtoMechs are built with Clan technology (TechManual, p. 80); Mixed Technology comes with Advanced rules.</span>
+              </>
+            )}
+          </div>
+        )}
         <SelectField id="field-tons" label="Tons" value={String(record.tons)} options={TONNAGES.map((t) => ({ value: String(t), label: `${String(t)} tons` }))} onChange={(v) => { onEdit((d) => void (d.tons = Number(v))); }} />
       </div>
       <p className="bt-hint">{`The lowest rules level that fits everything on the unit: ${levelRow(lowest).label}.`}</p>
@@ -104,7 +117,7 @@ export function ChassisPanel({ record, onEdit }: PartProps) {
         <NumberField id="field-walk" label="Walking MP" value={record.walk} min={1} onValid={(v) => { onEdit((d) => void (d.walk = v ?? 1), "walk"); }} />
         {jumps.length > 1 && <SelectField id="field-jumpType" label="Jump system" value={record.jumpType ?? "standard"} options={jumps.map((j) => ({ value: j.id, label: j.label }))} onChange={(v) => { onEdit((d) => { setOption(d, "jumpType", v); }); }} />}
         <NumberField id="field-jump" label={system?.unit ?? "Jumping MP"} value={record.jump} min={0} hint={`At most the ${system?.reach === "run" ? "Running MP" : "Walking MP"}, ${String(reach)}.`} onValid={(v) => { onEdit((d) => void (d.jump = v ?? 0), "jump"); }} />
-        {cockpits.length > 1 && <SelectField id="field-cockpit" label="Cockpit" value={record.cockpit ?? "standard"} options={cockpits.map((c) => ({ value: c.id, label: c.label }))} onChange={(v) => { onEdit((d) => { setOption(d, "cockpit", v); }); }} />}
+        {cockpits.length > 1 && <SelectField id="field-cockpit" label="Cockpit" value={record.cockpit ?? "standard"} options={cockpits.map((c) => ({ value: c.id, label: c.label }))} onChange={(v) => { onEdit((d) => { setOption(d, "cockpit", v); if (v === "interface") d.techBase = "mixed"; else if (record.cockpit === "interface") d.techBase = "clan"; }); }} />}
         <NumberField id="field-heatSinks" label="Heat sinks" value={record.heatSinks} min={0} hint="One for each point of energy weapon heat." onValid={(v) => { onEdit((d) => void (d.heatSinks = v ?? 0), "heatSinks"); }} />
         <div className="bt-field">
           <label className="pm-check">

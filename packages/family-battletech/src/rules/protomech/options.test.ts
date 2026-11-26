@@ -6,6 +6,7 @@ import type { Catalog } from "../catalog";
 import { tally } from "./build";
 import { checkProto, protoLowestLevel } from "./checks";
 import { armorChoices, cockpitChoices, jumpChoices, jumpMP, optionSummary, wingOffered } from "./options";
+import { offeredEquipment } from "./offered";
 import { protoBattleValue, protoCost } from "./rating";
 import { newProtoRecord, withDefaults } from "./record";
 import type { ProtoRecord } from "./record";
@@ -82,6 +83,31 @@ describe("extended jump jets", () => {
   it("are standard rules, offered from their 3071 prototype years at Experimental and from 3075 at Standard", () => {
     const ids = (year: number, rulesLevel: ProtoRecord["rulesLevel"]) => jumpChoices(proto({ year, rulesLevel })).map((j) => j.id).filter((id) => id !== "umu");
     expect([ids(3072, "standard"), ids(3072, "experimental"), ids(3075, "standard"), ids(3070, "experimental")]).toEqual([["standard"], ["standard", "xjj"], ["standard", "xjj"], ["standard"]]);
+  });
+});
+
+describe("the book panel rulings", () => {
+  it("caps extended jump jets at the base Running MP, which the Myomer Booster does not raise", () => {
+    expect([errors(proto({ jump: 6, jumpType: "xjj", booster: true }), "jump"), errors(proto({ jump: 7, jumpType: "xjj", booster: true }), "jump")].map((e) => e.length)).toEqual([0, 1]);
+  });
+
+  it("counts the partial wing's weight toward the torso's 2,000 kg", () => {
+    const withWing = (tons: number) => proto({ tons, walk: 5, jump: 3, partialWing: true, mounts: [{ id: "a", equipmentId: "er-micro-laser-clan", name: "a", location: "t" }] });
+    expect([errors(withWing(8), "location").length, errors(withWing(9), "location").length]).toEqual([0, 1]);
+  });
+
+  it("notes, and does not refuse, a wing on a unit with UMUs", () => {
+    const record = proto({ partialWing: true, jump: 2, jumpType: "umu" });
+    const found = checkProto(record, catalog).filter((f) => f.where?.field === "partialWing");
+    expect(found.map((f) => f.level)).toEqual(["note"]);
+  });
+
+  it("takes Mixed Technology only with the interface cockpit, or at Advanced rules, and then opens the Inner Sphere list", () => {
+    const tech = (r: ProtoRecord) => errors(r, "tech-base").length;
+    expect([tech(proto({ techBase: "mixed", cockpit: "interface" })), tech(proto({ cockpit: "interface" })), tech(proto({ techBase: "mixed", rulesLevel: "standard" })), tech(proto({ techBase: "mixed", rulesLevel: "advanced" }))]).toEqual([0, 1, 1, 0]);
+    const ids = (r: ProtoRecord) => offeredEquipment(r, catalog).map((row) => row.id);
+    expect([ids(proto()).includes("angel-ecm-is"), ids(proto({ techBase: "mixed", cockpit: "interface" })).includes("angel-ecm-is")]).toEqual([false, true]);
+    expect(protoLowestLevel(proto({ techBase: "mixed", rulesLevel: "advanced", year: 3090 }), catalog)).toBe("advanced");
   });
 });
 

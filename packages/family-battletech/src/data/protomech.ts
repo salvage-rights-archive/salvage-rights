@@ -12,7 +12,8 @@
 //
 // Left for later pieces (not built here): quad, glider and ultraheavy ProtoMechs (Interstellar Operations: Alternate Eras printed pp. 92-99, Advanced
 // rules: prototype 3075, production about 3083 to 3084) and the ultraheavy cockpit. The part options (the Inner Sphere interface cockpit, Electric Discharge
-// armor, the extended jump jet system, UMUs and the partial wing) are below, after the dates.
+// armor, the extended jump jet system, UMUs and the partial wing) are below, after the dates. Not built yet, so not handled here: glider ProtoMechs (they may have no jump jets, XJJ, wing, UMUs or booster:
+// IO:AE pp. 59, 95) and ultraheavy ones (jets and UMUs 150 kg per MP, the interface cockpit 750 kg over 9 tons: IO:AE pp. 95-96); the editor builds standard bipeds of 2 to 9 tons.
 import type { RulesLevel } from "./chassis";
 
 export interface ProtoCite {
@@ -228,7 +229,7 @@ export interface ProtoDates {
   prototype: number;
   /** Absent for a part that was only ever a prototype: it is then on offer from `prototype` to `extinct`, at the part's own rules level. */
   production?: number;
-  /** The year the part is extinct, as the table prints it ("Ext"): the last year of the span, inclusive, as the catalog's rows do. */
+  /** The last year the part is on offer (the table's "Ext" year less one). */
   extinct?: number;
   cite: ProtoCite;
   checked: ProtoChecked;
@@ -241,8 +242,9 @@ export const PROTO_DATES: Record<"unit" | "jumpJets" | "armor" | "booster" | "in
   // IO:AE third printing, printed pp. 29-30 and 33 (the Universal Technology Advancement Table). The Inner Sphere interface and the Electric Discharge armor have no
   // production year (prototype only, about 3071, extinct 3085); the extended jump jet is prototype about 3071, production 3075 and common 3085. The ProtoMech UMU's
   // prototype year is TO:AUE's (seventh printing, 2024, p. 217: 3061, the later printing) where IO:AE's table says about 3065; its production year, about 3075, is IO:AE's alone.
-  interface: { prototype: 3071, extinct: 3085, cite: { book: IO, page: 33 }, checked: "page" },
-  edp: { prototype: 3071, extinct: 3085, cite: { book: IO, page: 30 }, checked: "page" },
+  // "Ext: 3085" is read as gone in 3085, so the last year on offer is 3084 (book panel, interface ruling).
+  interface: { prototype: 3071, extinct: 3084, cite: { book: IO, page: 33 }, checked: "page" },
+  edp: { prototype: 3071, extinct: 3084, cite: { book: IO, page: 30 }, checked: "page" },
   xjj: { prototype: 3071, production: 3075, cite: { book: IO, page: 29 }, checked: "page" },
   umu: { prototype: 3061, production: 3075, cite: { book: TO, page: 217 }, checked: "page" },
   wing: { prototype: 3070, production: 3085, cite: { book: IO, page: 29 }, checked: "page" },

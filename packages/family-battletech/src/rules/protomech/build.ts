@@ -176,5 +176,7 @@ export function holdsAt(record: ProtoRecord, catalog: Catalog, location: string)
     if (each === undefined) unknown += 1;
     else kg += each;
   }
+  // The partial wing is a torso item (its slot is taken off the limit by limitOf) and its weight counts toward the torso's combined weight (book panel, TO:AUE p. 104, TM p. 87).
+  if (location === "t") kg += wingKg(record);
   return { items, kg, unknown };
 }

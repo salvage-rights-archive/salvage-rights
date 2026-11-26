@@ -8,7 +8,7 @@ import type { RulesLevel } from "../../data/chassis";
 import { inGame, rulesetOf } from "../../data/rulesets";
 import { PROTO_DATES, PROTO_EXCLUDED, PROTO_LAUNCHERS } from "../../data/protomech";
 import type { ProtoDates } from "../../data/protomech";
-import { equipmentPhase, ownSpans, pastEraCap } from "../availability";
+import { baseFits, equipmentPhase, ownSpans, pastEraCap } from "../availability";
 import { mountableOn } from "../catalog";
 import type { Catalog, EquipmentRow } from "../catalog";
 import { DEFAULT_LEVEL, equipmentLevel, levelAtLeast, levelIn } from "../levels";
@@ -19,9 +19,12 @@ import type { ProtoRecord } from "./record";
 
 type Subject = Parameters<typeof equipmentPhase>[1];
 
+/** True when the unit is Mixed Technology: the Inner Sphere interface cockpit makes it so (IO:AE p. 96), and Advanced rules let any ProtoMech be (TO:AUE p. 189). */
+export const isMixed = (record: Pick<ProtoRecord, "techBase" | "cockpit">): boolean => record.techBase === "mixed" || record.cockpit === "interface";
+
 /** The record as the 'Mech-side availability rules read it: a Clan unit of the record's year, era, level and edition. */
 export const subjectOf = (record: ProtoRecord): Subject => ({
-  techBase: "clan" as MechRecord["techBase"],
+  techBase: (isMixed(record) ? "mixed" : "clan") as MechRecord["techBase"],
   year: record.year,
   era: record.era,
   rulesLevel: record.rulesLevel,
@@ -67,7 +70,7 @@ export function itemAvailable(row: EquipmentRow, record: ProtoRecord, catalog: C
   const level = equipmentLevel(seen);
   if (!levelAtLeast(levelOfRecord(record), level)) return false;
   if (everything) return true;
-  if (!(row.techBase === "clan" || isStarLeagueTech(row.techBase, seen.availability))) return false;
+  if (!(isMixed(record) ? baseFits(row.techBase, "mixed") : row.techBase === "clan" || isStarLeagueTech(row.techBase, seen.availability))) return false;
   if (pastEraCap(subjectOf(record), ownSpans(subjectOf(record), row.techBase, seen.availability))) return false;
   const phase = itemPhase(row, record, catalog);
   return phase === "production" || (phase === "prototype" && levelAtLeast(levelOfRecord(record), levelIn(level, phase, row.prototypeLevel)));

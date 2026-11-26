@@ -6,7 +6,7 @@ import type { ProtoArmorType, ProtoCockpit, ProtoDates, ProtoJumpSystem } from "
 import type { RulesLevel } from "../../data/chassis";
 import { levelAtLeast, levelIn } from "../levels";
 import { own } from "../walk";
-import { runMP } from "./movement";
+import { plainRun } from "./movement";
 import { datesPhase, levelOfRecord } from "./offered";
 import type { ProtoRecord } from "./record";
 
@@ -14,8 +14,9 @@ export const cockpitOf = (record: Pick<ProtoRecord, "cockpit">): ProtoCockpit | 
 export const armorTypeOf = (record: Pick<ProtoRecord, "armorType">): ProtoArmorType | undefined => own(PROTO_ARMOR_TYPES, record.armorType ?? "standard");
 export const jumpSystemOf = (record: Pick<ProtoRecord, "jumpType">): ProtoJumpSystem | undefined => own(PROTO_JUMP_SYSTEMS, record.jumpType ?? "standard");
 
-/** The most Jumping MP (or UMU MP) the jets may give: the Walking MP, or the Running MP (as the unit has it, boosted or not) for extended jump jets (IO:AE p. 59). An unknown system is held to the Walking MP. */
-export const jumpReach = (record: Pick<ProtoRecord, "walk" | "booster" | "jumpType">): number => (jumpSystemOf(record)?.reach === "run" ? runMP(record) : record.walk);
+/** The most Jumping MP (or UMU MP) the jets may give: the Walking MP, or the base Running MP (Walking x 1.5 rounded up; the Myomer Booster does not raise it) for extended jump jets
+ * (IO:AE p. 59, book panel ruling). The UMU cap at the Walking MP is inferred from the jump jet rules TO:AUE p. 104 points to (TM p. 84). An unknown system is held to the Walking MP. */
+export const jumpReach = (record: Pick<ProtoRecord, "walk" | "jumpType">): number => (jumpSystemOf(record)?.reach === "run" ? plainRun(record.walk) : record.walk);
 
 /** The Jumping MP the partial wing adds in a standard atmosphere (TO:AUE p. 107); it only adds to a unit that can jump, and not to UMUs. */
 export const wingBonus = (record: Pick<ProtoRecord, "partialWing" | "jump" | "jumpType">): number =>
@@ -65,7 +66,8 @@ const offered = <T extends { label: string; level: RulesLevel; dates?: ProtoDate
     .map(([id, option]) => ({ id, label: option.label }));
 
 /** The cockpits, armor types and jump systems to offer: those the rules level and time allow, and the one the record already has. */
-export const cockpitChoices = (record: ProtoRecord): OptionChoice[] => offered(PROTO_COCKPITS, record, record.cockpit ?? "standard");
+export const cockpitChoices = (record: ProtoRecord): OptionChoice[] =>
+  offered(PROTO_COCKPITS, record, record.cockpit ?? "standard").filter((c) => c.id !== "interface" || record.cockpit === "interface" || record.techBase === "clan"); // the interface is for Clan ProtoMechs (IO:AE p. 96)
 export const armorChoices = (record: ProtoRecord): OptionChoice[] => offered(PROTO_ARMOR_TYPES, record, record.armorType ?? "standard");
 export const jumpChoices = (record: ProtoRecord): OptionChoice[] => offered(PROTO_JUMP_SYSTEMS, record, record.jumpType ?? "standard");
 export const wingOffered = (record: ProtoRecord): boolean => record.partialWing === true || optionOffered(record, PROTO_WING.level, PROTO_WING.dates);
