@@ -36,6 +36,7 @@ import {
 } from "../data/bv";
 import type { BvGroup, BvOptions } from "../data/bv";
 import { clanStructure } from "./case";
+import { physicalDamage } from "./formulas";
 import { industrialRulesOf, totalHeatSinks, walkMP } from "./mech";
 import type { LocationCode, MechRecord, Mount } from "./mech";
 import type { Catalog, EquipmentRow } from "./catalog";
@@ -493,7 +494,7 @@ export function battleValue(record: MechRecord, catalog: Catalog, pilot: PilotSk
     if (physical) {
       const t = record.tons;
       const d = physical.damage;
-      const damage = typeof d === "number" ? d : d === "hatchet" ? Math.ceil(t / 5) : d === "sword" ? Math.ceil(t / 10) + 1 : d === "claws" ? Math.ceil(t / 7) : Math.ceil(t / 10);
+      const damage = typeof d === "number" ? d : physicalDamage(d, t);
       equipment += damage * (tsm && !physical.fixed ? 2 : 1) * physical.factor * (aesArms.has(mount.location) ? aes.weaponFactor : 1);
     } else if (MACHINE_GUN_ARRAY_IDS.includes(row.id)) {
       const guns = weapons.filter((w) => /machine-gun-(is|clan)$/.test(w.item.row.id) && w.item.mount.location === mount.location);

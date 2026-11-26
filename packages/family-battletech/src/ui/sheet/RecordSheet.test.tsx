@@ -181,12 +181,64 @@ describe("Multi-mode launchers and special munitions on the sheet", () => {
       ["ER", "1/Msl", "4", "9", "18", "27"],
       ["HE", "3/Msl", "—", "3", "6", "9"],
     ]);
-    expect(ammo).toBe("(ER ATM) 10, (HE ATM) 10");
+    expect(ammo).toBe("(ATM 6 ER) 10, (ATM 6 HE) 10");
   });
 
   it("gives a special munition its launcher's shots, and each choice when two launchers could take it", async () => {
-    expect((await factsFor("lrm-15-is", "ammo-artemis-capable-is")).ammo).toBe("(Artemis-Capable Missile) 8");
-    expect((await factsFor("srm-4-is", "srm-6-is", "ammo-inferno-is")).ammo).toBe("(Inferno SRM) 25 for SRM 4 or 15 for SRM 6");
+    expect((await factsFor("lrm-15-is", "ammo-artemis-capable-is")).ammo).toBe("(LRM 15 Artemis-capable) 8");
+    expect((await factsFor("srm-4-is", "srm-6-is", "ammo-inferno-is")).ammo).toBe("(SRM 4 Inferno) 25 or (SRM 6 Inferno) 15");
     expect((await factsFor("ammo-inferno-is")).ammo).toBe("(Inferno SRM)");
+  });
+});
+
+describe("Printed sheet conventions", () => {
+  const plus = (d: MechRecord, id: string, equipmentId: string, location: "LT" | "RA" | "LA" | "CT", slot: number | null) =>
+    void d.mounts.push({ id, equipmentId, name: id, techBase: "inner-sphere", location, slot });
+  const slotsOf = (svg: SVGSVGElement, code: string) => [...svg.querySelectorAll(`[data-location='${code}'] [data-slot='mount']`)].map((g) => g.textContent.replace(/^\d\./, ""));
+
+  it("prints an ammunition slot as Ammo (LRM 10) 12 from the bin's shots, and an Artemis-capable bin with its launcher", async () => {
+    const record = editRecord(await recordOf(mordelBiped()), (d) => {
+      plus(d, "bin", "ammo-lrm-10-is", "LT", 6);
+      plus(d, "lrm", "lrm-10-is", "LT", 8);
+      plus(d, "art", "ammo-artemis-capable-is", "LT", 10);
+    });
+    expect(slotsOf((await drawn(record)).svg, "LT")).toEqual(expect.arrayContaining(["Ammo (LRM 10) 12", "Ammo (LRM 10 Artemis-capable) 12"]));
+  });
+
+  it("prints a hatchet damage as a number from the tonnage of the unit", async () => {
+    const record = editRecord(await recordOf(mordelBiped()), (d) => {
+      d.tons = 60;
+      plus(d, "axe", "hatchet-is", "RA", 2);
+    });
+    expect(sheetFacts(record, await loadCatalog()).inventory.find((l) => l.name === "Hatchet")).toMatchObject({ location: "RA", damage: "12" });
+  });
+
+  it("brackets the running MP for MASC and the walking and running MP for TSM", async () => {
+    const catalog = await loadCatalog();
+    const withMasc = editRecord(await recordOf(mordelBiped()), (d) => plus(d, "m", "masc-is", "LT", 6));
+    const masc = sheetFacts(withMasc, catalog);
+    expect([masc.walk, masc.walkBest, masc.run, masc.runBest]).toEqual(["4", undefined, "6", "8"]);
+    const tsm = sheetFacts(editRecord(await recordOf(mordelBiped()), (d) => void (d.chassis.myomer = "tsm")), catalog);
+    expect([tsm.walk, tsm.walkBest, tsm.run, tsm.runBest]).toEqual(["4", "5", "6", "8"]);
+    expect((await drawn(withMasc)).lines).toContain("Running: 6 [8]");
+  });
+
+  it("draws three gyro hit boxes for a heavy-duty gyro and two for a standard one", async () => {
+    const boxes = async (gyro: string) => {
+      const { svg } = await drawn(editRecord(await recordOf(mordelBiped()), (d) => void (d.chassis.gyro = gyro)));
+      cleanup();
+      return svg.querySelectorAll("[data-hits='Gyro Hits'] circle").length;
+    };
+    expect([await boxes("heavy-duty"), await boxes("standard")]).toEqual([3, 2]);
+  });
+
+  it("shades the fixed equipment of an OmniMech and nothing else", async () => {
+    const record = editRecord(await recordOf(mordelBiped()), (d) => {
+      const gun = d.mounts.find((m) => m.name === "AC/10");
+      d.omni = { chassisId: "o", configurationId: "a", code: "A", baseHeatSinks: 10, baseMountIds: gun ? [gun.id] : [] };
+    });
+    const { svg } = await drawn(record);
+    expect(svg.querySelectorAll("[data-location='RT'] [data-fixed]")).toHaveLength(7);
+    expect(svg.querySelectorAll("[data-location='LA'] [data-fixed]")).toHaveLength(0);
   });
 });

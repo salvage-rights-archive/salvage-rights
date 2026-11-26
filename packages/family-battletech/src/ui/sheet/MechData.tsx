@@ -2,6 +2,7 @@
 import type { InventoryLine } from "../../rules/catalog";
 import Frame from "./Frame";
 import type { Rect } from "./Frame";
+import { bracketed } from "./facts";
 import type { SheetFacts } from "./facts";
 import { FAINT, INK, MIN_SIZE, squeeze, wrap } from "./text";
 
@@ -115,8 +116,8 @@ export default function MechData({ rect, facts }: { rect: Rect; facts: SheetFact
           {facts.movementNote}
         </text>
       )}
-      {pair("Walking:", facts.walk, x + 40, y + 156, 25, 200)}
-      {pair("Running:", facts.run, x + 40, y + 188, 25, 200)}
+      {pair("Walking:", bracketed(facts.walk, facts.walkBest), x + 40, y + 156, 25, 200)}
+      {pair("Running:", bracketed(facts.run, facts.runBest), x + 40, y + 188, 25, 200)}
       {pair("Jumping:", facts.jump, x + 40, y + 220, 25, 200)}
       {pair("Tonnage:", facts.tons, x + 330, y + 156, 25, 160)}
       {pair("Tech Base:", facts.techBase, x + 330, y + 188, 25, 160)}

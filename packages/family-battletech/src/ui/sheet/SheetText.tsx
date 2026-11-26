@@ -1,6 +1,7 @@
 // The sheet's content as text, for a screen reader: the 'Mech data as a list of terms, the inventory as a table, and the
 // armor and structure points of each location as a list. Visually hidden, and not printed.
 import { EMPTY_SLOT } from "../../data/sheet";
+import { bracketed } from "./facts";
 import type { SheetFacts } from "./facts";
 import { armorText, structureText } from "./Diagrams";
 
@@ -8,8 +9,8 @@ export default function SheetText({ facts, record, marks = [] }: { facts: SheetF
   const id = `sheet-text-${record.id}`;
   const terms: [string, string][] = [
     ["Type", facts.title],
-    ["Walking", facts.walk],
-    ["Running", facts.run],
+    ["Walking", bracketed(facts.walk, facts.walkBest)],
+    ["Running", bracketed(facts.run, facts.runBest)],
     ["Jumping", facts.jump],
     ...(facts.movementNote === undefined ? [] : [["Movement taken off", facts.movementNote] as [string, string]]),
     ["Tonnage", facts.tons],
@@ -80,7 +81,7 @@ export default function SheetText({ facts, record, marks = [] }: { facts: SheetF
           <ul>
             {slots.map((code) => (
               <li key={code}>
-                {`${facts.points.find((p) => p.code === code)?.name ?? code}: ${(facts.layout.slots[code] ?? []).map((cell) => (cell.kind === "empty" ? EMPTY_SLOT : cell.label)).join(", ")}`}
+                {`${facts.points.find((p) => p.code === code)?.name ?? code}: ${(facts.layout.slots[code] ?? []).map((cell) => (cell.kind === "empty" ? EMPTY_SLOT : ((cell.mountId === undefined ? undefined : facts.ammoSlots.get(cell.mountId)) ?? cell.label))).join(", ")}`}
               </li>
             ))}
           </ul>
