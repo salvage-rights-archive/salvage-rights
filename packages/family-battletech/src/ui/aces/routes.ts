@@ -15,3 +15,5 @@ export const supportHref = (id: string): string => `${ACES_SUPPORT}?id=${encodeU
 export const ACES_NEW_GAME = `${ACES_BASE}/new-game`;
 export const ACES_GAME = `${ACES_BASE}/game`;
 export const gameHref = (id: string): string => `${ACES_GAME}?id=${encodeURIComponent(id)}`;
+export const ACES_AFTER = `${ACES_BASE}/after`;
+export const afterHref = (campaignId: string, sortie: number): string => `${ACES_AFTER}?campaign=${encodeURIComponent(campaignId)}&n=${String(sortie)}`;

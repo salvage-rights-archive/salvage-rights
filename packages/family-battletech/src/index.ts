@@ -26,6 +26,7 @@ const acesPreviewRoutes: FamilyRoute[] = [
   { path: "aces-preview/support", label: "Aces support card", section: "workshop", load: () => import("./ui/aces/SupportEditor") },
   { path: "aces-preview/new-game", label: "New Aces game", section: "workshop", load: () => import("./ui/aces/NewGamePage") },
   { path: "aces-preview/game", label: "Aces game", section: "workshop", load: () => import("./ui/aces/GamePage") },
+  { path: "aces-preview/after", label: "Aces after-sortie steps", section: "workshop", load: () => import("./ui/aces/AfterSortiePage") },
 ];
 
 // Gothic's pages are written as the game's own routes. The host serves them only once the game is ready (G-9), so until then they are
