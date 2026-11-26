@@ -2,13 +2,14 @@
 // year, era and tech base allow (hide, do not mark): a part the suit already holds stays listed, and the rules check reports it.
 import { useState } from "react";
 import { MOTIVE, SQUAD, armorTypeOf, unitWord, weightClassOf } from "../../data/battlearmor";
-import { ERAS } from "../../data/editions";
-import { setEra, setYear } from "../../rules/availability";
+import { ERAS, SUB_ERAS, eraLabel } from "../../data/editions";
+import type { EraRow } from "../../data/editions";
+import { eraNeedsPick, eraOfRecord, erasOfYear, setEra, setYear } from "../../rules/availability";
 import { armorChoices, equipmentChoices, manipulatorChoices, motiveChoices, weightClassChoices } from "../../rules/battlearmor/availability";
 import { LOCATION_NAMES, build, carriesShots, figuresOf, locationName, locationsOf, shotsOf } from "../../rules/battlearmor/construct";
 import type { BaRecord } from "../../rules/battlearmor/record";
 import type { Catalog, EquipmentRow } from "../../rules/catalog";
-import { DEFAULT_LEVEL, levelRow } from "../../rules/levels";
+import { DEFAULT_LEVEL, levelRow, techBaseChoices } from "../../rules/levels";
 import { tidy } from "../../rules/walk";
 import LevelSelect from "../editor/LevelSelect";
 import { NumberField, SelectField, TextField } from "../aero/fields";
@@ -21,11 +22,18 @@ interface PartProps {
   onEdit: BaOnEdit;
 }
 const num = (n: number): string => String(tidy(n));
-const ERA_CHOICES = [{ value: "", label: "Any era" }, ...ERAS.map((era) => ({ value: era.id, label: `${era.name} (${String(era.startYear)}${era.endYear === undefined ? " on" : `-${String(era.endYear)}`})` }))];
+const eraChoice = (era: EraRow): { value: string; label: string } => ({ value: era.id, label: `${eraLabel(era)} (${String(era.startYear)}${era.endYear === undefined ? " on" : `-${String(era.endYear)}`})` });
+const ERA_CHOICES = [{ value: "", label: "Any era" }, ...[...ERAS, ...SUB_ERAS].map(eraChoice)];
 const shortName = (name: string): string => name.replace(/ \(Battle Armor\)$/, "");
 
 export function IdentityPanel({ record, onEdit }: PartProps) {
   const cls = weightClassOf(record.weightClass);
+  // The year sits above the tech base and decides the eras: one era holds it, or two (an Inner Sphere era and a Clan sub-era) and the era is picked, and the era decides the tech base.
+  // Above Introductory a year is needed (IO:AE p. 27).
+  const yearEras = erasOfYear(record.year);
+  const level = record.rulesLevel ?? DEFAULT_LEVEL;
+  const needsYear = record.year === null && level !== "introductory";
+  const bases = techBaseChoices(record.rulesLevel, record.techBase, { year: record.year, era: record.era, editionId: record.editionId }).filter(([value]) => value !== "mixed");
   const classes = weightClassChoices(record, record.weightClass).map((row) => ({ value: row.id, label: `${row.label} (${num(row.minKg)} to ${num(row.maxKg)} kg)` }));
   return (
     <section className="bt-panel" aria-labelledby="ba-identity">
@@ -34,13 +42,35 @@ export function IdentityPanel({ record, onEdit }: PartProps) {
         <TextField id="field-name" label="Name" value={record.name.chassis} onChange={(v) => { onEdit((d) => void (d.name.chassis = v), "name"); }} />
         <TextField id="field-name-model" label="Model" value={record.name.model} onChange={(v) => { onEdit((d) => void (d.name.model = v), "name-model"); }} />
         <LevelSelect record={record} onChange={(level) => { onEdit((d) => void (d.rulesLevel = level)); }} />
-        <NumberField id="field-year" label="Year" value={record.year} allowEmpty onValid={(v) => { onEdit((d) => { setYear(d, v); }, "year"); }} />
-        <SelectField id="field-era" label="Era" value={record.era ?? ""} options={ERA_CHOICES} onChange={(v) => { onEdit((d) => { setEra(d, v); }); }} />
+        <NumberField
+          id="field-year"
+          label="Year"
+          value={record.year}
+          allowEmpty
+          hint={needsYear ? `Needs a year at ${levelRow(level).label} rules: the year sets the era and decides what is offered.` : undefined}
+          onValid={(v) => { onEdit((d) => { setYear(d, v); }, "year"); }}
+        />
+        {yearEras.length === 1 ? (
+          <div className="bt-field">
+            <span id="field-era-label" className="bt-label">Era</span>
+            <span id="field-era" tabIndex={-1} aria-labelledby="field-era-label">{(() => { const era = eraOfRecord(record); return era ? eraLabel(era) : "Any era"; })()}</span>
+            <span className="bt-hint">The era follows the year.</span>
+          </div>
+        ) : (
+          <SelectField
+            id="field-era"
+            label="Era"
+            value={yearEras.length > 1 ? (eraNeedsPick(record) ? "" : (eraOfRecord(record)?.id ?? "")) : (record.era ?? "")}
+            options={yearEras.length > 1 ? [{ value: "", label: "Choose an era" }, ...yearEras.map(eraChoice)] : ERA_CHOICES}
+            hint={yearEras.length > 1 ? `The year ${String(record.year)} is in two eras; the era you choose decides the tech base.` : undefined}
+            onChange={(v) => { onEdit((d) => { setEra(d, v); }); }}
+          />
+        )}
         <SelectField
           id="field-techBase"
           label="Tech base"
           value={record.techBase}
-          options={[{ value: "inner-sphere", label: "Inner Sphere" }, { value: "clan", label: "Clan" }]}
+          options={bases.map(([value, label]) => ({ value, label }))}
           hint="Inner Sphere suits use Inner Sphere equipment and Clan suits Clan equipment (TechManual, p. 160)."
           onChange={(v) => { onEdit((d) => void (d.techBase = v === "clan" ? "clan" : "inner-sphere")); }}
         />
@@ -80,7 +110,7 @@ export function MotivePanel({ record, onEdit }: PartProps) {
   const cls = weightClassOf(record.weightClass);
   const quad = record.body === "quad";
   const kinds = motiveChoices(record, record.motive.kind).map((kind) => ({ value: kind as string, label: MOTIVE[kind].label }));
-  const manips = manipulatorChoices(record, undefined).map((row) => ({ value: row.id, label: row.label + (row.kg ? ` (${num(row.kg)} kg)` : "") }));
+  const manips = manipulatorChoices(record, [record.manipulators.la, record.manipulators.ra]).map((row) => ({ value: row.id, label: row.label + (row.kg ? ` (${num(row.kg)} kg)` : "") }));
   const max = cls ? (quad ? cls.ground.max.quad : cls.ground.max.humanoid) : undefined;
   const free = cls ? (quad ? cls.ground.free.quad : cls.ground.free.humanoid) : undefined;
   const optionsFor = (current: string) => (manips.some((m) => m.value === current) ? manips : [...manips, { value: current, label: current }]);

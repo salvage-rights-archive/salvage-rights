@@ -20,10 +20,12 @@ export interface BattleArmorDiagramProps {
 const SIZE = 14;
 const GAP = 4;
 const PER_ROW = 10;
+/** More bubbles than a suit can carry (18 armor points and the trooper) are not drawn. */
+const MOST = 30;
 
 /** One row of bubbles; the first is the trooper's, drawn filled grey as on the sheet. */
 function Bubbles({ count, trooper }: { count: number; trooper: boolean }) {
-  const total = count + (trooper ? 1 : 0);
+  const total = Math.min(MOST, Math.max(0, Math.floor(count)) + (trooper ? 1 : 0));
   const rows = Math.max(1, Math.ceil(total / PER_ROW));
   const width = Math.min(total, PER_ROW) * (SIZE + GAP);
   return (
@@ -40,7 +42,7 @@ export default function BattleArmorDiagram({ locations, use, onSelect, selected,
     <ul className="ba-diagram bt-list" aria-label="Troopers">
       {locations.map((loc) => {
         const points = use === "armor" ? loc.armor : (loc.structure ?? 0);
-        const label = `${loc.name}, ${String(loc.armor)} armor ${loc.armor === 1 ? "point" : "points"} and the trooper`;
+        const label = use === "armor" ? `${loc.name}, ${String(loc.armor)} armor ${loc.armor === 1 ? "point" : "points"} and the trooper` : `${loc.name}, ${String(points)} structure ${points === 1 ? "point" : "points"}`;
         const classes = ["ba-diagram__box", selected === loc.code ? "is-selected" : "", inError.includes(loc.code) ? "is-error" : ""].filter(Boolean).join(" ");
         const inner: ReactNode = (
           <>

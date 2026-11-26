@@ -112,14 +112,14 @@ export interface ManipulatorRow extends Dated {
   group: ManipulatorGroup;
   /** Must be mounted in a pair (both arms). */
   pairs: boolean;
-  /** Cost per arm in C-bills (a cargo lifter's is per half ton of capacity). */
+  /** Cost per arm in C-bills. */
   cost: number;
   cite: Cite;
 }
 const MANIP_DATES = (page: number) => ({ datesCite: { book: IO, page } });
 const CLAW = { ...MANIP_DATES(45), availability: [{ from: 3050 }], clanAvailability: [{ from: 2868 }], clanPrototypeYear: 2865 };
 
-/** The manipulators (printed p. 166) with their costs (p. 281). The modular equipment adaptor is a later piece. */
+/** The manipulators (printed p. 166) with their costs (p. 281). The modular equipment adaptor and the cargo lifter (weighed and priced per half ton of capacity, pp. 166 and 281) are later pieces. */
 export const MANIPULATORS: ManipulatorRow[] = [
   { id: "none", label: "None", kg: 0, group: "none", pairs: false, cost: 0, availability: [{ from: 1950 }], datesCite: { book: TM, page: 166 }, cite: { book: TM, page: 166 } },
   { id: "armored-glove", label: "Armored glove", kg: 0, group: "glove", pairs: false, cost: 2_500, availability: [{ from: 2200 }], ...MANIP_DATES(45), cite: { book: TM, page: 166 } },
@@ -146,14 +146,9 @@ export const MANIPULATORS: ManipulatorRow[] = [
     id: "heavy-claw-vibro", label: "Heavy battle claw (vibro-claws)", kg: 60, group: "claw", pairs: false, cost: 30_000, availability: [{ from: 3054 }], prototypeYear: 3053,
     clanAvailability: [{ from: 3062 }], ...MANIP_DATES(45), cite: { book: TM, page: 166 },
   },
-  { id: "cargo-lifter", label: "Cargo lifter", kg: 30, group: "tool", pairs: true, cost: 500, availability: [{ from: 2110 }], ...MANIP_DATES(45), cite: { book: TM, page: 166 } },
   { id: "industrial-drill", label: "Industrial drill", kg: 30, group: "tool", pairs: false, cost: 2_500, availability: [{ from: 2200 }], ...MANIP_DATES(45), cite: { book: TM, page: 166 } },
   { id: "salvage-arm", label: "Salvage arm", kg: 30, group: "tool", pairs: false, cost: 50_000, availability: [{ from: 2415 }], prototypeYear: 2410, ...MANIP_DATES(45), cite: { book: TM, page: 166 } },
 ];
-
-/** A cargo lifter weighs this many kilograms for each half ton of capacity, rounded up (printed p. 166). */
-export const CARGO_LIFTER_KG_PER_HALF_TON = 30;
-export const CARGO_LIFTER_COST_PER_HALF_TON = 500;
 
 export interface ArmorRow extends Dated {
   id: string;
@@ -166,8 +161,6 @@ export interface ArmorRow extends Dated {
   moveMods?: [number, number, number, number];
   invisibleToProbes?: true;
   ignoresHeat?: true;
-  /** The type counts as the suit's one camo system (errata v8.0 to p. 253) and as camo or stealth in the Battle Value defensive factor. */
-  camo?: true;
   /** Added to the suit's defensive factor in Battle Value (TechManual BV v4.1, Defensive Factor Modifier Table). */
   bvFactor: number;
   /** Battle Value of one armor point: 3.5 for fire resistant armor, 2.5 for the rest. */
@@ -178,7 +171,7 @@ export interface ArmorRow extends Dated {
 const ARMOR_CITE: Cite = { book: TM, page: 169 };
 const ARMOR_DATES: Cite = { book: IO, page: 30 };
 
-/** The armor types (printed p. 169; costs p. 281; dates IO:AE printed p. 30). Stealth (basic) is Inner Sphere only in the later table, so it has no Clan weight here although p. 169 prints one. */
+/** The armor types (printed p. 169; costs p. 281; dates IO:AE printed p. 30). Weights are TechManual p. 169's for both tech bases, the later source (errata v8.0, 2024) over IO:AE p. 30, which lists basic stealth as Inner Sphere only; the dates are IO:AE's, the Clan ones for basic and standard stealth read as the Inner Sphere ones without the extinction (inferred). */
 export const ARMOR_TYPES: ArmorRow[] = [
   {
     id: "standard", label: "Standard", kg: { "inner-sphere": 50, clan: 25 }, slots: 0, bvFactor: 0, bvPerPoint: 2.5, costPerPoint: 10_000, cite: ARMOR_CITE,
@@ -194,19 +187,19 @@ export const ARMOR_TYPES: ArmorRow[] = [
     availability: [{ from: 3050 }], yearsInferred: true, datesCite: ARMOR_DATES,
   },
   {
-    id: "stealth-basic", label: "Stealth (basic)", kg: { "inner-sphere": 55 }, slots: 3, techBase: "inner-sphere", rangeMods: [0, 1, 2], invisibleToProbes: true, camo: true, bvFactor: 0.2, bvPerPoint: 2.5, costPerPoint: 12_000, cite: ARMOR_CITE,
-    availability: [{ from: 2710, to: 2770 }, { from: 3052 }], prototypeYear: 2700, datesCite: ARMOR_DATES,
+    id: "stealth-basic", label: "Stealth (basic)", kg: { "inner-sphere": 55, clan: 30 }, slots: 3, rangeMods: [0, 1, 2], invisibleToProbes: true, bvFactor: 0.2, bvPerPoint: 2.5, costPerPoint: 12_000, cite: ARMOR_CITE,
+    availability: [{ from: 2710, to: 2770 }, { from: 3052 }], prototypeYear: 2700, clanAvailability: [{ from: 2710 }], yearsInferred: true, datesCite: ARMOR_DATES,
   },
   {
-    id: "stealth-standard", label: "Stealth (standard)", kg: { "inner-sphere": 60, clan: 35 }, slots: 4, rangeMods: [1, 1, 2], invisibleToProbes: true, camo: true, bvFactor: 0.2, bvPerPoint: 2.5, costPerPoint: 15_000, cite: ARMOR_CITE,
+    id: "stealth-standard", label: "Stealth (standard)", kg: { "inner-sphere": 60, clan: 35 }, slots: 4, rangeMods: [1, 1, 2], invisibleToProbes: true, bvFactor: 0.2, bvPerPoint: 2.5, costPerPoint: 15_000, cite: ARMOR_CITE,
     availability: [{ from: 2720, to: 2770 }, { from: 3053 }], prototypeYear: 2710, clanAvailability: [{ from: 2720 }], yearsInferred: true, datesCite: ARMOR_DATES,
   },
   {
-    id: "stealth-improved", label: "Stealth (improved)", kg: { "inner-sphere": 60, clan: 35 }, slots: 5, rangeMods: [1, 2, 3], invisibleToProbes: true, camo: true, bvFactor: 0.3, bvPerPoint: 2.5, costPerPoint: 20_000, cite: ARMOR_CITE,
+    id: "stealth-improved", label: "Stealth (improved)", kg: { "inner-sphere": 60, clan: 35 }, slots: 5, rangeMods: [1, 2, 3], invisibleToProbes: true, bvFactor: 0.3, bvPerPoint: 2.5, costPerPoint: 20_000, cite: ARMOR_CITE,
     availability: [{ from: 3057 }], prototypeYear: 3055, clanAvailability: [{ from: 3058 }], datesCite: ARMOR_DATES,
   },
   {
-    id: "stealth-prototype", label: "Stealth (prototype)", kg: { "inner-sphere": 100 }, slots: 4, techBase: "inner-sphere", rangeMods: [0, 1, 2], invisibleToProbes: true, camo: true, rulesLevel: "experimental",
+    id: "stealth-prototype", label: "Stealth (prototype)", kg: { "inner-sphere": 100 }, slots: 4, techBase: "inner-sphere", rangeMods: [0, 1, 2], invisibleToProbes: true, rulesLevel: "experimental",
     bvFactor: 0.2, bvPerPoint: 2.5, costPerPoint: 50_000, cite: ARMOR_CITE, availability: [{ from: 3052, to: 3055 }], prototypeYear: 3050, datesCite: ARMOR_DATES,
   },
   {
@@ -214,7 +207,7 @@ export const ARMOR_TYPES: ArmorRow[] = [
     availability: [{ from: 3058 }], prototypeYear: 3052, datesCite: ARMOR_DATES,
   },
   {
-    id: "mimetic", label: "Mimetic", kg: { "inner-sphere": 50 }, slots: 7, techBase: "inner-sphere", moveMods: [3, 2, 1, 0], camo: true, bvFactor: 0.3, bvPerPoint: 2.5, costPerPoint: 15_000, cite: ARMOR_CITE,
+    id: "mimetic", label: "Mimetic", kg: { "inner-sphere": 50 }, slots: 7, techBase: "inner-sphere", moveMods: [3, 2, 1, 0], bvFactor: 0.3, bvPerPoint: 2.5, costPerPoint: 15_000, cite: ARMOR_CITE,
     availability: [{ from: 3061 }], prototypeYear: 3058, datesCite: ARMOR_DATES,
   },
 ];

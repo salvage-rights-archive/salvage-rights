@@ -7,6 +7,7 @@ import type { Catalog } from "../catalog";
 import { LEVEL_ORDER, equipmentLevel, levelAtLeast, levelIn, levelRow } from "../levels";
 import { canon, officialLabel } from "../official";
 import type { OfficialState } from "../official";
+import { yearEraFindings } from "../checks";
 import { datesText } from "../time";
 import { tidy } from "../walk";
 import { baseFits, itemOffered, itemPhase, phaseOf, suitOffered } from "./availability";
@@ -38,6 +39,16 @@ const typeCheck: Check = (record) => {
   }
   return out;
 };
+
+/** The year, era and tech base against one another and the era table, shared with the 'Mech and AeroTech checks. */
+const yearCheck: Check = (record) =>
+  yearEraFindings({ year: record.year, era: record.era, techBase: record.techBase, editionId: record.editionId }, record.rulesLevel ?? "standard", "suit").map(({ level, message, where, cite }) => ({
+    check: "year",
+    level,
+    message,
+    ...(where?.field === undefined ? {} : { where: { field: where.field } }),
+    ...(cite ? { cite: page(cite) } : {}),
+  }));
 
 const weightCheck: Check = (record, catalog) => {
   const b = build(record, catalog);
@@ -163,7 +174,7 @@ const datesCheck: Check = (record, catalog) => {
   if (isMotive(kind)) say(MOTIVE[kind].label, MOTIVE[kind], { field: "motive" });
   for (const mount of record.mounts) {
     const row = mount.equipmentId === null ? undefined : catalog.rowFor(mount.equipmentId, record.editionId);
-    if (!row || row.techBase !== record.techBase) continue;
+    if (!row) continue;
     const phase = itemPhase(row, record, catalog);
     if (phase === null && record.year !== null) out.push({ check: "dates", level: "warning", message: `${row.name} is not available in ${num(record.year)}.`, where: { mountId: mount.id }, cite: page(row.cite) });
     else if (phase === "prototype") out.push({ check: "dates", level: "note", message: `${row.name} is a prototype in ${String(record.year)}, an Experimental-level item.`, where: { mountId: mount.id }, cite: page(row.cite) });
@@ -214,7 +225,7 @@ const officialCheck: Check = (record) => {
 };
 
 export const BA_CHECKS: { id: string; run: Check }[] = [
-  { id: "type", run: typeCheck }, { id: "weight", run: weightCheck }, { id: "motive", run: motiveCheck }, { id: "manipulators", run: manipulatorCheck }, { id: "armor", run: armorCheck },
+  { id: "type", run: typeCheck }, { id: "year", run: yearCheck }, { id: "weight", run: weightCheck }, { id: "motive", run: motiveCheck }, { id: "manipulators", run: manipulatorCheck }, { id: "armor", run: armorCheck },
   { id: "slots", run: slotCheck }, { id: "equipment", run: equipmentCheck }, { id: "dates", run: datesCheck }, { id: "level", run: levelCheck }, { id: "official", run: officialCheck },
 ];
 

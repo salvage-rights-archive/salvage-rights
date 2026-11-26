@@ -42,10 +42,10 @@ export const offered = (row: Dated, record: BaSubject): boolean => levelFits(row
 export const suitOffered = (level: RulesLevel | undefined): boolean => levelAtLeast(level ?? DEFAULT_LEVEL, SUIT_LEVEL);
 
 /** The parts a choice list shows, the current one kept so a selector never blanks. */
-const choices = <T extends Dated & { id: string }>(table: T[], record: BaSubject, current: string | undefined): T[] => table.filter((row) => row.id === current || offered(row, record));
+const choices = <T extends Dated & { id: string }>(table: T[], record: BaSubject, current: string | string[] | undefined): T[] => table.filter((row) => [current].flat().includes(row.id) || offered(row, record));
 export const weightClassChoices = (record: BaSubject, current?: string): WeightClassRow[] => choices(WEIGHT_CLASSES, record, current);
 export const armorChoices = (record: BaSubject, current?: string): ArmorRow[] => choices(ARMOR_TYPES, record, current);
-export const manipulatorChoices = (record: BaSubject, current?: string): ManipulatorRow[] => choices(MANIPULATORS, record, current);
+export const manipulatorChoices = (record: BaSubject, current?: string | string[]): ManipulatorRow[] => choices(MANIPULATORS, record, current);
 export const motiveChoices = (record: BaSubject, current?: string): MotiveKind[] =>
   (Object.keys(MOTIVE) as MotiveKind[]).filter((kind) => kind === current || offered(MOTIVE[kind], record));
 

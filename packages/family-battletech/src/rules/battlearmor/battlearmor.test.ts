@@ -105,7 +105,7 @@ describe("battle armor availability", () => {
     const clan = { techBase: "clan" as const, year: 2870, era: undefined, rulesLevel: "standard" as const, editionId: "total-warfare" };
     expect(weightClassChoices(clan).map((row) => row.id)).toEqual(["light", "medium"]);
     expect(motiveChoices(clan)).toEqual(["jump"]);
-    expect(armorChoices(clan).map((row) => row.id)).toEqual(["standard", "stealth-standard"]);
+    expect(armorChoices(clan).map((row) => row.id)).toEqual(["standard", "stealth-basic", "stealth-standard"]);
     expect(manipulatorChoices({ ...clan, techBase: "inner-sphere", year: 3040 }).map((row) => row.id)).toContain("salvage-arm");
     expect(suitOffered("introductory")).toBe(false);
     expect(suitOffered("standard")).toBe(true);
@@ -138,5 +138,14 @@ describe("the battle armor record", () => {
     expect((read as unknown as Record<string, unknown>).extra).toBe(7);
     expect(read?.mounts[0]?.location).toBe("tail");
     expect(withDefaults({ schema: 2 })).toBeUndefined();
+  });
+});
+
+describe("battle armor year and era", () => {
+  it("asks for a year above Introductory, as the Mech check does, and weighs Clan basic stealth at the TechManual 30 kg", () => {
+    const noYear = { ...newBaRecord({ weightClass: "light" }), year: null };
+    expect(checkBa(noYear, catalog).some((f) => f.check === "year" && f.level === "error")).toBe(true);
+    const clan = { ...newBaRecord({ weightClass: "light", techBase: "clan", year: 2900 }), armor: { type: "stealth-basic", points: 2 } };
+    expect(build(clan, catalog).lines.find((l) => l.label.startsWith("Stealth (basic)"))?.kg).toBe(60);
   });
 });

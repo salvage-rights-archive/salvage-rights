@@ -3,7 +3,6 @@
 // does not understand: an unknown weight class, armor type, manipulator or item is counted as nothing and reported in `unknown`, so the rules
 // check can say so. Weights are kilograms.
 import {
-  CARGO_LIFTER_KG_PER_HALF_TON,
   MOTIVE,
   isMotive,
   SHOTS_PER_SLOT,
@@ -140,16 +139,16 @@ export function build(record: BaRecord, catalog: Catalog): BaBuild {
   const { la, ra } = manipulatorsOf(record);
   for (const [side, id, row] of [["left", record.manipulators.la, la], ["right", record.manipulators.ra, ra]] as const) {
     if (!row) unknown.push(`manipulator "${id}"`);
-    else add(`${row.label}, ${side} arm`, row.id === "cargo-lifter" ? CARGO_LIFTER_KG_PER_HALF_TON : row.kg);
+    else add(`${row.label}, ${side} arm`, row.kg);
   }
 
   const armor = armorTypeOf(record.armor.type);
   const points = Math.max(0, record.armor.points);
   if (!armor) unknown.push(`armor type "${record.armor.type}"`);
   else {
+    // A type the tech base does not build weighs nothing here; the armor check reports it once.
     const kgPerPoint = armor.kg[record.techBase];
-    if (kgPerPoint === undefined) unknown.push(`${armor.label} armor for a ${record.techBase === "clan" ? "Clan" : "Inner Sphere"} suit`);
-    else add(`${armor.label} armor, ${String(points)} points`, points * kgPerPoint);
+    if (kgPerPoint !== undefined) add(`${armor.label} armor, ${String(points)} points`, points * kgPerPoint);
   }
 
   const used: { mount: BaMount; figures: MountFigures }[] = [];
