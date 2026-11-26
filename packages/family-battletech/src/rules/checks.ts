@@ -1050,6 +1050,37 @@ function patchworkCheck({ record, layout }: CheckInput): Finding[] {
   return out;
 }
 
+/**
+ * The Actuator Enhancement System (TO:AUE printed p.90, construction rules): one to a limb, the leg kind on every leg or none, no leg kind on a
+ * heavy or assault 'Mech (so no four-legged heavy or assault 'Mech has one at all), and none beside MASC, Triple-Strength Myomer or a Targeting Computer.
+ */
+function aesCheck({ record, catalog }: CheckInput): Finding[] {
+  const aes = record.mounts.flatMap((m) => {
+    const id = rowOf(catalog, record, m)?.id ?? "";
+    return id.startsWith("aes-arm") || id.startsWith("aes-leg") ? [{ mount: m, leg: id.startsWith("aes-leg") }] : [];
+  });
+  if (aes.length === 0) return [];
+  const out: Finding[] = [];
+  const cite = { book: "Tactical Operations: Advanced Units and Equipment", page: 90 };
+  const places = new Set<string>();
+  for (const { mount } of aes) {
+    if (mount.location === null) continue;
+    if (places.has(mount.location)) out.push(finding("aes", "error", `The ${locationName(mount.location)} has more than one AES; the book allows one to a limb.`, { where: { mountId: mount.id, location: mount.location }, cite }));
+    places.add(mount.location);
+  }
+  const legs = (Object.keys(configurationOf(record.configuration)?.size ?? {}) as LocationCode[]).filter((loc) => ["LL", "RL", "CL", "FLL", "FRL", "RLL", "RRL"].includes(loc));
+  const legAes = aes.filter((a) => a.leg);
+  if (legAes.length > 0) {
+    const bare = legs.filter((loc) => !legAes.some((a) => a.mount.location === loc));
+    if (bare.length > 0) out.push(finding("aes", "error", `A leg AES must be on every leg; the ${bare.map(locationName).join(", ")} ${bare.length === 1 ? "has" : "have"} none.`, { where: { location: bare[0] }, cite }));
+    if (record.tons >= 60) out.push(finding("aes", "error", `A heavy or assault 'Mech (60 tons and up) cannot mount a leg AES; this one is ${tons(record.tons)}.`, { where: { mountId: legAes[0]?.mount.id }, cite }));
+  }
+  const items = equipmentItems(record, catalog).items;
+  const clash = [mascOf(record, items).mounts.length > 0 ? "MASC" : "", tsmOf(record, items) !== undefined ? "Triple-Strength Myomer" : "", items.some((i) => stemOf(i.row.id) === "targeting-computer") ? "a Targeting Computer" : ""].filter(Boolean);
+  if (clash.length > 0) out.push(finding("aes", "error", `AES is incompatible with ${clash.join(" and ")}, which this 'Mech also has.`, { where: { mountId: aes[0]?.mount.id }, cite }));
+  return out;
+}
+
 /** Stealth armor needs a Guardian ECM Suite on the same 'Mech (TechManual p.56 table note, p.213). A prototype Guardian counts. */
 function stealthCheck({ record }: CheckInput): Finding[] {
   // Stealth armor installed as patchwork gives no stealth modifiers (TO:AUE p.189), so it asks for no ECM Suite either.
@@ -1282,6 +1313,7 @@ export const CHECKS: Check[] = [
   { id: "myomer", editions: "all", run: myomerCheck },
   { id: "stealth", editions: "all", run: stealthCheck },
   { id: "patchwork", editions: "all", run: patchworkCheck },
+  { id: "aes", editions: "all", run: aesCheck },
   { id: "clan-case", editions: "all", run: clanCaseCheck },
   { id: "split", editions: "all", run: splitCheck },
 ];

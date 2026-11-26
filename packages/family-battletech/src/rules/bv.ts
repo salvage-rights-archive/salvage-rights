@@ -210,7 +210,8 @@ export function battleValue(record: MechRecord, catalog: Catalog, pilot: PilotSk
   // Shields take Walking MP away (Running follows from it, above) and hardened armor takes Running MP alone; the Defensive and Speed
   // Factors count the result (TO:AUE p. 192); a large shield's "no jumping" is not counted, the jump rating is used as normal (p. 193).
   const runMP = Math.max(0, (masc ? walk * 2 : Math.ceil(walkMax * 1.5)) - penalty.run); // MASC: double the Walking MP, Total Warfare p. 137; running: p. 53
-  const jumpMP = jumpJets(items);
+  // A UMU is calculated as if it were a jump jet (TO:AUE p.192, the BattleMech UMU System entry); the highest of the two movements counts.
+  const jumpMP = Math.max(jumpJets(items), items.filter((i) => BV_RULE_ITEMS.superCooledMyomer.umuIds.includes(i.row.id)).length);
   const improvedJets = has(IMPROVED_JUMP_JET_IDS);
   const cruise = jumpMP * LAM_BV.cruisePerJumpMP;
   const flank = Math.ceil(cruise * LAM_BV.flankFactor);
