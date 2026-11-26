@@ -62,7 +62,7 @@ describe("The Abomination tracker", () => {
   it("counts damage past a creature's last pip toward the phase, and End phase clears it", async () => {
     const user = userEvent.setup();
     await play("gnat", user);
-    await user.click(screen.getByRole("button", { name: /^Add extra damage: / }));
+    await user.click(screen.getByRole("button", { name: /^Add 1 extra damage: / }));
     expect(fact("Damage this phase")).toBe("1");
     await user.click(screen.getByRole("button", { name: /^End phase: / }));
     expect(fact("Damage this phase")).toBe("0");

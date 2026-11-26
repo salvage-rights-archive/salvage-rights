@@ -112,10 +112,10 @@ function UnitTracker({ unit, stats, state, catalog, onChange, onRemove }: UnitTr
           <dt>Extra damage past the last pip</dt>
           <dd>
             <span aria-live="polite">{state.overflow ?? 0}</span>{" "}
-            <button type="button" className="bt-button bt-button--secondary" aria-label={`Add extra damage: ${name}`} onClick={() => { onChange(addOverflow(state, 1)); }}>
+            <button type="button" className="bt-button bt-button--secondary" aria-label={`Add 1 extra damage: ${name}`} onClick={() => { onChange(addOverflow(state, 1)); }}>
               Add 1
             </button>{" "}
-            <button type="button" className="bt-button bt-button--secondary" disabled={(state.overflow ?? 0) === 0} aria-label={`Take back extra damage: ${name}`} onClick={() => { onChange(addOverflow(state, -1)); }}>
+            <button type="button" className="bt-button bt-button--secondary" disabled={(state.overflow ?? 0) === 0} aria-label={`Take back 1 extra damage: ${name}`} onClick={() => { onChange(addOverflow(state, -1)); }}>
               Take back 1
             </button>
           </dd>
