@@ -27,7 +27,7 @@ test("a unit's specials link to the aids page, the notes switch adds our line, a
   await page.getByLabel("Point Value (PV)").fill("30");
   await page.getByLabel("Special abilities").fill("IF1, HPG, ECM");
   await page.getByRole("button", { name: "Save", exact: true }).click();
-  await expect(page.getByText("Saved.")).toBeVisible();
+  await expectPage(page.getByText("Saved.")).toBeVisible();
 
   const card = page.locator(".as-card__special");
   await expect(card.getByRole("link")).toHaveCount(3);

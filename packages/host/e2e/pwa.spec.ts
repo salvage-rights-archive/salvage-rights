@@ -101,7 +101,7 @@ test("resetting the app cache clears this app's caches and keeps the saved data"
   await expect.poll(databases).toContain("salvage-rights:host");
 
   await page.goto(`${FREE}/about`);
-  await expect(page.getByText(/Offline copy version: [0-9a-f]{12}\./)).toBeVisible();
+  await expectPage(page.getByText(/Offline copy version: [0-9a-f]{12}\./)).toBeVisible();
   await Promise.all([
     page.waitForEvent("load"),
     page.getByRole("button", { name: "Reset the app cache" }).click(),

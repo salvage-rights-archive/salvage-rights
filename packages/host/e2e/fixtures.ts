@@ -229,7 +229,7 @@ export async function saveAsUnit(page: Page, base: string, name: string, pv: num
   await page.getByLabel("Name").fill(name);
   await page.getByLabel("Point Value (PV)").fill(String(pv));
   await page.getByRole("button", { name: "Save", exact: true }).click();
-  await expect(page.getByText("Saved.")).toBeVisible();
+  await expectPage(page.getByText("Saved.")).toBeVisible();
 }
 
 export const ACES = "/battletech/aces";

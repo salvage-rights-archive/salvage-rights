@@ -101,7 +101,7 @@ test("the Alpha Strike home and unit pages have no axe violations in either them
   await page.getByLabel("Name").fill("Scan Walker");
   await page.getByLabel("Special abilities").fill("QQ1");
   await page.getByRole("button", { name: "Save", exact: true }).click();
-  await expect(page.getByText("Saved.")).toBeVisible();
+  await expectPage(page.getByText("Saved.")).toBeVisible();
   const saved = new URL(page.url());
   await expectNoViolations(page, DEV, ["/battletech/alpha-strike/home", "/battletech/alpha-strike/unit", `${saved.pathname.replace(/^\/salvage-rights/, "")}${saved.search}`]);
 });
@@ -111,7 +111,7 @@ test("the Alpha Strike home with a Mordel key saved has no axe violations in eit
   await page.goto(`${DEV}/battletech/alpha-strike/home`);
   await page.getByLabel("Mordel key").fill(FAKE_KEY);
   await page.getByRole("button", { name: "Save key" }).click();
-  await expect(page.getByLabel("Unit number or address")).toBeVisible();
+  await expectPage(page.getByLabel("Unit number or address")).toBeVisible();
   await page.setViewportSize({ width: 320, height: 700 });
   const widths = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, client: document.documentElement.clientWidth }));
   expect(widths.scroll).toBe(widths.client);
@@ -147,7 +147,7 @@ test("the Aces home, library and card editor (each step and the picker) have no 
   await page.setViewportSize({ width: 1280, height: 720 });
   const editor = await saveAcesCard(page, DEV);
   await page.goto(`${DEV}${ACES}/home`);
-  await expect(page.getByText("1 behaviour card recorded.")).toBeVisible();
+  await expectPage(page.getByText("1 behaviour card recorded.")).toBeVisible();
   await expect(page.getByRole("img", { name: /quartermaster/ })).toHaveCount(0);
   await expectNoViolations(page, DEV, [`${ACES}/home`, `${ACES}/cards`]);
   for (const theme of ["Light", "Dark"] as const) {
@@ -180,7 +180,7 @@ test("the Classic home with Export all has no axe violations in either theme, fi
   await importMech(page, DEV);
   await page.goto(`${DEV}${CLASSIC}/home`);
   const exportAll = page.getByRole("button", { name: "Export all" });
-  await expect(exportAll).toBeVisible();
+  await expectPage(exportAll).toBeVisible();
   const downloading = page.waitForEvent("download");
   await exportAll.click();
   const download = await downloading;
@@ -281,7 +281,7 @@ test("the Aces game setup, every phase of the game page and the home with a game
     await page.getByRole("button", { name: "Go on" }).click();
     await scan(page, theme, "End Phase, strategy");
     await page.goto(`${DEV}${ACES}/home`);
-    await expect(page.getByText("Turn 1").first()).toBeVisible();
+    await expectPage(page.getByText("Turn 1").first()).toBeVisible();
     await scan(page, theme, "the Aces home with games");
   }
 });

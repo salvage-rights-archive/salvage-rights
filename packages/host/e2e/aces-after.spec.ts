@@ -138,7 +138,7 @@ test("run the after-sortie steps for an invented sortie at 320 px, in both theme
 
   // The sortie stays recorded after a reload.
   await page.reload();
-  await expect(page.getByText("Sortie 1 is recorded.").first()).toBeVisible();
+  await expectPage(page.getByText("Sortie 1 is recorded.").first()).toBeVisible();
 
   await page.goto(`${DEV}/settings`);
   await page.getByRole("radio", { name: "Dark" }).check();

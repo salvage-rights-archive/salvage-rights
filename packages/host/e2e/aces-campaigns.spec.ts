@@ -158,7 +158,7 @@ test("create a campaign, export it, delete it, import it back, and read a Battle
   await page.getByLabel("Import a campaign file or a BattleTech Tools backup").setInputFiles(exported);
   await expect(page.getByText(/6 cards and 1 game already here, unchanged/)).toBeVisible();
   await page.goto(`${DEV}${ACES}/home`);
-  await expect(page.getByText("Invented skirmish").first()).toBeVisible();
+  await expectPage(page.getByText("Invented skirmish").first()).toBeVisible();
   const kept = await page.evaluate(async () => {
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
       const request = indexedDB.open("salvage-rights:battletech");
@@ -254,7 +254,7 @@ test("the campaign pages at 320 px, in both themes, without axe violations", asy
     await noViolations(page, `campaign ${name}, dark`);
   }
   await page.goto(printUrl);
-  await expect(page.getByRole("heading", { name: "Aces: Campaign Log" })).toBeVisible();
+  await expectPage(page.getByRole("heading", { name: "Aces: Campaign Log" })).toBeVisible();
   await noViolations(page, "print page, dark");
   await page.goto(list);
   await expectPage(page.getByRole("heading", { level: 1 })).toBeVisible();

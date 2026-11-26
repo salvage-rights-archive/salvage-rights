@@ -15,7 +15,7 @@ test("build a Battle Lance and a Recon Lance from groups at 320 px, by keyboard 
   await putAsFormationForce(page);
   await page.setViewportSize({ width: 320, height: 900 });
   await page.goto(FORCE);
-  await expect(page.getByRole("heading", { name: "Groups and formations" })).toBeVisible();
+  await expectPage(page.getByRole("heading", { name: "Groups and formations" })).toBeVisible();
 
   await page.getByRole("button", { name: "Add a group" }).click();
   await page.getByRole("button", { name: "Add a group" }).click();

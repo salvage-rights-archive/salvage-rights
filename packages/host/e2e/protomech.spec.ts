@@ -57,7 +57,7 @@ test("build a ProtoMech at 320 px, save it, and open the Point sheet", async ({ 
   await expect(page.getByRole("button", { name: /Remove Delphyne \(2\)/ })).toBeVisible();
 
   await page.goto(HOME);
-  await expect(page.getByRole("link", { name: "Open Delphyne" })).toBeVisible();
+  await expectPage(page.getByRole("link", { name: "Open Delphyne" })).toBeVisible();
 });
 
 test("the ProtoMech editor and sheet have no axe violations in either theme", async ({ page }) => {
@@ -127,5 +127,5 @@ test("the ProtoMech part options appear with the rules level and year, and show 
   await expect(page.getByText("Options", { exact: true }).first()).toBeAttached();
   await expect(page.getByText(/Inner Sphere ProtoMech interface cockpit, Electric Discharge ProtoMech \(EDP\) armor, Extended jump jets \(XJJ\)/).first()).toBeAttached();
   await page.goto(HOME);
-  await expect(page.getByText(/Extended jump jets \(XJJ\)/).first()).toBeVisible();
+  await expectPage(page.getByText(/Extended jump jets \(XJJ\)/).first()).toBeVisible();
 });

@@ -75,7 +75,7 @@ test("import a unit from Mordel, review it with its credit, save it, and find it
   await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.getByText("Saved.")).toBeVisible();
   await page.goto(`${DEV}${ALPHA}/home`);
-  await expect(page.getByRole("list").getByText("Test Walker TW-1")).toBeVisible();
+  await expectPage(page.getByRole("list").getByText("Test Walker TW-1")).toBeVisible();
 });
 
 test("import a saved Master Unit List page, see it marked OFFICIAL, and see the mark go when the card is changed", async ({ page }, testInfo) => {
@@ -128,7 +128,7 @@ test("build a four-unit force, change skills and watch the totals, copy it, and 
     if (box) expect(box.height).toBeGreaterThanOrEqual(44);
   }
   await page.goto(`${DEV}${ALPHA}/home`);
-  await expect(page.getByRole("list").getByText("Strike lance copy")).toBeVisible();
+  await expectPage(page.getByRole("list").getByText("Strike lance copy")).toBeVisible();
 });
 
 test("the play aids and the table work at 320 px: the calculator answers, a staged hit lands at the End Phase", async ({ page }) => {

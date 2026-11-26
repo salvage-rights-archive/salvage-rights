@@ -198,7 +198,7 @@ test("play an invented two-turn game at 320 px: Initiative, Movement, Combat and
 
   // A reload comes back to the summary, and the log keeps the whole game.
   await page.reload();
-  await expect(page.getByRole("heading", { level: 2, name: "Game over after turn 2" })).toBeVisible();
+  await expectPage(page.getByRole("heading", { level: 2, name: "Game over after turn 2" })).toBeVisible();
   await page.getByRole("button", { name: "Log" }).click();
   await expect(page.getByText("The sortie ends: the last turn ended.")).toBeVisible();
 });
@@ -251,7 +251,7 @@ test("the support step: the End Phase waits until the players close it", async (
   await page.goto(`${DEV}${ACES}/support`);
   await page.getByLabel("Name", { exact: true }).fill("Invented Barrage");
   await page.getByRole("button", { name: "Save", exact: true }).click();
-  await expect(page.getByText("Saved.")).toBeVisible();
+  await expectPage(page.getByText("Saved.")).toBeVisible();
   await putAsUnits(page, ["Mine A", "Theirs A"]);
   await page.goto(`${DEV}${ACES}/new-game`);
   await page.getByLabel("Add a unit to your force").selectOption({ label: "Mine A (PV 20)" });

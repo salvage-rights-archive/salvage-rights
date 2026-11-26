@@ -111,7 +111,7 @@ test("a player who has their own cards is not offered the samples", async ({ pag
   test.setTimeout(60_000);
   await saveAcesCard(page, DEV);
   await page.goto(`${DEV}${ACES}/cards`);
-  await expect(page.getByRole("heading", { name: "Brawler" })).toBeVisible();
+  await expectPage(page.getByRole("heading", { name: "Brawler" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Try our sample cards" })).toBeHidden();
 });
 
@@ -188,16 +188,16 @@ test("an invented commander card A is entered at 320 px, with a special order an
   await page.getByRole("button", { name: "Record the column" }).click();
   await fitsPhone(page, "special order column");
   await page.getByRole("button", { name: "Save", exact: true }).click();
-  await expect(page.getByText("Saved.")).toBeVisible();
+  await expectPage(page.getByText("Saved.")).toBeVisible();
 
   await page.goto(`${DEV}${ACES}/support`);
   await page.getByLabel("Name", { exact: true }).fill("Invented Barrage");
   await page.getByRole("button", { name: "Save", exact: true }).click();
-  await expect(page.getByText("Saved.")).toBeVisible();
+  await expectPage(page.getByText("Saved.")).toBeVisible();
   await fitsPhone(page, "support card");
 
   await page.goto(`${DEV}${ACES}/cards`);
-  await expect(page.getByRole("heading", { name: "Invented Marshal (Invented House)" })).toBeVisible();
+  await expectPage(page.getByRole("heading", { name: "Invented Marshal (Invented House)" })).toBeVisible();
   await expect(page.getByText("Recorded A. Missing B, C, D, E.")).toBeVisible();
   await expect(page.getByText("1 of 5 recorded. Missing Forced withdrawal, Movement objective, Destroy objective, Indirect attacks.")).toBeVisible();
   await expect(page.getByRole("link", { name: "Open Invented Barrage support card" })).toBeVisible();
@@ -220,7 +220,7 @@ test("a three against four game is set up on a 320 px phone, started, listed on 
   await page.getByRole("link", { name: "Set up a game" }).click();
   await addUnits(page, "your force", ["Mine A", "Mine B", "Mine C"], 20);
   await addUnits(page, "automated force", ["Theirs A", "Theirs B", "Theirs C", "Theirs D"], 20);
-  await expect(page.getByText("Automated force: 4 units, 80 PV.")).toBeVisible();
+  await expectPage(page.getByText("Automated force: 4 units, 80 PV.")).toBeVisible();
   const widths = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, client: document.documentElement.clientWidth }));
   expect(widths.scroll).toBe(widths.client);
   for (const control of await page.locator("button, select, input:not([type=checkbox]), label:has(input[type=checkbox]), a.bt-button").all()) {
@@ -230,7 +230,7 @@ test("a three against four game is set up on a 320 px phone, started, listed on 
   await page.getByRole("button", { name: "Start the game" }).click();
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("New game");
   await page.goto(`${DEV}${ACES}/home`);
-  await expect(page.getByText("Turn 1")).toBeVisible();
+  await expectPage(page.getByText("Turn 1")).toBeVisible();
   await page.getByRole("link", { name: "Resume New game" }).click();
   await expectPage(page.getByRole("heading", { level: 2, name: "Turn 1: Initiative" })).toBeVisible();
 });

@@ -40,7 +40,7 @@ test("build a battle armor suit at 320 px, save it, find it on the home page and
   await expect(page.getByRole("heading", { name: "Rules check" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Battle Value and cost" })).toBeVisible();
   await page.goto(`${DEV}${HOME}`);
-  await expect(page.getByRole("link", { name: "Open Scan Suit" })).toBeVisible();
+  await expectPage(page.getByRole("link", { name: "Open Scan Suit" })).toBeVisible();
   await page.getByRole("link", { name: "Record sheet for Scan Suit" }).click();
   await expectPage(page.getByRole("img", { name: /Scan Suit record sheet/ })).toBeVisible();
   const widths = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, client: document.documentElement.clientWidth }));
