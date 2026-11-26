@@ -36,7 +36,7 @@ export const TRADEMARK_LINE =
 
 /** `checkedOn` is the date the verified line names (year-month-day); it defaults to today on this device. */
 /** `dazzle` (Gothic only) adds the Dazzle Mode lines under each laser. `pilot` (the force page) fills in the Warrior Data; without it they stay blank. */
-export default function RecordSheet({ record, catalog, checkedOn, dazzle = false, pilot }: { record: MechRecord; catalog: Catalog; checkedOn?: string; dazzle?: boolean; pilot?: SheetPilot }) {
+export default function RecordSheet({ record, catalog, checkedOn, dazzle = false, pilot, textHeading }: { record: MechRecord; catalog: Catalog; checkedOn?: string; dazzle?: boolean; pilot?: SheetPilot; textHeading?: string }) {
   const facts = sheetFacts(record, catalog, { dazzle });
   const name = facts.title;
   const nameSize = Math.min(84, Math.floor(1020 / (Math.max(name.length, 1) * 0.62)));
@@ -102,7 +102,7 @@ export default function RecordSheet({ record, catalog, checkedOn, dazzle = false
           {TRADEMARK_LINE}
         </text>
       </svg>
-      <SheetText facts={facts} record={record} marks={marks} />
+      <SheetText facts={facts} record={record} marks={marks} {...(textHeading ? { heading: textHeading } : {})} />
     </>
   );
 }

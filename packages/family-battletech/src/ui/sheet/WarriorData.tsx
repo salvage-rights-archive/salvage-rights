@@ -74,7 +74,7 @@ export default function WarriorData({ rect, gothic, pilot }: { rect: Rect; gothi
       {gothic && box("Frayed", y + 138, "frayed", pilot?.frayed === true)}
       {gothic?.handler === true && box("Handler", y + 188, "handler", pilot?.handler === true)}
       {gothic?.handler === true && pilot?.handler === true && pilot.carries && (
-        <text x={x + 24} y={y + 216} fontSize={MIN_SIZE} fill={INK} data-pilot="carries" {...squeeze(`Handler for: ${pilot.carries}`, MIN_SIZE, rect.w - 48)}>
+        <text x={x + 24} y={y + 209} fontSize={MIN_SIZE} fill={INK} data-pilot="carries" {...squeeze(`Handler for: ${pilot.carries}`, MIN_SIZE, rect.w - 48)}>
           {`Handler for: ${pilot.carries}`}
         </text>
       )}

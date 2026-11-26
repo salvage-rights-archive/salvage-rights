@@ -357,7 +357,7 @@ function ForceBuilder({ initial, roster, storage, catalog }: { initial: GothicFo
           </div>
           <p className="bt-hint">{`${String(force.mechs.length)} ${force.mechs.length === 1 ? "'Mech sheet" : "'Mech sheets"}, then the Abomination sheets, five units to a page. In the print dialog, turn off headers and footers.`}</p>
         </div>
-        {force.mechs.map((m) => {
+        {force.mechs.map((m, index) => {
           const record = recordOf(m.recordId);
           if (!record) return null;
           const carries = units.filter(({ entry }) => entry.handlerOf === m.id).map(({ unit }) => unitTitle(unit)).join(", ");
@@ -366,6 +366,7 @@ function ForceBuilder({ initial, roster, storage, catalog }: { initial: GothicFo
               <RecordSheet
                 record={{ ...record, id: m.id }}
                 catalog={catalog}
+                textHeading={`The record sheet as text, ${String(index + 1)} of ${String(force.mechs.length)}`}
                 pilot={{ name: m.pilot, gunnery: m.gunnery, piloting: m.piloting, frayed: m.frayed, handler: m.handler, ...(carries ? { carries } : {}) }}
               />
             </div>
