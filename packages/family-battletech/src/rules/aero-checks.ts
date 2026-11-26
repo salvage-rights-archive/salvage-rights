@@ -199,7 +199,10 @@ const arcsCheck: AeroCheck = {
   },
 };
 
-const PAGE_TECH_BASE = "TechManual, p. 57";
+// Which tech base's items an aerospace unit may mount: the Step 5 tech base paragraph says a Clan unit uses only Clan items and an Inner Sphere unit
+// only Inner Sphere items (printed p. 194, read against the page image); p. 183 (Choose Technology Base) gives the same for the whole unit. The
+// BattleMech chapter's p. 57 is not the fighter's rule. The fighter chapter states it itself, so nothing defers to a general rule.
+const PAGE_TECH_BASE = "TechManual, p. 194";
 const hasTable = (editionId: string): boolean => (Object.values(AERO_WEAPON_EDITIONS) as string[]).includes(editionId);
 
 /** Equipment the edition does not list, items not in our table, and (current edition) equipment of the other tech base. */
