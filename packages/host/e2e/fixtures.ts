@@ -224,8 +224,8 @@ export async function saveAsUnit(page: Page, base: string, name: string, pv: num
 }
 
 export const ACES = "/battletech/aces-preview";
-/** Gothic's pages until the game turns ready (G-9); then "/battletech/gothic". */
-export const GOTHIC = "/battletech/gothic-preview";
+/** Gothic's pages. */
+export const GOTHIC = "/battletech/gothic";
 
 /** Starts from a box 'Mech on the Gothic home (nothing from the sheets but its figures); returns the editor's path with its id. */
 export async function startGothicBox(page: Page, base: string, name: string): Promise<string> {

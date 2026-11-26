@@ -30,8 +30,8 @@ const acesPreviewRoutes: FamilyRoute[] = [
   { path: "aces-preview/sortie", label: "Aces sortie", section: "workshop", load: () => import("./ui/aces/SortiePage") },
 ];
 
-// Gothic's pages are written as the game's own routes. The host serves them only once the game is ready (G-9), so until then they are
-// also reachable as family routes under gothic-preview, where `gameBase` (data/rulesets.ts) sends every link.
+// Gothic's pages are the game's own routes (every link is built from `GOTHIC_BASE`, data/rulesets.ts). One route to a line, so a later
+// piece adds its own line without touching its neighbours.
 const gothicRoutes: FamilyRoute[] = [
   { path: "home", label: "BattleTech: Gothic", section: "workshop", load: () => import("./ui/gothic/GothicHomePage") },
   { path: "editor", label: "Gothic 'Mech editor", section: "workshop", load: () => import("./ui/EditorPage") },
@@ -40,7 +40,6 @@ const gothicRoutes: FamilyRoute[] = [
   { path: "force", label: "Gothic forces", section: "workshop", load: () => import("./ui/gothic/ForcePage") },
   { path: "play", label: "Gothic Abomination tracker", section: "play", load: () => import("./ui/gothic/TrackerPage") },
 ];
-const gothicPreviewRoutes: FamilyRoute[] = gothicRoutes.map((route) => ({ ...route, path: `gothic-preview/${route.path}` }));
 
 // AeroTech's pages are written as the game's own routes. The host serves them only once the game is ready (AERO-9), so until then they are
 // also reachable as family routes under aerotech-preview (ui/aero/routes.ts), where every link goes. The sheet joins in AERO-9.
@@ -67,12 +66,12 @@ const manifest: FamilyManifest = {
     { id: "alpha-strike", shortName: "Alpha Strike", fullName: "BattleTech: Alpha Strike", ready: true, routes: alphaStrikeRoutes, ...GAME_ART["alpha-strike"] },
     comingSoon("aces", "Aces", "BattleTech: Aces"),
     { id: "aerotech", shortName: "AeroTech", fullName: "BattleTech: AeroTech", ready: false, routes: aeroRoutes, ...GAME_ART["aerotech"] },
-    { id: "gothic", shortName: "Gothic", fullName: "BattleTech: Gothic", ready: false, routes: gothicRoutes, ...GAME_ART["gothic"] },
+    { id: "gothic", shortName: "Gothic", fullName: "BattleTech: Gothic", ready: true, routes: gothicRoutes, ...GAME_ART["gothic"] },
   ],
   unitTypes: (EDITIONS[0]?.unitTypes ?? []).filter((unit) => unit.ready), // the types the edition can build (data/editions.ts)
   eras: ERAS, // the Master Unit List's twelve (data/editions.ts)
   measures: ["hexes"],
-  routes: [...acesPreviewRoutes, ...aeroPreviewRoutes, ...gothicPreviewRoutes],
+  routes: [...acesPreviewRoutes, ...aeroPreviewRoutes],
   credits: {
     owner:
       // The non-affiliation notice fan projects for this game commonly carry, word for word, then two lines of our own.
@@ -87,6 +86,7 @@ const manifest: FamilyManifest = {
       "The import from mordel.net uses the API built by MordelBlacknight.",
       "Each imported design is credited to the mordel.net member who created it. The Alpha Strike values we read from mordel.net are shown as Mordel gives them, with the same credit.",
       "The Classic BattleTech section (the import, the editor and the rules checks) was made by the Salvage Rights team.",
+      "The BattleTech: Gothic section (the editor and rules check, Abomination units, forces and record sheets) was made by the Salvage Rights team.",
       "The Alpha Strike roster (unit entry, saving and unit files) was made by the Salvage Rights team.",
       "\"Verified Standard Rules Compliant\" means only that our own rules check, against the rulebooks we cite, found nothing wrong with a Standard-level 'Mech; tournament organisers have the final word. \"OFFICIAL\" is what the player states about a Classic design, and it turns off when the design is changed. For Alpha Strike it depends only on the Master Unit List: a unit imported from the list and not changed is OFFICIAL, and every other unit is NOT OFFICIAL.",
       "The pictures on the BattleTech tile and for each game were generated with an AI image tool (DeviantArt DreamUp); the picture shown on the Classic BattleTech page when no 'Mech is saved was generated with another (Nano Banana 2). We would rather show work made by a person. If you are an artist, or hold the rights to a piece, and can let us use it legally, we will gladly replace any AI-generated art here and credit you. To offer a piece, start a thread in Discussions on our GitHub repository (https://github.com/salvage-rights-archive/salvage-rights/discussions), or open an issue there.",
