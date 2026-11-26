@@ -484,6 +484,15 @@ export default function GothicHomePage() {
         </p>
       </section>
 
+      <section className="bt-section" aria-labelledby="bt-aids">
+        <h2 id="bt-aids">Rules reference</h2>
+        <p>
+          <Link className="bt-button" to={`${GOTHIC_BASE}/aids`}>
+            Rules reference tables
+          </Link>
+        </p>
+      </section>
+
       <p className="bt-hint">{books}</p>
     </div>
   );
