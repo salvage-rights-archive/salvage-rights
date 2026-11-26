@@ -1,6 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import type { Page } from "@playwright/test";
-import { ACES, CLASSIC, FREE, expect, test } from "./fixtures";
+import { ACES, CLASSIC, FREE, LAZY_PAGE_MS, expect, test } from "./fixtures";
 
 // Service workers and offline emulation behave the same way in Chromium only, so the other browsers skip these.
 test.beforeEach(({ browserName }) => {
@@ -10,7 +10,7 @@ test.beforeEach(({ browserName }) => {
 /** Opens the built site and waits until its worker controls the page (the first install is complete). */
 async function openInstalled(page: Page, path = "/"): Promise<void> {
   await page.goto(`${FREE}${path}`);
-  await expect.poll(() => page.evaluate(() => navigator.serviceWorker.controller !== null)).toBe(true);
+  await expect.poll(() => page.evaluate(() => navigator.serviceWorker.controller !== null), { timeout: LAZY_PAGE_MS }).toBe(true);
 }
 
 test("a deep link reloads with no connection, and the offline notices show", async ({ page, context }) => {

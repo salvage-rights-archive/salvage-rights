@@ -1,6 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import type { Page } from "@playwright/test";
-import { DEV, FREE, expect, expectPage, test } from "./fixtures";
+import { DEV, FREE, LAZY_PAGE_MS, expect, expectPage, test } from "./fixtures";
 
 // The card reader runs in Chromium here; the worker and offline cache are checked in that browser only.
 test.beforeEach(({ browserName }) => {
@@ -63,7 +63,7 @@ test("the reader read page passes the axe scan in both themes", async ({ page })
 
 test("a kept card reader works with no connection", async ({ page, context }) => {
   await page.goto(`${DEV}/`);
-  await expect.poll(() => page.evaluate(() => navigator.serviceWorker.controller !== null)).toBe(true);
+  await expect.poll(() => page.evaluate(() => navigator.serviceWorker.controller !== null), { timeout: LAZY_PAGE_MS }).toBe(true);
   await page.goto(PAGE);
   await page.getByRole("button", { name: "Keep the card reader on this device" }).click();
   await expect(page.getByRole("button", { name: "Card reader kept on this device" })).toBeVisible({ timeout: 90_000 });

@@ -16,6 +16,10 @@ import nova from "./nova-combat-desert-salvo.jpg";
 import novaIcon from "./nova-combat-icon.jpg";
 import rpg from "./mechwarrior-rpg-bench-repair.jpg";
 import rpgIcon from "./mechwarrior-rpg-icon.jpg";
+import campaign from "./campaign-play-salvage-crew.jpg";
+import campaignIcon from "./campaign-play-icon.jpg";
+import succession from "./succession-wars-war-room.jpg";
+import successionIcon from "./succession-wars-icon.jpg";
 
 // Every picture here is AI-generated. Terms and source: ./NOTICE.md.
 const DREAMUP = "DeviantArt DreamUp";
@@ -68,6 +72,22 @@ export const GAME_ART: Record<string, { artwork: Artwork; icon: string }> = {
       "freegen.app",
     ),
     icon: rpgIcon,
+  },
+  "campaign-play": {
+    artwork: picture(
+      campaign,
+      "A salvage crew with cranes and flatbed haulers stripping a fallen, one-armed walking war machine at sunset on a smoking battlefield, a command tent with glowing maps and a grounded drop ship behind.",
+      "creen.ai",
+    ),
+    icon: campaignIcon,
+  },
+  "succession-wars": {
+    artwork: picture(
+      succession,
+      "An overhead view of a war-room table with a glowing star map split into red, blue, green, purple and yellow territories, small walking war machine figures, hex counters and red arrows on the contested borders, with ledgers, brass dividers, dice and a mug of coffee around it under a desk lamp.",
+      "creen.ai",
+    ),
+    icon: successionIcon,
   },
 };
 
