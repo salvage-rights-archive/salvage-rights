@@ -7,7 +7,8 @@ import { AMMO_GROUPS, AMMO_OTHER_GROUP, EQUIPMENT_GROUPS, GROUP_ORDER, OTHER_GRO
 import type { UnitId } from "../data/units";
 import { DEFAULT_UNITS } from "../data/units";
 import { SHEET_ALIASES, sheetNameVariants } from "../data/equipment/names";
-import { FORMULAS, resolveFormula } from "./formulas";
+import { PHYSICAL_BV } from "../data/bv";
+import { FORMULAS, physicalDamage, resolveFormula } from "./formulas";
 import type { FactsOf, LocationCode, MechRecord, Mount, MountFacts, TechBase } from "./mech";
 
 /** The longest range band an aerospace unit's attack reaches, as the weapons table prints it in place of hex ranges. */
@@ -309,7 +310,7 @@ export interface InventoryLine {
 }
 
 const DASH = "—";
-const BIPED_ORDER: LocationCode[] = ["HD", "CT", "LT", "RT", "LA", "RA", "LL", "RL"];
+const BIPED_ORDER: LocationCode[] = ["HD", "CT", "LT", "RT", "LA", "RA", "LL", "RL", "CL"];
 const QUAD_ORDER: LocationCode[] = ["HD", "CT", "LT", "RT", "FLL", "FRL", "RLL", "RRL"];
 
 /** Position of a location in record-sheet order for the record's configuration; codes outside it sort after the rest. */
@@ -348,11 +349,15 @@ export function inventoryLines(record: MechRecord, catalog: Catalog): InventoryL
         medium: range === undefined || range[2] === 0 ? DASH : String(range[2]),
         long: range === undefined || range[3] === 0 ? DASH : String(range[3]),
       });
+      const damageOf = (r: EquipmentRow | undefined) => {
+        const physical = r && Object.hasOwn(PHYSICAL_BV.rows, r.id) ? PHYSICAL_BV.rows[r.id]?.damage : undefined;
+        return physical === undefined ? (r?.damage ?? DASH) : String(typeof physical === "number" ? physical : physicalDamage(physical, record.tons));
+      };
       const modes = row?.modes;
       // A multi-mode launcher prints its name and heat, then one line per mode with that mode's damage and ranges.
       const first: InventoryLine = modes
         ? { qty, name, location: location ?? DASH, heat: row?.heat === undefined ? DASH : String(row.heat), damage: "", min: "", short: "", medium: "", long: "" }
-        : { qty, name, location: location ?? DASH, heat: row?.heat === undefined ? DASH : String(row.heat), damage: row?.damage ?? DASH, ...bands(row?.range) };
+        : { qty, name, location: location ?? DASH, heat: row?.heat === undefined ? DASH : String(row.heat), damage: damageOf(row), ...bands(row?.range) };
       return [first, ...(modes ?? []).map((m): InventoryLine => ({ qty: 0, name: m.name, location: "", heat: "", damage: m.damage, ...bands(m.range), sub: true }))];
     });
 }
@@ -362,7 +367,12 @@ export interface AmmoLine {
   shots: number | null;
   /** A special munition that more than one launcher on the unit could fire, with the shots the bin carries for each; `shots` is null then. */
   choices?: { launcher: string; shots: number }[];
+  /** A special munition's short name for the sheet: "Artemis-capable", "ER", "Inferno". */
+  short?: string;
 }
+
+/** A special munition's name in the sheet's short form: without "Ammo" and the launcher family word. */
+const shortMunition = (name: string) => name.replace(/ Ammo$/, "").replace(/ (Missile|LRM|SRM|ATM)$/, "").replace("-Capable", "-capable");
 
 /** One entry per distinct ammunition item, shots summed over its bins: a row's `shotsPerTon` times the bin's tons, or its
  * own `shots` where that is what the row carries (a half-ton bin row holds its own count). A special munition carries the shots
@@ -386,8 +396,8 @@ export function ammoLines(record: MechRecord, catalog: Catalog): AmmoLine[] {
     if (!feeds) return line;
     const choices = launcherShots(record, catalog, feeds).map((c) => ({ launcher: c.launcher, shots: c.perTon * tons }));
     const distinct = new Set(choices.map((c) => c.shots));
-    if (distinct.size === 1) return { ...line, shots: choices[0]?.shots ?? null };
-    return distinct.size === 0 ? line : { ...line, choices };
+    if (distinct.size === 0) return line;
+    return { ...line, shots: distinct.size === 1 ? (choices[0]?.shots ?? null) : null, choices, short: shortMunition(line.name) };
   });
 }
 
@@ -408,6 +418,26 @@ function launcherShots(record: MechRecord, catalog: Catalog, feeds: NonNullable<
     }
   }
   return [...found.values()];
+}
+
+/** What each ammunition slot of the critical table prints, by mount id: `Ammo (LRM 10) 12`, the shots of one slot (a bin's shots over
+ * the slots it takes), as the published sheets have it. A special munition names the launcher it feeds, `Ammo (LRM 15 Artemis-capable) 8`,
+ * when the unit has just one that fits; with none or several it prints its own name and no shots. */
+export function ammoSlotLabels(record: MechRecord, catalog: Catalog): Map<string, string> {
+  const labels = new Map<string, string>();
+  for (const mount of record.mounts) {
+    const row = mount.equipmentId === null ? undefined : catalog.byId(mount.equipmentId);
+    if (row?.kind !== "ammunition") continue;
+    const slots = Math.max(1, catalog.factsOf(mount, record)?.slots ?? mount.slots ?? 1);
+    const tons = typeof row.tons === "number" ? row.tons : 1;
+    const launchers = row.feeds ? launcherShots(record, catalog, row.feeds) : [];
+    const only = launchers.length === 1 ? launchers[0] : undefined;
+    const shots = only ? only.perTon * tons : (row.shots ?? (row.shotsPerTon === undefined ? undefined : row.shotsPerTon * tons));
+    const inner = only ? `${only.launcher} ${shortMunition(row.name)}` : row.name.replace(/ Ammo\b/, "");
+    const known = shots !== undefined && (!row.feeds || only !== undefined);
+    labels.set(mount.id, known ? `Ammo (${inner}) ${String(Math.round((shots / slots) * 100) / 100)}` : `Ammo (${inner})`);
+  }
+  return labels;
 }
 
 

@@ -55,6 +55,11 @@ export const CRITICAL_BOXES: { label: string; boxes: number }[] = [
   { label: "Life Support", boxes: 1 },
 ];
 
+/** The hit boxes the critical table draws for a gyro type: a heavy-duty gyro survives two critical hits and is destroyed by the third
+ * (Total Warfare p. 126); every other gyro is destroyed by the second. */
+export const criticalBoxes = (gyro: string): { label: string; boxes: number }[] =>
+  CRITICAL_BOXES.map((row) => (row.label === "Gyro Hits" && gyro === "heavy-duty" ? { ...row, boxes: 3 } : row));
+
 /** The critical table's columns, left to right and top to bottom, as the published sheet arranges them. A quad's four legs take the
  * arms' and legs' places. */
 export const SHEET_COLUMNS: Record<string, LocationCode[][]> = {

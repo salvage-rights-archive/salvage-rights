@@ -1,6 +1,6 @@
 // The critical table: each location's slots numbered 1 to 6 as on the published sheets, the hit boxes under the center torso
 // and the damage transfer diagram. Slot labels are the editor's own, from `layout`.
-import { CRITICAL_BOXES, EMPTY_SLOT, SHEET_COLUMNS } from "../../data/sheet";
+import { criticalBoxes, EMPTY_SLOT, SHEET_COLUMNS } from "../../data/sheet";
 import { bodyOf, locationName } from "../../rules/mech";
 import type { LocationCode, Layout, MechRecord } from "../../rules/mech";
 import { dollUnitFromRecord } from "../doll/layouts";
@@ -13,9 +13,11 @@ import { FAINT, INK, squeeze, wrap } from "./text";
 const PITCH = 24;
 const SLOT_TYPE = 21;
 const COLUMN_GAP = 6;
+/** The shade behind fixed equipment: light enough that the black type stays plain on a printout. */
+const FIXED_SHADE = "#d9d9d9";
 
 /** One location: its name, then its slots in groups of six, a 12-slot location marked 1-3 and 4-6 at the left. */
-function Location({ code, layout, x, y, width }: { code: LocationCode; layout: Layout; x: number; y: number; width: number }) {
+function Location({ code, layout, labels, fixed, x, y, width }: { code: LocationCode; layout: Layout; labels: ReadonlyMap<string, string>; fixed: ReadonlySet<string>; x: number; y: number; width: number }) {
   const cells = layout.slots[code] ?? [];
   const groups = Math.max(1, Math.ceil(cells.length / 6));
   const label = width - 84;
@@ -35,9 +37,12 @@ function Location({ code, layout, x, y, width }: { code: LocationCode; layout: L
             )}
             {cells.slice(group * 6, group * 6 + 6).map((cell, index) => {
               const empty = cell.kind === "empty";
-              const text = empty ? EMPTY_SLOT : cell.label;
+              const text = empty ? EMPTY_SLOT : ((cell.mountId === undefined ? undefined : labels.get(cell.mountId)) ?? cell.label);
+              // Fixed equipment of an OmniMech is shaded: our own aid, which the published sheets do not have.
+              const isFixed = cell.mountId !== undefined && fixed.has(cell.mountId);
               return (
-                <g key={index} data-slot={empty ? "empty" : cell.kind}>
+                <g key={index} data-slot={empty ? "empty" : cell.kind} data-fixed={isFixed ? "" : undefined}>
+                  {isFixed && <rect x={x + 44} y={top + index * PITCH} width={width - 48} height={PITCH} fill={FIXED_SHADE} />}
                   <text x={x + 68} y={top + index * PITCH + 14} fontSize={SLOT_TYPE} textAnchor="end" fontWeight={empty ? 400 : 700} fill={empty ? FAINT : INK}>
                     {`${String(index + 1)}.`}
                   </text>
@@ -64,7 +69,7 @@ function Location({ code, layout, x, y, width }: { code: LocationCode; layout: L
 /** The height a location takes: its name and its groups of six slots. */
 const heightOf = (code: LocationCode, layout: Layout) => 40 + Math.max(1, Math.ceil((layout.slots[code]?.length ?? 0) / 6)) * (6 * PITCH + 12) + 6;
 
-export default function CriticalTable({ rect, record, layout }: { rect: Rect; record: MechRecord; layout: Layout }) {
+export default function CriticalTable({ rect, record, layout, labels, fixed }: { rect: Rect; record: MechRecord; layout: Layout; labels: ReadonlyMap<string, string>; fixed: ReadonlySet<string> }) {
   const body = bodyOf(record.configuration);
   const columns = Object.hasOwn(SHEET_COLUMNS, body) ? SHEET_COLUMNS[body] : undefined;
   if (!layout.supported || !columns) {
@@ -87,7 +92,7 @@ export default function CriticalTable({ rect, record, layout }: { rect: Rect; re
       .map((code) => {
         const at = y;
         y += heightOf(code, layout) + 8;
-        return <Location key={code} code={code} layout={layout} x={columnX(index)} y={at} width={width} />;
+        return <Location key={code} code={code} layout={layout} labels={labels} fixed={fixed} x={columnX(index)} y={at} width={width} />;
       });
   };
   // The middle column: head and center torso, then the hit boxes and the damage transfer diagram.
@@ -95,7 +100,8 @@ export default function CriticalTable({ rect, record, layout }: { rect: Rect; re
   const middleEnd = middle.reduce((y, code) => y + (layout.slots[code] ? heightOf(code, layout) + 8 : 0), top);
   const hitsTop = middleEnd + 6;
   const unit = dollUnitFromRecord(record);
-  const diagramTop = hitsTop + CRITICAL_BOXES.length * 34 + 14;
+  const hitBoxes = criticalBoxes(record.chassis.gyro);
+  const diagramTop = hitsTop + hitBoxes.length * 34 + 14;
   const diagramRoom = { width: width - 40, height: rect.y + rect.h - 40 - diagramTop };
   const fit = unit ? fitDoll(unit, "transfer", diagramRoom.width, diagramRoom.height) : undefined;
   const middleX = columnX(1);
@@ -104,7 +110,7 @@ export default function CriticalTable({ rect, record, layout }: { rect: Rect; re
       {columns.map((codes, index) => (
         <g key={index}>{stack(codes, index)}</g>
       ))}
-      {CRITICAL_BOXES.map(({ label, boxes }, row) => (
+      {hitBoxes.map(({ label, boxes }, row) => (
         <g key={label} data-hits={label}>
           <text x={middleX + width / 2 + 20} y={hitsTop + row * 34 + 24} fontSize={24} fontWeight={700} textAnchor="end" fill={INK}>
             {label}

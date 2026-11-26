@@ -71,7 +71,7 @@ export default function RecordSheet({ record, catalog, checkedOn }: { record: Me
         <WarriorData rect={RECTS.warrior} />
         <UnitPicture rect={RECTS.picture} record={record} label={`${name}, unit picture`} />
         <ArmorDiagram rect={RECTS.armor} record={record} catalog={catalog} points={facts.points} />
-        <CriticalTable rect={RECTS.critical} record={record} layout={facts.layout} />
+        <CriticalTable rect={RECTS.critical} record={record} layout={facts.layout} labels={facts.ammoSlots} fixed={facts.fixedMounts} />
         <StructureDiagram rect={RECTS.structure} record={record} catalog={catalog} points={facts.points} />
         <HeatScale rect={RECTS.scale} />
         <HeatData rect={RECTS.heat} facts={facts} />

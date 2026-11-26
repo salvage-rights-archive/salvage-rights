@@ -118,6 +118,14 @@ export const FORMULAS: Record<string, Formula> = {
   "aes-slots": (_row, record) => weightClass(record.tons),
 };
 
+/** The damage of a physical weapon as the record sheet prints it: the wielder's tonnage over a divisor, rounded up to the whole point.
+ * Hatchet: tons over 5 (TechManual p. 220). Sword: tons over 10, plus 1 (p. 237). Retractable blade: tons over 10 (p. 237).
+ * Claws: tons over 7 (TO:AUE p. 100). */
+export function physicalDamage(kind: "hatchet" | "sword" | "blade" | "claws", tons: number): number {
+  const up = (divisor: number) => Math.ceil(tons / divisor - 1e-9);
+  return kind === "hatchet" ? up(5) : kind === "sword" ? up(10) + 1 : kind === "claws" ? up(7) : up(10);
+}
+
 /** The value of a formula for a mount; undefined when the name is not a formula. */
 export function resolveFormula(name: string, row: EquipmentRow, record: MechRecord, catalog: Catalog, mount?: Mount): number | undefined {
   return Object.hasOwn(FORMULAS, name) ? FORMULAS[name]?.(row, record, catalog, mount) : undefined;

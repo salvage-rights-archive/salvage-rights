@@ -2,13 +2,14 @@
 // of the sheet say the same thing.
 import { editionName } from "../../data/editions";
 import { SHEET_HEAT_SINKS, TECH_BASE_NAMES } from "../../data/sheet";
-import { inventoryLines, ammoLines } from "../../rules/catalog";
+import { ammoLines, ammoSlotLabels, inventoryLines } from "../../rules/catalog";
 import type { Catalog, InventoryLine } from "../../rules/catalog";
 import { battleValue as battleValueOf } from "../../rules/bv";
+import { BV_METHOD } from "../../data/bv";
 import { levelOfRecord, levelRow } from "../../rules/levels";
 import { layout as buildLayout, locationName, structurePoints, totalHeatSinks, walkMP, weights } from "../../rules/mech";
 import { configurationLevel } from "../../rules/omni";
-import { heatSinkCapacity, movementPenalty, penalisedMovement } from "../../rules/walk";
+import { equipmentItems, heatSinkCapacity, mascOf, movementPenalty, penalisedMovement, tsmOf } from "../../rules/walk";
 import type { Layout, LocationCode, MechRecord } from "../../rules/mech";
 
 export const DASH = "—";
@@ -35,6 +36,9 @@ export interface SheetFacts {
   walk: string;
   run: string;
   jump: string;
+  /** The most the myomer can give, printed in brackets after the figure (`Running: 6 [8]`); absent when there is no MASC or TSM. */
+  walkBest: string | undefined;
+  runBest: string | undefined;
   /** What armor or a shield takes off the movement above, in a few words; absent when nothing does. */
   movementNote: string | undefined;
   tons: string;
@@ -52,6 +56,10 @@ export interface SheetFacts {
   battleValueFrom: string;
   heatSinks: HeatSinkFacts;
   layout: Layout;
+  /** What each ammunition slot of the critical table prints, by mount id. */
+  ammoSlots: ReadonlyMap<string, string>;
+  /** The mounts of an OmniMech base chassis: shaded in the critical table. */
+  fixedMounts: ReadonlySet<string>;
   points: LocationPoints[];
   designer: string | undefined;
 }
@@ -73,6 +81,12 @@ export function sheetFacts(record: MechRecord, catalog: Catalog): SheetFacts {
   const penalty = movementPenalty(record, catalog);
   const moved = walk === null ? null : penalisedMovement(walk, penalty);
   const taken = (mp: number, by: number) => String(Math.max(0, mp - by));
+  // The sheet brackets what MASC (double the Walking MP) and TSM (+1 Walking MP once the heat scale has taken its 1, as the Battle Value counts it) can give.
+  const { items } = equipmentItems(record, catalog);
+  const tsm = tsmOf(record, items) !== undefined;
+  const masc = mascOf(record, items).mounts.length > 0;
+  const walkMost = moved === null ? 0 : tsm ? moved.walk + BV_METHOD.tsmWalkBonus : moved.walk;
+  const runMost = moved === null ? 0 : Math.max(0, (masc ? moved.walk * 2 : Math.ceil(walkMost * 1.5)) - penalty.run);
   const sinks = record.chassis.heatSinks;
   const more = sinks.extra ?? [];
   const capacity = heatSinkCapacity(record);
@@ -86,7 +100,8 @@ export function sheetFacts(record: MechRecord, catalog: Catalog): SheetFacts {
   const ammo = ammoLines(record, catalog)
     .map((line) => {
       const name = line.name.replace(/ Ammo\b/, "");
-      if (line.choices) return `(${name}) ${line.choices.map((c) => `${String(c.shots)} for ${c.launcher}`).join(" or ")}`;
+      // A special munition names its launcher, `(LRM 15 Artemis-capable) 8`, one entry for each launcher it could feed.
+      if (line.choices && line.short) return line.choices.map((c) => `(${c.launcher} ${line.short ?? ""}) ${String(c.shots)}`).join(" or ");
       return line.shots === null ? `(${name})` : `(${name}) ${String(line.shots)}`;
     })
     .join(", ");
@@ -102,6 +117,8 @@ export function sheetFacts(record: MechRecord, catalog: Catalog): SheetFacts {
     title: sheetTitle(record),
     walk: moved === null ? DASH : String(moved.walk),
     run: moved === null ? DASH : String(moved.run),
+    walkBest: moved !== null && walkMost > moved.walk ? String(walkMost) : undefined,
+    runBest: moved !== null && runMost > moved.run ? String(runMost) : undefined,
     jump: penalty.noJump ? "0" : taken(jumpJets, jumpJets > 0 ? penalty.jump : 0),
     movementNote: penalty.short.length > 0 ? penalty.short.join("; ") : undefined,
     tons: String(record.tons),
@@ -120,6 +137,8 @@ export function sheetFacts(record: MechRecord, catalog: Catalog): SheetFacts {
       count: Number.isFinite(sinkTotal) ? Math.max(0, Math.floor(sinkTotal)) : 0,
     },
     layout,
+    ammoSlots: ammoSlotLabels(record, catalog),
+    fixedMounts: new Set(record.omni?.baseMountIds ?? []),
     points: codes.map((code) => ({
       code,
       name: locationName(code),
@@ -130,3 +149,6 @@ export function sheetFacts(record: MechRecord, catalog: Catalog): SheetFacts {
     designer: record.source ? record.source.designer || "an unnamed designer" : undefined,
   };
 }
+
+/** A movement figure with its best case in brackets, `8 [10]`, when the myomer gives one. */
+export const bracketed = (value: string, best: string | undefined) => (best === undefined ? value : `${value} [${best}]`);
