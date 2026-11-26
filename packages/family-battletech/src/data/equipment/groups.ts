@@ -31,7 +31,7 @@ export const EQUIPMENT_GROUPS: GroupRule[] = [
   { id: "aerospace", label: "Bombs and aerospace equipment", match: words("bomb|bay-door|look-down-radar") },
   { id: "special", label: "Anti-personnel and special weapons", match: words("booby-trap|machine-gun|machine-gun-array|a-pods|b-pods|grenade|mine-dispenser|taser|fluid-gun|m-pod") },
   { id: "physical", label: "Physical weapons", match: words("melee|claws|mace|lance|talons|hatchet|sword|retractable-blade|chain-whip|flail|spikes|vibroblade") },
-  { id: "missile", label: "Missile weapons", match: words("fusillade|lrm|srm|mrm|mml|atm|rocket-launcher|narc|thunderbolt|mortar") },
+  { id: "missile", label: "Missile weapons", match: words("fusillade|lrm|srm|srt|lrt|mrm|mml|atm|rocket-launcher|narc|thunderbolt|mortar") },
   { id: "energy", label: "Energy weapons", match: words("laser|ppc|plasma|flamer|tsemp|binary|blazer|bombast|centurion|capacitor|chemical") },
   { id: "ballistic", label: "Ballistic weapons", match: words("ac|lb|gauss|rifle|rotary|ultra|magshot") },
 ];
@@ -41,7 +41,7 @@ export const OTHER_GROUP = { id: "other", label: "Other equipment" };
 export const AMMO_GROUPS: GroupRule[] = [
   { id: "ammo-other", label: "Ammunition: machine guns, flamers and other", match: words("plasma|chemical|flamer|machine-gun|nail-rivet|fluid-gun|taser|ams|c3-remote-sensor-launcher|pds|tear-gas|remote-sensor-dispenser") },
   { id: "ammo-artillery", label: "Ammunition: artillery", match: words("arrow-iv|thumper|sniper|long-tom") },
-  { id: "ammo-missile", label: "Ammunition: missile", match: words("fusillade|lrm|srm|mrm|mml|atm|narc|thunder|thunderbolt|inferno|swarm|swarm-i|semi-guided|harpoon|artemis|mortar|streak|rocket") },
+  { id: "ammo-missile", label: "Ammunition: missile", match: words("fusillade|lrm|srm|srt|lrt|mrm|mml|atm|narc|thunder|thunderbolt|inferno|swarm|swarm-i|semi-guided|harpoon|artemis|mortar|streak|rocket") },
   { id: "ammo-ballistic", label: "Ammunition: ballistic", match: words("ac|lb|gauss|rifle|rotary|ultra|magshot|armor-piercing|flechette|precision|fragmentation") },
 ];
 export const AMMO_OTHER_GROUP = { id: "ammo-other", label: "Ammunition: machine guns, flamers and other" };

@@ -460,4 +460,29 @@ export const AMMUNITION: EquipmentGroup[] = [
       { id: "ammo-improved-inferno-atm-clan", name: "Improved Inferno ATM Ammo", availability: [{ from: 3070 }] },
     ],
   },
+  // Torpedo ammunition (TechManual printed p. 346, Heavy Weapon Ammunition, x1 shots and weight of the launcher's standard ammunition; dated as the launcher, p. 291).
+  {
+    defaults: { kind: "ammunition", techBase: "inner-sphere", cite: { book: "TechManual", page: 230 }, playCite: { book: "TechManual", page: 346 }, checked: "page", tons: 1, slots: 1, units: ["mech", "industrialmech", "vehicle"] },
+    items: [
+      { id: "ammo-srt-2-is", name: "SRT 2 Ammo", shotsPerTon: 50, availability: [{ from: 2380 }] },
+      { id: "ammo-srt-4-is", name: "SRT 4 Ammo", shotsPerTon: 25, availability: [{ from: 2380 }] },
+      { id: "ammo-srt-6-is", name: "SRT 6 Ammo", shotsPerTon: 15, availability: [{ from: 2380 }] },
+      { id: "ammo-lrt-5-is", name: "LRT 5 Ammo", shotsPerTon: 24, availability: [{ from: 2380 }] },
+      { id: "ammo-lrt-10-is", name: "LRT 10 Ammo", shotsPerTon: 12, availability: [{ from: 2380 }] },
+      { id: "ammo-lrt-15-is", name: "LRT 15 Ammo", shotsPerTon: 8, availability: [{ from: 2380 }] },
+      { id: "ammo-lrt-20-is", name: "LRT 20 Ammo", shotsPerTon: 6, availability: [{ from: 2380 }] },
+    ],
+  },
+  {
+    defaults: { kind: "ammunition", techBase: "clan", cite: { book: "TechManual", page: 230 }, playCite: { book: "TechManual", page: 346 }, checked: "page", tons: 1, slots: 1, units: ["mech", "industrialmech", "vehicle"] },
+    items: [
+      { id: "ammo-srt-2-clan", name: "SRT 2 Ammo", shotsPerTon: 50, availability: [{ from: 2824 }] },
+      { id: "ammo-srt-4-clan", name: "SRT 4 Ammo", shotsPerTon: 25, availability: [{ from: 2824 }] },
+      { id: "ammo-srt-6-clan", name: "SRT 6 Ammo", shotsPerTon: 15, availability: [{ from: 2824 }] },
+      { id: "ammo-lrt-5-clan", name: "LRT 5 Ammo", shotsPerTon: 24, availability: [{ from: 2824 }] },
+      { id: "ammo-lrt-10-clan", name: "LRT 10 Ammo", shotsPerTon: 12, availability: [{ from: 2824 }] },
+      { id: "ammo-lrt-15-clan", name: "LRT 15 Ammo", shotsPerTon: 8, availability: [{ from: 2824 }] },
+      { id: "ammo-lrt-20-clan", name: "LRT 20 Ammo", shotsPerTon: 6, availability: [{ from: 2824 }] },
+    ],
+  },
 ];

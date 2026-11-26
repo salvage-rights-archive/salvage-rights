@@ -239,6 +239,12 @@ interface PriceGroup extends Sourced {
 }
 export const EQUIPMENT_COST: PriceGroup[] = [
   {
+    // p.291: a torpedo launcher costs what its LRM or SRM does (x1, "as launcher"); the figures are the launchers' on the same page
+    cite: { book: TM, page: 291 },
+    checked: "page",
+    prices: { "srt-2": 10_000, "srt-4": 60_000, "srt-6": 80_000, "lrt-5": 30_000, "lrt-10": 100_000, "lrt-15": 175_000, "lrt-20": 250_000 },
+  },
+  {
     // IO:AE p.215 (Dark Age Equipment)
     cite: { book: IO, page: 215 },
     checked: "page",

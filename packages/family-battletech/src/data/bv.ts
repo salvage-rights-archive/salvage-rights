@@ -266,7 +266,13 @@ export const CAPACITOR: Sourced & { ids: string[]; heat: number; bv: Record<stri
 export const LASER_INSULATOR_IDS = ["laser-insulator-is", "laser-insulator-clan"];
 export const COOLANT_POD_IDS = ["coolant-pod-is", "coolant-pod-clan"];
 /** Rows whose BV the books make depend on something the row does not say, or whose rule is not implemented; each says why. */
+const TORPEDO_IDS = ["is", "clan"].flatMap((side) => [...[2, 4, 6].map((n) => `srt-${n}-${side}`), ...[5, 10, 15, 20].map((n) => `lrt-${n}-${side}`)]);
+/** Torpedo launchers and their ammunition (TechManual printed p. 230): neither Battle Value document prints a torpedo line, and the launcher is a standard LRM or SRM, so the figure is left open. */
+const TORPEDO_UNFIXED: Record<string, string> = Object.fromEntries(
+  TORPEDO_IDS.flatMap((id) => [id, `ammo-${id}`]).map((id) => [id, "a torpedo launcher or its ammunition: the Battle Value tables print no torpedo line, and its value as an LRM or SRM fired underwater is not stated (TechManual p. 230)"]),
+);
 export const UNFIXED: Record<string, string> = {
+  ...TORPEDO_UNFIXED,
   "radical-heat-sink-is": "the book prints two rules that disagree: its table adds the unit's heat sink count x 0.4 to Heat Efficiency, its text multiplies the capacity by 1.4, and the worked example gives both 42 and 36 (IO:AE pp.185, 190)",
   // Items whose BV is a modifier or a figure that depends on the unit, which the BV rules here do not compute (TO:AUE pp.192-197).
   "blue-shield-is": "it adds 0.2 to the armor type modifier and counts as a Gauss weapon for the defensive rating (TO:AUE pp.192, 194)",
