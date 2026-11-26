@@ -197,3 +197,36 @@ test("play an invented two-turn game at 320 px: Initiative, Movement, Combat and
   await page.getByRole("button", { name: "Log" }).click();
   await expect(page.getByText("The sortie ends: the last turn ended.")).toBeVisible();
 });
+
+test("the units list: damage entered by hand is staged, and a unit that left the table is out of play", async ({ page }) => {
+  test.setTimeout(180_000);
+  await page.setViewportSize({ width: 320, height: 800 });
+  await saveAcesCard(page, DEV);
+  await saveAcesCommand(page, DEV);
+  await putAsUnits(page, ["Mine A", "Theirs A"]);
+  await page.goto(`${DEV}${ACES}/new-game`);
+  await page.getByLabel("Add a unit to your force").selectOption({ label: "Mine A (PV 20)" });
+  await page.getByRole("button", { name: "Add to your force", exact: true }).click();
+  await page.getByLabel("Add a unit to automated force").selectOption({ label: "Theirs A (PV 20)" });
+  await page.getByRole("button", { name: "Add to automated force", exact: true }).click();
+  await page.getByRole("button", { name: "Start the game" }).click();
+  const orders = page.getByRole("button", { name: "Apply the orders" });
+  await answerQuestions(page, /^Orders applied|No order applies|Apply the orders/);
+  if (await orders.isVisible()) await orders.click();
+  await page.getByLabel("Your force: 2D6 roll, 2 to 12").fill("2");
+  await page.getByLabel("Automated force: 2D6 roll, 2 to 12").fill("12");
+  await page.getByRole("button", { name: "Start the Movement Phase" }).click();
+
+  await page.getByRole("button", { name: "Show the units" }).click();
+  await page.getByText("Damage by hand or left the table: Mine A").click();
+  await page.getByLabel("Damage to Mine A, staged until the End Phase").fill("1");
+  await page.getByRole("button", { name: "Stage the damage on Mine A" }).click();
+  await expect(page.getByText(/1 staged/)).toBeVisible();
+  await fitsPhone(page, "the units list with a hand entry open");
+  await noViolations(page, "the units list with a hand entry open");
+
+  await page.getByText("Damage by hand or left the table: Theirs A").click();
+  await page.getByRole("button", { name: "Theirs A left the table" }).click();
+  await expect(page.getByText("Escaped")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Theirs A left the table" })).toHaveCount(0);
+});

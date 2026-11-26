@@ -134,12 +134,15 @@ export default function NewCampaignForm({ storage, units }: { storage: CampaignS
           <p className="bt-hint" id={`${uid}-leg-hint`}>{`The book allows ${String(legend.pvPercent)}% PV or lower and ${String(legend.spPercent)}% SP earned or lower (Aces p. 28). Leave a box empty to keep the book number.`}</p>
           <div className="bt-field">
             <label htmlFor={`${uid}-legpv`}>PV percent (the book number or lower)</label>
-            <input id={`${uid}-legpv`} type="number" inputMode="numeric" max={legend.pvPercent} placeholder={String(legend.pvPercent)} aria-describedby={`${uid}-leg-hint`} value={form.legendPv} onChange={(e) => { set({ legendPv: e.target.value }); }} />
+            <input id={`${uid}-legpv`} type="number" inputMode="numeric" placeholder={String(legend.pvPercent)} aria-describedby={`${uid}-leg-hint`} value={form.legendPv} onChange={(e) => { set({ legendPv: e.target.value }); }} />
           </div>
           <div className="bt-field">
             <label htmlFor={`${uid}-legsp`}>SP earned percent (the book number or lower)</label>
-            <input id={`${uid}-legsp`} type="number" inputMode="numeric" min={0} max={legend.spPercent} placeholder={String(legend.spPercent)} aria-describedby={`${uid}-leg-hint`} value={form.legendSp} onChange={(e) => { set({ legendSp: e.target.value }); }} />
+            <input id={`${uid}-legsp`} type="number" inputMode="numeric" placeholder={String(legend.spPercent)} aria-describedby={`${uid}-leg-hint`} value={form.legendSp} onChange={(e) => { set({ legendSp: e.target.value }); }} />
           </div>
+          {((legendPv !== undefined && customPv === undefined) || (legendSp !== undefined && customSp === undefined)) && (
+            <p role="status" className="bt-hint">A number that is not harder than the book&apos;s is not used; the book number stays.</p>
+          )}
         </fieldset>
       )}
       <label className="bt-check">
