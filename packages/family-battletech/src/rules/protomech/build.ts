@@ -2,12 +2,14 @@
 // the weight of every mounted item and its ammunition, and the weight tally. Every figure is read from data/protomech.ts; this file only does the
 // arithmetic. Kilograms throughout. Pure functions; nothing here throws, and a record that does not fit the tables (a weight the book has no row for,
 // an item we do not know) gives undefined or null for that figure and a note in `unknown`, never a guess.
-import { PROTO_AMMO_KG, PROTO_BANDED_KG, PROTO_CODES, PROTO_LAUNCHERS, PROTO_MOVE, PROTO_PARTS, PROTO_STRUCTURE } from "../../data/protomech";
+import { PROTO_AMMO_KG, PROTO_BANDED_KG, PROTO_CODES, PROTO_LAUNCHERS, PROTO_LIMITS, PROTO_PARTS, PROTO_STRUCTURE } from "../../data/protomech";
 import type { ProtoLauncher, ProtoLocation, ProtoStructureRow } from "../../data/protomech";
 import { groupOf } from "../catalog";
 import type { Catalog, EquipmentRow } from "../catalog";
 import { engineTons } from "../mech";
 import { own, tidy } from "../walk";
+import { plainRun } from "./movement";
+import { armorTypeOf, cockpitOf, jumpSystemOf, torsoItemsLost, wingKg } from "./options";
 import type { ProtoMount, ProtoRecord } from "./record";
 
 /** The structure and armor row for the record's tonnage; undefined for a weight the table does not have. */
@@ -27,10 +29,7 @@ export const armorPoints = (record: ProtoRecord): number => locationsOf(record).
 
 // ---- Movement and the engine ----------------------------------------------------------------------------------------------------
 
-/** Running MP without the booster: Walking MP x 1.5, rounded up (p. 83). */
-export const plainRun = (walk: number): number => Math.ceil(tidy(walk * PROTO_MOVE.runFactor));
-/** Running MP as the sheet prints it first: with the booster, twice the Walking MP. */
-export const runMP = (record: Pick<ProtoRecord, "walk" | "booster">): number => (record.booster ? record.walk * PROTO_MOVE.boostedRunFactor : plainRun(record.walk));
+export { plainRun, runMP } from "./movement";
 
 /** Engine rating: tons x Running MP (the unboosted one), between 1 and 400 (p. 83); null for a walk that is not a whole number of at least 1. */
 export function engineRating(record: ProtoRecord): number | null {
@@ -50,13 +49,26 @@ export function engineKg(record: ProtoRecord): number | null {
 }
 
 export const structureKg = (record: ProtoRecord): number => record.tons * PROTO_PARTS.structureKgPerTon;
-export function jumpJetKg(record: ProtoRecord): number {
+/** The weight of the jump jets or UMUs: the jump jet weight table, doubled for extended jump jets (IO:AE p. 59); null for a system we do not know. */
+export function jumpJetKg(record: ProtoRecord): number | null {
+  const system = jumpSystemOf(record);
+  if (!system) return null;
   const per = PROTO_PARTS.jumpJetKg.find((band) => record.tons <= band.upTo)?.kg ?? (PROTO_PARTS.jumpJetKg.at(-1)?.kg ?? 0);
-  return Math.max(0, record.jump) * per;
+  return Math.max(0, record.jump) * per * system.kgFactor;
 }
 export const boosterKg = (record: ProtoRecord): number => (record.booster ? record.tons * PROTO_PARTS.boosterKgPerTon : 0);
 export const heatSinkKg = (record: ProtoRecord): number => Math.max(0, record.heatSinks) * PROTO_PARTS.heatSinkKg;
-export const armorKg = (record: ProtoRecord): number => armorPoints(record) * PROTO_PARTS.armorKgPerPoint;
+/** The weight of the armor points: 50 kg each, 75 for Electric Discharge armor (IO:AE p. 59); null for an armor type we do not know. */
+export const armorKg = (record: ProtoRecord): number | null => {
+  const type = armorTypeOf(record);
+  return type ? armorPoints(record) * type.kgPerPoint : null;
+};
+
+/** What a location holds at most: the Location Restrictions Table (p. 87), with the torso cut by Electric Discharge armor and the partial wing. Undefined for a place that is not a location. */
+export function limitOf(record: ProtoRecord, location: string): { items: number; kg: number | null } | undefined {
+  const limit = own(PROTO_LIMITS.rows, location);
+  return limit && location === "t" ? { ...limit, items: Math.max(0, limit.items - torsoItemsLost(record)) } : limit;
+}
 
 // ---- Mounted items ------------------------------------------------------------------------------------------------------------
 
@@ -137,11 +149,12 @@ export function tally(record: ProtoRecord, catalog: Catalog): Tally {
   add("Internal structure", structureKg(record));
   const rating = engineRating(record);
   add(rating === null ? "Engine" : `Engine, rating ${String(rating)}`, engineKg(record));
-  add("Cockpit", PROTO_PARTS.cockpitKg);
-  add("Jump jets", jumpJetKg(record));
+  add("Cockpit", cockpitOf(record)?.kg);
+  add(jumpSystemOf(record)?.label ?? "Jump system", jumpJetKg(record));
   add("Myomer Booster", boosterKg(record));
+  add("Partial wing", wingKg(record));
   add("Heat sinks", heatSinkKg(record));
-  add("Armor", armorKg(record));
+  add(armorTypeOf(record)?.label ?? "Armor", armorKg(record));
   for (const mount of record.mounts) {
     const name = mountName(mount) || "Unnamed item";
     add(name, mountKg(mount, catalog, record));
@@ -163,5 +176,7 @@ export function holdsAt(record: ProtoRecord, catalog: Catalog, location: string)
     if (each === undefined) unknown += 1;
     else kg += each;
   }
+  // The partial wing is a torso item (its slot is taken off the limit by limitOf) and its weight counts toward the torso's combined weight (book panel, TO:AUE p. 104, TM p. 87).
+  if (location === "t") kg += wingKg(record);
   return { items, kg, unknown };
 }

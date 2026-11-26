@@ -4,6 +4,7 @@
 import { PROTO_LOCATION_NAMES } from "../../data/protomech";
 import type { Catalog } from "../../rules/catalog";
 import { armorPoints, locationsOf, mountName, plainRun, rowOf, runMP, structurePoints, structureRow } from "../../rules/protomech/build";
+import { jumpMP, jumpSystemOf, optionSummary, wingBonus } from "../../rules/protomech/options";
 import { protoBattleValue, protoCost } from "../../rules/protomech/rating";
 import { protoOfficialState } from "../../rules/protomech/official";
 import { officialLabel } from "../../rules/official";
@@ -51,7 +52,9 @@ export function protoFacts(record: ProtoRecord, catalog: Catalog) {
     tons: String(record.tons),
     walk: String(record.walk),
     run: record.booster ? `${String(plainRun(record.walk))} (${String(runMP(record))})` : String(plainRun(record.walk)),
-    jump: String(record.jump),
+    jumpLabel: jumpSystemOf(record)?.unit ?? "Jumping MP",
+    jump: wingBonus(record) > 0 ? `${String(record.jump)} (${String(jumpMP(record))} with wing)` : String(record.jump),
+    options: optionSummary(record).join(", "),
     heatSinks: String(record.heatSinks),
     bv: String(bv.total),
     cost: protoCost(record, catalog).total.toLocaleString("en-US"),
@@ -71,7 +74,7 @@ function Block({ record, catalog, index, y }: { record: ProtoRecord; catalog: Ca
     ["Tonnage", facts.tons],
     ["Walking MP", facts.walk],
     ["Running MP", facts.run],
-    ["Jumping MP", facts.jump],
+    [facts.jumpLabel, facts.jump],
     ["Heat sinks", facts.heatSinks],
     ["Battle Value", facts.bv],
   ];
@@ -89,6 +92,11 @@ function Block({ record, catalog, index, y }: { record: ProtoRecord; catalog: Ca
           </text>
         </g>
       ))}
+      {facts.options !== "" && (
+        <text x={x + 24} y={y + 322} fontSize={20} fill={INK} {...squeeze(facts.options, 20, 340)}>
+          {facts.options}
+        </text>
+      )}
       <text x={x + 24} y={y + 346} fontSize={22} fill={INK}>{"Pilot: ______________________"}</text>
       <ProtoDiagram locations={facts.locations} use="armor" frame={{ x: x + 380, y: y + 28, w: 540, h: 346 }} />
       <text x={inventoryX} y={y + 40} fontSize={24} fontWeight={700} fill={INK}>Weapons and equipment</text>
@@ -137,7 +145,7 @@ export default function ProtoSheet({ records, catalog }: { records: ProtoRecord[
             <div key={`${record.id}-${String(i)}`}>
               <h3>{`${String(i + 1)}. ${facts.title}`}</h3>
               <dl>
-                {[["Tonnage", facts.tons], ["Walking MP", facts.walk], ["Running MP", facts.run], ["Jumping MP", facts.jump], ["Heat sinks", facts.heatSinks], ["Battle Value", facts.bv], ["Cost", `${facts.cost} C-bills`], ["Armor", facts.locations.map((l) => `${l.name} ${String(l.armor)}`).join(", ")], ["Internal structure", facts.locations.map((l) => `${l.name} ${String(l.structure ?? 0)}`).join(", ")], ["Marked", facts.official.badge]].map(([term, value]) => (
+                {[["Tonnage", facts.tons], ["Walking MP", facts.walk], ["Running MP", facts.run], [facts.jumpLabel, facts.jump], ["Heat sinks", facts.heatSinks], ["Battle Value", facts.bv], ["Cost", `${facts.cost} C-bills`], ...(facts.options === "" ? [] : [["Options", facts.options]]), ["Armor", facts.locations.map((l) => `${l.name} ${String(l.armor)}`).join(", ")], ["Internal structure", facts.locations.map((l) => `${l.name} ${String(l.structure ?? 0)}`).join(", ")], ["Marked", facts.official.badge]].map(([term, value]) => (
                   <div key={term}>
                     <dt>{term}</dt>
                     <dd>{value}</dd>

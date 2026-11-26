@@ -35,7 +35,7 @@ test("build an infantry platoon at 320 px, save it, open its record sheet and fi
   await expect(page.getByRole("heading", { level: 1, name: "Rifle Platoon record sheet" })).toBeVisible();
   const sheet = new URL(page.url());
   await page.goto(HOME);
-  await expect(page.getByRole("link", { name: "Open Rifle Platoon" })).toBeVisible();
+  await expectPage(page.getByRole("link", { name: "Open Rifle Platoon" })).toBeVisible();
 
   for (const theme of ["Light", "Dark"] as const) {
     await chooseTheme(page, theme);

@@ -1,15 +1,16 @@
 // The ProtoMech editor's panels: identity, chassis (weight, movement, heat sinks), armor, weapons and equipment by location, Battle Value and cost, and the OFFICIAL mark.
 // Each shows only what the rules level, year and era offer (hide, do not mark): an item the unit already holds stays listed, and the rules check reports it.
 import { useId, useMemo, useState } from "react";
-import { PROTO_LIMITS, PROTO_LOCATION_NAMES, PROTO_REAR_LOCATIONS, PROTO_WEIGHT } from "../../data/protomech";
+import { PROTO_WING, PROTO_LOCATION_NAMES, PROTO_REAR_LOCATIONS, PROTO_WEIGHT } from "../../data/protomech";
 import { BOOKS, eraLabel } from "../../data/editions";
 import { CLASSIC } from "../../data/rulesets";
 import { erasOfYear, setEra, setYear } from "../../rules/availability";
 import { groupOf } from "../../rules/catalog";
 import type { Catalog } from "../../rules/catalog";
-import { DEFAULT_LEVEL, levelRow } from "../../rules/levels";
+import { DEFAULT_LEVEL, levelAtLeast, levelRow } from "../../rules/levels";
 import { officialLabel } from "../../rules/official";
-import { armorPoints, ammoKg, engineKg, engineRating, holdsAt, launcherOf, locationsOf, mountKg, mountName, plainRun, rowOf, runMP, structurePoints, structureRow, tally, tubesOf, usesAmmo } from "../../rules/protomech/build";
+import { armorPoints, ammoKg, engineKg, engineRating, holdsAt, launcherOf, limitOf, locationsOf, mountKg, mountName, plainRun, rowOf, runMP, structurePoints, structureRow, tally, tubesOf, usesAmmo } from "../../rules/protomech/build";
+import { armorChoices, armorTypeOf, cockpitChoices, jumpChoices, jumpMP, jumpReach, jumpSystemOf, wingBonus, wingOffered } from "../../rules/protomech/options";
 import { protoLowestLevel } from "../../rules/protomech/checks";
 import type { ProtoFinding } from "../../rules/protomech/checks";
 import { markProtoOfficial, protoOfficialState } from "../../rules/protomech/official";
@@ -25,6 +26,11 @@ import type { ProtoOnEdit } from "./edit";
 
 const num = (n: number): string => String(tidy(n));
 const money = (n: number): string => `${n.toLocaleString("en-US")} C-bills`;
+/** Sets a part option by its id; the TechManual part is the absence of the key. */
+const setOption = (d: ProtoRecord, key: "cockpit" | "armorType" | "jumpType", id: string) => {
+  if (id === "standard") delete d[key];
+  else d[key] = id;
+};
 const TONNAGES = Array.from({ length: PROTO_WEIGHT.max - PROTO_WEIGHT.min + 1 }, (_, i) => PROTO_WEIGHT.min + i);
 
 interface PartProps {
@@ -71,11 +77,24 @@ export function IdentityPanel({ record, catalog, onEdit }: PartProps & { catalog
             onChange={(v) => { onEdit((d) => { setEra(d, v); }); }}
           />
         )}
-        <div className="bt-field">
-          <span className="bt-label">Tech base</span>
-          <span id="field-techBase">Clan</span>
-          <span className="bt-hint">ProtoMechs are built with Clan technology only (TechManual, p. 80).</span>
-        </div>
+        {record.cockpit !== "interface" && (levelAtLeast(record.rulesLevel ?? DEFAULT_LEVEL, "advanced") || record.techBase === "mixed") ? (
+          <SelectField id="field-techBase" label="Tech base" value={record.techBase} options={[{ value: "clan", label: "Clan" }, { value: "mixed", label: "Mixed" }]} onChange={(v) => { onEdit((d) => void (d.techBase = v)); }} hint="Clan, or Mixed Technology at Advanced rules (Tactical Operations: Advanced Units and Equipment, p. 189)." />
+        ) : (
+          <div className="bt-field">
+            <span className="bt-label">Tech base</span>
+            {record.cockpit === "interface" ? (
+              <>
+                <span id="field-techBase">Mixed</span>
+                <span className="bt-hint">The Inner Sphere interface cockpit makes the unit Mixed Technology (Interstellar Operations: Alternate Eras, p. 96).</span>
+              </>
+            ) : (
+              <>
+                <span id="field-techBase">Clan</span>
+                <span className="bt-hint">ProtoMechs are built with Clan technology (TechManual, p. 80); Mixed Technology comes with Advanced rules.</span>
+              </>
+            )}
+          </div>
+        )}
         <SelectField id="field-tons" label="Tons" value={String(record.tons)} options={TONNAGES.map((t) => ({ value: String(t), label: `${String(t)} tons` }))} onChange={(v) => { onEdit((d) => void (d.tons = Number(v))); }} />
       </div>
       <p className="bt-hint">{`The lowest rules level that fits everything on the unit: ${levelRow(lowest).label}.`}</p>
@@ -87,12 +106,18 @@ export function ChassisPanel({ record, onEdit }: PartProps) {
   const row = structureRow(record);
   const rating = engineRating(record);
   const kg = engineKg(record);
+  const cockpits = cockpitChoices(record);
+  const jumps = jumpChoices(record);
+  const system = jumpSystemOf(record);
+  const reach = jumpReach(record);
   return (
     <section className="bt-panel" aria-labelledby="pm-chassis">
       <h2 id="pm-chassis">Engine, movement and heat sinks</h2>
       <div className="bt-grid">
         <NumberField id="field-walk" label="Walking MP" value={record.walk} min={1} onValid={(v) => { onEdit((d) => void (d.walk = v ?? 1), "walk"); }} />
-        <NumberField id="field-jump" label="Jumping MP" value={record.jump} min={0} hint="At most the Walking MP." onValid={(v) => { onEdit((d) => void (d.jump = v ?? 0), "jump"); }} />
+        {jumps.length > 1 && <SelectField id="field-jumpType" label="Jump system" value={record.jumpType ?? "standard"} options={jumps.map((j) => ({ value: j.id, label: j.label }))} onChange={(v) => { onEdit((d) => { setOption(d, "jumpType", v); }); }} />}
+        <NumberField id="field-jump" label={system?.unit ?? "Jumping MP"} value={record.jump} min={0} hint={`At most the ${system?.reach === "run" ? "Running MP" : "Walking MP"}, ${String(reach)}.`} onValid={(v) => { onEdit((d) => void (d.jump = v ?? 0), "jump"); }} />
+        {cockpits.length > 1 && <SelectField id="field-cockpit" label="Cockpit" value={record.cockpit ?? "standard"} options={cockpits.map((c) => ({ value: c.id, label: c.label }))} onChange={(v) => { onEdit((d) => { setOption(d, "cockpit", v); if (v === "interface") d.techBase = "mixed"; else if (record.cockpit === "interface") d.techBase = "clan"; }); }} />}
         <NumberField id="field-heatSinks" label="Heat sinks" value={record.heatSinks} min={0} hint="One for each point of energy weapon heat." onValid={(v) => { onEdit((d) => void (d.heatSinks = v ?? 0), "heatSinks"); }} />
         <div className="bt-field">
           <label className="pm-check">
@@ -101,6 +126,15 @@ export function ChassisPanel({ record, onEdit }: PartProps) {
           </label>
           <span className="bt-hint">Running MP of twice the Walking MP.</span>
         </div>
+        {wingOffered(record) && (
+          <div className="bt-field">
+            <label className="pm-check">
+              <input id="field-partialWing" type="checkbox" checked={record.partialWing === true} onChange={(e) => { onEdit((d) => { if (e.target.checked) d.partialWing = true; else delete d.partialWing; }); }} />
+              {` ${PROTO_WING.label}`}
+            </label>
+            <span className="bt-hint">{`Weighs a fifth of the ProtoMech and takes one torso item; adds ${String(PROTO_WING.bonusAtStandard)} Jumping MP in a standard atmosphere to a unit that can jump.`}</span>
+          </div>
+        )}
         <div className="bt-field">
           <label className="pm-check">
             <input id="field-mainGun" type="checkbox" checked={record.mainGun} onChange={(e) => { onEdit((d) => void (d.mainGun = e.target.checked)); }} />
@@ -112,6 +146,8 @@ export function ChassisPanel({ record, onEdit }: PartProps) {
       <Readout
         lines={[
           `Running MP ${String(runMP(record))}${record.booster ? ` boosted (${String(plainRun(record.walk))} without the booster)` : ""}.`,
+          wingBonus(record) > 0 ? `Jumping MP ${String(jumpMP(record))} with the partial wing (${String(record.jump)} from the jets).` : undefined,
+          system?.underwater === true && record.jump > 0 ? `${String(record.jump)} UMU MP: underwater movement, no jumping.` : undefined,
           rating === null ? undefined : `Engine rating ${String(rating)}${kg === null ? ", which we have no weight for" : `, ${num(kg)} kg`}.`,
           row ? `Internal structure ${String(structurePoints(record) ?? 0)} points, ${String(record.tons * 100)} kg.` : undefined,
         ]}
@@ -124,10 +160,17 @@ export function ArmorPanel({ record, onEdit, inError }: PartProps & { inError: s
   const row = structureRow(record);
   const locations = locationsOf(record);
   const view = locations.map((code) => ({ code, name: PROTO_LOCATION_NAMES[code] ?? code, armor: record.armor[code] ?? 0, structure: row?.structure[code] }));
+  const types = armorChoices(record);
+  const type = armorTypeOf(record);
   return (
     <section className="bt-panel bt-editor__wide" aria-labelledby="pm-armor">
       <h2 id="pm-armor">Armor and structure</h2>
-      <p className="bt-hint">{`ProtoMech armor weighs 50 kg a point. ${String(armorPoints(record))} points placed${row ? `, ${String(locations.reduce((s, c) => s + row.armor[c], 0))} at most` : ""}.`}</p>
+      {types.length > 1 && (
+        <div className="bt-grid">
+          <SelectField id="field-armorType" label="Armor type" value={record.armorType ?? "standard"} options={types.map((t) => ({ value: t.id, label: t.label }))} onChange={(v) => { onEdit((d) => { setOption(d, "armorType", v); }); }} />
+        </div>
+      )}
+      <p className="bt-hint">{`${type ? `${type.label} weighs ${String(type.kgPerPoint)} kg a point` : "This armor type is not one we know"}. ${String(armorPoints(record))} points placed${row ? `, ${String(locations.reduce((s, c) => s + row.armor[c], 0))} at most` : ""}.`}</p>
       <div className="bt-grid">
         {locations.map((code) => (
           <NumberField
@@ -153,7 +196,7 @@ export function WeaponsPanel({ record, catalog, onEdit }: PartProps & { catalog:
   const offered = useMemo(() => offeredEquipment(record, catalog, false, record.mounts.map((m) => m.equipmentId ?? "")), [record, catalog]);
   const [pick, setPick] = useState<Record<string, string>>({});
   // The locations that may hold items, then any other place that holds one anyway (it stays visible, and the rules check reports it).
-  const main: string[] = locationsOf(record).filter((c) => (PROTO_LIMITS.rows[c]?.items ?? 0) > 0);
+  const main: string[] = locationsOf(record).filter((c) => (limitOf(record, c)?.items ?? 0) > 0);
   const places = [...main, ...new Set(record.mounts.map((m) => m.location).filter((c) => !main.includes(c)))];
   const groups = useMemo(() => {
     const by = new Map<string, { label: string; rows: typeof offered }>();
@@ -168,10 +211,10 @@ export function WeaponsPanel({ record, catalog, onEdit }: PartProps & { catalog:
   return (
     <section className="bt-panel bt-editor__wide" aria-labelledby="pm-weapons">
       <h2 id="pm-weapons">Weapons and equipment</h2>
-      <p className="bt-hint">The torso holds two items weighing 2,000 kg together, each arm one item of 500 kg at most, the main gun one item of any weight. The head and legs hold none. Ammunition does not count against these limits.</p>
+      <p className="bt-hint">The torso holds two items weighing 2,000 kg together (one less for each of Electric Discharge armor and the partial wing), each arm one item of 500 kg at most, the main gun one item of any weight. The head and legs hold none. Ammunition does not count against these limits.</p>
       {places.map((code) => {
         const name = PROTO_LOCATION_NAMES[code] ?? `"${code}"`;
-        const limit = PROTO_LIMITS.rows[code];
+        const limit = limitOf(record, code);
         const held = holdsAt(record, catalog, code);
         const here = record.mounts.filter((m) => m.location === code);
         const full = limit !== undefined && held.items >= limit.items;

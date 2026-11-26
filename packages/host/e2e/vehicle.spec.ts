@@ -58,7 +58,7 @@ test("build a tracked vehicle at 320 px, give it armor and a weapon, save it and
   await expect(page.getByRole("heading", { level: 1, name: "Scan Tank record sheet" })).toBeVisible();
   await expect(page.getByRole("img", { name: "Scan Tank record sheet" })).toBeVisible();
   await page.goto(`${DEV}${CLASSIC}/home`);
-  await expect(page.getByRole("link", { name: "Open Scan Tank" })).toBeVisible();
+  await expectPage(page.getByRole("link", { name: "Open Scan Tank" })).toBeVisible();
 });
 
 test("the vehicle editor, picker and record sheet have no axe violations in either theme", async ({ page }) => {
@@ -75,7 +75,7 @@ test("the vehicle editor, picker and record sheet have no axe violations in eith
     }
     await page.goto(`${DEV}${editor}`);
     await page.getByRole("button", { name: "Add equipment" }).click();
-    await expect(page.getByRole("dialog")).toBeVisible();
+    await expectPage(page.getByRole("dialog")).toBeVisible();
     const results = await new AxeBuilder({ page }).analyze();
     expect(results.violations, `${theme} theme, the picker`).toEqual([]);
     await page.keyboard.press("Escape");

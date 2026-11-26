@@ -353,5 +353,5 @@ test("build an OmniMech, add a configuration, compare them and reach a configura
   await expect(page.getByRole("img", { name: "Falcon A (copy) record sheet" }).locator("text", { hasText: /^OmniMech record sheet$/ })).toBeVisible();
   // The saved list shows one entry for the chassis.
   await page.goto(HOME);
-  await expect(page.getByRole("link", { name: "Open Falcon" })).toBeVisible();
+  await expectPage(page.getByRole("link", { name: "Open Falcon" })).toBeVisible();
 });

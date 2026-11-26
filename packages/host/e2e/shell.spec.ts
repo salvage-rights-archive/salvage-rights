@@ -25,7 +25,7 @@ test.describe("dev edition", () => {
     await page.setViewportSize({ width: 320, height: 700 });
     await page.goto(`${DEV}/`);
     const tile = page.getByTestId("family-tile").first();
-    await expect(tile.getByRole("link", { name: "Classic, BattleTech" }).locator("img")).toBeVisible();
+    await expectPage(tile.getByRole("link", { name: "Classic, BattleTech" }).locator("img")).toBeVisible();
     await expect(tile.getByRole("link", { name: /AeroTech/ })).toHaveCount(1);
     await expect(tile.getByText("AeroTech (coming soon)")).toHaveCount(0);
     await expect(tile.getByText("AeroTech 2")).toHaveCount(0);
@@ -59,7 +59,7 @@ test.describe("dev edition", () => {
     await expect(page.getByText("You have hidden every game.")).toBeVisible();
     // Reload at once: a change just made must not be lost.
     await page.reload();
-    await expect(page.getByText("You have hidden every game.")).toBeVisible();
+    await expectPage(page.getByText("You have hidden every game.")).toBeVisible();
     await expect(page.getByRole("link", { name: "Choose games in Settings" })).toBeVisible();
   });
 
@@ -72,7 +72,7 @@ test.describe("dev edition", () => {
 
   test("an unknown path shows Nothing here", async ({ page }) => {
     await page.goto(`${DEV}/nope`);
-    await expect(page.getByRole("heading", { name: "Nothing here" })).toBeVisible();
+    await expectPage(page.getByRole("heading", { name: "Nothing here" })).toBeVisible();
     expect(new URL(page.url()).pathname).toBe("/salvage-rights/nope");
   });
 
