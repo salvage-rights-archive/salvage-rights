@@ -25,7 +25,7 @@ export const locationName = (code: string): string => (Object.hasOwn(LOCATION_NA
 export const carriesShots = (row: EquipmentRow | undefined): boolean => row?.ammoKgPerShot !== undefined;
 export const isBooster = (row: EquipmentRow | undefined): boolean => row?.id.startsWith("ba-jump-booster") === true;
 export const isWing = (row: EquipmentRow | undefined): boolean => row?.id.startsWith("ba-partial-wing") === true;
-export const isClamps =(row: EquipmentRow | undefined): boolean => row?.id.startsWith("ba-magnetic-clamps") === true;
+export const isClamps = (row: EquipmentRow | undefined): boolean => row?.id.startsWith("ba-magnetic-clamps") === true;
 
 /** Kilograms, with float noise off (the catalog stores tons). */
 const kgOfTons = (tons: number): number => tidy(tons * 1000);
@@ -201,6 +201,7 @@ export function build(record: BaRecord, catalog: Catalog): BaBuild {
   // Movement.
   const boosters = used.filter((u) => isBooster(u.figures.row)).length;
   // The partial wing adds a Jumping MP in atmosphere (TechManual printed p. 266); the figure shown is the atmospheric one.
+  // The wing's Jumping MP may exceed the class maximum (TechManual printed p. 166, as for the jump booster): do not cap it.
   const wings = Math.min(1, used.filter((u) => isWing(u.figures.row)).length);
   const moves: Moves = {
     ground: record.ground,

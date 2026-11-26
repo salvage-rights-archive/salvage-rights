@@ -86,6 +86,9 @@ const motiveCheck: Check = (record, catalog) => {
   const wings = record.mounts.filter((m) => isWing(m.equipmentId === null ? undefined : catalog.byId(m.equipmentId)));
   if (wings.length > 0 && kind !== "jump") out.push({ check: "motive", level: "error", message: "A partial wing needs jump jets.", where: { mountId: wings[0]?.id }, cite: TM(266) });
   if (wings.length > 0 && boosters.length > 0) out.push({ check: "motive", level: "error", message: "A partial wing and a jump booster cannot be combined.", where: { mountId: wings[0]?.id }, cite: TM(266) });
+  const badWing = wings.find((m) => m.location !== "body");
+  if (badWing) out.push({ check: "motive", level: "error", message: "A partial wing can only be mounted in the Body.", where: { mountId: badWing.id }, cite: TM(266) });
+  if (wings.length > 0 && (record.body === "quad" || !["pal", "light"].includes(record.weightClass))) out.push({ check: "motive", level: "error", message: "A partial wing fits only humanoid light suits and PA(L) or exoskeleton suits.", where: { mountId: wings[0]?.id }, cite: TM(266) });
   if (wings.length > 1) out.push({ check: "motive", level: "warning", message: "A suit has one partial wing.", where: { mountId: wings[1]?.id }, cite: TM(266) });
   return out;
 };

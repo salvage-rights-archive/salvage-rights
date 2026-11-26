@@ -814,6 +814,7 @@ export const OTHER: EquipmentGroup[] = [
     // Raven); the light TAG is 3053 (Draconis Combine) / 3054 (Clan Wolf). One suit mounts at most one parafoil (Body only) and one remote sensor
     // dispenser (fixed payload of 6 sensors, errata v8.0 to p. 268); the others may be repeated. The squad support weapon mount, modular and turret
     // mounts, mission equipment and detachable missile pack have a variable weight and are not rows.
+    // The light TAG's table also prints an ammunition figure (0.08 kg for 60 shots); the battle armor construction code counts ammunition only for missile launchers (`ammoKgPerShot`), so it is not kept.
     defaults: { kind: "other", checked: "page", units: ["battlearmor"], cite: { book: "TechManual", page: 347 } },
     items: [
       { id: "ba-parafoil-is", techBase: "inner-sphere", name: "Parafoil (Battle Armor)", tons: 0.035, slots: 1, availability: [{ from: 1950 }] },

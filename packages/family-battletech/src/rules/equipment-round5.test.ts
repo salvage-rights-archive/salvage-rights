@@ -58,7 +58,7 @@ describe("infantry weapon years follow the later printing (IO:AE pp. 48-49 over 
 });
 
 describe("battle armor parafoil, remote sensor dispenser and partial wing rules", () => {
-  const record = (mounts: ReturnType<typeof mount>[], motive = { kind: "jump", mp: 2 }) => ({ ...newBaRecord({ weightClass: "medium", year: 3070 }), motive, mounts });
+  const record = (mounts: ReturnType<typeof mount>[], motive = { kind: "jump", mp: 2 }) => ({ ...newBaRecord({ weightClass: "light", year: 3070 }), motive, mounts });
   const errors = (r: ReturnType<typeof record>) => checkBa(r, catalog).filter((f) => f.level === "error").map((f) => f.message);
 
   it("allows one parafoil, in the Body only, and one remote sensor dispenser", () => {
@@ -72,5 +72,8 @@ describe("battle armor parafoil, remote sensor dispenser and partial wing rules"
     expect(build(record([mount("ba-partial-wing-is")]), catalog).moves.jump).toBe(3);
     expect(errors(record([mount("ba-partial-wing-is")], { kind: "none", mp: 0 }))).toContain("A partial wing needs jump jets.");
     expect(errors(record([mount("ba-partial-wing-is"), mount("ba-jump-booster-is")]))).toContain("A partial wing and a jump booster cannot be combined.");
+    expect(errors(record([mount("ba-partial-wing-is", "ra")]))).toContain("A partial wing can only be mounted in the Body.");
+    const medium = { ...record([mount("ba-partial-wing-is")]), weightClass: "medium" };
+    expect(errors(medium)).toContain("A partial wing fits only humanoid light suits and PA(L) or exoskeleton suits.");
   });
 });
