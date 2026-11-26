@@ -3,13 +3,18 @@
 // offers. A record is plain data; there is no class. Nothing here throws on a record it does not understand: a unit type, arc or
 // armor location the edition does not know is kept as it is, and keys this version does not know are kept too, so a record
 // written by a later version survives a round trip through this one.
-import { RULES_LEVELS } from "../data/chassis";
+import { ENGINE_TYPES, RULES_LEVELS } from "../data/chassis";
 import type { RulesLevel } from "../data/chassis";
-import { AERO_LOCATION_NAMES, DEFAULT_AERO_EDITION, aeroFigures, aeroTypesFor } from "../data/aero";
-import type { AeroShape, AeroType } from "../data/aero";
+import { AERO_LOCATION_NAMES, DEFAULT_AERO_EDITION, FIGHTER_ARMOR_TYPES, FIGHTER_FIGURES, aeroFigures, aeroTypesFor, fighterArmorPointsPerTon, fighterArmorTypes, figureOf, kindFigureOf } from "../data/aero";
+import type { AeroShape, AeroType, FighterKind } from "../data/aero";
+import { aeroCatalogFigures, aeroWeaponFigures } from "../data/aero-weapons";
+import { groupOf } from "./catalog";
+import type { Catalog } from "./catalog";
+import { engineTons } from "./mech";
 import type { OfficialMark, TechBase } from "./mech";
+import { own, roundHalfUp, tidy } from "./walk";
 
-export type { AeroShape, AeroType };
+export type { AeroShape, AeroType, FighterKind };
 export type AeroUse = "civilian" | "military";
 
 /** One weapon or item on the unit. `arc` is a code from the edition's arc set (`locationsOf`); one the edition lacks is kept. */
@@ -247,4 +252,228 @@ export function withDefaults(value: unknown, fallbackId = ""): AeroRecord | unde
   if (official) record.official = official;
   if (isObject(v.picture) && isString(v.picture.dataUrl)) record.picture = { dataUrl: v.picture.dataUrl };
   return record;
+}
+
+// ---- Fighter construction ------------------------------------------------------------------------------------------------------
+// Conventional and aerospace fighters in the four editions that build them. Every figure is read from data/aero.ts (FIGHTER_FIGURES,
+// one row per value, each edition named once); this file only does the arithmetic. A figure an edition's book does not print, a
+// unit that is not a fighter and an edition we do not know give null or undefined, never a throw, and nothing is removed from a
+// record: a part the edition does not offer is still weighed and listed by `fighterPartsNotOffered` for the rules check.
+
+/** The fighter kind of a record, or undefined for any other unit type. */
+export function fighterKind(record: Pick<AeroRecord, "unitType">): FighterKind | undefined {
+  return record.unitType === "aerospace-fighter" ? "aerospace" : record.unitType === "conventional-fighter" ? "conventional" : undefined;
+}
+
+const ceilHalf = (x: number): number => Math.ceil(tidy(x * 2)) / 2;
+const floorHalf = (x: number): number => Math.floor(tidy(x * 2)) / 2;
+/** A fusion engine, as against the internal combustion (turbine) kinds that the Master Engine Table prints weights of their own for. */
+const isFusion = (type: string): boolean => own(ENGINE_TYPES.types, type)?.weightTable === undefined;
+
+/** Engine Rating: tons times Safe Thrust less 2 (aerospace) or times Safe Thrust (conventional). Not limited here (`FIGHTER_FIGURES.ratingLimits` gives the range). */
+export function engineRating(record: AeroRecord): number | null {
+  const kind = fighterKind(record);
+  const offset = kind && kindFigureOf(FIGHTER_FIGURES.ratingOffset, kind, record.editionId);
+  return offset === undefined ? null : record.tons * (record.thrust.safe - offset);
+}
+
+/** Engine weight in tons: the shared Master Engine Table by rating and type; a conventional fighter's fusion engine weighs 1.5 times that, rounded up to a half ton. null for a rating or type the table lacks. */
+export function fighterEngineTons(record: AeroRecord): number | null {
+  const rating = engineRating(record);
+  const table = rating === null ? null : engineTons(record.engine.type, rating);
+  if (table === null) return null;
+  const factor = fighterKind(record) === "conventional" && isFusion(record.engine.type) ? figureOf(FIGHTER_FIGURES.conventionalFusionFactor, record.editionId) : undefined;
+  return factor === undefined ? table : ceilHalf(table * factor);
+}
+
+/** Max Thrust (AeroTech's overthrust): Safe Thrust times 1.5, rounded up. */
+export function maxThrust(record: AeroRecord): number | null {
+  const factor = figureOf(FIGHTER_FIGURES.maxThrustFactor, record.editionId);
+  return factor === undefined || fighterKind(record) === undefined ? null : Math.ceil(tidy(record.thrust.safe * factor));
+}
+
+/** Structural Integrity: the higher of Safe Thrust and a tenth of the tons rounded down. A fighter spends no mass on it and cannot choose another (the record's `si` is not read). */
+export function fighterSI(record: AeroRecord): number | null {
+  const divisor = figureOf(FIGHTER_FIGURES.siTonsDivisor, record.editionId);
+  return divisor === undefined || fighterKind(record) === undefined ? null : Math.max(record.thrust.safe, Math.floor(tidy(record.tons / divisor)));
+}
+
+/** Fuel points: the fuel tons times the points a ton gives. */
+export function fuelPoints(record: AeroRecord): number | null {
+  const kind = fighterKind(record);
+  const perTon = kind && kindFigureOf(FIGHTER_FIGURES.fuelPoints, kind, record.editionId);
+  return perTon === undefined ? null : tidy(record.fuelTons * perTon);
+}
+
+/** Cockpit and controls in tons: 3 for an aerospace fighter, a tenth of the tons (rounded up to a half ton) for a conventional one. */
+export function controlTons(record: AeroRecord): number | null {
+  const kind = fighterKind(record);
+  const figure = kind && kindFigureOf(FIGHTER_FIGURES.controls, kind, record.editionId);
+  return figure === undefined ? null : kind === "aerospace" ? figure : ceilHalf(record.tons * figure);
+}
+
+/** Whole armor points a weight of armor gives the fighter, by the edition's rounding. null for an armor type or edition the tables lack. */
+export function fighterArmorPoints(armorType: string, tons: number, editionId: string): number | null {
+  const perTon = fighterArmorPointsPerTon(armorType, editionId);
+  if (perTon === undefined) return null;
+  const points = tidy(tons * perTon);
+  return figureOf(FIGHTER_FIGURES.armorRounding, editionId) === "nearest" ? roundHalfUp(points) : Math.floor(points);
+}
+
+/** The most armor the edition lets the fighter carry, in points and in tons; undefined where its book prints no limit (AeroTech, and aerospace fighters in AeroTech 2 and Revised). */
+export function fighterArmorLimit(record: AeroRecord): { points: number; tons: number } | undefined {
+  const kind = fighterKind(record);
+  const limit = kind && kindFigureOf(FIGHTER_FIGURES.armorLimit, kind, record.editionId);
+  const perTon = fighterArmorPointsPerTon(record.armor.type, record.editionId);
+  if (!limit || perTon === undefined) return undefined;
+  const points = limit.pointsPerTon * record.tons;
+  if (limit.unit === "points") return { points, tons: ceilHalf(points / perTon) };
+  const tons = floorHalf(points / perTon);
+  return { points: Math.floor(tidy(tons * perTon)), tons };
+}
+
+export interface FighterArmor {
+  /** Points the armor tons give. */
+  bought: number | null;
+  /** Points the unit gives free (AeroTech's cockpit). */
+  free: number;
+  available: number | null;
+  /** The sum of the points set on the armor locations. */
+  allocated: number;
+  /** Points set beyond those available; zero or less when they fit. */
+  over: number | null;
+}
+export function fighterArmor(record: AeroRecord): FighterArmor {
+  const bought = fighterArmorPoints(record.armor.type, record.armor.tons, record.editionId);
+  const free = figureOf(FIGHTER_FIGURES.cockpitArmor, record.editionId) ?? 0;
+  const allocated = Object.values(record.armor.points).reduce((sum, n) => sum + n, 0);
+  const available = bought === null ? null : bought + free;
+  return { bought, free, available, allocated, over: available === null ? null : allocated - available };
+}
+
+export interface FighterHeat {
+  /** Sinks the engine gives free; none with an internal combustion engine. */
+  free: number;
+  /** `heatSinks.count`: the sinks added, a ton each. */
+  added: number;
+  total: number;
+  /** Heat the sinks dissipate: a double sink takes away two. */
+  capacity: number;
+}
+export function fighterHeat(record: AeroRecord): FighterHeat {
+  const figure = figureOf(FIGHTER_FIGURES.freeHeatSinks, record.editionId);
+  const free = figure === undefined ? 0 : isFusion(record.engine.type) ? figure.fusion : figure.ice;
+  const total = free + record.heatSinks.count;
+  return { free, added: record.heatSinks.count, total, capacity: total * (record.heatSinks.type === "double" ? 2 : 1) };
+}
+
+/** External stores hardpoints: a fifth of the tons, rounded down (TechManual only). */
+export function hardpoints(record: AeroRecord): number | undefined {
+  const divisor = figureOf(FIGHTER_FIGURES.hardpointTons, record.editionId);
+  return divisor === undefined || fighterKind(record) === undefined ? undefined : Math.floor(tidy(record.tons / divisor));
+}
+
+const isAmmoMount = (mount: AeroMount, catalog?: Catalog): boolean => (mount.equipmentId !== null && catalog?.byId(mount.equipmentId)?.kind === "ammunition") || (mount.equipmentId ?? "").startsWith("ammo-");
+
+export interface FighterArc {
+  arc: string;
+  /** Items in the arc that count against the limit (weapons; in AeroTech, ammunition too). */
+  items: number;
+  /** The most items the arc may hold: the edition's, less a slot where the armor takes one. */
+  limit: number;
+  weaponTons: number;
+  /** AeroTech's aft arc: the most tons of weapons. */
+  tonsLimit?: number;
+}
+
+/** Each arc's items against its limit, and the weapon tons in it. Weapons of unknown weight count as items and add no tons. Empty where the edition prints no limit. */
+export function fighterArcs(record: AeroRecord, catalog?: Catalog): FighterArc[] {
+  const arms = figureOf(FIGHTER_FIGURES.arms, record.editionId);
+  const lost = FIGHTER_ARMOR_TYPES.find((t) => t.id === record.armor.type)?.lostSlots ?? [];
+  if (!arms || fighterKind(record) === undefined) return [];
+  return locationsOf(record).arcs.map((arc) => {
+    const inArc = record.mounts.filter((m) => m.arc === arc);
+    const counted = inArc.filter((m) => arms.countsAmmo === true || !isAmmoMount(m, catalog));
+    const weaponTons = tidy(inArc.filter((m) => !isAmmoMount(m, catalog)).reduce((sum, m) => sum + (mountFacts(m, record.editionId, catalog)?.tons ?? 0), 0));
+    return { arc, items: counted.length, limit: arms.items - (lost.includes(arc) ? 1 : 0), weaponTons, ...(arc === "AF" && arms.aftTons !== undefined ? { tonsLimit: arms.aftTons } : {}) };
+  });
+}
+
+/** Whether the wings carry the same weapons where the edition requires it (AeroTech 2, Revised and TechManual); true where it does not. Ammunition is in the fuselage and not compared. */
+export function wingsMatch(record: AeroRecord, catalog?: Catalog): boolean {
+  if (figureOf(FIGHTER_FIGURES.wingsMatch, record.editionId) !== true) return true;
+  const side = (arc: string) =>
+    record.mounts
+      .filter((m) => m.arc === arc && !isAmmoMount(m, catalog))
+      .map((m) => `${m.equipmentId ?? m.name}|${m.amount ?? ""}|${m.aft === true ? "aft" : ""}`)
+      .sort();
+  return side("LW").join(",") === side("RW").join(",");
+}
+
+interface MountFacts {
+  tons: number;
+  ammunition: boolean;
+  energy: boolean;
+}
+/** The weight of one mount: an ammunition mount is `amount` tons (a ton when unset), anything else its figure in the edition, else the catalog's. undefined when the item is not in the catalog or has no weight. */
+function mountFacts(mount: AeroMount, editionId: string, catalog?: Catalog): MountFacts | undefined {
+  const row = mount.equipmentId === null ? undefined : catalog?.byId(mount.equipmentId);
+  if (!catalog || !row || mount.equipmentId === null) return undefined;
+  if (row.kind === "ammunition") return { tons: mount.amount ?? 1, ammunition: true, energy: false };
+  const tons = (aeroWeaponFigures(catalog, mount.equipmentId, editionId) ?? aeroCatalogFigures(catalog, mount.equipmentId))?.tons;
+  return tons === undefined ? undefined : { tons, ammunition: false, energy: row.heavyEnergy === true || (row.kind === "weapon" && groupOf(row).id === "energy") };
+}
+
+export interface FighterTally {
+  lines: { label: string; tons: number }[];
+  total: number;
+  /** The unit's tons less the total; negative when overweight. */
+  remaining: number;
+  /** What could not be weighed: "engine", or the id of a mount the catalog does not know. */
+  unknown: string[];
+}
+
+/** The weight of the fighter by part. A fighter spends no mass on structure. Power amplifiers (a turbine conventional fighter's energy weapons) are added where the edition prints them. */
+export function fighterTally(record: AeroRecord, catalog?: Catalog): FighterTally {
+  const unknown: string[] = [];
+  const engine = fighterEngineTons(record);
+  if (engine === null) unknown.push("engine");
+  let weapons = 0;
+  let ammunition = 0;
+  let energy = 0;
+  for (const m of record.mounts) {
+    const facts = mountFacts(m, record.editionId, catalog);
+    if (!facts) {
+      unknown.push(m.id);
+      continue;
+    }
+    if (facts.ammunition) ammunition += facts.tons;
+    else weapons += facts.tons;
+    if (facts.energy) energy += facts.tons;
+  }
+  const share = fighterKind(record) === "conventional" && !isFusion(record.engine.type) ? figureOf(FIGHTER_FIGURES.powerAmplifier, record.editionId) : undefined;
+  const lines = [
+    { label: "Engine", tons: engine ?? 0 },
+    { label: "Fuel", tons: record.fuelTons },
+    { label: "Cockpit and controls", tons: controlTons(record) ?? 0 },
+    { label: "Armor", tons: record.armor.tons },
+    { label: "Heat sinks", tons: record.heatSinks.count },
+    { label: "Weapons and equipment", tons: weapons },
+    { label: "Ammunition", tons: ammunition },
+    { label: "Power amplifiers", tons: share === undefined || energy === 0 ? 0 : ceilHalf(energy * share) },
+  ].map((line) => ({ ...line, tons: tidy(line.tons) }));
+  const total = tidy(lines.reduce((sum, line) => sum + line.tons, 0));
+  return { lines, total, remaining: tidy(record.tons - total), unknown };
+}
+
+/** The parts of the record the record's edition does not offer a fighter, kept in the record: "engine", "armor" or "heat-sinks". Empty for a unit that is not a fighter. */
+export function fighterPartsNotOffered(record: AeroRecord): ("engine" | "armor" | "heat-sinks")[] {
+  const kind = fighterKind(record);
+  if (!kind) return [];
+  const out: ("engine" | "armor" | "heat-sinks")[] = [];
+  if (!kindFigureOf(FIGHTER_FIGURES.engineTypes, kind, record.editionId)?.includes(record.engine.type)) out.push("engine");
+  if (!fighterArmorTypes(record.editionId).some((t) => t.id === record.armor.type)) out.push("armor");
+  const sinks = kindFigureOf(FIGHTER_FIGURES.heatSinkTypes, kind, record.editionId);
+  if (sinks !== undefined && !sinks.includes(record.heatSinks.type)) out.push("heat-sinks");
+  return out;
 }
