@@ -93,9 +93,13 @@ test("create a campaign, export it, delete it, import it back, and read a Battle
   await page.getByLabel("Anvil AV-1 (BM, 40 PV)").check();
   await page.getByLabel("Pilot 1 call sign").fill("Ash");
   await page.getByLabel("Pilot 2 call sign").fill("Birch");
+  await page.getByLabel("Difficulty").selectOption("legendary");
+  await page.getByLabel("PV percent (the book number or lower)").fill("-50");
+  await page.getByLabel("SP earned percent (the book number or lower)").fill("90");
   await expect(page.getByText("1 unit, 40 PV. Starting warchest 14800 SP.")).toBeVisible();
   await page.getByRole("button", { name: "Create campaign" }).click();
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Test run");
+  await expect(page.getByText("Legendary: PV -50%, SP earned 70%")).toBeVisible();
   await expect(page.getByText("14800 SP")).toBeVisible();
   await page.getByRole("button", { name: "Roster" }).click();
   await expect(page.getByText("Anvil AV-1", { exact: false }).first()).toBeVisible();

@@ -32,6 +32,8 @@ const blank = () => ({
   existing: false,
   advanced: false,
   warchest: "400",
+  legendPv: "",
+  legendSp: "",
   picked: [] as string[],
   pilots: [
     { key: 1, callsign: "", type: "BM" as PilotType, sp: String(CAMPAIGN_FIGURES.pilotStartSp) },
@@ -51,8 +53,17 @@ export default function NewCampaignForm({ storage, units }: { storage: CampaignS
   const totalPv = chosen.reduce((sum, u) => sum + u.card.pv, 0);
   const startWarchest = form.existing ? existingForceSetup({ warchest: toNumber(form.warchest), totalPv }).warchest : startingWarchest(totalPv);
 
+  // Legendary's "or less" (p. 28): a harder number than the book's, kept only when it really is harder.
+  const legend = DIFFICULTY.find((d) => d.id === "legendary");
+  const legendPv = form.legendPv.trim() === "" ? undefined : Math.trunc(Number(form.legendPv));
+  const legendSp = form.legendSp.trim() === "" ? undefined : Math.trunc(Number(form.legendSp));
+  const customPv = form.difficulty === "legendary" && legend && legendPv !== undefined && !Number.isNaN(legendPv) && legendPv <= legend.pvPercent ? legendPv : undefined;
+  const customSp = form.difficulty === "legendary" && legend && legendSp !== undefined && !Number.isNaN(legendSp) && legendSp >= 0 && legendSp <= legend.spPercent ? legendSp : undefined;
+
   const build = (id: string): AcesCampaign => ({
     ...newCampaign({ id, name: form.name.trim(), book: form.book, difficulty: form.difficulty, startWarchest, existingForce: form.existing }),
+    ...(customPv !== undefined ? { customPvPercent: customPv } : {}),
+    ...(customSp !== undefined ? { customSpPercent: customSp } : {}),
     roster: chosen.map((u) => ({ unitId: u.id, name: unitTitle(u), type: u.card.type, chassis: u.name.chassis, ...(u.name.model ? { variant: u.name.model } : {}), pv: u.card.pv, size: u.card.size, status: "active" as const })),
     pilots: form.pilots.map((p, i) => ({ ...newPilot(`${id}-p${String(i + 1)}`, p.callsign.trim() || `Pilot ${String(i + 1)}`, p.type), totalSp: form.existing ? toNumber(p.sp) : CAMPAIGN_FIGURES.pilotStartSp })),
   });
@@ -117,6 +128,20 @@ export default function NewCampaignForm({ storage, units }: { storage: CampaignS
           ))}
         </select>
       </div>
+      {form.difficulty === "legendary" && legend && (
+        <fieldset className="aces-fieldset">
+          <legend>Legendary: a harder number</legend>
+          <p className="bt-hint" id={`${uid}-leg-hint`}>{`The book allows ${String(legend.pvPercent)}% PV or lower and ${String(legend.spPercent)}% SP earned or lower (Aces p. 28). Leave a box empty to keep the book number.`}</p>
+          <div className="bt-field">
+            <label htmlFor={`${uid}-legpv`}>PV percent (the book number or lower)</label>
+            <input id={`${uid}-legpv`} type="number" inputMode="numeric" max={legend.pvPercent} placeholder={String(legend.pvPercent)} aria-describedby={`${uid}-leg-hint`} value={form.legendPv} onChange={(e) => { set({ legendPv: e.target.value }); }} />
+          </div>
+          <div className="bt-field">
+            <label htmlFor={`${uid}-legsp`}>SP earned percent (the book number or lower)</label>
+            <input id={`${uid}-legsp`} type="number" inputMode="numeric" min={0} max={legend.spPercent} placeholder={String(legend.spPercent)} aria-describedby={`${uid}-leg-hint`} value={form.legendSp} onChange={(e) => { set({ legendSp: e.target.value }); }} />
+          </div>
+        </fieldset>
+      )}
       <label className="bt-check">
         <input type="checkbox" checked={form.existing} onChange={(e) => { set({ existing: e.target.checked, warchest: e.target.checked ? form.warchest : "400" }); }} /> The force is carried over from another campaign
       </label>

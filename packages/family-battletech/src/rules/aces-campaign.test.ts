@@ -3,6 +3,7 @@ import {
   adjustedPvLimit,
   allocationFindings,
   columnValue,
+  editSortie,
   eligiblePilots,
   existingForcePercent,
   existingForceSetup,
@@ -109,5 +110,18 @@ describe("Buying, selling and OMNI changes (pp. 31, 36)", () => {
     expect(omniCost({ size: 3, oldPv: 40, newPv: 40 })).toBe(15);
     expect(omniCost({ size: 3, oldPv: 40, newPv: 35 })).toBe(15);
     expect(omniCost({ size: 3, oldPv: 40, newPv: 43 })).toBe(120);
+  });
+});
+
+describe("Correcting a recorded sortie", () => {
+  it("changes its words and next sortie but never the money, and leaves a failed sortie without keywords", () => {
+    const win = { number: 3, date: "2026-01-01", result: "win" as const, recon: [], fielded: [], income: 500, waypointSp: 0, rearm: 0, personnel: 0, repairs: 0, earnings: 400, shares: 50, keywords: ["a"], next: 4 };
+    const failed = { ...win, number: 4, result: "failed" as const, keywords: [] };
+    const c = campaign({ sorties: [win, failed] });
+    const edited = editSortie(c, 0, { name: " Hold the pass ", keywords: [" b ", ""], next: null });
+    expect(edited.sorties[0]).toMatchObject({ name: "Hold the pass", keywords: ["b"], earnings: 400 });
+    expect(edited.sorties[0]?.next).toBeUndefined();
+    expect(editSortie(c, 1, { keywords: ["x"] }).sorties[1]?.keywords).toEqual([]);
+    expect(editSortie(c, 9, { name: "none" })).toBe(c);
   });
 });
