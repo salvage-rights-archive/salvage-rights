@@ -371,7 +371,7 @@ export default function AbominationsPage() {
             }}
           >
             {stats && !custom && (
-              <p className="bt-hint">{`${stats.size?.label ?? stats.classId}: ${String(stats.creatures)} creatures of ${String(stats.pipsEach)} pips. ${moveText(stats)}. Each creature carries ${weaponsText(stats.weapons, catalog)}.`}</p>
+              <p className="bt-hint">{`${stats.size?.label ?? stats.classId}: ${String(stats.creatures)} ${stats.creatures === 1 ? "creature" : "creatures"} of ${String(stats.pipsEach)} pips. ${moveText(stats)}. Each creature carries ${weaponsText(stats.weapons, catalog)}.`}</p>
             )}
             <div className="bt-grid">
               <div className="bt-field">
@@ -482,7 +482,7 @@ export default function AbominationsPage() {
                     <Silhouette typeId={type.id} classId={type.classId} size={40} />
                     <span>
                       <strong>{type.name}</strong>
-                      <span className="bt-row__credit">{`${String(type.creatures)} creatures of ${String(size.rows * type.pipsPerRow)} pips. ${moveText(type)}. ${weaponsText(type.weapons, catalog)}.`}</span>
+                      <span className="bt-row__credit">{`${String(type.creatures)} ${type.creatures === 1 ? "creature" : "creatures"} of ${String(size.rows * type.pipsPerRow)} pips. ${moveText(type)}. ${weaponsText(type.weapons, catalog)}.`}</span>
                     </span>
                   </span>
                   <span className="bt-row__actions">

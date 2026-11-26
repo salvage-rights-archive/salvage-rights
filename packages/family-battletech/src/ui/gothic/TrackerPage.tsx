@@ -364,7 +364,7 @@ export default function TrackerPage() {
                   <span className="bt-row__text">
                     <strong>{name}</strong>
                     {stats ? (
-                      <span className="bt-row__credit">{`${stats.size?.label ?? stats.classId}, ${String(stats.creatures)} creatures of ${String(stats.pipsEach)} pips.`}</span>
+                      <span className="bt-row__credit">{`${stats.size?.label ?? stats.classId}, ${String(stats.creatures)} ${stats.creatures === 1 ? "creature" : "creatures"} of ${String(stats.pipsEach)} pips.`}</span>
                     ) : (
                       <span className="bt-row__credit bt-problem">This unit names a type this version does not know, so it cannot be tracked.</span>
                     )}
