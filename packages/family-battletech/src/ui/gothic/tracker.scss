@@ -76,6 +76,29 @@
     }
   }
 
+  &__facts--text dd {
+    font-size: 1rem;
+    font-weight: 600;
+  }
+
+  &__facts--text dd + dd {
+    font-size: .875rem;
+    font-weight: 400;
+  }
+
+  &__mark {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--sr-space-2);
+    margin: 0 0 var(--sr-space-2);
+
+    input {
+      width: 6rem;
+      min-height: 44px;
+    }
+  }
+
   &__dice {
     display: flex;
     flex-wrap: wrap;

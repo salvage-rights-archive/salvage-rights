@@ -215,6 +215,15 @@ export function markCreature(state: TrackerState, creature: number, count: numbe
   return { ...state, marked };
 }
 
+/** Marks `count` damage on a creature: pips up to its last, and what is left over counts as damage past the last pip (p. 72). */
+export function applyDamage(state: TrackerState, creature: number, count: number, pipsEach: number): TrackerState {
+  const now = state.marked[creature - 1] ?? 0;
+  const damage = Math.max(0, Math.floor(count));
+  const room = Math.max(0, pipsEach - now);
+  const marked = markCreature(state, creature, now + Math.min(damage, room), pipsEach);
+  return damage > room ? addOverflow(marked, damage - room) : marked;
+}
+
 /** Creature numbers (1-based) with every pip marked. */
 export const eliminatedCreatures = (state: TrackerState, pipsEach: number): number[] =>
   state.marked.flatMap((m, i) => (m >= pipsEach ? [i + 1] : []));

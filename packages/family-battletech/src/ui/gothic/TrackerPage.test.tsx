@@ -122,6 +122,46 @@ describe("The Abomination tracker", () => {
     expect(result.getByText("Roll again.")).toBeTruthy();
   });
 
+  it("shows what a player needs per unit: skills, movement, physical damage, the class modifier and each weapon's damage and range", async () => {
+    const user = userEvent.setup();
+    await play("werebeast", user);
+    expect(fact("Skills")).toBe("Gunnery 4, AniMelee 4");
+    expect(fact("Movement")).toBe("Ground 3, Jump 2");
+    expect(fact("Physical damage")).toBe("Melee 2, Mob 4, Hobble 4");
+    expect(fact("Class target movement modifier")).toBe("+1 (p. 64)");
+    await waitFor(() => { expect(column("Machine Gun")).toMatch(/Damage 2, range \d+\/\d+\/\d+ hexes/); });
+  });
+
+  it("marks N damage on a creature, carries the excess into the phase's damage, and undoes the last change", async () => {
+    const user = userEvent.setup();
+    await play("gnat", user);
+    await user.type(screen.getByLabelText("Damage to mark on creature 1"), "5");
+    await user.click(screen.getByRole("button", { name: /^Mark damage on creature 1: / }));
+    expect(screen.getByRole("group", { name: /Creature 1, 3 of 3 pips marked, out/ })).toBeTruthy();
+    expect(fact("Damage this phase")).toBe("5");
+    await user.click(screen.getByRole("button", { name: /^Undo the last change: / }));
+    expect(screen.getByRole("group", { name: /Creature 1, 0 of 3 pips marked/ })).toBeTruthy();
+    expect(fact("Damage this phase")).toBe("0");
+  });
+
+  it("fields a second copy of one saved unit outside a force, clears the table on confirm, and a deleted unit takes its state", async () => {
+    const user = userEvent.setup();
+    await play("gnat", user);
+    await user.click(screen.getByRole("button", { name: /^Put another on the table: / }));
+    expect(await screen.findByRole("heading", { level: 2, name: "Test 2 (Gnat)" })).toBeTruthy();
+    expect(screen.getByText(/Showing every saved unit/)).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Clear the table" }));
+    await user.click(within(screen.getByRole("group", { name: "Confirm clear the table" })).getByRole("button", { name: "Clear the table" }));
+    expect(screen.queryByRole("heading", { level: 2, name: /\(Gnat\)/ })).toBeNull();
+    expect(await screen.findByRole("button", { name: "Put on the table: Test (Gnat)" })).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Put on the table: Test (Gnat)" }));
+    await user.click(screen.getByRole("button", { name: /^Put another on the table: / }));
+    const storage = await openGothicStorage();
+    await waitFor(async () => { expect(Object.keys(await storage.playStates()).sort()).toEqual(["gnat-1", "gnat-1~2"]); });
+    await storage.removePlaysOf("gnat-1");
+    expect(await storage.playStates()).toEqual({});
+  });
+
   it("keeps the table across a reload", async () => {
     const user = userEvent.setup();
     await play("tyrant", user);

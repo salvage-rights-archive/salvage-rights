@@ -6,7 +6,7 @@ import type { ChangeEvent } from "react";
 import { Link } from "react-router";
 import type { RulesLevel } from "../../data/chassis";
 import { ABOM_CLASSES, ABOM_TYPES } from "../../data/gothic";
-import type { AbomClassId, AbomStats, AbomWeapon } from "../../data/gothic";
+import type { AbomClassId, AbomWeapon } from "../../data/gothic";
 import { GOTHIC, GOTHIC_BASE } from "../../data/rulesets";
 import { checkAbomination, launcherTubes, newAbominationUnit, unitStats } from "../../rules/abomination";
 import type { AbomCustom, AbominationUnit } from "../../rules/abomination";
@@ -21,6 +21,7 @@ import { AbominationSheets } from "./AbominationSheet";
 import Silhouette from "./Silhouette";
 import { downloadUnits, fromAbomFile, openGothicStorage } from "./storage";
 import type { AbomEntry, GothicStorage } from "./storage";
+import { moveText } from "./text";
 import { useGothicTheme } from "./theme";
 import "../classic.scss";
 
@@ -36,10 +37,6 @@ function weaponsText(weapons: readonly AbomWeapon[], catalog: Catalog | undefine
   return weapons
     .map((w) => `${w.count > 1 ? `${String(w.count)} ` : ""}${weaponName(catalog, w.id)}${w.shots === undefined ? "" : ` (${shotsText(w.shots)})`}`)
     .join(", ");
-}
-
-function moveText(stats: Pick<AbomStats, "ground" | "jump" | "vtol">): string {
-  return [`Ground ${String(stats.ground)}`, ...(stats.jump === undefined ? [] : [`Jump ${String(stats.jump)}`]), ...(stats.vtol === undefined ? [] : [`VTOL ${String(stats.vtol)}`])].join(", ");
 }
 
 const typeName = (unit: AbominationUnit): string => {
@@ -166,7 +163,7 @@ export default function AbominationsPage() {
   const remove = async (id: string) => {
     if (!storage) return;
     setConfirming(undefined);
-    if (!(await attempt(STORAGE_WRITE_FAILED, async () => { await storage.remove(id); await storage.removePlay(id); }))) return;
+    if (!(await attempt(STORAGE_WRITE_FAILED, async () => { await storage.remove(id); await storage.removePlaysOf(id); }))) return;
     if (draft?.id === id) setDraft(undefined);
     focusSaved.current = true;
     if (await reload(storage)) say("Deleted.");

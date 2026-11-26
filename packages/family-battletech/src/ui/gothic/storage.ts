@@ -44,7 +44,12 @@ export interface GothicStorage {
   playStates(): Promise<Record<string, unknown>>;
   savePlay(unitId: string, state: unknown): Promise<void>;
   removePlay(unitId: string): Promise<void>;
+  /** Clears the tracker state of a saved unit and of every extra copy of it fielded outside a force (`<id>~2`, `<id>~3`). */
+  removePlaysOf(unitId: string): Promise<void>;
 }
+
+/** The tracker key of the nth copy (2 and up) of a saved unit fielded outside a force; the first copy uses the unit's own id. */
+export const copyKey = (unitId: string, n: number): string => `${unitId}~${String(n)}`;
 
 /** One unit, or all of them, as a file (`*.abom.json`). */
 export interface AbomFile {
@@ -237,6 +242,10 @@ function wrap(store: Store): GothicStorage {
     },
     savePlay: (unitId, state) => store.set(PLAY_PREFIX + unitId, state),
     removePlay: (unitId) => store.delete(PLAY_PREFIX + unitId),
+    removePlaysOf: async (unitId) => {
+      const keys = (await store.keys()).filter((k) => k === PLAY_PREFIX + unitId || k.startsWith(`${PLAY_PREFIX}${unitId}~`));
+      for (const key of keys) await store.delete(key);
+    },
   };
 }
 
