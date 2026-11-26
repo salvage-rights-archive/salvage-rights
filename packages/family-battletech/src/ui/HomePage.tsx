@@ -31,6 +31,12 @@ import ProtoSavedUnits from "./protomech/ProtoSavedUnits";
 import { protoNewOptions } from "./protomech/newOptions";
 import { editorHref as protoEditorHref } from "./protomech/routes";
 import { openProtoStorage } from "./protomech/storage";
+import { MOTIVES } from "../data/vehicle";
+import { newVehicleRecord } from "../rules/vehicle/vehicle";
+import { startTons as vehicleStartTons } from "./vehicle/edit";
+import { vehicleEditorHref } from "./vehicle/routes";
+import { openVehicleStorage } from "./vehicle/storage";
+import VehicleShelf from "./vehicle/VehicleShelf";
 import type { MechRecord, NewMechOptions } from "../rules/mech";
 import { MAX_LIBRARY_BYTES, STORAGE_READ_FAILED, STORAGE_WRITE_FAILED, downloadLibrary, downloadMech, downloadOmni, fileGame, fromLibraryFile, fromMechFile, fromOmniFile, openFamilyStorage, wrongGameMessage } from "./storage";
 import type { FamilyStorage, SavedEntry } from "./storage";
@@ -103,6 +109,10 @@ export default function HomePage() {
   const [protoType, setProtoType] = useState<string>();
   const [protoTons, setProtoTons] = useState(5);
   const [protoWalk, setProtoWalk] = useState(4);
+  /** The Combat Vehicle chosen in the new-unit list, when one is: it opens the vehicle editor. */
+  const [vehicleType, setVehicleType] = useState<string>();
+  const [vehicleTons, setVehicleTons] = useState<number>();
+  const [vehicleCruise, setVehicleCruise] = useState(3);
   /** The year typed in the build form, as text; empty or not a year means no year, and nothing is hidden by time. */
   const [yearText, setYearText] = useState("");
   /** The era picked when the typed year is in two eras (an Inner Sphere era and a Clan sub-era). */
@@ -252,6 +262,30 @@ export default function HomePage() {
     void navigate(protoEditorHref(made.id));
   };
 
+  // The Combat Vehicles the rules level offers (hidden below, never marked).
+  const vehicleOptions = MOTIVES.filter((m) => levelAtLeast(draft.rulesLevel ?? "standard", m.level)).map((m) => ({ id: m.id, label: m.label, note: `${m.label}: a combat vehicle of up to ${String(m.maxTons)} tons, built under TechManual and opened in the vehicle editor.`, row: m }));
+  const vehiclePicked = vehicleOptions.find((option) => option.id === vehicleType);
+  const vehicleTonnage = vehicleTons ?? vehicleStartTons(vehiclePicked?.id ?? "");
+  const buildVehicle = async () => {
+    if (!storage || !vehiclePicked || !draft.chassis.trim() || vehicleTonnage < 1 || missing !== "") return;
+    const made = newVehicleRecord({
+      id: crypto.randomUUID(),
+      chassis: draft.chassis.trim(),
+      model: draft.model.trim(),
+      motive: vehiclePicked.row.id,
+      techBase,
+      tons: vehicleTonnage,
+      cruise: Math.max(vehiclePicked.row.minCruise ?? 1, vehicleCruise),
+      year: yearTyped,
+      ...(eraChosen ? { era: eraChosen.id } : {}),
+      rulesLevel: draft.rulesLevel,
+      editionId: edition,
+    });
+    const vehicleStorage = await openVehicleStorage().catch(() => undefined);
+    if (!vehicleStorage || !(await attempt(STORAGE_WRITE_FAILED, () => vehicleStorage.save(made)))) return;
+    void navigate(vehicleEditorHref(made.id));
+  };
+
   const buildAero = async () => {
     const aeroTonnage = aeroTons ?? startTons(aeroRow ?? undefined);
     if (!storage || !aeroPicked || !aeroRow || !draft.chassis.trim() || aeroTonnage <= 0 || missing !== "") return;
@@ -278,6 +312,7 @@ export default function HomePage() {
   const build = async () => {
     if (protoPicked) return buildProto();
     if (aeroPicked) return buildAero();
+    if (vehiclePicked) return buildVehicle();
     if (!storage || !draft.chassis.trim() || missing !== "") return;
     const options = { ...draft, techBase, configuration, tons, chassis: draft.chassis.trim(), model: draft.model.trim(), walk: Math.min(draft.walk, walks.at(-1) ?? 1), year: yearTyped };
     // An OmniMech is a chassis (its fixed base and a Prime to start) and is saved as one.
@@ -652,6 +687,7 @@ export default function HomePage() {
       </section>
 
       <ProtoSavedUnits />
+      <VehicleShelf />
 
       <section className="bt-section" aria-labelledby="bt-add">
         <h2 id="bt-add">Add a 'Mech</h2>
@@ -677,25 +713,43 @@ export default function HomePage() {
               id="bt-new-type"
               record={typed}
               onChange={(next) => { setDraft({ ...draft, unitType: next }); }}
-              aero={{
-                options: aeroOptions,
-                chosen: aeroPicked?.id,
-                onChoose: (id) => {
-                  setAeroType(id);
-                  setAeroTons(undefined);
-                  if (id !== undefined) setProtoType(undefined);
+              families={[
+                {
+                  prefix: "vehicle:",
+                  label: "Vehicles (opens the vehicle editor)",
+                  choices: {
+                    options: vehicleOptions,
+                    chosen: vehiclePicked?.id,
+                    onChoose: (id) => {
+                      setVehicleType(id);
+                      setVehicleTons(undefined);
+                    },
+                  },
                 },
-              }}
-              protomech={{
-                options: protoOptions,
-                chosen: protoPicked ? protoType : undefined,
-                onChoose: (id) => {
-                  setProtoType(id);
-                  if (id !== undefined) setAeroType(undefined);
+                {
+                  prefix: "aero:",
+                  label: "Aerospace (opens the AeroTech editor)",
+                  choices: {
+                    options: aeroOptions,
+                    chosen: aeroPicked?.id,
+                    onChoose: (id) => {
+                      setAeroType(id);
+                      setAeroTons(undefined);
+                    },
+                  },
                 },
-              }}
+                {
+                  prefix: "protomech:",
+                  label: "ProtoMech (opens the ProtoMech editor)",
+                  choices: {
+                    options: protoOptions,
+                    chosen: protoPicked ? protoType : undefined,
+                    onChoose: setProtoType,
+                  },
+                },
+              ]}
             />
-            {!aeroPicked && !protoPicked && (
+            {!aeroPicked && !protoPicked && !vehiclePicked && (
             <div className="bt-field">
               <label htmlFor="bt-new-config">Configuration</label>
               <select
@@ -788,6 +842,11 @@ export default function HomePage() {
                   </select>
                 </div>
               </>
+            ) : vehiclePicked ? (
+              <>
+                <NumberField id="bt-new-vehicle-tons" label="Tonnage" value={vehicleTonnage} min={1} hint={`Whole tons, 1 to ${String(vehiclePicked.row.maxTons)}.`} onValid={(tons) => { setVehicleTons(tons ?? undefined); }} />
+                <NumberField id="bt-new-vehicle-cruise" label="Cruising MP" value={vehicleCruise} min={1} hint={vehiclePicked.row.minCruise === undefined ? undefined : `At least ${String(vehiclePicked.row.minCruise)}.`} onValid={(cruise) => { setVehicleCruise(cruise ?? 1); }} />
+              </>
             ) : aeroPicked && aeroRow ? (
               <>
                 <NumberField id="bt-new-aero-tons" label="Tonnage" value={aeroTons ?? startTons(aeroRow)} min={0} hint={weightHint(aeroRow.weight)} onValid={(tons) => { setAeroTons(tons ?? undefined); }} />
@@ -819,11 +878,21 @@ export default function HomePage() {
             )}
           </div>
           <p className="bt-hint">
-            {protoPicked ? "You start with the chassis and an engine for the walking speed, no jump jets, no heat sinks, no armor and no equipment. The ProtoMech editor's rules check shows what is left to do." : aeroPicked ? "You start with a standard engine, no fuel, no armor, no heat sinks and no equipment. The AeroTech editor's rules check shows what is left to do." : unitType === "industrialmech" ? "You start with an industrial frame and cockpit, a standard fusion engine" : "You start with standard parts"}, ten
-            heat sinks, no armor and no equipment. {unitType === "omnimech" && "An OmniMech starts as a base chassis with an empty Prime configuration. "}The editor's rules check shows what is left to do.
+            {protoPicked ? (
+              "You start with the chassis and an engine for the walking speed, no jump jets, no heat sinks, no armor and no equipment. The ProtoMech editor's rules check shows what is left to do."
+            ) : vehiclePicked ? (
+              "You start with a standard fusion engine and its ten free heat sinks (an internal combustion engine gives none), no armor, no turret and no equipment. The vehicle editor's rules check shows what is left to do."
+            ) : aeroPicked ? (
+              "You start with a standard engine, no fuel, no armor, no heat sinks and no equipment. The AeroTech editor's rules check shows what is left to do."
+            ) : (
+              <>
+                {unitType === "industrialmech" ? "You start with an industrial frame and cockpit, a standard fusion engine" : "You start with standard parts"}, ten heat sinks, no armor and no equipment.{" "}
+                {unitType === "omnimech" && "An OmniMech starts as a base chassis with an empty Prime configuration. "}The editor's rules check shows what is left to do.
+              </>
+            )}
           </p>
           {missing !== "" && <p id="bt-new-missing" className="bt-hint">{missing}</p>}
-          <button type="submit" className="bt-button" disabled={!storage || missing !== "" || (aeroPicked !== undefined && (aeroTons ?? startTons(aeroRow)) <= 0)} aria-describedby={missing === "" ? undefined : "bt-new-missing"}>
+          <button type="submit" className="bt-button" disabled={!storage || missing !== "" || (aeroPicked !== undefined && (aeroTons ?? startTons(aeroRow)) <= 0) || (vehiclePicked !== undefined && vehicleTonnage < 1)} aria-describedby={missing === "" ? undefined : "bt-new-missing"}>
             Start building
           </button>
         </form>

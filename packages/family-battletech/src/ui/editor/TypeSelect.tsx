@@ -3,8 +3,9 @@
 // allow, so the build form and the editor re-filter it as those change. A type whose rules are not built yet is listed disabled, with
 // the reason in the text. It takes a record (anything with the fields availability reads) and reports the new type.
 //
-// The build form on the Classic home may also offer the aerospace units (`aero`): a second group in the same list that opens the
-// AeroTech editor instead. The group lists only what the rules level allows (the form passes none below Standard).
+// The build form on the Classic home may also offer other unit families (`families`: vehicles, aerospace, ProtoMechs, battle armor,
+// and later infantry): each is a group of its own in the same list that opens that family's editor instead. A group lists only what
+// the rules level, year and era allow (the form passes none otherwise). Choosing one family's option clears the others.
 import { MECH_TYPES } from "../../data/chassis";
 import type { MechType } from "../../data/chassis";
 import { bookName } from "../../data/editions";
@@ -15,54 +16,54 @@ import type { MechRecord } from "../../rules/mech";
 type Subject = Pick<MechRecord, "techBase" | "year" | "era" | "rulesLevel" | "unitType">;
 
 export interface AeroTypeChoices {
-  /** The aerospace units on offer: an id, its label and a line saying what it is and where its rules are. */
+  /** The units of one family on offer: an id, its label and a line saying what it is and where its rules are. */
   options: { id: string; label: string; note: string }[];
-  /** The chosen one, when an aerospace unit is the choice. */
+  /** The chosen one, when a unit of this family is the choice. */
   chosen: string | undefined;
   onChoose: (id: string | undefined) => void;
 }
 
-const AERO_PREFIX = "aero:";
-const PROTO_PREFIX = "protomech:";
+/** One unit family in the list: its option-value prefix, the group's visible label and its choices. Groups show in array order. */
+export interface TypeFamily {
+  prefix: string;
+  label: string;
+  choices: AeroTypeChoices;
+}
 
 export default function TypeSelect({
   record,
   onChange,
   id = "field-unitType",
   className,
-  aero,
-  protomech,
+  families = [],
 }: {
   record: Subject;
   onChange: (type: MechType) => void;
   id?: string;
   className?: string;
-  aero?: AeroTypeChoices;
-  /** The ProtoMech, when the rules level, year and era offer it: the same shape as `aero`; it opens the ProtoMech editor. */
-  protomech?: AeroTypeChoices;
+  families?: TypeFamily[];
 }) {
   const choices = typeChoices(record);
   const current = mechTypeOf(record);
   const noteId = `${id}-note`;
   const waiting = choices.flatMap((choice) => (choice.disabled === undefined ? [] : [`${MECH_TYPES.find((t) => t.id === choice.id)?.label ?? choice.id} is not offered yet: ${choice.disabled}`]));
-  const picked = aero?.chosen === undefined ? undefined : aero.options.find((option) => option.id === aero.chosen);
-  const protoPicked = protomech?.chosen === undefined ? undefined : protomech.options.find((option) => option.id === protomech.chosen);
+  const picked = families.flatMap((family) => {
+    const option = family.choices.chosen === undefined ? undefined : family.choices.options.find((each) => each.id === family.choices.chosen);
+    return option ? [{ family, option }] : [];
+  })[0];
   return (
     <div className={className ? `bt-field bt-level ${className}` : "bt-field bt-level"}>
       <label htmlFor={id}>Type</label>
       <select
         id={id}
-        value={protoPicked ? `${PROTO_PREFIX}${protoPicked.id}` : picked ? `${AERO_PREFIX}${picked.id}` : current.id}
+        value={picked ? `${picked.family.prefix}${picked.option.id}` : current.id}
         aria-describedby={noteId}
         onChange={(event) => {
           const value = event.target.value;
-          if (value.startsWith(PROTO_PREFIX)) protomech?.onChoose(value.slice(PROTO_PREFIX.length));
-          else if (value.startsWith(AERO_PREFIX)) aero?.onChoose(value.slice(AERO_PREFIX.length));
-          else {
-            aero?.onChoose(undefined);
-            protomech?.onChoose(undefined);
-            onChange(value as MechType);
-          }
+          const chosen = families.find((family) => value.startsWith(family.prefix));
+          for (const family of families) if (family !== chosen) family.choices.onChoose(undefined);
+          if (chosen) chosen.choices.onChoose(value.slice(chosen.prefix.length));
+          else onChange(value as MechType);
         }}
       >
         {choices.map((choice) => (
@@ -70,28 +71,22 @@ export default function TypeSelect({
             {choice.label}
           </option>
         ))}
-        {aero && aero.options.length > 0 && (
-          <optgroup label="Aerospace (opens the AeroTech editor)">
-            {aero.options.map((option) => (
-              <option key={option.id} value={`${AERO_PREFIX}${option.id}`}>
-                {option.label}
-              </option>
-            ))}
-          </optgroup>
-        )}
-        {protomech && protomech.options.length > 0 && (
-          <optgroup label="ProtoMech (opens the ProtoMech editor)">
-            {protomech.options.map((option) => (
-              <option key={option.id} value={`${PROTO_PREFIX}${option.id}`}>
-                {option.label}
-              </option>
-            ))}
-          </optgroup>
+        {families.map(
+          (family) =>
+            family.choices.options.length > 0 && (
+              <optgroup key={family.prefix} label={family.label}>
+                {family.choices.options.map((option) => (
+                  <option key={option.id} value={`${family.prefix}${option.id}`}>
+                    {option.label}
+                  </option>
+                ))}
+              </optgroup>
+            ),
         )}
       </select>
       <span id={noteId} className="bt-hint bt-level__note">
-        {protoPicked ? protoPicked.note : picked ? picked.note : `${current.description} ${bookName(current.cite.book)}, p. ${String(current.cite.page)}.`}
-        {!picked && !protoPicked && waiting.length > 0 && ` ${waiting.join(" ")}`}
+        {picked ? picked.option.note : `${current.description} ${bookName(current.cite.book)}, p. ${String(current.cite.page)}.`}
+        {!picked && waiting.length > 0 && ` ${waiting.join(" ")}`}
       </span>
     </div>
   );
