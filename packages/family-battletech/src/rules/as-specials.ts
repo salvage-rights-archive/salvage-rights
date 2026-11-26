@@ -3,10 +3,12 @@
 import { ARTX_FAMILY, AS_EDITION } from "../data/alpha-strike";
 import type { RulesLevel } from "../data/chassis";
 import { AS_GLOSSES } from "../data/as-glosses";
-import { AS_SPECIALS } from "../data/as-specials";
+import { AS_INTRODUCTORY_CODES, AS_SPECIALS } from "../data/as-specials";
 import type { AsSpecialRow } from "../data/as-specials";
 
-const BY_CODE = new Map<string, AsSpecialRow>(AS_SPECIALS.flatMap((row) => [row.code, ...(row.aliases ?? [])].map((c): [string, AsSpecialRow] => [c, row])));
+const BY_CODE = new Map<string, AsSpecialRow>(
+  AS_SPECIALS.flatMap((row) => [row.code, ...(row.aliases ?? [])].map((c): [string, AsSpecialRow] => [c, row])),
+);
 
 /** The table row for a card's code (`IF`, an alias such as `DN`, or any `ART...` code), or none for a code we do not know. */
 export function findSpecial(code: string): AsSpecialRow | undefined {
@@ -17,8 +19,12 @@ export function findSpecial(code: string): AsSpecialRow | undefined {
 /** The anchor of a special's entry on the aids page. */
 export const specialAnchor = (row: AsSpecialRow): string => `special-${row.code}`;
 
-/** Alpha Strike has no rules levels of its own; as the design maps them, the standard abilities show from Introductory up and the optional ones from Advanced up. */
-export const levelShows = (level: RulesLevel, row: AsSpecialRow): boolean => row.level === "standard" || !["introductory", "standard"].includes(level);
+/**
+ * Alpha Strike has no rules levels of its own; as the design maps them, Introductory shows the abilities printed on the box set cards,
+ * Standard the standard abilities, and Advanced and up the optional ones as well.
+ */
+export const levelShows = (level: RulesLevel, row: AsSpecialRow): boolean =>
+  level === "introductory" ? AS_INTRODUCTORY_CODES.includes(row.code) : row.level === "standard" || level !== "standard";
 
 /** Rows to list for a rules level, and for one unit type when given. A row the book limits to other unit types is left out, not marked. */
 export function specialsFor(level: RulesLevel, unitType?: string): AsSpecialRow[] {

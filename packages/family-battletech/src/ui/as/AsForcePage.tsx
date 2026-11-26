@@ -236,48 +236,48 @@ function ForceEditor({ initial, roster, filter, storage }: { initial: AsForce; r
         ) : (
           <>
             {totals.lines.some((l) => l.unit && l.unit.card.specials.length > 0) && <GlossSwitch id="as-force-gloss" />}
-          <ul className="bt-list">
-            {totals.lines.map((line, index) => {
-              const name = line.unit ? unitTitle(line.unit) || "Unnamed unit" : "";
-              return (
-                <li key={index} className="bt-row as-member">
-                  {line.unit ? (
-                    <>
-                      <span className="bt-row__text as-member__name">
-                        <strong>{name}</strong>
-                        {` ${line.unit.card.type}, base PV ${String(line.base)}`}
-                        <span className="bt-row__credit">{asOfficialMark(line.unit).text}</span>
-                      </span>
-                      <span className="as-member__pv">{`PV ${String(line.adjusted)}`}</span>
-                      <div className="bt-field">
-                        <label htmlFor={`as-skill-${String(index)}`}>Skill</label>
-                        <select id={`as-skill-${String(index)}`} value={clampSkill(line.member.skill)} onChange={(e) => void setMember(index, { skill: Number(e.target.value) })}>
-                          {SKILLS.map((s) => (
-                            <option key={s} value={s}>{`${String(s)}, ${AS_SKILL_NAMES[s] ?? ""}`}</option>
-                          ))}
-                        </select>
+            <ul className="bt-list">
+              {totals.lines.map((line, index) => {
+                const name = line.unit ? unitTitle(line.unit) || "Unnamed unit" : "";
+                return (
+                  <li key={index} className="bt-row as-member">
+                    {line.unit ? (
+                      <>
+                        <span className="bt-row__text as-member__name">
+                          <strong>{name}</strong>
+                          {` ${line.unit.card.type}, base PV ${String(line.base)}`}
+                          <span className="bt-row__credit">{asOfficialMark(line.unit).text}</span>
+                        </span>
+                        <span className="as-member__pv">{`PV ${String(line.adjusted)}`}</span>
+                        <div className="bt-field">
+                          <label htmlFor={`as-skill-${String(index)}`}>Skill</label>
+                          <select id={`as-skill-${String(index)}`} value={clampSkill(line.member.skill)} onChange={(e) => void setMember(index, { skill: Number(e.target.value) })}>
+                            {SKILLS.map((s) => (
+                              <option key={s} value={s}>{`${String(s)}, ${AS_SKILL_NAMES[s] ?? ""}`}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="bt-field">
+                          <label htmlFor={`as-pilot-${String(index)}`}>Pilot</label>
+                          <input id={`as-pilot-${String(index)}`} value={line.member.pilot ?? ""} onChange={(e) => void setMember(index, { pilot: e.target.value })} />
+                        </div>
+                      </>
+                    ) : (
+                      <span className="bt-row__text as-member__name">This unit is no longer in your roster.</span>
+                    )}
+                    <button type="button" className="bt-button bt-button--secondary" aria-label={name ? `Remove ${name}` : "Remove this unit"} onClick={() => { remove(index); }}>
+                      Remove
+                    </button>
+                    {line.unit && line.unit.card.specials.length > 0 && (
+                      <div className="as-member__specials">
+                        <strong>Specials</strong>
+                        <SpecialLinks specials={line.unit.card.specials} />
                       </div>
-                      <div className="bt-field">
-                        <label htmlFor={`as-pilot-${String(index)}`}>Pilot</label>
-                        <input id={`as-pilot-${String(index)}`} value={line.member.pilot ?? ""} onChange={(e) => void setMember(index, { pilot: e.target.value })} />
-                      </div>
-                    </>
-                  ) : (
-                    <span className="bt-row__text as-member__name">This unit is no longer in your roster.</span>
-                  )}
-                  <button type="button" className="bt-button bt-button--secondary" aria-label={name ? `Remove ${name}` : "Remove this unit"} onClick={() => { remove(index); }}>
-                    Remove
-                  </button>
-                  {line.unit && line.unit.card.specials.length > 0 && (
-                    <div className="as-member__specials">
-                      <strong>Specials</strong>
-                      <SpecialLinks specials={line.unit.card.specials} />
-                    </div>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
           </>
         )}
       </section>

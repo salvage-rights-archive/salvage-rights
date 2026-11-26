@@ -23,13 +23,36 @@ export interface AsSpecialRow {
   aliases?: string[];
 }
 
-export const ASCE_SPECIALS_CITE = { book: "Alpha Strike: Commander's Edition", appendixPage: 205, errata: "v7.02", checked: "page" } as const;
+/**
+ * What the Introductory level shows: the codes printed on the unit cards of the box sets that level covers. ASCE does not define the
+ * level for Alpha Strike; the design takes it from the box set's own rules and cards. We read the specials line of every 'Mech card in
+ * three folders of our private card scans (read in place, nothing copied): "Boxed Set - A Game of Armored Combat" (cards 01-16),
+ * "Boxed Set - Alpha Strike" (cards 01-26) and "Boxed Set - Clan Invasion - Card Pack" (cards 01-10), 52 cards in all. Pilot abilities on
+ * the pilot cards are not special abilities and are left out. Not read: the larger "Boxed Set - Clan Invasion - AS Cards" folder (213 files).
+ * IF0 appears on some cards with a die-roll note beside it; it is the IF code.
+ */
+export const AS_INTRODUCTORY_CODES = ["AC", "AMS", "CASE", "CASEII", "ECM", "ENE", "HT", "IF", "JMPW", "LRM", "OMNI", "OVL", "REAR", "SRM", "STL"];
+
+export const ASCE_SPECIALS_CITE = {
+  book: "Alpha Strike: Commander's Edition",
+  appendixPage: 205,
+  errata: "v7.02",
+  checked: "page",
+} as const;
 
 const MECH = ["BM", "IM"];
 const INFANTRY = ["CI", "BA"];
 
-type Extra = Pick<AsSpecialRow, "types" | "errata" | "also" | "aliases"> & { level?: AsSpecialLevel };
-const row = (code: string, name: string, page: number, extra: Extra = {}): AsSpecialRow => ({ code, name, page, level: page < 82 ? "standard" : "optional", ...extra });
+type Extra = Pick<AsSpecialRow, "types" | "errata" | "also" | "aliases"> & {
+  level?: AsSpecialLevel;
+};
+const row = (code: string, name: string, page: number, extra: Extra = {}): AsSpecialRow => ({
+  code,
+  name,
+  page,
+  level: page < 82 ? "standard" : "optional",
+  ...extra,
+});
 /** The C3 family: described on p. 82 but part of the standard C3 network rules that begin on p. 80. */
 const c3 = (code: string, name: string, extra: Extra = {}): AsSpecialRow => row(code, name, 82, { level: "standard", also: [80], ...extra });
 
@@ -42,7 +65,7 @@ export const AS_SPECIALS: AsSpecialRow[] = [
   row("AMP", "Amphibious", 76),
   row("AMS", "Anti-Missile System", 76),
   row("ARM", "Armored Component", 76),
-  row("ARS", "Armored Motive System", 77, { types: ["CV", "SV"] }),
+  row("ARS", "Armored Motive System", 77),
   row("ARTX", "Artillery", 82),
   row("AT", "Aerospace Transport", 82),
   row("ATAC", "Advanced Tactical Analysis Computer", 82),
@@ -127,7 +150,7 @@ export const AS_SPECIALS: AsSpecialRow[] = [
   row("MSW", "Minesweeper", 87),
   row("MT", "'Mech Transport", 87),
   row("MTAS", "'Mech Taser", 90, { types: MECH }),
-  row("MTN", "Mountain Troops", 87, { types: ["CI"] }),
+  row("MTN", "Mountain Troops", 87, { types: INFANTRY }),
   row("NC3", "Naval C3", 87),
   row("NOVA", "Nova Composite EW System", 87),
   row("OMNI", "Omni", 78, { types: ["BM", "IM", "CV", "SV"], errata: true }),
@@ -143,6 +166,8 @@ export const AS_SPECIALS: AsSpecialRow[] = [
   row("RBT", "Robotic Drone", 89),
   row("RCA", "Reactive Armor", 88, { errata: true }),
   row("RCN", "Recon", 88),
+  // The library's 2024 printing has this entry on p. 79 (checked on the page image); the Appendix there says 78, and an older printing has
+  // the heading at the foot of p. 78. We cite p. 79.
   row("REAR", "Rear-Firing Weapons", 79),
   row("REL", "Re-Engineered Lasers", 88),
   row("RFA", "Reflective Armor", 88, { errata: true }),
@@ -167,8 +192,11 @@ export const AS_SPECIALS: AsSpecialRow[] = [
   row("SUBW", "Submersible, Weak", 79, { errata: true }),
   row("TAG", "Target Acquisition Gear", 90, { errata: true }),
   row("TOR", "Torpedo", 79),
-  row("TRN", "Trenchworks Engineers", 91, { types: ["CI"], errata: true }),
-  row("TSEMP", "Tight-Stream EMP Weapon", 90, { errata: true, aliases: ["TSEMP-O"] }),
+  row("TRN", "Trenchworks Engineers", 91, { types: INFANTRY, errata: true }),
+  row("TSEMP", "Tight-Stream EMP Weapon", 90, {
+    errata: true,
+    aliases: ["TSEMP-O"],
+  }),
   row("TSI", "Triple-Strength Implants", 91, { types: INFANTRY }),
   row("TSM", "Triple-Strength Myomer", 79, { types: MECH }),
   row("TSMX", "Prototype TSM", 88),

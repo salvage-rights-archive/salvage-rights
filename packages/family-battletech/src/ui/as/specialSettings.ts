@@ -4,7 +4,7 @@ import { useSyncExternalStore } from "react";
 import type { RulesLevel } from "../../data/chassis";
 
 export interface SpecialSettings {
-  /** Our short notes, off until the owner has read the first batch. */
+  /** Our short notes, off until we have read the first batch. */
   glosses: boolean;
   level: RulesLevel;
 }

@@ -15,7 +15,14 @@ export function GlossSwitch({ id }: { id: string }) {
   const { glosses } = useSpecialSettings();
   return (
     <label className="as-aids__flag" htmlFor={id}>
-      <input id={id} type="checkbox" checked={glosses} onChange={(event) => { setSpecialSettings({ glosses: event.target.checked }); }} />
+      <input
+        id={id}
+        type="checkbox"
+        checked={glosses}
+        onChange={(event) => {
+          setSpecialSettings({ glosses: event.target.checked });
+        }}
+      />
       Show our short notes
     </label>
   );
@@ -74,11 +81,21 @@ export function SpecialsAid() {
   return (
     <section className="bt-section" aria-labelledby="as-specials">
       <h2 id="as-specials">Special abilities</h2>
-      <p className="bt-hint">Each ability with the page of Alpha Strike: Commander&apos;s Edition that describes it. Standard abilities are on pp. 76-81; the optional ones from p. 82 need every player&apos;s agreement.</p>
+      <p className="bt-hint">
+        Each ability with the page of Alpha Strike: Commander&apos;s Edition that describes it. Standard abilities run from p. 76 to the C3 entries on
+        p. 82; the optional ones follow, and every player has to agree to use them (p. 82). At the Introductory level we list only the abilities
+        printed on the box set cards.
+      </p>
       <div className="as-aids__grid">
         <div className="bt-field">
           <label htmlFor="as-spec-level">Rules level</label>
-          <select id="as-spec-level" value={level} onChange={(event) => { setSpecialSettings({ level: event.target.value as RulesLevel }); }}>
+          <select
+            id="as-spec-level"
+            value={level}
+            onChange={(event) => {
+              setSpecialSettings({ level: event.target.value as RulesLevel });
+            }}
+          >
             {RULES_LEVELS.map((l) => (
               <option key={l.id} value={l.id}>
                 {l.label}
@@ -88,7 +105,13 @@ export function SpecialsAid() {
         </div>
         <div className="bt-field">
           <label htmlFor="as-spec-type">Unit type</label>
-          <select id="as-spec-type" value={type} onChange={(event) => { setType(event.target.value); }}>
+          <select
+            id="as-spec-type"
+            value={type}
+            onChange={(event) => {
+              setType(event.target.value);
+            }}
+          >
             <option value="">Any</option>
             {AS_UNIT_TYPES.map((t) => (
               <option key={t.code} value={t.code}>{`${t.name} (${t.code})`}</option>
@@ -107,7 +130,6 @@ export function SpecialsAid() {
               {` ${row.name}, ${specialCite(row)}`}
               {row.also ? `; also p. ${row.also.join(", ")}` : ""}
               {row.types ? `. Limited to ${row.types.join(", ")}` : ""}
-              {shown.includes(row) ? "" : ". Listed because you followed a link to it"}
               {note && <span className="as-spec__note">{note}</span>}
             </li>
           );

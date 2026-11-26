@@ -24,8 +24,8 @@ describe("Special abilities", () => {
     const amp = document.getElementById("special-AMP");
     expect(amp?.textContent).toContain("Amphibious, Alpha Strike: Commander's Edition, p. 76");
     expect(amp?.textContent).not.toContain("naval");
-    // HPG is optional and the level is Standard, but the link asked for it, so it is listed and says why.
-    expect(document.getElementById("special-HPG")?.textContent).toContain("Listed because you followed a link");
+    // HPG is optional and the level is Standard, but the link asked for it, so it is listed, without a mark.
+    expect(document.getElementById("special-HPG")?.textContent).toBeTruthy();
     expect(document.getElementById("special-ABA")).toBeNull();
     await user.click(screen.getAllByLabelText("Show our short notes")[0]!);
     expect(document.getElementById("special-AMP")?.textContent).toContain("naval");

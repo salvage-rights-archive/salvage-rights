@@ -53,5 +53,6 @@ describe("special abilities table", () => {
     expect(infantry).toContain("MTN");
     expect(infantry).not.toContain("TSM");
     expect(glossOf(findSpecial("CAP")!)).toBeUndefined();
+    expect(specialsFor("introductory").map((r) => r.code)).toEqual(["AC", "AMS", "CASE", "CASEII", "ECM", "ENE", "HT", "IF", "JMPW", "LRM", "OMNI", "OVL", "REAR", "SRM", "STL"]);
   });
 });
