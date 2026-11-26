@@ -210,8 +210,25 @@ test("the Aces game setup, the game page and the home with a game in progress ha
     await page.getByRole("button", { name: "Add to automated force", exact: true }).click();
     await scan(page, theme, "the new game form");
     await page.getByRole("button", { name: "Start the game" }).click();
-    await expect(page.getByRole("heading", { level: 2, name: "Automated force" })).toBeVisible();
-    await scan(page, theme, "the game page");
+    await expect(page.getByRole("heading", { level: 2, name: "Turn 1: Initiative" })).toBeVisible();
+    await scan(page, theme, "the game page at Initiative");
+    await page.getByLabel("Your force: 2D6 roll, 2 to 12").fill("5");
+    await page.getByLabel("Automated force: 2D6 roll, 2 to 12").fill("9");
+    await expect(page.getByText("Automated force wins Initiative.")).toBeVisible();
+    await scan(page, theme, "the game page with the roll decided");
+    await page.getByRole("button", { name: "Start the Movement Phase" }).click();
+    await expect(page.getByRole("heading", { level: 2, name: /You move 1 unit/ })).toBeVisible();
+    await scan(page, theme, "the Movement Phase, your move");
+    await page.getByRole("button", { name: "Mine A: Standstill" }).click();
+    await page.getByRole("button", { name: "Activate Theirs A" }).click();
+    await expect(page.getByRole("heading", { level: 2, name: "Moving Theirs A" })).toBeVisible();
+    await scan(page, theme, "an automated activation with its question or decision open");
+    // From about 900 px the drawer is a column that is always open and its button is hidden.
+    const toggle = page.getByRole("button", { name: "Show the units" });
+    if (await toggle.isVisible()) await toggle.click();
+    await scan(page, theme, "the units drawer open");
+    await page.getByRole("button", { name: "Log" }).click();
+    await scan(page, theme, "the log");
     await page.goto(`${DEV}${ACES}/home`);
     await expect(page.getByText("Turn 1").first()).toBeVisible();
     await scan(page, theme, "the Aces home with games");
