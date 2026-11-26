@@ -21,7 +21,7 @@ const number = (x: number) => x.toLocaleString("en-US", { maximumFractionDigits:
 export const cbills = (x: number) => `${number(x)} C-bills`;
 const plural = (n: number, one: string, many: string) => `${String(n)} ${n === 1 ? one : many}`;
 
-function Disclosure({ label, children }: { label: string; children: React.ReactNode }) {
+export function Disclosure({ label, children }: { label: string; children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   const id = useId();
   return (
@@ -44,7 +44,7 @@ function Disclosure({ label, children }: { label: string; children: React.ReactN
   );
 }
 
-function Rows({ rows }: { rows: [string, string][] }) {
+export function Rows({ rows }: { rows: [string, string][] }) {
   return (
     <dl className="bt-calc__rows">
       {rows.map(([name, value]) => (
@@ -134,7 +134,7 @@ function CostBreakdown({ cost }: { cost: UnitCost }) {
 }
 
 /** The panel scrolls on its own when the column is shorter than it; then it is a tab stop so a keyboard user can scroll it. */
-function useScrolls() {
+export function useScrolls() {
   const box = useRef<HTMLElement>(null);
   const [scrolls, setScrolls] = useState(false);
   useEffect(() => {

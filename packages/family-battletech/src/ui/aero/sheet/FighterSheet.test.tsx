@@ -6,6 +6,7 @@ import { DEFAULT_AERO_EDITION } from "../../../data/aero";
 import { newAeroRecord } from "../../../rules/aero";
 import type { AeroRecord } from "../../../rules/aero";
 import { loadCatalog } from "../../../rules/catalog";
+import { aeroBattleValue, aeroCost } from "../../../rules/aero-bv";
 import { MAX_SINKS_DRAWN } from "../../sheet/HeatData";
 import { MAX_BUBBLES_DRAWN, MAX_SI_DRAWN } from "./Diagram";
 import FighterSheet from "./FighterSheet";
@@ -54,6 +55,15 @@ describe("The fighter record sheets", () => {
       expect([...svg.querySelectorAll("[textLength]")].every((t) => Number(t.getAttribute("textLength")) > 0), profile.id).toBe(true);
       cleanup();
     }
+  });
+
+  it("fills the BV and Cost fields of the AeroTech 2 Revised blank with the edition's figures", () => {
+    const profile = SHEET_PROFILES.find((p) => p.id === "at2r-aerospace");
+    if (!profile) throw new Error("no AeroTech 2 Revised sheet");
+    const record = fighterFor(profile);
+    const { svg } = drawn(record, profile);
+    expect(svg.querySelector("[data-testid=sheet-bv]")?.textContent).toBe(aeroBattleValue(record, catalog)?.total.toLocaleString("en-US"));
+    expect(svg.querySelector("[data-testid=sheet-cost]")?.textContent).toBe(aeroCost(record, catalog)?.total.toLocaleString("en-US"));
   });
 
   it("splits an attack value that changes with range across the brackets, one figure each", () => {

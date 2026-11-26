@@ -17,6 +17,7 @@ import AeroOfficialPanel, { AeroOfficialBadge } from "./AeroOfficial";
 import { STORAGE_READ_FAILED, STORAGE_WRITE_FAILED } from "../storage";
 import { CraftPanel, WeaponsPanel, arcDomId, mountDomId } from "./AeroArcs";
 import AeroFindings from "./AeroFindings";
+import AeroBvPanel from "./AeroBvPanel";
 import { ArmorPanel, EnginePanel, HeatPanel, IdentityPanel, WeightLines } from "./AeroParts";
 import type { AeroOnEdit } from "./edit";
 import { fieldId } from "./fields";
@@ -275,6 +276,7 @@ function Editor({ initial, catalog, storage }: { initial: AeroRecord; catalog: C
             document.getElementById(id)?.focus();
           }}
         />
+        <AeroBvPanel record={record} catalog={catalog} />
       </div>
 
       <div className="bt-editor__body">

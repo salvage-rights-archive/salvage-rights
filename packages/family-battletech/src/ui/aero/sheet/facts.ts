@@ -11,6 +11,7 @@ import { SHEET_HEAT_SINKS, TECH_BASE_NAMES } from "../../../data/sheet";
 import type { SheetProfile } from "../../../data/aero-sheet";
 import type { Catalog } from "../../../rules/catalog";
 import { officialLabel } from "../../../rules/official";
+import { aeroBattleValue, aeroCost } from "../../../rules/aero-bv";
 
 /** Weapon and equipment lines printed before the rest wait for the text copy (the block has room for this many). */
 export const MAX_LINES_DRAWN = 14;
@@ -56,7 +57,15 @@ export interface FighterFacts {
   ammo: string[];
   sinks: { count: number; total: number; capacity: number; type: string; line: string };
   official: { badge: string; detail: string; line: string };
+  /** Battle Value and cost as the sheet prints them: empty where the edition prints none or an item has no figure, so a total that is only
+   * "at least" never goes on paper. */
+  bv: string;
+  cost: string;
 }
+
+/** The AeroTech 2: Revised Edition blank has a BV and a Cost field beside its stores; the other fighter blanks have none. */
+export const printsValue = (profile: Pick<SheetProfile, "layout" | "velocity">): boolean => profile.layout === "at2" && profile.velocity === "across";
+const whole = (x: number) => x.toLocaleString("en-US");
 
 const BANDS = ["Short", "Medium", "Long", "Extreme"] as const;
 const text = (n: number | string | undefined): string => (n === undefined ? "" : String(n));
@@ -116,6 +125,8 @@ export function fighterFacts(record: AeroRecord, catalog: Catalog, profile: Shee
   const max = maxThrust(record);
   const si = fighterSI(record);
   const fuel = fuelPoints(record);
+  const bv = aeroBattleValue(record, catalog);
+  const cost = aeroCost(record, catalog);
   return {
     title: name,
     typeLabel: record.unitType === "conventional-fighter" ? "Conventional fighter" : "Aerospace fighter",
@@ -133,5 +144,7 @@ export function fighterFacts(record: AeroRecord, catalog: Catalog, profile: Shee
     ammo: ammoLines(record, catalog),
     sinks: { count: heat.total, total: heat.total, capacity: heat.capacity, type: sinkType, line: `${sinkType} heat sinks: ${String(heat.total)} (${String(heat.capacity)})` },
     official: { ...mark, line: mark.badge === "OFFICIAL" ? `OFFICIAL: ${mark.detail}` : mark.badge },
+    bv: bv && bv.unvalued.length === 0 ? whole(bv.total) : "",
+    cost: cost && cost.unpriced.length === 0 ? whole(cost.total) : "",
   };
 }

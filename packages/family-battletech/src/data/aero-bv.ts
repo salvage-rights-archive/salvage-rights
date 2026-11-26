@@ -70,7 +70,7 @@ export const AERO_BV_METHOD: FigureGroup<AeroBvMethod> = [
 /** AeroTech 2 and Revised (p. 53, p. 81): what fighters subtract, how heat cuts the weapon rating, the bombing rating and the large-vessel divisor. */
 export const AT2_BV_RULES = {
   editions: [AT2, AT2R],
-  cite: { [AT2]: "AeroTech 2 pp. 53-54", [AT2R]: "AeroTech 2: Revised Edition p. 81" },
+  cite: { [AT2]: "AeroTech 2 pp. 53-54", [AT2R]: "AeroTech 2: Revised Edition pp. 81-82 with the item values of the BattleTech Master Rules, Revised Edition pp. 156-158" },
   checked: "page",
   /** Per ton of explosive ammunition, without and with CASE (fighters only). Clan fighters carry CASE at no mass (AeroTech 2: Revised Edition p. 65). */
   ammoPerTon: { open: 20, case: 10 },
