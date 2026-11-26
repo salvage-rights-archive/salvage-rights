@@ -30,6 +30,7 @@ test.describe("dev edition", () => {
     await expect(tile.getByText("AeroTech (coming soon)")).toHaveCount(0);
     await expect(tile.getByText("AeroTech 2")).toHaveCount(0);
     await expect(tile.getByText("Nova Combat (coming soon)")).toBeVisible();
+    await expect(tile.getByText("MechWarrior RPG (coming soon)")).toBeVisible();
     await expect(tile.getByRole("link", { name: /Nova Combat/ })).toHaveCount(0);
     const widths = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, client: document.documentElement.clientWidth }));
     expect(widths.scroll).toBe(widths.client);
