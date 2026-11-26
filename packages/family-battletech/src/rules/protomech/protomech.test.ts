@@ -3,7 +3,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { PROTO_MAX_ARMOR_FACTOR, PROTO_STRUCTURE } from "../../data/protomech";
 import { loadCatalog } from "../catalog";
 import type { Catalog } from "../catalog";
-import { armorPoints, engineKg, engineRating, structurePoints, tally } from "./build";
+import { ammoKg, armorPoints, engineKg, engineRating, structurePoints, tally } from "./build";
 import { checkProto } from "./checks";
 import { offeredEquipment } from "./offered";
 import { protoBattleValue, protoCost } from "./rating";
@@ -118,5 +118,19 @@ describe("reading a record", () => {
     expect((read as unknown as Record<string, unknown>).later).toEqual({ a: 1 });
     expect(read?.armor.hd).toBe(0);
     expect(withDefaults({ schema: 2 })).toBeUndefined();
+  });
+});
+
+describe("the ProtoMech autocannons", () => {
+  it("are offered from their year at Advanced, take 1,000 kg divided by the shots a ton per shot, and only fit a main gun", () => {
+    const record = { ...newProtoRecord({ chassis: "Gun", model: "1", tons: 9, walk: 3, year: 3075 }), rulesLevel: "advanced" as const, mainGun: true };
+    const offered = (r: ProtoRecord) => offeredEquipment(r, catalog).map((row) => row.id);
+    expect(offered(record)).toEqual(expect.arrayContaining(["protomech-ac-2-clan", "protomech-ac-4-clan", "protomech-ac-8-clan"]));
+    expect(offered({ ...record, year: 3065 })).not.toContain("protomech-ac-2-clan");
+    const kg = (id: string) => ammoKg(mount("m", id, "mg", { shots: 4 }));
+    expect([kg("protomech-ac-2-clan"), kg("protomech-ac-4-clan"), kg("protomech-ac-8-clan")]).toEqual([100, 200, 400]);
+    const place = (location: string) => ({ ...record, mounts: [mount("g", "protomech-ac-2-clan", location)] });
+    const where = (r: ProtoRecord) => checkProto(r, catalog).filter((f) => f.check === "location").map((f) => f.where?.location);
+    expect([where(place("mg")), where(place("t"))]).toEqual([[], ["t"]]);
   });
 });

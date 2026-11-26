@@ -184,11 +184,14 @@ export const PROTO_AMMO_KG: Sourced & { rows: Record<string, number> } = {
     "hyper-assault-gauss-20-clan": 166.66,
     "vehicle-flamer-clan": 50,
     "plasma-cannon-clan": 100,
+    "protomech-ac-2-clan": 25,
+    "protomech-ac-4-clan": 50,
+    "protomech-ac-8-clan": 100,
   },
 };
-/** Catalog ids a ProtoMech may not mount although the catalog lists others of their kind: ATMs, MMLs, MRMs, rockets and one-shot launchers (TechManual p. 231 as amended by errata v8.0),
- * and the Proto autocannons, which the ammunition table has no weight for. The catalog's own `units` list decides everything else. */
-export const PROTO_EXCLUDED = /^(atm|mml|mrm|rocket|protomech-ac)/;
+/** Catalog ids a ProtoMech may not mount although the catalog lists others of their kind: ATMs, MMLs, MRMs, rockets and one-shot launchers (TechManual p. 231 as amended by errata v8.0).
+ * The catalog's own `units` list decides everything else. */
+export const PROTO_EXCLUDED = /^(atm|mml|mrm|rocket)/;
 
 // ---------------------------------------------------------------------------------------------------------------
 // When ProtoMechs exist (Universal Technology Advancement Table, IO:AE printed p. 44: Clan, prototype about 3055, production 3059, common 3060)

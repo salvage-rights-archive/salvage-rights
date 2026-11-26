@@ -464,11 +464,17 @@ export const WEAPONS: EquipmentGroup[] = [
       { id: "thumper-cannon-clan", name: "Thumper Cannon", tons: 10, slots: 7, type: "DB, AE, F", heat: 5, damage: "5A", range: [3, 4, 9, 14], availability: [{ from: 3032 }], rulesLevel: "experimental" },
       { id: "sniper-cannon-clan", name: "Sniper Cannon", tons: 15, slots: 10, type: "DB, AE, F", heat: 10, damage: "10A", range: [2, 4, 8, 12], availability: [{ from: 3032 }], rulesLevel: "experimental", splittable: true },
       { id: "long-tom-cannon-clan", name: "Long Tom Cannon", tons: 20, slots: 15, type: "DB, AE, F", heat: 20, damage: "20A", range: [4, 6, 13, 20], availability: [{ from: 3032 }], rulesLevel: "experimental", splittable: true },
-      { id: "protomech-ac-2-clan", name: "ProtoMech AC/2", tons: 3.5, slots: 2, type: "DB, S", heat: 1, damage: "2", range: [0, 7, 14, 20], availability: [{ from: 3073 }], prototypeYear: 3070, rulesLevel: "advanced", directFire: true },
-      { id: "protomech-ac-4-clan", name: "ProtoMech AC/4", tons: 4.5, slots: 3, type: "DB, S", heat: 1, damage: "4", range: [0, 5, 10, 15], availability: [{ from: 3073 }], prototypeYear: 3070, rulesLevel: "advanced", directFire: true },
-      { id: "protomech-ac-8-clan", name: "ProtoMech AC/8", tons: 5.5, slots: 4, type: "DB, S", heat: 2, damage: "8", range: [0, 3, 7, 10], availability: [{ from: 3073 }], prototypeYear: 3070, rulesLevel: "advanced", directFire: true },
       { id: "rotary-ac-2-clan", name: "Rotary AC/2", aliases: ["RAC/2"], tons: 8, slots: 4, type: "DB, R/C", heat: 1, damage: "2/Shot", range: [0, 8, 17, 25], availability: [{ from: 3104 }], prototypeYear: 3073, rulesLevel: "experimental", directFire: true },
       { id: "rotary-ac-5-clan", name: "Rotary AC/5", aliases: ["RAC/5"], tons: 10, slots: 8, type: "DB, R/C", heat: 1, damage: "5/Shot", range: [0, 7, 14, 21], availability: [{ from: 3104 }], prototypeYear: 3073, rulesLevel: "experimental", directFire: true, splittable: true },
+    ],
+  },
+  {
+    defaults: { kind: "weapon", techBase: "clan", cite: { book: TO, page: 217 }, playCite: { book: TO, page: 216 }, checked: "page", rulesLevel: "advanced", units: ["mech", "industrialmech", "protomech", "vehicle", "aero", "smallcraft", "dropship", "ship", "building"] },
+    items: [
+      // ProtoMech autocannons, available to every unit type the item entry (TO:AUE p. 98) lists, ProtoMechs in a Main Gun mount only (the weight does that: a torso holds 2 tons, an arm half a ton)
+      { id: "protomech-ac-2-clan", name: "ProtoMech AC/2", tons: 3.5, slots: 2, type: "DB, S", heat: 1, damage: "2", range: [0, 7, 14, 20], availability: [{ from: 3073 }], prototypeYear: 3070, directFire: true },
+      { id: "protomech-ac-4-clan", name: "ProtoMech AC/4", tons: 4.5, slots: 3, type: "DB, S", heat: 1, damage: "4", range: [0, 5, 10, 15], availability: [{ from: 3073 }], prototypeYear: 3070, directFire: true },
+      { id: "protomech-ac-8-clan", name: "ProtoMech AC/8", tons: 5.5, slots: 4, type: "DB, S", heat: 2, damage: "8", range: [0, 3, 7, 10], availability: [{ from: 3073 }], prototypeYear: 3070, directFire: true },
     ],
   },
   {
