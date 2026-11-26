@@ -714,3 +714,257 @@ export function craftArmorPointsPerTon(typeId: string, editionId: string, shape:
   const clan = techBase === "clan" || (techBase === "mixed" && type.techBase === "clan");
   return Math.round(band[clan ? 1 : 2] * multiplier * 1e6) / 1e6;
 }
+
+// ---------------------------------------------------------------------------------------------------------------------------------
+// JumpShip, WarShip and space station construction figures (AeroTech 2, AeroTech 2 Revised, and the current rules, whose capital ships
+// are built by Strategic Operations: Advanced Aerospace Rules and whose ship systems weigh what the Tactical Operations: Advanced Units and
+// Equipment construction table prints). Same shape as the groups above: one row per value, each edition named once with the page it
+// prints it on. Where an AeroTech 2 book prints one rule for DropShips and capital ships alike (the bay limit, fire control, gunners and
+// the like), the capital ship reads the small craft and DropShip row for that book and nothing is written twice here: a capital group holds
+// only the current rules' row then, because Strategic Operations prints it on its own page for capital ships (`capitalFigureOf` reads the
+// capital row first, then the fallback). Each edition keeps its own book and errata (AeroTech 2 with errata v1.2, Strategic Operations:
+// Advanced Aerospace Rules with errata v5.0). Page numbers are printed pages. BattleSpace builds these ships by steps of its own (a later piece).
+// ---------------------------------------------------------------------------------------------------------------------------------
+
+export type CapitalKind = "jumpship" | "warship" | "space-station";
+export const CAPITAL_KINDS: readonly CapitalKind[] = ["jumpship", "warship", "space-station"];
+type ByKind<T> = Partial<Record<CapitalKind, T>>;
+
+const TOAUE = "Tactical Operations: Advanced Units and Equipment";
+const CAPITAL_BOOK: Record<string, string> = { [E.at2]: AT2, [E.at2r]: AT2R, [E.current]: SOAA };
+/** Cites for capital ship figures: a page string is in the edition's capital ship book (Strategic Operations: Advanced Aerospace Rules for the current rules); a
+ * [book, pages] pair names another book. */
+type CapitalPages = Partial<Record<string, string | [book: string, pages: string]>>;
+const capitalPagesOf = (pages: CapitalPages): Record<string, string> =>
+  Object.fromEntries(Object.entries(pages).map(([edition, p]) => [edition, Array.isArray(p) ? cite(p[0], p[1]) : cite(CAPITAL_BOOK[edition] ?? edition, p ?? "")]));
+const capShare = <T>(pages: CapitalPages, value: T, note?: string): SharedFigure<T> => ({
+  editions: Object.keys(pages),
+  value,
+  cite: capitalPagesOf(pages),
+  checked: "page",
+  ...(note === undefined ? {} : { note }),
+});
+const CAP3 = (at2: string, at2r: string, so: string): CapitalPages => ({ [E.at2]: at2, [E.at2r]: at2r, [E.current]: so });
+const SO_ONLY = (so: string): CapitalPages => ({ [E.current]: so });
+
+/** How a capital ship figure is rounded: as the small craft masses, or to the nearest whole number (up on .5), or, for the fuel pumps, the fuel and pumps together up to a whole ton. */
+export type CapitalRound = CraftRound | "nearest" | "total-up-whole";
+export interface CapitalRounding {
+  engine: CapitalRound;
+  si: CapitalRound;
+  controls: CapitalRound;
+  /** The K-F drive's and the jump sail's mass. */
+  drive: CapitalRound;
+  /** The K-F drive's and the jump sail's integrity. */
+  integrity: CapitalRound;
+  pumps: CapitalRound;
+  armorLimit: CapitalRound;
+  fireControl: CapitalRound;
+}
+/** A K-F drive: its share of the unit's tons; integrity = `integrityBase` + drive tons / `integrityPer`; its sail weighs `sailBase` + unit tons / `sailPer`. */
+export interface KfDriveFigure {
+  share: number;
+  integrityBase: number;
+  integrityPer: number;
+  sailBase: number;
+  sailPer: number;
+}
+/** Sail integrity = `base` + sail tons / `per`. */
+export interface SailIntegrityFigure {
+  base: number;
+  per: number;
+}
+/** The most armor tons: the structural mass over `divide`, plus `add`. */
+export interface CapitalArmorLimit {
+  divide: number;
+  add?: number;
+}
+/** A unit's bay doors: `base` plus one for each `perTons` of the unit, rounded up. */
+export interface CapitalDoorRule {
+  base: number;
+  perTons: number;
+}
+
+export interface CapitalFigures {
+  /** Engine mass as a share of the tons: a station-keeping drive's fixed share (JumpShips and stations), and a WarShip's maneuvering drive's share per point of Safe Thrust. */
+  engine: FigureGroup<{ stationKeeping: number; perThrust: number }>;
+  /** A WarShip may mount a station-keeping drive in place of a maneuvering drive (for less than 1 Safe Thrust). */
+  warshipStationKeeping: FigureGroup<boolean>;
+  /** Max Thrust is Safe Thrust times this, rounded up (WarShips; a station-keeping drive has no Max Thrust). Fallback: the fighter row. */
+  maxThrustFactor: FigureGroup<number>;
+  kfDrive: FigureGroup<Record<"jumpship" | "warship", KfDriveFigure>>;
+  sailIntegrity: FigureGroup<SailIntegrityFigure>;
+  /** When a space station carries a jump (energy collection) sail: whenever it has energy storage batteries, or at the designer's choice. */
+  stationSail: FigureGroup<"with-batteries" | "optional">;
+  /** The Structural Integrity of a JumpShip or station, which may not be changed. */
+  fixedSi: FigureGroup<number>;
+  /** Structural mass: a JumpShip's and a station's tons over the divisor; a WarShip's SI times its tons over the divisor. */
+  siMass: FigureGroup<Record<CapitalKind, number>>;
+  /** A WarShip's SI range as multiples of Max Thrust. Fallback: the small craft and DropShip row. */
+  siRange: FigureGroup<{ min: number; max: number }>;
+  controlShare: FigureGroup<ByKind<number>>;
+  /** Fuel points a ton by the unit's tons: [lowest tons of the band, points]; a type the book gives no rows has none. */
+  fuelBands: FigureGroup<ByKind<[number, number][]>>;
+  /** Fuel is bought in lots of this many tons. Fallback: the fighter row (the same sentence covers every unit). */
+  fuelLot: FigureGroup<number>;
+  /** Fuel pumps weigh this share of the fuel. Fallback: the small craft and DropShip row. */
+  pumpShare: FigureGroup<number>;
+  /** Capital-scale armor points a ton of standard armor by the unit's tons: [lowest tons, Clan, Inner Sphere]. */
+  armorBands: FigureGroup<ArmorBand[]>;
+  armorLimit: FigureGroup<ByKind<CapitalArmorLimit>>;
+  /** Free armor on each facing: the SI over this, rounded to the nearest whole number (up on .5). */
+  freeArmorDivisor: FigureGroup<number>;
+  /** How a weight of armor is turned into whole points. Fallback: the fighter row (the same sentence covers every unit). */
+  armorRounding: FigureGroup<"nearest" | "down">;
+  /** Free heat sinks: `base` + the square root of the engine's tons times `root`, rounded down. */
+  freeSinks: FigureGroup<{ base: number; root: number }>;
+  arcLimit: FigureGroup<ByKind<number>>;
+  /** Fallbacks: the small craft and DropShip rows. */
+  fireControlShare: FigureGroup<number>;
+  bayLimit: FigureGroup<number>;
+  mixedSizes: FigureGroup<boolean>;
+  matchedArcs: FigureGroup<string[][]>;
+  crew: FigureGroup<ByKind<CrewRule>>;
+  gunners: FigureGroup<{ standardPer: number; capitalPer: number }>;
+  /** The most bay doors by type, and the least a unit with a transport bay must have. Fallback: the small craft and DropShip row (AeroTech 2 Revised's 8 launch doors). */
+  doors: FigureGroup<{ byKind: ByKind<CapitalDoorRule>; unitMinimum: number }>;
+  launch: FigureGroup<{ perDoor: number; kinds: string[] }>;
+  rounding: FigureGroup<CapitalRounding>;
+}
+
+const KF: Record<"jumpship" | "warship", KfDriveFigure> = {
+  jumpship: { share: 0.95, integrityBase: 1.2, integrityPer: 60000, sailBase: 30, sailPer: 7500 },
+  warship: { share: 0.4525, integrityBase: 2, integrityPer: 25000, sailBase: 30, sailPer: 20000 },
+};
+const CAPITAL_FUEL: [number, number][] = [[0, 10], [110000, 5], [250000, 2.5]];
+
+export const CAPITAL_FIGURES: CapitalFigures = {
+  engine: [capShare(CAP3("44", "61", "135"), { stationKeeping: 0.012, perThrust: 0.06 })],
+  warshipStationKeeping: [capShare(SO_ONLY("135"), true)],
+  maxThrustFactor: [capShare(SO_ONLY("135"), 1.5)],
+  kfDrive: [capShare(CAP3("44", "61", "137"), KF)],
+  sailIntegrity: [capShare(CAP3("44", "61", "137"), { base: 1, per: 20 })],
+  stationSail: [capShare({ [E.at2]: "44; errata v1.2", [E.at2r]: "61" }, "with-batteries"), capShare(SO_ONLY("136"), "optional")],
+  fixedSi: [capShare(CAP3("44", "62", "134"), 1)],
+  siMass: [capShare(CAP3("44", "62", "134, 136"), { jumpship: 150, "space-station": 100, warship: 1000 })],
+  siRange: [capShare(SO_ONLY("136"), { min: 1, max: 30 })],
+  controlShare: [capShare(CAP3("44", "62", "137"), { jumpship: 0.0025, warship: 0.0025, "space-station": 0.001 })],
+  // Conflicts 66 and 72 in the archive ledger: the AeroTech 2 books print WarShip rows only; Strategic Operations' 200,000 band ends at a misprinted 249,000.
+  fuelBands: [
+    capShare({ [E.at2]: "45", [E.at2r]: "63" }, { warship: CAPITAL_FUEL }, "the two AeroTech 2 books print fuel points for WarShips only, none for JumpShips or stations; their top band reads over 250,000"),
+    capShare(SO_ONLY("135"), { jumpship: CAPITAL_FUEL, warship: CAPITAL_FUEL, "space-station": CAPITAL_FUEL }, "the 200,000 band is printed as ending at 249,000; the next band starts over 249,999"),
+  ],
+  fuelLot: [capShare(SO_ONLY("134"), 0.5)],
+  pumpShare: [capShare(SO_ONLY("134-135"), 0.02)],
+  // Conflict 43 in the archive ledger: the AeroTech 2 table's lowest band, 50,000 printed, 2,000 by the errata.
+  armorBands: [capShare(CAP3("46; errata v1.2", "64", "140"), [[2000, 1, 0.8], [150000, 0.7, 0.6], [250000, 0.5, 0.4]])],
+  // Conflict 71 in the archive ledger: the AeroTech 2 books print no station limit.
+  armorLimit: [
+    capShare({ [E.at2]: "46", [E.at2r]: "63" }, { jumpship: { divide: 12 }, warship: { divide: 50 } }, "no limit is printed for a space station"),
+    capShare(SO_ONLY("140"), { jumpship: { divide: 12 }, "space-station": { divide: 3, add: 60 }, warship: { divide: 50 } }),
+  ],
+  freeArmorDivisor: [capShare(CAP3("46", "64", "140"), 10)],
+  armorRounding: [capShare(SO_ONLY("140"), "down" as const)],
+  freeSinks: [capShare(CAP3("48", "67", "139"), { base: 45, root: 2 })],
+  arcLimit: [capShare(CAP3("47", "66", "133, 143"), { jumpship: 12, warship: 20, "space-station": 20 })],
+  fireControlShare: [capShare(SO_ONLY("143"), 0.1)],
+  bayLimit: [capShare(SO_ONLY("142"), 700)],
+  mixedSizes: [capShare(SO_ONLY("142, 144"), true, "the Odyssey example mixes pulse laser sizes in one bay")],
+  matchedArcs: [capShare(CAP3("46", "66", "142, 145"), [["FL", "FR"], ["LB", "RB"], ["AL", "AR"]])],
+  crew: [
+    capShare(
+      { [E.at2]: "48; errata v1.2", [E.at2r]: "68", [E.current]: "138" },
+      { jumpship: { base: 6, perTons: 20000 }, warship: { base: 45, perTons: 5000 }, "space-station": { base: 45, perTons: 5000 } },
+      "AeroTech 2 names the space station by its errata",
+    ),
+  ],
+  gunners: [capShare(SO_ONLY("138"), { standardPer: 6, capitalPer: 1 })],
+  doors: [capShare(SO_ONLY("143"), { byKind: { jumpship: { base: 7, perTons: 50000 }, "space-station": { base: 8, perTons: 75000 }, warship: { base: 8, perTons: 100000 } }, unitMinimum: 1 })],
+  launch: [capShare(SO_ONLY("143"), { perDoor: 2, kinds: ["mech", "fighter", "small-craft", "protomech"] })],
+  // Conflict 70 in the archive ledger: the rounding differs by book.
+  rounding: [
+    capShare({ [E.at2]: "44-48" }, { engine: "exact", si: "exact", controls: "exact", drive: "exact", integrity: "exact", pumps: "exact", armorLimit: "exact", fireControl: "exact" }, "AeroTech 2 prints no rounding for these"),
+    capShare(
+      { [E.at2r]: "61-66" },
+      { engine: "exact", si: "exact", controls: "exact", drive: "nearest", integrity: "nearest", pumps: "up-whole", armorLimit: "exact", fireControl: "exact" },
+      "the K-F drive, sail and their integrity round to the nearest whole number (p. 61); the pumps round up in the WarShip example (p. 63)",
+    ),
+    capShare(SO_ONLY("134-143"), { engine: "up-half", si: "up-half", controls: "up-whole", drive: "up-whole", integrity: "up-whole", pumps: "total-up-whole", armorLimit: "down-half", fireControl: "up-half" }),
+  ],
+};
+
+/** A capital figure: the capital group's row for the edition, else the fallback group's (the AeroTech 2 books print one rule for DropShips and capital ships). */
+export function capitalFigureOf<T>(group: FigureGroup<T>, editionId: string, fallback?: FigureGroup<T>): T | undefined {
+  return figureOf(group, editionId) ?? (fallback === undefined ? undefined : figureOf(fallback, editionId));
+}
+
+export interface CapitalArmorType {
+  id: string;
+  name: string;
+  /** Capital-scale points a ton added to the standard armor's (the AeroTech 2 books print the bonus; Strategic Operations prints each type's own column, which is the standard column plus the same bonus). */
+  bonus: number;
+  editions: string[];
+  cite: Record<string, string>;
+  checked: "page" | "text";
+}
+const capitalArmor = (id: string, name: string, bonus: number): CapitalArmorType => ({ id, name, bonus, editions: [E.at2, E.at2r, E.current], cite: capitalPagesOf(CAP3("46", "64", "140")), checked: "page" });
+/** Capital ship armor types. A unit uses its own tech base's column (Inner Sphere or Clan); the types are not split by tech base. */
+export const CAPITAL_ARMOR_TYPES: CapitalArmorType[] = [
+  capitalArmor("standard", "Standard", 0),
+  capitalArmor("improved-ferro-aluminum", "Improved Ferro-Aluminum", 0.2),
+  capitalArmor("ferro-carbide", "Ferro-Carbide", 0.4),
+  capitalArmor("lamellor-ferro-carbide", "Lamellor Ferro-Carbide", 0.6),
+];
+
+/** Capital-scale armor points a ton of the type at the unit's tons: the standard points of the band (Clan or Inner Sphere column; a mixed unit reads the Inner Sphere one) plus the type's bonus. Undefined for an unknown type or edition, or tons under every band. */
+export function capitalArmorPointsPerTon(typeId: string, editionId: string, tons: number, techBase: "inner-sphere" | "clan" | "mixed"): number | undefined {
+  const type = CAPITAL_ARMOR_TYPES.find((t) => t.id === typeId && t.editions.includes(editionId));
+  const band = figureOf(CAPITAL_FIGURES.armorBands, editionId)?.filter(([from]) => tons >= from).at(-1);
+  if (!type || !band) return undefined;
+  return Math.round((band[techBase === "clan" ? 1 : 2] + type.bonus) * 1e6) / 1e6;
+}
+
+/** One ship system and what it weighs: `tons` each, or a `share` of the unit's tons. `types` may carry it; `max` caps the count, or one for each `perTons` of the unit (rounded as `round`, nothing under `minTons`). */
+export interface CapitalSystemFigure {
+  tons?: number;
+  share?: number;
+  types: CapitalKind[];
+  max?: number;
+  perTons?: number;
+  round?: "down" | "up";
+  minTons?: number;
+}
+export interface CapitalSystemRow {
+  kind: string;
+  label: string;
+  figures: FigureGroup<CapitalSystemFigure>;
+}
+const SYSTEM = (kind: string, label: string, figures: FigureGroup<CapitalSystemFigure>): CapitalSystemRow => ({ kind, label, figures });
+const ALL_CAPITAL: CapitalKind[] = ["jumpship", "warship", "space-station"];
+/** Ship systems (AeroTech 2 p. 47, AeroTech 2 Revised p. 65, and for the current rules the Tactical Operations: Advanced Units and Equipment construction table, pp. 219 and 221, whose
+ * JumpShip, WarShip and station columns say which may carry each). A record keeps their counts in `systems`, keyed by `kind`. The K-F drive and its sail are part of every JumpShip and
+ * WarShip (the errata to Strategic Operations: Advanced Aerospace Rules, p. 136), so they are not systems; a station's energy collection sail is (`jump-sail`). */
+// Conflicts 65 and 67 in the archive ledger: the docking hardpoint limit's rounding, and the lithium-fusion battery on stations.
+export const CAPITAL_SYSTEMS: CapitalSystemRow[] = [
+  SYSTEM("docking-hardpoint", "Docking hardpoint", [
+    capShare({ [E.at2]: "47", [E.at2r]: "65" }, { tons: 1000, types: ALL_CAPITAL, perTons: 50000, round: "down" }, "the books print one per 50,000 tons with no rounding: whole hardpoints within the limit"),
+    capShare({ [E.current]: [`${TOAUE}, p. 219; ${SOAA}`, "142; errata v5.0"] }, { tons: 1000, types: ALL_CAPITAL, perTons: 50000, round: "up", minTons: 50000 }),
+  ]),
+  SYSTEM("grav-deck-small", "Grav deck (under 100 m)", [capShare({ [E.at2]: "47", [E.at2r]: "65", [E.current]: [TOAUE, "219"] }, { tons: 50, types: ALL_CAPITAL })]),
+  SYSTEM("grav-deck-medium", "Grav deck (100 to 250 m)", [capShare({ [E.at2]: "47", [E.at2r]: "65", [E.current]: [TOAUE, "219"] }, { tons: 100, types: ALL_CAPITAL })]),
+  SYSTEM("grav-deck-large", "Grav deck (over 250 m)", [capShare({ [E.at2]: "47", [E.at2r]: "65", [E.current]: [TOAUE, "219"] }, { tons: 500, types: ["space-station"] })]),
+  SYSTEM("lithium-fusion-battery", "Lithium-fusion battery", [
+    capShare({ [E.at2]: "47" }, { share: 0.01, types: ALL_CAPITAL, max: 1 }),
+    capShare({ [E.at2r]: "65" }, { share: 0.01, types: ["jumpship", "warship"], max: 1 }),
+    capShare({ [E.current]: [TOAUE, "221"] }, { share: 0.01, types: ["jumpship", "warship"] }),
+  ]),
+  SYSTEM("energy-storage-battery", "Energy storage battery", [capShare({ [E.at2]: "47", [E.at2r]: "65", [E.current]: [TOAUE, "219"] }, { tons: 100000, types: ["space-station"] })]),
+  SYSTEM("hpg", "HPG", [capShare({ [E.at2]: "47", [E.at2r]: "65" }, { tons: 50, types: ALL_CAPITAL }, "ComStar and Clan vessels only")]),
+  SYSTEM("jump-sail", "Energy collection sail", [capShare({ [E.at2]: "44; errata v1.2", [E.at2r]: "61", [E.current]: "136" }, { types: ["space-station"], max: 1 }, "weighs what a JumpShip's sail of the same tons does")]),
+];
+
+/** What one ship system weighs and who may carry it in an edition; undefined for a kind the edition does not print. */
+export function capitalSystemFigure(kind: string, editionId: string): CapitalSystemFigure | undefined {
+  const row = CAPITAL_SYSTEMS.find((r) => r.kind === kind);
+  return row && figureOf(row.figures, editionId);
+}
