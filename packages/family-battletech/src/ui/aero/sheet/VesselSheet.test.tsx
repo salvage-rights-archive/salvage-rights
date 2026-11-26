@@ -100,6 +100,10 @@ describe("The small craft, DropShip and capital ship record sheets", () => {
       const small = profile.kind === "small-craft";
       expect(lines.includes("Consciousness #"), profile.id).toBe(profile.crew?.track === "pilot");
       expect(lines.includes(profile.crew?.incap ?? ""), profile.id).toBe(true);
+      // Every form's brackets follow the rules table (TW p. 235), capital ones on large craft; AeroTech 2 Revised spells the last box "Incp.".
+      expect(lines, profile.id).toContain("Hexes at SRV, MRV, LRV, ERV: standard 0-6, 7-12, 13-20, 21-25");
+      if (!small) expect(lines, profile.id).toContain("Capital scale (C): 0-12, 13-24, 25-40, 41-50");
+      if (profile.editionId === "aerotech2-revised" && !small) expect(profile.crew?.incap).toBe("Incp.");
       expect(svg.querySelectorAll("[data-sinks] circle").length > 0, profile.id).toBe(profile.heatScale === true);
       expect(profile.heatScale === true, profile.id).toBe(small && profile.editionId !== "aerotech2");
       cleanup();
@@ -144,6 +148,8 @@ describe("The small craft, DropShip and capital ship record sheets", () => {
     expect(scaleBottom).toBeLessThan(circlesTop);
     const arcRight = Math.max(...arcs.map((t) => Number(t.getAttribute("x")) + Number(t.getAttribute("textLength") ?? 0)));
     expect(arcRight).toBeLessThanOrEqual(1325 + 345);
+    // The sheet's type never goes under 20 units.
+    expect(Math.min(...[...svg.querySelectorAll("[data-heat], [data-heat-arcs] text")].map((t) => Number(t.getAttribute("font-size"))))).toBeGreaterThanOrEqual(20);
   });
 
   it("stays quick and bounded with absurd counts of points, sinks and weapons", () => {

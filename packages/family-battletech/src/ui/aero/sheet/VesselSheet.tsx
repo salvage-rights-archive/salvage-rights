@@ -5,6 +5,7 @@
 // Pure: it reads nothing but its props. The sheet is paper: white, with black ink.
 import { AERO_HEAT_TOP, FLAGGED_HEAT, PILOT_TRACK, SHEET_FOOT, VESSEL_LABELS } from "../../../data/aero-sheet";
 import type { SheetProfile } from "../../../data/aero-sheet";
+import { FIGHTER_EDITIONS } from "../../../data/aero";
 import type { AeroRecord } from "../../../rules/aero";
 import type { Catalog } from "../../../rules/catalog";
 import { TRADEMARK_LINE } from "../../sheet/RecordSheet";
@@ -125,7 +126,7 @@ function SiBox({ rect, facts }: { rect: Rect; facts: VesselFacts }) {
   );
 }
 
-function Data({ rect, facts }: { rect: Rect; facts: VesselFacts }) {
+function Data({ rect, facts, profile }: { rect: Rect; facts: VesselFacts; profile: SheetProfile }) {
   const { x, y, w } = rect;
   const half = (w - 48) / 2;
   const clan = facts.techBase === "Clan" || facts.techBase === "Mixed";
@@ -138,7 +139,7 @@ function Data({ rect, facts }: { rect: Rect; facts: VesselFacts }) {
     <Frame rect={rect} title={`${facts.typeLabel.toUpperCase()} DATA`}>
       <Blank x={x + 24} y={y + 76} w={w - 48} label="Type:" value={type} />
       <Blank x={x + 24} y={y + 118} w={half * 0.95} label="Tonnage:" value={facts.tons} />
-      <Blank x={x + 24 + half * 1.05} y={y + 118} w={half * 0.95} label={facts.stationKeeping ? "Thrust:" : "Safe Thrust:"} value={facts.safe} />
+      <Blank x={x + 24 + half * 1.05} y={y + 118} w={half * 0.95} label={facts.stationKeeping && profile.editionId === FIGHTER_EDITIONS.current ? "Thrust:" : "Safe Thrust:"} value={facts.safe} />
       {cells.slice(0, 8).map(([label, value], i) => (
         <Blank key={label} x={i % 2 === 0 ? x + 24 : x + 24 + half * 1.05} y={y + 160 + Math.floor(i / 2) * 42} w={half * 0.95} label={label} value={value} />
       ))}
@@ -267,12 +268,12 @@ function Heat({ rect, facts, profile }: { rect: Rect; facts: VesselFacts; profil
   const arcs = facts.heatByArc.filter((a) => a.heat > 0);
   const scale = profile.heatScale === true;
   const rows = FLAGGED_HEAT.rows;
-  const arcTop = y + 160;
-  const arcPitch = 26;
+  const arcTop = y + 150;
+  const arcPitch = 24;
   // The arcs go two across (a spheroid has six), and the scale's rows close up to leave the sinks their place at the foot.
   const arcCols = 2;
   const colW = (w - 48) / arcCols;
-  const tableTop = arcTop + Math.max(Math.ceil(arcs.length / arcCols), 1) * arcPitch + 50;
+  const tableTop = arcTop + Math.max(Math.ceil(arcs.length / arcCols), 1) * arcPitch + 44;
   const circlesTop = y + h - 100;
   const rowPitch = Math.min(22, (circlesTop - 14 - (tableTop + 20)) / Math.max(rows.length - 1, 1));
   return (
@@ -303,7 +304,7 @@ function Heat({ rect, facts, profile }: { rect: Rect; facts: VesselFacts; profil
             {`Heat level, effect (scale 0 to ${String(AERO_HEAT_TOP)})`}
           </text>
           {rows.map((row, i) => (
-            <text key={row.level} x={x + 24} y={tableTop + 20 + i * rowPitch} fontSize={Math.min(20, Math.floor(rowPitch))} fill={INK} data-heat={row.level} {...squeeze(`${String(row.level)}: ${row.effect}`, Math.min(20, Math.floor(rowPitch)), w - 48)}>
+            <text key={row.level} x={x + 24} y={tableTop + 20 + i * rowPitch} fontSize={20} fill={INK} data-heat={row.level} {...squeeze(`${String(row.level)}: ${row.effect}`, 20, w - 48)}>
               {`${String(row.level)}: ${row.effect}`}
             </text>
           ))}
@@ -335,7 +336,7 @@ export default function VesselSheet({ record, catalog, profile }: VesselSheetPro
       <svg className="bt-sheet" viewBox={`0 0 ${String(SHEET_WIDTH)} ${String(SHEET_HEIGHT)}`} preserveAspectRatio="xMidYMid meet" role="img" aria-label={`${facts.title} ${heading.toLowerCase()}`}>
         <rect width={SHEET_WIDTH} height={SHEET_HEIGHT} fill="#fff" />
         <SheetHead facts={facts} heading={heading} />
-        <Data rect={BLOCKS.data} facts={facts} />
+        <Data rect={BLOCKS.data} facts={facts} profile={profile} />
         <Inventory rect={BLOCKS.inventory} facts={facts} profile={profile} />
         <Crew rect={BLOCKS.crew} facts={facts} profile={profile} />
         <Diagram rect={BLOCKS.armor} facts={facts} profile={profile} />

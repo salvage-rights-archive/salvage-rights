@@ -34,6 +34,7 @@ describe("small craft and DropShip rules check", () => {
     ["a crew under the least", "tw-tm-so", { unitType: "dropship", tons: 3000, crew: 1 }, [], "crew:error"],
     ["more doors than the edition allows", "aerotech2-revised", { unitType: "dropship", tons: 3000, bays: [{ kind: "fighter", capacity: 6, doors: 9 }] }, [], "doors:error"],
     ["an arc that makes more heat than the sinks take away", "tw-tm-so", { unitType: "dropship", tons: 3000 }, Array.from({ length: 12 }, () => ["NO", "large-laser-is", "b1"]), "zero-heat:warning"],
+    ["a bay hotter than the sinks, on the current rules", "tw-tm-so", { unitType: "dropship", tons: 3000 }, Array.from({ length: 12 }, () => ["NO", "large-laser-is", "b1"]), "hottest-bay:error"],
     ["Clan armor on an Inner Sphere unit", "tw-tm-so", { unitType: "dropship", tons: 3000, armor: { type: "ferro-aluminum-clan", tons: 5, points: {} } }, [], "armor-tech:warning"],
     ["ship systems over the most the unit may carry", "tw-tm-so", { unitType: "warship", tons: 100000, systems: { "docking-hardpoint": 50 } }, [], "systems:error"],
     ["capital armor tons over the limit", "aerotech2-revised", { unitType: "warship", tons: 100000, thrust: { safe: 3 }, armor: { type: "standard", tons: 90000, points: {} } }, [], "vessel-armor:error"],

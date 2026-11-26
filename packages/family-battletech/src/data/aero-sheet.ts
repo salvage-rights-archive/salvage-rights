@@ -280,7 +280,14 @@ const AT2_LARGE_CRITICAL: CriticalRow[] = [AVIONICS, OPEN("Cargo"), CIC, box("Do
 const AT2R_DROPSHIP_CRITICAL: CriticalRow[] = [AVIONICS, box("Cargo", "1", "2", "3"), box("Docking Collar", "D"), box("Doors", "", "", ""), ENGINE, FCS, box("Gear", "+5"), box("K-F Boom", "D"), box("Life Support", "+2"), SENSORS, ...THRUSTERS];
 /** AeroTech 2 Revised: the large craft sheets (index 163-165): Docking Collars and Grav Decks a row of ten small boxes. */
 const TEN_BLANK = ["", "", "", "", "", "", "", "", "", ""];
-const AT2R_LARGE_CRITICAL: CriticalRow[] = [AVIONICS, box("Cargo", "1", "2", "3"), CIC, box("Doors", "", "", ""), ENGINE, box("Life Support", "+2"), SENSORS, { label: "Docking Collars", boxes: TEN_BLANK, small: true }, { label: "Grav Decks", boxes: TEN_BLANK, small: true }, ...THRUSTERS];
+const TEN = (label: string): CriticalRow => ({ label, boxes: TEN_BLANK, small: true });
+const AT2R_LARGE_ROWS = (...tail: CriticalRow[]): CriticalRow[] => [AVIONICS, box("Cargo", "1", "2", "3"), CIC, box("Doors", "", "", ""), ENGINE, box("Life Support", "+2"), SENSORS, TEN("Docking Collars"), TEN("Grav Decks"), ...THRUSTERS, ...tail];
+/** The JumpShip's form also has Sail and K-F Drive Integrity boxes (index 163); the station's has a Sail but no K-F drive and no Engine row (index 165). */
+const AT2R_LARGE_CRITICAL: Record<"jumpship" | "warship" | "space-station", CriticalRow[]> = {
+  jumpship: AT2R_LARGE_ROWS(TEN("Sail Integrity"), TEN("K-F Drive Integrity")),
+  warship: AT2R_LARGE_ROWS(TEN("Sail Integrity"), TEN("K-F Drive Integrity")),
+  "space-station": AT2R_LARGE_ROWS(TEN("Sail Integrity")).filter((row) => row.label !== "Engine"),
+};
 /** The current blanks (CAT35001RS index 14-17; Strategic Operations: Advanced Aerospace Rules index 173-175). A space station's has no Engine row. */
 const CURRENT_SMALL_CRAFT_CRITICAL: CriticalRow[] = [AVIONICS, box("Engine", "2", "4", "D"), FCS, box("Gear", "+5"), SENSORS, box("Life Support", "+2")];
 const CURRENT_DROPSHIP_CRITICAL: CriticalRow[] = [AVIONICS, FCS, SENSORS, ...THRUSTERS, ENGINE, box("Gear", "+5"), box("Life Support", "+2"), box("K-F Boom", "D"), box("Docking Collar", "D")];
@@ -324,21 +331,24 @@ const AT2_THRESHOLD = "AeroTech 2, p. 19; AeroTech 2 Revised, p. 28; Total Warfa
 const AT2R_LARGE_NOTICE = "AeroTech 2: Revised Edition, PDF index 163-165 (their foot lines give permission to photocopy for personal use)";
 const SO_NOTICE = "Strategic Operations: Advanced Aerospace Rules, PDF index 173-175 (their foot lines give permission to photocopy for personal use)";
 const CREW_AT2 = { track: "crew", incap: "Incap." } as const;
+/** AeroTech 2 Revised prints the last Modifier box as "Incp." (index 161, 163), AeroTech 2 as "Incap." (p. 102-103). */
+const CREW_AT2R = { track: "crew", incap: "Incp." } as const;
 const PILOT_CURRENT = { track: "pilot", incap: "Dead" } as const;
 const CREW_CURRENT = { track: "crew", incap: "Incp." } as const;
-const STANDARD = "1-6, 7-12, 13-20, 21-25";
-const CAPITAL = "1-12, 13-24, 25-40, 41-50";
-const SMALL_BRACKETS = { standard: "0-6, 7-12, 13-20, 21-25" };
+// Range brackets follow the rules table (Total Warfare p. 235; AeroTech 2 Revised p. 22). The current blanks print "6-12" and "1-6"/"1-12" in places: misprints against that table.
+const STANDARD = "0-6, 7-12, 13-20, 21-25";
+const CAPITAL = "0-12, 13-24, 25-40, 41-50";
+const SMALL_BRACKETS = { standard: STANDARD };
 const LARGE_BRACKETS = { standard: STANDARD, capital: CAPITAL };
 
 export const VESSEL_SHEET_PROFILES: SheetProfile[] = [
   vessel(FIGHTER_EDITIONS.at2, "dropship", { critical: AT2_DROPSHIP_CRITICAL, velocity: "down", columns: AT2_VELOCITY, follows: "the DropShip Record Sheet, AeroTech 2, p. 103", notice: AT2_NOTICE.replace("p. 104", "p. 103"), thresholdCite: THRESHOLD_CITE, crew: CREW_AT2, brackets: LARGE_BRACKETS }),
   vessel(FIGHTER_EDITIONS.at2, "warship", { critical: AT2_LARGE_CRITICAL, velocity: "down", columns: AT2_VELOCITY, follows: `the Large Craft Record Sheet, ${LARGE_AT2}`, notice: AT2_NOTICE.replace("p. 104", "p. 102"), thresholdCite: THRESHOLD_CITE, title: "Large craft record sheet", crew: CREW_AT2, brackets: LARGE_BRACKETS }),
   ...(["small-craft", "dropship"] as const).map((kind) =>
-    vessel(FIGHTER_EDITIONS.at2r, kind, { critical: AT2R_DROPSHIP_CRITICAL, velocity: "across", columns: AT2R_VELOCITY, follows: `the ${LABELS[kind] ?? kind} Record Sheets, AeroTech 2: Revised Edition, PDF index 159-162`, notice: AT2R_NOTICE.replace("index 158", "index 159-162"), thresholdCite: AT2_THRESHOLD, heatScale: kind === "small-craft", crew: kind === "small-craft" ? { track: "pilot", incap: "Dead" } : CREW_AT2, brackets: kind === "small-craft" ? SMALL_BRACKETS : LARGE_BRACKETS }),
+    vessel(FIGHTER_EDITIONS.at2r, kind, { critical: AT2R_DROPSHIP_CRITICAL, velocity: "across", columns: AT2R_VELOCITY, follows: `the ${LABELS[kind] ?? kind} Record Sheets, AeroTech 2: Revised Edition, PDF index 159-162`, notice: AT2R_NOTICE.replace("index 158", "index 159-162"), thresholdCite: AT2_THRESHOLD, heatScale: kind === "small-craft", crew: kind === "small-craft" ? { track: "pilot", incap: "Dead" } : CREW_AT2R, brackets: kind === "small-craft" ? SMALL_BRACKETS : LARGE_BRACKETS }),
   ),
   ...(["jumpship", "warship", "space-station"] as const).map((kind) =>
-    vessel(FIGHTER_EDITIONS.at2r, kind, { critical: AT2R_LARGE_CRITICAL, velocity: "across", columns: AT2R_VELOCITY, follows: `the ${LABELS[kind] ?? kind} Record Sheet, AeroTech 2: Revised Edition, PDF index 163-165`, notice: AT2R_LARGE_NOTICE, thresholdCite: AT2_THRESHOLD, crew: CREW_AT2, brackets: LARGE_BRACKETS }),
+    vessel(FIGHTER_EDITIONS.at2r, kind, { critical: AT2R_LARGE_CRITICAL[kind], velocity: "across", columns: AT2R_VELOCITY, follows: `the ${LABELS[kind] ?? kind} Record Sheet, AeroTech 2: Revised Edition, PDF index 163-165`, notice: AT2R_LARGE_NOTICE, thresholdCite: AT2_THRESHOLD, crew: CREW_AT2R, brackets: LARGE_BRACKETS }),
   ),
   vessel(FIGHTER_EDITIONS.current, "small-craft", { critical: CURRENT_SMALL_CRAFT_CRITICAL, velocity: "two-strips", columns: CURRENT_VELOCITY, follows: "the Small Craft Record Sheets, Blank Record Sheets (CAT35001RS), PDF index 14-15", notice: CURRENT_NOTICE.replace("12-13", "14-15"), thresholdCite: THRESHOLD_CITE, heatScale: true, crew: PILOT_CURRENT, brackets: SMALL_BRACKETS }),
   vessel(FIGHTER_EDITIONS.current, "dropship", { critical: CURRENT_DROPSHIP_CRITICAL, velocity: "two-strips", columns: CURRENT_VELOCITY, follows: "the DropShip Record Sheets, Blank Record Sheets (CAT35001RS), PDF index 16-17", notice: CURRENT_NOTICE.replace("12-13", "16-17"), thresholdCite: THRESHOLD_CITE, crew: CREW_CURRENT, brackets: LARGE_BRACKETS }),

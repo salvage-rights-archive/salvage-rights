@@ -22,11 +22,11 @@ const kindName = (record: AeroRecord): string => (record.unitType === "space-sta
 
 const AT2 = "aerotech2";
 // The zero-net-heat rule of large craft, by edition: AeroTech 2 p. 12, AeroTech 2 Revised p. 22 (an arc over the sinks may fire alone, with a control roll),
-// Strategic Operations: Advanced Aerospace Rules pp. 11 and 139 (such an arc may not fire).
+// Strategic Operations: Advanced Aerospace Rules pp. 11 and 139 (the heat fired in a turn is limited to the sinks).
 const ZERO_HEAT: Record<string, { cite: string; rule: string }> = {
   [FIGHTER_EDITIONS.at2]: { cite: "AeroTech 2, p. 12", rule: "a large craft may not make more heat than its sinks remove" },
   [FIGHTER_EDITIONS.at2r]: { cite: "AeroTech 2: Revised Edition, p. 22", rule: "it may fire that arc only on its own and must make a control roll" },
-  [FIGHTER_EDITIONS.current]: { cite: "Strategic Operations: Advanced Aerospace Rules, pp. 11, 139", rule: "it may not fire that arc" },
+  [FIGHTER_EDITIONS.current]: { cite: "Strategic Operations: Advanced Aerospace Rules, pp. 11, 139", rule: "the weapons it fires in a turn may not make more heat than the sinks remove, so it cannot fire this whole arc at once (its other arcs still can)" },
 };
 // Armor of the other tech base: TechManual p. 191 is the current edition's rule; the older books' pages are not read, so they are not checked.
 const PAGE_TECH_ARMOR = "TechManual, p. 191";
@@ -213,6 +213,19 @@ const zeroHeatCheck: AeroCheck = {
   },
 };
 
+/** The current edition's build rule: the sinks must cover the heat of the unit's hottest bay (Strategic Operations: Advanced Aerospace Rules p. 142; p. 139's table gives the Standard Rules no minimum; a DropShip, TechManual p. 193). */
+const hottestBayCheck: AeroCheck = {
+  id: "hottest-bay",
+  run({ record, catalog }) {
+    if (record.editionId !== FIGHTER_EDITIONS.current || (record.unitType !== "dropship" && capitalKind(record) === undefined)) return [];
+    const capacity = vessel(record, catalog)?.heat?.capacity;
+    const bays = vessel(record, catalog)?.bays ?? [];
+    const hottest = bays.reduce<(typeof bays)[number] | undefined>((best, bay) => (best === undefined || bay.heat > best.heat ? bay : best), undefined);
+    if (capacity === undefined || hottest === undefined || hottest.heat <= capacity) return [];
+    return [{ check: "hottest-bay", level: "error", message: `Firing ${hottest.bay.startsWith("arc:") ? `the ${aeroLocationName(hottest.arc)} weapons` : `bay ${hottest.bay}`} makes ${num(hottest.heat)} heat and the sinks take away ${num(capacity)}; the sinks must cover the hottest bay.`, where: { field: "heatSinks", arc: hottest.arc }, cite: record.unitType === "dropship" ? "TechManual, p. 193" : "Strategic Operations: Advanced Aerospace Rules, p. 142" }];
+  },
+};
+
 /** Ship systems of a capital ship: more than the edition allows, or on a type that may not carry them. */
 const systemsCheck: AeroCheck = {
   id: "systems",
@@ -245,4 +258,4 @@ const towingCheck: AeroCheck = {
   },
 };
 
-export const VESSEL_CHECKS: AeroCheck[] = [siCheck, vesselArmorCheck, armorTechBaseCheck, vesselArcsCheck, bayCheck, ammoCheck, crewCheck, doorCheck, zeroHeatCheck, systemsCheck, towingCheck];
+export const VESSEL_CHECKS: AeroCheck[] = [siCheck, vesselArmorCheck, armorTechBaseCheck, vesselArcsCheck, bayCheck, ammoCheck, crewCheck, doorCheck, zeroHeatCheck, hottestBayCheck, systemsCheck, towingCheck];

@@ -68,7 +68,8 @@ export function bayLines(record: AeroRecord, catalog: Catalog): WeaponLine[] {
         const value = Number(line.av[band]);
         if (Number.isFinite(value) && line.av[band] !== "") standard += capitalFigure ? value * 10 : value;
       }
-      return capitalBay ? standard / 10 : standard;
+      // A bay's attack value is a whole number, rounded to the nearest and up on .5 (AeroTech 2, p. 47); a capital bay's is counted in capital points.
+      return capitalBay ? Math.floor(standard / 10 + 0.5) : Math.floor(standard + 0.5);
     });
     const shown = totals.map((n, band) => (lines.some((l) => l.line.av[band] !== "") ? `${text(n)}${capitalBay ? "C" : ""}` : "")) as WeaponLine["av"];
     const names = [...new Set(group.mounts.map((m) => m.name))];
