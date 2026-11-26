@@ -762,12 +762,26 @@ export const BATTLE_ARMOR_BV: BvGroup[] = [
     ],
   },
   {
+    // The battle armor versions of the Tactical Operations: AUE weapons take the 'Mech weapon's line of the same name (printed pp. 194-196): the heavy flamer, ER pulse
+    // lasers, variable speed pulse lasers, and the Battle Armor Taser (p. 195). The BC3 systems have no Battle Value of their own (note D, p. 195).
+    cite: { book: TO, page: 195 },
+    checked: "page",
+    rows: [
+      ["ba-heavy-flamer-is", 15], ["ba-heavy-flamer-clan", 15],
+      ["ba-er-pulse-laser-small-clan", 36], ["ba-er-pulse-laser-medium-clan", 117],
+      ["ba-variable-speed-laser-small-is", 22], ["ba-variable-speed-laser-medium-is", 56],
+      ["ba-taser-is", 15],
+    ],
+  },
+  {
     // Battle armor Defensive Battle Rating, step 1 (replacement text for TechManual p. 310, v4.1): 1 for each of these systems.
     cite: { book: TM_BV, page: 310 },
     checked: "page",
     rows: [
       ["ba-improved-sensors-is", 1, undefined, { defensive: true }], ["ba-active-probe-is", 1, undefined, { defensive: true }], ["ba-ecm-suite-is", 1, undefined, { defensive: true }],
       ["ba-improved-sensors-clan", 1, undefined, { defensive: true }], ["ba-active-probe-clan", 1, undefined, { defensive: true }], ["ba-ecm-suite-clan", 1, undefined, { defensive: true }],
+      // The Angel ECM is factored in like an ECM suite but adds 2 (TO:AUE p. 192)
+      ["ba-angel-ecm-is", 2, undefined, { defensive: true }], ["ba-angel-ecm-clan", 2, undefined, { defensive: true }],
     ],
   },
 ];
