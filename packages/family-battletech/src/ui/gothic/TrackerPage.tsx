@@ -4,14 +4,15 @@
 // device per unit (`gothic-play:<unit id>`), so a reload or a closed tab loses nothing.
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router";
-import { HANDLER } from "../../data/gothic";
-import type { AbomWeapon } from "../../data/gothic";
+import { CONDITION_NAMES, HANDLER, PLANETARY_CONDITIONS } from "../../data/gothic";
+import type { AbomWeapon, ConditionId } from "../../data/gothic";
 import { GOTHIC_BASE } from "../../data/rulesets";
 import {
   activeCreatures,
   addOverflow,
   applyDamage,
   clusterColumn,
+  conditionEffect,
   creatureFor,
   damageModifier,
   damageThisPhase,
@@ -45,6 +46,18 @@ const EDITION = "gothic";
 const typeName = (unit: AbominationUnit, stats: UnitStats | undefined): string => (stats ? stats.name || "Custom type" : (unit.typeId ?? "Unknown type"));
 const unitName = (unit: AbominationUnit, stats: UnitStats | undefined): string => (unit.label.trim() ? `${unit.label.trim()} (${typeName(unit, stats)})` : typeName(unit, stats));
 const signed = (n: number): string => (n > 0 ? `+${String(n)}` : String(n));
+const CONDITION_KEY = "gothic-condition";
+const CONDITIONS = PLANETARY_CONDITIONS.flatMap((c) => c.ids);
+const PLANETARY_PAGE = PLANETARY_CONDITIONS[0]?.cite.page ?? 90;
+/** The condition the player left in play on this device, if any (a convenience: the page works without it). */
+const savedCondition = (): ConditionId | undefined => {
+  try {
+    const id = localStorage.getItem(CONDITION_KEY);
+    return CONDITIONS.find((c) => c === id);
+  } catch {
+    return undefined;
+  }
+};
 
 /** The units the player can put on the table when no force is open: every saved unit. */
 export function unitsToChoose(entries: readonly AbomEntry[]): AbominationUnit[] {
@@ -95,6 +108,8 @@ interface UnitTrackerProps {
   catalog: Catalog | undefined;
   onChange: (next: TrackerState) => void;
   onRemove: () => void;
+  /** The planetary condition in play, whose figures the unit shows for itself. */
+  condition?: ConditionId | undefined;
   /** Outside a force: put another of this saved unit on the table. */
   onAnother?: () => void;
 }
@@ -109,7 +124,8 @@ function weaponLabel(weapon: AbomWeapon, catalog: Catalog | undefined): string {
   return catalog?.rowFor(weapon.id, EDITION)?.name ?? weapon.id;
 }
 
-function UnitTracker({ unit, stats, state, catalog, onChange: keepState, onRemove, onAnother }: UnitTrackerProps) {
+function UnitTracker({ unit, stats, state, catalog, onChange: keepState, onRemove, onAnother, condition }: UnitTrackerProps) {
+  const effect = condition ? conditionEffect(condition, "abomination") : undefined;
   const name = unitName(unit, stats);
   /** The state before the last change, for Undo; kept on the page only, so a reload starts without one. */
   const [previous, setPrevious] = useState<TrackerState>();
@@ -159,10 +175,39 @@ function UnitTracker({ unit, stats, state, catalog, onChange: keepState, onRemov
             <dd>{`${signed(stats.size.bonusTmm)} (p. ${String(stats.size.cite.page)})`}</dd>
           </div>
         )}
+        {stats.size && (
+          <div>
+            <dt>Standing height</dt>
+            <dd>{`${String(stats.size.height)} ${stats.size.height === 1 ? "level" : "levels"} (p. ${String(stats.size.cite.page)})`}</dd>
+          </div>
+        )}
+        {stats.size && (
+          <div>
+            <dt>Facing</dt>
+            <dd>{`${stats.size.facing ? "Declared, no fire to the rear" : "None, fires all around"} (p. 69)`}</dd>
+          </div>
+        )}
         <div>
           <dt>Physical damage</dt>
           <dd>{[stats.melee !== null && `Melee ${String(stats.melee)}`, stats.mob !== null && `Mob ${String(stats.mob)}`, stats.hobble !== null && `Hobble ${String(stats.hobble)}`].filter(Boolean).join(", ") || "none"}</dd>
-        </div></dl>
+        </div>
+      </dl>
+      {condition && effect && (
+        <dl className="bt-track__facts bt-track__facts--text" aria-label={`${CONDITION_NAMES[condition]}: ${name}`}>
+          <div>
+            <dt>{`${CONDITION_NAMES[condition]}: extra MP per hex`}</dt>
+            <dd>{signed(effect.mp)}</dd>
+          </div>
+          <div>
+            <dt>Weapon attack modifier</dt>
+            <dd>{signed(effect.weapon)}</dd>
+          </div>
+          <div>
+            <dt>Physical attack modifier</dt>
+            <dd>{`${signed(effect.physical)} (p. ${String(PLANETARY_PAGE)})`}</dd>
+          </div>
+        </dl>
+      )}
       <dl className="bt-track__facts">
         <div>
           <dt>Active creatures</dt>
@@ -363,6 +408,7 @@ export default function TrackerPage() {
   const [states, setStates] = useState<Record<string, TrackerState>>({});
   const [catalog, setCatalog] = useState<Catalog>();
   const [loaded, setLoaded] = useState(false);
+  const [condition, setCondition] = useState<ConditionId | undefined>(savedCondition);
   const forceId = useSearchParams()[0].get("force");
   /** The force the page was opened from: its name and the saved-unit ids it lists. */
   const [force, setForce] = useState<{ name: string; units: AbominationUnit[] }>();
@@ -434,6 +480,17 @@ export default function TrackerPage() {
     if (stats) void keep(nextCopyKey(baseId, Object.keys(states)), newTracker(stats));
   };
 
+  const chooseCondition = (value: string) => {
+    const id = CONDITIONS.find((c) => c === value);
+    setCondition(id);
+    try {
+      if (id) localStorage.setItem(CONDITION_KEY, id);
+      else localStorage.removeItem(CONDITION_KEY);
+    } catch {
+      // The choice lasts until the page closes.
+    }
+  };
+
   const clearTable = async () => {
     setConfirmingClear(false);
     for (const unit of onTable) await keep(unit.id, undefined);
@@ -466,6 +523,19 @@ export default function TrackerPage() {
             Clear the table
           </button>
         </p>
+      )}
+      {onTable.length > 0 && (
+        <div className="bt-field">
+          <label htmlFor="bt-condition">Planetary condition</label>
+          <select id="bt-condition" value={condition ?? ""} onChange={(event) => { chooseCondition(event.target.value); }}>
+            <option value="">None</option>
+            {CONDITIONS.map((id) => (
+              <option key={id} value={id}>
+                {CONDITION_NAMES[id]}
+              </option>
+            ))}
+          </select>
+        </div>
       )}
       {confirmingClear && (
         <div className="bt-confirm" role="group" aria-label="Confirm clear the table" onKeyDown={(event) => { if (event.key === "Escape") setConfirmingClear(false); }}>
@@ -531,6 +601,7 @@ export default function TrackerPage() {
             stats={stats}
             state={state}
             catalog={catalog}
+            condition={condition}
             onChange={(next) => { void keep(unit.id, next); }}
             {...(force ? {} : { onAnother: () => { another(unit); } })}
             onRemove={() => {
