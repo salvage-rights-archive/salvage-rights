@@ -6,6 +6,10 @@ import { AS_AEROSPACE_ROLES, AS_EDITION, AS_GROUND_ROLES, AS_UNIT_TYPES, SKILLS 
 import { formatDamage, formatMove, formatSpecials, newAsUnit, parseDamage, parseMove, parseSpecials, unitFindings, unitTitle } from "../../rules/as-unit";
 import type { AsDamage, AsUnit } from "../../rules/as-unit";
 import { asOfficialMark } from "../../rules/as-mul";
+import { RULES_LEVELS } from "../../data/chassis";
+import { playFindings } from "../../rules/as-force";
+import { LEVEL_ORDER } from "../../rules/levels";
+import { usePlaySettings } from "./playSettings";
 import LeaveConfirm from "../editor/LeaveConfirm";
 import { readPicture } from "../picture";
 import { STORAGE_READ_FAILED, STORAGE_WRITE_FAILED } from "../storage";
@@ -33,6 +37,10 @@ interface Fields {
   structure: string;
   specials: string;
   skill: string;
+  /** "" when the unit states no level (it then counts as Standard). */
+  rulesLevel: string;
+  /** "" when the unit has no year. */
+  year: string;
   notes: string;
   picture: string;
 }
@@ -58,6 +66,8 @@ export function fieldsOf(unit: AsUnit): Fields {
     structure: String(card.structure),
     specials: formatSpecials(card.specials),
     skill: String(unit.skill),
+    rulesLevel: unit.rulesLevel ?? "",
+    year: typeof unit.year === "number" ? String(unit.year) : "",
     notes: unit.notes ?? "",
     picture: unit.picture?.dataUrl ?? "",
   };
@@ -92,8 +102,13 @@ export function buildUnit(fields: Fields, base: AsUnit): { unit: AsUnit; errors:
   else if (/^\d+$/.test(fields.tmm.trim())) tmm = Number(fields.tmm);
   else errors.tmm = WHOLE;
   if (fields.chassis.trim() === "") errors.chassis = "Give the unit a name.";
+  const yearText = fields.year.trim();
+  if (yearText !== "" && !/^\d{4}$/.test(yearText)) errors.year = "Write the year as four digits, such as 3052.";
+  const level = LEVEL_ORDER.find((l) => l === fields.rulesLevel);
   const unit: AsUnit = {
     ...base,
+    rulesLevel: level,
+    year: yearText === "" ? (typeof base.year === "number" ? undefined : base.year) : /^\d{4}$/.test(yearText) ? Number(yearText) : base.year,
     name: { chassis: fields.chassis.trim(), model: fields.model.trim() },
     skill: Number(fields.skill),
     notes: fields.notes === "" ? undefined : fields.notes,
@@ -267,7 +282,8 @@ function UnitForm({ initial, isNew, review, storage }: { initial: AsUnit; isNew:
   const { unit, errors } = buildUnit(fields, base);
   const dirty = JSON.stringify(fields) !== JSON.stringify(saved);
   const invalid = Object.keys(errors).length > 0;
-  const findings = unitFindings(unit);
+  const { filter } = usePlaySettings();
+  const findings = [...unitFindings(unit), ...playFindings(unit, filter)];
   const blocker = useBlocker(() => dirty && !skipGuard.current);
 
   useEffect(() => {
@@ -474,6 +490,15 @@ function UnitForm({ initial, isNew, review, storage }: { initial: AsUnit; isNew:
                 </option>
               ))}
             </SelectField>
+            <SelectField id="as-level" label="Rules level" value={fields.rulesLevel} onChange={set("rulesLevel")}>
+              <option value="">Not stated (counts as Standard)</option>
+              {RULES_LEVELS.map((l) => (
+                <option key={l.id} value={l.id}>
+                  {l.label}
+                </option>
+              ))}
+            </SelectField>
+            <TextField id="as-year" label="Year" value={fields.year} error={errors.year} onChange={set("year")} hint="Leave blank if the card gives none." />
             <TextField id="as-specials" label="Special abilities" value={fields.specials} onChange={set("specials")} hint="Separate with commas, for example IF1, CASE, LRM1/1/0." wide />
             <div className="bt-field as-wide">
               <label htmlFor="as-notes">Notes</label>

@@ -168,6 +168,52 @@
   margin: var(--sr-space-3) 0;
 }
 
+// One column at every width: a range, its odds, its damage box and the expected damage stack, so a phone needs no sideways scroll.
+.as-aids__ranges {
+  display: grid;
+  gap: var(--sr-space-3);
+  margin: var(--sr-space-3) 0;
+  padding: 0;
+  list-style: none;
+}
+
+.as-aids__range {
+  display: grid;
+  gap: var(--sr-space-1);
+  overflow-wrap: anywhere;
+}
+
+.as-aids__steps,
+.as-aids__rows {
+  margin: var(--sr-space-2) 0;
+  overflow-wrap: anywhere;
+}
+
+.as-aids__codes {
+  overflow-wrap: anywhere;
+}
+
+.as-aids__table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+
+  th,
+  td {
+    padding: var(--sr-space-1);
+    border-bottom: 1px solid var(--sr-border, currentColor);
+    text-align: left;
+    overflow-wrap: anywhere;
+  }
+}
+
+.as-aids__caption {
+  text-align: left;
+  font-weight: 600;
+  padding-bottom: var(--sr-space-1);
+}
+
 .as-table__list {
   display: grid;
   grid-template-columns: minmax(0, 1fr);

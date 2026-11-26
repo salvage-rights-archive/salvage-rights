@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { duplicateForce, forceTotals, inPlay, newAsForce, pvStep, readFilter, skillAdjustedPv } from "./as-force";
+import { duplicateForce, forceTotals, inPlay, newAsForce, playFindings, pvStep, readFilter, skillAdjustedPv } from "./as-force";
 import { newAsUnit } from "./as-unit";
 import type { AsUnit } from "./as-unit";
 
@@ -55,11 +55,19 @@ describe("the play filter", () => {
     [unit(3000, "clan"), { techBase: "inner-sphere" as const }, false],
     [unit(3000, "mixed"), { techBase: "inner-sphere" as const }, true],
     [unit(3000, "inner-sphere"), {}, true],
+    [{ ...unit(3000), rulesLevel: "advanced" as const }, {}, false], // Standard is the level until one is chosen
+    [{ ...unit(3000), rulesLevel: "advanced" as const }, { rulesLevel: "advanced" as const }, true],
+    [unit(3000), { rulesLevel: "introductory" as const }, false], // a unit that states no level counts as Standard
   ])("%#: picks or hides", (u, filter, shown) => {
     expect(inPlay(u, filter)).toBe(shown);
   });
+  it("reports a unit in use that the setting would hide, instead of hiding it", () => {
+    const u: AsUnit = { ...unit(3060), rulesLevel: "experimental" };
+    expect(playFindings(u, { year: 3050 }).map((f) => f.id)).toEqual(["play-level", "play-year"]);
+    expect(playFindings(u, { rulesLevel: "experimental", year: 3060 })).toEqual([]);
+  });
   it("reads a stored filter and drops what it does not know", () => {
-    expect(readFilter({ year: 3050.5, techBase: "both", extra: 1 })).toEqual({});
-    expect(readFilter({ year: 3050, techBase: "clan" })).toEqual({ year: 3050, techBase: "clan" });
+    expect(readFilter({ year: 3050.5, techBase: "both", rulesLevel: "huge", editionId: "old", extra: 1 })).toEqual({});
+    expect(readFilter({ year: 3050, techBase: "clan", rulesLevel: "advanced", editionId: "asce" })).toEqual({ year: 3050, techBase: "clan", rulesLevel: "advanced", editionId: "asce" });
   });
 });

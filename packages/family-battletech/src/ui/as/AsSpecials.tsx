@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router";
 import { AS_UNIT_TYPES } from "../../data/alpha-strike";
-import { RULES_LEVELS } from "../../data/chassis";
-import type { RulesLevel } from "../../data/chassis";
+import { playLevel } from "../../rules/as-force";
 import { findSpecial, glossOf, specialAnchor, specialCite, specialsFor } from "../../rules/as-specials";
 import { formatSpecial } from "../../rules/as-unit";
 import type { AsSpecial } from "../../rules/as-unit";
+import { usePlaySettings } from "./playSettings";
 import { setSpecialSettings, useSpecialSettings } from "./specialSettings";
 
 const AIDS = "/battletech/alpha-strike/aids";
@@ -63,7 +63,8 @@ export function SpecialLinks({ specials }: { specials: AsSpecial[] }) {
 
 /** The specials section of the aids page: the table cut to a rules level and, when asked, a unit type. */
 export function SpecialsAid() {
-  const { glosses, level } = useSpecialSettings();
+  const { glosses } = useSpecialSettings();
+  const level = playLevel(usePlaySettings().filter);
   const hash = useLocation().hash.replace(/^#/, "");
   const [type, setType] = useState("");
   const shown = specialsFor(level, type === "" ? undefined : type);
@@ -84,25 +85,9 @@ export function SpecialsAid() {
       <p className="bt-hint">
         Each ability with the page of Alpha Strike: Commander&apos;s Edition that describes it. Standard abilities run from p. 76 to the C3 entries on
         p. 82; the optional ones follow, and every player has to agree to use them (p. 82). At the Introductory level we list only the abilities
-        printed on the box set cards.
+        printed on the box set cards. The list follows the rules level set at the top of this page.
       </p>
       <div className="as-aids__grid">
-        <div className="bt-field">
-          <label htmlFor="as-spec-level">Rules level</label>
-          <select
-            id="as-spec-level"
-            value={level}
-            onChange={(event) => {
-              setSpecialSettings({ level: event.target.value as RulesLevel });
-            }}
-          >
-            {RULES_LEVELS.map((l) => (
-              <option key={l.id} value={l.id}>
-                {l.label}
-              </option>
-            ))}
-          </select>
-        </div>
         <div className="bt-field">
           <label htmlFor="as-spec-type">Unit type</label>
           <select

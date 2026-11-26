@@ -18,6 +18,7 @@ describe("target number", () => {
     expect(rangeBracket(43)).toBeNull();
     expect(targetNumber({ ...base, distance: 43 }).blocked?.id).toBe("out-of-range");
     expect(tn({ distance: 43, extreme: true })).toBe(4 + 2 + 6);
+    expect([60, 61].map((d) => rangeBracket(d, true))).toEqual(["E", null]); // past 60 inches is Horizon range, not Extreme (p. 163)
   });
 
   it("gives partial cover to 'Mechs only, never to vehicles, infantry or a hull-down unit", () => {

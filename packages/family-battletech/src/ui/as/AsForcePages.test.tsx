@@ -9,10 +9,12 @@ import { newAsUnit } from "../../rules/as-unit";
 import type { AsUnit } from "../../rules/as-unit";
 import AsForcePage from "./AsForcePage";
 import AsHomePage from "./AsHomePage";
+import { resetPlayFilter } from "./playSettings";
 import { openAsStorage, toForceFile } from "./storage";
 
 beforeEach(() => {
   globalThis.indexedDB = new IDBFactory();
+  resetPlayFilter();
 });
 afterEach(cleanup);
 
@@ -103,5 +105,28 @@ describe("the game year and tech base", () => {
     renderAt("/battletech/alpha-strike/force?id=f1");
     const picker = await screen.findByLabelText("Unit");
     expect([...picker.querySelectorAll("option")].map((o) => o.textContent)).toEqual(["Choose a unit", "Archer (PV 35)"]);
+  });
+});
+
+describe("the rules level", () => {
+  it("leaves a unit above the level out of the unit list for a force, and brings it back when the level is raised", async () => {
+    const user = userEvent.setup();
+    const storage = await openAsStorage();
+    await storage.save({ ...unit("a", "Archer", 35), rulesLevel: "standard" });
+    await storage.save({ ...unit("b", "Banshee", 39), rulesLevel: "advanced" });
+    await storage.save(unit("c", "Cougar", 30));
+    await storage.saveForce(newAsForce("f1", "Lance"));
+    const names = async () => [...(await screen.findByLabelText("Unit")).querySelectorAll("option")].map((o) => o.textContent).sort();
+    renderAt("/battletech/alpha-strike/force?id=f1");
+    expect(await names()).toEqual(["Archer (PV 35)", "Choose a unit", "Cougar (PV 30)"]);
+    cleanup();
+    renderAt("/battletech/alpha-strike/home");
+    const level = await screen.findByLabelText("Rules level");
+    await waitFor(() => { expect((level as HTMLSelectElement).disabled).toBe(false); });
+    await user.selectOptions(level, "advanced");
+    await waitFor(async () => { expect((await storage.getFilter()).rulesLevel).toBe("advanced"); });
+    cleanup();
+    renderAt("/battletech/alpha-strike/force?id=f1");
+    expect(await names()).toEqual(["Archer (PV 35)", "Banshee (PV 39)", "Choose a unit", "Cougar (PV 30)"]);
   });
 });

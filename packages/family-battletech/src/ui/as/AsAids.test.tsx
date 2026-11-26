@@ -9,9 +9,11 @@ import { splitRecord } from "../../rules/omni";
 import { openFamilyStorage } from "../storage";
 import AsAidsPage from "./AsAidsPage";
 import AsConvert from "./AsConvert";
+import { resetPlayFilter } from "./playSettings";
 
 beforeEach(() => {
   globalThis.indexedDB = new IDBFactory();
+  resetPlayFilter();
 });
 afterEach(cleanup);
 
@@ -26,10 +28,31 @@ describe("To-hit calculator", () => {
     // Skill 4, attacker moved (+0), 8 inches is Medium (+2), target TMM 2: 4 + 0 + 2 + 2 = 8, which 2D6 meets 15 times in 36.
     expect(screen.getByRole("status", { name: "" }).textContent).toContain("Target Number 8");
     expect(screen.getByRole("status", { name: "" }).textContent).toContain("42%");
-    await user.type(screen.getByLabelText("Damage at this range (from the card)"), "3");
+    await user.type(screen.getByLabelText("Damage at medium range (from the card)"), "3");
     expect(screen.getByText(/Expected damage 1\.25/)).toBeTruthy();
     await user.selectOptions(screen.getByLabelText("Attacker movement"), "sprint");
     expect(screen.getByText("A unit that sprinted cannot attack.")).toBeTruthy();
+  });
+});
+
+describe("Play aids and the rules level", () => {
+  it("has a section for each aid, and shows the optional ranges only once the level is Advanced", async () => {
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter>
+        <AsAidsPage />
+      </MemoryRouter>,
+    );
+    for (const name of ["To-hit calculator", "Ranges", "Heat", "Critical hits", "Turn sequence", "Movement costs"]) expect(screen.getByRole("heading", { name })).toBeTruthy();
+    expect(screen.queryByLabelText("Extreme range is in play")).toBeNull();
+    expect(screen.queryByText(/Horizon/)).toBeNull();
+    const level = screen.getByLabelText("Rules level");
+    await waitFor(() => { expect((level as HTMLSelectElement).disabled).toBe(false); });
+    await user.selectOptions(level, "advanced");
+    await user.click(screen.getByLabelText("Extreme range is in play"));
+    // Extreme adds +6: 4 + 2 (TMM) + 6 = 12 at its edge, and its damage is the Long value less 1.
+    expect(screen.getByText(/Extreme: Target Number 12/)).toBeTruthy();
+    expect(screen.getByText(/past 60" to the board edge/)).toBeTruthy();
   });
 });
 

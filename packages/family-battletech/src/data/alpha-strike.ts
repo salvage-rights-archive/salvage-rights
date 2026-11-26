@@ -5,6 +5,9 @@ import { AS_SPECIALS } from "./as-specials";
 /** The play book the roster follows (its row in `BOOKS` comes with the edition piece). */
 export const AS_EDITION = { id: "asce", name: "Alpha Strike: Commander's Edition", publisher: "Catalyst Game Labs" } as const;
 
+/** The play editions the player may choose. One for now: the Commander's Edition replaced the older rulebook. */
+export const AS_EDITIONS = [{ ...AS_EDITION, printing: "2024 printing, errata v7.02" }] as const;
+
 /** Where each table below was read, against the page image. */
 export const AS_CITES = {
   card: { book: "Alpha Strike: Commander's Edition", page: 27, checked: "page" },
@@ -169,7 +172,7 @@ export const AS_RANGE_BRACKETS = [
   { id: "S", label: "Short range", upTo: 6, value: 0 },
   { id: "M", label: "Medium range", upTo: 24, value: 2 },
   { id: "L", label: "Long range", upTo: 42, value: 4 },
-  { id: "E", label: "Extreme range", upTo: Infinity, value: 6 },
+  { id: "E", label: "Extreme range", upTo: 60, value: 6 },
 ] as const;
 export const AS_RANGE_CITE = asceCite("43-44");
 
@@ -315,3 +318,128 @@ export const AS_CARD_AIR: readonly CardLayout[] = ["fighter", "large-air"];
 
 /** Our own cite for the card's foot line: the blank card followed. */
 export const AS_CARD_FOOT = "ASCE p. 213";
+
+// ==== AS-6: play aids. Figures, codes and our own short words, each row with its page, read against the page images (ASCE 2024 printing,
+// errata v7.02). Where the errata changed a rule, the figure is the errata's. ==================================================
+
+/** The lowest rules level that offers the optional rules the aids show (the Optional Rules chapter, ASCE pp. 136-179; Extreme range p. 163). */
+export const AS_OPTIONAL_LEVEL = "advanced" as const;
+
+/** The four phases of a turn, with what the player does in each, in our words (ASCE pp. 30-31). */
+export const AS_TURN_STEPS = [
+  { id: "initiative", name: "Initiative", points: ["Each side rolls 2D6; the higher total wins, ties are rolled again.", "The winner acts after the other side in both the Movement and Combat phases."], cite: asceCite(30) },
+  { id: "movement", name: "Movement", points: ["The side that lost Initiative moves one unit first; sides then take turns, one unit each.", "With unequal numbers, the larger side moves units in proportion (p. 32)."], cite: asceCite("31-32") },
+  { id: "combat", name: "Combat", points: ["The side that lost Initiative declares and resolves all its attacks first, then the winner.", "A unit makes one attack. Damage is marked at once; its effects wait for the End Phase."], cite: asceCite(31) },
+  { id: "end", name: "End", points: ["Both sides together: remove destroyed units, apply heat (below), restart shut-down units, and do any other end-of-turn actions."], cite: asceCite(31) },
+] as const;
+
+/** One row of the range table (pp. 43-44; Extreme and Horizon pp. 162-163). `from` is the distance in inches the row starts after. */
+export interface RangeRow {
+  id: "S" | "M" | "L" | "E" | "H";
+  label: string;
+  from: number;
+  /** Last distance in inches; undefined runs to the edge of the board. */
+  to?: number;
+  modifier: number;
+  optional?: boolean;
+  /** Damage at this range, from the card's Long value, for the optional ranges. */
+  damage?: string;
+  cite: string;
+}
+export const AS_RANGE_ROWS: RangeRow[] = [
+  { id: "S", label: "Short", from: 0, to: 6, modifier: 0, cite: asceCite(43) },
+  { id: "M", label: "Medium", from: 6, to: 24, modifier: 2, cite: asceCite(43) },
+  { id: "L", label: "Long", from: 24, to: 42, modifier: 4, cite: asceCite(43) },
+  { id: "E", label: "Extreme", from: 42, to: 60, modifier: 6, optional: true, damage: "the Long value less 1, least 0", cite: asceCite(163) },
+  { id: "H", label: "Horizon", from: 60, modifier: 8, optional: true, damage: "half the Long value, rounded down", cite: asceCite(163) },
+];
+
+/** What heat does at each level of the scale (p. 52): the attack modifier is the level; Move loses 2 inches a level and TMM 1 from level 2, none of it when jumping. */
+export const AS_HEAT_SCALE_CITE = asceCite("52-53");
+
+/** The End Phase heat order, as our short step names (p. 53). */
+export const AS_HEAT_STEPS = [
+  "Add the Overheat Value used this turn.",
+  "Take 1 off if the unit sits in water 1 inch deep or more.",
+  "Clear all heat if the unit made no weapon attack.",
+  "Clear all heat and restart the unit if it began the phase shut down.",
+  "Add heat from outside sources (HT), at most 2 in a turn.",
+] as const;
+export const AS_HEAT_NOTES = [
+  { text: "Overheating: spend up to the unit's OV in points before the roll; each adds that much damage at Short and Medium (and Long with OVL), and 1 heat in the End Phase. Not for physical attacks, nor for special-ability damage.", cite: asceCite(53) },
+  { text: "A 'Mech may also raise its heat by 1 on purpose in the End Phase, once each turn it chooses to.", cite: asceCite(53) },
+  { text: "At level 4 the unit shuts down: it cannot move or attack, and counts as immobile (TMM -4).", cite: asceCite(53) },
+] as const;
+
+/** What each critical result does, in our short words, with the page (ASCE pp. 49-50; errata v7.02 changed Engine, MP and Weapon hits). */
+export const AS_CRIT_EFFECTS: Record<CritKind, { label: string; effect: string; cite: string }> = {
+  ammo: { label: "Ammo hit", effect: "Unit destroyed; CASE takes 1 damage instead, CASEII and ENE take none.", cite: asceCite(50) },
+  engine: { label: "Engine hit", effect: "'Mech: +1 heat in the End Phase if it fired that turn; a second hit destroys it. Vehicle: Move, TMM and damage halved; a second hit destroys it.", cite: asceCite(50) },
+  "fire-control": { label: "Fire control hit", effect: "+2 to the Target Number of weapon attacks, for each hit.", cite: asceCite(50) },
+  mp: { label: "MP hit", effect: "Move and TMM halved, rounded down; at least 2 inches and 1 TMM lost per hit. At 0 Move the unit is immobile.", cite: asceCite(50) },
+  weapon: { label: "Weapon hit", effect: "Every damage value drops by 1 (1 becomes 0*, 0* becomes 0). Physical attacks keep theirs.", cite: asceCite(50) },
+  none: { label: "No critical", effect: "No effect.", cite: asceCite(50) },
+  "crew-stunned": { label: "Crew stunned", effect: "No movement or attacks next turn; counts as immobile.", cite: asceCite(50) },
+  "crew-killed": { label: "Crew killed", effect: "Unit destroyed.", cite: asceCite(50) },
+  destroyed: { label: "Unit destroyed", effect: "Unit destroyed.", cite: asceCite(50) },
+};
+/** What calls for a critical roll, as short names (pp. 49-50); an IndustrialMech rolls twice (p. 50). */
+export const AS_CRIT_TRIGGERS = [
+  "A natural 12 that deals damage",
+  "Any hit that damages structure",
+  "A hit by Death from Above or an Anti-'Mech attack",
+  "Any damage to a unit with BAR, or to a submerged unit",
+  "An aerospace unit past its damage threshold",
+] as const;
+
+export const AS_CRIT_COLUMNS: { id: "mech" | "proto" | "vehicle"; label: string }[] = [
+  { id: "mech", label: "'Mech" },
+  { id: "proto", label: "ProtoMech" },
+  { id: "vehicle", label: "Vehicle" },
+];
+/** Motive systems damage by 2D6 after the type's modifier (p. 51; modifiers in AS_MOTIVE_MODIFIER), our labels for each row. */
+export const AS_MOTIVE_RESULTS = [
+  { rolls: "2 to 8", effect: "No effect" },
+  { rolls: "9 or 10", effect: "-2 inches Move and -1 TMM" },
+  { rolls: "11", effect: "Move and TMM halved (rounded down), least 2 inches and 1 TMM lost" },
+  { rolls: "12 or more", effect: "Immobilized" },
+] as const;
+export const AS_MOTIVE_CITE = asceCite(51);
+
+/** The movement codes (p. 35). */
+export const AS_MOVE_TYPES: [string, string][] = [
+  ["h", "Hover"], ["n", "Naval"], ["s", "Submersible"], ["qw", "Quadvee wheeled"], ["qt", "Quadvee tracked"], ["t", "Tracked"], ["v", "VTOL"],
+  ["w", "Wheeled"], ["w(b)", "Wheeled, bicycle"], ["w(m)", "Wheeled, monocycle"], ["g", "WiGE"], ["f", "Foot"], ["j", "Jump"], ["m", "Motorized"],
+];
+
+/** The Movement Cost Table (p. 34): extra Move per inch and the movement letters or unit types that may not enter. `note` is ours. */
+export interface MoveCostRow {
+  terrain: string;
+  cost: string;
+  barred: string;
+  note?: string;
+}
+export const AS_MOVE_COSTS: MoveCostRow[] = [
+  { terrain: "Base move", cost: "1\"", barred: "none" },
+  { terrain: "Clear", cost: "+0\"", barred: "n, s", note: "Wheeled support vehicles without ORO pay +1\"." },
+  { terrain: "Paved, road, bridge", cost: "+0\"", barred: "n, s", note: "Tracked and wheeled units that spend the whole move on it gain 2\"." },
+  { terrain: "Rough", cost: "+1\"", barred: "n, s, w" },
+  { terrain: "Rubble", cost: "+1\"", barred: "n, s" },
+  { terrain: "Woods", cost: "+1\"", barred: "g, n, h, s, v, w", note: "Infantry pay 1\" less (least +0\"); w(b) and w(m) may enter." },
+  { terrain: "Water, surface only", cost: "+0\"", barred: "all except g, h, n, s", note: "Wheeled or tracked with AMP pay +1\"." },
+  { terrain: "Water, depth 0", cost: "+0\"", barred: "n, s" },
+  { terrain: "Water, depth 1\"", cost: "+1\"", barred: "ground and air vehicles, infantry, IndustrialMechs", note: "Along the bottom; SEAL vehicles and UMU infantry may enter." },
+  { terrain: "Water, depth 2\" or more", cost: "+3\"", barred: "ground and air vehicles, infantry, IndustrialMechs", note: "As depth 1\"; submarine movement adds nothing. A SEAL IndustrialMech may enter (p. 34 note 9)." },
+];
+/** Level changes (p. 34), per 1 inch up or down. */
+export const AS_LEVEL_CHANGES: { who: string; cost: string }[] = [
+  { who: "'Mechs and ProtoMechs", cost: "+2\"" },
+  { who: "Airborne g and v types", cost: "+2\"" },
+  { who: "Submersible (s) in water, per inch of depth", cost: "+2\"" },
+  { who: "Infantry and ground vehicles", cost: "+4\"" },
+];
+/** The tallest step each may climb: 'Mechs 2 inches; infantry, ground vehicles, ProtoMechs and WiGEs 1 inch (p. 34; errata v7.02 for p. 35). */
+export const AS_LEVEL_LIMITS = { mech: 2, others: 1, cite: asceCite("34-35") } as const;
+export const AS_MOVE_CITE = "ASCE p. 34, 2024 printing; errata v7.02 replaces this table with a download we have not read";
+/** Entering a terrain type (p. 32, errata v7.02). */
+export const AS_ENTER_TERRAIN = { cite: "ASCE p. 32, errata v7.02", text: "Entering a new terrain type costs one full inch; the unit may then move 1 more inch in it, and further inches may be paid in full or half inches." } as const;
