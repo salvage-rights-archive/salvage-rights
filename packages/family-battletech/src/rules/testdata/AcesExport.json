@@ -126,7 +126,7 @@
       { "id": "so-1", "kind": "forced-withdrawal", "name": "Withdraw", "rules": ["leave the table"], "column": null, "preFilters": [], "spotter": [], "sample": false, "notes": "" },
       { "id": "so-2", "kind": "other", "name": "Odd", "rules": [], "sample": false }
     ],
-    "edgeCards": [{ "id": "edge-1", "name": "Invented edge", "sample": false }],
+    "edgeCards": [{ "id": "edge-1", "name": "Invented edge", "sample": false }, { "id": "edge-2", "name": "nimble", "sample": false }],
     "scenarios": [{ "id": "sc-1", "name": "Invented sortie", "sample": false }]
   },
   "exportedAt": "2026-11-26T12:00:00.000Z",

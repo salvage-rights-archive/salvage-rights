@@ -361,7 +361,7 @@ export function leaveTable(game: AcesGame, unitId: string): AcesGame {
 export const edgeLeft = (u: GameUnit): number => u.edge ?? 0;
 export const hasPilotEdge = (u: GameUnit): boolean => u.edge !== undefined;
 
-const mapUnit = (game: AcesGame, id: string, change: (u: GameUnit) => GameUnit): AcesGame => ({
+export const mapUnit = (game: AcesGame, id: string, change: (u: GameUnit) => GameUnit): AcesGame => ({
   ...game,
   sides: { player: { ...game.sides.player, units: game.sides.player.units.map((u) => (u.id === id ? change(u) : u)) }, automated: { ...game.sides.automated, units: game.sides.automated.units.map((u) => (u.id === id ? change(u) : u)) } },
 });
