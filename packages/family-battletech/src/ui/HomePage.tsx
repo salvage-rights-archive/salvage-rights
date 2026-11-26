@@ -264,7 +264,8 @@ export default function HomePage() {
   const tons = tonnages.includes(draft.tons) ? draft.tons : (tonnages.find((t) => t >= draft.tons) ?? tonnages.at(-1) ?? draft.tons);
 
   // The walking speeds the largest engine in the table allows at this tonnage.
-  const walks = Array.from({ length: Math.floor(MAX_RATING / tons) }, (_, i) => i + 1);
+  // A Primitive 'Mech's engine is built a fifth higher than the speed needs (IO:AE p.117), and must still be in the table.
+  const walks = Array.from({ length: Math.floor(MAX_RATING / (mechTypeOf({ unitType }).primitive?.ratingFactor ?? 1) / tons) }, (_, i) => i + 1);
 
   // The aerospace units the current rules build, offered at the rules levels that include them (hidden below, never marked).
   const aeroOptions = (["aerospace-fighter", "conventional-fighter", "small-craft", "dropship"] as const).flatMap((type) => {

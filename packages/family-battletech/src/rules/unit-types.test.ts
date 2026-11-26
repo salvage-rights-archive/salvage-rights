@@ -59,7 +59,7 @@ const forCheck = (record: MechRecord, id: string) => runChecks(record, catalog).
 
 describe("the 'Mech types", () => {
   it("are one table the edition's unit types come from; OmniMech is ready, with the Construction Options years and the Clan prototype year", () => {
-    expect(MECH_TYPES.map((t) => [t.id, t.label, t.ready])).toEqual([["mech", "BattleMech", true], ["industrialmech", "IndustrialMech", true], ["omnimech", "OmniMech", true]]);
+    expect(MECH_TYPES.map((t) => [t.id, t.label, t.ready])).toEqual([["mech", "BattleMech", true], ["industrialmech", "IndustrialMech", true], ["omnimech", "OmniMech", true], ["primitive-mech", "Primitive BattleMech", true], ["primitive-industrialmech", "Primitive IndustrialMech", true]]);
     expect(EDITIONS[0]?.unitTypes.slice(0, 3)).toEqual([
       { id: "mech", name: "BattleMech", ready: true },
       { id: "industrialmech", name: "IndustrialMech", ready: true },

@@ -23,12 +23,13 @@ import {
   ROUNDING,
   SENSORS_COST,
   STRUCTURE_COST,
+  PRIMITIVE_COST,
   SUPERHEAVY_COST,
 } from "../data/cost";
 import type { Price } from "../data/cost";
 import type { Catalog, EquipmentRow } from "./catalog";
 import { CLAN_CASE_IDS, clanStructure, explosiveLocations } from "./case";
-import { armorTypeAt, armorTypesUsed, armsOf, configurationOf, industrialRulesOf, patchworkActive, patchworkTons, superheavyOf } from "./mech";
+import { armorTypeAt, armorTypesUsed, armsOf, configurationOf, engineRatingOf, industrialRulesOf, patchworkActive, patchworkTons, primitiveRulesOf, superheavyOf } from "./mech";
 import type { LocationCode, MechRecord, Mount } from "./mech";
 import { equipmentItems, mascOf, own, stemOf, tsmOf, TSM_ROWS, weightLine } from "./walk";
 
@@ -142,7 +143,8 @@ export function unitCost(record: MechRecord, catalog: Catalog, options: CostOpti
     const key = tsm === "prototype" ? "prototype-tsm" : tsm ? "tsm" : own(MUSCULATURE_COST.rows, chassis.myomer) ? chassis.myomer : "standard";
     // A superheavy 'Mech's musculature is priced by its own formula (IO:AE printed p.217).
     const heavy = superheavyOf(record) !== undefined;
-    const musculature = heavy ? { perTon: SUPERHEAVY_COST.musculaturePerTon, cite: SUPERHEAVY_COST.cite } : MUSCULATURE_COST.rows[key];
+    const primitive = primitiveRulesOf(record) !== undefined;
+    const musculature = heavy ? { perTon: SUPERHEAVY_COST.musculaturePerTon, cite: SUPERHEAVY_COST.cite } : primitive ? { perTon: PRIMITIVE_COST.musculaturePerTon, cite: PRIMITIVE_COST.cite } : MUSCULATURE_COST.rows[key];
     if (musculature) add(structural, key === "standard" ? "Musculature" : `Musculature (${key})`, musculature.perTon * tons, `${money(musculature.perTon)} x ${tons}`, { cite: musculature.cite ?? MUSCULATURE_COST.cite, checked: MUSCULATURE_COST.checked });
   } else skip("Sensors and musculature", "the tonnage is not a positive number");
 
@@ -185,7 +187,9 @@ export function unitCost(record: MechRecord, catalog: Catalog, options: CostOpti
   const engine = own(ENGINE_COST.rows, chassis.engine.type);
   if (engine && tonsKnown && Number.isFinite(chassis.engine.rating)) {
     if (engine.assumed) assume(`Engine "${chassis.engine.type}"`);
-    add(structural, `Engine (${chassis.engine.type} ${chassis.engine.rating})`, engineCost(engine.perRating, chassis.engine.rating, tons), `${money(engine.perRating)} x ${chassis.engine.rating} x ${tons} / ${ENGINE_COST.divisor}`, { cite: engine.cite ?? ENGINE_COST.cite, checked: ENGINE_COST.checked });
+    // A Primitive 'Mech's engine is the rating raised a fifth (IO:AE printed p.117); that is the engine bought.
+    const built = engineRatingOf(record);
+    add(structural, `Engine (${chassis.engine.type} ${built})`, engineCost(engine.perRating, built, tons), `${money(engine.perRating)} x ${built} x ${tons} / ${ENGINE_COST.divisor}`, { cite: engine.cite ?? ENGINE_COST.cite, checked: ENGINE_COST.checked });
   } else skip(`Engine "${chassis.engine.type}" ${chassis.engine.rating}`, engine ? "the tonnage or rating is not a number" : "the cost table has no such engine");
 
   // Gyro: its cost is per ton of gyro, and the weight rules already work that out
@@ -213,7 +217,8 @@ export function unitCost(record: MechRecord, catalog: Catalog, options: CostOpti
   }
 
   // Armor
-  const armor = own(ARMOR_COST.rows, chassis.armorType);
+  // A Primitive IndustrialMech's commercial armor is bought at the primitive armor price, the table's "Primitive 'Mech/Industrial Armor" (IO:AE printed pp.181, 215).
+  const armor = own(ARMOR_COST.rows, primitiveRulesOf(record) !== undefined ? "primitive" : chassis.armorType);
   const armorTons = weightLine(record, catalog, "Armor");
   if (patchworkActive(record)) {
     // Patchwork armor is priced a type at a time, on the tons of the locations that wear it (each rounded up to the half ton, TO:AUE p.189).

@@ -85,6 +85,7 @@ export const COCKPIT_COST: Sourced & { rows: Record<string, { cost: number; cite
     "interface-clan": { cost: 1_500_000, cite: { book: IO, page: 213 } },
     vrpp: { cost: 1_250_000, cite: { book: IO, page: 213 } },
     primitive: { cost: 100_000, cite: { book: IO, page: 215 } },
+    "primitive-industrial": { cost: 50_000, cite: { book: IO, page: 215 } },
     "superheavy-tripod": { cost: 500_000, cite: { book: IO, page: 217 } },
     superheavy: { cost: 300_000, cite: { book: IO, page: 215 } },
     "superheavy-industrial": { cost: 200_000, cite: { book: IO, page: 215 } },
@@ -232,6 +233,9 @@ export const SUPERHEAVY_COST: Sourced & { musculaturePerTon: number; actuatorFac
   actuatorFactor: 2,
   structurePerTon: { standard: 4_000, "endo-composite": 6_400, "endo-steel": 16_000, industrial: 3_000 },
 };
+
+/** Primitive 'Mech musculature: 1,000 x the unit's tonnage (IO:AE printed p.181 and the cost table p.215, "Primitive 'Mech Musculature"). */
+export const PRIMITIVE_COST: Sourced & { musculaturePerTon: number } = { cite: { book: IO, page: 215 }, checked: "page", musculaturePerTon: 1_000 };
 
 export const CONFIGURATION_COST: Record<string, { structureFactor?: number; conversion?: number; cite: Cite; checked: Checked }> = {
   tripod: { structureFactor: 1.2, cite: { book: IO, page: 183 }, checked: "page" },

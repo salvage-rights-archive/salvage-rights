@@ -34,7 +34,7 @@ import { heatSinkTypeOf, locationsFor, mountableOn, mountsRequired, podMountable
 import { heatSinkMixAllowed, levelAtLeast, levelIn, levelItems, levelOfRecord, levelRow, mixedPhase } from "./levels";
 import { clanInTime, datesText, partIsPrototypeOnly, partPrototype, superheavyPhase } from "./time";
 import type { Catalog, EquipmentRow } from "./catalog";
-import { ARM_FULL, armorSpread, armorTypeAt, armorTypesUsed, armsOf, canSplitBetween, configurationOf, donorTons, engineTons, freeHeatSinks, industrialRulesOf, layout as buildLayout, maxArmor, mechTypeOf, mountCanFireRear, patchworkActive, patchworkSlotsFor, requiredCockpit, slotsFor, slotsTaken, splitOf, structurePoints, superheavyOf, walkMP, weights } from "./mech";
+import { ARM_FULL, armorSpread, armorTypeAt, armorTypesUsed, armsOf, canSplitBetween, configurationOf, donorTons, engineRatingOf, engineTons, freeHeatSinks, industrialRulesOf, layout as buildLayout, maxArmor, mechTypeOf, mountCanFireRear, patchworkActive, patchworkSlotsFor, primitiveRulesOf, requiredCockpit, slotsFor, slotsTaken, splitOf, structurePoints, superheavyOf, walkMP, weights } from "./mech";
 import { locationName, type Layout, type LocationCode, type MechRecord, type Mount } from "./mech";
 import { mountedShields, missingActuators, shieldStats } from "./shields";
 import { equipmentItems, mascOf, movementPenalty, rowOf, stemOf, TSM_ROWS, tsmOf } from "./walk";
@@ -307,8 +307,12 @@ function engineCheck({ record }: CheckInput): Finding[] {
   }
   if (!isPositive(rating)) {
     out.push(finding("engine", "error", `The engine rating is ${num(rating)}; it must be a positive number.`, { where, cite: tm(PAGE.engineRating) }));
-  } else if (!own(ENGINE_WEIGHTS.rows, rating) && own(ENGINE_TYPES.types, type)) {
-    out.push(finding("engine", "error", `An engine rated ${rating} is not in the engine table.`, { where, cite: ENGINE_WEIGHTS.cite }));
+  } else if (!own(ENGINE_WEIGHTS.rows, engineRatingOf(record)) && own(ENGINE_TYPES.types, type)) {
+    const built = engineRatingOf(record);
+    out.push(finding("engine", "error", built === rating ? `An engine rated ${rating} is not in the engine table.` : `A Primitive 'Mech's engine rated ${rating} is built as a ${built}, which is not in the engine table.`, { where, cite: ENGINE_WEIGHTS.cite }));
+  }
+  if (primitiveRulesOf(record) && isPositive(rating) && engineRatingOf(record) !== rating) {
+    out.push(finding("engine", "note", `A Primitive 'Mech's engine rating is multiplied by 1.2 and rounded up to the engine table: the engine is built as a ${engineRatingOf(record)}, and it and the gyro are weighed at that rating.`, { where, cite: primitiveRulesOf(record)?.cite }));
   }
   if (!own(ENGINE_TYPES.types, type)) {
     out.push(finding("engine", "error", `Engine type ${quoted(type)} is not one we know.`, { where, cite: ENGINE_TYPES.cite }));
@@ -365,7 +369,7 @@ function heatSinkCheck({ record, catalog }: CheckInput): Finding[] {
     out.push(finding("heat-sinks", "error", `The chassis has ${count} heat sinks; a 'Mech has at least the ${free} heat sinks its engine provides.`, { where, cite: industrialRulesOf(record)?.cites.heatSinks ?? cite }));
   }
   const sinks = record.mounts.filter((m) => rowOf(catalog, record, m)?.kind === "heat-sink");
-  const rating = record.chassis.engine.rating;
+  const rating = engineRatingOf(record);
   if (isPositive(rating)) {
     // An OmniMech's engine holds only the base's sinks critical-free: every sink a configuration adds takes slots (TechManual p.54).
     const held = Math.min(record.omni ? record.omni.baseHeatSinks : count, count, Math.floor(rating / HEAT_SINK_RULES.ratingPerHeldSink));
@@ -836,11 +840,11 @@ function partsCheck({ record, catalog }: CheckInput): Finding[] {
       const needs = levelRow(levelIn("standard", phase, part.prototypeLevel), rulesetOf(record.editionId)).label;
       out.push(finding("parts", "note", `${part.name} ${what} is a prototype in ${when} (${datesText(partPrototype(part, record.techBase), spans?.[0]?.from).toLowerCase()}); it needs ${needs} rules.`, { where, cite: IO_UTA }));
     }
-    if (part.industrial && industrialRulesOf(record) === undefined) {
+    if (part.industrial && industrialRulesOf(record) === undefined && primitiveRulesOf(record) === undefined) {
       out.push(finding("parts", "error", `${part.name} ${what} is printed for IndustrialMechs; a ${mechTypeOf(record).label} may not use it.`, { where, cite }));
     }
-    if (part.primitive) {
-      out.push(finding("parts", "warning", `${part.name} ${what} is printed for Primitive BattleMechs, which have their own construction rules this tool does not check.`, { where, cite }));
+    if (part.primitive && primitiveRulesOf(record) === undefined) {
+      out.push(finding("parts", "error", `${part.name} ${what} is printed for Primitive 'Mechs; ${aOrAn(mechTypeOf(record).label).toLowerCase()} may not use it.`, { where, cite }));
     }
     if (part.rules) out.push(finding("parts", "note", `${part.name} ${what}${part.rulesLevel && part.rulesLevel !== "standard" ? ` (${part.rulesLevel} rules)` : ""}: ${part.rules}`, { where, cite: part.rulesCite ?? cite }));
   }
@@ -1383,6 +1387,60 @@ function superheavyCheck({ record, catalog }: CheckInput): Finding[] {
   return out;
 }
 
+/**
+ * The Primitive 'Mech construction changes (Interstellar Operations: Alternate Eras, printed pp.115-118): Inner Sphere, a biped or quad, the parts the type's rules
+ * list, jump jets only from their prototype year and only on a fusion or fission engine, no improved jets, boosters or speed and strength enhancements, and equipment
+ * introduced by 2500. The engine rating's rise is in `engineRatingOf`; the armor, cockpit and structure weights and prices are the standard ones.
+ */
+function primitiveCheck({ record, catalog }: CheckInput): Finding[] {
+  const rules = primitiveRulesOf(record);
+  if (!rules) return [];
+  const out: Finding[] = [];
+  const type = mechTypeOf(record);
+  const add = (level: Finding["level"], message: string, where?: Finding["where"], cite: Cite = rules.cite) => out.push(finding("primitive", level, message, { where, cite }));
+  if (!rules.techBases.some((base) => base === record.techBase)) add("error", `A ${type.label} is Inner Sphere; a ${techBaseName(record.techBase).toLowerCase()} technology 'Mech is not allowed.`, { field: "techBase" });
+  if (!rules.configurations.includes(record.configuration)) add("error", `A ${type.label} is a biped or a quad; the ${record.configuration} configuration is not allowed.`, { field: "configuration" });
+  if (record.omni || record.unitType === "omnimech") add("error", `A ${type.label} cannot be an OmniMech.`, { field: "unitType" });
+  const { chassis } = record;
+  const parts: [string, { types: Record<string, { name: string }> }, string, string[], string][] = [
+    ["structure", STRUCTURE_TYPES, chassis.structure, rules.parts.structure, "chassis.structure"],
+    ["engine", ENGINE_TYPES, chassis.engine.type, rules.parts.engine, "chassis.engine"],
+    ["gyro", GYROS, chassis.gyro, rules.parts.gyro, "chassis.gyro"],
+    ["cockpit", COCKPITS, chassis.cockpit, rules.parts.cockpit, "chassis.cockpit"],
+    ["heat sink", HEAT_SINKS, chassis.heatSinks.type, rules.parts.heatSink, "chassis.heatSinks"],
+    ["myomer", MYOMER, chassis.myomer, rules.parts.myomer, "chassis.myomer"],
+    ["armor", ARMOR, chassis.armorType, rules.parts.armor, "chassis.armorType"],
+  ];
+  for (const group of chassis.heatSinks.extra ?? []) parts.push(["heat sink", HEAT_SINKS, group.type, rules.parts.heatSink, "chassis.heatSinks"]);
+  for (const [what, table, key, allowed, field] of parts) {
+    if (own(table.types, key) && !allowed.includes(key)) {
+      add("error", `${partName(table, key)} ${what} is not allowed on a ${type.label}; it may use ${allowed.map((k) => partName(table, k)).join(", ")}.`, { field }, rules.restrictedCite);
+    }
+  }
+  const jets = record.mounts.filter((m) => rowOf(catalog, record, m)?.kind === "jump-jet");
+  if (jets.length > 0 && record.year !== null && record.year < rules.jumpFrom) {
+    add("error", `A Primitive 'Mech cannot jump before ${rules.jumpFrom}, when the prototype jump jet appears; this one is dated ${record.year}.`, { field: "year" }, IO_PRIMITIVE_JUMP);
+  }
+  if (jets.length > 0 && own(ENGINE_TYPES.types, chassis.engine.type) && !rules.jumpEngines.includes(chassis.engine.type)) {
+    add("error", `A Primitive 'Mech may mount jump jets only with a fusion or fission engine; this one has ${partName(ENGINE_TYPES, chassis.engine.type)}.`, { field: "chassis.engine" });
+  }
+  for (const mount of record.mounts) {
+    const row = rowOf(catalog, record, mount);
+    if (!row) continue;
+    const where = { mountId: mount.id, location: mount.location ?? undefined };
+    if (rules.barredStems.includes(stemOf(row.id))) {
+      add("error", `${mount.name} cannot be mounted on a Primitive 'Mech; improved jump jets, jump boosters and speed or strength enhancements do not work with primitive technology.`, where, rules.restrictedCite);
+      continue;
+    }
+    const first = row.availability.length === 0 ? undefined : Math.min(...row.availability.map((s) => s.from));
+    if (first !== undefined && first > rules.equipmentUntil) {
+      add("error", `${mount.name} was introduced in ${first}; a Primitive 'Mech may mount only equipment introduced by ${rules.equipmentUntil}.`, where, rules.equipmentCite);
+    }
+  }
+  return out;
+}
+const IO_PRIMITIVE_JUMP: Cite = { book: "Interstellar Operations: Alternate Eras", page: 114 };
+
 export const CHECKS: Check[] = [
   { id: "weight", editions: "all", run: weightCheck },
   { id: "slots", editions: "all", run: slotsCheck },
@@ -1401,6 +1459,7 @@ export const CHECKS: Check[] = [
   { id: "shields", editions: "all", run: shieldCheck },
   { id: "lam", editions: "all", run: lamCheck },
   { id: "superheavy", editions: "all", run: superheavyCheck },
+  { id: "primitive", editions: "all", run: primitiveCheck },
   { id: "unsupported", editions: "all", run: unsupportedCheck },
   { id: "omni", editions: "all", run: omniCheck },
   { id: "frankenmech", editions: "all", run: frankenCheck },

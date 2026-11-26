@@ -541,6 +541,22 @@ export const COCKPITS: Sourced & { types: Record<string, CockpitType> } = {
       lifeSupport: [1, 6],
       rules: "Slots as a standard cockpit. Printed for Primitive BattleMechs, which have their own construction rules.",
     },
+    // The Primitive IndustrialMech's cockpit (IO:AE printed p.117, cost table p.215, table of dates p.44): 5 tons, the slots of a standard cockpit, no fire control and no ejection.
+    "primitive-industrial": {
+      name: "Primitive Industrial",
+      tons: 5,
+      techBase: "inner-sphere",
+      primitive: true,
+      industrial: true,
+      availability: [{ from: 2350, to: 2520 }],
+      prototypeYear: 2300,
+      cite: { book: IO, page: 117 },
+      checked: "page",
+      cockpit: [3],
+      sensors: [2, 5],
+      lifeSupport: [1, 6],
+      rules: "No targeting systems and no ejection; every attack takes +1 to hit besides the industrial fire control modifiers, unless the cockpit is upgraded (TechManual p.69).",
+    },
     // Superheavy 'Mech cockpits (Interstellar Operations: Alternate Eras, rules printed p.156, Add Cockpit; costs and dates the Additional Alternate
     // Era table, printed p.215 for the first two and p.217 for the tripod's; Advanced rules level, the table's Rules Level column). A superheavy
     // 'Mech is 105 to 200 tons and its cockpit weighs 4 tons (5 for the tripod's) and keeps the standard head slots. `tonnage` keeps each to a superheavy
@@ -1129,7 +1145,7 @@ export const SHEET = {
 // Primitive kinds, 2443 and 2350, have their own construction rules, IO:AE p.116, which this tool does not build); Omni Technology
 // 2856 for the Clans and 3052 for the Inner Sphere (p.45: "IS Intro: 3052").
 // ---------------------------------------------------------------------------------------------------------------
-export type MechType = "mech" | "industrialmech" | "omnimech";
+export type MechType = "mech" | "industrialmech" | "omnimech" | "primitive-mech" | "primitive-industrialmech";
 export interface IndustrialRules {
   /** The page each rule is read from: TechManual's IndustrialMech Construction chapter (printed pp.64-75). */
   cites: Record<"techBase" | "configuration" | "structure" | "engine" | "heatSinks" | "jump" | "cockpit" | "gyro" | "myomer" | "armor" | "powerAmplifier" | "fireControl", Cite>;
@@ -1149,6 +1165,33 @@ export interface IndustrialRules {
   powerAmplifier: { engines: string[]; share: number };
   /** Catalog rows barred unless the cockpit has Advanced Fire Control (Artemis IV, Beagle Active Probe or its Clan equivalent, C3 and C3i units, targeting computers). */
   needsFireControl: string[];
+}
+/**
+ * The Primitive 'Mech construction rules (Interstellar Operations: Alternate Eras, game rules printed pp.114-116, construction rules pp.116-118, read
+ * against the page images): a BattleMech or IndustrialMech of the Age of War, built by the TechManual rules with these changes. Inner Sphere only; a biped
+ * or quad of 10 to 100 tons; the structure, armor, cockpit, gyro, engines and heat sinks its row lists; the engine rating times 1.2, rounded up to the
+ * Master Engine Table, is what the engine and gyro weigh and what the free heat sinks are counted from; jump jets only from the year the prototype
+ * appears and only on a fusion or fission engine; no speed or strength enhancements; equipment only if it was introduced by 2500.
+ */
+export interface PrimitiveRules {
+  cite: Cite;
+  /** The page of the Restricted Technologies the rules above quote, and of the equipment limit. */
+  restrictedCite: Cite;
+  equipmentCite: Cite;
+  ratingFactor: number;
+  /** The Master Engine Table's step: the modified rating is rounded up to a multiple of it. */
+  ratingStep: number;
+  /** The last year of introduction an item may have: "an introduction date of 2500 or earlier". */
+  equipmentUntil: number;
+  /** The part keys the type may use, by table, the way an IndustrialMech's rules list them. */
+  parts: Record<"structure" | "engine" | "gyro" | "cockpit" | "heatSink" | "myomer" | "armor", string[]>;
+  /** The first year a primitive 'Mech may jump (the prototype jump jets, IO:AE p.114: introduced 2464) and the engines that may power jump jets. */
+  jumpFrom: number;
+  jumpEngines: string[];
+  /** Catalog id stems a primitive 'Mech may not mount: improved jump jets and jump boosters, speed and strength enhancements. */
+  barredStems: string[];
+  configurations: string[];
+  techBases: ("inner-sphere" | "clan" | "mixed")[];
 }
 export interface MechTypeRow {
   id: MechType;
@@ -1174,6 +1217,8 @@ export interface MechTypeRow {
   /** The type may also be superheavy, above `tonnage.max` (SUPERHEAVY): a BattleMech, an IndustrialMech and an OmniMech, not a primitive one. */
   superheavy?: true;
   industrial?: IndustrialRules;
+  /** Present on a Primitive BattleMech or IndustrialMech: the rules above, which replace the type's part lists. */
+  primitive?: PrimitiveRules;
   omni?: OmniRules;
 }
 /** What the books say about an OmniMech (TechManual pp.19-20, 44-58, read against the page image except where `checked` says text). */
@@ -1489,3 +1534,60 @@ export const MECH_TYPES: MechTypeRow[] = [
     },
   },
 ];
+
+const industrialRules = MECH_TYPES.find((row) => row.id === "industrialmech")?.industrial as IndustrialRules;
+const IO_PRIMITIVE = (page: number): Cite => ({ book: IO, page });
+const PRIMITIVE_COMMON = {
+  cite: IO_PRIMITIVE(116),
+  restrictedCite: IO_PRIMITIVE(115),
+  equipmentCite: IO_PRIMITIVE(118),
+  ratingFactor: 1.2,
+  ratingStep: 5,
+  equipmentUntil: 2500,
+  jumpFrom: 2464,
+  jumpEngines: ["standard", "fission"],
+  barredStems: ["improved-jump-jet", "mechanical-jump-booster", "partial-wing", "jump-pack", "masc", "supercharger", "aes-arm", "aes-leg"],
+  configurations: ["biped", "quad"],
+  techBases: ["inner-sphere" as const],
+};
+// Primitive BattleMechs and IndustrialMechs: the Construction Options table (IO:AE printed p.44, read against the page image) gives the Primitive BattleMech
+// (Biped and Quad) a prototype in 2439 and production from 2443, and the Primitive IndustrialMech a prototype in 2300 and production from 2350; both are
+// extinct in 2520 ("Ext: 2520"). The game rules (p.116) say Advanced. Both are 10 to 100 tons in steps of 5 (printed p.116, Choose Weight).
+MECH_TYPES.push(
+  {
+    id: "primitive-mech",
+    label: "Primitive BattleMech",
+    description: "An Age of War 'Mech: plain structure, a 5-ton cockpit with its own fire control, primitive armor and engines that must be rated a fifth higher for the same speed.",
+    unit: "mech",
+    rulesLevel: "advanced",
+    ready: true,
+    cite: IO_PRIMITIVE(116),
+    availabilityCite: IO_PRIMITIVE(44),
+    checked: "page",
+    availability: [{ from: 2443, to: 2520 }],
+    prototypeYear: 2439,
+    tonnage: { min: 10, max: 100, step: 5, cite: IO_PRIMITIVE(116) },
+    primitive: { ...PRIMITIVE_COMMON, parts: { structure: ["standard"], engine: ["standard", "ice", "fuel-cell", "fission"], gyro: ["standard"], cockpit: ["primitive"], heatSink: ["single"], myomer: ["standard"], armor: ["primitive"] } },
+  },
+  {
+    id: "primitive-industrialmech",
+    label: "Primitive IndustrialMech",
+    description: "An Age of War work 'Mech: industrial structure, a 5-ton cockpit with no fire control, commercial armor and engines that must be rated a fifth higher.",
+    unit: "industrialmech",
+    rulesLevel: "advanced",
+    ready: true,
+    cite: IO_PRIMITIVE(116),
+    availabilityCite: IO_PRIMITIVE(44),
+    checked: "page",
+    availability: [{ from: 2350, to: 2520 }],
+    prototypeYear: 2300,
+    tonnage: { min: 10, max: 100, step: 5, cite: IO_PRIMITIVE(116) },
+    primitive: { ...PRIMITIVE_COMMON, parts: { structure: ["industrial"], engine: ["standard", "ice", "fuel-cell", "fission"], gyro: ["standard"], cockpit: ["primitive-industrial"], heatSink: ["single"], myomer: ["standard"], armor: ["commercial"] } },
+    industrial: {
+      ...industrialRules,
+      techBases: ["inner-sphere"],
+      configurations: ["biped", "quad"],
+      parts: { structure: ["industrial"], engine: ["standard", "ice", "fuel-cell", "fission"], gyro: ["standard"], cockpit: ["primitive-industrial"], heatSink: ["single"], myomer: ["standard"], armor: ["commercial"] },
+    },
+  },
+);

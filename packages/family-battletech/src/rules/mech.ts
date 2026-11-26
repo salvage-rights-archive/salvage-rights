@@ -23,7 +23,7 @@ import {
   STRUCTURE_WEIGHT,
   SUPERHEAVY,
 } from "../data/chassis";
-import type { ArmorType, ConfigurationRow, IndustrialRules, MechType, MechTypeRow, RulesLevel, StructureRow, SuperheavyRules } from "../data/chassis";
+import type { ArmorType, ConfigurationRow, IndustrialRules, MechType, MechTypeRow, PrimitiveRules, RulesLevel, StructureRow, SuperheavyRules } from "../data/chassis";
 import type { Catalog } from "./catalog";
 
 export type LocationCode = "HD" | "CT" | "LT" | "RT" | "LA" | "RA" | "LL" | "RL" | "CL" | "FLL" | "FRL" | "RLL" | "RRL";
@@ -275,6 +275,18 @@ export function mechTypeOf(record: Pick<MechRecord, "unitType">): MechTypeRow {
 }
 /** The IndustrialMech construction rules when the record is an IndustrialMech, else undefined. */
 export const industrialRulesOf = (record: Pick<MechRecord, "unitType">): IndustrialRules | undefined => mechTypeOf(record).industrial;
+
+/** The Primitive 'Mech rules (IO:AE pp.116-118) when the record is a Primitive BattleMech or IndustrialMech, else undefined. */
+export const primitiveRulesOf = (record: Pick<MechRecord, "unitType">): PrimitiveRules | undefined => mechTypeOf(record).primitive;
+/** The engine rating the engine is built to: a Primitive 'Mech's rating times 1.2, rounded up to the next rating in the Master Engine Table (IO:AE printed
+ * p.117), which sets the engine's weight and cost, the gyro's weight and the heat sinks it holds; any other 'Mech's is the rating itself. The speed is the
+ * rating as entered over the tonnage. A rating that is not a number is returned as it is. */
+export function engineRatingOf(record: Pick<MechRecord, "unitType" | "chassis">): number {
+  const rating = record.chassis.engine.rating;
+  const rules = primitiveRulesOf(record);
+  if (!rules || !Number.isFinite(rating) || rating <= 0) return rating;
+  return Math.ceil(Math.round(rating * rules.ratingFactor * 1e4) / 1e4 / rules.ratingStep) * rules.ratingStep;
+}
 
 /** The superheavy rules (IO:AE pp.153-157) when the 'Mech is above the weight of a standard one, else undefined. A superheavy 'Mech is a
  * BattleMech or IndustrialMech of more than 100 tons; the weight check says whether the number is one the rules allow. */
@@ -593,10 +605,10 @@ export function weights(record: MechRecord, factsOf: FactsOf): { lines: WeightLi
   lines.push({ label: "Structure", tons: record.frankenmech ? frankenStructureTons(record) : structureTons(chassis.structure, record.tons, record.configuration) });
   const conversion = conversionTons(record);
   if (conversion !== null) lines.push({ label: "Conversion equipment", tons: conversion });
-  lines.push({ label: "Engine", tons: engineTons(chassis.engine.type, chassis.engine.rating) });
+  lines.push({ label: "Engine", tons: engineTons(chassis.engine.type, engineRatingOf(record)) });
 
   const gyro = own(GYROS.types, chassis.gyro);
-  const rating = chassis.engine.rating;
+  const rating = engineRatingOf(record);
   lines.push({
     label: "Gyro",
     tons: gyro && Number.isFinite(rating) && rating > 0 ? ceilHalf(Math.ceil(rating / 100) * gyro.multiplier) : null,
@@ -751,6 +763,7 @@ export interface NewMechOptions {
  */
 export function newRecord(options: NewMechOptions, editionId: string, id: string): MechRecord {
   const industrial = industrialRulesOf({ unitType: options.unitType }) !== undefined;
+  const primitive = primitiveRulesOf({ unitType: options.unitType });
   const record: MechRecord = {
     schema: 1,
     id,
@@ -767,9 +780,9 @@ export function newRecord(options: NewMechOptions, editionId: string, id: string
       gyro: superheavyOf({ tons: options.tons }) ? "superheavy" : "standard",
       // An IndustrialMech's own frame and cockpit (TechManual pp.67 and 69); armor "standard" is its Heavy Industrial. A tripod, a superheavy
       // 'Mech and a QuadVee have a cockpit of their own.
-      cockpit: requiredCockpit({ tons: options.tons, configuration: options.configuration, unitType: options.unitType }) ?? (industrial ? "industrial" : "standard"),
+      cockpit: requiredCockpit({ tons: options.tons, configuration: options.configuration, unitType: options.unitType }) ?? primitive?.parts.cockpit[0] ?? (industrial ? "industrial" : "standard"),
       structure: industrial ? "industrial" : "standard",
-      armorType: "standard",
+      armorType: primitive?.parts.armor[0] ?? "standard",
       myomer: "standard",
       heatSinks: { type: "single", count: HEAT_SINK_RULES.freeWithEngine },
     },
@@ -781,7 +794,7 @@ export function newRecord(options: NewMechOptions, editionId: string, id: string
     record.armor[loc] = ["CT", "LT", "RT"].includes(loc) ? { front: 0, rear: 0 } : { front: 0 };
   }
   // The heat sinks the engine cannot hold wait unplaced, for the builder to give each a slot.
-  const held = Math.floor(record.chassis.engine.rating / HEAT_SINK_RULES.ratingPerHeldSink);
+  const held = Math.floor(engineRatingOf(record) / HEAT_SINK_RULES.ratingPerHeldSink);
   for (let n = 1; n <= HEAT_SINK_RULES.freeWithEngine - held; n += 1) {
     record.mounts.push({
       id: `heat-sink-${n}`,

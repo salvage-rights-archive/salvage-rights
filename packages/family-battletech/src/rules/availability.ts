@@ -17,7 +17,7 @@ import { CLAN_CASE_IDS, clanCaseAllowed } from "./case";
 import { mountableOn } from "./catalog";
 import type { Catalog, EquipmentRow } from "./catalog";
 import { DEFAULT_LEVEL, equipmentLevel, levelAtLeast, levelIn, partLevel } from "./levels";
-import { industrialRulesOf, mechTypeOf, requiredCockpit, superheavyOf } from "./mech";
+import { industrialRulesOf, mechTypeOf, primitiveRulesOf, requiredCockpit, superheavyOf } from "./mech";
 import type { MechRecord } from "./mech";
 import { datesText, eraOfRecord, erasOfYear, partPrototype, partSpans, phaseIn, rowPhase, windowOf } from "./time";
 import type { Phase, When } from "./time";
@@ -131,7 +131,13 @@ export function partAvailable(kind: PartKind, key: string, record: Subject, ever
   // myomer (IO:AE printed pp.156-157). A part printed for a tonnage range is for 'Mechs in it only. A record with no tonnage yet is read as a standard one.
   const heavy = record.tons === undefined ? undefined : superheavyOf({ tons: record.tons });
   if (part.tonnage && record.tons !== undefined && (record.tons < part.tonnage.min || record.tons > part.tonnage.max)) return false;
-  if (!heavy || (kind !== "cockpit" && kind !== "gyro")) {
+  // A Primitive 'Mech takes the parts its own rules list (IO:AE printed pp.116-118), which include the engines printed for IndustrialMechs; a part printed
+  // for the Primitive 'Mechs belongs to them alone.
+  const primitive = primitiveRulesOf(record);
+  if (primitive) {
+    if (!primitive.parts[kind].includes(key)) return false;
+  } else if (part.primitive) return false;
+  else if (!heavy || (kind !== "cockpit" && kind !== "gyro")) {
     if (industrial ? !industrial.parts[kind].includes(key) : part.industrial) return false;
   }
   if (heavy) {
@@ -153,14 +159,16 @@ export function partAvailable(kind: PartKind, key: string, record: Subject, ever
 const configurationRow = (key: string): ConfigurationRow | undefined => (Object.hasOwn(SHEET.configurations, key) ? (SHEET.configurations as Record<string, ConfigurationRow>)[key] : undefined);
 
 /** A body configuration's phase for a record: production, prototype or neither. A key we do not know is in production. */
-export function configurationPhase(key: string, record: Pick<Subject, "techBase" | "year" | "era" | "editionId">): Phase | null {
+export function configurationPhase(key: string, record: Pick<Subject, "techBase" | "year" | "era" | "editionId" | "unitType">): Phase | null {
   const row = configurationRow(key);
   if (!row) return "production";
+  // The biped and quad of a Primitive 'Mech are the type's own and have its years (IO:AE printed p.44, "Primitive BattleMechs (Biped and Quad)"), not the standard body's.
+  if (primitiveRulesOf(record)?.configurations.includes(key)) return "production";
   return baseFits(row.techBase, record.techBase, row.availability) ? rowPhase({ ...row, availability: ownSpans(record, row.techBase, row.availability) ?? row.availability }, record.techBase, windowOf(record)) : null;
 }
 
 /** A body configuration's tech base and years against the record (not its level, which the level check reports); its prototype years count. */
-export function configurationInTime(key: string, record: Pick<Subject, "techBase" | "year" | "era" | "editionId">): boolean {
+export function configurationInTime(key: string, record: Pick<Subject, "techBase" | "year" | "era" | "editionId" | "unitType">): boolean {
   return configurationPhase(key, record) !== null;
 }
 
