@@ -473,3 +473,39 @@ describe("The armor panel", () => {
     expect(document.activeElement).toBe(screen.getByLabelText("RRL, Rear Right Leg armor"));
   });
 });
+
+describe("The size and link of a mount", () => {
+  const withMounts = async (...extra: ReturnType<typeof mount>[]) => {
+    const record = await saved(mordelBiped());
+    await (await openFamilyStorage()).save({ ...record, mounts: [...record.mounts, ...extra] });
+    await open("imported-1");
+    await screen.findByRole("heading", { name: "Critical slots" });
+  };
+
+  it("changes the weight of communications equipment with the size typed in its actions", async () => {
+    await withMounts(mount("comms", "communications-equipment-is", "CT", 11));
+    const user = userEvent.setup();
+    const summary = () => screen.getByText(/^[\d.]+ of 50 tons/).textContent;
+    const before = summary();
+    await openActions(user, "Center Torso", "comms");
+    const size = await screen.findByLabelText<HTMLInputElement>("Size of comms (tons)");
+    await user.clear(size);
+    await user.type(size, "3");
+    await waitFor(() => { expect(summary()).not.toBe(before); });
+  });
+
+  it("clears the bare-launcher finding when an Artemis IV is linked to that launcher", async () => {
+    await withMounts(
+      mount("l1", "lrm-5-is", "LT", 0),
+      mount("l2", "lrm-5-is", "LT", 1),
+      mount("a1", "artemis-iv-is", "LT", 2),
+      mount("a2", "artemis-iv-is", "LT", 3),
+    );
+    const user = userEvent.setup();
+    const bare = () => within(rules()).queryByText(/l2 in the Left Torso has no Artemis IV/);
+    await waitFor(() => { expect(bare()).toBeTruthy(); });
+    await openActions(user, "Left Torso", "a2");
+    await user.selectOptions(await screen.findByLabelText("a2 is linked to"), "l2");
+    await waitFor(() => { expect(bare()).toBeNull(); });
+  });
+});

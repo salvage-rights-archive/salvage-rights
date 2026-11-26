@@ -100,7 +100,7 @@ const HOSTS: Record<string, { host: RegExp; what: string; page: number }> = {
   launcher: { host: /^(lrm|srm|mml)-\d+-(is|clan)$/, what: "standard LRM, SRM or MML launcher", page: PAGE.artemis },
   "machine-gun": { host: /^(?:(light|heavy)-)?machine-gun-(is|clan)$/, what: "machine gun", page: PAGE.machineGunArray },
 };
-const hostRule = (row: EquipmentRow | undefined) => (row?.needs !== undefined && own(HOSTS, row.needs) ? HOSTS[row.needs] : undefined);
+export const hostRule = (row: EquipmentRow | undefined) => (row?.needs !== undefined && own(HOSTS, row.needs) ? HOSTS[row.needs] : undefined);
 const gunSize = (id: string | null) => /^(light|heavy)-/.exec(id ?? "")?.[1] ?? "standard";
 
 // ---------------------------------------------------------------------------------------------------------------

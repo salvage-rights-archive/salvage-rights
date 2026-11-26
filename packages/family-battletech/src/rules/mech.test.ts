@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import { STRUCTURE_TYPES } from "../data/chassis";
 import { bipedRecord, factsOf, lamRecord, mount, quadRecord, tripodRecord } from "./fixtures";
 import {
+  allocateArmor,
+  armorPointsForTons,
   armsOf,
   editRecord,
   newRecord,
@@ -313,5 +315,44 @@ describe("arm actuator settings", () => {
     expect(armsOf(quadRecord({ arms }))).toBeUndefined();
     expect(armsOf(lamRecord({ arms }))).toEqual(arms);
     expect(armsOf(bipedRecord({ configuration: "hexapod", arms }))).toEqual(arms); // a body we do not know: nothing is dropped
+  });
+});
+
+describe("armor allocation (our own helper, after TechManual pp.54-55)", () => {
+  const total = (armor: MechRecord["armor"]) => Object.values(armor).reduce((sum, a) => sum + (a ? a.front + (a.rear ?? 0) : 0), 0);
+  const at = (armor: MechRecord["armor"], loc: LocationCode) => (armor[loc]?.front ?? 0) + (armor[loc]?.rear ?? 0);
+
+  it("never passes a location's maximum and gives the points asked for, or every maximum when they are too many", () => {
+    const record = bipedRecord();
+    const max = maxArmor(record);
+    for (const points of [0, 1, 50, 100, 169, 500]) {
+      const armor = allocateArmor(record, points);
+      expect(total(armor)).toBe(Math.min(points, 169));
+      for (const [loc, cap] of Object.entries(max) as [LocationCode, number][]) expect(at(armor, loc)).toBeLessThanOrEqual(cap);
+    }
+  });
+
+  it("puts the head at 9, splits torsos 3 to 1 and gives the leftover to the center torso, then the side torsos", () => {
+    // 91 points for the rest, in proportion to 32, 24, 24, 16, 16, 24, 24: 18, 13, 13, 9, 9, 13, 13 and 3 over.
+    const armor = allocateArmor(bipedRecord(), 100);
+    expect(armor.HD).toEqual({ front: 9 });
+    expect(armor.CT).toEqual({ front: 14, rear: 5 });
+    expect(armor.LT).toEqual({ front: 11, rear: 3 });
+    expect(armor.RT).toEqual({ front: 11, rear: 3 });
+    expect([armor.LA, armor.RA, armor.LL, armor.RL]).toEqual([{ front: 9 }, { front: 9 }, { front: 13 }, { front: 13 }]);
+  });
+
+  it("fills every location to its maximum for the maximum total, a quad's legs to their own", () => {
+    for (const record of [bipedRecord(), quadRecord()]) {
+      const armor = allocateArmor(record, Number.MAX_SAFE_INTEGER);
+      for (const [loc, cap] of Object.entries(maxArmor(record)) as [LocationCode, number][]) expect(at(armor, loc)).toBe(cap);
+    }
+    expect(at(allocateArmor(quadRecord(), 9999), "FLL")).toBe(28);
+  });
+
+  it("turns tons into points by the armor type's points per ton", () => {
+    expect(armorPointsForTons(bipedRecord(), 14)).toBe(224);
+    // The TechManual example: 13.5 tons of Clan ferro-fibrous armor is 259 points.
+    expect(armorPointsForTons(chassis({ armorType: "ferro-fibrous-clan" }), 13.5)).toBe(259);
   });
 });
