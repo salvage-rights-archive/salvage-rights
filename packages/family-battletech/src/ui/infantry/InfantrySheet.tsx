@@ -26,7 +26,7 @@ export function sheetFacts(record: InfantryRecord, catalog: Catalog): string[] {
     `${String(p.troopers)} troopers in ${String(record.squads)} squads of ${String(record.perSquad)}${p.lines.length > 1 ? `, played as ${String(p.lines.length)} sub-platoons of ${p.lines.join(", ")}` : ""}`,
     `Movement ${String(p.mp)} ${p.mpType}${p.moveOrShoot ? ", move or fire" : ""}`,
     `Primary weapon ${p.primary?.name ?? "none"}${p.secondary ? `; secondary ${p.secondary.name}, ${String(record.secondary.perSquad)} a squad` : ""}`,
-    `Damage ${String(p.totalDamage)} for the full platoon; skills Gunnery ${String(record.skills.gunnery)}, Anti-'Mech ${record.antiMech && !(p.motive?.mechanized ?? false) ? String(record.skills.antiMech) : "8 (fixed)"}`,
+    `Damage ${String(p.totalDamage)} for the full platoon; skills Gunnery ${String(record.skills.gunnery)}, Anti-'Mech ${p.motive?.mechanized ? "none (mechanized)" : record.antiMech ? String(record.skills.antiMech) : "8 (fixed)"}`,
     `Range modifiers by hex from 0: ${p.rangeMods.map(signed).join(", ")}`,
     ...(p.specials.length > 0 ? [`Special: ${p.specials.join("; ")}`] : []),
     ...(p.armor ? [`Armor kit ${p.armor.name}, damage divisor ${String(p.armor.divisor)}`] : []),
@@ -59,7 +59,7 @@ export default function InfantrySheet({ record, catalog }: { record: InfantryRec
           <g key={li}>
             <rect x={30} y={y} width={W - 60} height={lineHeight - 20} rx={16} fill="#fff" stroke={INK} strokeWidth={4} />
             <text x={50} y={y + 40} fontSize={32} fontWeight="bold" fill={INK}>{lines.length === 1 ? "Platoon" : `Sub-platoon ${String(li + 1)}`}</text>
-            <text x={420} y={y + 40} fontSize={28} fill={INK}>{`Gunnery ${String(record.skills.gunnery)}   Anti-'Mech ${record.antiMech && !(p.motive?.mechanized ?? false) ? String(record.skills.antiMech) : "8"}`}</text>
+            <text x={420} y={y + 40} fontSize={28} fill={INK}>{`Gunnery ${String(record.skills.gunnery)}   Anti-'Mech ${p.motive?.mechanized ? "none" : record.antiMech ? String(record.skills.antiMech) : "8"}`}</text>
             <text x={W - 50} y={y + 40} fontSize={28} textAnchor="end" fill={INK}>{`Movement ${String(p.mp)} ${p.mpType}${p.moveOrShoot ? " (move or fire)" : ""}`}</text>
             {Array.from({ length: CELLS }, (_, i) => {
               const col = i % PER_ROW;

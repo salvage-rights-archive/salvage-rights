@@ -55,6 +55,8 @@ describe("platoon build (the book's examples)", () => {
     expect([bv.defensive, bv.bv]).toEqual([84, 146]); // 28 x 2 x 1.5 = 84; (84 + 2 x 28 x 1.59 x 0.54) x 1.3 x 0.85
     expect(infantryBv({ ...foot, armor: "sneak-1" }, catalog).bv).toBeUndefined();
     expect(infantryBv(make({ primary: "inf-auto-rifle-is", armor: "flak-standard" }, { motive: "hover" }), catalog).bv).toBeUndefined();
+    // Mechanized infantry use the 5 column (Gunnery 4 and 5 is 1.0), not a fixed 8.
+    expect(infantryBv(make({ primary: "inf-auto-rifle-is" }, { motive: "hover" }), catalog).skill).toBe(1);
   });
 
   it("splits a platoon into the fewest even lines, odd troopers to the first", () => {
