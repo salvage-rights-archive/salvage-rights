@@ -4,6 +4,7 @@
 // not know are kept too, so a record written by a later version survives a round trip through this one.
 import { ABOM_CLASSES, ABOM_TYPES, MOB_HOBBLE_MODIFIERS, RANDOM_CREATURE, STUMBLE_DAMAGE, HANDLER, DEFAULT_SKILLS } from "../data/gothic";
 import type { AbomClass, AbomClassId, AbomStats, AbomType, AbomWeapon } from "../data/gothic";
+import { RULES_LEVELS } from "../data/chassis";
 import type { RulesLevel } from "../data/chassis";
 import type { Catalog, EquipmentRow } from "./catalog";
 import { levelAtLeast } from "./levels";
@@ -28,6 +29,8 @@ export interface AbominationUnit {
   handlerOf?: string;
   /** The Handler bonus bubble is ticked: skills read one lower. */
   handlerBonus: boolean;
+  /** The rules level the unit was made at, as a 'Mech record keeps its own; absent reads as Standard. */
+  rulesLevel?: RulesLevel;
 }
 
 export function newAbominationUnit(typeId: string, id: string = crypto.randomUUID()): AbominationUnit {
@@ -192,7 +195,7 @@ function customOf(v: Record<string, unknown>): AbomCustom {
   return custom;
 }
 
-const RECORD_KEYS = ["schema", "id", "typeId", "custom", "label", "gunnery", "animelee", "handlerOf", "handlerBonus"] as const;
+const RECORD_KEYS = ["schema", "id", "typeId", "custom", "label", "gunnery", "animelee", "handlerOf", "handlerBonus", "rulesLevel"] as const;
 
 /**
  * Reads a unit from storage, a file or an import. Fields this version knows are filled with their defaults where missing or of the wrong
@@ -213,5 +216,7 @@ export function withDefaults(value: unknown, fallbackId = ""): AbominationUnit |
   if (isString(value.typeId)) unit.typeId = value.typeId;
   if (isObject(value.custom)) unit.custom = customOf(value.custom);
   if (isString(value.handlerOf)) unit.handlerOf = value.handlerOf;
+  const level = RULES_LEVELS.find((row) => row.id === value.rulesLevel);
+  if (level) unit.rulesLevel = level.id;
   return unit;
 }

@@ -147,7 +147,7 @@ export default function AbominationsPage() {
 
   const save = async () => {
     if (!storage || !draft) return;
-    if (!(await attempt(STORAGE_WRITE_FAILED, () => storage.save(draft)))) return;
+    if (!(await attempt(STORAGE_WRITE_FAILED, () => storage.save({ ...draft, rulesLevel: level })))) return;
     focusSaved.current = true;
     if (await reload(storage)) say(`${unitName(draft)} saved.`);
     setDraft(undefined);
@@ -283,7 +283,7 @@ export default function AbominationsPage() {
                 );
               }
               const name = unitName(unit);
-              const found = checkAbomination(unit, level, catalog).filter((f) => f.level !== "note");
+              const found = checkAbomination(unit, unit.rulesLevel ?? DEFAULT_LEVEL, catalog).filter((f) => f.level !== "note");
               const s = unitStats(unit);
               return (
                 <li key={entry.id} className="bt-row">
@@ -297,7 +297,7 @@ export default function AbominationsPage() {
                     ))}
                   </span>
                   <span className="bt-row__actions">
-                    <button type="button" className="bt-button" aria-label={`Open ${name}`} onClick={() => { setDraft(structuredClone(unit)); }}>
+                    <button type="button" className="bt-button" aria-label={`Open ${name}`} onClick={() => { setLevel(unit.rulesLevel ?? DEFAULT_LEVEL); setDraft(structuredClone(unit)); }}>
                       Open
                     </button>
                     <button type="button" className="bt-button bt-button--secondary" aria-label={`Record sheet for ${name}`} disabled={!catalog} onClick={() => { setPrinting(unit); }}>

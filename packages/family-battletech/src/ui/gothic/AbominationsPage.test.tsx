@@ -65,13 +65,18 @@ describe("The Abomination units page", () => {
     expect(saved).toEqual([unit]);
   });
 
-  it("reports a custom unit saved below Fan-made, and an unreadable saved unit can still be deleted", async () => {
+  it.each([
+    { saved: undefined, reported: true },
+    { saved: "standard", reported: true },
+    { saved: "fan-made", reported: false },
+  ] as const)("reports a custom unit by the level it was saved at ($saved), and an unreadable saved unit can still be deleted", async ({ saved, reported }) => {
     const { typeId: _none, ...base } = newAbominationUnit("gnat", "c-1");
     void _none;
-    await (await openGothicStorage()).save({ ...base, custom: { name: "Mine", classId: "swarmer", creatures: 2, pipsPerRow: 4, ground: 1, weapons: [], mob: null, hobble: null, melee: null } });
+    const custom = { name: "Mine", classId: "swarmer", creatures: 2, pipsPerRow: 4, ground: 1, weapons: [], mob: null, hobble: null, melee: null } as const;
+    await (await openGothicStorage()).save({ ...base, custom: { ...custom, weapons: [] }, ...(saved ? { rulesLevel: saved } : {}) });
     await (await openStore("battletech")).set(`${ABOM_PREFIX}bad`, { unit: { schema: 2 } });
     await ready(userEvent.setup());
-    expect(await screen.findByText(/needs the Fan-made level or higher/)).toBeTruthy();
     expect(await screen.findByText(/This saved unit cannot be read/)).toBeTruthy();
+    expect(screen.queryAllByText(/needs the Fan-made level or higher/).length).toBe(reported ? 1 : 0);
   });
 });
