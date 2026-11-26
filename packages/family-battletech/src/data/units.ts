@@ -12,6 +12,7 @@ export const UNIT_TYPES = {
   dropship: "DropShip",
   ship: "JumpShip, WarShip and space station",
   building: "Building and other fixed structure",
+  abomination: "Abomination (BattleTech: Gothic)",
 } as const;
 export type UnitId = keyof typeof UNIT_TYPES;
 /** What a row with no `units` field is for. */
