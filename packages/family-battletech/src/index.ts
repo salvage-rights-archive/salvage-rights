@@ -39,14 +39,12 @@ const gothicRoutes: FamilyRoute[] = [
 ];
 const gothicPreviewRoutes: FamilyRoute[] = gothicRoutes.map((route) => ({ ...route, path: `gothic-preview/${route.path}` }));
 
-// AeroTech's pages are written as the game's own routes. The host serves them only once the game is ready (AERO-9), so until then they are
-// also reachable as family routes under aerotech-preview (ui/aero/routes.ts), where every link goes.
+// AeroTech's pages are the game's own routes (the game is ready).
 const aeroRoutes: FamilyRoute[] = [
   { path: "home", label: "BattleTech: AeroTech", section: "workshop", load: () => import("./ui/aero/AeroHomePage") },
   { path: "editor", label: "AeroTech unit editor", section: "workshop", load: () => import("./ui/aero/AeroEditorPage") },
   { path: "sheet", label: "AeroTech record sheet", section: "workshop", load: () => import("./ui/aero/AeroSheetPage") },
 ];
-const aeroPreviewRoutes: FamilyRoute[] = aeroRoutes.map((route) => ({ ...route, path: `aerotech-preview/${route.path}` }));
 
 function comingSoon(
 id: string, shortName: string, fullName: string): GameManifest {
@@ -64,13 +62,13 @@ const manifest: FamilyManifest = {
     { id: "classic", shortName: "Classic", fullName: "Classic BattleTech", ready: true, routes: classicRoutes, ...GAME_ART["classic"] },
     { id: "alpha-strike", shortName: "Alpha Strike", fullName: "BattleTech: Alpha Strike", ready: true, routes: alphaStrikeRoutes, ...GAME_ART["alpha-strike"] },
     comingSoon("aces", "Aces", "BattleTech: Aces"),
-    { id: "aerotech", shortName: "AeroTech", fullName: "BattleTech: AeroTech", ready: false, routes: aeroRoutes, ...GAME_ART["aerotech"] },
+    { id: "aerotech", shortName: "AeroTech", fullName: "BattleTech: AeroTech", ready: true, routes: aeroRoutes, ...GAME_ART["aerotech"] },
     { id: "gothic", shortName: "Gothic", fullName: "BattleTech: Gothic", ready: false, routes: gothicRoutes, ...GAME_ART["gothic"] },
   ],
   unitTypes: (EDITIONS[0]?.unitTypes ?? []).filter((unit) => unit.ready), // the types the edition can build (data/editions.ts)
   eras: ERAS, // the Master Unit List's twelve (data/editions.ts)
   measures: ["hexes"],
-  routes: [...acesPreviewRoutes, ...aeroPreviewRoutes, ...gothicPreviewRoutes],
+  routes: [...acesPreviewRoutes, ...gothicPreviewRoutes],
   credits: {
     owner:
       // The non-affiliation notice fan projects for this game commonly carry, word for word, then two lines of our own.
@@ -86,6 +84,7 @@ const manifest: FamilyManifest = {
       "Each imported design is credited to the mordel.net member who created it. The Alpha Strike values we read from mordel.net are shown as Mordel gives them, with the same credit.",
       "The Classic BattleTech section (the import, the editor and the rules checks) was made by the Salvage Rights team.",
       "The Alpha Strike roster (unit entry, saving and unit files) was made by the Salvage Rights team.",
+      "The AeroTech section (the editor, the rules check and the fighter record sheets) was made by the Salvage Rights team. Its record sheets are drawn by us, with no logos or art, following the blank sheets the publishers mark for personal reproduction: AeroTech 2, AeroTech 2: Revised Edition and the Catalyst blank record sheets. The AeroTech (1986) sheet is our own layout. \"OFFICIAL\" on an AeroTech unit is what the player states, and it turns off when the design is changed.",
       "\"Verified Standard Rules Compliant\" means only that our own rules check, against the rulebooks we cite, found nothing wrong with a Standard-level 'Mech; tournament organisers have the final word. \"OFFICIAL\" is what the player states about a Classic design, and it turns off when the design is changed. For Alpha Strike it depends only on the Master Unit List: a unit imported from the list and not changed is OFFICIAL, and every other unit is NOT OFFICIAL.",
       "The pictures on the BattleTech tile and for each game were generated with an AI image tool (DeviantArt DreamUp); the picture shown on the Classic BattleTech page when no 'Mech is saved was generated with another (Nano Banana 2). We would rather show work made by a person. If you are an artist, or hold the rights to a piece, and can let us use it legally, we will gladly replace any AI-generated art here and credit you. To offer a piece, start a thread in Discussions on our GitHub repository (https://github.com/salvage-rights-archive/salvage-rights/discussions), or open an issue there.",
     ],
