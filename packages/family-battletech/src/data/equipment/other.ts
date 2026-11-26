@@ -292,7 +292,9 @@ export const OTHER: EquipmentGroup[] = [
   {
     // Cockpit and pilot-interface items (IO:AE printed p. 213 construction data, p. 212 play table, rules pp. 62-64 and 69-70 and 110-111, read against the page
     // images). All weigh nothing and take no slot: each only raises the cockpit's price (the table's "0*"). Rules level is the play table's (Experimental); the entries
-    // print Advanced for the neural interface modification and the SLDF neurohelmet, which the book panel should settle. Dates: the Universal Technology
+    // print Advanced for the neural interface modification and the SLDF neurohelmets. Owner ruling, 2026-11-27: Experimental for prototypes, Advanced once it is in production and not
+    // yet common, Standard once in common use. So those three rows are Advanced here, and Experimental in their prototype years (`levelIn`). The book prints no common year for them
+    // (IO:AE p. 34 table: a dash), so they stay Advanced; the standard neurohelmet's common year is 2487. Dates: the Universal Technology
     // Advancement Table (printed pp. 33-34) where it staged them. The damage interrupt circuit is prototype-only (3055, extinct 3060). The neurohelmet's
     // price is its table's 5,000 for each pilot seat (the record has no crew count, so one seat is priced); the neural interface modification costs the table's 500,000 once per
     // cockpit (the cost chapter, pp. 178-179, over the entry's 250,000: book panel, conflict logged).
@@ -357,9 +359,10 @@ export const OTHER: EquipmentGroup[] = [
     items: [
       { id: "dropshuttle-bay-is", name: "DropShuttle Bay", tons: 11000, availability: [{ from: 2120, to: 2500 }], type: "PE" },
       // Pre-boom docking collar (IO:AE printed p. 211 construction data, p. 210 play table, rules box p. 112, entry p. 114; availability table p. 36): prototype 2304, production 2350,
-      // common 2364, extinct 2520; 1,000 t, 500,000 a collar; Advanced by its rules box (the play table prints Experimental; the owner is deciding). A JumpShip, WarShip or space
-      // station mounts it. The prototype DropShip K-F boom has no row (the panel left it optional): 2458 prototype, 2470 production, no mass or slot, and the collar of a ship built
-      // 2458-2469 costs 1,010,000 (p. 113); the table's "2342P" for it matches no other page and is not used.
+      // common 2364, extinct 2520; 1,000 t, 500,000 a collar; Advanced by its rules box (the play table prints Experimental). Owner ruling, 2026-11-27: Experimental for prototypes, Advanced if not a
+      // prototype, Standard when in common use; so Advanced from production, Experimental in 2304-2349 (`levelIn`). Its common year 2364 is noted only: the model has no common-year stage. A JumpShip, WarShip or space
+      // station mounts it. The prototype DropShip K-F boom has no row: it has no mass and no slot and is part of the DropShip's collar, so its only effect is the collar's price in 2458-2469
+      // (1,010,000, p. 113), a price that depends on the year, which a catalog row cannot carry; the table's "2342P" for it matches no other page and is not used.
       { id: "docking-collar-pre-boom-is", name: "Docking Collar (Pre-Boom)", tons: 1000, availability: [{ from: 2350, to: 2520 }], prototypeYear: 2304, type: "PE" },
       { id: "docking-collar-post-boom-is", name: "DropShip Docking Collar (post-Boom)", tons: 1000, availability: [{ from: 2470 }], units: ["dropship", "ship"], type: "PE", prototypeYear: 2458 },
       { id: "sldf-sds-jammer-system-is", name: "SLDF SDS Jammer System", tons: 30000, availability: [{ from: 2776, to: 2780 }], type: "E", rulesLevel: "experimental", cite: { book: IO, page: 215 }, playCite: { book: IO, page: 214 } },

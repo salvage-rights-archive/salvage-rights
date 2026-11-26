@@ -3,7 +3,7 @@
 // keys this version does not know are kept. Rules: TechManual pp. 144-155 with errata v8.0 (see data/infantry-tables.ts).
 import { TARGET_MODIFIER } from "../../data/bv";
 import { INFANTRY_WEAPON_BV } from "../../data/infantry-bv";
-import { ADVANCED_INFANTRY_BV, ANTI_MECH, ARMOR_KITS, FORMATIONS, INFANTRY_BV, MOTIVES, RANGE_MODIFIERS, SPECIALIST_BASE_TONS, WEAPON_RULES, armorKitOf, motiveOf, specializationOf } from "../../data/infantry-tables";
+import { ADVANCED_INFANTRY_BV, ANTI_MECH, ARMOR_KITS, FORMATIONS, INFANTRY_BV, MOTIVES, RANGE_MODIFIERS, SNEAK_SYSTEMS, SPECIALIST_BASE_TONS, STEALTH_MODIFIERS, WEAPON_RULES, armorKitOf, motiveOf, specializationOf } from "../../data/infantry-tables";
 import type { ArmorKit, Formation, Motive, Specialization } from "../../data/infantry-tables";
 import type { RulesLevel } from "../../data/chassis";
 import { skillMultiplier, speedFactor } from "../bv";
@@ -34,6 +34,8 @@ export interface InfantryRecord {
   secondary: { weapon: string | null; perSquad: number };
   /** An ArmorKit id; null is no armor kit. */
   armor: string | null;
+  /** A sneak suit's systems (camo, ir, ecm), as many as the suit has; unset or unusable means the suit's defaults. */
+  sneakSystems?: string[];
   antiMech: boolean;
   specializations: string[];
   skills: { gunnery: number; antiMech: number };
@@ -100,6 +102,7 @@ export function withDefaults(value: unknown, fallbackId: string): InfantryRecord
     primary: typeof value.primary === "string" ? value.primary : null,
     secondary: { weapon: typeof secondary.weapon === "string" ? secondary.weapon : null, perSquad: whole(secondary.perSquad, 0) },
     armor: typeof value.armor === "string" ? value.armor : null,
+    ...(Array.isArray(value.sneakSystems) ? { sneakSystems: value.sneakSystems.filter((s): s is string => typeof s === "string") } : {}),
     specializations: Array.isArray(value.specializations) ? value.specializations.filter((s): s is string => typeof s === "string") : [],
     skills: { gunnery: whole(skills.gunnery, 4), antiMech: whole(skills.antiMech, 5) },
     antiMech: typeof value.antiMech === "boolean" ? value.antiMech : base.antiMech,
@@ -113,6 +116,8 @@ export interface Platoon {
   motive: Motive | undefined;
   specializations: Specialization[];
   armor: ArmorKit | undefined;
+  /** The systems of a sneak suit (empty for any other kit): the player's choice, else the suit's defaults. */
+  sneakSystems: string[];
   primary: EquipmentRow | undefined;
   secondary: EquipmentRow | undefined;
   troopers: number;
@@ -155,6 +160,13 @@ export function splitLines(troopers: number, max: number): number[] {
   const base = Math.floor(troopers / count);
   const extra = troopers - base * count;
   return Array.from({ length: count }, (_, i) => base + (i < extra ? 1 : 0));
+}
+
+/** The systems a sneak suit carries: the chosen ones, no more than the suit has; the suit's defaults when none of the choice is usable. */
+export function sneakSystemsOf(kit: ArmorKit | undefined, chosen: string[] | undefined): string[] {
+  if (!kit?.systems) return [];
+  const picked = SNEAK_SYSTEMS.filter((id) => chosen?.includes(id)).slice(0, kit.systems);
+  return picked.length > 0 ? picked : (kit.defaultSystems ?? []);
 }
 
 export function platoonOf(record: InfantryRecord, catalog: Catalog): Platoon {
@@ -230,6 +242,7 @@ export function platoonOf(record: InfantryRecord, catalog: Catalog): Platoon {
     motive,
     specializations: specs,
     armor,
+    sneakSystems: sneakSystemsOf(armor, record.sneakSystems),
     primary,
     secondary,
     troopers,
@@ -303,8 +316,6 @@ export interface InfantryBv {
   targetModifier: number;
   skill: number;
   unvalued: string[];
-  /** Why the platoon's Battle Value is not worked out, where it is not for a reason other than a weapon without a value. */
-  reason?: string;
 }
 const stemOf = (id: string): string => id.replace(/-(is|clan)$/, "");
 const bvOf = (row: EquipmentRow | undefined): number | undefined => (row ? INFANTRY_WEAPON_BV[stemOf(row.id)] : undefined);
@@ -319,11 +330,9 @@ export function infantryBv(record: InfantryRecord, catalog: Catalog): InfantryBv
   const mechanized = p.motive?.mechanized ?? false;
   // With an armor kit or a specialty the Advanced infantry rules apply (TO:AUE pp. 191, 193); the parts of them the books leave open are "not worked out".
   const advanced = p.armor !== undefined || p.specializations.length > 0;
-  let reason: string | undefined;
-  if (advanced && mechanized) reason = "Advanced infantry rules do not say which Unit Type Modifier a mechanized platoon takes.";
-  else if (p.armor?.stealth && p.armor.bvStealth === undefined) reason = "The book does not say which stealth systems a sneak suit has, so its Defensive Factor bonus is not known.";
   const divisor = advanced ? (p.armor?.divisor ?? 1) : 1;
-  const stealth = p.armor?.bvStealth ?? 0;
+  // A sneak suit adds each chosen system's bonus (TO:AUE p. 191, cumulative); the DEST suit has its own.
+  const stealth = p.armor?.systems ? p.sneakSystems.reduce((sum, id) => sum + (STEALTH_MODIFIERS.find((m) => m.id === id)?.bv ?? 0), 0) : (p.armor?.bvStealth ?? 0);
   const defensive = p.troopers * divisor * INFANTRY_BV.perTrooper * (1 + targetModifier / 10 + stealth);
   const single = p.primaryTroopers * (bvOf(p.primary) ?? 0) + p.secondaryTroopers * (bvOf(p.secondary) ?? 0);
   const weaponBv = mechanized ? single : single * 2; // all non-mechanized infantry can make anti-'Mech attacks: the weapons count again
@@ -333,8 +342,8 @@ export function infantryBv(record: InfantryRecord, catalog: Catalog): InfantryBv
   const antiMechSkill = mechanized ? 5 : record.antiMech ? record.skills.antiMech : ANTI_MECH.defaultSkill;
   const skill = skillMultiplier({ gunnery: record.skills.gunnery, piloting: antiMechSkill });
   const unitType = advanced ? 1 + p.specializations.reduce((sum, s) => sum + s.bvModifier, 0) : 1;
-  const worked = unvalued.length === 0 && p.primary !== undefined && reason === undefined;
-  return { bv: worked ? roundHalfUp((defensive + offensive) * unitType * skill) : undefined, defensive, offensive, weaponBv, speed, targetModifier, skill, unvalued, reason };
+  const worked = unvalued.length === 0 && p.primary !== undefined;
+  return { bv: worked ? roundHalfUp((defensive + offensive) * unitType * skill) : undefined, defensive, offensive, weaponBv, speed, targetModifier, skill, unvalued };
 }
 
 /** The armor kits a tech base and year may use (Advanced). */

@@ -88,7 +88,6 @@ export function checkInfantry(record: InfantryRecord, catalog: Catalog): Infantr
   }
   if (record.skills.gunnery > 8 || record.skills.antiMech > 8) add("warning", "skill", "Skill ratings run from 0 to 8.", at("TechManual Battle Value v4.1", 314), "skills");
   const bv = infantryBv(record, catalog);
-  if (bv.reason) add("note", "bv-reason", `The Battle Value is not worked out: ${bv.reason}`, at(TO, 191));
   for (const name of bv.unvalued) add("note", "bv-unvalued", `${name} has no Battle Value in our table, so the platoon's is not worked out.`);
   for (const name of infantryCost(record, catalog).unpriced) add("note", "unpriced", `${name} has no price in our table, so the cost is not complete.`);
   return found;

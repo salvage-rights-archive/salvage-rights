@@ -983,6 +983,8 @@ export interface CapitalSystemFigure {
   perTons?: number;
   round?: "down" | "up";
   minTons?: number;
+  /** The years the system exists and the level it is in production (the Universal Technology Advancement Table); in its prototype years it is Experimental. */
+  dates?: { prototype: number; production: number; level: RulesLevel };
 }
 export interface CapitalSystemRow {
   kind: string;
@@ -998,7 +1000,9 @@ const ALL_CAPITAL: CapitalKind[] = ["jumpship", "warship", "space-station"];
 export const CAPITAL_SYSTEMS: CapitalSystemRow[] = [
   SYSTEM("docking-hardpoint", "Docking hardpoint", [
     capShare({ [E.at2]: "47", [E.at2r]: "65" }, { tons: 1000, types: ALL_CAPITAL, perTons: 50000, round: "down" }, "the books print one per 50,000 tons with no rounding: whole hardpoints within the limit"),
-    capShare({ [E.current]: [`${TOAUE}, p. 219; ${SOAA}`, "142; errata v5.0"] }, { tons: 1000, types: ALL_CAPITAL, perTons: 50000, round: "up", minTons: 50000 }),
+    // The modern hardpoint mates with a DropShip's K-F boom, so it comes with the boom: prototype 2458, production 2470 (IO:AE printed p. 36 table, entry p. 113; owner, 2026-11-27).
+    // Before 2458 a ship uses the pre-boom docking collar (prototype 2304, production 2350, extinct 2520; the catalog's "docking-collar-pre-boom-is").
+    capShare({ [E.current]: [`${TOAUE}, p. 219; ${SOAA}`, "142; errata v5.0"] }, { tons: 1000, types: ALL_CAPITAL, perTons: 50000, round: "up", minTons: 50000, dates: { prototype: 2458, production: 2470, level: "advanced" } }),
   ]),
   SYSTEM("grav-deck-small", "Grav deck (under 100 m)", [capShare({ [E.at2]: "47", [E.at2r]: "65", [E.current]: [TOAUE, "219"] }, { tons: 50, types: ALL_CAPITAL })]),
   SYSTEM("grav-deck-medium", "Grav deck (100 to 250 m)", [capShare({ [E.at2]: "47", [E.at2r]: "65", [E.current]: [TOAUE, "219"] }, { tons: 100, types: ALL_CAPITAL })]),
