@@ -7,7 +7,7 @@ import { asOfficialMark } from "../../rules/as-mul";
 import { unitTitle } from "../../rules/as-unit";
 import type { AsUnit } from "../../rules/as-unit";
 import { STORAGE_READ_FAILED, STORAGE_WRITE_FAILED } from "../storage";
-import { forceHref, limitWords } from "./AsForces";
+import { forceHref, limitWords, printForceHref } from "./AsForces";
 import { downloadForce, openAsStorage } from "./storage";
 import type { AsStorage } from "./storage";
 
@@ -151,6 +151,9 @@ function ForceEditor({ initial, roster, filter, storage }: { initial: AsForce; r
         <div className="bt-actions">
           <Link className="bt-button" to={`/battletech/alpha-strike/table?force=${encodeURIComponent(force.id)}`}>
             Play at the table
+          </Link>
+          <Link className="bt-button bt-button--secondary" to={printForceHref(force.id)}>
+            Print
           </Link>
           <button type="button" className="bt-button bt-button--secondary" onClick={() => { downloadForce(force, roster); setStatus("Export started."); }}>
             Export

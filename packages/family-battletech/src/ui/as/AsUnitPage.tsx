@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState } from "react";
 import type { ChangeEvent, ReactNode } from "react";
+import { printUnitHref } from "./AsForces";
 import { Link, useBlocker, useLocation, useNavigate, useSearchParams } from "react-router";
 import { AS_AEROSPACE_ROLES, AS_EDITION, AS_GROUND_ROLES, AS_UNIT_TYPES, SKILLS } from "../../data/alpha-strike";
 import { formatDamage, formatMove, formatSpecials, newAsUnit, parseDamage, parseMove, parseSpecials, unitFindings, unitTitle } from "../../rules/as-unit";
@@ -365,6 +366,11 @@ function UnitForm({ initial, isNew, review, storage }: { initial: AsUnit; isNew:
           >
             Export
           </button>
+          {!isNew && (
+            <Link className="bt-button bt-button--secondary" to={printUnitHref(unit.id)}>
+              Print
+            </Link>
+          )}
           {!isNew && (
             <button type="button" ref={deleteRef} className="bt-button bt-button--secondary" onClick={() => { setConfirming(true); }}>
               Delete

@@ -8,7 +8,7 @@ import { eraOfYear } from "../../rules/time";
 import { STORAGE_READ_FAILED, STORAGE_WRITE_FAILED, downloadJson } from "../storage";
 import { downloadUnit, fromUnitFile, openAsStorage } from "./storage";
 import type { AsEntry, AsStorage } from "./storage";
-import AsForces from "./AsForces";
+import AsForces, { printUnitHref } from "./AsForces";
 import AsMordelImport from "./AsMordelImport";
 import AsMulImport from "./AsMulImport";
 import AsMordelFile from "./AsMordelFile";
@@ -196,6 +196,9 @@ export default function AsHomePage() {
                   <span className="bt-row__actions">
                     <Link className="bt-button" aria-label={`Open ${name}`} to={unitHref(unit.id)}>
                       Open
+                    </Link>
+                    <Link className="bt-button bt-button--secondary" aria-label={`Print ${name}`} to={printUnitHref(unit.id)}>
+                      Print
                     </Link>
                     <button type="button" className="bt-button bt-button--secondary" aria-label={`Export ${name}`} onClick={() => { downloadUnit(unit); say("Export started."); }}>
                       Export

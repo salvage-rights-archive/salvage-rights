@@ -377,6 +377,22 @@ export async function putAsUnits(page: Page, names: string[]): Promise<void> {
   await putRecords(page, names.map((name) => [`as-unit:${name.toLowerCase().replace(/ /g, "-")}`, { unit: inventedUnit(name.toLowerCase().replace(/ /g, "-"), name) }]));
 }
 
+/** Saves one unit of each kind of blank card (a 'Mech, a vehicle, infantry, a fighter, a DropShip) and a force of them; returns the force id. */
+export async function putAsPrintForce(page: Page, rounds = 1): Promise<string> {
+  const base = inventedUnit("x", "x").card;
+  const kinds: [string, string, Record<string, unknown>][] = [
+    ["mech", "Thunderbolt", { type: "BM", size: 3, pv: 36, armor: 7, structure: 5 }],
+    ["tank", "Test Tank", { type: "CV", size: 2, pv: 20, move: [{ inches: 6, mode: "t" }] }],
+    ["foot", "Test Foot Platoon", { type: "CI", size: 1, pv: 8, armor: 2, structure: 2 }],
+    ["wing", "Test Fighter", { type: "AF", size: 2, pv: 28, tmm: null, move: [], thrust: 6, threshold: 2 }],
+    ["ship", "Test Lander", { type: "DS", size: 4, pv: 70, tmm: null, move: [], thrust: 3, threshold: 6, armor: 40, structure: 30 }],
+  ];
+  const units = kinds.map(([id, chassis, card]) => ({ ...inventedUnit(id, chassis), card: { ...base, ...card } }));
+  const force = { schema: 1, kind: "as-force", id: "print-force", editionId: "asce", name: "Print test lance", pvLimit: 150, members: Array.from({ length: rounds }, () => units).flat().map((u, i) => ({ unitId: u.id, skill: 2 + (i % 5), ...(i === 0 ? { pilot: "Ash" } : {}) })) };
+  await putRecords(page, [...units.map((u): [string, unknown] => [`as-unit:${u.id}`, { unit: u }]), ["as-force:print-force", { force }]]);
+  return force.id;
+}
+
 /**
  * Answers an Aces game's resolver questions until the given text shows: every distance as 10 inches, yes and no as No, a pick of
  * units as none. For the invented games of the tests only.

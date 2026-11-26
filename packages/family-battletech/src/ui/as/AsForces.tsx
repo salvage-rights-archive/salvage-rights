@@ -11,6 +11,8 @@ import type { AsForceEntry, AsStorage } from "./storage";
 
 const MAX_IMPORT_BYTES = 1024 * 1024 * 8;
 export const forceHref = (id: string) => `/battletech/alpha-strike/force?id=${encodeURIComponent(id)}`;
+export const printForceHref = (id: string) => `/battletech/alpha-strike/print?force=${encodeURIComponent(id)}`;
+export const printUnitHref = (id: string) => `/battletech/alpha-strike/print?unit=${encodeURIComponent(id)}`;
 
 /** The wording for a total against a limit, shared by the home list and the force page. */
 export function limitWords(total: number, room: number | undefined): string {
@@ -196,6 +198,9 @@ export default function AsForces() {
                 <span className="bt-row__actions">
                   <Link className="bt-button" aria-label={`Open ${name}`} to={forceHref(force.id)}>
                     Open
+                  </Link>
+                  <Link className="bt-button bt-button--secondary" aria-label={`Print ${name}`} to={printForceHref(force.id)}>
+                    Print
                   </Link>
                   <button type="button" className="bt-button bt-button--secondary" aria-label={`Duplicate ${name}`} onClick={() => void duplicate(force)}>
                     Duplicate

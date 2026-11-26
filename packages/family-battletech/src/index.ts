@@ -16,6 +16,7 @@ const alphaStrikeRoutes: FamilyRoute[] = [
   { path: "force", label: "Alpha Strike force", section: "workshop", load: () => import("./ui/as/AsForcePage") },
   { path: "table", label: "Alpha Strike table", section: "workshop", load: () => import("./ui/as/AsTablePage") },
   { path: "aids", label: "Alpha Strike play aids", section: "workshop", load: () => import("./ui/as/AsAidsPage") },
+  { path: "print", label: "Print Alpha Strike cards", section: "workshop", load: () => import("./ui/as/AsPrintPage") },
 ];
 
 // Aces's own routes, under /battletech/aces (ui/aces/routes.ts builds every link from the same base).
