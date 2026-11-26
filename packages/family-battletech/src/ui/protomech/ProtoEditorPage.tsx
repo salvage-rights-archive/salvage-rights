@@ -2,7 +2,7 @@
 // record's history (for Undo and Redo), derives everything else from the current record, and hands each panel what it shows and an `onEdit(change)` callback.
 import { Component, useEffect, useMemo, useState } from "react";
 import type { ErrorInfo, ReactNode } from "react";
-import { Link, useBlocker, useSearchParams } from "react-router";
+import { Link, useBlocker, useLocation, useSearchParams } from "react-router";
 import { loadCatalog } from "../../rules/catalog";
 import type { Catalog } from "../../rules/catalog";
 import { tally } from "../../rules/protomech/build";
@@ -140,6 +140,10 @@ function Editor({ initial, catalog, storage }: { initial: ProtoRecord; catalog: 
   const [status, setStatus] = useState("");
   const [problem, setProblem] = useState("");
   const [weightOpen, setWeightOpen] = useState(false);
+  // What an import from Mordel could not match, handed over by the Import page.
+  const state: unknown = useLocation().state;
+  const stateNotes = typeof state === "object" && state !== null && "notes" in state ? (state as { notes: unknown }).notes : undefined;
+  const notes = Array.isArray(stateNotes) ? stateNotes.filter((n): n is string => typeof n === "string") : [];
   const record = history.present;
   const dirty = !same(record, saved);
 
@@ -239,6 +243,16 @@ function Editor({ initial, catalog, storage }: { initial: ProtoRecord; catalog: 
           </ul>
         )}
         {dirty && <p className="bt-hint">You have changes that are not saved.</p>}
+        {notes.length > 0 && (
+          <details className="bt-notes">
+            <summary>Import notes</summary>
+            <ul>
+              {notes.map((note) => (
+                <li key={note}>{note}</li>
+              ))}
+            </ul>
+          </details>
+        )}
       </div>
 
       <div className="bt-editor__side">

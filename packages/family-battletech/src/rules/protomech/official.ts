@@ -8,6 +8,7 @@ import type { ProtoRecord } from "./record";
 export const protoDesignKey = (record: ProtoRecord): string =>
   canon({
     tons: record.tons,
+    configuration: record.configuration,
     techBase: record.techBase,
     year: record.year,
     walk: record.walk,

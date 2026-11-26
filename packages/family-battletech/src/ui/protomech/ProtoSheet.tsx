@@ -1,9 +1,10 @@
 // The ProtoMech record sheet: a Point of up to five ProtoMechs on one page (Total Warfare), our own drawing on 1700 by 2200 units, the Classic sheet's
 // proportions, with no logos or art. Each ProtoMech has its data, its armor and structure diagrams (the plain stand-in, ProtoDiagram) and its weapons
 // inventory. Pure: it reads nothing but its props. The sheet is paper: white, with black ink. The type never goes under 20 units.
-import { PROTO_LOCATION_NAMES } from "../../data/protomech";
+import { PROTO_GLIDER, PROTO_LOCATION_NAMES } from "../../data/protomech";
 import type { Catalog } from "../../rules/catalog";
 import { armorPoints, locationsOf, mountName, plainRun, rowOf, runMP, structurePoints, structureRow } from "../../rules/protomech/build";
+import { isGlider, speedLabels } from "../../rules/protomech/config";
 import { jumpMP, jumpSystemOf, optionSummary, wingBonus } from "../../rules/protomech/options";
 import { protoBattleValue, protoCost } from "../../rules/protomech/rating";
 import { protoOfficialState } from "../../rules/protomech/official";
@@ -50,10 +51,14 @@ export function protoFacts(record: ProtoRecord, catalog: Catalog) {
   return {
     title: protoTitle(record) || "Unnamed ProtoMech",
     tons: String(record.tons),
+    body: record.configuration,
+    walkLabel: speedLabels(record).walk,
+    runLabel: speedLabels(record).run,
     walk: String(record.walk),
-    run: record.booster ? `${String(plainRun(record.walk))} (${String(runMP(record))})` : String(plainRun(record.walk)),
-    jumpLabel: jumpSystemOf(record)?.unit ?? "Jumping MP",
-    jump: wingBonus(record) > 0 ? `${String(record.jump)} (${String(jumpMP(record))} with wing)` : String(record.jump),
+    run: record.booster && !isGlider(record) ? `${String(plainRun(record.walk))} (${String(runMP(record))})` : String(plainRun(record.walk)),
+    // A glider moves 1 MP on the ground and does not jump (IO:AE p. 93).
+    jumpLabel: isGlider(record) ? "Ground MP" : (jumpSystemOf(record)?.unit ?? "Jumping MP"),
+    jump: isGlider(record) ? String(PROTO_GLIDER.groundMP) : wingBonus(record) > 0 ? `${String(record.jump)} (${String(jumpMP(record))} with wing)` : String(record.jump),
     options: optionSummary(record).join(", "),
     heatSinks: String(record.heatSinks),
     bv: String(bv.total),
@@ -72,8 +77,8 @@ function Block({ record, catalog, index, y }: { record: ProtoRecord; catalog: Ca
   const rect = { x, y, w: SHEET_WIDTH - 60, h: BLOCK_HEIGHT };
   const lines: [string, string][] = [
     ["Tonnage", facts.tons],
-    ["Walking MP", facts.walk],
-    ["Running MP", facts.run],
+    [facts.walkLabel, facts.walk],
+    [facts.runLabel, facts.run],
     [facts.jumpLabel, facts.jump],
     ["Heat sinks", facts.heatSinks],
     ["Battle Value", facts.bv],
@@ -98,7 +103,7 @@ function Block({ record, catalog, index, y }: { record: ProtoRecord; catalog: Ca
         </text>
       )}
       <text x={x + 24} y={y + 346} fontSize={22} fill={INK}>{"Pilot: ______________________"}</text>
-      <ProtoDiagram locations={facts.locations} use="armor" frame={{ x: x + 380, y: y + 28, w: 540, h: 346 }} />
+      <ProtoDiagram locations={facts.locations} use="armor" body={facts.body} frame={{ x: x + 380, y: y + 28, w: 540, h: 346 }} />
       <text x={inventoryX} y={y + 40} fontSize={24} fontWeight={700} fill={INK}>Weapons and equipment</text>
       {["Location", "Type", "Dmg", "S/M/L", "Ammo"].map((head, i) => (
         <text key={head} x={inventoryX + [0, 150, 400, 470, 570][i]!} y={y + 72} fontSize={20} fontWeight={700} fill={INK}>
@@ -114,7 +119,7 @@ function Block({ record, catalog, index, y }: { record: ProtoRecord; catalog: Ca
           <text x={inventoryX + 570} y={y + 104 + i * 32} fontSize={22} fill={INK}>{line.ammo}</text>
         </g>
       ))}
-      <ProtoDiagram locations={facts.locations} use="structure" frame={{ x: inventoryX + 330, y: y + 196, w: 290, h: 176 }} />
+      <ProtoDiagram locations={facts.locations} use="structure" body={facts.body} frame={{ x: inventoryX + 330, y: y + 196, w: 290, h: 176 }} />
       <text x={inventoryX} y={y + 340} fontSize={20} fill={INK}>{`Armor ${String(facts.armorPoints)}, structure ${String(facts.structurePoints)}`}</text>
       <text x={inventoryX} y={y + 366} fontSize={20} fill={INK}>{`${facts.official.badge}`}</text>
     </Frame>
@@ -145,7 +150,7 @@ export default function ProtoSheet({ records, catalog }: { records: ProtoRecord[
             <div key={`${record.id}-${String(i)}`}>
               <h3>{`${String(i + 1)}. ${facts.title}`}</h3>
               <dl>
-                {[["Tonnage", facts.tons], ["Walking MP", facts.walk], ["Running MP", facts.run], [facts.jumpLabel, facts.jump], ["Heat sinks", facts.heatSinks], ["Battle Value", facts.bv], ["Cost", `${facts.cost} C-bills`], ...(facts.options === "" ? [] : [["Options", facts.options]]), ["Armor", facts.locations.map((l) => `${l.name} ${String(l.armor)}`).join(", ")], ["Internal structure", facts.locations.map((l) => `${l.name} ${String(l.structure ?? 0)}`).join(", ")], ["Marked", facts.official.badge]].map(([term, value]) => (
+                {[["Tonnage", facts.tons], [facts.walkLabel, facts.walk], [facts.runLabel, facts.run], [facts.jumpLabel, facts.jump], ["Heat sinks", facts.heatSinks], ["Battle Value", facts.bv], ["Cost", `${facts.cost} C-bills`], ...(facts.options === "" ? [] : [["Options", facts.options]]), ["Armor", facts.locations.map((l) => `${l.name} ${String(l.armor)}`).join(", ")], ["Internal structure", facts.locations.map((l) => `${l.name} ${String(l.structure ?? 0)}`).join(", ")], ["Marked", facts.official.badge]].map(([term, value]) => (
                   <div key={term}>
                     <dt>{term}</dt>
                     <dd>{value}</dd>

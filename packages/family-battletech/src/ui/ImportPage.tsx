@@ -6,6 +6,9 @@ import { loadCatalog } from "../rules/catalog";
 import { DEFAULT_LEVEL, levelRow } from "../rules/levels";
 import { UNIT_TYPE_OF, fromMordel, importOmniSet, importOmniSingle, omniFacts, parseMordelRef } from "../rules/mordel";
 import type { OmniImport } from "../rules/mordel";
+import { fromMordelProto } from "../rules/protomech/mordel";
+import { editorHref } from "./protomech/routes";
+import { openProtoStorage } from "./protomech/storage";
 import type { MechRecord } from "../rules/mech";
 import { createMordelClient } from "./mordel-client";
 import type { MordelClient, MordelListRow } from "./mordel-client";
@@ -126,8 +129,8 @@ export default function ImportPage({ makeClient = defaultMakeClient }: ImportPag
       if (!storage || !storedKey) return;
       setProblem("");
       setStatus("");
-      if (!Object.hasOwn(UNIT_TYPE_OF, unitType)) {
-        setProblem("Only BattleMechs and IndustrialMechs can be imported so far.");
+      if (unitType !== "pm" && !Object.hasOwn(UNIT_TYPE_OF, unitType)) {
+        setProblem("Only BattleMechs, IndustrialMechs and ProtoMechs can be imported so far.");
         return;
       }
       setBusy(true);
@@ -143,6 +146,19 @@ export default function ImportPage({ makeClient = defaultMakeClient }: ImportPag
         const edition = await storage.getEdition();
         const now = new Date().toISOString();
         const newId = () => crypto.randomUUID();
+        if (unitType === "pm") {
+          // A ProtoMech is its own kind of record, kept in its own store and opened in the ProtoMech editor.
+          const made = fromMordelProto(fetched.value, catalog, edition, now, newId);
+          if (!made.ok) {
+            setProblem(made.message);
+            return;
+          }
+          const proto = made.record;
+          const protoStorage = await openProtoStorage();
+          if (!(await attempt(STORAGE_WRITE_FAILED, () => protoStorage.save(proto)))) return;
+          void navigate(editorHref(proto.id), { state: { notes: [`Rules level set to ${levelRow(proto.rulesLevel ?? DEFAULT_LEVEL).label}, the lowest level that accepts everything this design uses.`, ...made.notes] } });
+          return;
+        }
         const result = fromMordel(fetched.value, catalog, edition, now, newId, unitType);
         if (!result.ok) {
           setProblem(result.message);
@@ -326,7 +342,7 @@ export default function ImportPage({ makeClient = defaultMakeClient }: ImportPag
       {storedKey && (
         <>
           <section className="bt-section" aria-labelledby="bt-unit">
-            <h2 id="bt-unit">Import a 'Mech</h2>
+            <h2 id="bt-unit">Import a 'Mech or ProtoMech</h2>
             <form onSubmit={submit}>
               <div className="bt-field">
                 <label htmlFor="bt-ref">Unit number or address</label>

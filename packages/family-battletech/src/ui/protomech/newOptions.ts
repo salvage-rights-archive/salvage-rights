@@ -18,5 +18,5 @@ export function protoNewOptions(form: { rulesLevel: RulesLevel | undefined; year
   const phase = datesPhase(probe, PROTO_DATES.unit);
   // Hide, do not mark: in its prototype years (before production) a ProtoMech needs Experimental rules.
   if (phase === null || (phase === "prototype" && !levelAtLeast(form.rulesLevel ?? "standard", "experimental"))) return [];
-  return [{ id: "protomech", label: "ProtoMech", note: "ProtoMech: a Clan unit of 2 to 9 tons, built under TechManual construction and opened in the ProtoMech editor. TechManual, p. 80." }];
+  return [{ id: "protomech", label: "ProtoMech", note: "ProtoMech: a Clan unit of 2 to 9 tons (quads, gliders and Ultraheavy ProtoMechs of up to 15 tons come with Advanced rules in the editor), built under TechManual construction and opened in the ProtoMech editor. TechManual, p. 80." }];
 }
