@@ -47,3 +47,19 @@ test("the Gothic editor on a phone: Gothic's choices, the printed Battle Value, 
     if (box) expect(box.height, (await control.textContent())?.slice(0, 30) ?? "").toBeGreaterThanOrEqual(43.5);
   }
 });
+
+test("the Gothic sheet's Dazzle switch adds the Dazzle lines and fits a phone", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 700 });
+  await startGothicBox(page, DEV, "UrbanMech UM-R60B");
+  await page.getByRole("link", { name: "Record sheet" }).click();
+  const sheet = page.locator("svg.bt-sheet");
+  await expect(sheet).toBeVisible();
+  await expect(sheet.getByText("Dazzle", { exact: true })).toHaveCount(0);
+  const dazzle = page.getByLabel("Show Dazzle Mode lines under each laser");
+  const box = await dazzle.locator("xpath=..").boundingBox();
+  expect(box?.height ?? 0).toBeGreaterThanOrEqual(43.5);
+  await dazzle.check();
+  await expect(sheet.getByText("Dazzle", { exact: true })).not.toHaveCount(0);
+  const widths = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, client: document.documentElement.clientWidth }));
+  expect(widths.scroll).toBe(widths.client);
+});

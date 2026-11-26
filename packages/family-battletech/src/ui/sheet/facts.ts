@@ -7,6 +7,8 @@ import type { Catalog, InventoryLine } from "../../rules/catalog";
 import { battleValue as battleValueOf } from "../../rules/bv";
 import { BV_METHOD } from "../../data/bv";
 import { levelOfRecord, levelRow } from "../../rules/levels";
+import { rulesetOf } from "../../data/rulesets";
+import type { GameId } from "../../data/rulesets";
 import { layout as buildLayout, locationName, structurePoints, totalHeatSinks, walkMP, weights } from "../../rules/mech";
 import { configurationLevel } from "../../rules/omni";
 import { equipmentItems, heatSinkCapacity, mascOf, movementPenalty, penalisedMovement, tsmOf } from "../../rules/walk";
@@ -31,7 +33,18 @@ export interface LocationPoints {
   structure: number | undefined;
 }
 
+/** What Gothic adds to the sheet (absent in Classic). */
+export interface GothicFacts {
+  /** Heavier than the Handler line: 40 tons and up (medium, heavy, assault), rulebook p. 80. */
+  handler: boolean;
+  searchlight: boolean;
+  /** Dazzle lines are in the inventory. */
+  dazzle: boolean;
+}
+
 export interface SheetFacts {
+  game: GameId;
+  gothic: GothicFacts | undefined;
   title: string;
   walk: string;
   run: string;
@@ -75,7 +88,28 @@ function safeLayout(record: MechRecord, catalog: Catalog): Layout {
   }
 }
 
-export function sheetFacts(record: MechRecord, catalog: Catalog): SheetFacts {
+/** The Handler line starts at the medium class (rulebook p. 80). */
+export const HANDLER_TONS = 40;
+
+/** Whether the record carries a Searchlight (Gothic rulebook p. 90). Read defensively until the editor lands the `gothic` field on the record. */
+export const hasSearchlight = (record: MechRecord): boolean => record.gothic?.searchlight === true;
+
+/** Lasers the Dazzle Mode setting halves (rulebook p. 79): every laser including Blazers, none of the defensive or infantry kinds. */
+const isLaser = (line: InventoryLine) => !line.sub && /laser|blazer/i.test(line.name) && !/anti-missile|retrofit/i.test(line.name);
+
+/** A Dazzle line under each laser: heat and damage halved, rounded down, heat at least 0 and damage at least 1; the ranges stay. */
+export function withDazzle(lines: InventoryLine[]): InventoryLine[] {
+  return lines.flatMap((line) => {
+    const heat = Number(line.heat);
+    const damage = Number(line.damage);
+    if (!isLaser(line) || !Number.isInteger(heat) || !Number.isInteger(damage)) return [line];
+    return [line, { ...line, qty: 0, name: "Dazzle", location: "", heat: String(Math.floor(heat / 2)), damage: String(Math.max(1, Math.floor(damage / 2))), sub: true as const }];
+  });
+}
+
+export function sheetFacts(record: MechRecord, catalog: Catalog, options: { dazzle?: boolean } = {}): SheetFacts {
+  const ruleset = rulesetOf(record.editionId);
+  const gothic = ruleset.game === "gothic";
   const walk = walkMP(record);
   const jumpJets = record.mounts.filter((m) => m.equipmentId !== null && catalog.byId(m.equipmentId)?.kind === "jump-jet").length;
   const penalty = movementPenalty(record, catalog);
@@ -114,6 +148,8 @@ export function sheetFacts(record: MechRecord, catalog: Catalog): SheetFacts {
   // An OmniMech configuration prints the level of its contents, never below Standard; the base prints its pod space where a Battle Value would go.
   const total = isBase ? weights(record, catalog.factsOf).total : null;
   return {
+    game: ruleset.game,
+    gothic: gothic ? { handler: record.tons >= HANDLER_TONS, searchlight: hasSearchlight(record), dazzle: options.dazzle === true } : undefined,
     title: sheetTitle(record),
     walk: moved === null ? DASH : String(moved.walk),
     run: moved === null ? DASH : String(moved.run),
@@ -125,9 +161,9 @@ export function sheetFacts(record: MechRecord, catalog: Catalog): SheetFacts {
     frankenmech: record.frankenmech !== undefined,
     techBase: Object.hasOwn(TECH_BASE_NAMES, record.techBase) ? (TECH_BASE_NAMES[record.techBase] ?? record.techBase) : record.techBase,
     edition: editionName(record.editionId),
-    level: levelRow(record.omni ? configurationLevel(record, catalog) : levelOfRecord(record, catalog)).label,
+    level: levelRow(record.omni ? configurationLevel(record, catalog) : levelOfRecord(record, catalog), ruleset).label,
     year: record.year === null ? undefined : String(record.year),
-    inventory: inventoryLines(record, catalog),
+    inventory: gothic && options.dazzle === true ? withDazzle(inventoryLines(record, catalog)) : inventoryLines(record, catalog),
     ammo,
     battleValue: isBase ? DASH : imported !== undefined ? imported.toLocaleString("en-US") : `${computed?.complete === false ? "at least " : ""}${(computed?.total ?? 0).toLocaleString("en-US")}`,
     battleValueFrom: isBase ? (total === null ? "the base has none" : `the base has none; pod space ${String(Math.round((record.tons - total) * 1000) / 1000)} tons`) : imported !== undefined ? "mordel.net" : "calculated, pilot 4/5",

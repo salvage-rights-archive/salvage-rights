@@ -77,7 +77,7 @@ function Inventory({ x, top, bottom, lines }: { x: number; top: number; bottom: 
             {!line.sub && cell("qty", String(line.qty))}
             {cell("type", line.sub ? `${SUB_INDENT}${line.name}` : line.name)}
             {!line.sub && cell("loc", line.location)}
-            {!line.sub && cell("ht", line.heat)}
+            {line.heat !== "" && cell("ht", line.heat)}
             {line.damage !== "" && cell("dmg", line.damage)}
             {line.min !== "" && cell("min", line.min)}
             {line.short !== "" && cell("sht", line.short)}
@@ -148,6 +148,14 @@ export default function MechData({ rect, facts }: { rect: Rect; facts: SheetFact
         {` ${facts.battleValue} `}
         <tspan fontSize={MIN_SIZE}>{`(${facts.battleValueFrom})`}</tspan>
       </text>
+      {facts.gothic?.searchlight === true && (
+        <g data-searchlight="">
+          <text x={x + rect.w - 188} y={y + rect.h - 24} fontSize={22} fontWeight={700} fill={INK}>
+            Searchlight
+          </text>
+          <rect x={x + rect.w - 50} y={y + rect.h - 48} width={30} height={30} fill="#fff" stroke={INK} strokeWidth={2} />
+        </g>
+      )}
     </Frame>
   );
 }
