@@ -22,3 +22,5 @@ export const sortieHref = (campaignId: string, sortie?: number): string => `${AC
 export const ACES_CAMPAIGNS = `${ACES_BASE}/campaigns`;
 export const ACES_CAMPAIGN = `${ACES_BASE}/campaign`;
 export const campaignHref = (id: string): string => `${ACES_CAMPAIGN}?id=${encodeURIComponent(id)}`;
+export const ACES_PRINT = `${ACES_BASE}/print`;
+export const printHref = (campaignId: string): string => `${ACES_PRINT}?id=${encodeURIComponent(campaignId)}`;

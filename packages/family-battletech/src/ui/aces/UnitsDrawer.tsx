@@ -49,7 +49,7 @@ function HandActions({ u, apply }: { u: GameUnit; apply: Apply }) {
         It calls for a critical hit check
       </label>
       <p>
-        <button type="button" className="bt-button bt-button--secondary" disabled={!ok} aria-label={`Stage damage on ${u.name}`} onClick={() => { apply((g) => damageByHand(g, u.id, points, crit)); setAmount(""); setCrit(false); }}>
+        <button type="button" className="bt-button bt-button--secondary" disabled={!ok} aria-label={`Stage the damage on ${u.name}`} onClick={() => { apply((g) => damageByHand(g, u.id, points, crit)); setAmount(""); setCrit(false); }}>
           Stage the damage
         </button>
         {!isEmplacement(u.card) && (

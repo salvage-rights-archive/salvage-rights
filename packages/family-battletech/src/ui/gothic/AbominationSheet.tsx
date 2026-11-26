@@ -360,7 +360,7 @@ function ModelText({ model, catalog, handler }: { model: BlockModel; catalog: Ca
       <h3>{model.title}</h3>
       {stats && unit ? (
         <ul>
-          <li>{`Class ${stats.size?.label ?? stats.classId}, ${String(stats.creatures)} creatures of ${String(stats.pipsEach)} pips`}</li>
+          <li>{`Class ${stats.size?.label ?? stats.classId}, ${String(stats.creatures)} ${stats.creatures === 1 ? "creature" : "creatures"} of ${String(stats.pipsEach)} pips`}</li>
           <li>{`Skills: Gunnery ${String(unit.gunnery)}, AniMelee ${String(unit.animelee)}${unit.handlerBonus ? ", Handler bonus" : ""}${handler ? `, Handler ${handler}` : ""}`}</li>
           <li>{`Ground MP ${String(stats.ground)}${stats.jump === undefined ? "" : `, Jump MP ${String(stats.jump)}`}${stats.vtol === undefined ? "" : `, VTOL MP ${String(stats.vtol)}`}`}</li>
           <li>{`Physical damage: Mob ${stats.mob === null ? "none" : String(stats.mob)}, Hobble ${stats.hobble === null ? "none" : String(stats.hobble)}, Melee ${stats.melee === null ? "none" : String(stats.melee)}`}</li>
@@ -369,7 +369,7 @@ function ModelText({ model, catalog, handler }: { model: BlockModel; catalog: Ca
           ))}
         </ul>
       ) : (
-        <p>{unit ? "A type this version does not know." : `${String(model.creatures)} trackers of ${String(model.rows)} rows, left blank.`}</p>
+        <p>{unit ? "A type this version does not know." : `${String(model.creatures)} ${model.creatures === 1 ? "tracker" : "trackers"} of ${String(model.rows)} ${model.rows === 1 ? "row" : "rows"}, left blank.`}</p>
       )}
     </section>
   );

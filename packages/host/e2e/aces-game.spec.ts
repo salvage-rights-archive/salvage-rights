@@ -197,3 +197,89 @@ test("play an invented two-turn game at 320 px: Initiative, Movement, Combat and
   await page.getByRole("button", { name: "Log" }).click();
   await expect(page.getByText("The sortie ends: the last turn ended.")).toBeVisible();
 });
+
+test("the units list: damage entered by hand is staged, and a unit that left the table is out of play", async ({ page }) => {
+  test.setTimeout(180_000);
+  await page.setViewportSize({ width: 320, height: 800 });
+  await saveAcesCard(page, DEV);
+  await saveAcesCommand(page, DEV);
+  await putAsUnits(page, ["Mine A", "Theirs A"]);
+  await page.goto(`${DEV}${ACES}/new-game`);
+  await page.getByLabel("Add a unit to your force").selectOption({ label: "Mine A (PV 20)" });
+  await page.getByRole("button", { name: "Add to your force", exact: true }).click();
+  await page.getByLabel("Add a unit to automated force").selectOption({ label: "Theirs A (PV 20)" });
+  await page.getByRole("button", { name: "Add to automated force", exact: true }).click();
+  await page.getByRole("button", { name: "Start the game" }).click();
+  const orders = page.getByRole("button", { name: "Apply the orders" });
+  await answerQuestions(page, /^Orders applied|No order applies|Apply the orders/);
+  if (await orders.isVisible()) await orders.click();
+  await page.getByLabel("Your force: 2D6 roll, 2 to 12").fill("2");
+  await page.getByLabel("Automated force: 2D6 roll, 2 to 12").fill("12");
+  await page.getByRole("button", { name: "Start the Movement Phase" }).click();
+
+  await page.getByRole("button", { name: "Show the units" }).click();
+  await page.getByText("Damage by hand or left the table: Mine A").click();
+  await page.getByLabel("Damage to Mine A, staged until the End Phase").fill("1");
+  await page.getByRole("button", { name: "Stage the damage on Mine A" }).click();
+  await expect(page.getByText(/1 staged/)).toBeVisible();
+  await fitsPhone(page, "the units list with a hand entry open");
+  await noViolations(page, "the units list with a hand entry open");
+
+  await page.getByText("Objectives and transports").click();
+  await page.getByRole("group", { name: "Pursues the movement objective" }).getByLabel("Theirs A").check();
+  await page.getByRole("group", { name: "Is the destroy objective" }).getByLabel("Mine A").check();
+  await expect(page.getByRole("group", { name: "Is the destroy objective" }).getByLabel("Mine A")).toBeChecked();
+  await fitsPhone(page, "the objectives panel open");
+  await noViolations(page, "the objectives panel open");
+
+  await page.getByText("Damage by hand or left the table: Theirs A").click();
+  await page.getByRole("button", { name: "Theirs A left the table" }).click();
+  await expect(page.getByText("Escaped")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Theirs A left the table" })).toHaveCount(0);
+});
+
+test("the support step: the End Phase waits until the players close it", async ({ page }) => {
+  test.setTimeout(240_000);
+  await page.setViewportSize({ width: 320, height: 800 });
+  await saveAcesCard(page, DEV);
+  await saveAcesCommand(page, DEV);
+  await page.goto(`${DEV}${ACES}/support`);
+  await page.getByLabel("Name", { exact: true }).fill("Invented Barrage");
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(page.getByText("Saved.")).toBeVisible();
+  await putAsUnits(page, ["Mine A", "Theirs A"]);
+  await page.goto(`${DEV}${ACES}/new-game`);
+  await page.getByLabel("Add a unit to your force").selectOption({ label: "Mine A (PV 20)" });
+  await page.getByRole("button", { name: "Add to your force", exact: true }).click();
+  await page.getByLabel("Add a unit to automated force").selectOption({ label: "Theirs A (PV 20)" });
+  await page.getByRole("button", { name: "Add to automated force", exact: true }).click();
+  await page.getByLabel(/Invented Barrage/).check();
+  await page.getByRole("button", { name: "Start the game" }).click();
+  const orders = page.getByRole("button", { name: "Apply the orders" });
+  await answerQuestions(page, /^Orders applied|No order applies|Apply the orders/);
+  if (await orders.isVisible()) await orders.click();
+  await page.getByLabel("Your force: 2D6 roll, 2 to 12").fill("2");
+  await page.getByLabel("Automated force: 2D6 roll, 2 to 12").fill("12");
+  await page.getByRole("button", { name: "Start the Movement Phase" }).click();
+  await playMovement(page);
+  await page.getByRole("button", { name: "Go to the Combat Phase" }).click();
+  await page.getByRole("button", { name: "Attack with Mine A" }).click();
+  await page.getByRole("button", { name: "Mine A makes no attack" }).click();
+  await page.getByRole("button", { name: "Attack with Theirs A" }).click();
+  await answerQuestions(page, /^Theirs A (attacks Mine A|makes no attack)/);
+  const record = page.getByRole("button", { name: "Record the attack" });
+  if (await record.isVisible()) {
+    await page.getByLabel(/^2D6 attack roll/).fill("2");
+    await record.click();
+  } else {
+    await page.getByRole("button", { name: /^Done: Theirs A makes no attack/ }).click();
+  }
+  await expect(page.getByRole("heading", { name: "Emplacements, artillery and support cards" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Go to the End Phase" })).toBeDisabled();
+  await fitsPhone(page, "the support step");
+  await noViolations(page, "the support step");
+  // With no command deck recorded the page says to read the card, and the players close the step.
+  await expect(page.getByText(/No command card is recorded/).first()).toBeVisible();
+  await page.getByRole("button", { name: "Done with the support step" }).click();
+  await expect(page.getByRole("button", { name: "Go to the End Phase" })).toBeEnabled();
+});

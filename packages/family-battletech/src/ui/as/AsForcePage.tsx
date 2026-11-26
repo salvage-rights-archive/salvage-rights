@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router";
 import { AS_FORCE_CITES, AS_SKILL_NAMES, SKILLS } from "../../data/alpha-strike";
-import { clampSkill, duplicateForce, forceTotals } from "../../rules/as-force";
-import type { AsForce } from "../../rules/as-force";
+import { clampSkill, duplicateForce, forceTotals, inPlay } from "../../rules/as-force";
+import type { AsForce, PlayFilter } from "../../rules/as-force";
 import { asOfficialMark } from "../../rules/as-mul";
 import { unitTitle } from "../../rules/as-unit";
 import type { AsUnit } from "../../rules/as-unit";
@@ -10,8 +10,6 @@ import { STORAGE_READ_FAILED, STORAGE_WRITE_FAILED } from "../storage";
 import { forceHref, limitWords } from "./AsForces";
 import { downloadForce, openAsStorage } from "./storage";
 import type { AsStorage } from "./storage";
-import "../classic.scss";
-import "./alpha-strike.scss";
 
 const HOME = "/battletech/alpha-strike/home";
 
@@ -20,7 +18,7 @@ type Loaded =
   | { state: "failed" }
   | { state: "missing" }
   | { state: "unreadable"; message: string }
-  | { state: "ready"; storage: AsStorage; force: AsForce; roster: AsUnit[] };
+  | { state: "ready"; storage: AsStorage; force: AsForce; roster: AsUnit[]; filter: PlayFilter };
 
 export default function AsForcePage() {
   const [params] = useSearchParams();
@@ -34,10 +32,11 @@ export default function AsForcePage() {
         const storage = await openAsStorage();
         const entry = id ? await storage.getForce(id) : undefined;
         const roster = (await storage.list()).flatMap((e) => (e.unit ? [e.unit] : []));
+        const filter = await storage.getFilter();
         if (!live) return;
         if (!entry) setLoaded({ state: "missing" });
         else if (!entry.force) setLoaded({ state: "unreadable", message: entry.unreadable ?? "" });
-        else setLoaded({ state: "ready", storage, force: entry.force, roster });
+        else setLoaded({ state: "ready", storage, force: entry.force, roster, filter });
       } catch {
         if (live) setLoaded({ state: "failed" });
       }
@@ -47,7 +46,7 @@ export default function AsForcePage() {
     };
   }, [id]);
 
-  if (loaded.state === "ready") return <ForceEditor key={loaded.force.id} initial={loaded.force} roster={loaded.roster} storage={loaded.storage} />;
+  if (loaded.state === "ready") return <ForceEditor key={loaded.force.id} initial={loaded.force} roster={loaded.roster} filter={loaded.filter} storage={loaded.storage} />;
   if (loaded.state === "loading") return <div className="sr-page" role="status">Loading.</div>;
   return (
     <div className="sr-page">
@@ -68,7 +67,7 @@ export default function AsForcePage() {
   );
 }
 
-function ForceEditor({ initial, roster, storage }: { initial: AsForce; roster: AsUnit[]; storage: AsStorage }) {
+function ForceEditor({ initial, roster, filter, storage }: { initial: AsForce; roster: AsUnit[]; filter: PlayFilter; storage: AsStorage }) {
   const navigate = useNavigate();
   // Every change is saved as it is made, so there is no unsaved state to guard.
   const [force, setForce] = useState(initial);
@@ -150,6 +149,9 @@ function ForceEditor({ initial, roster, storage }: { initial: AsForce; roster: A
         </p>
         <h1>{force.name.trim() || "Unnamed force"}</h1>
         <div className="bt-actions">
+          <Link className="bt-button" to={`/battletech/alpha-strike/table?force=${encodeURIComponent(force.id)}`}>
+            Play at the table
+          </Link>
           <button type="button" className="bt-button bt-button--secondary" onClick={() => { downloadForce(force, roster); setStatus("Export started."); }}>
             Export
           </button>
@@ -281,7 +283,7 @@ function ForceEditor({ initial, roster, storage }: { initial: AsForce; roster: A
             <label htmlFor="as-force-unit">Unit</label>
             <select id="as-force-unit" value={choice} onChange={(e) => { setChoice(e.target.value); }}>
               <option value="">Choose a unit</option>
-              {roster.map((u) => (
+              {roster.filter((u) => inPlay(u, filter)).map((u) => (
                 <option key={u.id} value={u.id}>{`${unitTitle(u) || "Unnamed unit"} (PV ${String(u.card.pv)})`}</option>
               ))}
             </select>

@@ -54,6 +54,8 @@ export interface TableUnit {
   stats?: Partial<Record<StatId, number>>;
   /** This enemy is the destroy objective (p. 17). */
   destroyObjective?: true;
+  /** Riding in a transport: it counts for nothing on the table until it dismounts (p. 5). */
+  mounted?: true;
   /** An ally has already attacked it this turn (p. 18). */
   attackedByAlly?: true;
   /** Pilot Skill; a unit without one reads 4 (the standard Skill). */
@@ -313,7 +315,7 @@ function ask(run: Run, q: Omit<QuestionBase, "cite"> & Record<string, unknown>):
   throw new Asked({ ...q, cite: ACES_PROMPTS[q.prompt].cite } as Question);
 }
 
-const living = (units: readonly TableUnit[]): TableUnit[] => units.filter((u) => !u.play.destroyed && !u.play.escaped);
+const living = (units: readonly TableUnit[]): TableUnit[] => units.filter((u) => !u.play.destroyed && !u.play.escaped && !u.mounted);
 const names = (units: readonly TableUnit[]): string => units.map((u) => u.name).join(", ");
 const labelOf = (list: readonly { id: string; label: string }[], id: string): string => list.find((x) => x.id === id)?.label ?? id;
 const columnLabel = (id: string): string => labelOf(ACES_VALUES.column, id);

@@ -80,3 +80,25 @@ export function forceTotals(force: AsForce, roster: ReadonlyMap<string, AsUnit>)
   const count = lines.filter((line) => line.unit).length;
   return { lines, count, missing: lines.length - count, total, room: force.pvLimit === undefined ? undefined : force.pvLimit - total };
 }
+
+/** What the player has set for the game being played: the year (later units are out of it) and the tech base to pick from. */
+export interface PlayFilter {
+  year?: number;
+  techBase?: "inner-sphere" | "clan";
+}
+
+/** Whether a unit may be picked under the filter. A unit with no year, or a mixed or unstated tech base, is never ruled out by that part. */
+export function inPlay(unit: AsUnit, filter: PlayFilter): boolean {
+  if (filter.year !== undefined && typeof unit.year === "number" && unit.year > filter.year) return false;
+  if (filter.techBase !== undefined && (unit.techBase === "inner-sphere" || unit.techBase === "clan") && unit.techBase !== filter.techBase) return false;
+  return true;
+}
+
+/** A filter read back from storage: anything that is not a year or a known tech base is dropped. */
+export function readFilter(v: unknown): PlayFilter {
+  const o = (typeof v === "object" && v !== null ? v : {}) as Record<string, unknown>;
+  return {
+    ...(typeof o.year === "number" && Number.isInteger(o.year) ? { year: o.year } : {}),
+    ...(o.techBase === "inner-sphere" || o.techBase === "clan" ? { techBase: o.techBase } : {}),
+  };
+}

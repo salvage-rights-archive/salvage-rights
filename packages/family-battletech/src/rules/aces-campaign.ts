@@ -678,6 +678,22 @@ export function annotateSortie(c: AcesCampaign, number: number, notes: { keyword
   return { ...c, sorties: c.sorties.map((s, i) => (i === at ? { ...s, keywords: notes.keywords, ...(notes.next === undefined ? {} : { next: notes.next }) } : s)) };
 }
 
+/** Corrects the words on one recorded sortie (its name, date, keywords and the sortie to play next); the figures stay as the steps worked them out. */
+export function editSortie(c: AcesCampaign, index: number, change: { name?: string; date?: string; keywords?: string[]; next?: number | null }): AcesCampaign {
+  const old = c.sorties[index];
+  if (!old) return c;
+  const next = change.next === undefined ? old.next : change.next === null ? undefined : change.next;
+  const name = change.name === undefined ? old.name : change.name.trim() || undefined;
+  const sortie: SortieRecord = {
+    ...old,
+    name,
+    next,
+    ...(change.date === undefined ? {} : { date: change.date }),
+    ...(change.keywords === undefined || old.result === "failed" ? {} : { keywords: change.keywords.map((k) => k.trim()).filter(Boolean) }),
+  };
+  return { ...c, sorties: c.sorties.map((s, i) => (i === index ? sortie : s)) };
+}
+
 /** Is a saved value a campaign this version can read? Anything else is listed untouched. */
 export function isAcesCampaign(v: unknown): v is AcesCampaign {
   if (typeof v !== "object" || v === null) return false;

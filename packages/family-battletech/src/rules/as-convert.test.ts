@@ -17,6 +17,7 @@ import {
   convertStructure,
   convertType,
   convertWeapons,
+  conversionDraft,
   finalAbilityDamage,
   finalDamage,
   heatModifiedDamage,
@@ -409,5 +410,14 @@ describe("convertMech runs parts one to three", () => {
     expect(result.unit.source?.kind).toBe("converted");
     expect(new Set(result.working.map((w) => w.step))).toEqual(new Set(["type", "size", "movement", "tmm", "armor", "structure", "weapons", "heat", "damage", "overheat"]));
     expect(result.findings).toEqual([]);
+  });
+});
+
+describe("conversionDraft", () => {
+  it("fills the converted figures, keeps the Classic id and leaves Point Value and role for the player", () => {
+    const record = mech(50, 4, [...many(2, "er-ppc-is")]);
+    const draft = conversionDraft(record, convertMech(record, catalog), "new-id", "2026-11-26T00:00:00Z");
+    expect(draft).toMatchObject({ id: "new-id", source: { kind: "converted", ref: record.id, at: "2026-11-26T00:00:00Z" }, card: { type: "BM", pv: 0, role: null, specials: [] } });
+    expect(draft.card.armor).toBeGreaterThan(0);
   });
 });

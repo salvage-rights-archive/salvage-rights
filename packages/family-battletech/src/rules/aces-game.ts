@@ -59,7 +59,17 @@ export interface GameUnit {
   /** The key of the deck it plays by; absent for a unit without one (an emplacement, a unit on the player's side, a deck not chosen yet). */
   deck?: string;
   play: PlayState;
-  flags: { withdrawing?: true; fleeing?: true; automated?: true };
+  flags: {
+    withdrawing?: true;
+    fleeing?: true;
+    automated?: true;
+    /** The sortie names this automated unit as pursuing its movement objective (Aces p. 17). */
+    moveObjective?: true;
+    /** The sortie names this unit or building as the destroy objective (Aces p. 17). */
+    destroyObjective?: true;
+    /** Mounted on this transport (game-unit id): out of Initiative, movement and combat until it dismounts (Aces p. 5). */
+    mountedIn?: string;
+  };
 }
 
 export interface GameSide {
@@ -121,6 +131,8 @@ export interface CombatState {
   active?: { unitId: string; terrain: Record<string, string[]> };
   /** Pilots who have added a pip to an attack roll this phase: once a Combat Phase (p. 24). */
   pips: string[];
+  /** The support step after the units attack: the Battlefield Support cards played this turn, and whether the players have closed it (pp. 20-21). */
+  support?: { resolved: { card: string; target: string; hit: boolean }[]; closed?: boolean };
 }
 
 /** The End Phase of one turn: the six steps of p. 32. */

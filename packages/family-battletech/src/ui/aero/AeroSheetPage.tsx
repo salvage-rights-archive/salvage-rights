@@ -13,7 +13,6 @@ import FighterSheet from "./sheet/FighterSheet";
 import { AERO_HOME, editorHref } from "./routes";
 import { openAeroStorage } from "./storage";
 import { STORAGE_READ_FAILED } from "../storage";
-import "../classic.scss";
 import "./aero.scss";
 
 type Loaded =

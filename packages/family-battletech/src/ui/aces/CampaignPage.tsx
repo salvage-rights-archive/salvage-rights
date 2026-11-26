@@ -2,7 +2,6 @@
 // with unsaved edits asks first. The sortie and after-sortie pages open from here.
 import { useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router";
-import { SS_SORTIES } from "../../data/aces-scouring-sands";
 import {
   activeUnits,
   difficultyRow,
@@ -21,11 +20,12 @@ import { openAsStorage } from "../as/storage";
 import { LeaveGuard } from "../editor/LeaveConfirm";
 import { STORAGE_READ_FAILED, STORAGE_WRITE_FAILED } from "../storage";
 import { PilotsSection, RosterSection } from "./CampaignParts";
+import SortiesSection from "./SortiesSection";
 import { downloadCampaigns } from "./campaign-file";
 import { openCampaignStorage } from "./campaign-storage";
 import type { CampaignStorage } from "./campaign-storage";
-import { ACES_CAMPAIGNS, afterHref, gameHref, sortieHref } from "./routes";
-import "./styles";
+import { ACES_CAMPAIGNS, afterHref, gameHref, printHref, sortieHref } from "./routes";
+import "./aces.scss";
 
 const SECTIONS = [
   { id: "overview", name: "Overview" },
@@ -119,7 +119,6 @@ function Campaign({ storage, campaign: initial, units }: { storage: CampaignStor
     ...pilotCountFindings(campaign),
   ];
   const totals = Object.entries(keywordTotals(campaign));
-  const unitName = (unitId: string) => campaign.roster.find((r) => r.unitId === unitId)?.name ?? unitId;
 
   return (
     <div className="sr-page">
@@ -137,6 +136,9 @@ function Campaign({ storage, campaign: initial, units }: { storage: CampaignStor
         <button type="button" className="bt-button bt-button--secondary" onClick={() => { downloadCampaigns([campaign], units, true); setStatus("Export started."); }}>
           Export this campaign
         </button>
+        <Link className="bt-button bt-button--secondary" to={printHref(campaign.id)}>
+          Print the sheets
+        </Link>
       </div>
       {dirty && <p className="bt-hint">You have changes that are not saved.</p>}
       <div role="status">{status}</div>
@@ -197,32 +199,7 @@ function Campaign({ storage, campaign: initial, units }: { storage: CampaignStor
       {section === "roster" && <RosterSection campaign={campaign} units={units} edit={edit} />}
       {section === "pilots" && <PilotsSection campaign={campaign} edit={edit} />}
 
-      {section === "sorties" && (
-        <section aria-labelledby="aces-c-sorties">
-          <h2 id="aces-c-sorties">Sorties</h2>
-          {campaign.sorties.length === 0 ? (
-            <p>No sorties recorded yet.</p>
-          ) : (
-            <ul className="bt-list">
-              {campaign.sorties.map((s, i) => {
-                const name = (book ? SS_SORTIES.find((x) => x.n === s.number)?.title : undefined) ?? s.name;
-                return (
-                  <li key={`${String(s.number)}-${String(i)}`} className="bt-row">
-                    <span className="bt-row__text">
-                      {`Sortie ${two(s.number)}${name ? `, ${name}` : ""}`}
-                      <span className="bt-row__credit">
-                        {s.result === "failed"
-                          ? `${s.date}. Failed and replayed; nothing else recorded.`
-                          : `${s.date}. Income ${String(s.income)}, expenses ${String(s.income - s.earnings)}, earnings ${String(s.earnings)}, Named Pilot shares ${String(s.shares)}.${s.fielded.length > 0 ? ` Fielded ${s.fielded.map((f) => unitName(f.unitId)).join(", ")}.` : ""}${s.keywords.length > 0 ? ` Keywords ${s.keywords.join(", ")}.` : ""}`}
-                      </span>
-                    </span>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </section>
-      )}
+      {section === "sorties" && <SortiesSection campaign={campaign} edit={edit} />}
 
       {section === "keywords" && (
         <section aria-labelledby="aces-c-keywords">

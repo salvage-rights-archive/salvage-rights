@@ -126,7 +126,7 @@ describe("Classic BattleTech home", () => {
     const user = userEvent.setup();
     renderHome();
     const form = await screen.findByRole("form", { name: "Build a new one" });
-    expect([...form.querySelectorAll("label")].map((l) => l.textContent).slice(0, 8)).toEqual(["Name", "Model", "Type", "Configuration", "Rules level", "Tech base", "Tonnage", "Walking MP"]);
+    expect([...form.querySelectorAll("label")].map((l) => l.textContent).slice(0, 9)).toEqual(["Name", "Model", "Type", "Configuration", "Rules level", "Tech base", "Year", "Tonnage", "Walking MP"]);
     const type = within(form).getByLabelText<HTMLSelectElement>("Type");
     const config = within(form).getByLabelText<HTMLSelectElement>("Configuration");
     const texts = (select: HTMLSelectElement) => [...select.options].map((o) => o.text);

@@ -47,7 +47,6 @@ import RecordBoundary from "./RecordBoundary";
 import { STORAGE_READ_FAILED, STORAGE_WRITE_FAILED, downloadMech, downloadOmni, isMechRecord, openFamilyStorage } from "./storage";
 import type { FamilyStorage } from "./storage";
 import { useGothicTheme } from "./gothic/theme";
-import "./classic.scss";
 
 export type Change = (draft: MechRecord) => void;
 /** Applies an edit. Edits with the same `field` in a row (one visit to a field) are one Undo step. */
@@ -972,15 +971,26 @@ function Editor({ initial, unsaved, startAt, catalog, storage }: { initial: Doc;
               )}
               <NumberField id="field-year" label="Year" value={record.year} allowEmpty changed={mark("year")} onValid={(v) => { edit((d) => { setYear(d, v); }, "year"); }} />
               <div className="bt-grid__wide">
+              {chassis !== undefined && !inBase ? (
+                <div className="bt-field">
+                  <span id="field-era-label" className="bt-label">
+                    Era
+                  </span>
+                  <span id="field-era" tabIndex={-1} aria-labelledby="field-era-label">
+                    {eraOfRecord(record)?.name ?? "Any era"}
+                  </span>
+                  <span className="bt-hint">A configuration's era follows its year. Set the year here, or the base's era in the base.</span>
+                </div>
+              ) : (
               <SelectField
                 id="field-era"
                 label="Era"
                 value={eraOfRecord(record)?.id ?? ""}
                 options={eraChoices(ruleset.eras)}
                 changed={mark("era")}
-                disabled={fixedHere}
                 onChange={(v) => { edit((d) => { setEra(d, v); }, "era"); }}
               />
+              )}
               </div>
               <NumberField id="field-tons" label={record.frankenmech ? "Tons (center torso donor)" : "Tons"} value={record.tons} changed={mark("tons")} disabled={fixedHere} onValid={(v) => { edit((d) => void (d.tons = v ?? d.tons), "tons"); }} />
             </div>

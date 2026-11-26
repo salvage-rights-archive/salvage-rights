@@ -24,7 +24,6 @@ import { sheetProfileFor } from "../../data/aero-sheet";
 import { AERO_HOME, sheetHref } from "./routes";
 import { downloadAero, openAeroStorage } from "./storage";
 import type { AeroStorage } from "./storage";
-import "../classic.scss";
 import "./aero.scss";
 
 const HISTORY_LIMIT = 100;

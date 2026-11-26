@@ -10,7 +10,7 @@ import { STORAGE_READ_FAILED, STORAGE_WRITE_FAILED, downloadJson } from "../stor
 import { ACES_COMMAND, ACES_ORDER, ACES_SUPPORT, ACES_CARD, ACES_HOME, cardHref, commandHref, orderHref, supportHref } from "./routes";
 import { downloadLibrary, fromLibraryFile, libraryOf, openAcesStorage, planLibraryImport } from "./storage";
 import type { AcesEntry, AcesStorage } from "./storage";
-import "./styles";
+import "./aces.scss";
 
 const MAX_IMPORT_BYTES = 1024 * 1024 * 8;
 const KIND_WORDS: Record<AcesKind, string> = { "aces-card": "behaviour card", "aces-command": "command card", "aces-order": "special order card", "aces-support": "support card" };

@@ -1,5 +1,6 @@
 import type { FamilyManifest, FamilyRoute } from "@salvage-rights/shared";
 import { EDITIONS, ERAS } from "./data/editions";
+import "./ui/shared-styles";
 import { FAMILY_ART, GAME_ART } from "./artwork/games";
 
 const classicRoutes: FamilyRoute[] = [
@@ -13,6 +14,8 @@ const alphaStrikeRoutes: FamilyRoute[] = [
   { path: "home", label: "Alpha Strike", section: "workshop", load: () => import("./ui/as/AsHomePage") },
   { path: "unit", label: "Alpha Strike unit", section: "workshop", load: () => import("./ui/as/AsUnitPage") },
   { path: "force", label: "Alpha Strike force", section: "workshop", load: () => import("./ui/as/AsForcePage") },
+  { path: "table", label: "Alpha Strike table", section: "workshop", load: () => import("./ui/as/AsTablePage") },
+  { path: "aids", label: "Alpha Strike play aids", section: "workshop", load: () => import("./ui/as/AsAidsPage") },
 ];
 
 // Aces's own routes, under /battletech/aces (ui/aces/routes.ts builds every link from the same base).
@@ -29,6 +32,7 @@ const acesRoutes: FamilyRoute[] = [
   { path: "sortie", label: "Aces sortie", section: "workshop", load: () => import("./ui/aces/SortiePage") },
   { path: "campaigns", label: "Aces campaigns", section: "workshop", load: () => import("./ui/aces/CampaignsPage") },
   { path: "campaign", label: "Aces campaign", section: "workshop", load: () => import("./ui/aces/CampaignPage") },
+  { path: "print", label: "Print Aces campaign sheets", section: "workshop", load: () => import("./ui/aces/AcesPrintPage") },
 ];
 
 // Gothic's pages are the game's own routes (every link is built from `GOTHIC_BASE`, data/rulesets.ts). One route to a line, so a later
@@ -42,6 +46,14 @@ const gothicRoutes: FamilyRoute[] = [
   { path: "play", label: "Gothic Abomination tracker", section: "play", load: () => import("./ui/gothic/TrackerPage") },
   { path: "aids", label: "Gothic rules reference", section: "workshop", load: () => import("./ui/gothic/AidsPage") },
 ];
+
+// The Gothic pages ran for a night under gothic-preview/*; a link kept from then goes to the same page under gothic/*, query kept.
+const gothicPreviewRoutes: FamilyRoute[] = gothicRoutes.map((route) => ({
+  path: `gothic-preview/${route.path}`,
+  label: `${route.label} (old link)`,
+  section: route.section,
+  load: () => import("./ui/gothic/PreviewRedirect"),
+}));
 
 // AeroTech's pages are the game's own routes (the game is ready).
 const aeroRoutes: FamilyRoute[] = [
@@ -67,7 +79,7 @@ const manifest: FamilyManifest = {
   unitTypes: (EDITIONS[0]?.unitTypes ?? []).filter((unit) => unit.ready), // the types the edition can build (data/editions.ts)
   eras: ERAS, // the Master Unit List's twelve (data/editions.ts)
   measures: ["hexes"],
-  routes: [],
+  routes: gothicPreviewRoutes,
   credits: {
     owner:
       // The non-affiliation notice fan projects for this game commonly carry, word for word, then two lines of our own.

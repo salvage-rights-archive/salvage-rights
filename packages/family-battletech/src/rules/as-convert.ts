@@ -40,6 +40,7 @@ import {
   WEAPON_RULES,
 } from "../data/as-convert";
 import type { AsWeaponRow, AscCite, DamageValue } from "../data/as-convert";
+import { newAsUnit } from "./as-unit";
 import type { AsCard, AsDamage, AsMove, AsUnit } from "./as-unit";
 import type { Catalog } from "./catalog";
 import { mechTypeOf, walkMP } from "./mech";
@@ -987,4 +988,22 @@ export function convertMech(record: MechRecord, catalog: Catalog): MechConversio
     return true;
   });
   return result;
+}
+
+/**
+ * The draft the unit page opens from a conversion: the figures parts one to three worked out, everything else as a blank card leaves it
+ * (Point Value 0, no role, no abilities), so the player fills the rest and saves. Nothing is guessed to fill a gap.
+ */
+export function conversionDraft(record: MechRecord, conversion: MechConversion, id: string, now: string): AsUnit {
+  const blank = newAsUnit(id);
+  const { card, source, ...rest } = conversion.unit;
+  return {
+    ...blank,
+    ...rest,
+    id,
+    card: { ...blank.card, ...card },
+    rulesLevel: record.rulesLevel,
+    era: record.era,
+    source: { ...blank.source, ...source, kind: "converted", ref: record.id, at: now },
+  };
 }

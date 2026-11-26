@@ -1146,6 +1146,10 @@ export const MIXED_TECHNOLOGY: {
   availabilityCite: { book: IO_AE, page: 45 },
   checked: "page",
 };
+/** When the Clan technology base exists for a design: Interstellar Operations: Alternate Eras printed p.17 opens the Clan Sub-Eras at 2800
+ * and says nothing may be produced with a Clan technology base in the Age of War or the Age of the Star League (Early Succession Wars:
+ * Clan technology only among Clan factions). Equipment and parts carry their own, later, dates; this only gates the choice of the tech base. */
+export const CLAN_TECHNOLOGY: { firstYear: number; cite: Cite; checked: Checked } = { firstYear: 2800, cite: { book: IO_AE, page: 17 }, checked: "page" };
 /**
  * The FrankenMech option (Campaign Operations, corrected fourth printing, printed p.213; the v5.0 errata of 22 August 2024 only adds the
  * line barring heavier jump jets, which the fourth printing's text already holds). Campaign Operations calls all its rules optional and

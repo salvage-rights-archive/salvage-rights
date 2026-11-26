@@ -5,7 +5,7 @@ import { ENGINE_WEIGHTS, INTERNAL_STRUCTURE, MECH_TYPES } from "../data/chassis"
 import type { MechType } from "../data/chassis";
 import { baseOf } from "../data/rulesets";
 import { DEFAULT_EDITION, EDITIONS, bookName, editionName } from "../data/editions";
-import { configurationAvailable, configurationChoices, typeAvailable } from "../rules/availability";
+import { configurationAvailable, configurationChoices, setYear, typeAvailable } from "../rules/availability";
 import { levelAtLeast, techBaseChoices, withLevel } from "../rules/levels";
 import { DEFAULT_AERO_EDITION } from "../data/aero";
 import { newAeroRecord } from "../rules/aero";
@@ -30,7 +30,6 @@ import { MAX_LIBRARY_BYTES, STORAGE_READ_FAILED, STORAGE_WRITE_FAILED, downloadL
 import type { FamilyStorage, SavedEntry } from "./storage";
 import emptyBay from "../artwork/empty-bay.jpg";
 import GamePicture from "./GamePicture";
-import "./classic.scss";
 
 const MAX_IMPORT_BYTES = 1024 * 1024;
 /** This page lists the Classic designs only; Gothic ones are on the Gothic home. */
@@ -38,8 +37,6 @@ const classicOnly = (entries: SavedEntry[]) => entries.filter((entry) => entry.g
 // The choices a new 'Mech starts from, read from the book's own tables.
 const TONNAGES = Object.keys(INTERNAL_STRUCTURE.rows).map(Number);
 const MAX_RATING = Math.max(...Object.keys(ENGINE_WEIGHTS.rows).map(Number));
-/** The build form has no year or era yet, so a tech base is offered by the level alone. */
-const NO_TIME = { year: null } as const;
 
 const nameOf = (record: MechRecord) => `${record.name.chassis} ${record.name.model}`.trim();
 const plural = (n: number, word: string) => `${String(n)} ${word}${n === 1 ? "" : "s"}`;
@@ -96,6 +93,8 @@ export default function HomePage() {
   const [aeroType, setAeroType] = useState<string>();
   const [aeroTons, setAeroTons] = useState<number>();
   const [aeroThrust, setAeroThrust] = useState(5);
+  /** The year typed in the build form, as text; empty or not a year means no year, and nothing is hidden by time. */
+  const [yearText, setYearText] = useState("");
   const keepRef = useRef<HTMLButtonElement>(null);
   const openerRef = useRef<HTMLElement | null>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
@@ -196,7 +195,10 @@ export default function HomePage() {
 
   // What the form offers follows the rules level and tech base: a choice that no longer fits gives way to the first that does, so the Type
   // and Configuration lists re-filter as those fields change and nothing offered is out of the rules.
-  const subject = { techBase: draft.techBase, year: null, rulesLevel: draft.rulesLevel };
+  const yearTyped = /^\d{4}$/.test(yearText.trim()) ? Number(yearText.trim()) : null;
+  const when = { year: yearTyped };
+  const techBase = techBaseChoices(draft.rulesLevel, "inner-sphere", when).some(([value]) => value === draft.techBase) ? draft.techBase : "inner-sphere"; // a year that rules the chosen tech base out gives way to Inner Sphere
+  const subject = { techBase, year: yearTyped, rulesLevel: draft.rulesLevel };
   const usable = (id: MechType) => MECH_TYPES.find((t) => t.id === id)?.ready === true && typeAvailable(id, subject);
   const unitType: MechType = draft.unitType !== undefined && usable(draft.unitType) ? draft.unitType : (MECH_TYPES.find((t) => usable(t.id))?.id ?? "mech");
   const typed = { ...subject, unitType };
@@ -227,7 +229,7 @@ export default function HomePage() {
         chassis: draft.chassis.trim(),
         model: draft.model.trim(),
         unitType: aeroPicked.id as AeroType,
-        techBase: draft.techBase,
+        techBase,
         tons: aeroTonnage,
         safeThrust: aeroThrust,
         rulesLevel: draft.rulesLevel,
@@ -242,9 +244,10 @@ export default function HomePage() {
   const build = async () => {
     if (aeroPicked) return buildAero();
     if (!storage || !draft.chassis.trim()) return;
-    const options = { ...draft, configuration, tons, chassis: draft.chassis.trim(), model: draft.model.trim(), walk: Math.min(draft.walk, walks.at(-1) ?? 1), year: null };
+    const options = { ...draft, techBase, configuration, tons, chassis: draft.chassis.trim(), model: draft.model.trim(), walk: Math.min(draft.walk, walks.at(-1) ?? 1), year: yearTyped };
     // An OmniMech is a chassis (its fixed base and a Prime to start) and is saved as one.
     const made = unitType === "omnimech" ? newOmniChassis(options, edition, crypto.randomUUID()) : newRecord({ ...options, unitType }, edition, crypto.randomUUID());
+    if ("mounts" in made) setYear(made, yearTyped);
     if (!(await attempt(STORAGE_WRITE_FAILED, () => ("base" in made ? storage.saveOmni(made) : storage.save(made))))) return;
     void navigate(`/battletech/classic/editor?id=${encodeURIComponent(made.id)}`);
   };
@@ -664,19 +667,24 @@ export default function HomePage() {
               record={draft}
               onChange={(rulesLevel) => {
                 // A tech base the new level does not offer gives way to Inner Sphere (Clan below Standard, Mixed below Advanced).
-                const fits = techBaseChoices(rulesLevel, "inner-sphere", NO_TIME).some(([value]) => value === draft.techBase);
+                const fits = techBaseChoices(rulesLevel, "inner-sphere", when).some(([value]) => value === draft.techBase);
                 setDraft({ ...draft, rulesLevel, techBase: fits ? draft.techBase : "inner-sphere" });
               }}
             />
             <div className="bt-field">
               <label htmlFor="bt-new-tech">Tech base</label>
-              <select id="bt-new-tech" value={draft.techBase} onChange={(e) => setDraft({ ...draft, techBase: e.target.value as NewMechOptions["techBase"] })}>
-                {techBaseChoices(draft.rulesLevel, draft.techBase, NO_TIME).map(([value, label]) => (
+              <select id="bt-new-tech" value={techBase} onChange={(e) => setDraft({ ...draft, techBase: e.target.value as NewMechOptions["techBase"] })}>
+                {techBaseChoices(draft.rulesLevel, techBase, when).map(([value, label]) => (
                   <option key={value} value={value}>
                     {label}
                   </option>
                 ))}
               </select>
+            </div>
+            <div className="bt-field">
+              <label htmlFor="bt-new-year">Year</label>
+              <input id="bt-new-year" inputMode="numeric" maxLength={4} value={yearText} onChange={(e) => { setYearText(e.target.value); }} />
+              <span className="bt-hint">Optional. A year hides the body types, parts and tech bases that did not exist yet, and sets the era.</span>
             </div>
             {aeroPicked && aeroRow ? (
               <>

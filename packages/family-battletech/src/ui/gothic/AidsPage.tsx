@@ -7,7 +7,6 @@ import { loadCatalog } from "../../rules/catalog";
 import type { Catalog } from "../../rules/catalog";
 import { aidTables, citeText } from "./aidTables";
 import { useGothicTheme } from "./theme";
-import "../classic.scss";
 
 export default function AidsPage() {
   useGothicTheme();
