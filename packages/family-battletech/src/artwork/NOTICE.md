@@ -6,7 +6,7 @@ Every picture is shown in the app with a label saying it is AI-generated. We wil
 gives us artwork made by a person that we can legally use. To offer a piece, start a thread in Discussions on the
 GitHub repository, or open an issue there.
 
-The game pictures below were made with DeviantArt DreamUp. Each entry reads: "Made by the Salvage Rights team with an
+The game pictures below were made with DeviantArt DreamUp, except Nova Combat's, which says its own tool. Each entry reads: "Made by the Salvage Rights team with an
 AI image tool (DeviantArt DreamUp) on or before 2026-11-25, cropped and resized." The prompt is given as DeviantArt
 saved it in the picture's file name, which cuts it off after about 100 characters; "..." marks where it stops. Two
 pairs of pictures came from the same prompt, so they share one. Each icon comes from the same original as its game
@@ -55,6 +55,14 @@ picture and shares its prompt.
 - The Gothic tile entry and its icon. Made by the Salvage Rights team with an AI image tool (DeviantArt DreamUp) on or
   before 2026-11-25, cropped and resized.
 - Prompt: "dark grimdark gothic sci fi art set in battletech gothic with a menacing war mech with ornate cathe..."
+
+## nova-combat-desert-salvo.jpg and nova-combat-icon.jpg
+
+- The Nova Combat tile entry (coming soon) and its icon. Made by the Salvage Rights team with an AI image tool
+  (creen.ai) on 2026-11-26, cropped and resized. creen.ai's terms of service (effective 2025-10-11) say the user keeps
+  ownership of what they generate, and ask for no attribution.
+- Prompt: "A cinematic, first-person ground-level perspective looking across a vast, arid rocky desert canyon at a
+  massive 70-ton BattleMech..." (cut off here; the prompt goes on)
 
 ## empty-bay.jpg
 

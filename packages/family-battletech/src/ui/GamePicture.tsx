@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { AI_LABEL, GAME_ART } from "../artwork/games";
+import { aiLabel, GAME_ART } from "../artwork/games";
 
 /** A game's picture for the top of its home page, with the AI label. It drops out if it cannot load. */
 export default function GamePicture({ game }: { game: string }) {
@@ -17,7 +17,7 @@ export default function GamePicture({ game }: { game: string }) {
           setFailed(true);
         }}
       />
-      <figcaption className="bt-hint">{AI_LABEL}</figcaption>
+      <figcaption className="bt-hint">{aiLabel(art)}</figcaption>
     </figure>
   );
 }

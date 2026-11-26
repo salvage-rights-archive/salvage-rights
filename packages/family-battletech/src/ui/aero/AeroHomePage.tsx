@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ChangeEvent } from "react";
 import { Link, useNavigate } from "react-router";
-import { AERO_EDITION_ART, AI_LABEL } from "../../artwork/games";
+import { AERO_EDITION_ART, aiLabel } from "../../artwork/games";
 import { AERO_EDITIONS, DEFAULT_AERO_EDITION, aeroEditionName } from "../../data/aero";
 import { bookName, eraLabel } from "../../data/editions";
 import LevelSelect from "../editor/LevelSelect";
@@ -165,7 +165,7 @@ export default function AeroHomePage() {
             return (
               <li key={edition.id}>
                 {art && <img src={art.src} alt={art.alt} width={800} height={600} loading="lazy" />}
-                {art && <p className="bt-hint">{AI_LABEL}</p>}
+                {art && <p className="bt-hint">{aiLabel(art)}</p>}
                 <h3>{edition.name}</h3>
                 {edition.id === DEFAULT_AERO_EDITION && (
                   <p>
