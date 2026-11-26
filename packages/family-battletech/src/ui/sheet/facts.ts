@@ -1,12 +1,13 @@
 // The words and figures the record sheet prints for a 'Mech, worked out once so the drawing and the screen reader's copy
 // of the sheet say the same thing.
 import { editionName } from "../../data/editions";
-import { DAZZLE } from "../../data/gothic";
+import { DAZZLE, HANDLER } from "../../data/gothic";
 import { SHEET_HEAT_SINKS, TECH_BASE_NAMES } from "../../data/sheet";
 import { ammoLines, ammoSlotLabels, inventoryLines } from "../../rules/catalog";
 import type { Catalog, InventoryLine } from "../../rules/catalog";
 import { battleValue as battleValueOf } from "../../rules/bv";
 import { BV_METHOD } from "../../data/bv";
+import { changedSinceImport } from "../../rules/mordel";
 import { levelOfRecord, levelRow } from "../../rules/levels";
 import { rulesetOf } from "../../data/rulesets";
 import type { GameId } from "../../data/rulesets";
@@ -89,9 +90,6 @@ function safeLayout(record: MechRecord, catalog: Catalog): Layout {
   }
 }
 
-/** The Handler line starts at the medium class (rulebook p. 80). */
-export const HANDLER_TONS = 40;
-
 /** Whether the record carries a Searchlight (Gothic rulebook p. 90). Read defensively until the editor lands the `gothic` field on the record. */
 export const hasSearchlight = (record: MechRecord): boolean => record.gothic?.searchlight === true;
 
@@ -143,14 +141,16 @@ export function sheetFacts(record: MechRecord, catalog: Catalog, options: { dazz
   const layout = safeLayout(record, catalog);
   const structure = structurePoints(record);
   const codes = layout.supported ? layout.locations : (Object.keys(record.armor) as LocationCode[]);
-  const imported = record.source?.values.battleValue;
+  // A box design keeps its printed value only until it is changed; after that the figure is ours. mordel.net imports always keep theirs.
+  const printed = record.source?.values.battleValue;
+  const imported = record.source?.kind === "book" && changedSinceImport(record).size > 0 ? undefined : printed;
   const isBase = record.omni?.isBase === true;
   const computed = imported === undefined && !isBase ? battleValueOf(record, catalog) : undefined;
   // An OmniMech configuration prints the level of its contents, never below Standard; the base prints its pod space where a Battle Value would go.
   const total = isBase ? weights(record, catalog.factsOf).total : null;
   return {
     game: ruleset.game,
-    gothic: gothic ? { handler: record.tons >= HANDLER_TONS, searchlight: hasSearchlight(record), dazzle: options.dazzle === true } : undefined,
+    gothic: gothic ? { handler: record.tons >= HANDLER.minMechTons, searchlight: hasSearchlight(record), dazzle: options.dazzle === true } : undefined,
     title: sheetTitle(record),
     walk: moved === null ? DASH : String(moved.walk),
     run: moved === null ? DASH : String(moved.run),

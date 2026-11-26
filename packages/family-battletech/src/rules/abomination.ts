@@ -165,6 +165,8 @@ export interface TrackerState {
   /** Shots left for each launcher the unit carries, in the order of `launcherSlots`. */
   shotsLeft: number[];
   mounted: "none" | "mob" | "hobble";
+  /** Damage suffered this phase past a creature's last pip: it marks nothing but still counts toward the phase's damage (pp. 72-73). */
+  overflow?: number;
   /** A note of our own: what the unit is mounted on. */
   mountedOn: string;
 }
@@ -201,6 +203,7 @@ export function trackerWithDefaults(value: unknown, stats: Pick<AbomStats, "crea
     marked,
     phaseStart: list(value.phaseStart, fresh.phaseStart, (i) => marked[i] ?? 0),
     shotsLeft: list(value.shotsLeft, fresh.shotsLeft, (i) => slots[i]?.shots ?? 0),
+    ...(isNumber(value.overflow) && value.overflow > 0 ? { overflow: Math.round(value.overflow) } : {}),
     mounted: value.mounted === "mob" || value.mounted === "hobble" ? value.mounted : "none",
     mountedOn: isString(value.mountedOn) ? value.mountedOn : "",
   };
@@ -219,10 +222,22 @@ export const eliminatedCreatures = (state: TrackerState, pipsEach: number): numb
 export const activeCreatures = (state: TrackerState, pipsEach: number): number => state.marked.length - eliminatedCreatures(state, pipsEach).length;
 
 /** Pips marked since the phase began, over all creatures. */
-export const damageThisPhase = (state: TrackerState): number => state.marked.reduce((sum, m, i) => sum + Math.max(0, m - (state.phaseStart[i] ?? 0)), 0);
+export const damageThisPhase = (state: TrackerState): number => state.marked.reduce((sum, m, i) => sum + Math.max(0, m - (state.phaseStart[i] ?? 0)), state.overflow ?? 0);
+
+/** Adds (or takes back, with a negative `by`) damage past a creature's last pip this phase. */
+export function addOverflow(state: TrackerState, by: number): TrackerState {
+  const { overflow: _old, ...rest } = state;
+  void _old;
+  const next = Math.max(0, (state.overflow ?? 0) + by);
+  return next > 0 ? { ...rest, overflow: next } : rest;
+}
 
 /** End Phase: this phase's damage starts again from nothing. */
-export const endPhase = (state: TrackerState): TrackerState => ({ ...state, phaseStart: [...state.marked] });
+export const endPhase = (state: TrackerState): TrackerState => {
+  const { overflow: _old, ...rest } = state;
+  void _old;
+  return { ...rest, phaseStart: [...state.marked] };
+};
 
 /** Spends one shot of a launcher (or gives one back with a negative `by`), held between none and what the sheet prints. */
 export function spendShot(state: TrackerState, slot: number, by: number, capacity: number): TrackerState {

@@ -10,24 +10,35 @@ import "../classic.scss";
 
 export default function AidsPage() {
   const [catalog, setCatalog] = useState<Catalog>();
+  const [failed, setFailed] = useState(false);
   useEffect(() => {
     let live = true;
-    void loadCatalog().then((loaded) => {
-      if (live) setCatalog(loaded);
-    });
+    void loadCatalog().then(
+      (loaded) => {
+        if (live) setCatalog(loaded);
+      },
+      () => {
+        if (live) setFailed(true);
+      },
+    );
     return () => {
       live = false;
     };
   }, []);
 
   return (
-    <div className="bt-page bt-aids">
+    <div className="sr-page bt-aids">
       <h1>Gothic rules reference</h1>
       <p>
         <Link className="bt-back" to={`${GOTHIC_BASE}/home`}>
           Back to Gothic
         </Link>
       </p>
+      {failed && (
+        <p role="alert" className="bt-problem">
+          The weapon list did not load, so the tables that name weapons are left short. Reload the page to try again.
+        </p>
+      )}
       {aidTables(catalog).map((table) => (
         <section key={table.id} className="bt-section" data-testid="aid-table" data-table={table.id}>
           <h2 id={`aid-${table.id}`}>{table.title}</h2>

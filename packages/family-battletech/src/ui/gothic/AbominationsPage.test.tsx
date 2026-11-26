@@ -3,7 +3,7 @@ import { cleanup, render, screen, waitFor, within } from "@testing-library/react
 import userEvent from "@testing-library/user-event";
 import { IDBFactory } from "fake-indexeddb";
 import { openStore } from "@salvage-rights/shared";
-import { MemoryRouter } from "react-router";
+import { RouterProvider, createMemoryRouter } from "react-router";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { newAbominationUnit } from "../../rules/abomination";
 import AbominationsPage from "./AbominationsPage";
@@ -14,7 +14,7 @@ beforeEach(() => {
 });
 afterEach(cleanup);
 
-const show = () => render(<MemoryRouter><AbominationsPage /></MemoryRouter>);
+const show = () => render(<RouterProvider router={createMemoryRouter([{ path: "/", element: <AbominationsPage /> }])} />);
 const ready = async (user: ReturnType<typeof userEvent.setup>) => {
   show();
   await waitFor(() => { expect((screen.getByLabelText("Import a file") as HTMLInputElement).disabled).toBe(false); }, { timeout: 5000 });

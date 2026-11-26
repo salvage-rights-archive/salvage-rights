@@ -8,6 +8,7 @@ import type { AbomWeapon } from "../../data/gothic";
 import { GOTHIC_BASE } from "../../data/rulesets";
 import {
   activeCreatures,
+  addOverflow,
   clusterColumn,
   creatureFor,
   damageModifier,
@@ -25,7 +26,7 @@ import {
   trackerWithDefaults,
   unitStats,
 } from "../../rules/abomination";
-import type { AbominationUnit, TrackerState, UnitStats } from "../../rules/abomination";
+import type { AbominationUnit, GothicForce, TrackerState, UnitStats } from "../../rules/abomination";
 import { loadCatalog } from "../../rules/catalog";
 import type { Catalog } from "../../rules/catalog";
 import GamePicture from "../GamePicture";
@@ -41,12 +42,22 @@ const typeName = (unit: AbominationUnit, stats: UnitStats | undefined): string =
 const unitName = (unit: AbominationUnit, stats: UnitStats | undefined): string => (unit.label.trim() ? `${unit.label.trim()} (${typeName(unit, stats)})` : typeName(unit, stats));
 const signed = (n: number): string => (n > 0 ? `+${String(n)}` : String(n));
 
+/** The units the player can put on the table when no force is open: every saved unit. */
+export function unitsToChoose(entries: readonly AbomEntry[]): AbominationUnit[] {
+  return entries.flatMap((entry) => (entry.unit ? [entry.unit] : []));
+}
+
 /**
- * The units the player can put on the table: the saved units, or, with `only` (the unit ids a force lists, from the force page's
- * "Play this force" link), just those.
+ * The units a force puts on the table, one per force entry (a saved unit entered twice is two units, each tracked on its own, under
+ * the entry's id). The entry's Handler bonus counts only while the 'Mech it names has a Handler aboard (p. 80).
  */
-export function unitsToChoose(entries: readonly AbomEntry[], only?: readonly string[]): AbominationUnit[] {
-  return entries.flatMap((entry) => (entry.unit && (only === undefined || only.includes(entry.unit.id)) ? [entry.unit] : []));
+export function forceUnits(force: GothicForce, entries: readonly AbomEntry[]): AbominationUnit[] {
+  return force.units.flatMap((entry) => {
+    const saved = entries.find((e) => e.unit?.id === entry.unitId)?.unit;
+    if (!saved) return [];
+    const handled = entry.handlerBonus && force.mechs.some((m) => m.id === entry.handlerOf && m.handler);
+    return [{ ...structuredClone(saved), id: entry.id, handlerBonus: handled }];
+  });
 }
 
 interface UnitTrackerProps {
@@ -96,6 +107,18 @@ function UnitTracker({ unit, stats, state, catalog, onChange, onRemove }: UnitTr
         <div>
           <dt>Damage this phase</dt>
           <dd>{phaseDamage}</dd>
+        </div>
+        <div>
+          <dt>Extra damage past the last pip</dt>
+          <dd>
+            <span aria-live="polite">{state.overflow ?? 0}</span>{" "}
+            <button type="button" className="bt-button bt-button--secondary" aria-label={`Add extra damage: ${name}`} onClick={() => { onChange(addOverflow(state, 1)); }}>
+              Add 1
+            </button>{" "}
+            <button type="button" className="bt-button bt-button--secondary" disabled={(state.overflow ?? 0) === 0} aria-label={`Take back extra damage: ${name}`} onClick={() => { onChange(addOverflow(state, -1)); }}>
+              Take back 1
+            </button>
+          </dd>
         </div>
         <div>
           <dt>Stumble target</dt>
@@ -234,7 +257,7 @@ export default function TrackerPage() {
   const [loaded, setLoaded] = useState(false);
   const forceId = useSearchParams()[0].get("force");
   /** The force the page was opened from: its name and the saved-unit ids it lists. */
-  const [force, setForce] = useState<{ name: string; unitIds: string[] }>();
+  const [force, setForce] = useState<{ name: string; units: AbominationUnit[] }>();
   const [problem, setProblem] = useState("");
   const savedRef = useRef<HTMLHeadingElement>(null);
 
@@ -245,14 +268,14 @@ export default function TrackerPage() {
         const list = await s.list();
         const stored = await s.playStates();
         const asked = forceId ? (await s.getForce(forceId))?.force : undefined;
-        const only = asked?.units.map((u) => u.unitId);
+        const onForce = asked ? forceUnits(asked, list) : undefined;
         const next: Record<string, TrackerState> = {};
-        for (const unit of unitsToChoose(list, only)) {
+        for (const unit of onForce ?? unitsToChoose(list)) {
           const stats = unitStats(unit);
           if (stats && unit.id in stored) next[unit.id] = trackerWithDefaults(stored[unit.id], stats);
         }
         setStorage(s);
-        setForce(asked && only ? { name: asked.name.trim() || "Unnamed force", unitIds: only } : undefined);
+        setForce(asked && onForce ? { name: asked.name.trim() || "Unnamed force", units: onForce } : undefined);
         setEntries(list);
         setStates(next);
       } catch {
@@ -286,7 +309,7 @@ export default function TrackerPage() {
     [storage],
   );
 
-  const units = unitsToChoose(entries, force?.unitIds);
+  const units = force ? force.units : unitsToChoose(entries);
   const onTable = units.filter((u) => u.id in states);
   const waiting = units.filter((u) => !(u.id in states));
 

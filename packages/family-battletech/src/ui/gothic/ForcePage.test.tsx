@@ -54,14 +54,14 @@ describe("The Gothic force page", () => {
     expect(screen.getByText(/Abomination units have no Battle Value in the book/)).toBeTruthy();
   });
 
-  it("shows -2 when the leading pilot is Frayed, reports a Handler in a 30-ton 'Mech and a unit with the bonus but no Handler", async () => {
+  it("shows -2 when the leading pilot is Frayed, hides the Handler box in a 30-ton 'Mech and reports a unit with the bonus but no Handler", async () => {
     await seed();
     const { user } = await show(userEvent.setup());
     expect(screen.getByText("No Initiative modifier applies.")).toBeTruthy();
     await user.click(screen.getByLabelText(/^Frayed MechWarrior in .*UM-R60B/));
     expect(within(screen.getByRole("list", { name: "Initiative modifiers" })).getByText(/^Initiative −2: Led by a Frayed MechWarrior/)).toBeTruthy();
-    await user.click(screen.getByLabelText(/^Handler aboard .*UM-R60B/));
-    expect(within(screen.getByRole("list", { name: "Force findings" })).getByText(/30 tons; a Handler rides only in a 'Mech of 40 tons or more/)).toBeTruthy();
+    expect(screen.queryByLabelText(/^Handler aboard .*UM-R60B/)).toBeNull();
+    expect(screen.getByLabelText(/^Handler aboard .*PXH-1T/)).toBeTruthy();
     await user.click(screen.getByLabelText("Handler bonus for Gnat 1 (Gnat)"));
     expect(within(screen.getByRole("list", { name: "Force findings" })).getByText(/Gnat 1 \(Gnat\) has the Handler bonus, but no 'Mech with a Handler aboard/)).toBeTruthy();
   });

@@ -3,6 +3,7 @@
 // go: each 'Mech's sheet with its pilot filled in, then the Abomination sheets five to a page (gothic-design s.7.4, s.8).
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router";
+import { HANDLER } from "../../data/gothic";
 import { GOTHIC_BASE } from "../../data/rulesets";
 import { checkForce, initiativeModifiers, newForce, newForceMech, newForceUnit, unitStats } from "../../rules/abomination";
 import type { AbominationUnit, ForceMech, ForceUnit, GothicForce } from "../../rules/abomination";
@@ -10,6 +11,7 @@ import { battleValue } from "../../rules/bv";
 import { loadCatalog } from "../../rules/catalog";
 import type { Catalog } from "../../rules/catalog";
 import type { MechRecord } from "../../rules/mech";
+import { LeaveGuard } from "../editor/LeaveConfirm";
 import GamePicture from "../GamePicture";
 import RecordSheet from "../sheet/RecordSheet";
 import { STORAGE_READ_FAILED, STORAGE_WRITE_FAILED, openFamilyStorage } from "../storage";
@@ -324,6 +326,8 @@ function ForceBuilder({ initial, roster, storage, catalog }: { initial: GothicFo
     () => force.mechs.reduce((sum, m) => { const record = recordOf(m.recordId); return record ? sum + battleValue(record, catalog, { gunnery: m.gunnery, piloting: m.piloting }).total : sum; }, 0),
     [force.mechs, recordOf, catalog],
   );
+  // A 'Mech carrying an item with no printed Battle Value (the Light Blazer) has an inferred figure; the editor says so and so do we.
+  const inferredBv = force.mechs.some((m) => recordOf(m.recordId)?.mounts.some((mount) => (mount.equipmentId ? catalog.byId(mount.equipmentId)?.bvInferred : false)));
   const initiative = initiativeModifiers(force);
   const findings = checkForce(force, {
     mech: (recordId) => { const r = recordOf(recordId); return r ? { name: mechName(r), tons: r.tons } : undefined; },
@@ -345,6 +349,7 @@ function ForceBuilder({ initial, roster, storage, catalog }: { initial: GothicFo
     }
     return (
       <div className="sr-page bt-sheetpage">
+        <LeaveGuard dirty={dirty} />
         <div className="bt-sheetpage__bar">
           <h1 ref={barRef} tabIndex={-1}>{`${title} record sheets`}</h1>
           <div className="bt-actions">
@@ -381,6 +386,7 @@ function ForceBuilder({ initial, roster, storage, catalog }: { initial: GothicFo
 
   return (
     <div className="sr-page">
+      <LeaveGuard dirty={dirty} />
       <h1 ref={headingRef} tabIndex={-1}>{force.name.trim() || "Unnamed force"}</h1>
       <p>
         <Link className="bt-back" to={FORCES}>
@@ -414,7 +420,7 @@ function ForceBuilder({ initial, roster, storage, catalog }: { initial: GothicFo
       <section className="bt-section" aria-labelledby="bt-force-summary">
         <h2 id="bt-force-summary">The force at a glance</h2>
         <p data-testid="force-bv">{`'Mech Battle Value: ${bv.toLocaleString("en-US")}`}</p>
-        <p className="bt-hint">Abomination units have no Battle Value in the book, so they add nothing to it. Each 'Mech counts at its pilot's skills.</p>
+        <p className="bt-hint">Abomination units have no Battle Value in the book, so they add nothing to it. Each 'Mech counts at its pilot's skills.{inferredBv ? " A 'Mech here carries an item with no printed Battle Value, so the total includes an inferred figure." : ""}</p>
         {initiative.length === 0 ? (
           <p>No Initiative modifier applies.</p>
         ) : (
@@ -461,10 +467,13 @@ function ForceBuilder({ initial, roster, storage, catalog }: { initial: GothicFo
                 <input type="checkbox" checked={m.frayed} onChange={(event) => { patchMech(m.id, { frayed: event.target.checked }); }} />
                 {`Frayed MechWarrior in ${label}`}
               </label>
+              {m.frayed && <p className="bt-hint">Enter the skills as the pilot card prints them: the card already counts the Frayed bonus (p. 78).</p>}
+              {(m.handler || (recordOf(m.recordId)?.tons ?? HANDLER.minMechTons) >= HANDLER.minMechTons) && (
               <label className="bt-check">
                 <input type="checkbox" checked={m.handler} onChange={(event) => { patchMech(m.id, { handler: event.target.checked }); }} />
                 {`Handler aboard ${label}`}
               </label>
+              )}
               <p className="bt-actions">
                 <button type="button" className="bt-button bt-button--secondary" disabled={index === 0} aria-label={`Move up ${label}`} onClick={() => { move(index, -1); }}>
                   Move up
