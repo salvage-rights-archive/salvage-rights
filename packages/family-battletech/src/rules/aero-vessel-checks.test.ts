@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { capitalMaxThrust, capitalSI, capitalSiRange, newAeroRecord } from "./aero";
+import { capitalMaxThrust, capitalSI, capitalSiRange, craftSiTons, newAeroRecord } from "./aero";
 import type { AeroRecord } from "./aero";
+import type { AeroType } from "../data/aero";
 import { checkAero } from "./aero-checks";
 import { loadCatalog } from "./catalog";
 
@@ -8,7 +9,7 @@ const catalog = await loadCatalog();
 
 type Mounts = [arc: string, id: string, bay?: string, amount?: number][];
 function unit(editionId: string, f: Partial<AeroRecord> & { unitType: string; tons: number }, mounts: Mounts = []): AeroRecord {
-  const base = newAeroRecord({ id: "v", unitType: f.unitType as AeroRecord["unitType"] & string, tons: f.tons, safeThrust: f.thrust?.safe ?? 5, year: 3070, shape: f.shape ?? "aerodyne", use: f.use ?? "military" }, editionId);
+  const base = newAeroRecord({ id: "v", unitType: f.unitType as AeroType, tons: f.tons, safeThrust: f.thrust?.safe ?? 5, year: 3070, shape: f.shape ?? "aerodyne", use: f.use ?? "military" }, editionId);
   return {
     ...base,
     ...f,
@@ -34,6 +35,8 @@ describe("small craft and DropShip rules check", () => {
     ["more doors than the edition allows", "aerotech2-revised", { unitType: "dropship", tons: 3000, bays: [{ kind: "fighter", capacity: 6, doors: 9 }] }, [], "doors:error"],
     ["a bay that makes more heat than the sinks take away", "tw-tm-so", { unitType: "dropship", tons: 3000 }, Array.from({ length: 12 }, () => ["NO", "large-laser-is", "b1"]), "zero-heat:error"],
     ["Clan armor on an Inner Sphere unit", "tw-tm-so", { unitType: "dropship", tons: 3000, armor: { type: "ferro-aluminum-clan", tons: 5, points: {} } }, [], "armor-tech:warning"],
+    ["ship systems over the most the unit may carry", "tw-tm-so", { unitType: "warship", tons: 100000, systems: { "docking-hardpoint": 50 } }, [], "systems:error"],
+    ["capital armor tons over the limit", "aerotech2-revised", { unitType: "warship", tons: 100000, thrust: { safe: 3 }, armor: { type: "standard", tons: 90000, points: {} } }, [], "vessel-armor:error"],
     ["a part the edition does not offer", "aerotech2", { unitType: "small-craft", tons: 100, armor: { type: "light-ferro-aluminum", tons: 1, points: {} } }, [], "engine:warning"],
   ] as [string, string, Partial<AeroRecord> & { unitType: string; tons: number }, Mounts, string][])("%s", (_label, editionId, build, mounts, expected) => {
     expect(kinds(unit(editionId, build, mounts))).toContain(expected);
@@ -54,6 +57,15 @@ describe("small craft and DropShip rules check", () => {
     const clan = (mounts: Mounts) => unit("aerotech2", { unitType: "dropship", tons: 3000, techBase: "clan" }, mounts);
     expect(checkAero(clan([["NO", "medium-laser-is"]]), catalog).map((f) => f.check)).toContain("equipment");
     expect(checkAero(clan([["NO", "nac-10-is"]]), catalog).filter((f) => f.check === "equipment" && f.level === "warning")).toEqual([]);
+  });
+});
+
+describe("a vessel built to tow", () => {
+  it("adds a tenth to the mass of its structure under AeroTech 2 only, and the check notes the book's other reading", () => {
+    const tow = (editionId: string) => unit(editionId, { unitType: "dropship", tons: 3000, si: 10, towing: true });
+    expect([craftSiTons(tow("aerotech2")), craftSiTons(tow("tw-tm-so")), craftSiTons({ ...tow("aerotech2"), towing: false })]).toEqual([165, 150, 150]);
+    expect(checkAero(tow("aerotech2"), catalog).map((f) => f.check)).toContain("towing");
+    expect(checkAero(tow("tw-tm-so"), catalog).map((f) => f.check)).not.toContain("towing");
   });
 });
 

@@ -2,20 +2,8 @@
 // count against the edition's limit; items are added through the grouped picker. An arc the edition does not give the unit, holding items
 // the unit already has, stays listed so the items can be moved (the rules check reports them).
 import { useEffect, useRef, useState } from "react";
-import { CRAFT_FIGURES, FIGHTER_FIGURES, craftBaysFor, figureOf } from "../../data/aero";
-import {
-  aeroLocationName,
-  craftAmmoShortfalls,
-  craftArcs,
-  craftCrew,
-  craftDoors,
-  craftKind,
-  craftQuarters,
-  craftWeaponBays,
-  fighterArcs,
-  fighterKind,
-  locationsOf,
-} from "../../rules/aero";
+import { CAPITAL_FIGURES, CRAFT_FIGURES, FIGHTER_FIGURES, craftBaysFor, figureOf } from "../../data/aero";
+import { aeroLocationName, capitalKind, capitalSystems, capitalSystemsFor, craftAmmoShortfalls, craftKind, craftQuarters, fighterArcs, fighterKind, locationsOf, vessel, vesselGroup } from "../../rules/aero";
 import type { AeroMount, AeroRecord } from "../../rules/aero";
 import type { Catalog, EquipmentRow } from "../../rules/catalog";
 import { tidy } from "../../rules/walk";
@@ -36,7 +24,7 @@ function arcSummary(record: AeroRecord, arc: string, catalog: Catalog): string {
     const tons = fighter.tonsLimit === undefined ? `${plural(fighter.weaponTons, "ton")} of weapons` : `${num(fighter.weaponTons)} of ${plural(fighter.tonsLimit, "ton")} of weapons`;
     return `${num(fighter.items)} of ${plural(fighter.limit, "item")}, ${tons}`;
   }
-  const craft = craftArcs(record, catalog).find((a) => a.arc === arc);
+  const craft = vessel(record, catalog)?.arcs.find((a) => a.arc === arc);
   if (craft) return `${plural(craft.weapons, "weapon")} (${num(craft.limit)} before more fire control), ${plural(craft.weaponTons, "ton")} of weapons${craft.fireControlTons > 0 ? `, fire control ${plural(craft.fireControlTons, "ton")}` : ""}`;
   return "";
 }
@@ -44,7 +32,7 @@ function arcSummary(record: AeroRecord, arc: string, catalog: Catalog): string {
 function MountRow({ record, mount, arcs, onEdit }: { record: AeroRecord; mount: AeroMount; arcs: string[]; onEdit: AeroOnEdit }) {
   const locations = locationsOf(record);
   const ammunition = mount.amount !== undefined || (mount.equipmentId ?? "").startsWith("ammo-");
-  const craft = craftKind(record) !== undefined && figureOf(CRAFT_FIGURES.bayLimit, record.editionId) !== undefined;
+  const craft = vesselGroup(record) !== undefined && (figureOf(CRAFT_FIGURES.bayLimit, record.editionId) !== undefined || figureOf(CAPITAL_FIGURES.bayLimit, record.editionId) !== undefined);
   const wing = mount.arc === "LW" || mount.arc === "RW";
   const edit = (change: (m: AeroMount) => void, field?: string) => {
     onEdit((d) => {
@@ -205,15 +193,52 @@ const QUARTERS: [string, string][] = [
   ["first-class", "First class"],
 ];
 
-/** Small craft and DropShips: weapon bays, transport bays, quarters and crew, with the figures the edition prints for each. */
+/** The ship systems of a capital ship (docking hardpoints, grav decks, batteries and the like): how many of each, with the edition's most and what the type may carry. */
+function ShipSystems({ record, onEdit }: { record: AeroRecord; onEdit: AeroOnEdit }) {
+  const kinds = capitalSystemsFor(record.editionId);
+  const lines = capitalSystems(record).lines;
+  if (kinds.length === 0) return null;
+  return (
+    <fieldset className="bt-arm">
+      <legend>Ship systems</legend>
+      <div className="bt-grid">
+        {kinds.map(({ kind, label }) => {
+          const line = lines.find((l) => l.kind === kind);
+          const hint = line === undefined ? undefined : [line.limit === undefined ? undefined : `at most ${num(line.limit)}`, line.allowed ? undefined : "this type does not carry it", line.tons > 0 ? plural(line.tons, "ton") : undefined].filter((part) => part !== undefined).join("; ") || undefined;
+          return (
+            <NumberField
+              key={kind}
+              id={`system-${kind}`}
+              label={label}
+              value={record.systems?.[kind] ?? 0}
+              min={0}
+              {...(hint === undefined ? {} : { hint })}
+              onValid={(v) => {
+                onEdit((d) => {
+                  const next = { ...d.systems, [kind]: v ?? 0 };
+                  if (next[kind] === 0) delete next[kind];
+                  if (Object.keys(next).length === 0) delete d.systems;
+                  else d.systems = next;
+                }, `system-${kind}`);
+              }}
+            />
+          );
+        })}
+      </div>
+    </fieldset>
+  );
+}
+
+/** Small craft, DropShips and capital ships: weapon bays, transport bays, quarters and crew, with the figures the edition prints for each. */
 export function CraftPanel({ record, catalog, onEdit }: { record: AeroRecord; catalog: Catalog; onEdit: AeroOnEdit }) {
-  if (craftKind(record) === undefined) return null;
+  const ship = vessel(record, catalog);
+  if (!ship) return null;
   const kinds = craftBaysFor(record.editionId);
   const bays = record.bays ?? [];
-  const weaponBays = craftWeaponBays(record, catalog);
-  const shortfalls = craftAmmoShortfalls(record, catalog);
-  const crew = craftCrew(record, catalog);
-  const doors = craftDoors(record);
+  const weaponBays = ship.bays;
+  const shortfalls = craftKind(record) === undefined ? [] : craftAmmoShortfalls(record, catalog);
+  const crew = ship.crew;
+  const doors = ship.doors;
   const quarters = craftQuarters(record, catalog);
   return (
     <section className="bt-panel bt-editor__wide" aria-labelledby="aero-craft">
@@ -323,6 +348,7 @@ export function CraftPanel({ record, catalog, onEdit }: { record: AeroRecord; ca
           />
         </div>
       </fieldset>
+      {capitalKind(record) !== undefined && <ShipSystems record={record} onEdit={onEdit} />}
       <ul className="bt-list bt-readout">
         {quarters.tons > 0 && <li className="bt-hint">{`Quarters ${plural(quarters.tons, "ton")}`}</li>}
         {doors && (

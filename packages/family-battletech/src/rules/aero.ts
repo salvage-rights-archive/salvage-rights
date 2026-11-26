@@ -642,10 +642,10 @@ export function expandedFireControlTons(weapons: number, weaponTons: number, edi
 }
 
 /** A capital weapon (a gunner each and its own ammunition rule), as the catalog marks one. */
-const isCapitalRow = (row: EquipmentRow | undefined): boolean => row !== undefined && (row.bayClass?.startsWith("Capital") === true || row.tonsPerShot !== undefined);
+export const isCapitalRow = (row: EquipmentRow | undefined): boolean => row !== undefined && (row.bayClass?.startsWith("Capital") === true || row.tonsPerShot !== undefined);
 /** Whether the catalog prints the weapon's damage at the capital scale (the "-C" mark: naval weapons). Capital missiles print their Aero damage at the standard scale
  * ("40" for a Killer Whale whose capital Attack Value is 4, AeroTech 2 p. 101), so only the marked figures count tenfold in a bay. */
-const capitalScale = (row: EquipmentRow | undefined): boolean => {
+export const capitalScale = (row: EquipmentRow | undefined): boolean => {
   const damage = row?.by?.aero?.damage ?? row?.by?.dropship?.damage ?? row?.by?.ship?.damage ?? row?.damage;
   return typeof damage === "string" && /-C$/.test(damage);
 };

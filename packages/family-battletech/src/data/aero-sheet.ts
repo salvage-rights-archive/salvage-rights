@@ -6,9 +6,9 @@
 // is flagged, the page carrying the notice (the notice is cited, never copied).
 import { FIGHTER_EDITIONS } from "./aero";
 
-export type SheetKind = "aerospace" | "conventional";
+export type SheetKind = "aerospace" | "conventional" | "small-craft" | "dropship" | "jumpship" | "warship" | "space-station";
 /** How a sheet arranges its blocks: the AeroTech (1986) fighter sheet, the AeroTech 2 pair, or the current blank. */
-export type SheetLayout = "at1" | "at2" | "current";
+export type SheetLayout = "at1" | "at2" | "current" | "vessel";
 
 export interface HeatRow {
   level: number;
@@ -132,6 +132,8 @@ export interface SheetProfile {
   groundTables?: boolean;
   /** The page of the rule that sets the threshold. */
   thresholdCite?: string;
+  /** A small craft sheet carries the heat scale; a DropShip or capital ship has none (the zero-heat rule) and lists the heat of each arc instead. */
+  heatScale?: boolean;
 }
 
 const AT2_STORES: Stores = { kind: "labelled", groups: [["Arrow IV", "Fuel", "Rockets", "TAG"], ["HE", "INF", "FRAG", "LG", "MINE"]] };
@@ -248,12 +250,85 @@ export const SHEET_PROFILES: SheetProfile[] = [
   },
 ];
 
-/** The sheet a unit prints on, or undefined where none is built yet (an edition or unit type without a fighter sheet). AeroTech 2 prints one fighter sheet for both kinds. */
+// ---- Small craft, DropShips and capital ships ----------------------------------------------------------------------------------------
+// One arrangement serves them all (our own layout of the blocks the flagged blanks name: vessel data with the weapon bays by arc, the armor diagram
+// with a threshold for each facing, crew data, critical damage, heat data and the velocity record). What differs by type and edition is the list
+// of critical boxes, the velocity record's rows and whether the heat scale is printed. Armor areas come from the unit's own facings, not the profile.
+
+const box = (label: string, ...boxes: string[]): CriticalRow => ({ label, boxes });
+const AVIONICS = box("Avionics", "+1", "+2", "+5");
+const SENSORS = box("Sensors", "+1", "+2", "+5");
+const FCS = box("FCS", "+2", "+4", "D");
+const ENGINE = box("Engine", "-1", "-2", "-3", "-4", "-5", "D");
+const THRUSTERS = [box("Thrusters: Left", "+1", "+2", "+3", "D"), box("Thrusters: Right", "+1", "+2", "+3", "D")];
+const CIC = box("CIC", "+2", "+4", "D");
+/** AeroTech 2 and Revised: the small craft and DropShip sheets (AeroTech 2 p. 103, Revised index 159-162). */
+const AT2_DROPSHIP_CRITICAL: CriticalRow[] = [AVIONICS, box("Cargo", "1", "2", "3"), box("Docking Collar", "D"), box("Doors", "1", "2", "3"), ENGINE, FCS, box("Gear", "+5"), box("K-F Boom", "D"), box("Life Support", "+2"), SENSORS, ...THRUSTERS];
+/** AeroTech 2 and Revised: the large craft sheets (AeroTech 2 p. 102, Revised index 163-165). */
+const AT2_LARGE_CRITICAL: CriticalRow[] = [AVIONICS, box("Cargo", "1", "2", "3"), CIC, box("Docking Collars", "D"), box("Doors", "1", "2", "3"), ENGINE, box("Grav Decks", "1", "2", "3"), box("Life Support", "+2"), SENSORS, ...THRUSTERS];
+/** The current blanks (CAT35001RS index 14-17; Strategic Operations: Advanced Aerospace Rules index 173-175). */
+const CURRENT_SMALL_CRAFT_CRITICAL: CriticalRow[] = [AVIONICS, box("Engine", "2", "4", "D"), FCS, box("Gear", "+5"), SENSORS, box("Life Support", "+2")];
+const CURRENT_DROPSHIP_CRITICAL: CriticalRow[] = [AVIONICS, FCS, SENSORS, ...THRUSTERS, ENGINE, box("Gear", "+5"), box("Life Support", "+2"), box("K-F Boom", "D"), box("Docking Collar", "D")];
+const CURRENT_LARGE_CRITICAL: CriticalRow[] = [AVIONICS, CIC, SENSORS, ...THRUSTERS, box("Life Support", "+2"), ENGINE];
+
+const LABELS: Record<string, string> = { "small-craft": "Small craft", dropship: "DropShip", jumpship: "JumpShip", warship: "WarShip", "space-station": "Space station" };
+const LARGE_AT2 = "AeroTech 2, p. 102";
+
+function vessel(editionId: string, kind: SheetKind, parts: { critical: CriticalRow[]; velocity: SheetProfile["velocity"]; columns: string[]; follows: string; notice: string; thresholdCite: string; heatScale?: boolean }): SheetProfile {
+  return {
+    id: `${editionId}-${kind}`,
+    editionId,
+    kind,
+    layout: "vessel",
+    flagged: true,
+    title: `${LABELS[kind] ?? kind} record sheet`,
+    armor: [],
+    thresholds: true,
+    thresholdCite: parts.thresholdCite,
+    critical: parts.critical,
+    velocity: parts.velocity,
+    velocityColumns: parts.columns,
+    stores: { kind: "line" },
+    follows: parts.follows,
+    notice: parts.notice,
+    ...(parts.heatScale === true ? { heatScale: true } : {}),
+  };
+}
+
+const AT2_VELOCITY = ["Thrust", "Velocity", "Effective Velocity", "Fuel"];
+const CURRENT_VELOCITY = ["Thrust", "Velocity", "Effective Velocity", "Altitude"];
+const AT2R_VELOCITY = ["Thrust", "Velocity", "Effective Velocity", "Altitude Level", "Fuel"];
+const AT2_THRESHOLD = "AeroTech 2, p. 19; AeroTech 2 Revised, p. 28; Total Warfare, p. 239";
+const AT2R_LARGE_NOTICE = "AeroTech 2: Revised Edition, PDF index 163-165 (their foot lines give permission to photocopy for personal use)";
+const SO_NOTICE = "Strategic Operations: Advanced Aerospace Rules, PDF index 173-175 (their foot lines give permission to photocopy for personal use)";
+
+export const VESSEL_SHEET_PROFILES: SheetProfile[] = [
+  vessel(FIGHTER_EDITIONS.at2, "dropship", { critical: AT2_DROPSHIP_CRITICAL, velocity: "down", columns: AT2_VELOCITY, follows: "the DropShip Record Sheet, AeroTech 2, p. 103", notice: AT2_NOTICE, thresholdCite: THRESHOLD_CITE }),
+  vessel(FIGHTER_EDITIONS.at2, "warship", { critical: AT2_LARGE_CRITICAL, velocity: "down", columns: AT2_VELOCITY, follows: `the Large Craft Record Sheet, ${LARGE_AT2}`, notice: AT2_NOTICE.replace("p. 104", "p. 102"), thresholdCite: THRESHOLD_CITE }),
+  ...(["small-craft", "dropship"] as const).map((kind) =>
+    vessel(FIGHTER_EDITIONS.at2r, kind, { critical: AT2_DROPSHIP_CRITICAL, velocity: "across", columns: AT2R_VELOCITY, follows: `the ${LABELS[kind] ?? kind} Record Sheets, AeroTech 2: Revised Edition, PDF index 159-162`, notice: AT2R_NOTICE.replace("index 158", "index 159-162"), thresholdCite: AT2_THRESHOLD, heatScale: kind === "small-craft" }),
+  ),
+  ...(["jumpship", "warship", "space-station"] as const).map((kind) =>
+    vessel(FIGHTER_EDITIONS.at2r, kind, { critical: AT2_LARGE_CRITICAL, velocity: "across", columns: AT2R_VELOCITY, follows: `the ${LABELS[kind] ?? kind} Record Sheet, AeroTech 2: Revised Edition, PDF index 163-165`, notice: AT2R_LARGE_NOTICE, thresholdCite: AT2_THRESHOLD }),
+  ),
+  vessel(FIGHTER_EDITIONS.current, "small-craft", { critical: CURRENT_SMALL_CRAFT_CRITICAL, velocity: "two-strips", columns: CURRENT_VELOCITY, follows: "the Small Craft Record Sheets, Blank Record Sheets (CAT35001RS), PDF index 14-15", notice: CURRENT_NOTICE.replace("12-13", "14-15"), thresholdCite: THRESHOLD_CITE, heatScale: true }),
+  vessel(FIGHTER_EDITIONS.current, "dropship", { critical: CURRENT_DROPSHIP_CRITICAL, velocity: "two-strips", columns: CURRENT_VELOCITY, follows: "the DropShip Record Sheets, Blank Record Sheets (CAT35001RS), PDF index 16-17", notice: CURRENT_NOTICE.replace("12-13", "16-17"), thresholdCite: THRESHOLD_CITE }),
+  ...(["jumpship", "warship", "space-station"] as const).map((kind) =>
+    vessel(FIGHTER_EDITIONS.current, kind, { critical: CURRENT_LARGE_CRITICAL, velocity: "two-strips", columns: CURRENT_VELOCITY, follows: `the ${LABELS[kind] ?? kind} Record Sheet, Strategic Operations: Advanced Aerospace Rules, PDF index 173-175`, notice: SO_NOTICE, thresholdCite: THRESHOLD_CITE }),
+  ),
+];
+
+const FIGHTER_KINDS: Record<string, SheetKind> = { "aerospace-fighter": "aerospace", "conventional-fighter": "conventional" };
+/** The sheet a unit prints on, or undefined where none is built yet (an edition or unit type without one). AeroTech 2 prints one fighter sheet for both kinds, one DropShip sheet that also serves a small craft, and one large craft sheet for the JumpShip, WarShip and station. */
 export function sheetProfileFor(editionId: string, unitType: string): SheetProfile | undefined {
-  const kind: SheetKind | undefined = unitType === "aerospace-fighter" ? "aerospace" : unitType === "conventional-fighter" ? "conventional" : undefined;
+  const fighter = Object.hasOwn(FIGHTER_KINDS, unitType) ? FIGHTER_KINDS[unitType] : undefined;
+  const kind: SheetKind | undefined = fighter ?? (Object.hasOwn(LABELS, unitType) ? (unitType as SheetKind) : undefined);
   if (kind === undefined) return undefined;
-  const here = SHEET_PROFILES.filter((p) => p.editionId === editionId);
-  return here.find((p) => p.kind === kind) ?? (editionId === FIGHTER_EDITIONS.at2 ? here[0] : undefined);
+  const here = [...SHEET_PROFILES, ...VESSEL_SHEET_PROFILES].filter((p) => p.editionId === editionId);
+  const exact = here.find((p) => p.kind === kind);
+  if (exact || editionId !== FIGHTER_EDITIONS.at2) return exact;
+  const stand = fighter !== undefined ? "aerospace" : kind === "small-craft" ? "dropship" : "warship";
+  return here.find((p) => p.kind === stand);
 }
 
 /** The ground-map straight movement table of the current conventional fighter sheet (CAT35001RS index 12): minimum hexes by velocity, for a fighter and for small craft and fixed-wing support vehicles; and the Fighter Return table: turns before return by Safe Thrust. */

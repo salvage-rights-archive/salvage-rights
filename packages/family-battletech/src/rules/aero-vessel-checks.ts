@@ -3,9 +3,9 @@
 // the WarShip's drive. These join the fighter checks in `AERO_CHECKS` (rules/aero-checks.ts). Every figure and page comes from data/aero.ts; a
 // message states the numbers and names the deciding page through its cite. Findings are advice, never refusals, and a unit this version does
 // not understand gets none from here.
-import { CAPITAL_FIGURES, CRAFT_FIGURES, FIGHTER_ARMOR_TYPES, aeroEditionName } from "../data/aero";
+import { CAPITAL_FIGURES, CAPITAL_SYSTEMS, CRAFT_FIGURES, FIGHTER_ARMOR_TYPES, aeroEditionName } from "../data/aero";
 import type { FigureGroup } from "../data/aero";
-import { aeroLocationName, capitalKind, craftAmmoShortfalls, craftKind, locationsOf, stationKeeping, towingShare, vessel } from "./aero";
+import { aeroLocationName, capitalKind, capitalSystems, craftAmmoShortfalls, craftKind, locationsOf, stationKeeping, towingShare, vessel } from "./aero";
 import type { AeroRecord } from "./aero";
 import type { AeroCheck, AeroFinding } from "./aero-checks";
 import { tidy } from "./walk";
@@ -206,6 +206,27 @@ const zeroHeatCheck: AeroCheck = {
   },
 };
 
+/** Ship systems of a capital ship: more than the edition allows, or on a type that may not carry them. */
+const systemsCheck: AeroCheck = {
+  id: "systems",
+  run({ record }) {
+    if (capitalKind(record) === undefined) return [];
+    const systems = capitalSystems(record);
+    const out: AeroFinding[] = [];
+    const page = (kind: string) => {
+      const row = CAPITAL_SYSTEMS.find((r) => r.kind === kind);
+      return row === undefined ? undefined : pageOf(row.figures, record.editionId);
+    };
+    for (const line of systems.lines) {
+      const label = CAPITAL_SYSTEMS.find((r) => r.kind === line.kind)?.label ?? line.kind;
+      if (!line.allowed) out.push({ check: "systems", level: "error", message: `A ${kindName(record)} does not carry ${label.toLowerCase()} in ${aeroEditionName(record.editionId)}.`, where: { field: "systems" }, ...withCite(page(line.kind)) });
+      else if (line.limit !== undefined && line.count > line.limit) out.push({ check: "systems", level: "error", message: `${plural(line.count, label.toLowerCase())} are over the ${num(line.limit)} a ${num(record.tons)}-ton ${kindName(record)} may carry.`, where: { field: "systems" }, ...withCite(page(line.kind)) });
+    }
+    if (systems.unknown.length > 0) out.push({ check: "systems", level: "note", message: `${systems.unknown.join(", ")} ${systems.unknown.length === 1 ? "is" : "are"} not a ship system ${aeroEditionName(record.editionId)} prints, so ${systems.unknown.length === 1 ? "it was" : "they were"} not weighed.`, where: { field: "systems" } });
+    return out;
+  },
+};
+
 /** A vessel built to tow, where the edition's books disagree on what the tow costs. */
 const towingCheck: AeroCheck = {
   id: "towing",
@@ -217,4 +238,4 @@ const towingCheck: AeroCheck = {
   },
 };
 
-export const VESSEL_CHECKS: AeroCheck[] = [siCheck, vesselArmorCheck, armorTechBaseCheck, vesselArcsCheck, bayCheck, ammoCheck, crewCheck, doorCheck, zeroHeatCheck, towingCheck];
+export const VESSEL_CHECKS: AeroCheck[] = [siCheck, vesselArmorCheck, armorTechBaseCheck, vesselArcsCheck, bayCheck, ammoCheck, crewCheck, doorCheck, zeroHeatCheck, systemsCheck, towingCheck];

@@ -6,20 +6,20 @@ import { DEFAULT_AERO_EDITION, FIGHTER_FIGURES, aeroTypesFor, figureOf } from ".
 import type { AeroType, AeroTypeRow } from "../../data/aero";
 import { AERO_WEAPON_EDITIONS, aeroWeaponOffered, ammoRowOf } from "../../data/aero-weapons";
 import type { UnitId } from "../../data/units";
-import { craftKind, fighterKind, locationsOf, newAeroRecord } from "../../rules/aero";
+import { fighterKind, locationsOf, newAeroRecord, vesselGroup } from "../../rules/aero";
 import type { AeroMount, AeroRecord } from "../../rules/aero";
 import { mountableOn } from "../../rules/catalog";
 import type { Catalog, EquipmentRow } from "../../rules/catalog";
 import { phaseIn, windowOf } from "../../rules/time";
 
 /**
- * Whether the app builds this unit type under the edition: the fighters, small craft and DropShips (each with its rules check and record
- * sheet). The JumpShips, WarShips and stations wait for their own pages. A type the edition prints no figures for is hidden from every
+ * Whether the app builds this unit type under the edition: the fighters, small craft, DropShips, JumpShips, WarShips and space stations
+ * (each with its rules check and record sheet) where the edition prints their figures. A type it prints none for is hidden from every
  * new-unit list; a saved record of one still opens.
  */
 export function typeReady(editionId: string, unitType: string): boolean {
   if (fighterKind({ unitType }) !== undefined) return figureOf(FIGHTER_FIGURES.maxThrustFactor, editionId) !== undefined;
-  return craftKind({ unitType, editionId }) !== undefined;
+  return vesselGroup({ unitType, editionId }) !== undefined;
 }
 
 export const typeRow = (editionId: string, unitType: string): AeroTypeRow | undefined => aeroTypesFor(editionId).find((row) => row.type === unitType);

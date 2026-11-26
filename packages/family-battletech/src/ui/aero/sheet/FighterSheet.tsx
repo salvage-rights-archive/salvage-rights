@@ -14,6 +14,8 @@ import type { Rect } from "../../sheet/Frame";
 import ArmorDiagram from "./Diagram";
 import { CriticalBlock, DataBlock, EquipmentAreas, GroundTables, HeatData, HeatScale, HeatScaleColumn, MovementVectors, NotesBlock, PilotBlock, SinksStrip, StoresBlock, VelocityBlock } from "./Blocks";
 import SheetText from "./SheetText";
+import SheetHead from "./SheetHead";
+import VesselSheet from "./VesselSheet";
 import { SHEET_FOOT } from "../../../data/aero-sheet";
 
 export const SHEET_WIDTH = 1700;
@@ -62,29 +64,16 @@ export interface FighterSheetProps {
 
 export default function FighterSheet({ record, catalog, profile = sheetProfileFor(record.editionId, record.unitType) }: FighterSheetProps) {
   if (!profile) return null;
+  // The small craft, DropShip and capital ship sheets are their own arrangement.
+  if (profile.layout === "vessel") return <VesselSheet record={record} catalog={catalog} profile={profile} />;
   const facts = fighterFacts(record, catalog, profile);
   const name = facts.title;
-  const nameSize = Math.min(84, Math.floor((profile.layout === "at2" ? 1000 : 1020) / (Math.max(name.length, 1) * 0.62)));
   const heading = profile.title;
   return (
     <>
       <svg className="bt-sheet" viewBox={`0 0 ${String(SHEET_WIDTH)} ${String(SHEET_HEIGHT)}`} preserveAspectRatio="xMidYMid meet" role="img" aria-label={`${name} ${heading.toLowerCase()}`}>
         <rect width={SHEET_WIDTH} height={SHEET_HEIGHT} fill="#fff" />
-        <text className="bt-sheet__head" x={40} y={30 + nameSize * 0.8} fontSize={nameSize} fill={INK} {...squeeze(name, nameSize, profile.layout === "at2" ? 1040 : 1100)}>
-          {name}
-        </text>
-        <text x={42} y={170} fontSize={34} fontWeight={700} fill={INK}>
-          {heading}
-        </text>
-        <text x={42} y={204} fontSize={22} fill={INK} {...squeeze(`Built under ${facts.edition}`, 22, 1000)}>
-          {`Built under ${facts.edition}`}
-        </text>
-        <text className="bt-sheet__head" x={1670} y={170} fontSize={24} textAnchor="end" letterSpacing={3} fill={INK}>
-          SALVAGE RIGHTS
-        </text>
-        <text x={1670} y={142} fontSize={26} fontWeight={700} textAnchor="end" fill={INK} data-official={facts.official.badge === "OFFICIAL"} {...squeeze(facts.official.line, 26, 560, true)}>
-          {facts.official.line}
-        </text>
+        <SheetHead facts={facts} heading={heading} narrow={profile.layout === "at2"} />
         {profile.layout === "at1" && <At1 record={record} facts={facts} profile={profile} />}
         {profile.layout === "at2" && <At2 facts={facts} profile={profile} />}
         {profile.layout === "current" && <Current facts={facts} profile={profile} />}

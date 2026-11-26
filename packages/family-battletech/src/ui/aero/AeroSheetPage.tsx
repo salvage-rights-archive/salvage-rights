@@ -107,7 +107,7 @@ function Sheet({ record, catalog }: { record: AeroRecord; catalog: Catalog }) {
         {profile ? (
           <p className="bt-hint">Prints on one page, Letter or A4. In the print dialog, turn off headers and footers.</p>
         ) : (
-          <p role="status">{`We have no record sheet yet for this unit type under ${aeroEditionName(record.editionId)}. The sheets for fighters are ready; small craft, DropShips and the large craft are still to come.`}</p>
+          <p role="status">{`We have no record sheet for this unit type under ${aeroEditionName(record.editionId)}.`}</p>
         )}
         {profile && errors > 0 && <p role="status">{`This unit has ${String(errors)} rules ${errors === 1 ? "error" : "errors"}. The sheet shows it as saved.`}</p>}
       </div>

@@ -17,7 +17,7 @@ interface Props {
   profile: SheetProfile;
 }
 
-const Check = ({ x, y, on, label, size = 24 }: { x: number; y: number; on: boolean; label: string; size?: number }) => (
+export const Check = ({ x, y, on, label, size = 24 }: { x: number; y: number; on: boolean; label: string; size?: number }) => (
   <g data-check={on}>
     <rect x={x} y={y - size + 4} width={size} height={size} fill="#fff" stroke={INK} strokeWidth={2.5} />
     {on && <path d={`M ${String(x + 4)} ${String(y - size + 8)} L ${String(x + size - 4)} ${String(y)} M ${String(x + size - 4)} ${String(y - size + 8)} L ${String(x + 4)} ${String(y)}`} stroke={INK} strokeWidth={3} />}
@@ -27,10 +27,10 @@ const Check = ({ x, y, on, label, size = 24 }: { x: number; y: number; on: boole
   </g>
 );
 
-const Rule = ({ x1, x2, y }: { x1: number; x2: number; y: number }) => <line x1={x1} x2={x2} y1={y} y2={y} stroke={INK} strokeWidth={2} />;
+export const Rule = ({ x1, x2, y }: { x1: number; x2: number; y: number }) => <line x1={x1} x2={x2} y1={y} y2={y} stroke={INK} strokeWidth={2} />;
 
 /** "Label: value" with the value on a rule, as the blanks print them. */
-function Blank({ x, y, w, label, value }: { x: number; y: number; w: number; label: string; value?: string }) {
+export function Blank({ x, y, w, label, value }: { x: number; y: number; w: number; label: string; value?: string }) {
   const labelW = label.length * 12.5 + 8;
   return (
     <g>

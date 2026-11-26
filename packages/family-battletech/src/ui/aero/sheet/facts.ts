@@ -67,7 +67,7 @@ const isAmmo = (mount: AeroMount, catalog: Catalog): boolean => (mount.equipment
 const figuresOf = (mount: AeroMount, record: AeroRecord, catalog: Catalog): AeroWeaponFigures | undefined =>
   mount.equipmentId === null ? undefined : (aeroWeaponFigures(catalog, mount.equipmentId, record.editionId) ?? aeroCatalogFigures(catalog, mount.equipmentId));
 
-function lineOf(mount: AeroMount, record: AeroRecord, catalog: Catalog, qty: number): WeaponLine {
+export function lineOf(mount: AeroMount, record: AeroRecord, catalog: Catalog, qty: number): WeaponLine {
   const f = figuresOf(mount, record, catalog);
   const reach = f?.maxRange === undefined ? 0 : BANDS.indexOf(f.maxRange) + 1;
   const attack = f?.attack === undefined ? "" : String(f.attack);
