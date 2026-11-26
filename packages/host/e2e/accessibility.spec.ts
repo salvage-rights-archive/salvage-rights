@@ -75,6 +75,7 @@ test("an OmniMech editor, base and comparison have no axe violations in either t
   const form = page.getByRole("form", { name: "Build a new one" });
   await form.getByLabel("Name").fill("Falcon");
   await form.getByLabel("Type", { exact: true }).selectOption({ label: "OmniMech" });
+  await form.getByLabel("Year").fill("3060");
   await form.getByRole("button", { name: "Start building" }).click();
   await expect(page.getByRole("tab", { name: /Prime/ })).toBeVisible();
   const editor = new URL(page.url());

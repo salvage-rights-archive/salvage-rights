@@ -159,6 +159,7 @@ test("the Classic home offers an aerospace unit that opens the AeroTech editor, 
   const form = page.getByRole("form", { name: "Build a new one" });
   await form.getByLabel("Name").fill("Classic Door");
   await form.getByLabel("Type").selectOption("aero:aerospace-fighter");
+  await form.getByLabel("Year").fill("3060");
   await form.getByRole("button", { name: "Start building" }).click();
   await expect(page.getByRole("heading", { level: 1, name: "Classic Door" })).toBeVisible();
   await expect(page.getByText("Built under: Total Warfare / TechManual / Strategic Operations")).toBeVisible();
