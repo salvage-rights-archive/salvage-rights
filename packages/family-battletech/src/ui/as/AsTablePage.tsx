@@ -9,9 +9,9 @@ import type { TableState } from "../../rules/as-table";
 import { newAsUnit, unitTitle } from "../../rules/as-unit";
 import type { AsCard, AsUnit } from "../../rules/as-unit";
 import { STORAGE_READ_FAILED, STORAGE_WRITE_FAILED } from "../storage";
+import { useWakeLock } from "../useWakeLock";
 import AsTableUnit from "./AsTableUnit";
 import { openAsStorage } from "./storage";
-import { useWakeLock } from "./useWakeLock";
 
 const HOME = "/battletech/alpha-strike/home";
 const KEY = (forceId: string) => `as-table:${forceId}`;
@@ -73,7 +73,7 @@ function Table({ store, force, units, table: initial }: { store: Store; force: A
   const [problem, setProblem] = useState("");
   const [confirming, setConfirming] = useState(false);
   const keepRef = useRef<HTMLButtonElement>(null);
-  const awake = useWakeLock();
+  const awake = useWakeLock("as-table-keep-awake");
 
   useEffect(() => {
     if (confirming) keepRef.current?.focus();

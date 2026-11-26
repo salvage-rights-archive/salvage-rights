@@ -1,19 +1,17 @@
-// Keeps the screen on while a table page is open, with an off switch the player's choice is remembered by (Screen Wake Lock).
+// Keeps the screen on while a game page is open (Screen Wake Lock), with an off switch whose setting is remembered under the given key.
 import { useEffect, useState } from "react";
 
-const KEY = "as-table-keep-awake";
-
-function read(): boolean {
+function read(key: string): boolean {
   try {
-    return localStorage.getItem(KEY) !== "off";
+    return localStorage.getItem(key) !== "off";
   } catch {
     return true;
   }
 }
 
 /** The switch, whether the browser can do it at all, and the setter that remembers the choice. Asks again when the page comes back to the front. */
-export function useWakeLock(): { on: boolean; supported: boolean; set: (on: boolean) => void } {
-  const [on, setOn] = useState(read);
+export function useWakeLock(key: string): { on: boolean; supported: boolean; set: (on: boolean) => void } {
+  const [on, setOn] = useState(() => read(key));
   const supported = typeof navigator !== "undefined" && "wakeLock" in navigator;
   useEffect(() => {
     if (!on || !supported) return;
@@ -42,7 +40,7 @@ export function useWakeLock(): { on: boolean; supported: boolean; set: (on: bool
   const set = (next: boolean): void => {
     setOn(next);
     try {
-      localStorage.setItem(KEY, next ? "on" : "off");
+      localStorage.setItem(key, next ? "on" : "off");
     } catch {
       // Private window: the choice lasts until the page closes.
     }

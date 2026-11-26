@@ -11,6 +11,7 @@ import { emptySheet } from "../../rules/aces-resolve";
 import { PHASE_WORDS, addLog, currentStep, forceLabel, initiativeSummary, logLine, ordersDone, ordersState, startMovement, turnStateOf, TURN_CITE } from "../../rules/aces-turn";
 import type { TurnRecords } from "../../rules/aces-turn";
 import { STORAGE_READ_FAILED, STORAGE_WRITE_FAILED } from "../storage";
+import { useWakeLock } from "../useWakeLock";
 import { combatForce, startEnd } from "../../rules/aces-combat";
 import { supportPending } from "../../rules/aces-support";
 import ActivationCard from "./ActivationCard";
@@ -27,46 +28,6 @@ import "./aces.scss";
 
 type Loaded = { state: "loading" } | { state: "failed" } | { state: "missing" } | { state: "unreadable"; message: string } | { state: "ready"; game: AcesGame };
 
-
-const KEEP_AWAKE_KEY = "aces-keep-awake";
-
-function readKeepAwake(): boolean {
-  try {
-    return localStorage.getItem(KEEP_AWAKE_KEY) !== "off";
-  } catch {
-    return true;
-  }
-}
-
-/** Asks the browser to keep the screen on while `on`; asks again when the page comes back to the front. Returns whether the browser can. */
-function useWakeLock(on: boolean): boolean {
-  const supported = typeof navigator !== "undefined" && "wakeLock" in navigator;
-  useEffect(() => {
-    if (!on || !supported) return;
-    let live = true;
-    let sentinel: WakeLockSentinel | undefined;
-    const request = async (): Promise<void> => {
-      try {
-        const got = await navigator.wakeLock.request("screen");
-        if (live) sentinel = got;
-        else void got.release();
-      } catch {
-        // The browser may refuse (low battery, hidden page): the screen then dims as usual.
-      }
-    };
-    const back = (): void => {
-      if (document.visibilityState === "visible") void request();
-    };
-    void request();
-    document.addEventListener("visibilitychange", back);
-    return () => {
-      live = false;
-      document.removeEventListener("visibilitychange", back);
-      void sentinel?.release().catch(() => undefined);
-    };
-  }, [on, supported]);
-  return supported;
-}
 
 function Log({ game, headingRef }: { game: AcesGame; headingRef: RefObject<HTMLHeadingElement | null> }) {
   return (
@@ -108,12 +69,11 @@ export default function GamePage() {
   const [problem, setProblem] = useState("");
   const [view, setView] = useState<"now" | "log">("now");
   const [touched, setTouched] = useState(false);
-  const [keepAwake, setKeepAwake] = useState(readKeepAwake);
   const storage = useRef<GameStorage>(undefined);
   const gameRef = useRef<AcesGame>(undefined);
   const saving = useRef<Promise<void>>(Promise.resolve());
   const logHeading = useRef<HTMLHeadingElement>(null);
-  const supported = useWakeLock(keepAwake);
+  const { on: keepAwake, supported, set: setAwake } = useWakeLock("aces-keep-awake");
 
   const persist = useCallback((game: AcesGame) => {
     const s = storage.current;
@@ -168,15 +128,6 @@ export default function GamePage() {
     },
     [persist, show],
   );
-
-  const setAwake = (on: boolean): void => {
-    setKeepAwake(on);
-    try {
-      localStorage.setItem(KEEP_AWAKE_KEY, on ? "on" : "off");
-    } catch {
-      // The choice then lasts until the page closes.
-    }
-  };
 
   if (loaded.state === "loading") return <div className="sr-page" role="status">Loading.</div>;
   if (loaded.state !== "ready") {
