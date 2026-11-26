@@ -49,6 +49,18 @@ describe("the table's numbers", () => {
     expect(crippleChecks(slow, walker).find((c) => c.id === "move")?.met).toBe(true);
     const spent = { ...play, armor: 4, structure: 5, crits: { engine: 0, fireControl: 0, weapon: 3 } };
     expect(crippleChecks(spent, walker).find((c) => c.id === "damage")?.met).toBe(true);
+    // A condition that cannot apply is left out: no damage on the card, no Move on the card.
+    const still = { ...walker, damage: { s: { value: 0 }, m: { value: 0 }, l: { value: 0 } }, move: [] };
+    expect(crippleChecks(newTable("f", [still]).units[0]?.play as PlayState, still).map((c) => c.id)).toEqual(["structure"]);
+  });
+
+  it("takes outside heat on a unit that builds none as damage with no cap, and a vehicle rolls its motive damage", () => {
+    const foot = { ...walker, type: "CI", armor: 2, structure: 6 };
+    const after = endTurn(setUnit(newTable("f", [foot]), 0, { external: 3 }), [foot], () => 7);
+    expect(after.units[0]?.play).toMatchObject({ armor: 0, structure: 5 });
+    const tank = { ...walker, type: "CV", move: [{ mode: "t", inches: 6 }] };
+    const hit = endTurn(setUnit(newTable("f", [tank]), 0, { external: 1 }), [tank], () => 7);
+    expect(hit.last.some((l) => l.event.text.startsWith("Motive roll 7"))).toBe(true);
   });
 
   it("names the roll and the table row, and adds fire control and heat to the to-hit", () => {

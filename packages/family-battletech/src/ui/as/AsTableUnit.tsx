@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { AS_CRIT_EFFECTS, AS_CRIT_TABLES, AS_CRIT_TABLE_OF } from "../../data/alpha-strike";
 import type { CritKind } from "../../data/alpha-strike";
-import { applyCrit, crippled, currentDamage, currentMove, currentTmm, escape, recordMove, tracksHeat } from "../../rules/as-play";
+import { applyCrit, crippled, currentDamage, currentOv, currentMove, currentTmm, escape, recordMove, tracksHeat } from "../../rules/as-play";
 import type { MotiveResult, MoveMode } from "../../rules/as-play";
 import { skillAdjustedPv } from "../../rules/as-force";
 import type { AsMember } from "../../rules/as-force";
@@ -77,7 +77,7 @@ export default function AsTableUnit({ index, unit, member, table, change }: Prop
     ["Move", formatMove(currentMove(play, card)) || "-"],
     ["TMM", tmm === null ? "-" : String(tmm)],
     ["Damage S/M/L", `${formatDamage(dmg.s)}/${formatDamage(dmg.m)}/${formatDamage(dmg.l)}`],
-    ["To-hit added", `+${String(attackModifier(play, card))}`],
+    ...(play.shutdown || out ? [] : [["To-hit added, weapon attacks (pp. 50, 52)", `+${String(attackModifier(play, card))}`] as [string, string]]),
     ...(play.moved ? [["Target TMM this turn", String(play.moved.tmm)] as [string, string]] : []),
     ...(motiveHits.length > 0 ? [["Motive damage", motiveHits.join(", ")] as [string, string]] : []),
     ...(play.stunned ? [["Crew", "stunned until the End Phase"] as [string, string]] : []),
@@ -144,12 +144,16 @@ export default function AsTableUnit({ index, unit, member, table, change }: Prop
           </div>
           {heat && (
             <>
-              <div className="bt-field">
-                <label>
-                  <input type="checkbox" checked={entry.attacked} onChange={(event) => { change(setUnit(table, index, { attacked: event.target.checked })); }} /> Made a weapon attack this turn
-                </label>
-              </div>
-              <Stepper id={id("ov")} label={`Overheat used (up to ${String(card.ov)})`} value={entry.overheat} max={card.ov} onChange={(n) => { change(setUnit(table, index, { overheat: n, ...(n > 0 ? { attacked: true } : {}) })); }} />
+              {!play.shutdown && (
+                <div className="bt-field">
+                  <label>
+                    <input type="checkbox" checked={entry.attacked} onChange={(event) => { change(setUnit(table, index, { attacked: event.target.checked })); }} /> Made a weapon attack this turn
+                  </label>
+                </div>
+              )}
+              {currentOv(play, card) > 0 && (
+                <Stepper id={id("ov")} label={`Overheat used (up to ${String(currentOv(play, card))})`} value={entry.overheat} max={currentOv(play, card)} onChange={(n) => { change(setUnit(table, index, { overheat: n, ...(n > 0 ? { attacked: true } : {}) })); }} />
+              )}
               <div className="bt-field">
                 <label>
                   <input type="checkbox" checked={entry.deliberate} onChange={(event) => { change(setUnit(table, index, { deliberate: event.target.checked })); }} /> Raises its heat by 1 on purpose
@@ -157,7 +161,11 @@ export default function AsTableUnit({ index, unit, member, table, change }: Prop
               </div>
             </>
           )}
-          {(heat || vehicle) && <Stepper id={id("ext")} label="Heat from enemy attacks (most 2)" value={entry.external} max={2} onChange={(n) => { change(setUnit(table, index, { external: n })); }} />}
+          {heat ? (
+            <Stepper id={id("ext")} label="Heat from enemy attacks (most 2)" value={entry.external} max={2} onChange={(n) => { change(setUnit(table, index, { external: n })); }} />
+          ) : (
+            <Stepper id={id("ext")} label="Heat (HT) damage from enemy attacks" value={entry.external} onChange={(n) => { change(setUnit(table, index, { external: n })); }} />
+          )}
           <div role="group" aria-label={`Critical hits for ${name}`} className="as-crits">
             <p className="as-crits__title">Critical hits so far (press a box to add one by hand)</p>
             <div className="as-crits__boxes">

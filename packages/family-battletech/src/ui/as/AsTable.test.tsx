@@ -76,6 +76,10 @@ describe("Alpha Strike table", () => {
     await user.click(screen.getByRole("button", { name: "End the turn" }));
     expect(screen.getByText("S (shut down)")).toBeTruthy();
     expect(screen.getByText(/Skill 4, PV \d+\. Shut down/)).toBeTruthy();
+    // A shut-down unit cannot attack: no attack or Overheat orders, no to-hit.
+    expect(screen.queryByLabelText(/Made a weapon attack/)).toBeNull();
+    expect(screen.queryByLabelText(/Overheat used/)).toBeNull();
+    expect(screen.queryByText(/To-hit added/)).toBeNull();
   });
 
   it("rolls a critical for the player, shows the roll and the row, and recomputes the to-hit", async () => {

@@ -47,7 +47,9 @@ export function Bubbles({ count, full, before, waiting, marking, name, unit, onM
     return { i, global, state };
   });
   const firstFree = cells.find((c) => c.state !== "waiting")?.i ?? 0;
-  const tab = (i: number): 0 | -1 => ((cells[active]?.state === "waiting" ? firstFree : active) === i ? 0 : -1);
+  // The bubble count can shrink under a remembered position (an End Phase, Undo): keep one bubble in the tab order.
+  const here = Math.min(active, count - 1);
+  const tab = (i: number): 0 | -1 => ((cells[here]?.state === "waiting" ? firstFree : here) === i ? 0 : -1);
   const move = (event: KeyboardEvent<HTMLDivElement>): void => {
     const buttons = Array.from(group.current?.querySelectorAll("button") ?? []);
     const at = buttons.indexOf(document.activeElement as HTMLButtonElement);

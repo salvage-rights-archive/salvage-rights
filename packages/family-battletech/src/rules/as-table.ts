@@ -97,22 +97,22 @@ export interface CrippleCheck {
 
 const zeroNow = (d: AsCard["damage"]["m"]): boolean => d === null || (d.value === 0 && d.minimal !== true);
 
-/** The three Crippling Damage conditions worked out for this unit, each with the numbers behind it (ASCE p. 127; Forced Withdrawal is p. 126). */
+/** The Crippling Damage conditions that apply to this unit, each with the numbers behind it (ASCE p. 127; Forced Withdrawal is p. 126). A condition that cannot apply is left out. */
 export function crippleChecks(play: PlayState, card: AsCard): CrippleCheck[] {
-  const limit = Math.ceil(card.structure / 2);
   const d = currentDamage(play, card);
+  if (card.type === "BD") {
+    return [{ id: "damage", met: zeroNow(d.s) && zeroNow(d.m) && zeroNow(d.l), text: `Damage now ${formatDamage(d.s)}/${formatDamage(d.m)}/${formatDamage(d.l)}: crippled when every value is 0` }];
+  }
+  const limit = Math.ceil(card.structure / 2);
   const started = zeroNow(card.damage.m) && zeroNow(card.damage.l);
   const start = card.move[0]?.inches ?? 0;
   const left = currentMove({ ...play, heat: 0, shutdown: false }, card)[0]?.inches ?? 0;
-  return [
+  const checks: CrippleCheck[] = [
     { id: "structure", met: play.armor === 0 && play.structure <= limit, text: `Armor ${String(play.armor)}, structure ${String(play.structure)}: crippled at no armor and structure ${String(limit)} or less` },
-    {
-      id: "damage",
-      met: !started && zeroNow(d.m) && zeroNow(d.l),
-      text: started ? "The card began with no Medium or Long damage, so this does not count" : `Damage now ${formatDamage(d.m)} at Medium and ${formatDamage(d.l)} at Long: crippled when both are 0`,
-    },
-    { id: "move", met: start > 0 && left === 0, text: `Move ${String(left)} of ${String(start)} after hits: crippled at 0` },
   ];
+  if (!started) checks.push({ id: "damage", met: zeroNow(d.m) && zeroNow(d.l), text: `Damage now ${formatDamage(d.m)} at Medium and ${formatDamage(d.l)} at Long: crippled when both are 0` });
+  if (start > 0) checks.push({ id: "move", met: left === 0, text: `Move ${String(left)} of ${String(start)} after hits: crippled at 0` });
+  return checks;
 }
 
 /** The End Phase for every unit, then the next turn: staged damage lands, heat is settled, the per-turn answers are cleared. Every roll made is noted. */
