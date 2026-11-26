@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { ABOM_TYPES } from "../data/gothic";
 import { loadCatalog, mountableOn, type Catalog } from "./catalog";
-import { checkAbomination, clusterColumn, creatureFor, damageModifier, launcherTubes, mobHobbleModifier, newAbominationUnit, stumbleTarget, unitStats, withDefaults } from "./abomination";
+import { checkAbomination, checkForce, clusterColumn, creatureFor, damageModifier, initiativeModifiers, launcherTubes, mobHobbleModifier, newAbominationUnit, newForceMech, newForceUnit, stumbleTarget, unitStats, withDefaults } from "./abomination";
 
 let catalog: Catalog;
 beforeAll(async () => {
@@ -91,5 +91,32 @@ describe("the check and the record", () => {
     expect(checkAbomination(read!, "standard")[0]?.level).toBe("warning");
     expect(unitStats({ ...newAbominationUnit("gnat", "g"), handlerBonus: true })).toMatchObject({ gunneryEffective: 3, animeleeEffective: 3 });
     expect([withDefaults(null), withDefaults({ schema: 2 }), withDefaults([])]).toEqual([undefined, undefined, undefined]);
+  });
+});
+
+describe("forces", () => {
+  const mech = (id: string, over: Partial<ReturnType<typeof newForceMech>> = {}) => ({ ...newForceMech(`rec-${id}`, id), ...over });
+  const unit = (id: string, over: Partial<ReturnType<typeof newForceUnit>> = {}) => ({ ...newForceUnit(`u-${id}`, id), ...over });
+  const lookup = { mech: (r: string) => ({ name: r, tons: r === "rec-light" ? 35 : 50 }), unit: (u: string) => u };
+
+  it.each([
+    { name: "a Handler on a 35-ton 'Mech", mechs: [mech("light", { handler: true })], units: [], expected: ["handler-weight"] },
+    { name: "a Handler on a 40-ton 'Mech is fine, three units are fine", mechs: [mech("m", { handler: true })], units: ["a", "b", "c"].map((i) => unit(i, { handlerOf: "m" })), expected: [] },
+    { name: "a fourth unit on one Handler", mechs: [mech("m", { handler: true })], units: ["a", "b", "c", "d"].map((i) => unit(i, { handlerOf: "m" })), expected: ["handler-count"] },
+    { name: "a bonus with no Handler", mechs: [mech("m")], units: [unit("a", { handlerBonus: true })], expected: ["handler-bonus"] },
+    { name: "a link to a 'Mech with no Handler aboard", mechs: [mech("m")], units: [unit("a", { handlerOf: "m" })], expected: ["handler-bonus"] },
+  ])("reports $name", ({ mechs, units, expected }) => {
+    expect(checkForce({ mechs, units }, lookup).map((f) => f.check)).toEqual(expected);
+  });
+
+  it.each([
+    { name: "Abominations only", mechs: [], units: [unit("a")], expected: [-4] },
+    { name: "an empty force", mechs: [], units: [], expected: [] },
+    { name: "a 'Mech beside Abominations lifts the -4", mechs: [mech("m")], units: [unit("a")], expected: [] },
+    { name: "a Frayed leader", mechs: [mech("m", { frayed: true }), mech("n")], units: [], expected: [-2] },
+    { name: "every 'Mech Frayed", mechs: [mech("m"), mech("n", { frayed: true })].map((m) => ({ ...m, frayed: true })), units: [], expected: [-2] },
+    { name: "a Frayed pilot who is not the leader", mechs: [mech("m"), mech("n", { frayed: true })], units: [], expected: [] },
+  ])("Initiative: $name", ({ mechs, units, expected }) => {
+    expect(initiativeModifiers({ mechs, units }).map((m) => m.value)).toEqual(expected);
   });
 });

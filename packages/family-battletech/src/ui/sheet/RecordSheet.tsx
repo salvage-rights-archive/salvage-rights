@@ -13,6 +13,7 @@ import MechData from "./MechData";
 import SheetText from "./SheetText";
 import UnitPicture from "./UnitPicture";
 import WarriorData from "./WarriorData";
+import type { SheetPilot } from "./WarriorData";
 import { sheetFacts } from "./facts";
 import { INK, squeeze } from "./text";
 
@@ -34,16 +35,23 @@ export const TRADEMARK_LINE =
   "BattleTech, 'Mech, BattleMech, and MechWarrior are registered trademarks and/or trademarks of The Topps Company, Inc. Unofficial, non-commercial fan project, not affiliated with or endorsed by Topps or Catalyst Game Labs.";
 
 /** `checkedOn` is the date the verified line names (year-month-day); it defaults to today on this device. */
-/** `dazzle` (Gothic only) adds the Dazzle Mode lines under each laser. */
-export default function RecordSheet({ record, catalog, checkedOn, dazzle = false }: { record: MechRecord; catalog: Catalog; checkedOn?: string; dazzle?: boolean }) {
+/** `dazzle` (Gothic only) adds the Dazzle Mode lines under each laser. `pilot` (the force page) fills in the Warrior Data; without it they stay blank. */
+export default function RecordSheet({ record, catalog, checkedOn, dazzle = false, pilot }: { record: MechRecord; catalog: Catalog; checkedOn?: string; dazzle?: boolean; pilot?: SheetPilot }) {
   const facts = sheetFacts(record, catalog, { dazzle });
   const name = facts.title;
   const nameSize = Math.min(84, Math.floor(1020 / (Math.max(name.length, 1) * 0.62)));
   const official = officialLabel(officialState(record));
-  const mark = official.badge === "OFFICIAL" ? `OFFICIAL: ${official.detail}` : official.badge;
+  // The Gothic books name no Official mark and no tournament check, so a Gothic sheet carries neither.
+  const gothic = facts.gothic !== undefined;
+  const mark = gothic ? "" : official.badge === "OFFICIAL" ? `OFFICIAL: ${official.detail}` : official.badge;
   const compliance = standardCompliance(record, catalog);
-  const verified = compliance.verified ? verifiedLine(compliance.edition, checkedOn ?? new Date().toLocaleDateString("en-CA")) : undefined;
+  const verified = !gothic && compliance.verified ? verifiedLine(compliance.edition, checkedOn ?? new Date().toLocaleDateString("en-CA")) : undefined;
   const credit = facts.designer === undefined ? "" : ` Designed by ${facts.designer} on mordel.net.`;
+  const marks: [string, string][] = [
+    ...(pilot ? [["Pilot", `${pilot.name.trim() || "unnamed"}, Gunnery ${String(pilot.gunnery)}, Piloting ${String(pilot.piloting)}${pilot.frayed ? ", Frayed" : ""}${pilot.handler ? `, Handler aboard${pilot.carries ? ` for ${pilot.carries}` : ""}` : ""}`] as [string, string]] : []),
+    ...(gothic ? [] : [["Official", official.detail ? `${official.badge}, ${official.detail}` : official.badge] as [string, string]]),
+    ...(verified === undefined ? [] : [["Verified", verified] as [string, string]]),
+  ];
   return (
     <>
       <svg
@@ -74,7 +82,7 @@ export default function RecordSheet({ record, catalog, checkedOn, dazzle = false
         </text>
 
         <MechData rect={RECTS.mech} facts={facts} />
-        <WarriorData rect={RECTS.warrior} {...(facts.gothic ? { gothic: facts.gothic } : {})} />
+        <WarriorData rect={RECTS.warrior} {...(facts.gothic ? { gothic: facts.gothic } : {})} {...(pilot ? { pilot } : {})} />
         <UnitPicture rect={RECTS.picture} record={record} label={`${name}, unit picture`} />
         <ArmorDiagram rect={RECTS.armor} record={record} catalog={catalog} points={facts.points} />
         <CriticalTable rect={RECTS.critical} record={record} layout={facts.layout} labels={facts.ammoSlots} fixed={facts.fixedMounts} />
@@ -94,7 +102,7 @@ export default function RecordSheet({ record, catalog, checkedOn, dazzle = false
           {TRADEMARK_LINE}
         </text>
       </svg>
-      <SheetText facts={facts} record={record} marks={[["Official", official.detail ? `${official.badge}, ${official.detail}` : official.badge], ...(verified === undefined ? [] : [["Verified", verified] as [string, string]])]} />
+      <SheetText facts={facts} record={record} marks={marks} />
     </>
   );
 }

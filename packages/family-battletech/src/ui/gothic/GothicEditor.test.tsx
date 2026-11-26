@@ -48,6 +48,13 @@ describe("The editor in Gothic", () => {
     expect(within(dialog).queryByRole("button", { name: /XL/ })).toBeNull();
   });
 
+  it("hides the Official and Tournament check panels and the OFFICIAL badge, which only Classic defines", async () => {
+    await openBox("UM-R60B");
+    expect(screen.queryByRole("heading", { name: "Tournament check" })).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Official or not" })).toBeNull();
+    expect(screen.queryByText(/NOT OFFICIAL|licensed-noncanon|Standard or lower/)).toBeNull();
+  });
+
   it("shows no cost, and the printed Battle Value beside ours that says when it differs after a change", async () => {
     const user = userEvent.setup();
     await openBox("PXH-1T");

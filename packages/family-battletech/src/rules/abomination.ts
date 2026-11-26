@@ -2,7 +2,7 @@
 // small play calculations the sheet and the tracker share. A record is plain data; there is no class. Nothing here throws on a record
 // it does not understand: a type id this version does not know is kept as it is (and reported by the check), and keys this version does
 // not know are kept too, so a record written by a later version survives a round trip through this one.
-import { ABOM_CLASSES, ABOM_TYPES, MOB_HOBBLE_MODIFIERS, RANDOM_CREATURE, STUMBLE_DAMAGE, HANDLER, DEFAULT_SKILLS } from "../data/gothic";
+import { ABOM_CLASSES, ABOM_TYPES, ABOMINATION_ONLY_INITIATIVE, DEFAULT_SKILLS, FRAYED, HANDLER, MOB_HOBBLE_MODIFIERS, RANDOM_CREATURE, STUMBLE_DAMAGE } from "../data/gothic";
 import type { AbomClass, AbomClassId, AbomStats, AbomType, AbomWeapon } from "../data/gothic";
 import { RULES_LEVELS } from "../data/chassis";
 import type { RulesLevel } from "../data/chassis";
@@ -160,6 +160,114 @@ export function paginate<T>(units: readonly T[], perPage = 5): T[][] {
   return pages;
 }
 
+// ---- Forces (rulebook pp. 66, 78, 80) ---------------------------------------------------------------------------------------------
+
+/** A 'Mech in a force: a saved Gothic 'Mech and the pilot who drives it. Skills are as written on the pilot's card (Frayed already applied). */
+export interface ForceMech {
+  /** This entry's own id, so one saved 'Mech can stand in a force twice. */
+  id: string;
+  recordId: string;
+  pilot: string;
+  gunnery: number;
+  piloting: number;
+  frayed: boolean;
+  /** An Abomination Handler rides in this 'Mech. */
+  handler: boolean;
+}
+
+/** An Abomination unit in a force: a saved unit, the 'Mech entry that carries its Handler, and the Handler bonus box. */
+export interface ForceUnit {
+  id: string;
+  unitId: string;
+  /** The id of a `ForceMech` entry. */
+  handlerOf?: string;
+  handlerBonus: boolean;
+}
+
+export interface GothicForce {
+  schema: 1;
+  id: string;
+  name: string;
+  mechs: ForceMech[];
+  units: ForceUnit[];
+}
+
+export const newForce = (id: string = crypto.randomUUID()): GothicForce => ({ schema: 1, id, name: "", mechs: [], units: [] });
+
+export const newForceMech = (recordId: string, id: string = crypto.randomUUID()): ForceMech => ({
+  id,
+  recordId,
+  pilot: "",
+  gunnery: DEFAULT_SKILLS.mechwarriorGunnery,
+  piloting: DEFAULT_SKILLS.mechwarriorPiloting,
+  frayed: false,
+  handler: false,
+});
+
+export const newForceUnit = (unitId: string, id: string = crypto.randomUUID()): ForceUnit => ({ id, unitId, handlerBonus: false });
+
+export interface InitiativeModifier {
+  value: number;
+  why: string;
+}
+
+/**
+ * The Initiative modifiers a force carries. -4 when it holds Abomination units and no 'Mech (p. 66: any human-controlled unit lifts it, and
+ * a 'Mech is one). -2 when the first 'Mech listed is Frayed-piloted, or when every 'Mech in the force is (p. 78).
+ */
+export function initiativeModifiers(force: Pick<GothicForce, "mechs" | "units">): InitiativeModifier[] {
+  const found: InitiativeModifier[] = [];
+  if (force.mechs.length === 0 && force.units.length > 0) found.push({ value: ABOMINATION_ONLY_INITIATIVE, why: `Only Abomination units (p. 66)` });
+  const lead = force.mechs[0];
+  if (lead && (lead.frayed || force.mechs.every((m) => m.frayed))) {
+    found.push({ value: FRAYED.initiative, why: `${lead.frayed ? "Led by a Frayed MechWarrior" : "Every 'Mech has a Frayed MechWarrior"} (p. ${String(FRAYED.cite.page)})` });
+  }
+  return found;
+}
+
+export interface ForceFinding {
+  check: "handler-weight" | "handler-count" | "handler-bonus";
+  level: "error";
+  message: string;
+}
+
+/**
+ * The force's own checks: a Handler under the minimum tonnage, more units on one Handler than the book allows, and a Handler bonus
+ * with no Handler to give it. `lookup` names what the force points at; a 'Mech or unit it cannot find is left to the page to report.
+ */
+export function checkForce(
+  force: Pick<GothicForce, "mechs" | "units">,
+  lookup: { mech: (recordId: string) => { name: string; tons: number } | undefined; unit: (unitId: string) => string | undefined },
+): ForceFinding[] {
+  const findings: ForceFinding[] = [];
+  const nameOf = (m: ForceMech) => {
+    const mech = lookup.mech(m.recordId)?.name ?? "A 'Mech";
+    return m.pilot.trim() ? `${mech} (${m.pilot.trim()})` : mech;
+  };
+  for (const m of force.mechs) {
+    const tons = lookup.mech(m.recordId)?.tons;
+    if (m.handler && tons !== undefined && tons < HANDLER.minMechTons) {
+      findings.push({ check: "handler-weight", level: "error", message: `${nameOf(m)} is ${String(tons)} tons; a Handler rides only in a 'Mech of ${String(HANDLER.minMechTons)} tons or more (p. ${String(HANDLER.cite.page)}).` });
+    }
+    const carried = force.units.filter((u) => u.handlerOf === m.id);
+    if (carried.length > HANDLER.maxUnits) {
+      findings.push({ check: "handler-count", level: "error", message: `${nameOf(m)} has ${String(carried.length)} units on its Handler; one Handler serves up to ${String(HANDLER.maxUnits)} (p. ${String(HANDLER.cite.page)}).` });
+    }
+  }
+  for (const u of force.units) {
+    const handlerMech = force.mechs.find((m) => m.id === u.handlerOf);
+    if (!handlerMech?.handler && (u.handlerBonus || u.handlerOf !== undefined)) {
+      const unit = lookup.unit(u.unitId) ?? "A unit";
+      findings.push({
+        check: "handler-bonus",
+        level: "error",
+        message: u.handlerBonus ? `${unit} has the Handler bonus, but no 'Mech with a Handler aboard is linked to it.` : `${unit} is linked to a 'Mech with no Handler aboard.`,
+      });
+    }
+  }
+  return findings;
+}
+
 // ---- Reading a record from storage, a file or an import ---------------------------------------------------------------------------
 
 const isObject = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
@@ -219,4 +327,39 @@ export function withDefaults(value: unknown, fallbackId = ""): AbominationUnit |
   const level = RULES_LEVELS.find((row) => row.id === value.rulesLevel);
   if (level) unit.rulesLevel = level.id;
   return unit;
+}
+
+const forceMechOf = (v: unknown): ForceMech | undefined => {
+  if (!isObject(v) || !isString(v.id) || !isString(v.recordId)) return undefined;
+  return {
+    ...unknownKeys(v, ["id", "recordId", "pilot", "gunnery", "piloting", "frayed", "handler"]),
+    id: v.id,
+    recordId: v.recordId,
+    pilot: isString(v.pilot) ? v.pilot : "",
+    gunnery: isNumber(v.gunnery) ? v.gunnery : DEFAULT_SKILLS.mechwarriorGunnery,
+    piloting: isNumber(v.piloting) ? v.piloting : DEFAULT_SKILLS.mechwarriorPiloting,
+    frayed: v.frayed === true,
+    handler: v.handler === true,
+  };
+};
+
+const forceUnitOf = (v: unknown): ForceUnit | undefined => {
+  if (!isObject(v) || !isString(v.id) || !isString(v.unitId)) return undefined;
+  const unit: ForceUnit = { ...unknownKeys(v, ["id", "unitId", "handlerOf", "handlerBonus"]), id: v.id, unitId: v.unitId, handlerBonus: v.handlerBonus === true };
+  if (isString(v.handlerOf)) unit.handlerOf = v.handlerOf;
+  return unit;
+};
+
+/** Reads a force from storage: missing fields take their defaults, an entry that is not an entry is dropped, unknown keys are kept. Undefined for what is not a force of schema 1. */
+export function forceWithDefaults(value: unknown, fallbackId = ""): GothicForce | undefined {
+  if (!isObject(value) || (value.schema !== undefined && value.schema !== 1)) return undefined;
+  const list = <T,>(v: unknown, read: (item: unknown) => T | undefined): T[] => (Array.isArray(v) ? v.flatMap((item) => { const got = read(item); return got ? [got] : []; }) : []);
+  return {
+    ...unknownKeys(value, ["schema", "id", "name", "mechs", "units"]),
+    schema: 1,
+    id: isString(value.id) ? value.id : fallbackId,
+    name: isString(value.name) ? value.name : "",
+    mechs: list(value.mechs, forceMechOf),
+    units: list(value.units, forceUnitOf),
+  };
 }

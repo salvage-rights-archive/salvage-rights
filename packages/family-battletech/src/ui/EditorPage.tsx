@@ -742,9 +742,11 @@ function Editor({ initial, unsaved, startAt, catalog, storage }: { initial: Doc;
           </Link>
           <h1 tabIndex={-1}>{title || "Unnamed 'Mech"}</h1>
           <p className="bt-hint">Built under: {editionName(record.editionId)}</p>
-          <p>
-            <OfficialBadge record={record} />
-          </p>
+          {!gothic && (
+            <p>
+              <OfficialBadge record={record} />
+            </p>
+          )}
         </div>
         <div className="bt-actions">
           <button type="button" className="bt-button" disabled={!dirty} onClick={() => void save()}>
@@ -845,7 +847,8 @@ function Editor({ initial, unsaved, startAt, catalog, storage }: { initial: Doc;
 
       <div className="bt-editor__side">
         <FindingsPanel findings={findings} targetOf={targetOf} onChoose={focusTarget} />
-        <CompliancePanel compliance={compliance} targetOf={targetOf} onChoose={focusTarget} />
+        {/* The Gothic books name no Official mark and no tournament check, so Gothic records show neither (hide, do not mark). */}
+        {!gothic && <CompliancePanel compliance={compliance} targetOf={targetOf} onChoose={focusTarget} />}
         <CalculatorPanel record={record} catalog={catalog} />
       </div>
 
@@ -1063,7 +1066,7 @@ function Editor({ initial, unsaved, startAt, catalog, storage }: { initial: Doc;
               })}
           </section>
 
-          <OfficialPanel key={record.id} record={record} onEdit={edit} />
+          {!gothic && <OfficialPanel key={record.id} record={record} onEdit={edit} />}
 
           <section className="bt-panel">
             <details className="bt-notes">

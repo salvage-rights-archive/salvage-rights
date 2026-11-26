@@ -476,10 +476,13 @@ export default function GothicHomePage() {
       </section>
 
       <section className="bt-section" aria-labelledby="bt-abom">
-        <h2 id="bt-abom">Abomination units</h2>
-        <p>
+        <h2 id="bt-abom">Abomination units and forces</h2>
+        <p className="bt-actions">
           <Link className="bt-button" to={`${GOTHIC_BASE}/abominations`}>
             Abomination units
+          </Link>
+          <Link className="bt-button" to={`${GOTHIC_BASE}/force`}>
+            Forces
           </Link>
         </p>
       </section>

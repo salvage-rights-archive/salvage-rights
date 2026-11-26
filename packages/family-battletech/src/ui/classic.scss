@@ -1129,8 +1129,9 @@ a.bt-button {
     -webkit-print-color-adjust: exact;
   }
 
-  // Abomination sheets: one page each.
-  .bt-abom-page {
+  // Abomination sheets, and each sheet of a force: one page each.
+  .bt-abom-page,
+  .bt-force-sheet {
     break-after: page;
 
     &:last-child {
