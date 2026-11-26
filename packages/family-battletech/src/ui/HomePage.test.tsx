@@ -238,7 +238,11 @@ describe("Classic BattleTech home", () => {
     const storage = await openFamilyStorage();
     await storage.save(saved("a", "TW-1"));
     renderHome();
-    const input = await screen.findByLabelText("Import a file");
+    const input = await screen.findByLabelText<HTMLInputElement>("Import a file");
+    // The input stays disabled until the page's storage is open.
+    await waitFor(() => {
+      expect(input.disabled).toBe(false);
+    }, { timeout: 10_000 });
     const file = (text: string) => new File([text], "x.json", { type: "application/json" });
     const refused: [File, string][] = [
       [file("not json at all"), "That file is not a 'Mech file."],
