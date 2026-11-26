@@ -13,7 +13,7 @@ async function chooseTheme(page: Page, theme: "Light" | "Dark") {
 /** Builds a bare Standard-level tracked vehicle from the Classic home and returns the editor's path. */
 async function startVehicle(page: Page, name: string): Promise<string> {
   await page.goto(`${DEV}${CLASSIC}/home`);
-  await expect(page.getByLabel("Import a file")).toBeEnabled();
+  await expect(page.getByLabel("Import a file", { exact: true })).toBeEnabled();
   const form = page.getByRole("form", { name: "Build a new one" });
   await form.getByLabel("Name").fill(name);
   await form.getByLabel("Year").fill("3060");
@@ -48,10 +48,8 @@ test("build a tracked vehicle at 320 px, give it armor and a weapon, save it and
 });
 
 test("the vehicle editor, picker and record sheet have no axe violations in either theme", async ({ page }) => {
-  test.setTimeout(180_000);
+  test.setTimeout(120_000);
   const editor = await startVehicle(page, "Axe Tank");
-  await page.getByRole("button", { name: "Save", exact: true }).click();
-  await expect(page.getByText("Saved.")).toBeVisible();
   const sheet = editor.replace("vehicle-editor", "vehicle-sheet");
   for (const theme of ["Light", "Dark"] as const) {
     await chooseTheme(page, theme);
