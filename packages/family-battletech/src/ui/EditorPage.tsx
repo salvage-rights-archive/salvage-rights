@@ -16,7 +16,7 @@ import { ARM_FULL, armorTypeAt, bodyOf, configurationOf, donorTons, editRecord, 
 import type { Layout, LocationCode, MechRecord } from "../rules/mech";
 import { configurationChoices, eraNeedsPick, eraOfRecord, erasOfYear, partChoices, setEra, setYear } from "../rules/availability";
 import type { PartKind } from "../rules/availability";
-import { frankenMechOffered, heatSinkMixAllowed, heatSinkMixPossible, levelRow, techBaseChoices, withLevel } from "../rules/levels";
+import { frankenMechOffered, heatSinkMixAllowed, heatSinkMixPossible, levelOfRecord, levelRow, techBaseChoices, withLevel } from "../rules/levels";
 import {
   BASE,
   applyBaseEdit,
@@ -31,7 +31,7 @@ import {
 import type { OmniChassis } from "../rules/omni";
 import { BaseBreaks, CompareView, ConfigurationBar, OMNI_PANEL_ID, PodSpacePanel, omniTabId } from "./editor/OmniBar";
 import type { OnChassis } from "./editor/OmniBar";
-import { ERAS } from "../data/editions";
+import type { EraRow } from "../data/editions";
 import LevelSelect from "./editor/LevelSelect";
 import TypeSelect from "./editor/TypeSelect";
 import ArmorPanel from "./editor/ArmorPanel";
@@ -454,7 +454,7 @@ const CHASSIS_FIELDS: ChassisField[] = [
   { kind: "number", path: "chassis.heatSinks-count", label: "Heat sinks", read: (r) => r.chassis.heatSinks.count, write: (d, v) => void (d.chassis.heatSinks.count = v) },
 ];
 
-const eraChoices = (eras: typeof ERAS): [string, string][] => [["", "Any era"], ...eras.map((era): [string, string] => [era.id, `${era.name} (${String(era.startYear)}${era.endYear === undefined ? " on" : `-${String(era.endYear)}`})`])];
+const eraChoices = (eras: EraRow[]): [string, string][] => [["", "Any era"], ...eras.map((era): [string, string] => [era.id, `${era.name} (${String(era.startYear)}${era.endYear === undefined ? " on" : `-${String(era.endYear)}`})`])];
 
 // ---------------------------------------------------------------------------------------------------------------
 // What a finding or a changed marker can point at
@@ -1028,7 +1028,7 @@ function Editor({ initial, unsaved, startAt, catalog, storage }: { initial: Doc;
                 value={record.year}
                 allowEmpty
                 changed={mark("year")}
-                needs={ruleset.dated && (record.rulesLevel ?? "standard") !== "introductory" ? `Needs a year at ${levelRow(record.rulesLevel ?? "standard", ruleset).label} rules.` : undefined}
+                needs={ruleset.dated && levelOfRecord(record, catalog) !== "introductory" ? `Needs a year at ${levelRow(levelOfRecord(record, catalog), ruleset).label} rules.` : undefined}
                 onValid={(v) => { edit((d) => { setYear(d, v); }, "year"); }}
               />
               <div className="bt-grid__wide">
@@ -1047,7 +1047,7 @@ function Editor({ initial, unsaved, startAt, catalog, storage }: { initial: Doc;
                 id="field-era"
                 label="Era"
                 value={ruleset.dated && record.year !== null && eraNeedsPick(record) ? "" : (eraOfRecord(record)?.id ?? "")}
-                options={ruleset.dated && record.year !== null && yearEras.length > 1 ? [["", "Choose an era"], ...yearEras.map((era): [string, string] => [era.id, `${era.name} (${String(era.startYear)}${era.endYear === undefined ? " on" : `-${String(era.endYear)}`})`])] : eraChoices(ruleset.eras)}
+                options={ruleset.dated && record.year !== null && yearEras.length > 1 ? [["", "Choose an era"], ...yearEras.map((era): [string, string] => [era.id, `${era.name} (${String(era.startYear)}${era.endYear === undefined ? " on" : `-${String(era.endYear)}`})`])] : eraChoices([...ruleset.eras, ...(ruleset.subEras ?? [])])}
                 changed={mark("era")}
                 onChange={(v) => { edit((d) => { setEra(d, v); }, "era"); }}
               />

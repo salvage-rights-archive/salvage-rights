@@ -200,7 +200,9 @@ export default function HomePage() {
   const yearTyped = /^\d{4}$/.test(yearText.trim()) ? Number(yearText.trim()) : null;
   // The year sets the era: one era holding it is the era, two (an Inner Sphere era and a Clan sub-era) are a choice the player makes, and the choice
   // decides the tech bases offered. Above Introductory the year is needed (and so the pick); Introductory is 3025 technology and may go without.
-  const yearEras = erasOfYear(yearTyped, CLASSIC);
+  // An era whose tech bases the level does not offer (at Introductory, only Inner Sphere) is not a choice here: hide, do not mark.
+  const basesHere = techBaseChoices(draft.rulesLevel, "", { year: yearTyped }).map(([value]) => value);
+  const yearEras = erasOfYear(yearTyped, CLASSIC).filter((era) => era.techBases === undefined || era.techBases.some((base) => basesHere.includes(base)));
   const eraChosen = yearEras.length === 1 ? yearEras[0] : yearEras.find((era) => era.id === eraPick);
   const aboveIntroductory = (draft.rulesLevel ?? "standard") !== "introductory";
   const missing = aboveIntroductory && yearTyped === null ? `A year is needed at ${levelRow(draft.rulesLevel ?? "standard").label} rules: it sets the era, and the era and year decide what is offered.` : aboveIntroductory && yearEras.length > 1 && eraChosen === undefined ? `The year ${String(yearTyped)} is in two eras; choose one, since it decides the tech base.` : "";
@@ -241,6 +243,8 @@ export default function HomePage() {
         techBase,
         tons: aeroTonnage,
         safeThrust: aeroThrust,
+        year: yearTyped,
+        ...(eraChosen ? { era: eraChosen.id } : {}),
         rulesLevel: draft.rulesLevel,
       },
       DEFAULT_AERO_EDITION,

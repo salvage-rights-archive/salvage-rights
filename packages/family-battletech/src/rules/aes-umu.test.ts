@@ -57,3 +57,18 @@ describe("the PPC capacitor", () => {
     expect(problems(bipedRecord({ mounts: [mount("p", "ppc-is", "RA", 0), mount("c", "ppc-capacitor-is", "RA", 3)] }))).toEqual([]);
   });
 });
+
+describe("review follow-ups", () => {
+  it("bars jump jets beside UMUs but not a Mechanical Jump Booster (TO:AUE p.104)", () => {
+    const umu = (extra: ReturnType<typeof mount>) => runChecks(bipedRecord({ mounts: [mount("u", "umu-is", "LL", 0), extra] }), catalog).filter((f) => f.check === "umu");
+    expect(umu(mount("j", "jump-jet-is", "RL", 0))).toHaveLength(1);
+    expect(umu(mount("b", "mechanical-jump-booster-is", "CT", 8))).toHaveLength(0);
+  });
+
+  it("clashes AES with Industrial Triple-Strength Myomer, and lets an Angel ECM or Watchdog stand in for the Guardian beside stealth armor", () => {
+    const aes = bipedRecord({ mounts: [mount("a", "aes-arm-is", "RA", 8), mount("t", "industrial-tsm-is", "CT", 8)] });
+    expect(aesFindings(aes)).toEqual([expect.stringContaining("Industrial Triple-Strength Myomer")]);
+    const stealth = (id: string) => runChecks(bipedRecord({ chassis: { ...bipedRecord().chassis, armorType: "stealth" }, mounts: [mount("e", id, "CT", 8)] }), catalog).filter((f) => f.check === "stealth");
+    expect([stealth("angel-ecm-is").length, stealth("guardian-ecm-is").length, stealth("medium-laser-is").length]).toEqual([0, 0, 1]);
+  });
+});

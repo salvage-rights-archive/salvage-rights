@@ -199,9 +199,9 @@ function slotsCheck({ record, layout }: CheckInput): Finding[] {
   for (const p of layout.partSlots) {
     if (p.needed === p.present) continue;
     const structure = p.part === "structure";
-    const type = structure ? partName(STRUCTURE_TYPES, record.chassis.structure) : partName(ARMOR, record.chassis.armorType);
+    const type = structure ? `${partName(STRUCTURE_TYPES, record.chassis.structure)} structure` : patchworkActive(record) ? "Patchwork armor" : `${partName(ARMOR, record.chassis.armorType)} armor`;
     out.push(
-      finding("slots", "error", `${type} ${p.part} takes ${p.needed} critical slots; the record places ${p.present}.`, {
+      finding("slots", "error", `${type} takes ${p.needed} critical slots; the record places ${p.present}.`, {
         where: { field: structure ? "chassis.structure" : "chassis.armorType" },
         cite: structure ? STRUCTURE_TYPES.cite : ARMOR.cite,
       }),
@@ -959,7 +959,7 @@ function unitTypeCheck({ record, catalog }: CheckInput): Finding[] {
 const LAUNCHER = /^(lrm|srm|mml)-\d+-(is|clan)$/;
 const MASC_IDS = ["masc-is", "masc-clan"];
 const ARTEMIS_IV = /^(prototype-)?artemis-iv-/;
-const GUARDIAN = /guardian-ecm/;
+const GUARDIAN = /guardian-ecm|angel-ecm|watchdog-cews/; // the Angel ECM (TO:AUE p.91) and the Watchdog CEWS (p.90) work in a stealth armor unit's Guardian's place
 const STEALTH_ECM_PAGE = 213;
 // A Gauss rifle, autocannon (any kind) or PPC: the weapons that keep the lower arm and hand off the arm they sit in on an OmniMech (TechManual p.57).
 const ARM_HEAVY = /(^|-)(gauss|ppc)(-|$)|(^|-)ac-\d|-x-ac-/;
@@ -1065,6 +1065,15 @@ function patchworkCheck({ record, layout }: CheckInput): Finding[] {
   return out;
 }
 
+/** UMUs are mounted as jump jets are, and a unit with UMUs may mount no jump jets of any kind, though Mechanical Jump Boosters are allowed (TO:AUE printed p.104). */
+function umuCheck({ record, catalog }: CheckInput): Finding[] {
+  const items = equipmentItems(record, catalog).items;
+  const umus = items.filter((i) => stemOf(i.row.id) === "umu");
+  const jets = items.filter((i) => i.row.kind === "jump-jet" && stemOf(i.row.id) !== "umu");
+  if (umus.length === 0 || jets.length === 0) return [];
+  return [finding("umu", "error", `A 'Mech with UMUs may not mount jump jets of any kind; this one has ${jets.length} alongside ${umus.length} UMU${umus.length === 1 ? "" : "s"}. Mechanical Jump Boosters are allowed.`, { where: { mountId: jets[0]?.mount.id }, cite: { book: "Tactical Operations: Advanced Units and Equipment", page: 104 } })];
+}
+
 /**
  * The Actuator Enhancement System (TO:AUE printed p.90, construction rules): one to a limb, the leg kind on every leg or none, no leg kind on a
  * heavy or assault 'Mech (so no four-legged heavy or assault 'Mech has one at all), and none beside MASC, Triple-Strength Myomer or a Targeting Computer.
@@ -1091,7 +1100,7 @@ function aesCheck({ record, catalog }: CheckInput): Finding[] {
     if (record.tons >= 60) out.push(finding("aes", "error", `A heavy or assault 'Mech (60 tons and up) cannot mount a leg AES; this one is ${tons(record.tons)}.`, { where: { mountId: legAes[0]?.mount.id }, cite }));
   }
   const items = equipmentItems(record, catalog).items;
-  const clash = [mascOf(record, items).mounts.length > 0 ? "MASC" : "", tsmOf(record, items) !== undefined ? "Triple-Strength Myomer" : "", items.some((i) => stemOf(i.row.id) === "targeting-computer") ? "a Targeting Computer" : ""].filter(Boolean);
+  const clash = [mascOf(record, items).mounts.length > 0 ? "MASC" : "", tsmOf(record, items) !== undefined ? "Triple-Strength Myomer" : "", items.some((i) => stemOf(i.row.id) === "targeting-computer") ? "a Targeting Computer" : "", items.some((i) => stemOf(i.row.id) === "industrial-tsm") ? "Industrial Triple-Strength Myomer" : ""].filter(Boolean);
   if (clash.length > 0) out.push(finding("aes", "error", `AES is incompatible with ${clash.join(" and ")}, which this 'Mech also has.`, { where: { mountId: aes[0]?.mount.id }, cite }));
   return out;
 }
@@ -1100,7 +1109,7 @@ function aesCheck({ record, catalog }: CheckInput): Finding[] {
 function stealthCheck({ record }: CheckInput): Finding[] {
   // Stealth armor installed as patchwork gives no stealth modifiers (TO:AUE p.189), so it asks for no ECM Suite either.
   if (record.chassis.armorType !== "stealth" || patchworkActive(record) || record.mounts.some((m) => GUARDIAN.test(m.equipmentId ?? ""))) return [];
-  return [finding("stealth", "error", "Stealth armor needs a Guardian ECM Suite on the same 'Mech, and none is mounted.", { where: { field: "chassis.armorType" }, cite: tm(STEALTH_ECM_PAGE) })];
+  return [finding("stealth", "error", "Stealth armor needs a Guardian ECM Suite (or an Angel ECM Suite or Watchdog CEWS, which work in its place) on the same 'Mech, and none is mounted.", { where: { field: "chassis.armorType" }, cite: tm(STEALTH_ECM_PAGE) })];
 }
 
 /** Clan CASE belongs to a Clan internal structure, where it is automatic (TechManual p.210), or to a FrankenMech on Clan parts. An explicit Clan CASE
@@ -1329,6 +1338,7 @@ export const CHECKS: Check[] = [
   { id: "stealth", editions: "all", run: stealthCheck },
   { id: "patchwork", editions: "all", run: patchworkCheck },
   { id: "aes", editions: "all", run: aesCheck },
+  { id: "umu", editions: "all", run: umuCheck },
   { id: "clan-case", editions: "all", run: clanCaseCheck },
   { id: "split", editions: "all", run: splitCheck },
 ];
