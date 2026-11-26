@@ -23,6 +23,7 @@ export interface AeroTypeChoices {
 }
 
 const AERO_PREFIX = "aero:";
+const VEHICLE_PREFIX = "vehicle:";
 
 export default function TypeSelect({
   record,
@@ -30,30 +31,40 @@ export default function TypeSelect({
   id = "field-unitType",
   className,
   aero,
+  vehicle,
 }: {
   record: Subject;
   onChange: (type: MechType) => void;
   id?: string;
   className?: string;
   aero?: AeroTypeChoices;
+  /** The Combat Vehicles on offer, the same way: they open the vehicle editor. */
+  vehicle?: AeroTypeChoices;
 }) {
   const choices = typeChoices(record);
   const current = mechTypeOf(record);
   const noteId = `${id}-note`;
   const waiting = choices.flatMap((choice) => (choice.disabled === undefined ? [] : [`${MECH_TYPES.find((t) => t.id === choice.id)?.label ?? choice.id} is not offered yet: ${choice.disabled}`]));
   const picked = aero?.chosen === undefined ? undefined : aero.options.find((option) => option.id === aero.chosen);
+  const pickedVehicle = vehicle?.chosen === undefined ? undefined : vehicle.options.find((option) => option.id === vehicle.chosen);
   return (
     <div className={className ? `bt-field bt-level ${className}` : "bt-field bt-level"}>
       <label htmlFor={id}>Type</label>
       <select
         id={id}
-        value={picked ? `${AERO_PREFIX}${picked.id}` : current.id}
+        value={pickedVehicle ? `${VEHICLE_PREFIX}${pickedVehicle.id}` : picked ? `${AERO_PREFIX}${picked.id}` : current.id}
         aria-describedby={noteId}
         onChange={(event) => {
           const value = event.target.value;
-          if (value.startsWith(AERO_PREFIX)) aero?.onChoose(value.slice(AERO_PREFIX.length));
-          else {
+          if (value.startsWith(VEHICLE_PREFIX)) {
             aero?.onChoose(undefined);
+            vehicle?.onChoose(value.slice(VEHICLE_PREFIX.length));
+          } else if (value.startsWith(AERO_PREFIX)) {
+            vehicle?.onChoose(undefined);
+            aero?.onChoose(value.slice(AERO_PREFIX.length));
+          } else {
+            aero?.onChoose(undefined);
+            vehicle?.onChoose(undefined);
             onChange(value as MechType);
           }
         }}
@@ -63,6 +74,15 @@ export default function TypeSelect({
             {choice.label}
           </option>
         ))}
+        {vehicle && vehicle.options.length > 0 && (
+          <optgroup label="Vehicles (opens the vehicle editor)">
+            {vehicle.options.map((option) => (
+              <option key={option.id} value={`${VEHICLE_PREFIX}${option.id}`}>
+                {option.label}
+              </option>
+            ))}
+          </optgroup>
+        )}
         {aero && aero.options.length > 0 && (
           <optgroup label="Aerospace (opens the AeroTech editor)">
             {aero.options.map((option) => (
@@ -74,8 +94,8 @@ export default function TypeSelect({
         )}
       </select>
       <span id={noteId} className="bt-hint bt-level__note">
-        {picked ? picked.note : `${current.description} ${bookName(current.cite.book)}, p. ${String(current.cite.page)}.`}
-        {!picked && waiting.length > 0 && ` ${waiting.join(" ")}`}
+        {pickedVehicle ? pickedVehicle.note : picked ? picked.note : `${current.description} ${bookName(current.cite.book)}, p. ${String(current.cite.page)}.`}
+        {!picked && !pickedVehicle && waiting.length > 0 && ` ${waiting.join(" ")}`}
       </span>
     </div>
   );

@@ -25,6 +25,12 @@ import { startTons, typeReady, typeRow, weightHint } from "./aero/edit";
 import { NumberField } from "./aero/fields";
 import { AERO_HOME, editorHref } from "./aero/routes";
 import { openAeroStorage } from "./aero/storage";
+import { MOTIVES } from "../data/vehicle";
+import { newVehicleRecord } from "../rules/vehicle/vehicle";
+import { startTons as vehicleStartTons } from "./vehicle/edit";
+import { vehicleEditorHref } from "./vehicle/routes";
+import { openVehicleStorage } from "./vehicle/storage";
+import VehicleShelf from "./vehicle/VehicleShelf";
 import type { MechRecord, NewMechOptions } from "../rules/mech";
 import { MAX_LIBRARY_BYTES, STORAGE_READ_FAILED, STORAGE_WRITE_FAILED, downloadLibrary, downloadMech, downloadOmni, fileGame, fromLibraryFile, fromMechFile, fromOmniFile, openFamilyStorage, wrongGameMessage } from "./storage";
 import type { FamilyStorage, SavedEntry } from "./storage";
@@ -93,6 +99,10 @@ export default function HomePage() {
   const [aeroType, setAeroType] = useState<string>();
   const [aeroTons, setAeroTons] = useState<number>();
   const [aeroThrust, setAeroThrust] = useState(5);
+  /** The Combat Vehicle chosen in the new-unit list, when one is: it opens the vehicle editor. */
+  const [vehicleType, setVehicleType] = useState<string>();
+  const [vehicleTons, setVehicleTons] = useState<number>();
+  const [vehicleCruise, setVehicleCruise] = useState(3);
   /** The year typed in the build form, as text; empty or not a year means no year, and nothing is hidden by time. */
   const [yearText, setYearText] = useState("");
   /** The era picked when the typed year is in two eras (an Inner Sphere era and a Clan sub-era). */
@@ -231,6 +241,30 @@ export default function HomePage() {
   const aeroPicked = aeroOptions.find((option) => option.id === aeroType);
   const aeroRow = aeroPicked?.row;
 
+  // The Combat Vehicles the rules level offers (hidden below, never marked).
+  const vehicleOptions = MOTIVES.filter((m) => levelAtLeast(draft.rulesLevel ?? "standard", m.level)).map((m) => ({ id: m.id, label: m.label, note: `${m.label}: a combat vehicle of up to ${String(m.maxTons)} tons, built under TechManual and opened in the vehicle editor.`, row: m }));
+  const vehiclePicked = vehicleOptions.find((option) => option.id === vehicleType);
+  const vehicleTonnage = vehicleTons ?? vehicleStartTons(vehiclePicked?.id ?? "");
+  const buildVehicle = async () => {
+    if (!storage || !vehiclePicked || !draft.chassis.trim() || vehicleTonnage < 1 || missing !== "") return;
+    const made = newVehicleRecord({
+      id: crypto.randomUUID(),
+      chassis: draft.chassis.trim(),
+      model: draft.model.trim(),
+      motive: vehiclePicked.row.id,
+      techBase,
+      tons: vehicleTonnage,
+      cruise: Math.max(vehiclePicked.row.minCruise ?? 1, vehicleCruise),
+      year: yearTyped,
+      ...(eraChosen ? { era: eraChosen.id } : {}),
+      rulesLevel: draft.rulesLevel,
+      editionId: edition,
+    });
+    const vehicleStorage = await openVehicleStorage().catch(() => undefined);
+    if (!vehicleStorage || !(await attempt(STORAGE_WRITE_FAILED, () => vehicleStorage.save(made)))) return;
+    void navigate(vehicleEditorHref(made.id));
+  };
+
   const buildAero = async () => {
     const aeroTonnage = aeroTons ?? startTons(aeroRow ?? undefined);
     if (!storage || !aeroPicked || !aeroRow || !draft.chassis.trim() || aeroTonnage <= 0 || missing !== "") return;
@@ -256,6 +290,7 @@ export default function HomePage() {
 
   const build = async () => {
     if (aeroPicked) return buildAero();
+    if (vehiclePicked) return buildVehicle();
     if (!storage || !draft.chassis.trim() || missing !== "") return;
     const options = { ...draft, techBase, configuration, tons, chassis: draft.chassis.trim(), model: draft.model.trim(), walk: Math.min(draft.walk, walks.at(-1) ?? 1), year: yearTyped };
     // An OmniMech is a chassis (its fixed base and a Prime to start) and is saved as one.
@@ -629,6 +664,8 @@ export default function HomePage() {
         )}
       </section>
 
+      <VehicleShelf />
+
       <section className="bt-section" aria-labelledby="bt-add">
         <h2 id="bt-add">Add a 'Mech</h2>
         <form
@@ -661,8 +698,16 @@ export default function HomePage() {
                   setAeroTons(undefined);
                 },
               }}
+              vehicle={{
+                options: vehicleOptions,
+                chosen: vehiclePicked?.id,
+                onChoose: (id) => {
+                  setVehicleType(id);
+                  setVehicleTons(undefined);
+                },
+              }}
             />
-            {!aeroPicked && (
+            {!aeroPicked && !vehiclePicked && (
             <div className="bt-field">
               <label htmlFor="bt-new-config">Configuration</label>
               <select
@@ -729,7 +774,12 @@ export default function HomePage() {
                 ))}
               </select>
             </div>
-            {aeroPicked && aeroRow ? (
+            {vehiclePicked ? (
+              <>
+                <NumberField id="bt-new-vehicle-tons" label="Tonnage" value={vehicleTonnage} min={1} hint={`Whole tons, 1 to ${String(vehiclePicked.row.maxTons)}.`} onValid={(tons) => { setVehicleTons(tons ?? undefined); }} />
+                <NumberField id="bt-new-vehicle-cruise" label="Cruising MP" value={vehicleCruise} min={1} hint={vehiclePicked.row.minCruise === undefined ? undefined : `At least ${String(vehiclePicked.row.minCruise)}.`} onValid={(cruise) => { setVehicleCruise(cruise ?? 1); }} />
+              </>
+            ) : aeroPicked && aeroRow ? (
               <>
                 <NumberField id="bt-new-aero-tons" label="Tonnage" value={aeroTons ?? startTons(aeroRow)} min={0} hint={weightHint(aeroRow.weight)} onValid={(tons) => { setAeroTons(tons ?? undefined); }} />
                 <NumberField id="bt-new-aero-thrust" label="Safe Thrust" value={aeroThrust} min={0} onValid={(thrust) => { setAeroThrust(thrust ?? 0); }} />
@@ -760,11 +810,11 @@ export default function HomePage() {
             )}
           </div>
           <p className="bt-hint">
-            {aeroPicked ? "You start with a standard engine, no fuel, no armor, no heat sinks and no equipment. The AeroTech editor's rules check shows what is left to do." : unitType === "industrialmech" ? "You start with an industrial frame and cockpit, a standard fusion engine" : "You start with standard parts"}, ten
+            {vehiclePicked ? "You start with a standard fusion engine, no armor, no turret and no equipment. The vehicle editor's rules check shows what is left to do." : aeroPicked ? "You start with a standard engine, no fuel, no armor, no heat sinks and no equipment. The AeroTech editor's rules check shows what is left to do." : unitType === "industrialmech" ? "You start with an industrial frame and cockpit, a standard fusion engine" : "You start with standard parts"}, ten
             heat sinks, no armor and no equipment. {unitType === "omnimech" && "An OmniMech starts as a base chassis with an empty Prime configuration. "}The editor's rules check shows what is left to do.
           </p>
           {missing !== "" && <p id="bt-new-missing" className="bt-hint">{missing}</p>}
-          <button type="submit" className="bt-button" disabled={!storage || missing !== "" || (aeroPicked !== undefined && (aeroTons ?? startTons(aeroRow)) <= 0)} aria-describedby={missing === "" ? undefined : "bt-new-missing"}>
+          <button type="submit" className="bt-button" disabled={!storage || missing !== "" || (aeroPicked !== undefined && (aeroTons ?? startTons(aeroRow)) <= 0) || (vehiclePicked !== undefined && vehicleTonnage < 1)} aria-describedby={missing === "" ? undefined : "bt-new-missing"}>
             Start building
           </button>
         </form>

@@ -1,0 +1,39 @@
+// The vehicle pages' own styles, after the Classic ones they share.
+.bt-editor__wide {
+  grid-column: 1 / -1;
+}
+
+.bt-readout {
+  margin: var(--sr-space-2) 0 0;
+  padding: 0;
+
+  li {
+    margin: 0 0 var(--sr-space-1);
+  }
+}
+
+.bt-vehicle-doll {
+  max-width: 34rem;
+}
+
+.bt-vehicle-diagram {
+  display: block;
+  width: 100%;
+  height: auto;
+
+  &__box--button {
+    cursor: pointer;
+
+    &:focus-visible {
+      outline: 3px solid currentColor;
+      outline-offset: 2px;
+    }
+  }
+}
+
+.bt-vehicle-mount {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sr-space-2);
+  align-items: flex-end;
+}
