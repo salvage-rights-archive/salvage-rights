@@ -219,6 +219,20 @@ export const ARMOR_COST: Sourced & { rows: Record<string, PerTon> } = {
 //     equipment and internal structure; the text's worked example uses the structural, weapon and equipment total, which
 //     we follow (see the report).
 // ---------------------------------------------------------------------------------------------------------------
+/**
+ * Superheavy 'Mech components (IO:AE printed p.183, the Additional Alternate Era Weapons and Equipment cost table p.217, read against the
+ * page images): the musculature and the four structure types are priced by the unit's tonnage in place of a standard 'Mech's, and each
+ * actuator costs twice a standard one. The cockpits and the gyro are in COCKPIT_COST and GYRO_COST.
+ */
+export const SUPERHEAVY_COST: Sourced & { musculaturePerTon: number; actuatorFactor: number; structurePerTon: Record<string, number>; textCite: Cite } = {
+  cite: { book: IO, page: 217 },
+  checked: "page",
+  textCite: { book: IO, page: 183 },
+  musculaturePerTon: 12_000,
+  actuatorFactor: 2,
+  structurePerTon: { standard: 4_000, "endo-composite": 6_400, "endo-steel": 16_000, industrial: 3_000 },
+};
+
 export const CONFIGURATION_COST: Record<string, { structureFactor?: number; conversion?: number; cite: Cite; checked: Checked }> = {
   tripod: { structureFactor: 1.2, cite: { book: IO, page: 183 }, checked: "page" },
   lam: { conversion: 0.75, cite: { book: IO, page: 181 }, checked: "page" },

@@ -3,11 +3,12 @@
 // dates, a prototype's and a production's: in production it is available as its book prints it, from its prototype year to the year
 // before its production year it is a prototype (Experimental level unless the books say otherwise), and before that it does not exist.
 // Pure functions over plain data; nothing here throws on a record it does not understand.
-import { CLAN_TECHNOLOGY } from "../data/chassis";
+import { CLAN_TECHNOLOGY, SUPERHEAVY } from "../data/chassis";
 import type { PartFacts, Span } from "../data/chassis";
 import type { EraRow } from "../data/editions";
 import { CLASSIC, rulesetOf } from "../data/rulesets";
 import type { Ruleset } from "../data/rulesets";
+import { industrialRulesOf, superheavyOf } from "./mech";
 import type { MechRecord } from "./mech";
 
 /** A record's time: its era and year, and the edition whose game's era table and dates apply (none: Classic). */
@@ -126,4 +127,14 @@ export function datesText(prototype: number | undefined, production: number | un
   if (prototype !== undefined && production !== undefined) return `Prototype ${prototype}, production ${production}`;
   if (prototype !== undefined) return `Prototype ${prototype}`;
   return production === undefined ? "" : `Production ${production}`;
+}
+
+/** A superheavy 'Mech's own phase for a record: the years of its type (the BattleMech tripod's are later than the biped's and quad's), as the
+ * Construction Options table prints them (IO:AE printed p.44). Production for a 'Mech of 100 tons or less, which has no dates of this kind. */
+export function superheavyPhase(record: When & Pick<MechRecord, "tons" | "unitType" | "configuration">): Phase | null {
+  if (!superheavyOf(record)) return "production";
+  const industrial = industrialRulesOf(record) !== undefined;
+  const dates = SUPERHEAVY.dates[industrial ? "industrialmech" : "mech"];
+  const tripod = !industrial && record.configuration === "tripod";
+  return rowPhase({ availability: tripod ? SUPERHEAVY.dates.mechTripod.availability : dates.availability, prototypeYear: tripod ? undefined : dates.prototypeYear }, "inner-sphere", windowOf(record));
 }

@@ -24,16 +24,17 @@ import {
   SHEET,
   SHIELDS,
   STRUCTURE_TYPES,
+  SUPERHEAVY,
 } from "../data/chassis";
 import type { Cite, PartFacts, RulesLevel, Span } from "../data/chassis";
 import { configurationInTime, equipmentPhase, eraOfRecord, erasOfYear, pastEraCap, partPhase, partSpans, typeInTime, windowOf } from "./availability";
 import { listed, RULESETS, rulesetOf } from "../data/rulesets";
 import { CLAN_CASE_IDS, clanCaseAllowed } from "./case";
-import { locationsFor, mountableOn, mountsRequired, podMountable } from "./catalog";
+import { heatSinkTypeOf, locationsFor, mountableOn, mountsRequired, podMountable } from "./catalog";
 import { heatSinkMixAllowed, levelAtLeast, levelIn, levelItems, levelOfRecord, levelRow, mixedPhase } from "./levels";
-import { clanInTime, datesText, partIsPrototypeOnly, partPrototype } from "./time";
+import { clanInTime, datesText, partIsPrototypeOnly, partPrototype, superheavyPhase } from "./time";
 import type { Catalog, EquipmentRow } from "./catalog";
-import { ARM_FULL, armorSpread, armorTypeAt, armorTypesUsed, armsOf, canSplitBetween, configurationOf, donorTons, engineTons, freeHeatSinks, industrialRulesOf, layout as buildLayout, maxArmor, mechTypeOf, mountCanFireRear, patchworkActive, patchworkSlotsFor, slotsTaken, splitOf, structurePoints, walkMP, weights } from "./mech";
+import { ARM_FULL, armorSpread, armorTypeAt, armorTypesUsed, armsOf, canSplitBetween, configurationOf, donorTons, engineTons, freeHeatSinks, industrialRulesOf, layout as buildLayout, maxArmor, mechTypeOf, mountCanFireRear, patchworkActive, patchworkSlotsFor, requiredCockpit, slotsFor, slotsTaken, splitOf, structurePoints, superheavyOf, walkMP, weights } from "./mech";
 import { locationName, type Layout, type LocationCode, type MechRecord, type Mount } from "./mech";
 import { mountedShields, missingActuators, shieldStats } from "./shields";
 import { equipmentItems, mascOf, movementPenalty, rowOf, stemOf, TSM_ROWS, tsmOf } from "./walk";
@@ -93,12 +94,6 @@ const finding = (check: string, level: Finding["level"], message: string, extra:
   ...extra,
 });
 
-/** The heat sink type key a row stands for. */
-function heatSinkTypeOf(row: EquipmentRow): string {
-  if (row.id.startsWith("compact")) return "compact";
-  if (row.id.startsWith("laser")) return "laser";
-  return row.id.startsWith("double") ? (row.techBase === "clan" ? "double-clan" : "double") : "single";
-}
 
 // What an item that `needs` something must be paired with, the book's page for it, and the size class a pairing is made
 // within. A `needs` with no entry here (liquid cargo space) has nothing in the record to check against and is left alone.
@@ -130,11 +125,14 @@ function weightCheck({ record, layout, catalog }: CheckInput): Finding[] {
   const where = { field: "tons" };
   const type = mechTypeOf(record);
   const limits = type.tonnage;
-  if (isPositive(record.tons) && !(record.tons >= limits.min && record.tons <= limits.max && record.tons % limits.step === 0)) {
+  const standard = record.tons >= limits.min && record.tons <= limits.max && record.tons % limits.step === 0;
+  const heavy = type.superheavy === true && record.tons >= SUPERHEAVY.minTons && record.tons <= SUPERHEAVY.maxTons && record.tons % SUPERHEAVY.step === 0;
+  if (isPositive(record.tons) && !(standard || heavy)) {
+    const more = type.superheavy === true ? `, or ${SUPERHEAVY.minTons} to ${SUPERHEAVY.maxTons} tons as a superheavy 'Mech` : "";
     out.push(
-      finding("weight", "error", `${/^[AEIOU]/i.test(type.label) ? "An" : "A"} ${type.label} weighs ${limits.min} to ${limits.max} tons in steps of ${limits.step}; ${num(record.tons)} is not allowed.`, {
+      finding("weight", "error", `${/^[AEIOU]/i.test(type.label) ? "An" : "A"} ${type.label} weighs ${limits.min} to ${limits.max} tons in steps of ${limits.step}${more}; ${num(record.tons)} is not allowed.`, {
         where,
-        cite: limits.cite,
+        cite: record.tons > limits.max && type.superheavy === true ? SUPERHEAVY.cite : limits.cite,
       }),
     );
   }
@@ -216,7 +214,7 @@ function slotsCheck({ record, layout }: CheckInput): Finding[] {
     const anyUnplaced = armorMounts.some((m) => !m.location);
     for (const loc of layout.locations) {
       const type = armorTypeAt(record, loc);
-      const wanted = patchworkSlotsFor(type) ?? 0;
+      const wanted = slotsFor(record, patchworkSlotsFor(type) ?? 0);
       const found = armorMounts.filter((m) => m.location === loc).length;
       if (found === wanted || (found < wanted && anyUnplaced)) continue;
       out.push(
@@ -233,7 +231,7 @@ function slotsCheck({ record, layout }: CheckInput): Finding[] {
     const anyUnplaced = armorMounts.some((m) => !m.location);
     const type = partName(ARMOR, record.chassis.armorType);
     for (const loc of layout.locations) {
-      const wanted = spread[loc] ?? 0;
+      const wanted = slotsFor(record, spread[loc] ?? 0);
       const found = armorMounts.filter((m) => m.location === loc).length;
       if (found === wanted || (found < wanted && anyUnplaced)) continue;
       out.push(
@@ -715,12 +713,21 @@ function configurationCheck({ record }: CheckInput): Finding[] {
     );
   }
   const cockpit = own(COCKPITS.types, record.chassis.cockpit) ? COCKPITS.types[record.chassis.cockpit] : undefined;
-  if (row.cockpit && record.chassis.cockpit !== row.cockpit) {
-    const needed = partName(COCKPITS, row.cockpit);
+  const required = requiredCockpit(record);
+  if (required && record.chassis.cockpit !== required) {
+    const needed = partName(COCKPITS, required);
+    const body = superheavyOf(record) ? `superheavy ${record.configuration}` : record.configuration;
     out.push(
-      finding("configuration", "error", `A ${record.configuration} must mount the ${needed} cockpit; ${partName(COCKPITS, record.chassis.cockpit)} is not allowed.`, {
+      finding("configuration", "error", `A ${body} must mount the ${needed} cockpit; ${partName(COCKPITS, record.chassis.cockpit)} is not allowed.`, {
         where: { field: "chassis.cockpit" },
-        cite: COCKPITS.types[row.cockpit]?.cite ?? COCKPITS.cite,
+        cite: COCKPITS.types[required]?.cite ?? COCKPITS.cite,
+      }),
+    );
+  } else if (!superheavyOf(record) && cockpit?.tonnage && cockpit.tonnage.min > SUPERHEAVY.standardMaxTons) {
+    out.push(
+      finding("configuration", "error", `The ${cockpit.name} cockpit is for a superheavy 'Mech of ${cockpit.tonnage.min} tons or more; this one weighs ${num(record.tons)}.`, {
+        where: { field: "chassis.cockpit" },
+        cite: cockpit.cite ?? COCKPITS.cite,
       }),
     );
   } else if (cockpit?.only && cockpit.only !== record.configuration) {
@@ -1321,6 +1328,61 @@ function splitCheck({ record, catalog }: CheckInput): Finding[] {
   return out;
 }
 
+/** The superheavy 'Mech construction changes (Interstellar Operations: Alternate Eras, printed pp.153-157): Inner Sphere, the three body types, no
+ * jump equipment or speed and strength enhancements, the parts its rules name, and its own years. The weight limits are in the weight check, the
+ * cockpit in the configuration check, the half-size slots and the structure table in mech.ts. */
+function superheavyCheck({ record, catalog }: CheckInput): Finding[] {
+  if (!superheavyOf(record)) return [];
+  const out: Finding[] = [];
+  const type = mechTypeOf(record);
+  const industrial = type.industrial !== undefined;
+  const add = (level: Finding["level"], message: string, where?: Finding["where"], cite: Cite = SUPERHEAVY.cite) => out.push(finding("superheavy", level, message, { where, cite }));
+  if (type.superheavy !== true) add("error", `${aOrAn(type.label)} cannot be a superheavy 'Mech; this one weighs ${num(record.tons)} tons.`, { field: "tons" }, SUPERHEAVY.levelCite);
+  if (record.techBase !== "inner-sphere") add("error", "Superheavy 'Mechs use Inner Sphere technology only; the Clans do not build them.", { field: "techBase" }, SUPERHEAVY.cite);
+  if (record.configuration !== "biped" && record.configuration !== "quad" && record.configuration !== "tripod") {
+    add("error", `A superheavy 'Mech is a biped, a quad or a tripod; the ${record.configuration} configuration is not allowed.`, { field: "configuration" }, SUPERHEAVY.cite);
+  }
+  if (industrial && (record.omni || record.unitType === "omnimech")) add("error", "A superheavy IndustrialMech may not be an OmniMech.", { field: "unitType" }, SUPERHEAVY.cite);
+  const allowed = SUPERHEAVY.parts[industrial ? "industrialmech" : "mech"];
+  const parts: [string, { types: Record<string, { name: string }> }, string, string[] | undefined, string][] = [
+    ["structure", STRUCTURE_TYPES, record.chassis.structure, allowed.structure, "chassis.structure"],
+    ["engine", ENGINE_TYPES, record.chassis.engine.type, allowed.engine, "chassis.engine"],
+    ["gyro", GYROS, record.chassis.gyro, allowed.gyro, "chassis.gyro"],
+    ["myomer", MYOMER, record.chassis.myomer, allowed.myomer, "chassis.myomer"],
+  ];
+  const kind = industrial ? "IndustrialMech" : "BattleMech";
+  for (const [what, table, key, keys, field] of parts) {
+    if (!keys || !own(table.types, key) || keys.includes(key)) continue;
+    const reason: Record<string, string> = {
+      structure: "its structure is a superheavy kind",
+      engine: "only fusion engines have the power to move one",
+      gyro: "every superheavy 'Mech needs the superheavy gyro",
+      myomer: "its larger actuators and thicker myomer do not work with MASC, Triple-Strength Myomer or other enhancements",
+    };
+    add("error", `${partName(table, key)} ${what} is not allowed on a superheavy ${kind}; ${reason[what]}. It may use ${keys.map((k) => partName(table, k)).join(", ")}.`, { field });
+  }
+  for (const mount of record.mounts) {
+    const row = rowOf(catalog, record, mount);
+    if (!row) continue;
+    const stem = stemOf(row.id);
+    const where = { mountId: mount.id, location: mount.location ?? undefined };
+    const bar = SUPERHEAVY.barred.find((b) => b.stems.includes(stem));
+    if (bar) add("error", `${mount.name} cannot be mounted on a superheavy 'Mech: ${bar.why}.`, where);
+    else if (SUPERHEAVY.noEffect.stems.includes(stem)) add("warning", `${mount.name} has no effect on a superheavy 'Mech: ${SUPERHEAVY.noEffect.why}.`, where);
+    else if (stem === "cockpit-command-console" && (record.configuration === "tripod" || industrial)) {
+      add("error", `${mount.name} cannot be mounted on a superheavy ${record.configuration === "tripod" ? "tripod" : "IndustrialMech"}; ${record.configuration === "tripod" ? "its cockpit already does the console's work" : "only a superheavy BattleMech may"}.`, where);
+    }
+  }
+  const phase = superheavyPhase(record);
+  if (phase === null) {
+    const when = record.year !== null ? String(record.year) : `the ${eraOfRecord(record)?.name ?? "chosen"} era`;
+    const dates = SUPERHEAVY.dates[industrial ? "industrialmech" : "mech"];
+    const first = !industrial && record.configuration === "tripod" ? SUPERHEAVY.dates.mechTripod.availability[0]?.from : dates.availability[0]?.from;
+    add("error", `A superheavy ${kind} is not available in ${when}; ${datesText(industrial || record.configuration !== "tripod" ? dates.prototypeYear : undefined, first).toLowerCase()}.`, { field: "tons" }, SUPERHEAVY.datesCite);
+  }
+  return out;
+}
+
 export const CHECKS: Check[] = [
   { id: "weight", editions: "all", run: weightCheck },
   { id: "slots", editions: "all", run: slotsCheck },
@@ -1338,6 +1400,7 @@ export const CHECKS: Check[] = [
   { id: "era", editions: "all", run: eraCheck },
   { id: "shields", editions: "all", run: shieldCheck },
   { id: "lam", editions: "all", run: lamCheck },
+  { id: "superheavy", editions: "all", run: superheavyCheck },
   { id: "unsupported", editions: "all", run: unsupportedCheck },
   { id: "omni", editions: "all", run: omniCheck },
   { id: "frankenmech", editions: "all", run: frankenCheck },

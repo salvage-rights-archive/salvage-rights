@@ -21,8 +21,9 @@ import {
   SHEET,
   STRUCTURE_TYPES,
   STRUCTURE_WEIGHT,
+  SUPERHEAVY,
 } from "../data/chassis";
-import type { ArmorType, ConfigurationRow, IndustrialRules, MechType, MechTypeRow, RulesLevel } from "../data/chassis";
+import type { ArmorType, ConfigurationRow, IndustrialRules, MechType, MechTypeRow, RulesLevel, StructureRow, SuperheavyRules } from "../data/chassis";
 import type { Catalog } from "./catalog";
 
 export type LocationCode = "HD" | "CT" | "LT" | "RT" | "LA" | "RA" | "LL" | "RL" | "CL" | "FLL" | "FRL" | "RLL" | "RRL";
@@ -232,6 +233,8 @@ export interface MountFacts {
   slots: number;
   /** True for an energy weapon (laser, PPC, flamer...): an IndustrialMech with an internal combustion or fuel cell engine carries power amplifiers for its weight. */
   energy?: true;
+  /** Set on a superheavy 'Mech's heat sink or ammunition: how many of the same `key` one cell holds (IO:AE printed p.157). */
+  pack?: { key: string; capacity: number };
 }
 export type FactsOf = (mount: Mount, record: MechRecord) => MountFacts | undefined;
 
@@ -239,6 +242,8 @@ export interface SlotCell {
   kind: "fixed" | "mount" | "empty";
   label: string;
   mountId?: string;
+  /** On a superheavy 'Mech's cell that holds several heat sinks or rounds of ammunition: the mounts in it, the kind and the most it holds. */
+  packed?: { key: string; capacity: number; mountIds: string[] };
   /** Names of other mounts that also cover this slot (a clash). They are not drawn in it, but the slot panel names them. */
   alsoLabels?: string[];
 }
@@ -271,6 +276,20 @@ export function mechTypeOf(record: Pick<MechRecord, "unitType">): MechTypeRow {
 /** The IndustrialMech construction rules when the record is an IndustrialMech, else undefined. */
 export const industrialRulesOf = (record: Pick<MechRecord, "unitType">): IndustrialRules | undefined => mechTypeOf(record).industrial;
 
+/** The superheavy rules (IO:AE pp.153-157) when the 'Mech is above the weight of a standard one, else undefined. A superheavy 'Mech is a
+ * BattleMech or IndustrialMech of more than 100 tons; the weight check says whether the number is one the rules allow. */
+export const superheavyOf = (record: Pick<MechRecord, "tons">): SuperheavyRules | undefined => (record.tons > SUPERHEAVY.standardMaxTons ? SUPERHEAVY : undefined);
+/** The share of a standard slot count a superheavy 'Mech's cell holds, rounded up; a standard 'Mech's count is its own. */
+export const slotsFor = (record: Pick<MechRecord, "tons">, standard: number): number => (superheavyOf(record) ? Math.ceil(Math.round(standard * SUPERHEAVY.slotFactor * 1e6) / 1e6) : standard);
+/** The structure points of a tonnage: TechManual's table, or the superheavy one above 100 tons. */
+export const structureRowOf = (tons: number): StructureRow | undefined => own(INTERNAL_STRUCTURE.rows, tons) ?? (tons > SUPERHEAVY.standardMaxTons ? own(SUPERHEAVY.structure.rows, tons) : undefined);
+/** The critical slots a structure type takes on this 'Mech: the superheavy table's where it prints one (endo steel 7, endo composite 4), else the type's own. */
+export function structureSlotsOf(record: Pick<MechRecord, "tons" | "chassis">): number {
+  const type = own(STRUCTURE_TYPES.types, record.chassis.structure);
+  if (!type) return 0;
+  return superheavyOf(record) ? (own(SUPERHEAVY.structure.slots, record.chassis.structure) ?? 0) : type.slots;
+}
+
 /** Heat sinks that cost no tonnage: ten with a fusion engine, and for an IndustrialMech what its engine type gives (TechManual p.71). */
 export function freeHeatSinks(record: Pick<MechRecord, "unitType" | "chassis">): number {
   const free = industrialRulesOf(record)?.freeHeatSinks;
@@ -279,6 +298,17 @@ export function freeHeatSinks(record: Pick<MechRecord, "unitType" | "chassis">):
 
 /** Every heat sink on the chassis, both kinds: the number that dissipates heat and counts for Battle Value. */
 export const totalHeatSinks = (heatSinks: MechRecord["chassis"]["heatSinks"]): number => heatSinks.count + (heatSinks.extra ?? []).reduce((n, g) => n + g.count, 0);
+
+/** The one cockpit a body type must have (a tripod's, a superheavy 'Mech's), or undefined where the type's own rules choose. A superheavy
+ * BattleMech and IndustrialMech each have theirs, and every superheavy tripod the 5-ton one (IO:AE printed pp.156, 159). */
+export function requiredCockpit(record: Pick<MechRecord, "tons" | "configuration" | "unitType">): string | undefined {
+  const config = (Object.hasOwn(SHEET.configurations, record.configuration) ? (SHEET.configurations as Record<string, ConfigurationRow>)[record.configuration] : undefined);
+  if (superheavyOf(record)) {
+    if (record.configuration === "tripod") return SUPERHEAVY.cockpits.tripod;
+    return mechTypeOf(record).industrial ? SUPERHEAVY.cockpits.industrialmech : SUPERHEAVY.cockpits.mech;
+  }
+  return config?.cockpit;
+}
 
 /** The configuration's row in the chassis tables, or undefined for a body type we have no layout for. */
 export function configurationOf(name: string): ConfigurationRow | undefined {
@@ -367,8 +397,10 @@ export function engineTons(type: string, rating: number): number | null {
  * heavier, rounded up to a half ton again (IO:AE printed p.159). null if unknown. */
 export function structureTons(type: string, tons: number, configuration = "biped"): number | null {
   const structure = own(STRUCTURE_TYPES.types, type);
-  if (!structure || !own(INTERNAL_STRUCTURE.rows, tons)) return null;
-  const base = ceilHalf(tons * STRUCTURE_WEIGHT.fractionOfTons * structure.weightFactor);
+  if (!structure || !structureRowOf(tons)) return null;
+  // A superheavy 'Mech's structure weighs twice what the type's share of a standard one does (IO:AE printed p.155: 20, 10, 15 and 40 percent).
+  const heavy = tons > SUPERHEAVY.standardMaxTons ? SUPERHEAVY.structure.weightMultiplier : 1;
+  const base = ceilHalf(tons * STRUCTURE_WEIGHT.fractionOfTons * structure.weightFactor * heavy);
   const extra = configurationOf(configuration)?.structureExtra;
   return extra === undefined ? base : ceilHalf(base * (1 + extra));
 }
@@ -419,12 +451,14 @@ function fixedLabels(record: MechRecord, config: NonNullable<ReturnType<typeof c
   // print it (see SHEET in data/chassis.ts).
   const engine = own(ENGINE_TYPES.types, record.chassis.engine.type);
   const gyro = own(GYROS.types, record.chassis.gyro);
-  const above = Math.min(SHEET.engineAbove, engine?.ct ?? SHEET.engineAbove);
+  const above = Math.min(SHEET.engineAbove, engine ? slotsFor(record, engine.ct) : SHEET.engineAbove);
   const gyroSlots = gyro?.slots ?? own(GYROS.types, "standard")?.slots ?? 4;
   if (engine) {
-    for (let i = 0; i < above; i++) set("CT", i, engine.label);
-    for (let i = 0; i < engine.ct - above; i++) set("CT", above + gyroSlots + i, engine.label);
-    for (let i = 0; i < engine.side; i++) {
+    // A superheavy 'Mech's engine takes half the cells of a standard one, rounded up (IO:AE printed p.156).
+    const ct = slotsFor(record, engine.ct), side = slotsFor(record, engine.side);
+    for (let i = 0; i < Math.min(above, ct); i++) set("CT", i, engine.label);
+    for (let i = 0; i < ct - above; i++) set("CT", above + gyroSlots + i, engine.label);
+    for (let i = 0; i < side; i++) {
       set("LT", i, engine.label);
       set("RT", i, engine.label);
     }
@@ -465,25 +499,28 @@ function fixedLabels(record: MechRecord, config: NonNullable<ReturnType<typeof c
 
 /** How many slots a mount takes: one for a structure or armor slot, else the catalog's count, else what the source said, else one. */
 export function slotsTaken(mount: Mount, record: MechRecord, factsOf: FactsOf): number {
-  return mount.part ? 1 : (factsOf(mount, record)?.slots ?? mount.slots ?? 1);
+  if (mount.part) return 1;
+  const slots = factsOf(mount, record)?.slots ?? mount.slots ?? 1;
+  // A superheavy 'Mech's equipment takes half the cells it would on a standard one, rounded up (IO:AE printed p.157).
+  return slotsFor(record, slots);
 }
 
 export function layout(record: MechRecord, factsOf: FactsOf): Layout {
   const partSlots: Layout["partSlots"] = [];
   const structure = own(STRUCTURE_TYPES.types, record.chassis.structure);
   if (structure) {
-    partSlots.push({ part: "structure", needed: structure.slots, present: record.mounts.filter((m) => m.part === "structure").length });
+    partSlots.push({ part: "structure", needed: structureSlotsOf(record), present: record.mounts.filter((m) => m.part === "structure").length });
   }
   const armor = own(ARMOR.types, record.chassis.armorType);
   if (patchworkActive(record)) {
     // Patchwork: each location's type takes its own slots in that location (the Patchwork Armor Table); a type the table lacks takes none.
     const here = configurationOf(record.configuration);
-    const needed = (here ? (Object.keys(here.size) as LocationCode[]) : []).reduce((sum, loc) => sum + (patchworkSlotsFor(armorTypeAt(record, loc)) ?? 0), 0);
+    const needed = (here ? (Object.keys(here.size) as LocationCode[]) : []).reduce((sum, loc) => sum + slotsFor(record, patchworkSlotsFor(armorTypeAt(record, loc)) ?? 0), 0);
     partSlots.push({ part: "armor", needed, present: record.mounts.filter((m) => m.part === "armor").length });
   } else if (armor) {
     // A type with a place for each slot takes as many as the configuration's places add up to (a tripod's third leg takes some).
     const spread = armorSpread(armor, record.configuration);
-    const needed = spread ? Object.values(spread).reduce((sum, n) => sum + n, 0) : armor.slots;
+    const needed = spread ? Object.values(spread).reduce((sum, n) => sum + slotsFor(record, n), 0) : slotsFor(record, armor.slots);
     partSlots.push({ part: "armor", needed, present: record.mounts.filter((m) => m.part === "armor").length });
   }
 
@@ -509,6 +546,7 @@ export function layout(record: MechRecord, factsOf: FactsOf): Layout {
       unplaced.push(mount);
       continue;
     }
+    const pack = taken === 1 ? factsOf(mount, record)?.pack : undefined;
     for (const { location, slot: first, count, cells } of parts) {
       if (!location || !cells || first === null) continue;
       for (let i = 0; i < count; i++) {
@@ -517,6 +555,13 @@ export function layout(record: MechRecord, factsOf: FactsOf): Layout {
         if (!cell) {
           overflow.push({ location, mountId: mount.id });
           break;
+        }
+        // A superheavy 'Mech's cell holds several heat sinks, or rounds of one kind of ammunition, as the book allows: the item joins what is there.
+        const held = cell.packed;
+        if (pack && cell.kind === "mount" && held?.key === pack.key && held.mountIds.length < held.capacity) {
+          held.mountIds.push(mount.id);
+          cell.label = `${mount.name} (x${held.mountIds.length})`;
+          continue;
         }
         if (cell.kind !== "empty") {
           const key = `${location}:${index}`;
@@ -527,7 +572,7 @@ export function layout(record: MechRecord, factsOf: FactsOf): Layout {
           cells[index] = { ...cell, alsoLabels: [...(cell.alsoLabels ?? []), mount.name] };
           continue;
         }
-        cells[index] = { kind: "mount", label: mount.rear ? `${mount.name} (R)` : mount.name, mountId: mount.id };
+        cells[index] = { kind: "mount", label: mount.rear ? `${mount.name} (R)` : mount.name, mountId: mount.id, ...(pack && pack.capacity > 1 ? { packed: { key: pack.key, capacity: pack.capacity, mountIds: [mount.id] } } : {}) };
       }
     }
   }
@@ -601,9 +646,9 @@ export function weights(record: MechRecord, factsOf: FactsOf): { lines: WeightLi
 // ---------------------------------------------------------------------------------------------------------------
 
 export function structurePoints(record: MechRecord): Partial<Record<LocationCode, number>> {
-  const row = own(INTERNAL_STRUCTURE.rows, record.tons);
+  const row = structureRowOf(record.tons);
   if (!row) return {};
-  const points: Partial<Record<LocationCode, number>> = { HD: HEAD_STRUCTURE.points, CT: row.ct, LT: row.side, RT: row.side };
+  const points: Partial<Record<LocationCode, number>> = { HD: superheavyOf(record) ? SUPERHEAVY.structure.headPoints : HEAD_STRUCTURE.points, CT: row.ct, LT: row.side, RT: row.side };
   // Every limb of a configuration we lay out: the arms take the arm column, every leg the leg column. A tripod's third leg has
   // the same points as its other two (IO:AE printed p.159).
   for (const loc of Object.keys(configurationOf(record.configuration)?.size ?? {}) as LocationCode[]) {
@@ -623,7 +668,7 @@ export function structurePoints(record: MechRecord): Partial<Record<LocationCode
 export function maxArmor(record: MechRecord): Partial<Record<LocationCode, number>> {
   const max: Partial<Record<LocationCode, number>> = {};
   for (const [loc, points] of Object.entries(structurePoints(record)) as [LocationCode, number][]) {
-    max[loc] = loc === "HD" ? HEAD_MAX_ARMOR.points : points * 2;
+    max[loc] = loc === "HD" ? (superheavyOf(record) ? SUPERHEAVY.structure.headMaxArmor : HEAD_MAX_ARMOR.points) : points * 2;
   }
   return max;
 }
@@ -719,9 +764,10 @@ export function newRecord(options: NewMechOptions, editionId: string, id: string
     configuration: options.configuration,
     chassis: {
       engine: { type: "standard", rating: options.tons * options.walk },
-      gyro: "standard",
-      // An IndustrialMech's own frame and cockpit (TechManual pp.67 and 69); armor "standard" is its Heavy Industrial.
-      cockpit: industrial ? "industrial" : (configurationOf(options.configuration)?.cockpit ?? "standard"),
+      gyro: superheavyOf({ tons: options.tons }) ? "superheavy" : "standard",
+      // An IndustrialMech's own frame and cockpit (TechManual pp.67 and 69); armor "standard" is its Heavy Industrial. A tripod, a superheavy
+      // 'Mech and a QuadVee have a cockpit of their own.
+      cockpit: requiredCockpit({ tons: options.tons, configuration: options.configuration, unitType: options.unitType }) ?? (industrial ? "industrial" : "standard"),
       structure: industrial ? "industrial" : "standard",
       armorType: "standard",
       myomer: "standard",

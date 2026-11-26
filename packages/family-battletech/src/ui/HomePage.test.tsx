@@ -157,8 +157,8 @@ describe("Classic BattleTech home", () => {
     expect(texts(config)).toEqual(["Biped", "Quad", "Tripod", "Land-Air 'Mech", "Bimodal Land-Air 'Mech"]);
     await user.selectOptions(config, "tripod");
     await user.selectOptions(type, "industrialmech");
-    expect(texts(config)).toEqual(["Biped", "Quad"]); // the tripod is no IndustrialMech's body, so the choice gave way to the first that fits
-    expect(config.value).toBe("biped");
+    expect(texts(config)).toEqual(["Biped", "Quad", "Tripod"]); // a Land-Air 'Mech is no IndustrialMech's body (the tripod is: IO:AE p.158 says Available to BM, IM)
+    expect(config.value).toBe("tripod");
     await user.selectOptions(within(form).getByLabelText("Rules level"), "standard");
     const tons = within(form).getByLabelText<HTMLSelectElement>("Tonnage");
     expect(tons.options[0]?.value).toBe("10");

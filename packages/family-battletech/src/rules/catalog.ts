@@ -13,7 +13,8 @@ import { SHEET_ALIASES, sheetNameVariants } from "../data/equipment/names";
 import { PHYSICAL_BV } from "../data/bv";
 import { FORMULAS, physicalDamage, resolveFormula } from "./formulas";
 import type { FactsOf, LocationCode, MechRecord, Mount, MountFacts, TechBase } from "./mech";
-import { splitOf } from "./mech";
+import { SUPERHEAVY } from "../data/chassis";
+import { superheavyOf, splitOf } from "./mech";
 
 /** The longest range band an aerospace unit's attack reaches, as the weapons table prints it in place of hex ranges. */
 export type AeroRange = "Short" | "Medium" | "Long" | "Extreme";
@@ -236,6 +237,13 @@ function seenIn(row: EquipmentRow, editionId: string, overlays: Overlays): Equip
   return override || ours ? { ...row, ...override, ...ours } : row;
 }
 
+/** The heat sink type key a heat sink row stands for (the chassis' `heatSinks.type`). */
+export function heatSinkTypeOf(row: Pick<EquipmentRow, "id" | "techBase">): string {
+  if (row.id.startsWith("compact")) return "compact";
+  if (row.id.startsWith("laser")) return "laser";
+  return row.id.startsWith("double") ? (row.techBase === "clan" ? "double-clan" : "double") : "single";
+}
+
 const normalize = (name: string) => name.toLowerCase().replace(/[\s\-/.]/g, "");
 
 export function createCatalog(rows: EquipmentRow[], overlays: Overlays = {}): Catalog {
@@ -276,8 +284,11 @@ export function createCatalog(rows: EquipmentRow[], overlays: Overlays = {}): Ca
     const tons = whole !== undefined && row.splitWeight && count !== undefined && count > 1 ? whole / count : whole;
     const slots = resolve(row.slots, row, record, mount);
     if (tons === undefined || slots === undefined) return undefined;
+    // A superheavy 'Mech's cell holds two heat sinks (four compact, one Clan double) or two rounds of one kind of ammunition (IO:AE printed p.157).
+    const capacity = !superheavyOf(record) ? undefined : row.kind === "heat-sink" ? (SUPERHEAVY.heatSinksPerCell[heatSinkTypeOf(row)] ?? 1) : row.kind === "ammunition" ? SUPERHEAVY.ammoPerCell : undefined;
+    const pack = capacity !== undefined && capacity > 1 ? { pack: { key: row.id, capacity } } : {};
     // An energy weapon is what an IndustrialMech's power amplifiers are a share of (the picker's Energy weapons group).
-    return row.heavyEnergy || (row.kind === "weapon" && groupOf(row).id === "energy") ? ({ tons, slots, energy: true } satisfies MountFacts) : ({ tons, slots } satisfies MountFacts);
+    return row.heavyEnergy || (row.kind === "weapon" && groupOf(row).id === "energy") ? ({ tons, slots, energy: true, ...pack } satisfies MountFacts) : ({ tons, slots, ...pack } satisfies MountFacts);
   };
 
   const catalog: Catalog = {

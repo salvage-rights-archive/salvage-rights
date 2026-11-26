@@ -23,11 +23,12 @@ import {
   ROUNDING,
   SENSORS_COST,
   STRUCTURE_COST,
+  SUPERHEAVY_COST,
 } from "../data/cost";
 import type { Price } from "../data/cost";
 import type { Catalog, EquipmentRow } from "./catalog";
 import { CLAN_CASE_IDS, clanStructure, explosiveLocations } from "./case";
-import { armorTypeAt, armorTypesUsed, armsOf, configurationOf, industrialRulesOf, patchworkActive, patchworkTons } from "./mech";
+import { armorTypeAt, armorTypesUsed, armsOf, configurationOf, industrialRulesOf, patchworkActive, patchworkTons, superheavyOf } from "./mech";
 import type { LocationCode, MechRecord, Mount } from "./mech";
 import { equipmentItems, mascOf, own, stemOf, tsmOf, TSM_ROWS, weightLine } from "./walk";
 
@@ -139,12 +140,16 @@ export function unitCost(record: MechRecord, catalog: Catalog, options: CostOpti
     add(structural, "Sensors", SENSORS_COST.perTon * tons, `${money(SENSORS_COST.perTon)} x ${tons}`, SENSORS_COST);
     const tsm = tsmOf(record, items);
     const key = tsm === "prototype" ? "prototype-tsm" : tsm ? "tsm" : own(MUSCULATURE_COST.rows, chassis.myomer) ? chassis.myomer : "standard";
-    const musculature = MUSCULATURE_COST.rows[key];
+    // A superheavy 'Mech's musculature is priced by its own formula (IO:AE printed p.217).
+    const heavy = superheavyOf(record) !== undefined;
+    const musculature = heavy ? { perTon: SUPERHEAVY_COST.musculaturePerTon, cite: SUPERHEAVY_COST.cite } : MUSCULATURE_COST.rows[key];
     if (musculature) add(structural, key === "standard" ? "Musculature" : `Musculature (${key})`, musculature.perTon * tons, `${money(musculature.perTon)} x ${tons}`, { cite: musculature.cite ?? MUSCULATURE_COST.cite, checked: MUSCULATURE_COST.checked });
   } else skip("Sensors and musculature", "the tonnage is not a positive number");
 
   // Internal structure (a tripod's costs more)
-  const structure = own(STRUCTURE_COST.rows, chassis.structure);
+  const heavySuper = superheavyOf(record) !== undefined;
+  const heavyPrice = heavySuper ? own(SUPERHEAVY_COST.structurePerTon, chassis.structure) : undefined;
+  const structure = heavySuper ? (heavyPrice === undefined ? undefined : { perTon: heavyPrice, cite: SUPERHEAVY_COST.cite }) : own(STRUCTURE_COST.rows, chassis.structure);
   if (structure && tonsKnown) {
     const factor = special?.structureFactor ?? 1;
     if (structure.assumed) assume(`Internal structure "${chassis.structure}"`);
@@ -170,7 +175,9 @@ export function unitCost(record: MechRecord, catalog: Catalog, options: CostOpti
         parts.push(`${loc} ${each}`);
       }
     }
-    add(structural, "Actuators", actuators, `(${parts.join(" + ")}) x ${tons}`, ACTUATOR_COST);
+    // A superheavy 'Mech's actuators cost twice a standard one's (IO:AE printed p.183).
+    const factor = superheavyOf(record) ? SUPERHEAVY_COST.actuatorFactor : 1;
+    add(structural, "Actuators", actuators * factor, `(${parts.join(" + ")}) x ${tons}${factor === 1 ? "" : ` x ${factor}`}`, factor === 1 ? ACTUATOR_COST : { cite: SUPERHEAVY_COST.textCite, checked: SUPERHEAVY_COST.checked });
     if (record.configuration === "tripod") notes.push("Tripod actuators: the book prints no list for the center leg; it is priced with the same upper leg, lower leg and foot actuators as the other two.");
   } else if (tonsKnown) skip("Actuators", `no limb layout for the "${record.configuration}" configuration`);
 

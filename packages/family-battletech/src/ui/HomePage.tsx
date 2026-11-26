@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ChangeEvent } from "react";
 import { Link, useNavigate } from "react-router";
-import { ENGINE_WEIGHTS, INTERNAL_STRUCTURE, MECH_TYPES } from "../data/chassis";
+import { ENGINE_WEIGHTS, INTERNAL_STRUCTURE, MECH_TYPES, SUPERHEAVY } from "../data/chassis";
 import type { MechType } from "../data/chassis";
 import { baseOf, CLASSIC } from "../data/rulesets";
 import { DEFAULT_EDITION, EDITIONS, bookName, editionName, eraLabel } from "../data/editions";
 import { configurationAvailable, configurationChoices, erasOfYear, setYear, typeAvailable } from "../rules/availability";
-import { levelAtLeast, levelRow, techBaseChoices, withLevel } from "../rules/levels";
+import { levelAtLeast, levelIn, levelRow, techBaseChoices, withLevel } from "../rules/levels";
+import { superheavyPhase } from "../rules/time";
 import { DEFAULT_AERO_EDITION } from "../data/aero";
 import { newAeroRecord } from "../rules/aero";
 import type { AeroType } from "../data/aero";
@@ -256,7 +257,10 @@ export default function HomePage() {
   const configurations = configurationChoices(typed, "");
   const configuration = configurationAvailable(draft.configuration, typed) ? draft.configuration : ((configurations[0]?.[0] ?? "biped") as NewMechOptions["configuration"]);
   const limits = mechTypeOf({ unitType }).tonnage;
-  const tonnages = TONNAGES.filter((t) => t >= limits.min && t <= limits.max);
+  // Superheavy weights are offered where the type may be one, at Advanced rules (Experimental in its prototype years), in the Inner Sphere and in the body's years (hide, do not mark).
+  const heavyPhase = superheavyPhase({ year: yearTyped, era: eraChosen?.id, editionId: edition, unitType, configuration, tons: SUPERHEAVY.minTons });
+  const heavyOffered = mechTypeOf({ unitType }).superheavy === true && techBase === "inner-sphere" && heavyPhase !== null && levelAtLeast(draft.rulesLevel ?? "standard", levelIn(SUPERHEAVY.rulesLevel, heavyPhase));
+  const tonnages = [...TONNAGES.filter((t) => t >= limits.min && t <= limits.max), ...(heavyOffered && configuration !== "lam" && configuration !== "bimodal-lam" ? Object.keys(SUPERHEAVY.structure.rows).map(Number) : [])];
   const tons = tonnages.includes(draft.tons) ? draft.tons : (tonnages.find((t) => t >= draft.tons) ?? tonnages.at(-1) ?? draft.tons);
 
   // The walking speeds the largest engine in the table allows at this tonnage.

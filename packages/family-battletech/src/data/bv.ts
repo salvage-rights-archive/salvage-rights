@@ -127,7 +127,16 @@ export const ENGINE_BV_MODIFIER: Sourced & { values: Record<string, number> } = 
 export const GYRO_BV_MODIFIER: Sourced & { values: Record<string, number> } = {
   cite: { book: TM, page: 315 },
   checked: "page",
-  values: { standard: 0.5, compact: 0.5, xl: 0.5, "heavy-duty": 1.0 },
+  // The superheavy gyro counts as a standard one: IO:AE printed p.187 says "standard Gyro"; the summary table on p.190 says Heavy Duty. The
+  // rules text wins over a table's one-line summary of it (the ledger holds the conflict), so 0.5.
+  values: { standard: 0.5, compact: 0.5, xl: 0.5, "heavy-duty": 1.0, superheavy: 0.5 },
+};
+/** A superheavy 'Mech's engine modifiers, in place of the standard table (Superheavy Engine Type BV Modifier Table, IO:AE printed p.188, read against the
+ * page image). Keys are the chassis table's; the Large engines are not in the engine table yet. */
+export const SUPERHEAVY_ENGINE_BV_MODIFIER: Sourced & { values: Record<string, number> } = {
+  cite: { book: IO, page: 188 },
+  checked: "page",
+  values: { standard: 1.0, light: 0.825, compact: 1.0, xl: 0.75, "xl-clan": 0.825, xxl: 0.5, "xxl-clan": 0.75 },
 };
 
 /**
