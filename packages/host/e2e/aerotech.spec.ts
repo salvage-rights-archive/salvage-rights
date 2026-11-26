@@ -111,3 +111,17 @@ test("a fighter's sheet opens from the editor, prints as one page, has no axe vi
   const widths = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, client: document.documentElement.clientWidth }));
   expect(widths.scroll).toBe(widths.client);
 });
+
+test("the Classic home offers an aerospace unit that opens the AeroTech editor, and links to the AeroTech home", async ({ page }) => {
+  await page.goto(`${DEV}/battletech/classic/home`);
+  await expect(page.getByLabel("Import a file", { exact: true })).toBeEnabled();
+  const form = page.getByRole("form", { name: "Build a new one" });
+  await form.getByLabel("Name").fill("Classic Door");
+  await form.getByLabel("Type").selectOption("aero:aerospace-fighter");
+  await form.getByRole("button", { name: "Start building" }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Classic Door" })).toBeVisible();
+  await expect(page.getByText("Built under: Total Warfare / TechManual / Strategic Operations")).toBeVisible();
+  await page.goto(`${DEV}/battletech/classic/home`);
+  await page.getByRole("link", { name: "Go to the AeroTech home" }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "BattleTech: AeroTech" })).toBeVisible();
+});
