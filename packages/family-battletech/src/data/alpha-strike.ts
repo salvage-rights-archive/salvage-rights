@@ -40,6 +40,8 @@ export const AS_UNIT_TYPES: AsUnitType[] = [
   { code: "SC", name: "Small craft", heat: false, aerospace: true },
   { code: "DS", name: "Spheroid DropShip", heat: false, aerospace: true },
   { code: "DA", name: "Aerodyne DropShip", heat: false, aerospace: true },
+  // PLAY-1: an armed building (a gun emplacement) as an opposing unit in Aces: Aces rulebook p. 6; buildings ASCE pp. 72-73.
+  { code: "BD", name: "Building (emplacement)", heat: false, aerospace: false },
 ];
 
 /** Ground unit roles (pp. 112-114) and aerospace unit roles (p. 114). */
@@ -89,3 +91,69 @@ export const AS_FORCE_CITES = {
   skill: { book: "Alpha Strike: Commander's Edition", page: 29, checked: "page" },
   steps: { book: "Alpha Strike: Commander's Edition", pages: [110, 112], checked: "page" },
 } as const;
+
+// ==== PLAY-1: table state (rules/as-play.ts). Figures and identifiers only, each with the page it was read from. ==============
+
+/** The books the play tables below were read from, against the page images. */
+export const AS_PLAY_CITES = {
+  critical: { book: "Alpha Strike: Commander's Edition", pages: [49, 51], checked: "page" },
+  heat: { book: "Alpha Strike: Commander's Edition", pages: [52, 53], checked: "page" },
+  crippled: { book: "Alpha Strike: Commander's Edition", page: 127, checked: "page" },
+  acesVehicle: { book: "BattleTech: Aces", page: 4, checked: "page" },
+  acesInfantry: { book: "BattleTech: Aces", page: 5, checked: "page" },
+  acesEmplacement: { book: "BattleTech: Aces", page: 6, checked: "page" },
+  acesCrippled: { book: "BattleTech: Aces", page: 8, checked: "page" },
+  quickStart: { book: "Alpha Strike Box Set Quick-Start Rules", pages: [12, 23], checked: "page" },
+} as const;
+
+/** Which rules text a game plays by: Alpha Strike: Commander's Edition, or the Aces rulebook where the two differ (conflicts 24 and 26). */
+export type PlayVariant = "asce" | "aces";
+
+export type CritKind = "ammo" | "engine" | "fire-control" | "mp" | "weapon" | "none" | "crew-stunned" | "crew-killed" | "destroyed";
+
+/** Each table lists the result for a 2D6 roll of 2 to 12, in order. */
+export const AS_CRIT_TABLES: Record<"mech" | "proto" | "vehicle" | "vehicle-aces", CritKind[]> = {
+  /** ASCE p. 50. */
+  mech: ["ammo", "engine", "fire-control", "none", "weapon", "mp", "weapon", "none", "fire-control", "engine", "destroyed"],
+  /** ASCE p. 50. */
+  proto: ["weapon", "weapon", "fire-control", "mp", "none", "mp", "none", "mp", "destroyed", "weapon", "weapon"],
+  /** ASCE p. 50. */
+  vehicle: ["ammo", "crew-stunned", "fire-control", "fire-control", "none", "none", "none", "weapon", "weapon", "crew-killed", "engine"],
+  /** Aces rulebook p. 4: its own table, printed as different from ASCE's. */
+  "vehicle-aces": ["ammo", "crew-stunned", "fire-control", "fire-control", "weapon", "mp", "weapon", "weapon", "weapon", "crew-killed", "engine"],
+};
+
+/** Which critical table a unit type rolls on. Infantry and buildings have no table: every critical hit is a Weapon Hit (Aces pp. 5-6). */
+export const AS_CRIT_TABLE_OF: Record<string, "mech" | "proto" | "vehicle" | "weapon-only"> = {
+  BM: "mech", IM: "mech", PM: "proto", CV: "vehicle", SV: "vehicle", BA: "weapon-only", CI: "weapon-only", BD: "weapon-only",
+};
+
+/** Motive Systems Damage Table (ASCE p. 51; Aces p. 4 for hover and wheeled): 2D6 modifier by movement letter. */
+export const AS_MOTIVE_MODIFIER: Record<string, number> = { t: 0, n: 0, s: 0, w: 1, h: 1, v: 2, g: 2 };
+
+/**
+ * Motive Systems Damage Table rows by the modified roll: up to 8 no effect, 9-10 minus 2" Move and 1 TMM, 11 half, 12 and over
+ * immobilised. ASCE keeps a minimum loss of 2" and 1 TMM on the half; the Aces table prints only "round down" (conflict 26).
+ */
+export const AS_MOTIVE_ROWS = { none: 8, minus: 10, half: 11 } as const;
+
+/** Heat (ASCE pp. 52-53). */
+export const AS_HEAT = {
+  /** Level 4 is shutdown. */
+  max: 4,
+  /** Inches of Move lost per heat level (not when jumping). */
+  inchesPerLevel: 2,
+  /** TMM drops by 1 from this level (not when jumping). */
+  tmmFromLevel: 2,
+  /** Most heat a unit takes from outside attacks (HT) in one turn. */
+  externalCap: 2,
+} as const;
+
+/** Specials that stop an Ammo Hit from destroying the unit: CASE costs 1 damage, these two cost nothing (ASCE p. 50). */
+export const AS_AMMO_SAFE = ["CASEII", "ENE"] as const;
+
+/**
+ * Specials an emplacement card carries: CF is its construction factor (ASCE p. 72), IMMOBILE marks a unit that never moves (Aces
+ * p. 6). The books we hold print the idea on those pages but not the code IMMOBILE itself, so it is kept as our identifier.
+ */
+export const AS_PLAY_SPECIAL_CODES = ["CF", "IMMOBILE"];
