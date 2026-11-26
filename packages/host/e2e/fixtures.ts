@@ -4,6 +4,14 @@ import type { Locator, Page, Route } from "@playwright/test";
 import { BASE_PATH, DEV_ORIGIN, FREE_ORIGIN } from "./urls";
 
 export const DEV = `${DEV_ORIGIN}${BASE_PATH}`;
+/**
+ * Assertions for a page that loads its code on demand. Opening a family page shows "Loading…" until its chunks arrive, and a page that
+ * opens the on-device store needs a moment more; on a machine running many browsers that takes longer than an assertion's 5 seconds, and the
+ * wait ended on the "Loading…" page (no heading, no enabled input). This waits for the page itself: it costs nothing when the page is
+ * quick, and a page that never arrives still fails, only later. The test's own timeout and the global defaults are unchanged.
+ */
+export const LAZY_PAGE_MS = 25_000;
+export const expectPage = expect.configure({ timeout: LAZY_PAGE_MS });
 export const FREE = `${FREE_ORIGIN}${BASE_PATH}`;
 
 /** Every test fails on a console error or an uncaught page error. */

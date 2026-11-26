@@ -31,6 +31,7 @@ import {
 import type { OmniChassis } from "../rules/omni";
 import { BaseBreaks, CompareView, ConfigurationBar, OMNI_PANEL_ID, PodSpacePanel, omniTabId } from "./editor/OmniBar";
 import type { OnChassis } from "./editor/OmniBar";
+import { eraLabel } from "../data/editions";
 import type { EraRow } from "../data/editions";
 import LevelSelect from "./editor/LevelSelect";
 import TypeSelect from "./editor/TypeSelect";
@@ -454,7 +455,7 @@ const CHASSIS_FIELDS: ChassisField[] = [
   { kind: "number", path: "chassis.heatSinks-count", label: "Heat sinks", read: (r) => r.chassis.heatSinks.count, write: (d, v) => void (d.chassis.heatSinks.count = v) },
 ];
 
-const eraChoices = (eras: EraRow[]): [string, string][] => [["", "Any era"], ...eras.map((era): [string, string] => [era.id, `${era.name} (${String(era.startYear)}${era.endYear === undefined ? " on" : `-${String(era.endYear)}`})`])];
+const eraChoices = (eras: EraRow[]): [string, string][] => [["", "Any era"], ...eras.map((era): [string, string] => [era.id, `${eraLabel(era)} (${String(era.startYear)}${era.endYear === undefined ? " on" : `-${String(era.endYear)}`})`])];
 
 // ---------------------------------------------------------------------------------------------------------------
 // What a finding or a changed marker can point at
@@ -1038,7 +1039,7 @@ function Editor({ initial, unsaved, startAt, catalog, storage }: { initial: Doc;
                     Era
                   </span>
                   <span id="field-era" tabIndex={-1} aria-labelledby="field-era-label">
-                    {eraOfRecord(record)?.name ?? "Any era"}
+                    {(() => { const era = eraOfRecord(record); return era ? eraLabel(era) : "Any era"; })()}
                   </span>
                   <span className="bt-hint">{chassis !== undefined && !inBase ? "A configuration's era follows its year. Set the year here, or the base's era in the base." : "The era follows the year."}</span>
                 </div>
@@ -1047,7 +1048,7 @@ function Editor({ initial, unsaved, startAt, catalog, storage }: { initial: Doc;
                 id="field-era"
                 label="Era"
                 value={ruleset.dated && record.year !== null && eraNeedsPick(record) ? "" : (eraOfRecord(record)?.id ?? "")}
-                options={ruleset.dated && record.year !== null && yearEras.length > 1 ? [["", "Choose an era"], ...yearEras.map((era): [string, string] => [era.id, `${era.name} (${String(era.startYear)}${era.endYear === undefined ? " on" : `-${String(era.endYear)}`})`])] : eraChoices([...ruleset.eras, ...(ruleset.subEras ?? [])])}
+                options={ruleset.dated && record.year !== null && yearEras.length > 1 ? [["", "Choose an era"], ...yearEras.map((era): [string, string] => [era.id, `${eraLabel(era)} (${String(era.startYear)}${era.endYear === undefined ? " on" : `-${String(era.endYear)}`})`])] : eraChoices([...ruleset.eras, ...(ruleset.subEras ?? [])])}
                 changed={mark("era")}
                 onChange={(v) => { edit((d) => { setEra(d, v); }, "era"); }}
               />

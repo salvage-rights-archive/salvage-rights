@@ -1,4 +1,4 @@
-import { CLASSIC, DEV, expect, test } from "./fixtures";
+import { CLASSIC, DEV, expect, expectPage, test } from "./fixtures";
 
 // One test per selector on the Classic pages: change it and see what the player sees change. Then one Omni walk-through.
 const HOME = `${DEV}${CLASSIC}/home`;
@@ -10,7 +10,7 @@ test("edition: a unit built under the Core Rulebook cites that play book in the 
   await form.getByLabel("Name").fill("Edition Walker");
   await form.getByLabel("Year").fill("3060");
   await form.getByRole("button", { name: "Start building" }).click();
-  await expect(page.getByText("Built under: Core Rulebook (BCR) / TechManual")).toBeVisible();
+  await expectPage(page.getByText("Built under: Core Rulebook (BCR) / TechManual")).toBeVisible();
   await expect(page.getByRole("region", { name: "Battle Value and cost" })).toContainText("movement heat p. 102");
   await page.getByRole("link", { name: "Record sheet" }).click();
   await expect(page.getByRole("img", { name: "Edition Walker record sheet" })).toContainText("Rules edition: Core Rulebook (BCR) / TechManual");
@@ -34,7 +34,7 @@ test("year and era: a year in the new-unit form hides types that did not exist, 
   await form.getByLabel("Name").fill("Era Walker");
   await form.getByLabel("Era").selectOption("late-succession-war-renaissance"); // 3025 is in two eras (an Inner Sphere one and a Clan sub-era): the pick decides the tech base
   await form.getByRole("button", { name: "Start building" }).click();
-  await expect(page.getByLabel("Year")).toHaveValue("3025");
+  await expectPage(page.getByLabel("Year")).toHaveValue("3025");
   await expect(page.getByLabel("Era")).toHaveValue("late-succession-war-renaissance");
 
   const picker = async () => {
@@ -58,6 +58,7 @@ test("tech base: Clan swaps the equipment offered and the parts lists", async ({
   await expect(form.getByLabel("Tech base").locator("option")).toHaveText(["Inner Sphere", "Clan", "Mixed"]);
   await form.getByLabel("Year").fill("3060");
   await form.getByRole("button", { name: "Start building" }).click();
+  await expectPage(page.getByLabel("Engine type")).toBeVisible();
   const engines = page.getByLabel("Engine type").locator("option");
   const isEngines = await engines.count();
   await page.getByLabel("Tech base").selectOption("clan");
@@ -77,6 +78,7 @@ test("rules level: Introductory hides Clan and advanced parts, and the check nam
   await form.getByLabel("Year").fill("3060");
   await form.getByRole("button", { name: "Start building" }).click();
   const armor = page.getByLabel("Armor type").locator("option");
+  await expectPage(page.getByLabel("Armor type")).toBeVisible();
   await expect.poll(() => armor.count()).toBeGreaterThan(1);
   const all = await armor.count();
   await page.getByLabel("Rules level").selectOption("introductory");
@@ -95,7 +97,7 @@ test("OmniMech: build one, add A, switch between configurations, print each shee
   await form.getByLabel("Tech base").selectOption("clan");
   await form.getByLabel("Year").fill("3060");
   await form.getByRole("button", { name: "Start building" }).click();
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Hawk Prime");
+  await expectPage(page.getByRole("heading", { level: 1 })).toHaveText("Hawk Prime");
   const tabs = page.getByRole("tablist", { name: "Base and configurations" });
   await expect(tabs.getByRole("tab")).toHaveText(["Base", "Prime (Primary)"]);
   await expect(page.getByText("Pods use 0 of")).toBeVisible();

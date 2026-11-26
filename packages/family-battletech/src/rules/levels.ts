@@ -81,7 +81,9 @@ export function techBaseChoices(level: RulesLevel | undefined, current: string, 
   // A year in two eras (an Inner Sphere era and a Clan sub-era): the era picked decides the base, a Clan era offering Clan and an Inner Sphere
   // era Inner Sphere, and Mixed by its own dates in both.
   const inYear = erasOfYear(when.year, ruleset);
-  const picked = inYear.length > 1 ? inYear.find((era) => era.id === when.era) : undefined;
+  // With no year the era the record names still decides (hide, do not mark): the Star League in Exile leaves Clan out whatever the year.
+  const named = [...ruleset.eras, ...(ruleset.subEras ?? [])].find((era) => era.id === when.era);
+  const picked = inYear.length > 1 ? inYear.find((era) => era.id === when.era) : when.year === null ? named : undefined;
   const eraFits = (value: string) => picked?.techBases === undefined || value === "mixed" || picked.techBases.some((base) => base === value);
   // In the Succession Wars years the Clan and Inner Sphere technology bases do not cross (IO:AE p.9), so Mixed is hidden there, whichever era is picked.
   const noMixed = inYear.length > 0 ? inYear.every((era) => era.noMixed === true) : picked?.noMixed === true;

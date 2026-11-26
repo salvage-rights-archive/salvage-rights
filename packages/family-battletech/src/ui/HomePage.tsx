@@ -4,7 +4,7 @@ import { Link, useNavigate } from "react-router";
 import { ENGINE_WEIGHTS, INTERNAL_STRUCTURE, MECH_TYPES } from "../data/chassis";
 import type { MechType } from "../data/chassis";
 import { baseOf, CLASSIC } from "../data/rulesets";
-import { DEFAULT_EDITION, EDITIONS, bookName, editionName } from "../data/editions";
+import { DEFAULT_EDITION, EDITIONS, bookName, editionName, eraLabel } from "../data/editions";
 import { configurationAvailable, configurationChoices, erasOfYear, setYear, typeAvailable } from "../rules/availability";
 import { levelAtLeast, levelRow, techBaseChoices, withLevel } from "../rules/levels";
 import { DEFAULT_AERO_EDITION } from "../data/aero";
@@ -705,7 +705,7 @@ export default function HomePage() {
             {yearEras.length === 1 && (
               <div className="bt-field">
                 <span id="bt-new-era-label" className="bt-label">Era</span>
-                <span id="bt-new-era" aria-labelledby="bt-new-era-label">{yearEras[0]?.name}</span>
+                <span id="bt-new-era" aria-labelledby="bt-new-era-label">{yearEras[0] ? eraLabel(yearEras[0]) : ""}</span>
               </div>
             )}
             {yearEras.length > 1 && (
@@ -714,7 +714,7 @@ export default function HomePage() {
                 <select id="bt-new-era-pick" value={eraChosen?.id ?? ""} onChange={(e) => { setEraPick(e.target.value); }}>
                   <option value="">Choose an era</option>
                   {yearEras.map((era) => (
-                    <option key={era.id} value={era.id}>{era.name}</option>
+                    <option key={era.id} value={era.id}>{eraLabel(era)}</option>
                   ))}
                 </select>
               </div>

@@ -139,7 +139,7 @@ describe("tech base choices", () => {
 
   it("hides Clan before the Clan Sub-Eras (2800, IO:AE p.17), keeps a current Clan record's choice, and reports it with the page", () => {
     const offered = (year: number | null, era?: string, current = "inner-sphere") => techBaseChoices("standard", current, { year, era }).some(([v]) => v === "clan");
-    expect([offered(2799), offered(2800), offered(null), offered(null, "star-league"), offered(null, "early-succession-war"), offered(2400, undefined, "clan")]).toEqual([false, true, true, false, true, true]);
+    expect([offered(2799), offered(2800), offered(null), offered(null, "star-league"), offered(null, "early-succession-war"), offered(2400, undefined, "clan")]).toEqual([false, true, true, false, false, true]);
     const found = runChecks(bipedRecord({ techBase: "clan", year: 2400 }), catalog).filter((f) => f.message.startsWith("Clan technology is not available"));
     expect(found).toHaveLength(1);
     expect(found[0]?.cite).toMatchObject({ page: 17 });

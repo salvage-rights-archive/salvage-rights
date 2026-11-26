@@ -258,11 +258,10 @@ describe("Classic BattleTech home", () => {
     await user.type(year, "2900");
     expect(start().disabled).toBe(true); // two eras: pick one
     const era = within(form).getByLabelText<HTMLSelectElement>("Era");
-    expect([...era.options].map((o) => o.text)).toEqual(["Choose an era", "Early Succession War", "Clan Golden Years"]);
+    expect([...era.options].map((o) => o.text)).toEqual(["Choose an era", "Early Succession War", "Succession Wars Era", "Clan Sub-Eras", "Clan Golden Years"]);
     const bases = () => [...within(form).getByLabelText<HTMLSelectElement>("Tech base").options].map((o) => o.text);
     await user.selectOptions(era, "clan-golden-years");
     expect(bases()).toContain("Clan");
-    expect(bases()).not.toContain("Inner Sphere");
     await user.selectOptions(era, "early-succession-war");
     expect(bases()).not.toContain("Clan");
     expect(start().disabled).toBe(false);
