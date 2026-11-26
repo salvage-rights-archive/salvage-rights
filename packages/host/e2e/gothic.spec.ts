@@ -31,3 +31,25 @@ test("the Gothic home fits a phone: nothing scrolls sideways and every control i
     if (box) expect(box.height, (await control.textContent())?.slice(0, 30) ?? "").toBeGreaterThanOrEqual(43.5);
   }
 });
+
+test("add a Werebeast on a phone, save it, open its sheet, and nothing scrolls sideways", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 700 });
+  await page.goto(HOME);
+  await page.getByRole("link", { name: "Abomination units" }).click();
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Abomination units");
+  expect(page.url()).toContain(`${GOTHIC}/abominations`);
+  await expect(page.getByLabel("Import a file")).toBeEnabled();
+  await page.getByRole("button", { name: "Add Werebeast" }).click();
+  await page.getByLabel("Label").fill("Pack");
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await page.getByRole("button", { name: "Record sheet for Pack (Werebeast)" }).click();
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Pack (Werebeast) record sheet");
+  await expect(page.getByRole("img", { name: /Abomination record sheet: WEREBEAST ABOMINATION/ })).toBeVisible();
+  const widths = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, client: document.documentElement.clientWidth }));
+  expect(widths.scroll).toBe(widths.client);
+  await page.getByRole("button", { name: "Back to the units" }).click();
+  for (const control of await page.locator("button, select, input:not([type=file]), a.bt-button").all()) {
+    const box = await control.boundingBox();
+    if (box) expect(box.height, (await control.textContent())?.slice(0, 30) ?? "").toBeGreaterThanOrEqual(43.5);
+  }
+});

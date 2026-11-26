@@ -223,3 +223,26 @@ test("the Gothic home, a box Mech editor and its sheet have no axe violations in
   const editorPath = await startGothicBox(page, DEV, "UrbanMech UM-R60B");
   await expectNoViolations(page, DEV, [`${GOTHIC}/home`, editorPath, editorPath.replace("/editor", "/sheet")]);
 });
+
+test("the Gothic Abomination units page, its form, a custom form and a unit sheet have no axe violations in either theme", async ({ page }) => {
+  test.setTimeout(120_000);
+  for (const theme of ["Light", "Dark"] as const) {
+    await chooseTheme(page, DEV, theme);
+    await page.goto(`${DEV}${GOTHIC}/abominations`);
+    await expect(page.getByLabel("Import a file")).toBeEnabled();
+    await scan(page, theme, "the units page");
+    await page.getByRole("button", { name: "Add Werebeast" }).click();
+    await page.getByLabel("Label").fill("Pack");
+    await scan(page, theme, "the unit form");
+    await page.getByRole("button", { name: "Save", exact: true }).click();
+    await expect(page.getByText("Pack (Werebeast) saved.")).toBeVisible();
+    await page.getByLabel("Rules level").selectOption("fan-made");
+    await page.getByRole("button", { name: "Start a custom type" }).click();
+    await page.getByLabel("Add a weapon").selectOption({ label: "SRM 5" });
+    await page.getByRole("button", { name: "Add weapon" }).click();
+    await scan(page, theme, "the custom form");
+    await page.getByRole("button", { name: "Record sheet for Pack (Werebeast)" }).first().click();
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Pack (Werebeast) record sheet");
+    await scan(page, theme, "the unit sheet");
+  }
+});
