@@ -2,7 +2,7 @@
 // this turn, and an F for forced withdrawal. On a phone it opens and closes; from about 900 px wide it is the left column and always open.
 import { useState } from "react";
 import type { ForceName, GameUnit } from "../../rules/aces-game";
-import { currentTmm } from "../../rules/as-play";
+import { crippled, currentTmm } from "../../rules/as-play";
 import { modeLabel } from "../../rules/aces-turn";
 import type { UnitChip } from "./QuestionView";
 
@@ -40,6 +40,7 @@ function Row({ u, force }: { u: GameUnit; force: ForceName }) {
         {u.flags.withdrawing && <span className="bt-tag">F, withdrawing</span>}
         {u.flags.fleeing && <span className="bt-tag">Fleeing</span>}
         {u.play.shutdown && <span className="bt-tag">Shut down</span>}
+        {!gone && crippled(u.play, u.card, "aces") && <span className="bt-tag">Crippled</span>}
         {gone && <span className="bt-tag">{u.play.destroyed ? "Destroyed" : "Escaped"}</span>}
       </span>
       {!gone && (
@@ -48,6 +49,7 @@ function Row({ u, force }: { u: GameUnit; force: ForceName }) {
           {u.play.staged.length ? `, ${String(u.play.staged.reduce((s, h) => s + h.damage, 0))} staged` : ""}
           {`, heat ${String(u.play.heat)}`}
           {crits.length ? `, ${crits.join(", ")}` : ""}
+          {u.edge === undefined ? "" : `, Edge ${String(u.edge)}`}
           {u.play.moved ? `, moved ${MOVE_WORDS[u.play.moved.mode]} (TMM ${String(u.play.moved.tmm)})` : tmm === null ? "" : `, not moved (TMM ${String(tmm)})`}
         </span>
       )}

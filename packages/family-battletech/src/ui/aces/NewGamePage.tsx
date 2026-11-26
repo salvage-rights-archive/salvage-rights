@@ -47,6 +47,7 @@ export default function NewGamePage() {
   const [destroy, setDestroy] = useState("");
   const [waypoints, setWaypoints] = useState<WaypointRow[]>([]);
   const [rules, setRules] = useState<AcesRules>(DEFAULT_RULES);
+  const [turnLimit, setTurnLimit] = useState("");
 
   useEffect(() => {
     void (async () => {
@@ -104,6 +105,7 @@ export default function NewGamePage() {
       },
       waypoints: waypoints.filter((w) => w.letter.trim()).map((w) => ({ letter: w.letter.trim(), ...(/^\d+$/.test(w.turn.trim()) ? { turn: Number(w.turn) } : {}) })),
       rules,
+      ...(/^[1-9]\d*$/.test(turnLimit.trim()) ? { turnLimit: Number(turnLimit) } : {}),
     });
     try {
       await (await openGameStorage()).save(game);
@@ -245,6 +247,10 @@ export default function NewGamePage() {
           <input id="ng-48" type="checkbox" checked={rules.bigTable48} onChange={(e) => { setRule("bigTable48", e.target.checked); }} />
           A 48" table for the ideal colours
         </label>
+        <div className="bt-field">
+          <label htmlFor="ng-limit">Last turn of the sortie (leave empty for no limit)</label>
+          <input id="ng-limit" inputMode="numeric" value={turnLimit} onChange={(e) => { setTurnLimit(e.target.value); }} />
+        </div>
         <div className="bt-field">
           <label htmlFor="ng-withdraw">Forced withdrawal for crippled units</label>
           <select id="ng-withdraw" value={rules.forcedWithdrawal} onChange={(e) => { setRule("forcedWithdrawal", e.target.value as AcesRules["forcedWithdrawal"]); }}>

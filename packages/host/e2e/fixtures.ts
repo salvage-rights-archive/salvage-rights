@@ -331,4 +331,81 @@ export async function saveAcesCommand(page: Page, base: string): Promise<string>
   return `${saved.pathname.replace(/^\/salvage-rights/, "")}${saved.search}`;
 }
 
+const inventedUnit = (id: string, chassis: string) => ({
+  schema: 1,
+  kind: "as-unit",
+  id,
+  editionId: "asce",
+  name: { chassis, model: "" },
+  card: { type: "BM", size: 2, tmm: 2, move: [{ inches: 6, mode: "" }], role: "Brawler", pv: 20, damage: { s: { value: 3 }, m: { value: 3 }, l: { value: 1 } }, ov: 1, armor: 4, structure: 4, specials: [] },
+  skill: 4,
+  source: { kind: "manual" },
+});
+
+/** Writes records into the family store the way the pages do: the key, then the saved record. */
+async function putRecords(page: Page, records: [string, unknown][]): Promise<void> {
+  await page.goto(`${DEV}${ACES}/home`);
+  await page.evaluate(async (list) => {
+    const db = await new Promise<IDBDatabase>((resolve, reject) => {
+      const request = indexedDB.open("salvage-rights:battletech", 1);
+      request.onupgradeneeded = () => {
+        request.result.createObjectStore("kv");
+      };
+      request.onsuccess = () => {
+        resolve(request.result);
+      };
+      request.onerror = () => {
+        reject(new Error("open failed"));
+      };
+    });
+    await new Promise<void>((resolve, reject) => {
+      const tx = db.transaction("kv", "readwrite");
+      for (const [key, value] of list) tx.objectStore("kv").put({ ...(value as object), savedAt: new Date().toISOString() }, key);
+      tx.oncomplete = () => {
+        db.close();
+        resolve();
+      };
+      tx.onerror = () => {
+        reject(new Error("write failed"));
+      };
+    });
+  }, records);
+}
+
+/** Saves invented Alpha Strike units with real figures (Armor 4, Structure 4, damage 3, 3, 1, OV 1) so an attack has something to do. */
+export async function putAsUnits(page: Page, names: string[]): Promise<void> {
+  await putRecords(page, names.map((name) => [`as-unit:${name.toLowerCase().replace(/ /g, "-")}`, { unit: inventedUnit(name.toLowerCase().replace(/ /g, "-"), name) }]));
+}
+
+/**
+ * Answers an Aces game's resolver questions until the given text shows: every distance as 10 inches, yes and no as No, a pick of
+ * units as none. For the invented games of the tests only.
+ */
+export async function answerQuestions(page: Page, done: RegExp | string): Promise<void> {
+  const target = page.getByText(done).first();
+  const distances = page.getByLabel(/^Distance to .*, in inches$/);
+  for (let i = 0; i < 14; i += 1) {
+    if (await target.isVisible()) return;
+    if (await distances.first().isVisible()) {
+      for (const input of await distances.all()) await input.fill("10");
+      await page.getByRole("button", { name: "Done with distances" }).click();
+      continue;
+    }
+    const no = page.getByRole("button", { name: "No", exact: true });
+    if (await no.isVisible()) {
+      await no.click();
+      continue;
+    }
+    const none = page.getByRole("button", { name: /^(None of them|Done)$/ });
+    if (await none.isVisible()) {
+      // A sight question has every enemy in sight; any other pick of units is none.
+      if (await page.getByText(/in line of sight|can it see|see /i).first().isVisible()) for (const box of await page.getByRole("region", { name: "Question" }).getByRole("checkbox").all()) await box.check();
+      await none.click();
+      continue;
+    }
+    await page.waitForTimeout(150);
+  }
+  await expect(target).toBeVisible();
+}
+
 export { expect };

@@ -2,9 +2,9 @@
 // orders applied, the Initiative roll with its penalties, the Movement Phase's order, who is next, and a unit marked moved. The page
 // calls these; nothing here draws or touches storage, and nothing throws on a record it does not understand.
 //
-// Book: Aces rulebook pp. 6, 8, 10-11, 14, 16, 32, 39 (printed page = index) and the Alpha Strike Quick-Start Rules (Sequence of
-// Play, Step 1: each force rolls 2D6, ties are rolled again, the lower roll moves first; the unequal-numbers rule), read against the
-// page images 2026-11-26 (checked: "page"), except the Quick-Start unequal-numbers page, read from its text layer only.
+// Book: Aces rulebook pp. 6, 8, 10-11, 14, 16, 32, 39 (printed page = index) and the Alpha Strike Quick-Start Rules, box set, third
+// printing (p. 13, Sequence of Play: each force rolls 2D6, ties are rolled again, the lower roll moves first; p. 14, the Unequal
+// Number of 'Mechs rule), all read against the page images (checked: "page"); the Quick-Start page numbers are the printed ones.
 import { ACES_LOG, ACES_SPECIAL_ORDERS, ACES_VALUES } from "../data/aces-vocab";
 import type { MoveMode } from "../data/aces-vocab";
 import type { AcesCard, CommandCard, SpecialOrderCard } from "./aces-card";
@@ -19,11 +19,11 @@ import { isImmobile, recordMove } from "./as-play";
 
 export const TURN_CITE = {
   reveal: { cite: "Aces p. 10", checked: "page" },
-  roll: { cite: "Alpha Strike Quick-Start Rules, Sequence of Play, Step 1", checked: "page" },
+  roll: { cite: "Alpha Strike Quick-Start Rules, p. 13", checked: "page" },
   lastWinner: { cite: "Aces pp. 32, 39", checked: "page" },
   commander: { cite: "Aces pp. 32, 39", checked: "page" },
-  loserFirst: { cite: "Aces p. 6; Alpha Strike Quick-Start Rules, Sequence of Play, Step 2", checked: "page" },
-  proportional: { cite: "Alpha Strike Quick-Start Rules, Unequal Number of 'Mechs", checked: "text" },
+  loserFirst: { cite: "Aces p. 6; Alpha Strike Quick-Start Rules, p. 13", checked: "page" },
+  proportional: { cite: "Alpha Strike Quick-Start Rules, p. 14", checked: "page" },
   allies: { cite: "Aces p. 38", checked: "page" },
   activation: { cite: "Aces p. 11", checked: "page" },
 } as const;

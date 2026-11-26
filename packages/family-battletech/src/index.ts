@@ -39,6 +39,7 @@ const gothicRoutes: FamilyRoute[] = [
   { path: "abominations", label: "Gothic Abomination units", section: "workshop", load: () => import("./ui/gothic/AbominationsPage") },
   { path: "force", label: "Gothic forces", section: "workshop", load: () => import("./ui/gothic/ForcePage") },
   { path: "play", label: "Gothic Abomination tracker", section: "play", load: () => import("./ui/gothic/TrackerPage") },
+  { path: "aids", label: "Gothic rules reference", section: "workshop", load: () => import("./ui/gothic/AidsPage") },
 ];
 
 // AeroTech's pages are written as the game's own routes. The host serves them only once the game is ready (AERO-9), so until then they are

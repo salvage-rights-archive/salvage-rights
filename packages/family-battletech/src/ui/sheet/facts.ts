@@ -1,6 +1,7 @@
 // The words and figures the record sheet prints for a 'Mech, worked out once so the drawing and the screen reader's copy
 // of the sheet say the same thing.
 import { editionName } from "../../data/editions";
+import { DAZZLE } from "../../data/gothic";
 import { SHEET_HEAT_SINKS, TECH_BASE_NAMES } from "../../data/sheet";
 import { ammoLines, ammoSlotLabels, inventoryLines } from "../../rules/catalog";
 import type { Catalog, InventoryLine } from "../../rules/catalog";
@@ -103,7 +104,7 @@ export function withDazzle(lines: InventoryLine[]): InventoryLine[] {
     const heat = Number(line.heat);
     const damage = Number(line.damage);
     if (!isLaser(line) || !Number.isInteger(heat) || !Number.isInteger(damage)) return [line];
-    return [line, { ...line, qty: 0, name: "Dazzle", location: "", heat: String(Math.floor(heat / 2)), damage: String(Math.max(1, Math.floor(damage / 2))), sub: true as const }];
+    return [line, { ...line, qty: 0, name: "Dazzle", location: "", heat: String(Math.max(DAZZLE.minHeat, Math.floor(heat / DAZZLE.heatDivisor))), damage: String(Math.max(DAZZLE.minDamage, Math.floor(damage / DAZZLE.damageDivisor))), sub: true as const }];
   });
 }
 
@@ -166,7 +167,7 @@ export function sheetFacts(record: MechRecord, catalog: Catalog, options: { dazz
     inventory: gothic && options.dazzle === true ? withDazzle(inventoryLines(record, catalog)) : inventoryLines(record, catalog),
     ammo,
     battleValue: isBase ? DASH : imported !== undefined ? imported.toLocaleString("en-US") : `${computed?.complete === false ? "at least " : ""}${(computed?.total ?? 0).toLocaleString("en-US")}`,
-    battleValueFrom: isBase ? (total === null ? "the base has none" : `the base has none; pod space ${String(Math.round((record.tons - total) * 1000) / 1000)} tons`) : imported !== undefined ? "mordel.net" : "calculated, pilot 4/5",
+    battleValueFrom: isBase ? (total === null ? "the base has none" : `the base has none; pod space ${String(Math.round((record.tons - total) * 1000) / 1000)} tons`) : imported !== undefined ? (record.source?.kind === "book" ? "as printed on the sheet" : "mordel.net") : "calculated, pilot 4/5",
     heatSinks: {
       line: `${label} Heat Sinks: ${counts} (${dissipation})`,
       summary: `${label}, ${counts} (${dissipation})`,

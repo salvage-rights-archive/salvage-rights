@@ -45,7 +45,7 @@ import { chipOf, unitFacts } from "./UnitsDrawer";
 
 export type Apply = (change: (game: AcesGame) => AcesGame, options?: { undo?: boolean }) => void;
 
-interface PanelProps {
+export interface PanelProps {
   game: AcesGame;
   /** The players have acted on this page since it opened. */
   touched: boolean;
@@ -57,7 +57,7 @@ interface PanelProps {
  * A heading the page moves focus to when the step changes. A page just opened (a reload, a resumed game) keeps focus where it is:
  * it moves only once the players have done something (`touched`).
  */
-function useStepHeading(key: string, touched: boolean) {
+export function useStepHeading(key: string, touched: boolean) {
   const ref = useRef<HTMLHeadingElement>(null);
   const last = useRef<string>(undefined);
   useEffect(() => {
@@ -464,10 +464,5 @@ export default function ActivationCard(props: PanelProps) {
   const { game } = props;
   if (game.phase === "initiative") return <InitiativePanel {...props} />;
   if (game.phase === "movement") return <MovementPanel {...props} />;
-  return (
-    <div className="aces-card">
-      <h2>{`Turn ${String(game.turn)}: ${game.phase === "combat" ? "Combat" : game.phase === "end" ? "End Phase" : "Game over"}`}</h2>
-      <p>This page plays the Initiative and Movement Phases so far. The Combat and End Phases are not on it yet. Undo goes back to the end of Movement.</p>
-    </div>
-  );
+  return null;
 }
