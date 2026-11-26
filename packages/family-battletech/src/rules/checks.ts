@@ -102,10 +102,13 @@ function heatSinkTypeOf(row: EquipmentRow): string {
 
 // What an item that `needs` something must be paired with, the book's page for it, and the size class a pairing is made
 // within. A `needs` with no entry here (liquid cargo space) has nothing in the record to check against and is left alone.
-const HOSTS: Record<string, { host: RegExp; what: string; page: number }> = {
+const HOSTS: Record<string, { host: RegExp; what: string; page: number; book?: string }> = {
   launcher: { host: /^(lrm|srm|mml)-\d+-(is|clan)$/, what: "standard LRM, SRM or MML launcher", page: PAGE.artemis },
   "machine-gun": { host: /^(?:(light|heavy)-)?machine-gun-(is|clan)$/, what: "machine gun", page: PAGE.machineGunArray },
+  // A PPC Capacitor is restricted to its PPC's location (TO:AUE printed pp.126 and 149; the BV addendum, p.194, lists the five PPCs it pairs with).
+  ppc: { host: /^(heavy-|light-|snub-nose-|er-)?ppc-is$/, what: "PPC", page: 149, book: "Tactical Operations: Advanced Units and Equipment" },
 };
+const hostCite = (rule: { page: number; book?: string }) => (rule.book === undefined ? tm(rule.page) : { book: rule.book, page: rule.page });
 export const hostRule = (row: EquipmentRow | undefined) => (row?.needs !== undefined && own(HOSTS, row.needs) ? HOSTS[row.needs] : undefined);
 const gunSize = (id: string | null) => /^(light|heavy)-/.exec(id ?? "")?.[1] ?? "standard";
 
@@ -453,12 +456,12 @@ function placementCheck({ record, layout, catalog }: CheckInput): Finding[] {
       } else if (!host) {
         out.push(finding("placement", "error", `${mount.name} is linked to a mount that is not on this 'Mech.`, { where, cite: rule ? tm(rule.page) : row?.cite }));
       } else if (rule && !rule.host.test(host.equipmentId ?? "")) {
-        out.push(finding("placement", "error", `${mount.name} attaches to a ${rule.what}; ${host.name} is not one.`, { where, cite: tm(rule.page) }));
+        out.push(finding("placement", "error", `${mount.name} attaches to a ${rule.what}; ${host.name} is not one.`, { where, cite: hostCite(rule) }));
       } else if (rule && mount.location && host.location && mount.location !== host.location) {
         out.push(
           finding("placement", "error", `${mount.name} is in the ${locationName(mount.location)} but ${host.name} is in the ${locationName(host.location)}; they must share a location.`, {
             where,
-            cite: tm(rule.page),
+            cite: hostCite(rule),
           }),
         );
       }
@@ -471,14 +474,14 @@ function placementCheck({ record, layout, catalog }: CheckInput): Finding[] {
         out.push(
           finding("placement", "error", `${mount.name} links two to four machine guns of one size in its own location; the ${locationName(mount.location)} has ${guns.length}${sizes.size > 1 ? " of mixed sizes" : ""}.`, {
             where,
-            cite: tm(rule.page),
+            cite: hostCite(rule),
           }),
         );
       }
     } else if (rule && mount.linkedTo === undefined && mount.location) {
       const found = record.mounts.some((m) => m.id !== mount.id && m.location === mount.location && rule.host.test(m.equipmentId ?? ""));
       if (!found) {
-        out.push(finding("placement", "error", `${mount.name} needs a ${rule.what} in the same location, and the ${locationName(mount.location)} has none.`, { where, cite: tm(rule.page) }));
+        out.push(finding("placement", "error", `${mount.name} needs a ${rule.what} in the same location, and the ${locationName(mount.location)} has none.`, { where, cite: hostCite(rule) }));
       }
     }
     if (!row || !mount.location) continue;

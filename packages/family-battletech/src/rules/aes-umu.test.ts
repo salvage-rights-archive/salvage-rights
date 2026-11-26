@@ -32,3 +32,28 @@ describe("AES and UMU", () => {
     expect(battleValue(mixed, catalog).offensive.jumpMP).toBe(3);
   });
 });
+
+describe("the book's own figures", () => {
+  it("computes the Zeus example of TO:AUE p.192: an 80-ton Mech with an AES in one arm is worked as 88 tons, and its linked weapons count 1.25", () => {
+    const zeus = bipedRecord({ tons: 80, chassis: { ...bipedRecord().chassis, engine: { type: "standard", rating: 240 } }, mounts: [mount("a", "aes-arm-is", "RA", 8), mount("p", "heavy-ppc-is", "RA", 0)] });
+    const bv = battleValue(zeus, catalog);
+    expect(bv.offensive.tonnage).toBe(88);
+    expect(bv.offensive.weapons[0]?.modifiedBv).toBeCloseTo((bv.offensive.weapons[0]?.unmodifiedBv ?? 0) * 1.25, 5);
+  });
+
+  it("gives the PPC capacitor pair the table figure of p.194 and a medium shield the 135 of p.195", () => {
+    const ppc = mount("p", "ppc-is", "RA", 0);
+    const pair = bipedRecord({ mounts: [ppc, { ...mount("c", "ppc-capacitor-is", "RA", 3), linkedTo: "p" }] });
+    expect(battleValue(pair, catalog).offensive.weapons[0]?.unmodifiedBv).toBe(264);
+    const shield = bipedRecord({ mounts: [mount("s", "shield-medium-is", "LA", 0)] });
+    expect(battleValue(shield, catalog).defensive.equipment).toBe(135);
+  });
+});
+
+describe("the PPC capacitor", () => {
+  it("needs a PPC in its own location (TO:AUE pp.126 and 149)", () => {
+    const problems = (record: ReturnType<typeof bipedRecord>) => runChecks(record, catalog).filter((f) => f.check === "placement").map((f) => f.message);
+    expect(problems(bipedRecord({ mounts: [mount("c", "ppc-capacitor-is", "RA", 3)] }))).toEqual([expect.stringContaining("needs a PPC in the same location")]);
+    expect(problems(bipedRecord({ mounts: [mount("p", "ppc-is", "RA", 0), mount("c", "ppc-capacitor-is", "RA", 3)] }))).toEqual([]);
+  });
+});
