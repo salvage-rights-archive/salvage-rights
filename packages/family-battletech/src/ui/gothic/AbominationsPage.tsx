@@ -20,6 +20,7 @@ import { MAX_LIBRARY_BYTES, STORAGE_READ_FAILED, STORAGE_WRITE_FAILED } from "..
 import { AbominationSheets } from "./AbominationSheet";
 import { downloadUnits, fromAbomFile, openGothicStorage } from "./storage";
 import type { AbomEntry, GothicStorage } from "./storage";
+import { useGothicTheme } from "./theme";
 import "../classic.scss";
 
 const EDITION = "gothic";
@@ -77,6 +78,7 @@ function NumberField({ id, label, value, onChange, optional, max }: { id: string
 }
 
 export default function AbominationsPage() {
+  useGothicTheme();
   const [storage, setStorage] = useState<GothicStorage>();
   const [entries, setEntries] = useState<AbomEntry[]>([]);
   const [catalog, setCatalog] = useState<Catalog>();

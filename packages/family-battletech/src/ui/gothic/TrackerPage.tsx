@@ -33,6 +33,7 @@ import GamePicture from "../GamePicture";
 import { STORAGE_READ_FAILED, STORAGE_WRITE_FAILED } from "../storage";
 import { openGothicStorage } from "./storage";
 import type { AbomEntry, GothicStorage } from "./storage";
+import { useGothicTheme } from "./theme";
 import "../classic.scss";
 import "./tracker.scss";
 
@@ -250,6 +251,7 @@ function UnitTracker({ unit, stats, state, catalog, onChange, onRemove }: UnitTr
 }
 
 export default function TrackerPage() {
+  useGothicTheme();
   const [storage, setStorage] = useState<GothicStorage>();
   const [entries, setEntries] = useState<AbomEntry[]>([]);
   const [states, setStates] = useState<Record<string, TrackerState>>({});

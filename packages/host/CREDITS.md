@@ -45,3 +45,8 @@ The copyright lines below are read from each font file's own name table.
 - Special Elite, by Astigmatic. Apache License 2.0.
   "Copyright (c) 2010 by Brian J. Bonislawsky DBA Astigmatic (AOETI). All rights reserved."
   https://fonts.google.com/specimen/Special+Elite
+- IM Fell English, by Igino Marini. SIL Open Font License 1.1 (text in
+  the second licence text in this file, from the game family package's Gothic fonts folder). Used for the headings on the Gothic pages.
+  "Copyright (c) 2010, Igino Marini (mail@iginomarini.com)"
+  https://fonts.google.com/specimen/IM+Fell+English (the licence text is from the Google Fonts repository,
+  `ofl/imfellenglish/OFL.txt`; the font file is that site's Latin subset)

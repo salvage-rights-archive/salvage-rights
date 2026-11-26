@@ -12,6 +12,7 @@ import RecordBoundary from "./RecordBoundary";
 import RecordSheet from "./sheet/RecordSheet";
 import { sheetTitle } from "./sheet/facts";
 import { STORAGE_READ_FAILED, openFamilyStorage } from "./storage";
+import { useGothicTheme } from "./gothic/theme";
 import "./classic.scss";
 
 type Loaded =
@@ -38,6 +39,8 @@ function SheetLoader() {
   const asked = params.get("c") ?? undefined;
   const game = gameOfPath(useLocation().pathname);
   const [loaded, setLoaded] = useState<Loaded>({ state: "loading" });
+  // Until the record is in hand the address says which game this is; then the record decides (the Sheet itself).
+  useGothicTheme(game === "gothic" && loaded.state !== "ready");
 
   useEffect(() => {
     let live = true;
@@ -89,6 +92,7 @@ function SheetLoader() {
 function Sheet({ record, catalog, chassis }: { record: MechRecord; catalog: Catalog; chassis?: OmniChassis }) {
   const base = gameBase(record);
   const gothic = rulesetOf(record.editionId).game === "gothic";
+  useGothicTheme(gothic);
   const [dazzle, setDazzle] = useState(false);
   const errors = useMemo(() => runChecks(record, catalog).filter((f) => f.level === "error").length, [record, catalog]);
   return (

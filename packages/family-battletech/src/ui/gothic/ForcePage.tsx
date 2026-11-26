@@ -18,6 +18,7 @@ import { STORAGE_READ_FAILED, STORAGE_WRITE_FAILED, openFamilyStorage } from "..
 import { AbominationSheets } from "./AbominationSheet";
 import { openGothicStorage } from "./storage";
 import type { ForceEntry, GothicStorage } from "./storage";
+import { useGothicTheme } from "./theme";
 import "../classic.scss";
 
 const FORCES = `${GOTHIC_BASE}/force`;
@@ -46,6 +47,7 @@ const skillOf = (text: string): number | undefined => {
 };
 
 export default function ForcePage() {
+  useGothicTheme();
   const [params] = useSearchParams();
   const id = params.get("id");
   return id ? <ForceEditor key={id} id={id} /> : <ForceList />;
