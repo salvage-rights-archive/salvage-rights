@@ -204,7 +204,7 @@ const partsCheck: Check = (record, _catalog, out) => {
       out.push({
         check: "part",
         level: "error",
-        message: `${part.label} is not available in ${String(record.year)}: its prototypes appear about ${String(dates.prototype)}${dates.production === undefined ? "" : ` and it is in production from ${String(dates.production)}`}${dates.extinct === undefined ? "" : `, and it is extinct from ${String(dates.extinct)}`}.`,
+        message: `${part.label}: not available in ${String(record.year)}: its prototypes appear about ${String(dates.prototype)}${dates.production === undefined ? "" : ` and it is in production from ${String(dates.production)}`}${dates.extinct === undefined ? "" : `, and it is extinct from ${String(dates.extinct)}`}.`,
         where: { field: part.field },
         cite: page(dates.cite),
       });
@@ -212,7 +212,7 @@ const partsCheck: Check = (record, _catalog, out) => {
       out.push({
         check: "part",
         level: "error",
-        message: phase === "prototype" && dates ? `${part.label} is a prototype in ${String(record.year)}${dates.production === undefined ? "" : ` (production starts in ${String(dates.production)})`}, which needs Experimental rules.` : `${part.label} needs ${levelRow(needed).label} rules.`,
+        message: phase === "prototype" && dates ? `${part.label}: a prototype in ${String(record.year)}${dates.production === undefined ? "" : ` (production starts in ${String(dates.production)})`}, which needs Experimental rules.` : `${part.label}: needs ${levelRow(needed).label} rules.`,
         where: { field: part.field },
         cite: page(dates?.cite ?? PROTO_DATES.unit.cite),
       });

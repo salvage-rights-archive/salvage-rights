@@ -63,6 +63,14 @@ describe("Electric Discharge armor", () => {
   });
 });
 
+describe("standard ProtoMech armor", () => {
+  it("keeps its dates: an error in 3050, and Experimental rules in its prototype years", () => {
+    const parts = (r: ProtoRecord) => errors(r, "part").filter((f) => f.where?.field === "armor").length;
+    expect([parts(proto({ year: 3050 })), parts(proto({ year: 3057, rulesLevel: "standard" })), parts(proto({ year: 3057 }))]).toEqual([1, 1, 0]);
+    expect(protoLowestLevel(proto({ year: 3057 }), catalog)).toBe("experimental");
+  });
+});
+
 describe("extended jump jets", () => {
   it("weigh twice the jump jet table, cost 500 a ton for each jet squared, and may reach the Running MP", () => {
     const six = proto({ jump: 6, jumpType: "xjj" });
@@ -92,6 +100,7 @@ describe("underwater maneuvering units", () => {
   it("weigh and cost as jump jets, add nothing from a wing, and need Experimental rules", () => {
     const umu = proto({ jump: 3, jumpType: "umu", partialWing: true });
     expect([kgOf(umu, "Underwater maneuvering units (UMU)"), costOf(umu, "Underwater maneuvering units (UMU)"), jumpMP(umu)]).toEqual([300, 10_800, 3]);
+    expect([errors(proto({ jump: 4, jumpType: "umu" }), "jump"), errors(proto({ jump: 5, jumpType: "umu" }), "jump")].map((e) => e.length)).toEqual([0, 1]);
     expect(jumpChoices(proto({ rulesLevel: "standard" })).map((j) => j.id)).not.toContain("umu");
   });
 });

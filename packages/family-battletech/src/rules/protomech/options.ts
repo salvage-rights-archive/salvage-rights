@@ -42,9 +42,9 @@ export function usedOptions(record: ProtoRecord): UsedOption[] {
   const cockpit = cockpitOf(record);
   if (cockpit && record.cockpit !== undefined && record.cockpit !== "standard") out.push({ label: cockpit.label, field: "cockpit", dates: cockpit.dates, level: cockpit.level });
   const armor = armorTypeOf(record);
-  if (armor && Object.values(record.armor).some((points) => points > 0)) out.push({ label: armor.label, field: "armorType", dates: armor.dates ?? undefined, level: armor.level });
+  if (armor && Object.values(record.armor).some((points) => points > 0)) out.push({ label: armor.label, field: record.armorType === undefined || record.armorType === "standard" ? "armor" : "armorType", dates: armor.dates ?? undefined, level: armor.level });
   const jump = jumpSystemOf(record);
-  if (jump && record.jump > 0) out.push({ label: jump.label, field: "jumpType", dates: jump.dates, level: jump.level });
+  if (jump && record.jump > 0) out.push({ label: jump.label, field: record.jumpType === undefined || record.jumpType === "standard" ? "jump" : "jumpType", dates: jump.dates, level: jump.level });
   if (record.partialWing === true) out.push({ label: PROTO_WING.label, field: "partialWing", dates: PROTO_WING.dates, level: PROTO_WING.level });
   return out;
 }

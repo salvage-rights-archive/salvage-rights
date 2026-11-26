@@ -311,6 +311,7 @@ export interface ProtoCockpit extends Sourced {
 }
 export const PROTO_COCKPITS: Record<string, ProtoCockpit> = {
   standard: { label: "Standard ProtoMech cockpit", kg: 500, cost: 500_000, level: "standard", cite: { book: TM, page: 85 }, checked: "page" },
+  // Inner Sphere technology (IO:AE pp. 96, 213) offered in this Clan-only editor: held for the book panel, which rules whether the interface makes the unit Mixed Technology.
   // Weighs as much as a standard cockpit, takes no space on the record sheet, costs 1,000,000, and does not change the Battle Value.
   interface: { label: "Inner Sphere ProtoMech interface cockpit", kg: 500, cost: 1_000_000, level: "experimental", dates: PROTO_DATES.interface, mixed: true, cite: { book: IO, page: 96 }, checked: "page" },
 };
@@ -327,7 +328,7 @@ export interface ProtoArmorType extends Sourced {
   bvAsWeapon: number;
 }
 export const PROTO_ARMOR_TYPES: Record<string, ProtoArmorType> = {
-  standard: { label: "Standard ProtoMech armor", kgPerPoint: 50, costPerPoint: 625, level: "standard", torsoItems: 0, bvAsWeapon: 0, cite: { book: TM, page: 86 }, checked: "page" },
+  standard: { label: "Standard ProtoMech armor", kgPerPoint: 50, costPerPoint: 625, level: "standard", dates: PROTO_DATES.armor, torsoItems: 0, bvAsWeapon: 0, cite: { book: TM, page: 86 }, checked: "page" },
   edp: { label: "Electric Discharge ProtoMech (EDP) armor", kgPerPoint: 75, costPerPoint: 1_250, level: "experimental", dates: PROTO_DATES.edp, torsoItems: 1, bvAsWeapon: 32, cite: { book: IO, page: 59 }, checked: "page" },
 };
 
@@ -347,7 +348,7 @@ export interface ProtoJumpSystem extends Sourced {
 export const PROTO_JUMP_SYSTEMS: Record<string, ProtoJumpSystem> = {
   standard: { label: "ProtoMech jump jets", unit: "Jumping MP", kgFactor: 1, costPerTonSquared: 200, reach: "walk", level: "standard", dates: PROTO_DATES.jumpJets, cite: { book: TM, page: 85 }, checked: "page" },
   xjj: { label: "Extended jump jets (XJJ)", unit: "Jumping MP", kgFactor: 2, costPerTonSquared: 500, reach: "run", level: "standard", dates: PROTO_DATES.xjj, cite: { book: IO, page: 59 }, checked: "page" },
-  umu: { label: "Underwater maneuvering units (UMU)", unit: "UMU MP", kgFactor: 1, costPerTonSquared: 200, reach: "walk", level: "experimental", dates: PROTO_DATES.umu, underwater: true, cite: { book: TO, page: 107 }, checked: "page" },
+  umu: { label: "Underwater maneuvering units (UMU)", unit: "UMU MP", kgFactor: 1, costPerTonSquared: 200, reach: "walk", level: "experimental", dates: PROTO_DATES.umu, underwater: true, cite: { book: TO, page: 104 }, checked: "page" },
 };
 
 /** The partial wing (TO:AUE pp. 104-105, 107, 217): 20 percent of the ProtoMech's weight, one of the torso's items, 50,000 C-bills for each ton it weighs, and a Jumping MP bonus by atmosphere. */
