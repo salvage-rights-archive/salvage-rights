@@ -2,26 +2,24 @@
 // Redo), derives everything else from the current record, and hands each panel what it shows and an `onEdit(change)` callback. Same layout,
 // controls, findings and leave-confirm as the 'Mech editor.
 import { useEffect, useMemo, useState } from "react";
-import { Link, useBlocker, useSearchParams } from "react-router";
+import { Link, useSearchParams } from "react-router";
 import { loadCatalog } from "../../rules/catalog";
 import type { Catalog } from "../../rules/catalog";
 import { checkBa } from "../../rules/battlearmor/checks";
 import { build } from "../../rules/battlearmor/construct";
 import type { BaRecord } from "../../rules/battlearmor/record";
 import LeaveConfirm from "../editor/LeaveConfirm";
-import { STORAGE_READ_FAILED, STORAGE_WRITE_FAILED } from "../storage";
+import { useRecordHistory } from "../editor/useRecordHistory";
+import { STORAGE_READ_FAILED } from "../storage";
 import "../aero/aero.scss";
 import "./ba.scss";
 import BaBoundary from "./BaBoundary";
 import { ArmorPanel, CapabilitiesNote, EquipmentPanel, IdentityPanel, MotivePanel } from "./BaPanels";
 import { BaCalc, BaFindings, BaOfficialBadge, BaOfficialPanel } from "./BaSide";
 import { targetFor } from "./edit";
-import type { BaOnEdit } from "./edit";
 import { BA_HOME, sheetHref } from "./routes";
 import { downloadBa, openBaStorage } from "./storage";
 import type { BaStorage } from "./storage";
-
-const HISTORY_LIMIT = 100;
 
 type Loaded =
   | { state: "loading" }
@@ -78,85 +76,19 @@ function Loader({ id }: { id: string }) {
   );
 }
 
-interface History {
-  past: BaRecord[];
-  present: BaRecord;
-  future: BaRecord[];
-  /** The field being typed into: edits to it in a row make one step. */
-  group?: string;
-}
-
-const same = (a: BaRecord, b: BaRecord) => a === b || JSON.stringify(a) === JSON.stringify(b);
 
 function Editor({ initial, catalog, storage }: { initial: BaRecord; catalog: Catalog; storage: BaStorage }) {
-  const [history, setHistory] = useState<History>({ past: [], present: initial, future: [] });
-  const [saved, setSaved] = useState<BaRecord>(initial);
-  const [justSaved, setJustSaved] = useState(false);
-  const [status, setStatus] = useState("");
-  const [problem, setProblem] = useState("");
+  const { record, dirty, canUndo, canRedo, edit, undo, redo, save, endGroup, justSaved, status, setStatus, problem, blocker } = useRecordHistory(initial, (r) => storage.save(r));
   const [weightOpen, setWeightOpen] = useState(false);
-  const record = history.present;
-  const dirty = !same(record, saved);
-
-  const edit: BaOnEdit = (change, field) => {
-    setJustSaved(false);
-    setStatus("");
-    setHistory((h) => {
-      const next = structuredClone(h.present);
-      change(next);
-      if (same(next, h.present)) return h;
-      const joins = field !== undefined && h.group === field;
-      return { past: joins ? h.past : [...h.past, h.present].slice(-HISTORY_LIMIT), present: next, future: [], group: field };
-    });
-  };
-  const undo = () => {
-    setJustSaved(false);
-    setHistory((h) => {
-      const previous = h.past[h.past.length - 1];
-      return previous ? { past: h.past.slice(0, -1), present: previous, future: [h.present, ...h.future] } : h;
-    });
-  };
-  const redo = () => {
-    setJustSaved(false);
-    setHistory((h) => {
-      const next = h.future[0];
-      return next ? { past: [...h.past, h.present].slice(-HISTORY_LIMIT), present: next, future: h.future.slice(1) } : h;
-    });
-  };
-  const save = async () => {
-    const toSave = record;
-    try {
-      await storage.save(toSave);
-    } catch {
-      setJustSaved(false);
-      setProblem(STORAGE_WRITE_FAILED);
-      return;
-    }
-    setProblem("");
-    setSaved(toSave);
-    setJustSaved(true);
-  };
 
   const findings = useMemo(() => checkBa(record, catalog), [record, catalog]);
   const built = useMemo(() => build(record, catalog), [record, catalog]);
-  const blocker = useBlocker(dirty);
-  useEffect(() => {
-    if (!dirty) return;
-    const warn = (event: BeforeUnloadEvent) => {
-      event.preventDefault();
-      event.returnValue = "";
-    };
-    window.addEventListener("beforeunload", warn);
-    return () => {
-      window.removeEventListener("beforeunload", warn);
-    };
-  }, [dirty]);
 
   const title = `${record.name.chassis} ${record.name.model}`.trim();
   const weightText = `${String(built.totalKg)} of ${built.maxKg === undefined ? "?" : String(built.maxKg)} kg`;
 
   return (
-    <div className="sr-page bt-editor" onBlur={() => { setHistory((h) => (h.group === undefined ? h : { ...h, group: undefined })); }}>
+    <div className="sr-page bt-editor" onBlur={endGroup}>
       <header className="bt-editor__header">
         <div className="bt-editor__title">
           <Link className="bt-back" to={BA_HOME}>
@@ -175,10 +107,10 @@ function Editor({ initial, catalog, storage }: { initial: BaRecord; catalog: Cat
           <Link className="bt-button bt-button--secondary" to={sheetHref(record.id)}>
             Record sheet
           </Link>
-          <button type="button" className="bt-button bt-button--secondary" disabled={history.past.length === 0} onClick={undo}>
+          <button type="button" className="bt-button bt-button--secondary" disabled={!canUndo} onClick={undo}>
             Undo
           </button>
-          <button type="button" className="bt-button bt-button--secondary" disabled={history.future.length === 0} onClick={redo}>
+          <button type="button" className="bt-button bt-button--secondary" disabled={!canRedo} onClick={redo}>
             Redo
           </button>
           <button type="button" className="bt-button bt-button--secondary" onClick={() => { downloadBa(record); setStatus("Export started."); }}>

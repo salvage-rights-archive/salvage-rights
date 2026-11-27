@@ -14,8 +14,8 @@ export function today(): string {
   return `${String(now.getFullYear())}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 }
 
-export function OfficialBadge({ record }: { record: MechRecord }) {
-  const state = officialState(record);
+/** The badge for a state worked out by the unit type's own rule. */
+export function OfficialMark({ state }: { state: OfficialState }) {
   const { badge, detail } = officialLabel(state);
   return (
     <span className="bt-official" data-official={state.official}>
@@ -30,34 +30,48 @@ export function OfficialBadge({ record }: { record: MechRecord }) {
   );
 }
 
+export function OfficialBadge({ record }: { record: MechRecord }) {
+  return <OfficialMark state={officialState(record)} />;
+}
+
+/** The books a mark may name: those the app knows. The player may also type their own. */
+const BOOK_TITLES = Object.keys(BOOKS);
+
 /** States the mark: the book (from the books we know, or the player's own words) and the page, or takes it off. */
-export function OfficialPanel({ record, onEdit }: { record: MechRecord; onEdit: OnEdit }) {
-  const state: OfficialState = officialState(record);
-  const [book, setBook] = useState(record.official?.book ?? "");
-  const [page, setPage] = useState(record.official?.page === undefined ? "" : String(record.official.page));
+export function OfficialMarkPanel({
+  state,
+  stated,
+  books = BOOK_TITLES,
+  wide = false,
+  onMark,
+  onUnmark,
+}: {
+  state: OfficialState;
+  /** What the record holds now, to start the fields from. */
+  stated: { book?: string; page?: number } | undefined;
+  books?: string[];
+  /** Spans the editor's columns, as the unit editors lay it out. */
+  wide?: boolean;
+  onMark: (book: string, page: number | undefined) => void;
+  onUnmark: () => void;
+}) {
+  const [book, setBook] = useState(stated?.book ?? "");
+  const [page, setPage] = useState(stated?.page === undefined ? "" : String(stated.page));
   const id = useId();
   const pageNumber = page.trim() === "" ? undefined : Number(page);
   const pageBad = pageNumber !== undefined && !(Number.isInteger(pageNumber) && pageNumber > 0);
   return (
-    <section className="bt-panel" aria-labelledby={`${id}-heading`}>
+    <section className={wide ? "bt-panel bt-editor__wide" : "bt-panel"} aria-labelledby={`${id}-heading`}>
       <h2 id={`${id}-heading`}>Official or not</h2>
       <p>
-        <OfficialBadge record={record} />
+        <OfficialMark state={state} />
       </p>
       <p className="bt-hint">
         OFFICIAL means the game's publisher put this design out in a book. You state it; we never claim it for you. Changing the design (not the name, the notes or the picture) turns it
         NOT OFFICIAL, and Undo gets it back.
       </p>
       {state.official ? (
-        <button
-          type="button"
-          className="bt-button bt-button--secondary"
-          onClick={() => {
-            onEdit((d) => {
-              unmarkOfficial(d);
-            });
-          }}
-        >
+        <button type="button" className="bt-button bt-button--secondary" onClick={onUnmark}>
           Mark NOT OFFICIAL
         </button>
       ) : (
@@ -74,7 +88,7 @@ export function OfficialPanel({ record, onEdit }: { record: MechRecord; onEdit: 
               }}
             />
             <datalist id={`${id}-books`}>
-              {Object.keys(BOOKS).map((title) => (
+              {books.map((title) => (
                 <option key={title} value={title} />
               ))}
             </datalist>
@@ -87,20 +101,23 @@ export function OfficialPanel({ record, onEdit }: { record: MechRecord; onEdit: 
               inputMode="numeric"
               value={page}
               aria-invalid={pageBad || undefined}
+              aria-describedby={pageBad ? `${id}-page-problem` : undefined}
               onChange={(event) => {
                 setPage(event.target.value);
               }}
             />
-            {pageBad && <span className="bt-hint">Enter a page number.</span>}
+            {pageBad && (
+              <span id={`${id}-page-problem`} className="bt-hint">
+                Enter a page number.
+              </span>
+            )}
           </div>
           <button
             type="button"
             className="bt-button"
             disabled={book.trim() === "" || pageBad}
             onClick={() => {
-              onEdit((d) => {
-                markOfficial(d, book, pageNumber);
-              });
+              onMark(book, pageNumber);
             }}
           >
             Mark OFFICIAL
@@ -108,6 +125,25 @@ export function OfficialPanel({ record, onEdit }: { record: MechRecord; onEdit: 
         </div>
       )}
     </section>
+  );
+}
+
+export function OfficialPanel({ record, onEdit }: { record: MechRecord; onEdit: OnEdit }) {
+  return (
+    <OfficialMarkPanel
+      state={officialState(record)}
+      stated={record.official}
+      onMark={(book, page) => {
+        onEdit((d) => {
+          markOfficial(d, book, page);
+        });
+      }}
+      onUnmark={() => {
+        onEdit((d) => {
+          unmarkOfficial(d);
+        });
+      }}
+    />
   );
 }
 

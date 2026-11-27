@@ -2,7 +2,7 @@
 // Redo) and derives everything else from the current record. Hide, do not mark: what the rules level, tech base, year or era leaves out is not
 // listed, unless the platoon already holds it (it then stays listed and the rules check reports it).
 import { useEffect, useMemo, useState } from "react";
-import { Link, useBlocker, useSearchParams } from "react-router";
+import { Link, useSearchParams } from "react-router";
 import { ARMOR_KITS, BEASTS, FIELD_ARTILLERY_ID, FIELD_GUN_ID, FIELD_GUN_RULES, FORMATIONS, MOTIVES, SECONDARY_SLOT_TROOPS, SPECIALIZATIONS, XCT, XCT_ENVIRONMENTS, armorKitOf, beastOf, motiveOf } from "../../data/infantry-tables";
 import { loadCatalog } from "../../rules/catalog";
 import type { Catalog, EquipmentRow } from "../../rules/catalog";
@@ -13,8 +13,9 @@ import { beastSize, infantryBv, infantryCost, lineCode, offered as optionOffered
 import type { InfantryRecord } from "../../rules/infantry/platoon";
 import SneakSystemsField from "./SneakSystemsField";
 import LeaveConfirm from "../editor/LeaveConfirm";
+import { useRecordHistory } from "../editor/useRecordHistory";
 import LevelSelect from "../editor/LevelSelect";
-import { STORAGE_READ_FAILED, STORAGE_WRITE_FAILED } from "../storage";
+import { STORAGE_READ_FAILED } from "../storage";
 import { NumberField, SelectField, TextField } from "../aero/fields";
 import { YearEraFields, eraFollowsBase } from "../YearEraFields";
 import { useEraRoom } from "../eraChoice";
@@ -25,8 +26,6 @@ import type { InfantryStorage } from "./storage";
 import "../aero/aero.scss";
 import "./infantry.scss";
 
-const HISTORY_LIMIT = 100;
-type Edit = (change: (draft: InfantryRecord) => void, field?: string) => void;
 type Loaded =
   | { state: "loading" }
   | { state: "missing" }
@@ -71,13 +70,6 @@ export default function InfantryEditorPage() {
   );
 }
 
-interface History {
-  past: InfantryRecord[];
-  present: InfantryRecord;
-  future: InfantryRecord[];
-  group?: string;
-}
-const same = (a: InfantryRecord, b: InfantryRecord) => a === b || JSON.stringify(a) === JSON.stringify(b);
 const num = (n: number, digits = 2): string => String(Math.round(n * 10 ** digits) / 10 ** digits);
 const money = (n: number): string => n.toLocaleString("en-US", { maximumFractionDigits: 2 });
 /** An affiliation's first name, for a phone: "Generic, mercenary, House or major Periphery" is "Generic". */
@@ -86,70 +78,13 @@ const weaponLabel = (row: EquipmentRow): string => `${row.name}${row.techBase ==
 
 function Editor({ initial, catalog, storage }: { initial: InfantryRecord; catalog: Catalog; storage: InfantryStorage }) {
   const room = useEraRoom();
-  const [history, setHistory] = useState<History>({ past: [], present: initial, future: [] });
-  const [saved, setSaved] = useState(initial);
-  const [justSaved, setJustSaved] = useState(false);
-  const [status, setStatus] = useState("");
-  const [problem, setProblem] = useState("");
-  const record = history.present;
-  const dirty = !same(record, saved);
+  const { record, dirty, canUndo, canRedo, edit, undo, redo, save, endGroup, justSaved, status, setStatus, problem, blocker } = useRecordHistory(initial, (r) => storage.save(r));
   const level = record.rulesLevel ?? DEFAULT_LEVEL;
-
-  const edit: Edit = (change, field) => {
-    setJustSaved(false);
-    setStatus("");
-    setHistory((h) => {
-      const next = structuredClone(h.present);
-      change(next);
-      if (same(next, h.present)) return h;
-      const joins = field !== undefined && h.group === field;
-      return { past: joins ? h.past : [...h.past, h.present].slice(-HISTORY_LIMIT), present: next, future: [], group: field };
-    });
-  };
-  const undo = () => {
-    setJustSaved(false);
-    setHistory((h) => {
-      const previous = h.past[h.past.length - 1];
-      return previous ? { past: h.past.slice(0, -1), present: previous, future: [h.present, ...h.future] } : h;
-    });
-  };
-  const redo = () => {
-    setJustSaved(false);
-    setHistory((h) => {
-      const next = h.future[0];
-      return next ? { past: [...h.past, h.present].slice(-HISTORY_LIMIT), present: next, future: h.future.slice(1) } : h;
-    });
-  };
-  const save = async () => {
-    const toSave = record;
-    try {
-      await storage.save(toSave);
-    } catch {
-      setJustSaved(false);
-      setProblem(STORAGE_WRITE_FAILED);
-      return;
-    }
-    setProblem("");
-    setSaved(toSave);
-    setJustSaved(true);
-  };
 
   const platoon = useMemo(() => platoonOf(record, catalog), [record, catalog]);
   const findings = useMemo(() => checkInfantry(record, catalog), [record, catalog]);
   const bv = useMemo(() => infantryBv(record, catalog), [record, catalog]);
   const cost = useMemo(() => infantryCost(record, catalog), [record, catalog]);
-  const blocker = useBlocker(dirty);
-  useEffect(() => {
-    if (!dirty) return;
-    const warn = (event: BeforeUnloadEvent) => {
-      event.preventDefault();
-      event.returnValue = "";
-    };
-    window.addEventListener("beforeunload", warn);
-    return () => {
-      window.removeEventListener("beforeunload", warn);
-    };
-  }, [dirty]);
 
   // What is offered
   const offered = useMemo(() => catalog.offered(record.editionId, { techBase: record.techBase, year: record.year, unit: "infantry", level }), [catalog, record.editionId, record.techBase, record.year, level]);
@@ -195,7 +130,7 @@ function Editor({ initial, catalog, storage }: { initial: InfantryRecord; catalo
   };
 
   return (
-    <div className="sr-page bt-editor" onBlur={() => { setHistory((h) => (h.group === undefined ? h : { ...h, group: undefined })); }}>
+    <div className="sr-page bt-editor" onBlur={endGroup}>
       <header className="bt-editor__header">
         <div className="bt-editor__title">
           <Link className="bt-back" to={CLASSIC_HOME}>
@@ -207,8 +142,8 @@ function Editor({ initial, catalog, storage }: { initial: InfantryRecord; catalo
         <div className="bt-actions">
           <button type="button" className="bt-button" disabled={!dirty} onClick={() => { void save(); }}>Save</button>
           <Link className="bt-button bt-button--secondary" to={sheetHref(record.id)}>Record sheet</Link>
-          <button type="button" className="bt-button bt-button--secondary" disabled={history.past.length === 0} onClick={undo}>Undo</button>
-          <button type="button" className="bt-button bt-button--secondary" disabled={history.future.length === 0} onClick={redo}>Redo</button>
+          <button type="button" className="bt-button bt-button--secondary" disabled={!canUndo} onClick={undo}>Undo</button>
+          <button type="button" className="bt-button bt-button--secondary" disabled={!canRedo} onClick={redo}>Redo</button>
           <button type="button" className="bt-button bt-button--secondary" onClick={() => { downloadInfantry(record); setStatus("Export started."); }}>Export</button>
         </div>
       </header>

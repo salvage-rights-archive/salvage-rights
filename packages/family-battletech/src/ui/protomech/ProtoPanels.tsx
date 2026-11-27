@@ -1,12 +1,10 @@
 // The ProtoMech editor's panels: identity, chassis (weight, movement, heat sinks), armor, weapons and equipment by location, Battle Value and cost, and the OFFICIAL mark.
 // Each shows only what the rules level, year and era offer (hide, do not mark): an item the unit already holds stays listed, and the rules check reports it.
-import { useId, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { PROTO_GLIDER, PROTO_PARTS, PROTO_WING, PROTO_LOCATION_NAMES, PROTO_REAR_LOCATIONS } from "../../data/protomech";
-import { BOOKS } from "../../data/editions";
 import { groupOf } from "../../rules/catalog";
 import type { Catalog } from "../../rules/catalog";
 import { DEFAULT_LEVEL, levelAtLeast, levelRow } from "../../rules/levels";
-import { officialLabel } from "../../rules/official";
 import { armorPoints, ammoKg, engineKg, engineRating, holdsAt, launcherOf, limitOf, locationsOf, mountKg, mountName, plainRun, rowOf, runMP, structurePoints, structureRow, tally, tubesOf, usesAmmo } from "../../rules/protomech/build";
 import { isGlider, speedLabels } from "../../rules/protomech/config";
 import { armorChoices, armorTypeOf, cockpitChoices, configChoices, jumpChoices, jumpMP, jumpReach, jumpSystemOf, tonnageChoices, wingBonus, wingOffered } from "../../rules/protomech/options";
@@ -20,6 +18,7 @@ import { tidy } from "../../rules/walk";
 import { NumberField, SelectField, TextField, fieldId } from "../aero/fields";
 import { YearEraFields, eraFollowsBase } from "../YearEraFields";
 import LevelSelect from "../editor/LevelSelect";
+import { OfficialMark, OfficialMarkPanel } from "../editor/Marks";
 import ProtoDiagram from "./ProtoDiagram";
 import { locationDomId, mountDomId, mountFor, pickerLabel, setChassis } from "./edit";
 import type { ProtoOnEdit } from "./edit";
@@ -378,50 +377,26 @@ export function FindingsPanel({ findings, targetOf, onChoose }: { findings: Prot
 }
 
 export function OfficialBadge({ record }: { record: ProtoRecord }) {
-  const state = protoOfficialState(record);
-  const { badge, detail } = officialLabel(state);
-  return (
-    <span className="bt-official" data-official={state.official}>
-      <strong className="bt-official__badge">{badge}</strong>
-      {detail && <span className="bt-official__detail">{` ${detail}`}</span>}
-    </span>
-  );
+  return <OfficialMark state={protoOfficialState(record)} />;
 }
 
 export function OfficialPanel({ record, onEdit }: PartProps) {
-  const state = protoOfficialState(record);
-  const [book, setBook] = useState(record.official?.book ?? "");
-  const [page, setPage] = useState(record.official?.page === undefined ? "" : String(record.official.page));
-  const id = useId();
-  const pageNumber = page.trim() === "" ? undefined : Number(page);
-  const pageBad = pageNumber !== undefined && !(Number.isInteger(pageNumber) && pageNumber > 0);
   return (
-    <section className="bt-panel bt-editor__wide" aria-labelledby={`${id}-heading`}>
-      <h2 id={`${id}-heading`}>Official or not</h2>
-      <p><OfficialBadge record={record} /></p>
-      <p className="bt-hint">OFFICIAL means the game's publisher put this design out in a book. You state it; we never claim it for you. Changing the design (not the name, the notes or the picture) turns it NOT OFFICIAL, and Undo gets it back.</p>
-      {state.official ? (
-        <button type="button" className="bt-button bt-button--secondary" onClick={() => { onEdit((d) => void delete d.official); }}>
-          Mark NOT OFFICIAL
-        </button>
-      ) : (
-        <div className="bt-grid">
-          <div className="bt-field">
-            <label htmlFor={`${id}-book`}>Book</label>
-            <input id={`${id}-book`} type="text" list={`${id}-books`} value={book} onChange={(e) => { setBook(e.target.value); }} />
-            <datalist id={`${id}-books`}>{Object.keys(BOOKS).map((title) => <option key={title} value={title} />)}</datalist>
-          </div>
-          <div className="bt-field">
-            <label htmlFor={`${id}-page`}>Page (optional)</label>
-            <input id={`${id}-page`} type="text" inputMode="numeric" value={page} aria-invalid={pageBad || undefined} onChange={(e) => { setPage(e.target.value); }} />
-            {pageBad && <span className="bt-hint">Enter a page number.</span>}
-          </div>
-          <button type="button" className="bt-button" disabled={book.trim() === "" || pageBad} onClick={() => { onEdit((d) => { markProtoOfficial(d, book, pageNumber); }); }}>
-            Mark OFFICIAL
-          </button>
-        </div>
-      )}
-    </section>
+    <OfficialMarkPanel
+      wide
+      state={protoOfficialState(record)}
+      stated={record.official}
+      onMark={(book, page) => {
+        onEdit((d) => {
+          markProtoOfficial(d, book, page);
+        });
+      }}
+      onUnmark={() => {
+        onEdit((d) => {
+          delete d.official;
+        });
+      }}
+    />
   );
 }
 

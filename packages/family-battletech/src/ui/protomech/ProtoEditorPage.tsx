@@ -1,8 +1,7 @@
 // The ProtoMech editor: one saved ProtoMech, edited in place, with the rules check beside it, the same layout and controls as the 'Mech editor. The page holds the
 // record's history (for Undo and Redo), derives everything else from the current record, and hands each panel what it shows and an `onEdit(change)` callback.
-import { Component, useEffect, useMemo, useState } from "react";
-import type { ErrorInfo, ReactNode } from "react";
-import { Link, useBlocker, useLocation, useSearchParams } from "react-router";
+import { useEffect, useMemo, useState } from "react";
+import { Link, useLocation, useSearchParams } from "react-router";
 import { loadCatalog } from "../../rules/catalog";
 import type { Catalog } from "../../rules/catalog";
 import { tally } from "../../rules/protomech/build";
@@ -11,17 +10,16 @@ import type { ProtoFinding } from "../../rules/protomech/checks";
 import type { ProtoRecord } from "../../rules/protomech/record";
 import { protoTitle } from "../../rules/protomech/record";
 import LeaveConfirm from "../editor/LeaveConfirm";
-import { STORAGE_READ_FAILED, STORAGE_WRITE_FAILED, downloadJson } from "../storage";
+import { useRecordHistory } from "../editor/useRecordHistory";
+import { STORAGE_READ_FAILED } from "../storage";
+import UnitBoundary from "../UnitBoundary";
 import { fieldId } from "../aero/fields";
 import { ArmorPanel, ChassisPanel, FindingsPanel, IdentityPanel, OfficialBadge, OfficialPanel, RatingPanel, WeaponsPanel } from "./ProtoPanels";
 import { locationDomId, mountDomId } from "./edit";
-import type { ProtoOnEdit } from "./edit";
 import { CLASSIC_HOME, sheetHref } from "./routes";
 import { downloadProto, openProtoStorage } from "./storage";
 import type { ProtoStorage } from "./storage";
 import "./protomech.scss";
-
-const HISTORY_LIMIT = 100;
 
 type Loaded =
   | { state: "loading" }
@@ -30,52 +28,13 @@ type Loaded =
   | { state: "failed" }
   | { state: "ready"; storage: ProtoStorage; catalog: Catalog; record: ProtoRecord };
 
-/** A saved unit the editor cannot show must never blank the page: it says which record it is, offers a copy of what is stored, and a way back. */
-class Boundary extends Component<{ id: string; children: ReactNode }, { error?: Error }> {
-  override state: { error?: Error } = {};
-  static getDerivedStateFromError(error: unknown): { error: Error } {
-    return { error: error instanceof Error ? error : new Error(String(error)) };
-  }
-  override componentDidCatch(error: Error, info: ErrorInfo) {
-    console.error(error, info.componentStack);
-  }
-  override render() {
-    if (!this.state.error) return this.props.children;
-    const { id } = this.props;
-    return (
-      <div className="sr-page">
-        <h1>This unit could not be shown</h1>
-        <p>Something in the saved unit stopped this page from drawing. Nothing has been changed or lost. You can keep a copy of exactly what is saved.</p>
-        <p>
-          Record id: <code>{id || "(none)"}</code>
-        </p>
-        <p className="bt-hint">{this.state.error.message}</p>
-        <p className="bt-actions">
-          <button
-            type="button"
-            className="bt-button"
-            onClick={() => {
-              void openProtoStorage().then((s) => s.raw(id)).then((stored) => { downloadJson(`${id.replace(/[^A-Za-z0-9-]+/g, "-") || "unit"}.raw.json`, stored ?? null); });
-            }}
-          >
-            Export raw record
-          </button>
-          <Link className="bt-button bt-button--secondary" to={CLASSIC_HOME}>
-            Back to Classic BattleTech
-          </Link>
-        </p>
-      </div>
-    );
-  }
-}
-
 export default function ProtoEditorPage() {
   const [params] = useSearchParams();
   const id = params.get("id") ?? "";
   return (
-    <Boundary key={id} id={id}>
+    <UnitBoundary key={id} id={id} unit="unit" home={CLASSIC_HOME} raw={async (key) => (await openProtoStorage()).raw(key)}>
       <Loader id={id} />
-    </Boundary>
+    </UnitBoundary>
   );
 }
 
@@ -113,13 +72,6 @@ function Loader({ id }: { id: string }) {
   );
 }
 
-interface History {
-  past: ProtoRecord[];
-  present: ProtoRecord;
-  future: ProtoRecord[];
-  group?: string;
-}
-const same = (a: ProtoRecord, b: ProtoRecord) => a === b || JSON.stringify(a) === JSON.stringify(b);
 
 /** The id of the control a finding points at, when this page has one. */
 export function targetFor(where: ProtoFinding["where"], record: ProtoRecord): string | undefined {
@@ -134,80 +86,23 @@ export function targetFor(where: ProtoFinding["where"], record: ProtoRecord): st
 }
 
 function Editor({ initial, catalog, storage }: { initial: ProtoRecord; catalog: Catalog; storage: ProtoStorage }) {
-  const [history, setHistory] = useState<History>({ past: [], present: initial, future: [] });
-  const [saved, setSaved] = useState<ProtoRecord>(initial);
-  const [justSaved, setJustSaved] = useState(false);
-  const [status, setStatus] = useState("");
-  const [problem, setProblem] = useState("");
+  const { record, dirty, canUndo, canRedo, edit, undo, redo, save, endGroup, justSaved, status, setStatus, problem, blocker } = useRecordHistory(initial, (r) => storage.save(r));
   const [weightOpen, setWeightOpen] = useState(false);
   // What an import from Mordel could not match, handed over by the Import page.
   const state: unknown = useLocation().state;
   const stateNotes = typeof state === "object" && state !== null && "notes" in state ? (state as { notes: unknown }).notes : undefined;
   const notes = Array.isArray(stateNotes) ? stateNotes.filter((n): n is string => typeof n === "string") : [];
-  const record = history.present;
-  const dirty = !same(record, saved);
-
-  const edit: ProtoOnEdit = (change, field) => {
-    setJustSaved(false);
-    setStatus("");
-    setHistory((h) => {
-      const next = structuredClone(h.present);
-      change(next);
-      if (same(next, h.present)) return h;
-      const joins = field !== undefined && h.group === field;
-      return { past: joins ? h.past : [...h.past, h.present].slice(-HISTORY_LIMIT), present: next, future: [], group: field };
-    });
-  };
-  const undo = () => {
-    setJustSaved(false);
-    setHistory((h) => {
-      const previous = h.past[h.past.length - 1];
-      return previous ? { past: h.past.slice(0, -1), present: previous, future: [h.present, ...h.future] } : h;
-    });
-  };
-  const redo = () => {
-    setJustSaved(false);
-    setHistory((h) => {
-      const next = h.future[0];
-      return next ? { past: [...h.past, h.present].slice(-HISTORY_LIMIT), present: next, future: h.future.slice(1) } : h;
-    });
-  };
-  const save = async () => {
-    const toSave = record;
-    try {
-      await storage.save(toSave);
-    } catch {
-      setJustSaved(false);
-      setProblem(STORAGE_WRITE_FAILED);
-      return;
-    }
-    setProblem("");
-    setSaved(toSave);
-    setJustSaved(true);
-  };
 
   const findings = useMemo(() => checkProto(record, catalog), [record, catalog]);
   const weight = useMemo(() => tally(record, catalog), [record, catalog]);
   const errorAt = useMemo(() => findings.filter((f) => f.level === "error" && f.where?.location !== undefined).map((f) => f.where?.location ?? ""), [findings]);
-  const blocker = useBlocker(dirty);
-  useEffect(() => {
-    if (!dirty) return;
-    const warn = (event: BeforeUnloadEvent) => {
-      event.preventDefault();
-      event.returnValue = "";
-    };
-    window.addEventListener("beforeunload", warn);
-    return () => {
-      window.removeEventListener("beforeunload", warn);
-    };
-  }, [dirty]);
 
   const title = protoTitle(record);
   const limit = record.tons * 1000;
   const weightText = `${String(weight.total)} of ${String(limit)} kg${weight.unknown.length > 0 ? ", not counting what could not be weighed" : ""}`;
 
   return (
-    <div className="sr-page bt-editor" onBlur={() => { setHistory((h) => (h.group === undefined ? h : { ...h, group: undefined })); }}>
+    <div className="sr-page bt-editor" onBlur={endGroup}>
       <header className="bt-editor__header">
         <div className="bt-editor__title">
           <Link className="bt-back" to={CLASSIC_HOME}>
@@ -220,8 +115,8 @@ function Editor({ initial, catalog, storage }: { initial: ProtoRecord; catalog: 
         <div className="bt-actions">
           <button type="button" className="bt-button" disabled={!dirty} onClick={() => { void save(); }}>Save</button>
           <Link className="bt-button bt-button--secondary" to={sheetHref([record.id])}>Record sheet</Link>
-          <button type="button" className="bt-button bt-button--secondary" disabled={history.past.length === 0} onClick={undo}>Undo</button>
-          <button type="button" className="bt-button bt-button--secondary" disabled={history.future.length === 0} onClick={redo}>Redo</button>
+          <button type="button" className="bt-button bt-button--secondary" disabled={!canUndo} onClick={undo}>Undo</button>
+          <button type="button" className="bt-button bt-button--secondary" disabled={!canRedo} onClick={redo}>Redo</button>
           <button type="button" className="bt-button bt-button--secondary" onClick={() => { downloadProto(record); setStatus("Export started."); }}>Export</button>
           <button type="button" className="bt-weight__toggle" aria-expanded={weightOpen} aria-controls="pm-weight-lines" onClick={() => { setWeightOpen(!weightOpen); }}>
             {weightText}

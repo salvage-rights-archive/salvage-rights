@@ -1,7 +1,7 @@
 // The Support Vehicle editor: one saved Support Vehicle, edited in place, with the rules check beside it. Laid out as the 'Mech editor is: the record's history
 // (for Undo and Redo) lives here, everything else is derived from the current record, and each panel gets what it shows and an `onEdit(change)` callback.
 import { useEffect, useMemo, useState } from "react";
-import { Link, useBlocker, useSearchParams } from "react-router";
+import { Link, useSearchParams } from "react-router";
 import { loadCatalog } from "../../rules/catalog";
 import type { Catalog } from "../../rules/catalog";
 import type { Finding } from "../../rules/checks";
@@ -12,17 +12,15 @@ import { svTally } from "../../rules/support-vehicle/sv";
 import type { SupportVehicleRecord } from "../../rules/support-vehicle/sv";
 import FindingsPanel from "../editor/FindingsPanel";
 import LeaveConfirm from "../editor/LeaveConfirm";
-import { STORAGE_READ_FAILED, STORAGE_WRITE_FAILED } from "../storage";
+import { useRecordHistory } from "../editor/useRecordHistory";
+import { STORAGE_READ_FAILED } from "../storage";
 import SvBoundary from "./SvBoundary";
 import SvOfficialPanel, { SvOfficialBadge } from "./SvOfficial";
 import { ArmorPanel, ChassisPanel, CrewPanel, EnginePanel, EquipmentPanel, HeatPanel, IdentityPanel, locationFieldId, mountDomId } from "./SvParts";
-import type { SvOnEdit } from "./edit";
 import { SV_HOME, svSheetHref } from "./routes";
 import { downloadSv, openSvStorage } from "./storage";
 import type { SvStorage } from "./storage";
 import "../vehicle/vehicle.scss";
-
-const HISTORY_LIMIT = 100;
 
 type Loaded =
   | { state: "loading" }
@@ -85,15 +83,6 @@ function Loader({ id }: { id: string }) {
   );
 }
 
-interface History {
-  past: SupportVehicleRecord[];
-  present: SupportVehicleRecord;
-  future: SupportVehicleRecord[];
-  /** The field being typed into: edits to it in a row make one step. */
-  group?: string;
-}
-
-const same = (a: SupportVehicleRecord, b: SupportVehicleRecord) => a === b || JSON.stringify(a) === JSON.stringify(b);
 
 /** The id of the control a finding points at, when this vehicle's page has one. */
 export function targetFor(where: Finding["where"], record: SupportVehicleRecord): string | undefined {
@@ -114,69 +103,12 @@ export function targetFor(where: Finding["where"], record: SupportVehicleRecord)
 }
 
 function Editor({ initial, catalog, storage }: { initial: SupportVehicleRecord; catalog: Catalog; storage: SvStorage }) {
-  const [history, setHistory] = useState<History>({ past: [], present: initial, future: [] });
-  const [saved, setSaved] = useState<SupportVehicleRecord>(initial);
-  const [justSaved, setJustSaved] = useState(false);
-  const [status, setStatus] = useState("");
-  const [problem, setProblem] = useState("");
+  const { record, dirty, canUndo, canRedo, edit, undo, redo, save, endGroup, justSaved, status, setStatus, problem, blocker } = useRecordHistory(initial, (r) => storage.save(r));
   const [weightOpen, setWeightOpen] = useState(false);
   const [selected, setSelected] = useState<string>();
-  const record = history.present;
-  const dirty = !same(record, saved);
-
-  const edit: SvOnEdit = (change, field) => {
-    setJustSaved(false);
-    setStatus("");
-    setHistory((h) => {
-      const next = structuredClone(h.present);
-      change(next);
-      if (same(next, h.present)) return h;
-      const joins = field !== undefined && h.group === field;
-      return { past: joins ? h.past : [...h.past, h.present].slice(-HISTORY_LIMIT), present: next, future: [], group: field };
-    });
-  };
-  const undo = () => {
-    setJustSaved(false);
-    setHistory((h) => {
-      const previous = h.past[h.past.length - 1];
-      return previous ? { past: h.past.slice(0, -1), present: previous, future: [h.present, ...h.future] } : h;
-    });
-  };
-  const redo = () => {
-    setJustSaved(false);
-    setHistory((h) => {
-      const next = h.future[0];
-      return next ? { past: [...h.past, h.present].slice(-HISTORY_LIMIT), present: next, future: h.future.slice(1) } : h;
-    });
-  };
-  const save = async () => {
-    const toSave = record;
-    try {
-      await storage.save(toSave);
-    } catch {
-      setJustSaved(false);
-      setProblem(STORAGE_WRITE_FAILED);
-      return;
-    }
-    setProblem("");
-    setSaved(toSave);
-    setJustSaved(true);
-  };
 
   const findings = useMemo(() => checkSv(record, catalog), [record, catalog]);
   const tally = useMemo(() => svTally(record, catalog), [record, catalog]);
-  const blocker = useBlocker(dirty);
-  useEffect(() => {
-    if (!dirty) return;
-    const warn = (event: BeforeUnloadEvent) => {
-      event.preventDefault();
-      event.returnValue = "";
-    };
-    window.addEventListener("beforeunload", warn);
-    return () => {
-      window.removeEventListener("beforeunload", warn);
-    };
-  }, [dirty]);
 
   const title = `${record.name.chassis} ${record.name.model}`.trim();
   const weightText = `${String(tally.total)} of ${String(record.tons)} tons${tally.unknown.length === 0 ? "" : ", not counting what could not be weighed"}`;
@@ -184,10 +116,7 @@ function Editor({ initial, catalog, storage }: { initial: SupportVehicleRecord; 
   return (
     <div
       className="sr-page bt-editor"
-      onBlur={() => {
-        // Leaving a field ends the run of edits that make one Undo step.
-        setHistory((h) => (h.group === undefined ? h : { ...h, group: undefined }));
-      }}
+      onBlur={endGroup}
     >
       <header className="bt-editor__header">
         <div className="bt-editor__title">
@@ -206,10 +135,10 @@ function Editor({ initial, catalog, storage }: { initial: SupportVehicleRecord; 
           <Link className="bt-button bt-button--secondary" to={svSheetHref(record.id)}>
             Record sheet
           </Link>
-          <button type="button" className="bt-button bt-button--secondary" disabled={history.past.length === 0} onClick={undo}>
+          <button type="button" className="bt-button bt-button--secondary" disabled={!canUndo} onClick={undo}>
             Undo
           </button>
-          <button type="button" className="bt-button bt-button--secondary" disabled={history.future.length === 0} onClick={redo}>
+          <button type="button" className="bt-button bt-button--secondary" disabled={!canRedo} onClick={redo}>
             Redo
           </button>
           <button
