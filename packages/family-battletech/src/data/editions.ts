@@ -245,18 +245,11 @@ export const CLAN_SUB_ERAS: EraRow[] = [
   // Post-Reaving: the Homeworld Clans use the Clan base (introduced by 3085), the Escorpion Imperio Mixed, every other power the Inner Sphere base (introduced by 3049) (p.24).
   { id: "clan-post-reaving", name: "Clan Post-Reaving", startYear: 3086, endYear: 3150, space: "clan", techBases: ["inner-sphere", "clan"], introCaps: { clan: 3085, mixed: 3085, "inner-sphere": 3049 }, cite: { book: IO_AE, page: 24 }, checked: "page" },
 ];
-/** The eras the book names that the Master Unit List does not: its umbrella eras and its own sub-era spans, which overlap the list's rows (a year in 3025
- * is in the list's Late Succession War - Renaissance, the book's Late Succession Wars, the Succession Wars Era and the Clan sub-eras). Each takes the tech base
- * rules of its section; an umbrella era's are those of its sub-eras. Years and pages read against the page images. */
-export const BOOK_SUB_ERAS: EraRow[] = [
-  { id: "star-league-era", name: "Star League Era", startYear: 2300, endYear: 2780, space: "inner-sphere", techBases: IS, cite: { book: IO_AE, page: 8 }, checked: "page" },
-  { id: "succession-wars-era", name: "Succession Wars Era", startYear: 2781, endYear: 3049, space: "inner-sphere", techBases: IS, noMixed: true, cite: { book: IO_AE, page: 9 }, checked: "page" },
-  { id: "late-succession-wars", name: "Late Succession Wars", startYear: 2901, endYear: 3049, space: "inner-sphere", techBases: IS, noMixed: true, cite: { book: IO_AE, page: 14 }, checked: "page" },
-  { id: "clan-sub-eras", name: "Clan Sub-Eras", startYear: 2800, endYear: 3049, space: "clan", techBases: BOTH, noMixed: true, introCaps: { "inner-sphere": 2780 }, cite: { book: IO_AE, page: 9 }, checked: "page" },
-  { id: "dark-age-era", name: "Dark Age Era", startYear: 3086, endYear: 3150, space: "both", techBases: BOTH, cite: { book: IO_AE, page: 10 }, checked: "page" },
-  { id: "republic-age", name: "Republic Age", alsoCalled: "Age of the Republic", startYear: 3086, endYear: 3130, space: "inner-sphere", techBases: BOTH, cite: { book: IO_AE, page: 23 }, checked: "page" },
-];
-/** Every era a game can pick besides its main table: the book's own and the Clan sub-eras. */
-export const SUB_ERAS: EraRow[] = [...BOOK_SUB_ERAS, ...CLAN_SUB_ERAS];
+/** Era ids once offered as the book's umbrella eras. Each only repeated the rows it spans (same tech bases, Mixed rule, date caps and years), so a year in
+ * one was always "in two eras". A saved record that still names one loads as it is and reads as naming no era: its year (and tech base) pick the finer era,
+ * since an umbrella span has no single finer row to map to. Never offered, never in `SUB_ERAS`. */
+export const RETIRED_ERA_IDS: readonly string[] = ["star-league-era", "succession-wars-era", "late-succession-wars", "clan-sub-eras", "dark-age-era", "republic-age"];
+/** Every era a game can pick besides its main table: the Clan sub-eras. */
+export const SUB_ERAS: EraRow[] = [...CLAN_SUB_ERAS];
 /** An era as a choice reads: its name, and the book's other name for it. */
 export const eraLabel = (era: Pick<EraRow, "name" | "alsoCalled">): string => (era.alsoCalled === undefined ? era.name : `${era.name} (${era.alsoCalled})`);

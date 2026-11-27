@@ -274,7 +274,7 @@ describe("the year decides the era, and a dual year the tech base", () => {
   it("offers Clan from 2800 and not 2799, and a year in two eras lets the picked era decide Inner Sphere or Clan", () => {
     const bases = (year: number, era?: string) => techBaseChoices("standard", era === "clan-golden-years" ? "clan" : "inner-sphere", { year, era }).map(([value]) => value);
     expect([bases(2799).includes("clan"), bases(2800).includes("clan")]).toEqual([false, true]);
-    expect(erasOfYear(2900).map((e) => e.id)).toEqual(["early-succession-war", "succession-wars-era", "clan-sub-eras", "clan-golden-years"]);
+    expect(erasOfYear(2900).map((e) => e.id)).toEqual(["early-succession-war", "clan-golden-years"]);
     expect(erasOfYear(3060).map((e) => e.id)).toEqual(["clan-invasion"]); // one era: shown as text, no choice
     expect([bases(2900, "clan-golden-years").includes("clan"), bases(2900, "clan-golden-years").includes("inner-sphere")]).toEqual([true, true]);
     expect([bases(2900, "early-succession-war").includes("clan"), bases(2900, "early-succession-war").includes("inner-sphere")]).toEqual([false, true]);
@@ -307,9 +307,9 @@ describe("every era the year is in, and what the picked one allows", () => {
   const eraErrors = (r: MechRecord) => runChecks(r, catalog).filter((f) => f.level === "error" && (f.where?.field === "era" || f.where?.field === "techBase")).map((f) => f.message);
 
   it("offers every era or sub-era that holds the year, three at 2800, and the Star League in Exile (a faction) takes the Inner Sphere base only", () => {
-    expect(erasOfYear(2800).map((e) => e.id)).toEqual(["early-succession-war", "succession-wars-era", "clan-sub-eras", "star-league-in-exile", "clan-founding-years"]);
-    expect(erasOfYear(2790).map((e) => e.id)).toEqual(["early-succession-war", "succession-wars-era", "star-league-in-exile"]);
-    expect(erasOfYear(3100).map((e) => e.id)).toEqual(["early-republic", "dark-age-era", "republic-age", "clan-post-reaving"]);
+    expect(erasOfYear(2800).map((e) => e.id)).toEqual(["early-succession-war", "star-league-in-exile", "clan-founding-years"]);
+    expect(erasOfYear(2790).map((e) => e.id)).toEqual(["early-succession-war", "star-league-in-exile"]);
+    expect(erasOfYear(3100).map((e) => e.id)).toEqual(["early-republic", "clan-post-reaving"]);
     const bases = (year: number, era: string) => techBaseChoices("unlimited", "inner-sphere", { year, era }).map(([v]) => v);
     expect(bases(2790, "star-league-in-exile")).toEqual(["inner-sphere"]);
   });
@@ -360,10 +360,13 @@ describe("Clan sub-eras allow both bases, the book's own eras are choices, and a
     expect(techBaseChoices("unlimited", "", { year: null, era: "star-league-in-exile" }).map(([v]) => v)).toEqual(["inner-sphere"]);
   });
 
-  it("adds the book's umbrella and sub-eras beside the list's, with the book's other names in the label", () => {
-    const ids = erasOfYear(3100).map((e) => e.id);
-    expect(ids).toEqual(expect.arrayContaining(["dark-age-era", "republic-age"]));
-    expect(erasOfYear(2400).map((e) => e.id)).toEqual(["age-of-war", "star-league-era"]);
+  it("a saved record naming a retired umbrella era loads with no era finding and the year picks the era", () => {
+    const old = { ...bipedRecord(), techBase: "inner-sphere" as const, year: 2400, era: "star-league-era" };
+    expect(eraOfRecord(old)?.id).toBe("age-of-war");
+    expect(runChecks(old, catalog).filter((f) => f.where?.field === "era")).toEqual([]);
+  });
+
+  it("labels an era with the other name the book gives it", () => {
     expect([eraLabel(ERAS.find((e) => e.id === "civil-war")!), eraLabel(ERAS.find((e) => e.id === "jihad")!)]).toEqual(["Civil War (Late Invasion Era)", "Jihad (Wars of Reaving)"]);
   });
 });

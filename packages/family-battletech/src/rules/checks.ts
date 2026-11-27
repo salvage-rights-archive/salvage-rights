@@ -29,6 +29,7 @@ import {
 import type { Cite, PartFacts, RulesLevel, Span } from "../data/chassis";
 import { configurationInTime, equipmentPhase, eraOfRecord, erasOfYear, pastEraCap, partPhase, partSpans, typeInTime, windowOf } from "./availability";
 import { listed, RULESETS, rulesetOf } from "../data/rulesets";
+import { RETIRED_ERA_IDS } from "../data/editions";
 import { CLAN_CASE_IDS, clanCaseAllowed } from "./case";
 import { heatSinkTypeOf, locationsFor, mountableOn, mountsRequired, podMountable } from "./catalog";
 import { heatSinkMixAllowed, levelAtLeast, levelIn, levelItems, levelOfRecord, levelRow, mixedPhase } from "./levels";
@@ -605,13 +606,13 @@ export function yearEraFindings(record: Pick<MechRecord, "year" | "era" | "techB
   if (ruleset.dated && record.year === null && level !== undefined && level !== "introductory") {
     out.push(finding("availability", "error", `This ${unit} needs a year at ${levelRow(level, ruleset).label} rules: the year sets the era, and the era and year decide the technology offered.`, { where: { field: "year" }, cite: IO_UTA }));
   }
-  if (record.era !== undefined && record.year !== null && !holding.some((era) => era.id === record.era)) {
+  if (record.era !== undefined && record.year !== null && !RETIRED_ERA_IDS.includes(record.era) && !holding.some((era) => era.id === record.era)) {
     out.push(finding("availability", "warning", `The era is ${record.era}, but the year ${record.year} is ${holding[0] ? `in the ${holding[0].name} era` : "in no era we list"}. Choose the era again or change the year.`, { where: { field: "era" } }));
   }
   // Only an era the record actually names is held against its tech base: a record with none (an old save, a Mordel import, a year moved out of
   // a picked sub-era) is in the era its tech base and year make it, a Clan unit in a Clan sub-era (IO:AE p.9).
   const named = record.era === undefined ? undefined : [...ruleset.eras, ...(ruleset.subEras ?? [])].find((era) => era.id === record.era);
-  if (record.era !== undefined && named === undefined) {
+  if (record.era !== undefined && named === undefined && !RETIRED_ERA_IDS.includes(record.era)) {
     out.push(finding("availability", "error", `The era "${record.era}" is not one we list; choose an era again.`, { where: { field: "era" } }));
   }
   if (named?.techBases && record.techBase !== "mixed" && !named.techBases.some((base) => base === record.techBase) && (record.year === null || holding.some((era) => era.id === named.id))) {
