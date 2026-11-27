@@ -10,7 +10,7 @@ import type { When } from "../rules/availability";
 import { eraChoice, eraFull, eraList, useEraRoom } from "./eraChoice";
 import { EraCaption, eraCaptionId, eraCaptionText } from "./eraCaption";
 import { levelAtLeast, levelIn, levelRow, techBaseChoices, withLevel } from "../rules/levels";
-import { clanInTime, superheavyPhase } from "../rules/time";
+import { UNLIMITED_NOTE, clanInTime, superheavyPhase } from "../rules/time";
 import { DEFAULT_AERO_EDITION } from "../data/aero";
 import { newAeroRecord } from "../rules/aero";
 import type { AeroType } from "../data/aero";
@@ -927,7 +927,7 @@ export default function HomePage() {
               </div>
             </div>
             <span id="bt-new-year-hint" className="bt-hint bt-grid__wide">
-              {aboveIntroductory ? "Needed. The year sets the era and hides the body types, parts and tech bases that did not exist yet." : "Optional at Introductory, which is 3025 technology. A year sets the era and hides what did not exist yet."}
+              {draft.rulesLevel === "unlimited" ? UNLIMITED_NOTE : aboveIntroductory ? "Needed. The year sets the era and hides the body types, parts and tech bases that did not exist yet." : "Optional at Introductory, which is 3025 technology. A year sets the era and hides what did not exist yet."}
             </span>
             {!aeroPicked && !protoPicked && !vehiclePicked && !svPicked && !baPicked && !infantryPicked && (
             <div className="bt-field">

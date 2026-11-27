@@ -13,7 +13,7 @@ describe("AeroTech year and era", () => {
   it("the tech bases follow the year and the era picked: no Clans before the Clan sub-eras, the picked era decides in a year in two, older editions the same without a level", () => {
     expect(techBasesFor(unit("tw-tm-so", { year: 2750, techBase: "inner-sphere" }))).toEqual(["inner-sphere"]);
     expect(techBasesFor(unit("tw-tm-so", { year: 3000, era: "clan-golden-years", techBase: "inner-sphere" }))).toEqual(["inner-sphere", "clan"]);
-    expect(techBasesFor(unit("tw-tm-so", { year: 3000, era: "succession-wars-era", techBase: "inner-sphere" }))).toEqual(["inner-sphere"]);
+    expect(techBasesFor(unit("tw-tm-so", { year: 3000, era: "late-succession-war-lostech", techBase: "inner-sphere" }))).toEqual(["inner-sphere"]);
     expect(techBasesFor(unit("aerotech2", { year: 3060, techBase: "inner-sphere" }))).toEqual(["inner-sphere", "clan", "mixed"]);
     expect(techBasesFor(unit("aerotech2", { year: 2750, techBase: "inner-sphere" }))).toEqual(["inner-sphere"]);
     expect(techBasesFor(unit("aerotech-1986", { year: 3060, techBase: "inner-sphere" }))).toEqual(["inner-sphere"]);

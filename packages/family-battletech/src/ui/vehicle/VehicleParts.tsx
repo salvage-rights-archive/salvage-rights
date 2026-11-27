@@ -1,6 +1,7 @@
 // The vehicle editor's panels: identity, engine, armor, heat sinks and equipment. Each shows only what the unit's rules level, tech base and year
 // offer (hide, do not mark): a part the unit already holds stays listed, and the rules check reports it. Every derived figure comes from
 // rules/vehicle and is shown as a sentence in the panel's own words.
+import { UNLIMITED_NOTE } from "../../rules/time";
 import { useState } from "react";
 import { MOTIVE_CITE } from "../../data/vehicle";
 import { bookName, eraLabel } from "../../data/editions";
@@ -79,7 +80,7 @@ export function IdentityPanel({ record, onEdit }: PartProps) {
           label="Year"
           value={record.year}
           allowEmpty
-          hint={above ? `Needed at ${level} rules: it sets the era and hides what did not exist yet.` : undefined}
+          hint={record.rulesLevel === "unlimited" ? UNLIMITED_NOTE : above ? `Needed at ${level} rules: it sets the era and hides what did not exist yet.` : undefined}
           onValid={(v) => { onEdit((d) => { setYear(d, v); }, "year"); }}
         />
         {record.year !== null && yearEras.length === 1 ? (

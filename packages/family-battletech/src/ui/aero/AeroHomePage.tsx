@@ -1,5 +1,6 @@
 // The AeroTech home: the five editions as cards (oldest first, the current rules marked as the default), the saved units under their
 // editions, a build form that offers only what the chosen edition builds, and unit files in and out.
+import { UNLIMITED_NOTE } from "../../rules/time";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ChangeEvent } from "react";
 import { Link, useNavigate } from "react-router";
@@ -397,7 +398,7 @@ export default function AeroHomePage() {
               />
             </div>
             {!missing.startsWith("A year") && (
-              <p className="bt-hint bt-grid__wide">{draft.editionId === DEFAULT_AERO_EDITION ? "The year sets the era and hides the tech bases and equipment that did not exist yet." : "Optional: these books print no dates, but a year still sets the era and the tech bases that existed."}</p>
+              <p className="bt-hint bt-grid__wide">{draft.editionId === DEFAULT_AERO_EDITION && draft.rulesLevel === "unlimited" ? UNLIMITED_NOTE : draft.editionId === DEFAULT_AERO_EDITION ? "The year sets the era and hides the tech bases and equipment that did not exist yet." : "Optional: these books print no dates, but a year still sets the era and the tech bases that existed."}</p>
             )}
             <SelectField
               id="bt-new-tech"

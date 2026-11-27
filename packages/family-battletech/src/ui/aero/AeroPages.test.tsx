@@ -80,7 +80,7 @@ describe("AeroTech pages", () => {
     await waitFor(() => { expect(start.disabled).toBe(true); });
     await user.type(screen.getByLabelText("Year"), "3000");
     expect((screen.getByLabelText("Era") as HTMLSelectElement).value).toBe("late-succession-war-lostech"); // 3000 is in two eras: the Inner Sphere tech base takes the main one
-    await user.selectOptions(screen.getByLabelText("Era"), "succession-wars-era");
+    await user.selectOptions(screen.getByLabelText("Era"), "late-succession-war-renaissance");
     expect(optionsOf("Tech base")).toEqual(["Inner Sphere"]); // the era picked decides the base
     await user.selectOptions(screen.getByLabelText("Era"), "clan-golden-years");
     expect(optionsOf("Tech base")).toEqual(["Inner Sphere", "Clan"]);
