@@ -46,6 +46,21 @@ test("dev edition has no axe violations in either theme", async ({ page }) => {
   await expectNoViolations(page, DEV, ["/", "/about", "/settings", `${CLASSIC}/home`, `${CLASSIC}/import`, editorPath, sheetPath]);
 });
 
+
+test("the Unlimited markers on the build form are text, reachable by keyboard and pass axe in both themes", async ({ page }) => {
+  for (const theme of ["Light", "Dark"] as const) {
+    await chooseTheme(page, DEV, theme);
+    await page.goto(`${DEV}${CLASSIC}/home`);
+    const form = page.getByRole("form", { name: "Build a new one" });
+    await form.getByLabel("Rules level").selectOption("unlimited");
+    await form.getByLabel("Year").fill("2400");
+    await expectPage(form.getByLabel("Configuration").getByRole("option", { name: "Tripod (not yet)" })).toHaveCount(1);
+    await expectPage(form.getByText("Nothing is hidden at Unlimited", { exact: false })).toBeVisible();
+    await form.getByLabel("Configuration").focus();
+    await page.keyboard.press("ArrowDown");
+    await scan(page, theme, "the Unlimited build form");
+  }
+});
 test("the editor's picker and Actions row have no axe violations in either theme", async ({ page }) => {
   test.setTimeout(90_000);
   const editorPath = await importForScan(page);
