@@ -6,7 +6,7 @@ import { openAeroStorage } from "./storage";
 
 export default function AeroBoundary({ id, children }: { id: string; children: ReactNode }) {
   return (
-    <UnitBoundary id={id} unit="unit" home={AERO_HOME} game="AeroTech" raw={async (key) => (await openAeroStorage()).raw(key)}>
+    <UnitBoundary id={id} unit="unit" home={AERO_HOME} game="AeroTech" open={openAeroStorage}>
       {children}
     </UnitBoundary>
   );

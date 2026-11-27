@@ -13,7 +13,7 @@ import { beastSize, infantryBv, infantryCost, lineCode, offered as optionOffered
 import type { InfantryRecord } from "../../rules/infantry/platoon";
 import SneakSystemsField from "./SneakSystemsField";
 import LeaveConfirm from "../editor/LeaveConfirm";
-import { useRecordHistory } from "../editor/useRecordHistory";
+import { DraftOffer, useRecordHistory } from "../editor/useRecordHistory";
 import LevelSelect from "../editor/LevelSelect";
 import { STORAGE_READ_FAILED } from "../storage";
 import { NumberField, SelectField, TextField } from "../aero/fields";
@@ -78,7 +78,7 @@ const weaponLabel = (row: EquipmentRow): string => `${row.name}${row.techBase ==
 
 function Editor({ initial, catalog, storage }: { initial: InfantryRecord; catalog: Catalog; storage: InfantryStorage }) {
   const room = useEraRoom();
-  const { record, dirty, canUndo, canRedo, edit, undo, redo, save, endGroup, justSaved, status, setStatus, problem, blocker } = useRecordHistory(initial, (r) => storage.save(r));
+  const { record, dirty, canUndo, canRedo, edit, undo, redo, save, endGroup, justSaved, status, setStatus, problem, blocker, draft } = useRecordHistory(initial, (r) => storage.save(r));
   const level = record.rulesLevel ?? DEFAULT_LEVEL;
 
   const platoon = useMemo(() => platoonOf(record, catalog), [record, catalog]);
@@ -148,6 +148,7 @@ function Editor({ initial, catalog, storage }: { initial: InfantryRecord; catalo
         </div>
       </header>
       <div className="bt-editor__status">
+        <DraftOffer draft={draft} />
         <div role="status">{justSaved && !dirty ? "Saved." : status}</div>
         <div role="alert" className="bt-problem">{problem}</div>
       </div>

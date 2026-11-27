@@ -6,7 +6,7 @@ import { openVehicleStorage } from "./storage";
 
 export default function VehicleBoundary({ id, children }: { id: string; children: ReactNode }) {
   return (
-    <UnitBoundary id={id} unit="vehicle" home={VEHICLE_HOME} raw={async (key) => (await openVehicleStorage()).raw(key)}>
+    <UnitBoundary id={id} unit="vehicle" home={VEHICLE_HOME} open={openVehicleStorage}>
       {children}
     </UnitBoundary>
   );

@@ -3,7 +3,7 @@
 // have their own, RecordBoundary, which also offers to delete the record.)
 import { Component, useState } from "react";
 import type { ErrorInfo, ReactNode } from "react";
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
 import { downloadJson } from "./storage";
 
 export interface UnitBoundaryProps {
@@ -13,16 +13,27 @@ export interface UnitBoundaryProps {
   home: string;
   /** The game the way back names; Classic BattleTech unless said. */
   game?: string;
-  /** What is stored under the id, exactly as it is. */
-  raw: (id: string) => Promise<unknown>;
+  /** The unit type's store: what is saved under an id exactly as it is, and removing it. */
+  open: () => Promise<{ raw(id: string): Promise<unknown>; remove(id: string): Promise<void> }>;
   children: ReactNode;
 }
 
-function Failure({ id, unit, home, game = "Classic BattleTech", raw, message }: Omit<UnitBoundaryProps, "children"> & { message: string }) {
+function Failure({ id, unit, home, game = "Classic BattleTech", open, message }: Omit<UnitBoundaryProps, "children"> & { message: string }) {
   const [status, setStatus] = useState("");
+  const [confirming, setConfirming] = useState(false);
+  const navigate = useNavigate();
+  const remove = async () => {
+    try {
+      await (await open()).remove(id);
+      void navigate(home);
+    } catch {
+      setConfirming(false);
+      setStatus("We could not delete that record.");
+    }
+  };
   const exportRaw = async () => {
     try {
-      downloadJson(`${id.replace(/[^A-Za-z0-9-]+/g, "-") || "unit"}.raw.json`, (await raw(id)) ?? null);
+      downloadJson(`${id.replace(/[^A-Za-z0-9-]+/g, "-") || "unit"}.raw.json`, (await (await open()).raw(id)) ?? null);
       setStatus("Export started.");
     } catch {
       setStatus("We could not read that record to export it.");
@@ -31,7 +42,7 @@ function Failure({ id, unit, home, game = "Classic BattleTech", raw, message }: 
   return (
     <div className="sr-page">
       <h1>{`This ${unit} could not be shown`}</h1>
-      <p>Something in the saved unit stopped this page from drawing. Nothing has been changed or lost. You can keep a copy of exactly what is saved.</p>
+      <p>Something in the saved unit stopped this page from drawing. Nothing has been changed or lost. You can keep a copy of exactly what is saved, or delete the record.</p>
       <p>
         Record id: <code>{id || "(none)"}</code>
       </p>
@@ -40,6 +51,20 @@ function Failure({ id, unit, home, game = "Classic BattleTech", raw, message }: 
         <button type="button" className="bt-button" onClick={() => { void exportRaw(); }}>
           Export raw record
         </button>
+        {confirming ? (
+          <>
+            <button type="button" className="bt-button bt-button--secondary" onClick={() => { void remove(); }}>
+              Delete it for good
+            </button>
+            <button type="button" className="bt-button bt-button--secondary" onClick={() => { setConfirming(false); }}>
+              Keep it
+            </button>
+          </>
+        ) : (
+          <button type="button" className="bt-button bt-button--secondary" disabled={id === ""} onClick={() => { setConfirming(true); }}>
+            Delete this record
+          </button>
+        )}
         <Link className="bt-button bt-button--secondary" to={home}>
           {`Back to ${game}`}
         </Link>
