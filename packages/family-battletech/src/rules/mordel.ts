@@ -399,7 +399,9 @@ function convert(response: unknown, catalog: Catalog, editionId: string, now: st
       }
       return;
     }
-    let { row, why } = find(name, tech);
+    const looked = find(name, tech);
+    let row = looked.row;
+    const why = looked.why;
     let mountTech = tech;
     // Mordel may label an item with the other tech base than the one the books print it for (a PPC capacitor is Inner Sphere only): an item
     // found under the other base alone is taken as that one, with a note.
