@@ -79,7 +79,7 @@ describe("Gothic eras and levels", () => {
     expect(eraOfRecord({ editionId: "gothic", year: 3015 })?.name).toBe("Endless War");
     const draft = { editionId: "gothic", year: 3015 as number | null, era: undefined as string | undefined };
     setEra(draft, "gothic-star-league");
-    expect([draft.era, draft.year]).toEqual(["gothic-star-league", null]);
+    expect([draft.era, draft.year]).toEqual(["gothic-star-league", 2675]);
   });
 
   it("shows Licensed non-canon as Unofficial, and the Light Blazer makes a design Unofficial", () => {

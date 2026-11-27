@@ -78,13 +78,16 @@ describe("The 'Mech editor", () => {
     expect(screen.getByText(/^[\d.]+ of 50 tons, not counting \d+ items? of unknown weight$/)).toBeTruthy();
   });
 
-  it("puts Name, Model, Type and Configuration first in the identity card, and switching to IndustrialMech re-filters the lists and judges the parts by its rules", async () => {
+  it("puts Name, Model, Type, Rules level, Year and Era above Configuration in the identity card, the era a select beside the year, and switching to IndustrialMech re-filters the lists and judges the parts by its rules", async () => {
     await saved(mordelBiped());
     const user = userEvent.setup();
     await open("imported-1");
     const card = (await screen.findByRole("heading", { level: 2, name: "Identity" })).closest("section");
     if (!card) throw new Error("no identity card");
-    expect([...card.querySelectorAll("label")].map((l) => l.textContent).slice(0, 6)).toEqual(["Name", "Model", "Type", "Configuration", "Rules level", "Year"]);
+    expect([...card.querySelectorAll("label")].map((l) => l.textContent).slice(0, 7)).toEqual(["Name", "Model", "Type", "Rules level", "Year", "Era", "Configuration"]);
+    const era = within(card).getByLabelText("Era");
+    expect(era.tagName).toBe("SELECT");
+    expect(era.closest(".bt-grid")).toBe(within(card).getByLabelText("Year").closest(".bt-grid"));
     const type = within(card).getByLabelText<HTMLSelectElement>("Type");
     const config = within(card).getByLabelText<HTMLSelectElement>("Configuration");
     const texts = (select: HTMLSelectElement) => [...select.options].map((o) => o.text);

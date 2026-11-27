@@ -12,6 +12,8 @@
 // the level its `prototypeLevel` names, where the books print it lower); before its prototype year it does not exist.
 import { ARMOR, COCKPITS, ENGINE_TYPES, GYROS, HEAT_SINKS, isStarLeagueTech, MECH_TYPES, MYOMER, SHEET, STRUCTURE_TYPES } from "../data/chassis";
 import type { ConfigurationRow, MechType, MechTypeRow, PartFacts, PartUnit, RulesLevel, Span } from "../data/chassis";
+import { CLAN_SUB_ERAS } from "../data/editions";
+import type { EraRow } from "../data/editions";
 import { inGame, listsOpen, rulesetOf } from "../data/rulesets";
 import { CLAN_CASE_IDS, clanCaseAllowed } from "./case";
 import { mountableOn } from "./catalog";
@@ -20,7 +22,7 @@ import { DEFAULT_LEVEL, equipmentLevel, levelAtLeast, levelIn, partLevel } from 
 import { SUPERHEAVY } from "../data/chassis";
 import { industrialRulesOf, mechTypeOf, primitiveRulesOf, requiredCockpit, superheavyOf } from "./mech";
 import type { MechRecord } from "./mech";
-import { datesText, eraOfRecord, erasOfYear, partPrototype, partSpans, phaseIn, rowPhase, windowOf } from "./time";
+import { datesText, eraOfRecord, eraOfYear, erasOfYear, partPrototype, partSpans, phaseIn, rowPhase, windowOf } from "./time";
 import type { Phase, When } from "./time";
 
 export { eraNeedsPick, eraOfRecord, eraOfYear, erasOfYear, partSpans, spansFit, windowOf } from "./time";
@@ -30,20 +32,50 @@ export type { Phase, When, Window } from "./time";
 // Eras and years: kept consistent, in the era table of the draft's game (its edition's; none: Classic)
 // ---------------------------------------------------------------------------------------------------------------
 
-/** Set the year on a draft; the era follows it. A year in one era sets that era; a year in two (an Inner Sphere era and a Clan sub-era) keeps
- * the era the draft already names if it holds the year, and otherwise leaves it unset for the player to pick. A cleared year leaves the era as it was. */
-export function setYear(draft: When, year: number | null): void {
-  draft.year = year;
-  if (year === null) return;
-  const eras = erasOfYear(year, rulesetOf(draft.editionId));
-  if (draft.era !== undefined && eras.some((era) => era.id === draft.era)) return;
-  const only = eras.length === 1 ? eras[0] : undefined;
-  if (only) draft.era = only.id;
+
+/** The eras a tech base can use out of `eras` (hide, do not mark): an era whose tech bases leave the base out is not offered, and a Mixed unit takes only an
+ * era that allows Mixed. If that leaves nothing the list stays whole, since a year some era holds must offer something. */
+export function erasForTechBase(eras: EraRow[], techBase: string | undefined): EraRow[] {
+  if (techBase === undefined) return eras;
+  const fits = eras.filter((era) => (techBase === "mixed" ? era.noMixed !== true : era.techBases === undefined || (era.techBases as string[]).includes(techBase)));
+  return fits.length > 0 ? fits : eras;
+}
+
+/** The one era a year in several eras belongs to for a tech base, or undefined when that is still ambiguous. An Inner Sphere unit takes the Master Unit List era
+ * (the main table); a Clan unit the Clan sub-era the year is in (the book umbrella eras are never picked for it, and with no Clan sub-era it takes the main
+ * era); a Mixed unit the one of those two that the era rows allow Mixed in, if only one does. */
+function eraFor(eras: EraRow[], techBase: string | undefined, main: EraRow | undefined): EraRow | undefined {
+  if (eras.length <= 1) return eras[0];
+  const clan = erasForTechBase(eras.filter((era) => CLAN_SUB_ERAS.some((row) => row.id === era.id)), "clan");
+  if (techBase === "clan") return clan.length === 1 ? clan[0] : clan.length === 0 ? main : undefined;
+  if (techBase === "mixed") {
+    const open = [...(main ? [main] : []), ...clan].filter((era) => era.noMixed !== true);
+    return open.length === 1 ? open[0] : undefined;
+  }
+  return main;
+}
+
+/** Re-resolve the era of a draft by its tech base (a changed tech base calls this): a year in one era names it; a year in two takes the era the tech base
+ * decides, or leaves the era unset for the player to pick when it is still ambiguous. A draft with no year is left alone. */
+export function resolveEra(draft: When & { techBase?: string }): void {
+  if (draft.year === null) return;
+  const ruleset = rulesetOf(draft.editionId);
+  const era = eraFor(erasOfYear(draft.year, ruleset), draft.techBase, eraOfYear(draft.year, ruleset));
+  if (era) draft.era = era.id;
   else delete draft.era;
 }
 
-/** Set the era on a draft (an empty or unknown id clears it). A year the new era does not hold is cleared, since a year and an era that
- * disagree is the one state this keeps out; the era then limits what is offered by its whole span. */
+/** Set the year on a draft; the era follows it. The era the draft already names stays if it holds the year; otherwise the era is resolved by the tech base
+ * (resolveEra). A cleared year leaves the era as it was. */
+export function setYear(draft: When & { techBase?: string }, year: number | null): void {
+  draft.year = year;
+  if (year === null) return;
+  if (draft.era !== undefined && erasOfYear(year, rulesetOf(draft.editionId)).some((era) => era.id === draft.era)) return;
+  resolveEra(draft);
+}
+
+/** Set the era on a draft (an empty or unknown id clears only the era). The year follows it: one the era holds stays, and any other (or none) becomes the
+ * mean of the era years, an open-ended era (ilClan) taking its first year. This is the one place for that rule. */
 export function setEra(draft: When, id: string): void {
   const ruleset = rulesetOf(draft.editionId);
   const era = [...ruleset.eras, ...(ruleset.subEras ?? [])].find((row) => row.id === id);
@@ -52,7 +84,7 @@ export function setEra(draft: When, id: string): void {
     return;
   }
   draft.era = era.id;
-  if (draft.year !== null && !erasOfYear(draft.year, ruleset).some((row) => row.id === era.id)) draft.year = null;
+  if (draft.year === null || !erasOfYear(draft.year, ruleset).some((row) => row.id === era.id)) draft.year = era.endYear === undefined ? era.startYear : Math.round((era.startYear + era.endYear) / 2);
 }
 
 // ---------------------------------------------------------------------------------------------------------------

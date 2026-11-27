@@ -26,13 +26,13 @@ describe("AeroTech year and era", () => {
     expect(ids(unit("tw-tm-so", { year: 3070, techBase: "inner-sphere" }))).toEqual(expect.arrayContaining(["medium-laser-is", "lb-5-x-ac-is"]));
   });
 
-  it("the new-unit form needs a year above Introductory and an era when the year is in two, and asks for neither in the older books", () => {
+  it("the new-unit form needs a year above Introductory and takes the era of a year in two from the tech base, and asks for neither in the older books", () => {
     const form = settle({ ...newDraft(), chassis: "Wasp" });
     expect(draftMissing(form)).toContain("A year is needed");
     expect(draftMissing(settle({ ...form, rulesLevel: "introductory" }))).toBe("");
     const two = settle({ ...form, year: 3000 });
     expect(yearErasOf(two).length).toBeGreaterThan(1);
-    expect(draftMissing(two)).toContain("two eras");
+    expect([two.era, draftMissing(two)]).toEqual(["late-succession-war-lostech", ""]);
     const picked = settle({ ...two, era: "clan-golden-years" });
     expect(draftMissing(picked)).toBe("");
     expect(settle({ ...picked, techBase: "clan" }).techBase).toBe("clan");

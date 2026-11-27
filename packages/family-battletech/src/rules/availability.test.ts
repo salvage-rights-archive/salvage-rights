@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { ERAS, eraLabel } from "../data/editions";
 import type { Span } from "../data/chassis";
-import { configurationAvailable, configurationChoices, equipmentAvailable, eraOfRecord, erasOfYear, pastEraCap, partAvailable, partChoices, setEra, setYear, typeAvailable } from "./availability";
+import { configurationAvailable, configurationChoices, equipmentAvailable, eraOfRecord, erasForTechBase, erasOfYear, pastEraCap, partAvailable, partChoices, resolveEra, setEra, setYear, typeAvailable } from "./availability";
 import type { PartKind } from "./availability";
 import { expand, groupOf, loadCatalog } from "./catalog";
 import type { Catalog } from "./catalog";
@@ -86,19 +86,46 @@ describe("chassis parts and body types", () => {
 });
 
 describe("era and year", () => {
-  it("keep each other consistent: a year names its era, an era that does not hold the year clears it, and old records read their era from the year", () => {
+  it("keep each other consistent: a year names its era, and old records read their era from the year", () => {
     const draft = record({ year: 3025 });
     expect(eraOfRecord(draft)?.id).toBe("late-succession-war-renaissance");
     setYear(draft, 3067);
     expect([draft.era, draft.year]).toEqual(["civil-war", 3067]);
-    setEra(draft, "civil-war");
-    expect(draft.year).toBe(3067);
-    setEra(draft, "jihad");
-    expect([draft.era, draft.year]).toEqual(["jihad", null]);
-    setEra(draft, "no-such-era");
-    expect(draft.era).toBeUndefined();
     expect(eraOfRecord({ year: 3067, era: "star-league" })?.id).toBe("civil-war");
     expect(ERAS.map((e) => e.id)).toContain("civil-war");
+  });
+
+  it("takes the Clan sub-era for a Clan unit and the main era for an Inner Sphere unit when a year is in two, and leaves a Mixed one to choose", () => {
+    const resolved = (techBase: MechRecord["techBase"], year: number) => {
+      const draft = record({ techBase, year: null });
+      setYear(draft, year);
+      return draft.era;
+    };
+    expect([resolved("clan", 3100), resolved("inner-sphere", 3100), resolved("clan", 3040), resolved("inner-sphere", 3040), resolved("mixed", 3100)]).toEqual(["clan-post-reaving", "early-republic", "clan-golden-years", "late-succession-war-renaissance", undefined]);
+  });
+
+  it("re-resolves a year in two eras when the tech base changes, and offers a tech base only the eras it can use", () => {
+    const draft = record({ techBase: "inner-sphere", year: 3040 });
+    setYear(draft, 3040);
+    draft.techBase = "clan";
+    resolveEra(draft);
+    expect(draft.era).toBe("clan-golden-years");
+    expect(erasForTechBase(ERAS, "clan").map((e) => e.id)).not.toContain("age-of-war");
+  });
+
+  it("fills the year with the mean of a chosen era, an open-ended era with its first year, keeps a year inside the era, and clears only the era for Any era", () => {
+    const draft = record({ year: null });
+    setEra(draft, "jihad");
+    expect([draft.era, draft.year]).toEqual(["jihad", 3077]);
+    draft.year = 3070;
+    setEra(draft, "jihad");
+    expect(draft.year).toBe(3070);
+    setEra(draft, "civil-war");
+    expect([draft.era, draft.year]).toEqual(["civil-war", 3065]);
+    setEra(draft, "ilclan");
+    expect(draft.year).toBe(3151);
+    setEra(draft, "");
+    expect([draft.era, draft.year]).toEqual([undefined, 3151]);
   });
 });
 
@@ -300,7 +327,7 @@ describe("every era the year is in, and what the picked one allows", () => {
     expect(eraErrors(record({ techBase: "clan", year: 2900, era: "early-succession-war", rulesLevel: "advanced" }))).toEqual([expect.stringContaining("which uses Inner Sphere technology, but the tech base is Clan")]);
     const moved = record({ techBase: "clan", year: 2900, era: "clan-golden-years", rulesLevel: "advanced" });
     setYear(moved, 3100);
-    expect([moved.era, eraErrors(moved)]).toEqual([undefined, []]);
+    expect([moved.era, eraErrors(moved)]).toEqual(["clan-post-reaving", []]);
     expect(eraErrors(record({ year: 3025, era: "made-up" }))).toEqual([expect.stringContaining('The era "made-up" is not one we list')]);
   });
 
