@@ -110,7 +110,7 @@ test.describe("dev edition", () => {
     await expect(page.getByTestId("family-tile")).toHaveCount(2);
     // Every link in the page's own content, in document order: a tile that is one link, then the links inside the other.
     const contentLinks = page.getByRole("main").getByRole("link");
-    const expected = ["Salvage Rights, back to Games", "Games", "About", "Settings"].map((name) => ({
+    const expected = ["Skip to content", "Salvage Rights, back to Games", "Games", "About", "Settings"].map((name) => ({
       name,
       link: page.getByRole("link", { name, exact: true }),
       token: "--sr-header-focus",

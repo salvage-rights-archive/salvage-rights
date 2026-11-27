@@ -3,7 +3,7 @@
 // callback. The unit is built under one edition and the panels show only what that edition builds; the check beside it speaks for that
 // edition and can also speak for another ("Check under") without touching the unit.
 import { useEffect, useMemo, useState } from "react";
-import { Link, useBlocker, useSearchParams } from "react-router";
+import { Link, useSearchParams } from "react-router";
 import { aeroEditionName } from "../../data/aero";
 import { loadCatalog } from "../../rules/catalog";
 import type { Catalog } from "../../rules/catalog";
@@ -12,22 +12,20 @@ import type { AeroRecord } from "../../rules/aero";
 import { checkAero } from "../../rules/aero-checks";
 import type { AeroFinding } from "../../rules/aero-checks";
 import LeaveConfirm from "../editor/LeaveConfirm";
+import { useRecordHistory } from "../editor/useRecordHistory";
 import AeroBoundary from "./AeroBoundary";
 import AeroOfficialPanel, { AeroOfficialBadge } from "./AeroOfficial";
-import { STORAGE_READ_FAILED, STORAGE_WRITE_FAILED } from "../storage";
+import { STORAGE_READ_FAILED } from "../storage";
 import { CraftPanel, WeaponsPanel, arcDomId, mountDomId } from "./AeroArcs";
 import AeroFindings from "./AeroFindings";
 import AeroBvPanel from "./AeroBvPanel";
 import { ArmorPanel, EnginePanel, HeatPanel, IdentityPanel, WeightLines } from "./AeroParts";
-import type { AeroOnEdit } from "./edit";
 import { fieldId } from "./fields";
 import { sheetProfileFor } from "../../data/aero-sheet";
 import { AERO_HOME, sheetHref } from "./routes";
 import { downloadAero, openAeroStorage } from "./storage";
 import type { AeroStorage } from "./storage";
 import "./aero.scss";
-
-const HISTORY_LIMIT = 100;
 
 type Loaded =
   | { state: "loading" }
@@ -90,15 +88,6 @@ function Loader({ id }: { id: string }) {
   );
 }
 
-interface History {
-  past: AeroRecord[];
-  present: AeroRecord;
-  future: AeroRecord[];
-  /** The field being typed into: edits to it in a row make one step. */
-  group?: string;
-}
-
-const same = (a: AeroRecord, b: AeroRecord) => a === b || JSON.stringify(a) === JSON.stringify(b);
 
 /** The id of the control a finding points at, when this unit's page has one. */
 export function targetFor(where: AeroFinding["where"], record: AeroRecord): string | undefined {
@@ -122,68 +111,11 @@ export function targetFor(where: AeroFinding["where"], record: AeroRecord): stri
 }
 
 function Editor({ initial, catalog, storage }: { initial: AeroRecord; catalog: Catalog; storage: AeroStorage }) {
-  const [history, setHistory] = useState<History>({ past: [], present: initial, future: [] });
-  const [saved, setSaved] = useState<AeroRecord>(initial);
-  const [justSaved, setJustSaved] = useState(false);
-  const [status, setStatus] = useState("");
-  const [problem, setProblem] = useState("");
+  const { record, dirty, canUndo, canRedo, edit, undo, redo, save, endGroup, justSaved, status, setStatus, problem, blocker } = useRecordHistory(initial, (r) => storage.save(r));
   const [weightOpen, setWeightOpen] = useState(false);
-  const record = history.present;
-  const dirty = !same(record, saved);
-
-  const edit: AeroOnEdit = (change, field) => {
-    setJustSaved(false);
-    setStatus("");
-    setHistory((h) => {
-      const next = structuredClone(h.present);
-      change(next);
-      if (same(next, h.present)) return h;
-      const joins = field !== undefined && h.group === field;
-      return { past: joins ? h.past : [...h.past, h.present].slice(-HISTORY_LIMIT), present: next, future: [], group: field };
-    });
-  };
-  const undo = () => {
-    setJustSaved(false);
-    setHistory((h) => {
-      const previous = h.past[h.past.length - 1];
-      return previous ? { past: h.past.slice(0, -1), present: previous, future: [h.present, ...h.future] } : h;
-    });
-  };
-  const redo = () => {
-    setJustSaved(false);
-    setHistory((h) => {
-      const next = h.future[0];
-      return next ? { past: [...h.past, h.present].slice(-HISTORY_LIMIT), present: next, future: h.future.slice(1) } : h;
-    });
-  };
-  const save = async () => {
-    const toSave = record;
-    try {
-      await storage.save(toSave);
-    } catch {
-      setJustSaved(false);
-      setProblem(STORAGE_WRITE_FAILED);
-      return;
-    }
-    setProblem("");
-    setSaved(toSave);
-    setJustSaved(true);
-  };
 
   const findings = useMemo(() => checkAero(record, catalog), [record, catalog]);
   const tally = useMemo(() => (fighterKind(record) !== undefined ? fighterTally(record, catalog) : vessel(record, catalog)?.tally), [record, catalog]);
-  const blocker = useBlocker(dirty);
-  useEffect(() => {
-    if (!dirty) return;
-    const warn = (event: BeforeUnloadEvent) => {
-      event.preventDefault();
-      event.returnValue = "";
-    };
-    window.addEventListener("beforeunload", warn);
-    return () => {
-      window.removeEventListener("beforeunload", warn);
-    };
-  }, [dirty]);
 
   const title = `${record.name.chassis} ${record.name.model}`.trim();
   const weightText =
@@ -192,10 +124,7 @@ function Editor({ initial, catalog, storage }: { initial: AeroRecord; catalog: C
   return (
     <div
       className="sr-page bt-editor"
-      onBlur={() => {
-        // Leaving a field ends the run of edits that make one Undo step.
-        setHistory((h) => (h.group === undefined ? h : { ...h, group: undefined }));
-      }}
+      onBlur={endGroup}
     >
       <header className="bt-editor__header">
         <div className="bt-editor__title">
@@ -224,10 +153,10 @@ function Editor({ initial, catalog, storage }: { initial: AeroRecord; catalog: C
               Record sheet
             </Link>
           )}
-          <button type="button" className="bt-button bt-button--secondary" disabled={history.past.length === 0} onClick={undo}>
+          <button type="button" className="bt-button bt-button--secondary" disabled={!canUndo} onClick={undo}>
             Undo
           </button>
-          <button type="button" className="bt-button bt-button--secondary" disabled={history.future.length === 0} onClick={redo}>
+          <button type="button" className="bt-button bt-button--secondary" disabled={!canRedo} onClick={redo}>
             Redo
           </button>
           <button

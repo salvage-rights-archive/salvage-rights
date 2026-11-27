@@ -1,13 +1,12 @@
 // The panels beside the editor: the rules check, Battle Value and cost, and the OFFICIAL mark. Same look as the 'Mech editor's.
-import { useId, useMemo, useState } from "react";
-import { BOOKS } from "../../data/editions";
+import { useMemo } from "react";
 import { markOfficial, officialState } from "../../rules/battlearmor/checks";
 import type { BaFinding } from "../../rules/battlearmor/checks";
 import { battleValue, unitCost } from "../../rules/battlearmor/bv";
 import type { BaRecord } from "../../rules/battlearmor/record";
 import type { Catalog } from "../../rules/catalog";
-import { officialLabel } from "../../rules/official";
 import { Disclosure, Rows, cbills } from "../editor/CalculatorPanel";
+import { OfficialMark, OfficialMarkPanel } from "../editor/Marks";
 import type { BaOnEdit } from "./edit";
 
 const GROUPS: { level: BaFinding["level"]; title: string }[] = [
@@ -83,55 +82,25 @@ export function BaCalc({ record, catalog }: { record: BaRecord; catalog: Catalog
 }
 
 export function BaOfficialBadge({ record }: { record: BaRecord }) {
-  const state = officialState(record);
-  const { badge, detail } = officialLabel(state);
-  return (
-    <span className="bt-official" data-official={state.official}>
-      <strong className="bt-official__badge">{badge}</strong>
-      {detail && <span className="bt-official__detail">{` ${detail}`}</span>}
-    </span>
-  );
+  return <OfficialMark state={officialState(record)} />;
 }
 
 export function BaOfficialPanel({ record, onEdit }: { record: BaRecord; onEdit: BaOnEdit }) {
-  const state = officialState(record);
-  const [book, setBook] = useState(record.official?.book ?? "");
-  const [pageText, setPage] = useState(record.official?.page === undefined ? "" : String(record.official.page));
-  const id = useId();
-  const pageNumber = pageText.trim() === "" ? undefined : Number(pageText);
-  const pageBad = pageNumber !== undefined && !(Number.isInteger(pageNumber) && pageNumber > 0);
   return (
-    <section className="bt-panel bt-editor__wide" aria-labelledby={`${id}-heading`}>
-      <h2 id={`${id}-heading`}>Official or not</h2>
-      <p>
-        <BaOfficialBadge record={record} />
-      </p>
-      <p className="bt-hint">OFFICIAL means the game's publisher put this design out in a book. You state it; we never claim it for you. Changing the design (not the name, the notes or the picture) turns it NOT OFFICIAL, and Undo gets it back.</p>
-      {state.official ? (
-        <button type="button" className="bt-button bt-button--secondary" onClick={() => { onEdit((d) => { delete d.official; }); }}>
-          Mark NOT OFFICIAL
-        </button>
-      ) : (
-        <div className="bt-grid">
-          <div className="bt-field">
-            <label htmlFor={`${id}-book`}>Book</label>
-            <input id={`${id}-book`} type="text" list={`${id}-books`} value={book} onChange={(e) => { setBook(e.target.value); }} />
-            <datalist id={`${id}-books`}>
-              {Object.keys(BOOKS).map((title) => (
-                <option key={title} value={title} />
-              ))}
-            </datalist>
-          </div>
-          <div className="bt-field">
-            <label htmlFor={`${id}-page`}>Page (optional)</label>
-            <input id={`${id}-page`} type="text" inputMode="numeric" value={pageText} aria-invalid={pageBad || undefined} onChange={(e) => { setPage(e.target.value); }} />
-            {pageBad && <span className="bt-hint">Enter a page number.</span>}
-          </div>
-          <button type="button" className="bt-button" disabled={book.trim() === "" || pageBad} onClick={() => { onEdit((d) => { markOfficial(d, book, pageNumber); }); }}>
-            Mark OFFICIAL
-          </button>
-        </div>
-      )}
-    </section>
+    <OfficialMarkPanel
+      wide
+      state={officialState(record)}
+      stated={record.official}
+      onMark={(book, page) => {
+        onEdit((d) => {
+          markOfficial(d, book, page);
+        });
+      }}
+      onUnmark={() => {
+        onEdit((d) => {
+          delete d.official;
+        });
+      }}
+    />
   );
 }
