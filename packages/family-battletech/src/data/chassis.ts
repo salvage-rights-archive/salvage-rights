@@ -16,7 +16,7 @@ import type { UnitId } from "./units";
 const WITH_GOTHIC: GameId[] = ["classic", "gothic"];
 
 export interface Cite {
-  book: "TechManual" | "Interstellar Operations: Alternate Eras" | "Tactical Operations: Advanced Units and Equipment" | "Campaign Operations";
+  book: "TechManual" | "Interstellar Operations: Alternate Eras" | "Tactical Operations: Advanced Units and Equipment" | "Campaign Operations" | "BattleTech Core Rulebook";
   page: number;
 }
 export type Checked = "page" | "text";

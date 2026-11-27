@@ -58,6 +58,8 @@ export const AMMUNITION: EquipmentGroup[] = [
       { id: "ammo-heavy-machine-gun-is", games: ["classic", "gothic"], shots: 100, name: "Heavy Machine Gun Ammo", availability: [{ from: 3068 }], prototypeYear: 3063, units: ["mech", "industrialmech", "vehicle"] },
       { id: "ammo-heavy-machine-gun-half-is", shots: 50, name: "Heavy Machine Gun Ammo (Half Ton)", tons: 0.5, availability: [{ from: 3068 }], units: ["mech", "industrialmech", "vehicle"] },
       { id: "ammo-vehicle-flamer-is", name: "Flamer (Vehicle) Ammo", aliases: ["Vehicle Flamer Ammo"], shotsPerTon: 20, availability: [{ from: 1950 }], units: ["mech", "industrialmech", "vehicle"] },
+      { id: "ammo-light-plasma-rifle-is", name: "Light Plasma Rifle Ammo", shotsPerTon: 20, availability: [{ from: 3068 }], yearsInferred: true, cite: { book: "BattleTech Core Rulebook", page: 248 }, units: ["mech", "industrialmech", "vehicle"] },
+      { id: "ammo-heavy-plasma-rifle-is", name: "Heavy Plasma Rifle Ammo", shotsPerTon: 8, availability: [{ from: 3068 }], yearsInferred: true, cite: { book: "BattleTech Core Rulebook", page: 248 }, units: ["mech", "industrialmech", "vehicle"] },
       { id: "ammo-plasma-rifle-is", name: "Plasma Rifle Ammo", shotsPerTon: 10, availability: [{ from: 3068 }], prototypeYear: 3061, units: ["mech", "industrialmech", "vehicle"] },
       // Missile ammunition (Inner Sphere)
       { id: "ammo-lrm-5-is", games: ["classic", "gothic"], name: "LRM 5 Ammo", shotsPerTon: 24, availability: [{ from: 2300 }], prototypeYear: 2295, units: ["mech", "industrialmech", "vehicle"] },
@@ -457,6 +459,8 @@ export const AMMUNITION: EquipmentGroup[] = [
       { id: "ammo-flechette-artillery-clan", name: "Flechette Artillery Ammo", availability: [{ from: 1950 }], cite: { book: TO, page: 227 }, playCite: { book: TO, page: 226 } },
       { id: "ammo-arrow-iv-illumination-clan", name: "Arrow IV (Illumination) Ammo", availability: [{ from: 2621 }], cite: { book: TO, page: 227 }, playCite: { book: TO, page: 226 } },
       { id: "ammo-illumination-artillery-clan", name: "Illumination Artillery Ammo", availability: [{ from: 1950 }], cite: { book: TO, page: 227 }, playCite: { book: TO, page: 226 } },
+      // The Core Rulebook (printed pp. 190 and 254) gives Inferno-IV to the Clan too, where Tactical Operations: AUE (p. 226) lists it Inner Sphere only; the later book wins, and the year is the Clan Arrow IV ammunition's (inferred).
+      { id: "ammo-inferno-iv-clan", name: "Inferno-IV Ammo", availability: [{ from: 2850 }], yearsInferred: true, cite: { book: "BattleTech Core Rulebook", page: 190 } },
       { id: "ammo-arrow-iv-smoke-clan", name: "Arrow IV (Smoke) Ammo", availability: [{ from: 2600 }], cite: { book: TO, page: 227 }, playCite: { book: TO, page: 226 } },
       { id: "ammo-smoke-artillery-clan", name: "Smoke Artillery Ammo", availability: [{ from: 1950 }], cite: { book: TO, page: 227 }, playCite: { book: TO, page: 226 } },
       { id: "ammo-thunder-fascam-artillery-clan", name: "Thunder (FASCAM) Artillery Ammo", availability: [{ from: 2621 }], cite: { book: TO, page: 227 }, playCite: { book: TO, page: 226 } },

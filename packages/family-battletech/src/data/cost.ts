@@ -261,6 +261,13 @@ interface PriceGroup extends Sourced {
 }
 export const EQUIPMENT_COST: PriceGroup[] = [
   {
+    // The heavy plasma rifle (catalog row flagged `bvInferred`, which covers the price too): no book we hold prints its cost. 320,000 is the figure that
+    // makes Mordel's cost for the Atlas AS7-Ln (unit 99519, 11,286,000) come out exactly; the light plasma rifle has no unit to work from and no price.
+    cite: { book: "BattleTech Core Rulebook", page: 248 },
+    checked: "text",
+    prices: { "heavy-plasma-rifle": 320_000 },
+  },
+  {
     // p.291: a torpedo launcher costs what its LRM or SRM does (x1, "as launcher"); the figures are the launchers' on the same page
     cite: { book: TM, page: 291 },
     checked: "page",
