@@ -446,8 +446,8 @@ export const PHYSICAL_BV: Sourced & { rows: Record<string, { factor: number; dam
     // Mace: 1 damage per 4 tons, rounded up (TO:AUE p.216, read on the page image); BV is that damage times 1 (TO:AUE p.195). It makes the
     // Gothic MAD-3H's printed Battle Value reproduce exactly (G-2).
     "mace-is": { factor: 1, damage: "mace" },
-    // Lance: the unit's tonnage over 5, rounded up (TO:AUE p.101), times 1 on the table's line "(Dmg x 1)*", whose footnote takes the damage after every
-    // modification such as TSM (p.197), so TSM doubles it as it does the others. A live 80-ton Lance IndustrialMech (Mordel, im 356) reproduces it exactly.
+    // Lance: the unit's tonnage over 5, rounded up (TO:AUE p.102), times 1 on the table's line "(Dmg x 1)*", whose footnote takes the damage after every
+    // modification such as TSM (p.195), so TSM doubles it as it does the others. A live 80-ton Lance IndustrialMech (Mordel, im 356) reproduces it exactly.
     "lance-is": { factor: 1, damage: "lance" },
   },
 };
