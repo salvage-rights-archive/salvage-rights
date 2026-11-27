@@ -286,8 +286,11 @@ export const AMMUNITION: EquipmentGroup[] = [
     defaults: { kind: "ammunition", techBase: "clan", cite: { book: TO, page: 217 }, playCite: { book: TO, page: 216 }, checked: "page" },
     items: [
       // Ammunition for the weapons above (the Ammo column; the bin is one ton in one slot, TechManual p. 57), pp. 216-217
+      // Clan Arrow IV rounds start no earlier than the Clan launcher (IO:AE artillery weapons table: Clan Arrow IV production 2850,
+      // CHH; the p. 53 ammo table dates the rounds for "All" tech bases by the Terran Hegemony only). The TO:AUE p. 227
+      // Clan column repeats the Star League date (2600), before the Clans existed (owner 2026-11-26; conflict 140).
       { id: "ammo-arrow-iv-clan", name: "Arrow IV (Non-Homing) Ammo", aliases: ["Arrow IV Ammo", "Arrow IV Non-Homing Ammo"], tons: 1, slots: 1, shotsPerTon: 5, availability: [{ from: 2850 }], rulesLevel: "advanced", cite: { book: TO, page: 227 }, playCite: { book: TO, page: 226 } },
-      { id: "ammo-arrow-iv-homing-clan", name: "Arrow IV (Homing) Ammo", aliases: ["Arrow IV Homing Ammo"], tons: 1, slots: 1, shotsPerTon: 5, availability: [{ from: 2600 }], rulesLevel: "advanced", cite: { book: TO, page: 227 }, playCite: { book: TO, page: 226 } },
+      { id: "ammo-arrow-iv-homing-clan", name: "Arrow IV (Homing) Ammo", aliases: ["Arrow IV Homing Ammo"], tons: 1, slots: 1, shotsPerTon: 5, availability: [{ from: 2850 }], rulesLevel: "advanced", cite: { book: TO, page: 227 }, playCite: { book: TO, page: 226 } },
       { id: "ammo-thumper-artillery-clan", name: "Thumper Artillery Ammo", tons: 1, slots: 1, shotsPerTon: 20, availability: [{ from: 1950 }], rulesLevel: "advanced" },
       { id: "ammo-sniper-artillery-clan", name: "Sniper Artillery Ammo", tons: 1, slots: 1, shotsPerTon: 10, availability: [{ from: 1950 }], rulesLevel: "advanced" },
       { id: "ammo-thumper-cannon-clan", name: "Thumper Cannon Ammo", tons: 1, slots: 1, shotsPerTon: 20, availability: [{ from: 3032 }], rulesLevel: "experimental" },
@@ -455,16 +458,16 @@ export const AMMUNITION: EquipmentGroup[] = [
       { id: "ammo-armor-piercing-clan", name: "Armor-Piercing Autocannon Ammo", availability: [{ from: 3105 }], cite: { book: IO, page: 53 } },
       { id: "ammo-flechette-clan", name: "Flechette Autocannon Ammo", availability: [{ from: 3105 }], cite: { book: IO, page: 53 } },
       { id: "ammo-tracer-ac-clan", name: "Tracer Autocannon Ammo", availability: [{ from: 2300 }] },
-      { id: "ammo-arrow-iv-cluster-clan", name: "Arrow IV (Cluster) Ammo", availability: [{ from: 2620 }] },
+      { id: "ammo-arrow-iv-cluster-clan", name: "Arrow IV (Cluster) Ammo", availability: [{ from: 2850 }] },
       { id: "ammo-cluster-long-tom-clan", name: "Cluster (Long Tom) Ammo", availability: [{ from: 1950 }] },
       { id: "ammo-cluster-sniper-clan", name: "Cluster (Sniper) Ammo", availability: [{ from: 1950 }] },
       { id: "ammo-cluster-thumper-clan", name: "Cluster (Thumper) Ammo", availability: [{ from: 1950 }] },
       { id: "ammo-flechette-artillery-clan", name: "Flechette Artillery Ammo", availability: [{ from: 1950 }], cite: { book: TO, page: 227 }, playCite: { book: TO, page: 226 } },
-      { id: "ammo-arrow-iv-illumination-clan", name: "Arrow IV (Illumination) Ammo", availability: [{ from: 2621 }], cite: { book: TO, page: 227 }, playCite: { book: TO, page: 226 } },
+      { id: "ammo-arrow-iv-illumination-clan", name: "Arrow IV (Illumination) Ammo", availability: [{ from: 2850 }], cite: { book: TO, page: 227 }, playCite: { book: TO, page: 226 } },
       { id: "ammo-illumination-artillery-clan", name: "Illumination Artillery Ammo", availability: [{ from: 1950 }], cite: { book: TO, page: 227 }, playCite: { book: TO, page: 226 } },
       // The Core Rulebook (printed pp. 190 and 254) gives Inferno-IV to the Clan too, where Tactical Operations: AUE (p. 226) lists it Inner Sphere only; the later book wins, and the year is the Clan Arrow IV ammunition's (inferred).
       { id: "ammo-inferno-iv-clan", name: "Inferno-IV Ammo", availability: [{ from: 2850 }], yearsInferred: true, cite: { book: "BattleTech Core Rulebook", page: 190 } },
-      { id: "ammo-arrow-iv-smoke-clan", name: "Arrow IV (Smoke) Ammo", availability: [{ from: 2600 }], cite: { book: TO, page: 227 }, playCite: { book: TO, page: 226 } },
+      { id: "ammo-arrow-iv-smoke-clan", name: "Arrow IV (Smoke) Ammo", availability: [{ from: 2850 }], cite: { book: TO, page: 227 }, playCite: { book: TO, page: 226 } },
       { id: "ammo-smoke-artillery-clan", name: "Smoke Artillery Ammo", availability: [{ from: 1950 }], cite: { book: TO, page: 227 }, playCite: { book: TO, page: 226 } },
       { id: "ammo-thunder-fascam-artillery-clan", name: "Thunder (FASCAM) Artillery Ammo", availability: [{ from: 2621 }], cite: { book: TO, page: 227 }, playCite: { book: TO, page: 226 } },
       { id: "ammo-flamer-coolant-clan", name: "Coolant Ammo (Flamer/Fluid Gun/Sprayer)", availability: [{ from: 2200 }], cite: { book: TO, page: 227 }, playCite: { book: TO, page: 226 }, yearsInferred: true },
