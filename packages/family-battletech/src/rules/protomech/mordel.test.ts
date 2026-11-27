@@ -87,6 +87,14 @@ describe("fromMordelProto", () => {
     expect([glider.record.configuration, glider.record.walk, glider.record.rulesLevel, glider.record.official]).toEqual(["glider", 4, "advanced", undefined]);
   });
 
+  it("carries a chemical laser's ammunition by the shot, 1,000 kg over the shots a ton holds rounded up, and counts its Battle Value (TO:AUE p. 131)", () => {
+    const base = delphyne();
+    const { record } = imported({ ...base, unit: { ...base.unit, equipment: [entry(1, "Medium Chemical Laser", "T"), ...shots("Medium Chemical Laser", 12)] } });
+    expect(record.mounts.map((m) => [m.equipmentId, m.shots])).toEqual([["chemical-laser-medium-clan", 12]]);
+    // 12 shots at 34 kg is 408 kg, a 0.408 ton share of the 5 a ton the table prints.
+    expect(protoBattleValue(record, catalog).offensive.ammunition).toBeCloseTo(2.04, 2);
+  });
+
   it("refuses what is not a ProtoMech or not a unit, and never throws", () => {
     expect(run({ status: "Error", message: "Unit not found" })).toEqual({ ok: false, message: 'Mordel answered with the status "Error": Unit not found.' });
     expect(run({ unit: { unit_type_short: "bm" } }).ok).toBe(false);
