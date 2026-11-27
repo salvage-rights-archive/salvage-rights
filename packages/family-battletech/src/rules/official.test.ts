@@ -65,7 +65,7 @@ describe("standardCompliance", () => {
       ["an Advanced item", (d) => void (d.chassis.armorType = "hardened"), /Hardened/],
       ["an error", (d) => void (d.armor.CT = { front: 99 }), /./],
       ["an unmatched mount", (d) => void d.mounts.push({ id: "x", equipmentId: null, name: "Mystery Box", techBase: "inner-sphere", location: "CT", slot: 5 }), /Mystery Box/],
-      ["no year or era", (d) => void (d.year = null), /no year or era/],
+      ["no year or era", (d) => { d.year = null; delete d.era; }, /no year or era/],
     ];
     for (const [what, change, reason] of cases) {
       const result = standardCompliance(editRecord(clean(), change), catalog);

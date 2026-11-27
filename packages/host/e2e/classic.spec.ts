@@ -271,7 +271,7 @@ test("pick an era and a tech base in the editor and see the picker's groups and 
   await form.getByLabel("Year").fill("3060");
   await form.getByRole("button", { name: "Start building" }).click();
   await page.getByLabel("Year").fill("3067");
-  await expect(page.locator("#field-era")).toHaveText("Civil War (Late Invasion Era)"); // one era holds the year: shown as text, with the book's other name
+  await expect(page.locator("#field-era")).toHaveValue("civil-war"); // one era holds the year: the era select takes it
 
   const dialog = page.getByRole("dialog");
   const open = async (search = "") => {

@@ -14,7 +14,7 @@ import type { Finding } from "../rules/checks";
 import { changedSinceImport } from "../rules/mordel";
 import { ARM_FULL, armorTypeAt, bodyOf, configurationOf, donorTons, editRecord, layout as buildLayout, locationName, mechTypeOf, partMountBase, patchworkActive, patchworkSlotsFor, setConfiguration, setMyomer, structurePoints, weights as buildWeights } from "../rules/mech";
 import type { Layout, LocationCode, MechRecord } from "../rules/mech";
-import { configurationChoices, eraNeedsPick, eraOfRecord, erasOfYear, partChoices, setEra, setYear } from "../rules/availability";
+import { configurationChoices, eraNeedsPick, eraOfRecord, erasForTechBase, erasOfYear, partChoices, resolveEra, setEra, setYear } from "../rules/availability";
 import type { PartKind } from "../rules/availability";
 import { frankenMechOffered, heatSinkMixAllowed, heatSinkMixPossible, levelOfRecord, levelRow, techBaseChoices, withLevel } from "../rules/levels";
 import {
@@ -776,7 +776,11 @@ function Editor({ initial, unsaved, startAt, catalog, storage }: { initial: Doc;
     : [];
   const base = gameBase(record);
   const ruleset = rulesetOf(record.editionId);
-  const yearEras = erasOfYear(record.year, ruleset);
+  // The era drop-down: every era the tech base can use (hide, do not mark; the era the record already has stays), the first row "Choose an era" while the year is in two eras and none is picked.
+  const eraNeeded = ruleset.dated && record.year !== null && eraNeedsPick(record);
+  const eraOptions: [string, string][] = [[ "", eraNeeded ? "Choose an era" : "Any era"], ...eraChoices(erasForTechBase([...ruleset.eras, ...(ruleset.subEras ?? [])], record.techBase)).slice(1)];
+  const eraNow = eraOfRecord(record);
+  if (eraNow && !eraOptions.some(([id]) => id === eraNow.id)) eraOptions.push(...eraChoices([eraNow]).slice(1));
   const gothic = ruleset.game === "gothic";
   const open = listsOpen(ruleset, record.rulesLevel); // Unlimited opens the whole catalog, Clan rows and every unit type included
   // Items whose weight we worked out because no book prints it (the Light Blazer), each named once for the weight list.
@@ -1015,16 +1019,8 @@ function Editor({ initial, unsaved, startAt, catalog, storage }: { initial: Doc;
                   FrankenMech (built from donor parts)
                 </label>
               )}
-              <SelectField
-                id="field-configuration"
-                label="Configuration"
-                value={record.configuration}
-                options={configurationChoices(record, record.configuration)}
-                changed={mark("configuration")}
-                disabled={fixedHere}
-                onChange={(v) => { edit((d) => { setConfiguration(d, v); if (d.patchwork) syncArmorMounts(d); }); }}
-              />
               <LevelSelect record={record} ruleset={ruleset} onChange={(level) => { edit((d) => void (d.rulesLevel = level)); }} />
+              <div className="bt-grid__wide bt-grid">
               <NumberField
                 id="field-year"
                 label="Year"
@@ -1034,8 +1030,7 @@ function Editor({ initial, unsaved, startAt, catalog, storage }: { initial: Doc;
                 needs={ruleset.dated && levelOfRecord(record, catalog) !== "introductory" ? `Needs a year at ${levelRow(levelOfRecord(record, catalog), ruleset).label} rules.` : undefined}
                 onValid={(v) => { edit((d) => { setYear(d, v); }, "year"); }}
               />
-              <div className="bt-grid__wide">
-              {(chassis !== undefined && !inBase) || (ruleset.dated && record.year !== null && yearEras.length === 1) ? (
+              {chassis !== undefined && !inBase ? (
                 <div className="bt-field">
                   <span id="field-era-label" className="bt-label">
                     Era
@@ -1043,19 +1038,28 @@ function Editor({ initial, unsaved, startAt, catalog, storage }: { initial: Doc;
                   <span id="field-era" tabIndex={-1} aria-labelledby="field-era-label">
                     {(() => { const era = eraOfRecord(record); return era ? eraLabel(era) : "Any era"; })()}
                   </span>
-                  <span className="bt-hint">{chassis !== undefined && !inBase ? "A configuration's era follows its year. Set the year here, or the base's era in the base." : "The era follows the year."}</span>
+                  <span className="bt-hint">A configuration's era follows its year. Set the year here, or the base's era in the base.</span>
                 </div>
               ) : (
               <SelectField
                 id="field-era"
                 label="Era"
                 value={ruleset.dated && record.year !== null && eraNeedsPick(record) ? "" : (eraOfRecord(record)?.id ?? "")}
-                options={ruleset.dated && record.year !== null && yearEras.length > 1 ? [["", "Choose an era"], ...yearEras.map((era): [string, string] => [era.id, `${eraLabel(era)} (${String(era.startYear)}${era.endYear === undefined ? " on" : `-${String(era.endYear)}`})`])] : eraChoices([...ruleset.eras, ...(ruleset.subEras ?? [])])}
+                options={eraOptions}
                 changed={mark("era")}
                 onChange={(v) => { edit((d) => { setEra(d, v); }, "era"); }}
               />
               )}
               </div>
+              <SelectField
+                id="field-configuration"
+                label="Configuration"
+                value={record.configuration}
+                options={configurationChoices(record, record.configuration)}
+                changed={mark("configuration")}
+                disabled={fixedHere}
+                onChange={(v) => { edit((d) => { setConfiguration(d, v); if (d.patchwork) syncArmorMounts(d); }); }}
+              />
               {(!gothic || open) && (
               <SelectField
                 id="field-techBase"
@@ -1064,7 +1068,7 @@ function Editor({ initial, unsaved, startAt, catalog, storage }: { initial: Doc;
                 options={techBaseChoices(record.rulesLevel, record.techBase, record)}
                 changed={mark("techBase")}
                 disabled={fixedHere}
-                onChange={(v) => { edit((d) => void (d.techBase = v as MechRecord["techBase"])); }}
+                onChange={(v) => { edit((d) => { d.techBase = v as MechRecord["techBase"]; if (erasOfYear(d.year, ruleset).length > 1) resolveEra(d); }); }}
               />
               )}
               {gothic && (

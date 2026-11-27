@@ -70,7 +70,7 @@ describe("AeroTech pages", () => {
     expect((screen.getByRole("button", { name: "Start building" }) as HTMLButtonElement).disabled).toBe(true);
   });
 
-  it("the new-unit form reads rules level, year, era (when two), tech base in that order, and needs the year until the level is Introductory", async () => {
+  it("the new-unit form reads rules level, year, era (when two), tech base in that order, takes the era from the year and the tech base, and needs the year until the level is Introductory", async () => {
     const user = userEvent.setup();
     render(<RouterProvider router={createMemoryRouter([{ path: AERO_HOME, element: <AeroHomePage /> }], { initialEntries: [AERO_HOME] })} />);
     await user.type(await screen.findByLabelText("Name"), "Wasp");
@@ -79,7 +79,7 @@ describe("AeroTech pages", () => {
     const start = screen.getByRole("button", { name: "Start building" }) as HTMLButtonElement;
     await waitFor(() => { expect(start.disabled).toBe(true); });
     await user.type(screen.getByLabelText("Year"), "3000");
-    expect(start.disabled).toBe(true); // 3000 is in two eras: the era is picked before the tech base is decided
+    expect((screen.getByLabelText("Era") as HTMLSelectElement).value).toBe("late-succession-war-lostech"); // 3000 is in two eras: the Inner Sphere tech base takes the main one
     await user.selectOptions(screen.getByLabelText("Era"), "succession-wars-era");
     expect(optionsOf("Tech base")).toEqual(["Inner Sphere"]); // the era picked decides the base
     await user.selectOptions(screen.getByLabelText("Era"), "clan-golden-years");
