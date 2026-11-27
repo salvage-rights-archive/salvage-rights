@@ -233,7 +233,7 @@ const FUEL_TANK_IDS = ["extended-fuel-tank-is", "extended-fuel-tank-clan"];
 const ARMS: LocationCode[] = ["LA", "RA"];
 const INWARD: Partial<Record<LocationCode, LocationCode>> = { LA: "LT", RA: "RT" }; // Damage Transfer Diagram, Total Warfare p. 123
 /** Where damage goes on from each location, the legs apart (TO:AUE p. 193: CASE II covers its own location and one out, excepting the legs). */
-const TRANSFERS_TO: Partial<Record<LocationCode, LocationCode>> = { LA: "LT", RA: "RT", LT: "CT", RT: "CT", HD: "CT" };
+const TRANSFERS_TO: Partial<Record<LocationCode, LocationCode>> = { LA: "LT", RA: "RT", LT: "CT", RT: "CT" };
 const PARTIAL_WING_IDS = ["partial-wing-is", "partial-wing-clan"];
 const PARTIAL_WING_BV = { mediumMaxTons: 55, lightMedium: 2, heavyAssault: 1, heat: 3 };
 const SUPERCHARGER_IDS = ["supercharger-is", "supercharger-clan"];
@@ -285,8 +285,8 @@ export function battleValue(record: MechRecord, catalog: Catalog, pilot: PilotSk
   // A UMU is calculated as if it were a jump jet (TO:AUE p.192, the BattleMech UMU System entry); the highest of the two movements counts.
   const jumpBase = Math.max(jumpJets(items), items.filter((i) => BV_RULE_ITEMS.superCooledMyomer.umuIds.includes(i.row.id)).length);
   // A Partial Wing adds Jumping MP to a unit that can jump, counted at standard atmosphere: 2 for a light or medium Mech, 1 for a heavy or assault one (TO:AUE pp. 107, 194).
-  const partialWing = has(PARTIAL_WING_IDS) && jumpBase > 0;
-  const jumpMP = jumpBase + (partialWing ? (record.tons <= PARTIAL_WING_BV.mediumMaxTons ? PARTIAL_WING_BV.lightMedium : PARTIAL_WING_BV.heavyAssault) : 0);
+  const partialWing = has(PARTIAL_WING_IDS);
+  const jumpMP = jumpBase + (partialWing && jumpBase > 0 ? (record.tons <= PARTIAL_WING_BV.mediumMaxTons ? PARTIAL_WING_BV.lightMedium : PARTIAL_WING_BV.heavyAssault) : 0);
   const improvedJets = has(IMPROVED_JUMP_JET_IDS);
   const cruise = jumpMP * LAM_BV.cruisePerJumpMP;
   const flank = Math.ceil(cruise * LAM_BV.flankFactor);
@@ -438,6 +438,7 @@ export function battleValue(record: MechRecord, catalog: Catalog, pilot: PilotSk
   // Coolant pods: heat sinks x (pods / 5), rounded up, at most twice the heat sinks (TO:AUE p. 193).
   const sinkCount = totalHeatSinks(chassis.heatSinks);
   const coolant = pods === 0 ? 0 : Math.min(2 * sinkCount, Math.ceil((sinkCount * pods) / 5));
+  // The wing's +3 heat modifier is our reading: the p. 194 BV entry names only the jump distance, and the heat bonus is on p. 107 (p. 106: it applies whether or not the unit can jump).
   const capacity = sinks + coolant + (partialWing ? PARTIAL_WING_BV.heat : 0) + items.reduce((sum, i) => sum + (own(HEAT_EFFICIENCY_BONUS, i.row.id) ?? 0), 0);
   const jumpHeat = jumpBase === 0 ? 0 : Math.max(BV_METHOD.jumpHeatMinimum, improvedJets ? Math.ceil(jumpBase / 2) : jumpBase); // the wing's bonus MP makes no jump heat (TO:AUE p. 106)
   const airMechHeat = standardLam ? Math.round(flank / 3) : 0; // one heat per 3 MP, IO:AE p. 102

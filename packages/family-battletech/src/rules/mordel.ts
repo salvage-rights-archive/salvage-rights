@@ -475,7 +475,12 @@ function convert(response: unknown, catalog: Catalog, editionId: string, now: st
   if (jets && jumpMP !== undefined && jumpMP > 0 && jetKind && !mounts.some((m) => /jump jet/i.test(m.name))) {
     const jetTech: TechBase = techOf(jets["technology"], "jump jet technology") ?? (unitClan ? "clan" : "inner-sphere");
     const jetRow = find(/^standard$/i.test(jetKind) ? "Jump Jet" : `${jetKind} Jump Jet`, jetTech).row;
-    if (jetRow) {
+    // Mordel's jump figure may already include a Partial Wing's bonus, so no jets are made up for a unit that has one.
+    if (mounts.some((m) => /partial wing/i.test(m.name))) {
+      note(`Mordel gives the unit ${jumpMP} jump movement but lists no jump jet items, and the unit has a Partial Wing whose bonus may be part of that figure, so no jump jets were added.`);
+    } else if (!jetRow) {
+      note(`Mordel gives the unit ${jumpMP} jump movement and a "${jetKind}" jump jet kind this tool does not know, so no jump jets were added.`);
+    } else {
       for (let i = 0; i < jumpMP; i++) mounts.push({ id: `jump-jet-${i + 1}`, equipmentId: jetRow.id, name: jetRow.name, techBase: jetTech, location: null, slot: null });
       note(`Mordel gives the unit ${jumpMP} jump movement and its jump jets but lists no jump jet items, so ${jumpMP} ${jetRow.name} mounts were added and are not placed.`);
     }

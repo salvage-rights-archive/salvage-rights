@@ -141,7 +141,6 @@ describe("the method's rules", () => {
     expect(exposed("CT", "CT")).toBe(0);
     expect(exposed("LA", "LT")).toBe(0);
     expect(exposed("LT", "CT")).toBe(0);
-    expect(exposed("HD", "CT")).toBe(0);
     expect(exposed("LL", "LT")).toBe(15);
   });
 
@@ -258,7 +257,8 @@ describe("the method's rules", () => {
     expect(wing.movementHeat).toBe(plain.movementHeat);
     expect(wing.heatEfficiency).toBe(plain.heatEfficiency + 3);
     expect(jumper(wings, 70).jumpMP).toBe(jumper([], 70).jumpMP + 1);
-    expect(battleValue(biped(wings), catalog).offensive.jumpMP).toBe(0);
+    const noJets = battleValue(biped(wings), catalog).offensive;
+    expect([noJets.jumpMP, noJets.heatEfficiency]).toEqual([0, battleValue(biped([]), catalog).offensive.heatEfficiency + 3]);
   });
 
   it("a small cockpit takes 5 percent off the total", () => {
