@@ -242,7 +242,7 @@ function seenIn(row: EquipmentRow, editionId: string, overlays: Overlays): Equip
 
 /** The weapon a round of ammunition is for, whatever its type: the row id without the munition words, so that a superheavy 'Mech's cell may hold two kinds of one weapon's
  * ammunition (IO:AE printed p.157). A heuristic over the catalog's ids; an id with none of the words is its own family. */
-const MUNITION_WORDS = /-(cluster|precision|armor-piercing|ap|caseless|tracer|flak|flechette|incendiary|inferno|semi-guided|narc-capable|artemis-capable|swarm-i|swarm|thunder|standard)(?=-(is|clan)$|$)/g;
+const MUNITION_WORDS = /-(cluster|precision|armor-piercing|ap|caseless|tracer|flak|flechette|incendiary|inferno|homing|semi-guided|narc-capable|artemis-capable|swarm-i|swarm|thunder|standard)(?=-(is|clan)$|$)/g;
 export const ammoFamily = (id: string): string => id.replace(MUNITION_WORDS, "");
 
 /** The heat sink type key a heat sink row stands for (the chassis' `heatSinks.type`). */

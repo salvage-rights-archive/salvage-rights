@@ -10,7 +10,7 @@ describe("autocannon, artillery and fluid munitions (TO:AUE pp. 164-175, 225-227
     ["ammo-tracer-ac-clan", [{ from: 2300 }], undefined, "advanced", "ammo-ballistic"],
     ["ammo-air-defense-arrow-is", [{ from: 3080 }], 3068, "experimental", "ammo-artillery"],
     ["ammo-arrow-iv-cluster-is", [{ from: 2620, to: 2830 }, { from: 3047 }], 2594, "advanced", "ammo-artillery"],
-    ["ammo-arrow-iv-smoke-clan", [{ from: 2600 }], undefined, "advanced", "ammo-artillery"],
+    ["ammo-arrow-iv-smoke-clan", [{ from: 2850 }], undefined, "advanced", "ammo-artillery"],
     ["ammo-thunder-active-iv-is", [{ from: 3065 }], 3056, "advanced", "ammo-artillery"],
     ["ammo-caseless-ac-clan", [{ from: 3109 }], undefined, "experimental", "ammo-ballistic"],
     ["ammo-flamer-inferno-fuel-clan", [{ from: 2400 }], undefined, "advanced", "ammo-other"],

@@ -286,6 +286,7 @@ export const UNFIXED: Record<string, string> = {
   ...Object.fromEntries(["is", "clan"].map((side) => [`bomb-arrow-iv-homing-${side}`, "the Aerospace BV Addendum (TO:AUE p. 197) prints a figure for the non-homing air-launched Arrow IV missile but none for the homing one"])),
   ...Object.fromEntries(["is", "clan"].map((side) => [`bomb-thunder-fascam-${side}`, "its BV is seven 20-point minefields of the mine type named before play (TO:AUE p. 197), which the row does not fix"])),
   ...Object.fromEntries(["light-scc", "medium-scc", "heavy-scc", "scl-1", "scl-2", "scl-3"].map((n) => [`${n}-clan`, "the Clan capital Battle Value table prints no sub-capital cannon or laser line (TO:AUE p. 196)"])),
+  ...Object.fromEntries(["light-plasma-rifle-is", "ammo-light-plasma-rifle-is"].map((id) => [id, "only the Core Rulebook lists it (printed p. 248), with no Battle Value, and no unit we can read carries it to work the figure from"])),
   "dropshuttle-bay-is": "a large-craft item: neither Alternate Eras Battle Value table (IO:AE pp. 189-191) prints a line for it",
   "docking-collar-pre-boom-is": "a large-craft item: neither Alternate Eras Battle Value table (IO:AE pp. 189-191) prints a line for it",
   "docking-collar-post-boom-is": "a large-craft item: neither Alternate Eras Battle Value table (IO:AE pp. 189-191) prints a line for it",
@@ -591,7 +592,7 @@ export const WEAPON_BV: BvGroup[] = [
       ["enhanced-lrm-5-is", 52, 7], ["enhanced-lrm-10-is", 104, 13], ["enhanced-lrm-15-is", 157, 20], ["enhanced-lrm-20-is", 210, 26],
       ["extended-lrm-5-is", 67, 8], ["extended-lrm-10-is", 133, 17], ["extended-lrm-15-is", 200, 25], ["extended-lrm-20-is", 268, 34],
       ["thunderbolt-5-is", 64, 8], ["thunderbolt-10-is", 127, 16], ["thunderbolt-15-is", 229, 29], ["thunderbolt-20-is", 305, 38],
-      ["arrow-iv-is", 240, 30], ["sniper-artillery-is", 85, 11], ["thumper-artillery-is", 43, 5],
+      ["arrow-iv-is", 240, 30, { ammo: ["ammo-arrow-iv-is", "ammo-arrow-iv-homing-is"] }], ["sniper-artillery-is", 85, 11], ["thumper-artillery-is", 43, 5],
     ],
   },
   {
@@ -611,7 +612,7 @@ export const WEAPON_BV: BvGroup[] = [
       ["long-tom-cannon-clan", 329, 41], ["sniper-cannon-clan", 77, 10], ["thumper-cannon-clan", 41, 5],
       ["streak-lrm-5-clan", 86, 11, { heat: "streak" }], ["streak-lrm-10-clan", 173, 22, { heat: "streak" }],
       ["streak-lrm-15-clan", 259, 32, { heat: "streak" }], ["streak-lrm-20-clan", 345, 43, { heat: "streak" }],
-      ["arrow-iv-clan", 240, 30], ["sniper-artillery-clan", 96, 11], ["thumper-artillery-clan", 48, 5],
+      ["arrow-iv-clan", 240, 30, { ammo: ["ammo-arrow-iv-clan", "ammo-arrow-iv-homing-clan"] }], ["sniper-artillery-clan", 96, 11], ["thumper-artillery-clan", 48, 5],
     ],
   },
   {
@@ -678,6 +679,15 @@ export const WEAPON_BV: BvGroup[] = [
     cite: { book: "BattleTech: Gothic Deluxe Record Sheets", page: 4 },
     checked: "text",
     rows: [["light-blazer-gothic", 148]],
+  },
+  {
+    // no printed BV/cost; inferred from Mordel unit totals, owner 2026-11-26.
+    // The heavy plasma rifle (catalog row flagged `bvInferred`): no book we hold prints its Battle Value. 296 with ammunition at 36 is the pair that,
+    // run through this table's method, reproduces Mordel's figure for the Atlas AS7-Ln (unit 99519, 2,386); of the pairs that land there it is the one
+    // in the 8-to-1 weapon-to-ammunition ratio the plasma rifle (210, 26) and the other weapons keep. The light plasma rifle has no unit to work from.
+    cite: { book: "BattleTech Core Rulebook", page: 248 },
+    checked: "text",
+    rows: [["heavy-plasma-rifle-is", 296, 36, { inert: true }]],
   },
 ];
 /** "Other Equipment" and the physical and industrial items: BV added in full, never sorted by heat. */

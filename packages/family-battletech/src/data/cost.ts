@@ -261,6 +261,14 @@ interface PriceGroup extends Sourced {
 }
 export const EQUIPMENT_COST: PriceGroup[] = [
   {
+    // no printed BV/cost; inferred from Mordel unit totals, owner 2026-11-26.
+    // The heavy plasma rifle (catalog row flagged `bvInferred`, which covers the price too): no book we hold prints its cost. 320,000 is the figure that
+    // makes Mordel's cost for the Atlas AS7-Ln (unit 99519, 11,286,000) come out exactly; the light plasma rifle has no unit to work from and no price.
+    cite: { book: "BattleTech Core Rulebook", page: 248 },
+    checked: "text",
+    prices: { "heavy-plasma-rifle": 320_000 },
+  },
+  {
     // p.291: a torpedo launcher costs what its LRM or SRM does (x1, "as launcher"); the figures are the launchers' on the same page
     cite: { book: TM, page: 291 },
     checked: "page",
@@ -624,8 +632,8 @@ export const EQUIPMENT_COST: PriceGroup[] = [
 /**
  * Alternative munition prices per ton (TO:AUE printed pp. 225 and 227, Heavy Weapons Ammunition Construction Data, read against the page images). The
  * table prints either a price (`perTon`) or a multiplier (`times`) on the price of the standard round of the weapon the munition serves, so a multiplier
- * has no figure of its own here. Keys are the id stems (without `-is` and `-clan`). Arrow IV (Homing), the standard Arrow IV round, is 15,000 a ton and
- * Arrow IV (Non-Homing) 10,000 (the catalog has no row for the latter). The Copperhead rows are x1.5, as the same table prints them.
+ * has no figure of its own here. Keys are the id stems (without `-is` and `-clan`). Arrow IV (Homing) is 15,000 a ton and
+ * Arrow IV (Non-Homing), the standard round, 10,000 (one row each since the Core Rulebook split them, printed p. 190). The Copperhead rows are x1.5, as the same table prints them.
  */
 export const MUNITION_PRICE: Sourced & { rows: Record<string, { perTon: number } | { times: number }> } = {
   cite: { book: TO, page: 227 },
@@ -633,7 +641,7 @@ export const MUNITION_PRICE: Sourced & { rows: Record<string, { perTon: number }
   rows: {
     "ammo-flamer-coolant": { perTon: 3_000 }, "ammo-flamer-corrosive": { perTon: 5_000 }, "ammo-flamer-flame-retardant-foam": { perTon: 1_000 },
     "ammo-flamer-inferno-fuel": { perTon: 2_000 }, "ammo-flamer-oil-slick": { perTon: 2_000 }, "ammo-flamer-paint-obscurant": { perTon: 1_000 },
-    "ammo-flamer-water": { perTon: 500 }, "ammo-air-defense-arrow": { perTon: 45_000 }, "ammo-arrow-iv": { perTon: 15_000 },
+    "ammo-flamer-water": { perTon: 500 }, "ammo-air-defense-arrow": { perTon: 45_000 }, "ammo-arrow-iv": { perTon: 10_000 }, "ammo-arrow-iv-homing": { perTon: 15_000 },
     "ammo-caseless-ac": { times: 1.5 }, "ammo-flak-ac": { times: 1.5 }, "ammo-tracer-ac": { times: 1.5 }, "ammo-arrow-iv-cluster": { times: 1.5 },
     "ammo-cluster-long-tom": { times: 1.5 }, "ammo-cluster-sniper": { times: 1.5 }, "ammo-cluster-thumper": { times: 1.5 }, "ammo-flechette-artillery": { times: 1.5 },
     "ammo-copperhead-long-tom": { times: 1.5 }, "ammo-copperhead-sniper": { times: 1.5 }, "ammo-copperhead-thumper": { times: 1.5 },
