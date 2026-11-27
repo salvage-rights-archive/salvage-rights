@@ -319,6 +319,7 @@ describe("heat output: movement and the special cases (errata v1.3, p. 115)", ()
     ["a rocket launcher adds no heat", mech(50, 4, [item("rocket-launcher-10-is"), item("medium-laser-is")]), 5, 2],
     ["the rear weapons' heat counts when it is larger than the forward weapons'", mech(50, 4, [item("medium-laser-is", "LA"), { ...item("ppc-is", "CT"), rear: true }]), 12, 12],
     ["stealth armor adds 10 and the Chameleon shield 6", mech(50, 4, [item("chameleon-lps-is")], { armorType: "stealth" }), 18, 18],
+    ["the Null-Signature System (10) and the Chameleon shield (6) together make 16", mech(50, 4, [item("chameleon-lps-is"), item("null-signature-system-is")]), 18, 18],
   ] as [string, MechRecord, number, number][])("%s", (_name, record, total, long) => {
     expect(output(record)).toEqual({ total, long });
   });

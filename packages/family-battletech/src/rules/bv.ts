@@ -425,7 +425,9 @@ export function battleValue(record: MechRecord, catalog: Catalog, pilot: PilotSk
   if (standardLam && jumpMP > 0) modifiers.push(movementModifier(flank, false) + LAM_BV.airborneModifier);
   // The Chameleon LPS and the Null-Signature System add the long-range modifier; the Void-Signature System raises it to +3, or adds 1 on a tie (TO:AUE pp. 193-194).
   const signature = BV_RULE_ITEMS.signature;
-  let targetModifier = Math.max(...modifiers) + (stealth ? BV_METHOD.stealthTargetModifier : 0) + (has(signature.longRangeIds) ? signature.longRangeModifier : 0);
+  // The two long-range systems are cumulative when both are fitted (TO:AUE pp. 112 and 148, owner ruling 2026-11-26): each adds its own modifier.
+  const longRangeSystems = signature.longRangeIds.filter((id) => has([id])).length;
+  let targetModifier = Math.max(...modifiers) + (stealth ? BV_METHOD.stealthTargetModifier : 0) + longRangeSystems * signature.longRangeModifier;
   if (has(signature.voidIds)) targetModifier = Math.max(targetModifier, signature.voidModifier) + (targetModifier === signature.voidModifier ? 1 : 0);
   const factor = 1 + targetModifier / 10;
   const defensiveRating = defensiveSubtotal * factor;
@@ -447,7 +449,7 @@ export function battleValue(record: MechRecord, catalog: Catalog, pilot: PilotSk
   const noMovementHeat = (chassis.myomer === cool.myomer || has(cool.ids)) && jumpMP === 0 && !has(cool.umuIds);
   // An IndustrialMech with an internal combustion engine makes no heat by moving (v4.1, Determine Movement Heat Value).
   const industrialNoHeat = INDUSTRIAL_BV.noMovementHeatEngines.includes(chassis.engine.type);
-  const movementHeat = industrialNoHeat ? 0 : (noMovementHeat ? 0 : Math.max(BV_METHOD.runningHeat, jumpHeat, airMechHeat)) + (stealth ? BV_METHOD.stealthHeat : 0);
+  const movementHeat = industrialNoHeat ? 0 : (noMovementHeat ? 0 : Math.max(BV_METHOD.runningHeat, jumpHeat, airMechHeat)) + (stealth ? BV_METHOD.stealthHeat : 0) + signature.longRangeIds.reduce((sum, id) => sum + (has([id]) ? (own(signature.heat, id) ?? 0) : 0), 0);
   const heatEfficiency = (isLam ? BV_METHOD.lamHeatEfficiency : BV_METHOD.baseHeatEfficiency) + capacity - movementHeat;
 
   // Each weapon's unmodified BV, heat and place.

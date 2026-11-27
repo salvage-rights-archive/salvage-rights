@@ -404,7 +404,7 @@ export const IMPROVED_JUMP_JET_IDS = ["improved-jump-jet-is", "improved-jump-jet
  * - the Actuator Enhancement System multiplies the BV of the weapons in its arm by 1.25 and adds 10 percent of the unit's tonnage, for each limb that has one.
  */
 export const BV_RULE_ITEMS: {
-  signature: Sourced & { longRangeIds: string[]; longRangeModifier: number; voidIds: string[]; voidModifier: number };
+  signature: Sourced & { longRangeIds: string[]; longRangeModifier: number; heat: Record<string, number>; voidIds: string[]; voidModifier: number };
   laserPulseModule: Sourced & { ids: string[]; multiplier: number };
   finalMultiplier: Sourced & { multipliers: Record<string, number> };
   superCooledMyomer: Sourced & { ids: string[]; myomer: string; umuIds: string[] };
@@ -417,6 +417,7 @@ export const BV_RULE_ITEMS: {
     cite: { book: TO, page: 193 },
     checked: "page",
     longRangeIds: ["chameleon-lps-is", "null-signature-system-is"], // Chameleon p.193, Null-Signature p.194
+    heat: { "null-signature-system-is": 10, "chameleon-lps-is": 6 }, // heat while active, added to movement heat together (TO:AUE pp. 148 and 112; the BV pages do not name it, Mordel does)
     longRangeModifier: 2, // the long-range to-hit modifier (Total Warfare p. 142)
     voidIds: ["void-signature-system-is"], // p.194
     voidModifier: 3,
