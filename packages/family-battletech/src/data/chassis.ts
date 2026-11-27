@@ -446,6 +446,9 @@ export const GYROS: Sourced & { types: Record<string, GyroType> } = {
     compact: { name: "Compact", label: "Compact Gyro", multiplier: 1.5, slots: 2, techBase: "inner-sphere", availability: [{ from: 3068 }], prototypeYear: 3055, availabilityCite: UTA(42) },
     "heavy-duty": { name: "Heavy-Duty", label: "Heavy Duty Gyro", multiplier: 2.0, slots: 4, techBase: "inner-sphere", availability: [{ from: 3067 }], prototypeYear: 3055, availabilityCite: UTA(42) },
     xl: { name: "XL", label: "XL Gyro", multiplier: 0.5, slots: 6, techBase: "inner-sphere", availability: [{ from: 3067 }], prototypeYear: 3055, availabilityCite: UTA(42) },
+    // No gyro: only a BattleMech with an interface cockpit may be built without one, and its gyro slots are then empty (Interstellar Operations:
+    // Alternate Eras, rules printed p.110). It weighs nothing, takes no slots and is dated and levelled as the interface cockpit is.
+    none: { name: "None", label: "No Gyro", multiplier: 0, slots: 0, techBase: "both", rulesLevel: "experimental", introduced: { is: 3078, clan: 3083, prototype: ["is", "clan"] }, cite: { book: IO, page: 110 }, checked: "page", rules: "Only a 'Mech with an interface cockpit may go without a gyro." },
     // The superheavy gyro (Interstellar Operations: Alternate Eras, rules printed p.156 Add Gyroscope; table p.217, date and Advanced level): the
     // only gyro a superheavy 'Mech may use, weighing as much as a heavy-duty gyro (the engine rating over 100, rounded up, times 2) in two
     // center torso slots; `tonnage` keeps it to a superheavy 'Mech and the superheavy rules (SUPERHEAVY) allow no other.

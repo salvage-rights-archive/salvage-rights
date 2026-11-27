@@ -84,7 +84,10 @@ const GYRO_WORDS: Record<string, Words> = {
   extralight: { is: "xl" },
   primitive: { is: "standard" }, // a primitive gyro is a standard one weighed at the raised rating (IO:AE p.117)
   superheavy: { is: "superheavy" },
+  none: { is: "none" }, // an interface cockpit's 'Mech may go without a gyro (IO:AE p.110)
 };
+/** Mordel's configuration words that are not our id once lowercased. */
+const MORDEL_CONFIGURATIONS: Record<string, string> = { "land-air (standard)": "lam", "land-air (bimodal)": "bimodal-lam" };
 /** The unit types this importer reads, by Mordel's short code: bm is a BattleMech, im an IndustrialMech. */
 export const UNIT_TYPE_OF: Record<string, MechType> = { bm: "mech", im: "industrialmech" };
 // The IndustrialMech words below (internal combustion, fuel cell, fission, industrial cockpit and Industrial TSM) are our best reading of
@@ -105,6 +108,7 @@ const COCKPIT_WORDS: Record<string, Words> = {
   superheavyindustrial: { is: "superheavy-industrial" },
   tripod: { is: "tripod" },
   quadvee: { is: "quadvee" },
+  interface: { is: "interface", clan: "interface-clan" },
 };
 const STRUCTURE_WORDS: Record<string, Words> = {
   standard: { is: "standard" },
@@ -275,7 +279,8 @@ function convert(response: unknown, catalog: Catalog, editionId: string, now: st
   const unitClan = !isMixed && unitTech === "clan";
 
   const rawConfiguration = str(unit["configuration"], "configuration");
-  const configuration = rawConfiguration ? rawConfiguration.toLowerCase() : "";
+  // Mordel spells the Land-Air 'Mech's two kinds "Land-Air (Standard)" and "Land-Air (Bimodal)" (IO:AE p.108).
+  const configuration = rawConfiguration ? (own(MORDEL_CONFIGURATIONS, rawConfiguration.toLowerCase()) ?? rawConfiguration.toLowerCase()) : "";
   if (!rawConfiguration) note("Mordel gave no configuration.");
   else if (!configurationOf(configuration)) {
     note(`The configuration "${rawConfiguration}" is not one this tool lays out; it is stored as "${configuration}".`);
@@ -395,6 +400,8 @@ function convert(response: unknown, catalog: Catalog, editionId: string, now: st
     }
     // A QuadVee's conversion gear is the fifth slot of each leg, fixed in its layout, so Mordel's entries for it are not mounts of ours.
     if (/^conversion gear$/i.test(name) && configuration === "quadvee") return;
+    // A Land-Air 'Mech's landing gear and avionics cells are fixed in its layout (IO:AE p.108), so Mordel's entries for them are not mounts of ours.
+    if (/^(landing gear|avionics)$/i.test(name) && (configuration === "lam" || configuration === "bimodal-lam")) return;
     if (/^advanced fire control system$/i.test(name) && entry["location"] == null && !catalog.match(name, unitClan ? "clan" : "inner-sphere")) {
       advancedFireControl = true;
       return;
