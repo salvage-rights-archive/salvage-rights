@@ -151,6 +151,10 @@
   }
 }
 
+.as-aids__wide {
+  grid-column: 1 / -1;
+}
+
 .as-aids__flags {
   display: grid;
   gap: var(--sr-space-1);

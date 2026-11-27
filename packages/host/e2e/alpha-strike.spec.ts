@@ -178,7 +178,7 @@ test("the rules level and game year narrow the force picker and the aids, and th
   await expectPage(page.getByLabel("Rules level")).toBeEnabled();
   await page.getByLabel("Rules level").selectOption("advanced");
   await page.getByLabel("Game year").fill("3040");
-  await expect(page.getByText(/The Late Succession War - Renaissance era/)).toBeVisible();
+  await expect(page.getByLabel("Era")).toHaveValue("late-succession-war-renaissance");
   await expect(page.getByText(/Units dated after 3040 are left out/)).toBeVisible();
   // The setting is kept on the device: a reload still shows it.
   await page.waitForTimeout(500);

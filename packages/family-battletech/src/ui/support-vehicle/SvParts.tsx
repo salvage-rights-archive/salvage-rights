@@ -3,10 +3,8 @@
 // rules/support-vehicle and is shown as a sentence in the panel's own words.
 import { UNLIMITED_NOTE } from "../../rules/time";
 import { useState } from "react";
-import { bookName, eraLabel } from "../../data/editions";
-import { CLASSIC } from "../../data/rulesets";
+import { bookName } from "../../data/editions";
 import { SV_PAGES, SV_FIRE_CONTROL, TECH_LEVEL_TEXT, TECH_RATINGS, svEngineOf, svMotiveOf } from "../../data/support-vehicle";
-import { eraNeedsPick, erasOfYear, eraOfRecord, setEra, setYear } from "../../rules/availability";
 import type { Catalog, EquipmentRow } from "../../rules/catalog";
 import { DEFAULT_LEVEL, techBaseChoices } from "../../rules/levels";
 import { chosenMunition, munitionShort, reloadCost } from "../../rules/munitions";
@@ -19,6 +17,7 @@ import type { SupportVehicleRecord } from "../../rules/support-vehicle/sv";
 import { tidy } from "../../rules/walk";
 import LevelSelect from "../editor/LevelSelect";
 import { NumberField, SelectField, TextField } from "../aero/fields";
+import { YearEraFields, eraFollowsBase } from "../YearEraFields";
 import VehiclePicker, { describeRow } from "../vehicle/VehiclePicker";
 import type { PickerSource } from "../vehicle/VehiclePicker";
 import { mountFor, munitionChoices, offeredEquipment, strayLocations, syncArmorLocations } from "./edit";
@@ -53,7 +52,6 @@ interface PartProps {
 export function IdentityPanel({ record, onEdit }: PartProps) {
   const level = record.rulesLevel ?? DEFAULT_LEVEL;
   const row = svMotiveOf(record.motive);
-  const yearEras = erasOfYear(record.year, CLASSIC);
   const above = level !== "introductory";
   const max = maxTonsOf(record);
   const weights = weightRowOf(record);
@@ -82,34 +80,13 @@ export function IdentityPanel({ record, onEdit }: PartProps) {
           }}
         />
         <LevelSelect record={record} onChange={(next) => { onEdit((d) => void (d.rulesLevel = next)); }} />
-        <NumberField
-          id="field-year"
-          label="Year"
-          value={record.year}
-          allowEmpty
-          hint={record.rulesLevel === "unlimited" ? UNLIMITED_NOTE : above ? `Needed at ${level} rules: it sets the era and hides what did not exist yet.` : undefined}
-          onValid={(v) => { onEdit((d) => { setYear(d, v); }, "year"); }}
-        />
-        {record.year !== null && yearEras.length === 1 ? (
-          <div className="bt-field">
-            <span id="field-era-label" className="bt-label">Era</span>
-            <span id="field-era" tabIndex={-1} aria-labelledby="field-era-label">{(() => { const era = eraOfRecord(record); return era ? eraLabel(era) : "Any era"; })()}</span>
-          </div>
-        ) : record.year !== null && yearEras.length > 1 ? (
-          <SelectField
-            id="field-era"
-            label="Era"
-            value={eraNeedsPick(record) ? "" : (eraOfRecord(record)?.id ?? "")}
-            options={[{ value: "", label: "Choose an era" }, ...yearEras.map((era) => ({ value: era.id, label: `${eraLabel(era)} (${String(era.startYear)}${era.endYear === undefined ? " on" : `-${String(era.endYear)}`})` }))]}
-            onChange={(v) => { onEdit((d) => { setEra(d, v); }); }}
-          />
-        ) : null}
+        <YearEraFields record={record} onEdit={onEdit} hint={record.rulesLevel === "unlimited" ? UNLIMITED_NOTE : above ? `Needed at ${level} rules: it sets the era and hides what did not exist yet.` : undefined} />
         <SelectField
           id="field-techBase"
           label="Tech base"
           value={record.techBase}
           options={techBaseChoices(record.rulesLevel, record.techBase, record).map(([value, label]) => ({ value, label }))}
-          onChange={(v) => { onEdit((d) => void (d.techBase = v === "clan" || v === "mixed" ? v : "inner-sphere")); }}
+          onChange={(v) => { onEdit((d) => { d.techBase = v === "clan" || v === "mixed" ? v : "inner-sphere"; eraFollowsBase(d); }); }}
         />
         <NumberField
           id="field-tons"

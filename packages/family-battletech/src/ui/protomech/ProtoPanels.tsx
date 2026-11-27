@@ -2,9 +2,7 @@
 // Each shows only what the rules level, year and era offer (hide, do not mark): an item the unit already holds stays listed, and the rules check reports it.
 import { useId, useMemo, useState } from "react";
 import { PROTO_GLIDER, PROTO_PARTS, PROTO_WING, PROTO_LOCATION_NAMES, PROTO_REAR_LOCATIONS } from "../../data/protomech";
-import { BOOKS, eraLabel } from "../../data/editions";
-import { CLASSIC } from "../../data/rulesets";
-import { erasOfYear, setEra, setYear } from "../../rules/availability";
+import { BOOKS } from "../../data/editions";
 import { groupOf } from "../../rules/catalog";
 import type { Catalog } from "../../rules/catalog";
 import { DEFAULT_LEVEL, levelAtLeast, levelRow } from "../../rules/levels";
@@ -20,6 +18,7 @@ import { protoBattleValue, protoCost } from "../../rules/protomech/rating";
 import type { ProtoRecord } from "../../rules/protomech/record";
 import { tidy } from "../../rules/walk";
 import { NumberField, SelectField, TextField, fieldId } from "../aero/fields";
+import { YearEraFields, eraFollowsBase } from "../YearEraFields";
 import LevelSelect from "../editor/LevelSelect";
 import ProtoDiagram from "./ProtoDiagram";
 import { locationDomId, mountDomId, mountFor, pickerLabel, setChassis } from "./edit";
@@ -52,7 +51,6 @@ function Readout({ lines }: { lines: (string | undefined)[] }) {
 }
 
 export function IdentityPanel({ record, catalog, onEdit }: PartProps & { catalog: Catalog }) {
-  const eras = erasOfYear(record.year, CLASSIC);
   const lowest = protoLowestLevel(record, catalog);
   return (
     <section className="bt-panel" aria-labelledby="pm-identity">
@@ -61,24 +59,9 @@ export function IdentityPanel({ record, catalog, onEdit }: PartProps & { catalog
         <TextField id="field-name" label="Name" value={record.name.chassis} onChange={(v) => { onEdit((d) => void (d.name.chassis = v), "name"); }} />
         <TextField id="field-name-model" label="Model" value={record.name.model} onChange={(v) => { onEdit((d) => void (d.name.model = v), "name-model"); }} />
         <LevelSelect record={record} onChange={(level) => { onEdit((d) => void (d.rulesLevel = level)); }} />
-        <NumberField id="field-year" label="Year" value={record.year} allowEmpty hint="Needed above Introductory. The year decides which equipment exists." onValid={(v) => { onEdit((d) => { setYear(d, v); }, "year"); }} />
-        {eras.length === 1 && (
-          <div className="bt-field">
-            <span className="bt-label">Era</span>
-            <span>{eras[0] ? eraLabel(eras[0]) : ""}</span>
-          </div>
-        )}
-        {eras.length > 1 && (
-          <SelectField
-            id="field-era"
-            label="Era"
-            value={record.era ?? ""}
-            options={[{ value: "", label: "Choose an era" }, ...eras.map((era) => ({ value: era.id, label: eraLabel(era) }))]}
-            onChange={(v) => { onEdit((d) => { setEra(d, v); }); }}
-          />
-        )}
+        <YearEraFields record={record} onEdit={onEdit} hint="Needed above Introductory. The year decides which equipment exists." />
         {record.cockpit !== "interface" && (levelAtLeast(record.rulesLevel ?? DEFAULT_LEVEL, "advanced") || record.techBase === "mixed") ? (
-          <SelectField id="field-techBase" label="Tech base" value={record.techBase} options={[{ value: "clan", label: "Clan" }, { value: "mixed", label: "Mixed" }]} onChange={(v) => { onEdit((d) => void (d.techBase = v)); }} hint="Clan, or Mixed Technology at Advanced rules (Tactical Operations: Advanced Units and Equipment, p. 189)." />
+          <SelectField id="field-techBase" label="Tech base" value={record.techBase} options={[{ value: "clan", label: "Clan" }, { value: "mixed", label: "Mixed" }]} onChange={(v) => { onEdit((d) => { d.techBase = v; eraFollowsBase(d); }); }} hint="Clan, or Mixed Technology at Advanced rules (Tactical Operations: Advanced Units and Equipment, p. 189)." />
         ) : (
           <div className="bt-field">
             <span className="bt-label">Tech base</span>
