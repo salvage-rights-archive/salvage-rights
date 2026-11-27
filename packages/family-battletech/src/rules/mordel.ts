@@ -153,6 +153,10 @@ const HEAT_SINK_WORDS: Record<string, Words> = {
   double: { is: "double", clan: "double-clan" },
   doubleheatsink: { is: "double", clan: "double-clan" },
   doubleclan: { is: "double-clan" },
+  compact: { is: "compact" },
+  compactheatsink: { is: "compact" },
+  laser: { is: "laser" },
+  laserheatsink: { is: "laser" },
 };
 
 const LOCATIONS: Record<string, LocationCode> = {
@@ -357,7 +361,9 @@ function convert(response: unknown, catalog: Catalog, editionId: string, now: st
     const bin = /^(.*\S)\s*\(Ammo\s+(\d+)\)(?:\s*\[([^\]]+)\])?$/i.exec(name);
     if (!bin) return {};
     const shots = Number(bin[2]);
-    const stems = [bin[3] ? `${bin[1]} ${bin[3]}` : undefined, bin[1]].filter((x): x is string => x !== undefined);
+    // A multiple-missile launcher's tag may carry the munition after a slash ("[SRM / Artemis IV]"): the part before it names the bin.
+    const tag = bin[3]?.split("/")[0]?.trim();
+    const stems = [bin[3] ? `${bin[1]} ${bin[3]}` : undefined, tag && tag !== bin[3] ? `${bin[1]} ${tag}` : undefined, bin[1]].filter((x): x is string => x !== undefined);
     // The tagged stem first: "LB 20-X AC (Ammo 5) [Cluster]" is the cluster bin, not the standard one (the live Barghest BGS-1T, bm 823).
     for (const stem of stems) {
       const bins = [catalog.match(`${stem} Ammo`, tech), catalog.match(`${stem} Ammo (Half Ton)`, tech)].filter((r): r is EquipmentRow => r !== undefined);
@@ -403,7 +409,9 @@ function convert(response: unknown, catalog: Catalog, editionId: string, now: st
     // (checked live on the TechManual Barghest BGS-1T, bm 823, on 2026-11-25: LB 20-X AC, CT 2 and RT 9). They are one mount: the part
     // with more slots (the first on a tie) is its location, the other its `split`; the slots in each place are set when it is placed.
     const joined = theirId === undefined ? undefined : mounts.find((m) => m.id === idToMount.get(theirId));
-    if (joined && joined.name === name && joined.location && loc && joined.location !== loc && joined.split === undefined && theirSlots !== undefined && theirSlots > 0) {
+    // An item the table carries as one mount in each of several places (partial wing, talons) is not a split weapon: its two entries stay two mounts.
+    const joinedRow = joined?.equipmentId ? catalog.byId(joined.equipmentId) : undefined;
+    if (joined && joinedRow?.perMech === undefined && joined.name === name && joined.location && loc && joined.location !== loc && joined.split === undefined && theirSlots !== undefined && theirSlots > 0) {
       const before = partSlots.get(joined.id) ?? 1;
       const [main, other] = theirSlots > before ? [loc, joined.location] : [joined.location, loc];
       joined.location = main;
@@ -416,9 +424,23 @@ function convert(response: unknown, catalog: Catalog, editionId: string, now: st
       }
       return;
     }
-    const { row, why } = find(name, tech);
+    const looked = find(name, tech);
+    let row = looked.row;
+    const why = looked.why;
+    let mountTech = tech;
+    // Mordel may label an item with the other tech base than the one the books print it for (a PPC capacitor is Inner Sphere only): an item
+    // found under the other base alone is taken as that one, with a note.
+    if (!row && !/\(Ammo\s+\d+\)/i.test(name)) {
+      const other: TechBase = tech === "clan" ? "inner-sphere" : "clan";
+      const found = find(name, other).row;
+      if (found) {
+        row = found;
+        mountTech = other;
+        note(`Mordel calls ${name} ${tech === "clan" ? "Clan" : "Inner Sphere"}, and the books print it for ${other === "clan" ? "Clan" : "Inner Sphere"} technology only; it was read as that.`);
+      }
+    }
     if (!row) note(why ?? `${name} is not in our equipment table.`);
-    const mount: Mount = { id: `mount-${index + 1}`, equipmentId: row?.id ?? null, name, techBase: tech, location: loc ?? null, slot: null };
+    const mount: Mount = { id: `mount-${index + 1}`, equipmentId: row?.id ?? null, name, techBase: mountTech, location: loc ?? null, slot: null };
     // An item that is not in the table keeps the slots Mordel gave it; one with no id and no location takes none.
     const slotless = entry["id"] == null && entry["location"] == null;
     // An item sold by size (cargo, communications equipment): Mordel gives its size as a count of the table's steps.
@@ -443,6 +465,25 @@ function convert(response: unknown, catalog: Catalog, editionId: string, now: st
     const mount = mounts.find((m) => m.id === mountId);
     if (mount && to && to !== mountId) mount.linkedTo = to;
     else note(`${mount?.name ?? "An item"} is associated with item ${target}, which is not in the equipment list.`);
+  }
+
+  // A unit whose jump jets are in the movement and the jump jet section but not in the equipment list (the live Tyson TYS1, bm 25466): the jets are added,
+  // unplaced, so the weight, cost and Battle Value carry them.
+  const jets = sect(unit["jump_jets"], "jump jets");
+  const jumpMP = num(sect(unit["movement"], "movement")?.["jump"], "jump movement");
+  const jetKind = jets ? str(jets["type"], "jump jet type") : undefined;
+  if (jets && jumpMP !== undefined && jumpMP > 0 && jetKind && !mounts.some((m) => /jump jet/i.test(m.name))) {
+    const jetTech: TechBase = techOf(jets["technology"], "jump jet technology") ?? (unitClan ? "clan" : "inner-sphere");
+    const jetRow = find(/^standard$/i.test(jetKind) ? "Jump Jet" : `${jetKind} Jump Jet`, jetTech).row;
+    // Mordel's jump figure may already include a Partial Wing's bonus, so no jets are made up for a unit that has one.
+    if (mounts.some((m) => /partial wing/i.test(m.name))) {
+      note(`Mordel gives the unit ${jumpMP} jump movement but lists no jump jet items, and the unit has a Partial Wing whose bonus may be part of that figure, so no jump jets were added.`);
+    } else if (!jetRow) {
+      note(`Mordel gives the unit ${jumpMP} jump movement and a "${jetKind}" jump jet kind this tool does not know, so no jump jets were added.`);
+    } else {
+      for (let i = 0; i < jumpMP; i++) mounts.push({ id: `jump-jet-${i + 1}`, equipmentId: jetRow.id, name: jetRow.name, techBase: jetTech, location: null, slot: null });
+      note(`Mordel gives the unit ${jumpMP} jump movement and its jump jets but lists no jump jet items, so ${jumpMP} ${jetRow.name} mounts were added and are not placed.`);
+    }
   }
 
   // A mixed unit may list both kinds of double heat sink: the section names the main kind, and the other kind's sinks in the equipment
