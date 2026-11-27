@@ -16,7 +16,35 @@ interface Group extends GroupKey {
 const TECH_BASE_NAMES = { "inner-sphere": "Inner Sphere", clan: "Clan" };
 const plural = (n: number, word: string) => `${String(n)} ${word}${n === 1 ? "" : "s"}`;
 
-export default function VehiclePicker({ record, catalog, title, current, onChoose, onClose }: { record: VehicleRecord; catalog: Catalog; title: string; current?: string; onChoose: (row: EquipmentRow) => void; onClose: () => void }) {
+/** What a unit kind passes the picker in place of its record: the rows on offer (`everything` lifts the tech base and time; `keep` stays on offer) and a line about each row. */
+export interface PickerSource {
+  offered: (everything: boolean, keep?: string) => EquipmentRow[];
+  describe: (row: EquipmentRow) => string;
+  /** What the "show everything" box says it lists, in the unit kind's own words. */
+  everythingHint?: string;
+}
+
+export function vehiclePickerSource(record: VehicleRecord, catalog: Catalog): PickerSource {
+  return {
+    offered: (everything, keep) => offeredEquipment(record, catalog, everything, keep),
+    describe: (row) => {
+      const facts = itemFacts({ id: "trial", equipmentId: row.id, name: row.name, location: "body" }, record, catalog);
+      const size = facts.tons === null ? "weight not known for a vehicle" : row.kind === "ammunition" ? `${plural(1, "slot")}, any weight from ${row.id.includes("machine-gun") || row.id.includes("nail") ? "half a ton" : "a ton"}` : `${plural(facts.tons, "ton")}, ${plural(facts.slots, "slot")}`;
+      return describeRow(row, size);
+    },
+  };
+}
+
+/** The picker line: tech base, the size text, a level above Standard and the prototype year. */
+export function describeRow(row: EquipmentRow, size: string): string {
+  const parts = [TECH_BASE_NAMES[row.techBase], size];
+  const level = equipmentLevel(row);
+  if (level !== DEFAULT_LEVEL && level !== "introductory") parts.push(`${levelRow(level).label} level`);
+  if (row.prototypeYear !== undefined) parts.push(datesText(row.prototypeYear, row.availability[0]?.from).toLowerCase());
+  return parts.join(", ");
+}
+
+export default function VehiclePicker({ source, title, current, onChoose, onClose }: { source: PickerSource; title: string; current?: string; onChoose: (row: EquipmentRow) => void; onClose: () => void }) {
   const [query, setQuery] = useState("");
   const [everything, setEverything] = useState(false);
   const dialog = useRef<HTMLDivElement>(null);
@@ -29,7 +57,7 @@ export default function VehiclePicker({ record, catalog, title, current, onChoos
   const groups = useMemo<Group[]>(() => {
     const needle = query.trim().toLowerCase();
     const byGroup = new Map<string, Group>();
-    for (const row of offeredEquipment(record, catalog, everything, current)) {
+    for (const row of source.offered(everything, current)) {
       if (needle !== "" && ![row.name, ...row.aliases].some((name) => name.toLowerCase().includes(needle))) continue;
       const key = groupOf(row);
       const group = byGroup.get(key.id) ?? { ...key, rows: [] };
@@ -38,18 +66,10 @@ export default function VehiclePicker({ record, catalog, title, current, onChoos
     }
     for (const group of byGroup.values()) group.rows.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }) || a.techBase.localeCompare(b.techBase));
     return [...byGroup.values()].sort((a, b) => groupRank(a.id) - groupRank(b.id));
-  }, [catalog, record, everything, query, current]);
+  }, [source, everything, query, current]);
 
   const total = groups.reduce((sum, group) => sum + group.rows.length, 0);
-  const detail = (row: EquipmentRow): string => {
-    const facts = itemFacts({ id: "trial", equipmentId: row.id, name: row.name, location: "body" }, record, catalog);
-    const size = facts.tons === null ? "weight not known for a vehicle" : row.kind === "ammunition" ? `${plural(1, "slot")}, any weight from ${row.id.includes("machine-gun") || row.id.includes("nail") ? "half a ton" : "a ton"}` : `${plural(facts.tons, "ton")}, ${plural(facts.slots, "slot")}`;
-    const parts = [TECH_BASE_NAMES[row.techBase], size];
-    const level = equipmentLevel(row);
-    if (level !== DEFAULT_LEVEL && level !== "introductory") parts.push(`${levelRow(level).label} level`);
-    if (row.prototypeYear !== undefined) parts.push(datesText(row.prototypeYear, row.availability[0]?.from).toLowerCase());
-    return parts.join(", ");
-  };
+  const detail = source.describe;
 
   return (
     <div className="bt-picker-backdrop">
@@ -87,7 +107,7 @@ export default function VehiclePicker({ record, catalog, title, current, onChoos
             />{" "}
             Show everything
           </label>
-          <span className="bt-hint">{everything ? "Showing every item printed for vehicles, whatever its tech base or era. Items above the unit's rules level stay hidden." : "Showing what this unit's rules level, tech base and year allow."}</span>
+          <span className="bt-hint">{everything ? (source.everythingHint ?? "Showing every item printed for vehicles, whatever its tech base or era. Items above the unit's rules level stay hidden.") : "Showing what this unit's rules level, tech base and year allow."}</span>
         </div>
         {total === 0 ? (
           <p>No equipment matches.</p>

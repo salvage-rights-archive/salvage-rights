@@ -21,7 +21,7 @@ import { chosenMunition, munitionShort, reloadCost } from "../../rules/munitions
 import { mountFor, munitionChoices, strayLocations, syncArmorLocations } from "./edit";
 import type { VehicleOnEdit } from "./edit";
 import VehicleDiagram from "./VehicleDiagram";
-import VehiclePicker from "./VehiclePicker";
+import VehiclePicker, { vehiclePickerSource } from "./VehiclePicker";
 
 const num = (n: number): string => String(tidy(n));
 const plural = (n: number, word: string) => `${num(n)} ${word}${n === 1 ? "" : "s"}`;
@@ -292,7 +292,7 @@ export function EquipmentPanel({ record, catalog, onEdit }: PartProps & { catalo
       <p>
         <button type="button" className="bt-button" onClick={() => { setPicking({}); }}>Add equipment</button>
       </p>
-      {picking && <VehiclePicker record={record} catalog={catalog} title={picking.replace === undefined ? "Add equipment" : "Replace equipment"} current={record.mounts.find((m) => m.id === picking.replace)?.equipmentId ?? undefined} onChoose={choose} onClose={() => { setPicking(undefined); }} />}
+      {picking && <VehiclePicker source={vehiclePickerSource(record, catalog)} title={picking.replace === undefined ? "Add equipment" : "Replace equipment"} current={record.mounts.find((m) => m.id === picking.replace)?.equipmentId ?? undefined} onChoose={choose} onClose={() => { setPicking(undefined); }} />}
     </section>
   );
 }

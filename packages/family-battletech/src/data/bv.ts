@@ -838,7 +838,7 @@ export const BATTLE_ARMOR_BV: BvGroup[] = [
   },
   {
     // The battle armor versions of the Tactical Operations: AUE weapons take the 'Mech weapon's line of the same name (printed pp. 194-196): the heavy flamer, ER pulse
-    // lasers, variable speed pulse lasers, and the Battle Armor Taser (p. 195). The BC3 systems have no Battle Value of their own (note D, p. 195).
+    // lasers, variable speed pulse lasers, and the Battle Armor Taser (p. 195). The BC3 systems have no Battle Value of their own (note D, TechManual p. 317).
     cite: { book: TO, page: 195 },
     checked: "page",
     rows: [
