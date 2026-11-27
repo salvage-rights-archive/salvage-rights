@@ -29,6 +29,8 @@ describe("automatic Clan CASE", () => {
     expect(exposure(unit({ techBase: "clan", mounts }))).toBe(0);
     expect(exposure(withChassis(unit({ techBase: "mixed", mounts }), { structure: "endo-steel-clan" }))).toBe(0);
     expect(exposure(withChassis(unit({ techBase: "mixed", mounts }), { structure: "endo-steel" }))).toBe(15);
+    expect(exposure(withChassis(unit({ techBase: "mixed", mounts }), { structureTech: "clan" }))).toBe(0); // a standard structure the import read as Clan
+    expect(exposure(withChassis(unit({ techBase: "mixed", mounts }), { structureTech: "inner-sphere" }))).toBe(15);
   });
 
   it("is refused as an explicit mount on an Inner Sphere structure, which it protects only in its own location and still prices", () => {

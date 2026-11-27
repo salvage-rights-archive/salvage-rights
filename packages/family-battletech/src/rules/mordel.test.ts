@@ -188,6 +188,13 @@ describe("fromMordel", () => {
     expect(tsm.every((m) => m.location !== null && m.slot !== null)).toBe(true);
   });
 
+  it("keeps the tech base Mordel gives a standard structure on a mixed-tech unit", () => {
+    const tagged = (technology: string) => imported(mordelWith(mordelBiped(), { mixed_tech: true, structure: { type: "Standard", technology } })).record;
+    expect(tagged("Clan").chassis).toMatchObject({ structure: "standard", structureTech: "clan" });
+    expect(tagged("Inner Sphere").chassis.structureTech).toBe("inner-sphere");
+    expect(imported(mordelWith(mordelBiped(), { tech_base: "Clan", structure: { type: "Standard", technology: "Clan" } })).record.chassis.structureTech).toBeUndefined();
+  });
+
   it("reads a mixed-tech unit's parts by their own technology and Clan CASE as one unplaced mount", () => {
     const mixed = imported(
       mordelWith(mordelBiped(), { mixed_tech: true, engine: { type: "XL", technology: "Clan", rating: 200 }, structure: { type: "Endo Steel" } }),

@@ -351,6 +351,16 @@ describe("Dark Age, signature and enhancement rules (TO:AUE pp. 192-194, IO:AE p
     for (const [label, id, patch, expected] of cases) expect(battleValue(biped([m(id, "CT")], patch), catalog).defensive.targetModifier, label).toBe(expected);
   });
 
+  it("the Chameleon LPS and the Null-Signature System together are cumulative: +2 each, +4 in all", () => {
+    const both = biped([m("chameleon-lps-is", "CT"), m("null-signature-system-is", "LT")]);
+    expect(battleValue(both, catalog).defensive.targetModifier).toBe(plain.defensive.targetModifier + 4);
+  });
+
+  it("the Null-Signature System (10) and the Chameleon LPS (6) add their heat to movement heat together", () => {
+    const heat = (...ids: string[]) => battleValue(biped(ids.map((id) => m(id, "CT"))), catalog).offensive.movementHeat - plain.offensive.movementHeat;
+    expect([heat("null-signature-system-is"), heat("chameleon-lps-is"), heat("null-signature-system-is", "chameleon-lps-is")]).toEqual([10, 6, 16]);
+  });
+
   it("HarJel II and III multiply the armor BV of their location and cost a defensive point a slot", () => {
     const rows: [string, number, number][] = [["harjel-ii-clan", 202, 1], ["harjel-iii-clan", 204, 2]]; // the left arm's 8 points x 2.5 x 0.1 or 0.2 on 200
     for (const [id, armor, slots] of rows) {
