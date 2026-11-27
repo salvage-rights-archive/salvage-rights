@@ -17,8 +17,6 @@ async function startProto(page: Page, name: string): Promise<string> {
   const form = page.getByRole("form", { name: "Build a new one" });
   await form.getByLabel("Name").fill(name);
   await form.getByLabel("Year").fill("3070");
-  const era = form.getByLabel("Era");
-  if ((await era.count()) > 0 && (await era.first().evaluate((el) => el.tagName)) === "SELECT") await era.first().selectOption({ index: 1 });
   await form.getByLabel("Type").selectOption({ label: "ProtoMech" });
   await form.getByLabel("Tonnage").selectOption("9");
   await form.getByRole("button", { name: "Start building" }).click();

@@ -4,8 +4,10 @@ import { Link, useNavigate } from "react-router";
 import { ENGINE_WEIGHTS, INTERNAL_STRUCTURE, MECH_TYPES, SUPERHEAVY } from "../data/chassis";
 import type { MechType } from "../data/chassis";
 import { baseOf, CLASSIC } from "../data/rulesets";
-import { DEFAULT_EDITION, EDITIONS, bookName, editionName, eraLabel } from "../data/editions";
-import { configurationAvailable, configurationChoices, erasOfYear, setYear, typeAvailable } from "../rules/availability";
+import { DEFAULT_EDITION, EDITIONS, bookName, editionName } from "../data/editions";
+import { configurationAvailable, configurationChoices, erasForTechBase, erasOfYear, setEra, setYear, typeAvailable } from "../rules/availability";
+import type { When } from "../rules/availability";
+import { eraChoice, eraFull, useEraRoom } from "./eraChoice";
 import { levelAtLeast, levelIn, levelRow, techBaseChoices, withLevel } from "../rules/levels";
 import { clanInTime, superheavyPhase } from "../rules/time";
 import { DEFAULT_AERO_EDITION } from "../data/aero";
@@ -142,8 +144,9 @@ export default function HomePage() {
   const [baListed, setBaListed] = useState(0);
   /** The year typed in the build form, as text; empty or not a year means no year, and nothing is hidden by time. */
   const [yearText, setYearText] = useState("");
-  /** The era picked when the typed year is in two eras (an Inner Sphere era and a Clan sub-era). */
+  /** The era the player picked (it filled the year); empty leaves the era to the year and the tech base. */
   const [eraPick, setEraPick] = useState("");
+  const room = useEraRoom();
   const keepRef = useRef<HTMLButtonElement>(null);
   const openerRef = useRef<HTMLElement | null>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
@@ -249,17 +252,31 @@ export default function HomePage() {
   // What the form offers follows the rules level and tech base: a choice that no longer fits gives way to the first that does, so the Type
   // and Configuration lists re-filter as those fields change and nothing offered is out of the rules.
   const yearTyped = /^\d{4}$/.test(yearText.trim()) ? Number(yearText.trim()) : null;
-  // The year sets the era: one era holding it is the era, two (an Inner Sphere era and a Clan sub-era) are a choice the player makes, and the choice
-  // decides the tech bases offered. Above Introductory the year is needed (and so the pick); Introductory is 3025 technology and may go without.
-  // An era whose tech bases the level does not offer (at Introductory, only Inner Sphere) is not a choice here: hide, do not mark.
+  // The year sets the era, by the tech base: a year in two eras (an Inner Sphere era and a Clan sub-era) takes the one the tech base decides (setYear, resolveEra), so
+  // 3025 is the Late Succession War - Renaissance without asking. An era the player picks fills the year (setEra) and the tech base then follows the era and the
+  // level. Above Introductory the year is needed; Introductory is 3025 technology and may go without. An era whose tech bases the level does not offer is hidden.
   const basesHere = techBaseChoices(draft.rulesLevel, "", { year: yearTyped }).map(([value]) => value);
   const yearEras = erasOfYear(yearTyped, CLASSIC).filter((era) => era.techBases === undefined || era.techBases.some((base) => basesHere.includes(base)));
-  const eraChosen = yearEras.length === 1 ? yearEras[0] : yearEras.find((era) => era.id === eraPick);
+  const eraFor = (base: string): string | undefined => {
+    const d: When & { techBase?: string } = { year: yearTyped, techBase: base, ...(eraPick === "" ? {} : { era: eraPick }) };
+    if (yearTyped !== null) setYear(d, yearTyped);
+    return d.era;
+  };
+  let eraId = eraFor(draft.techBase);
+  let offeredBases = techBaseChoices(draft.rulesLevel, "", { year: yearTyped, era: eraId }); // the current choice is not kept here: one the year or era rules out gives way to the first offered
+  const techBase = (offeredBases.some(([value]) => value === draft.techBase) ? draft.techBase : (offeredBases[0]?.[0] ?? "inner-sphere")) as NewMechOptions["techBase"];
+  if (techBase !== draft.techBase) {
+    eraId = eraFor(techBase); // the tech base gave way, so the era follows the one it fell back to
+    offeredBases = techBaseChoices(draft.rulesLevel, "", { year: yearTyped, era: eraId });
+  }
+  const eraChosen = [...CLASSIC.eras, ...(CLASSIC.subEras ?? [])].find((era) => era.id === eraId);
   const aboveIntroductory = (draft.rulesLevel ?? "standard") !== "introductory";
   const missing = aboveIntroductory && yearTyped === null ? `A year is needed at ${levelRow(draft.rulesLevel ?? "standard").label} rules: it sets the era, and the era and year decide what is offered.` : aboveIntroductory && yearEras.length > 1 && eraChosen === undefined ? `The year ${String(yearTyped)} is in two eras; choose one, since it decides the tech base.` : "";
   const when = { year: yearTyped, era: eraChosen?.id };
-  const offeredBases = techBaseChoices(draft.rulesLevel, "", when); // the current choice is not kept here: one the year or era rules out gives way to the first offered
-  const techBase = (offeredBases.some(([value]) => value === draft.techBase) ? draft.techBase : (offeredBases[0]?.[0] ?? "inner-sphere")) as NewMechOptions["techBase"];
+  const levelBases = techBaseChoices(draft.rulesLevel, "", { year: null }).map(([value]) => value);
+  const eraOptions = erasForTechBase([...CLASSIC.eras, ...(CLASSIC.subEras ?? [])], techBase)
+    .filter((era) => era.techBases === undefined || era.techBases.some((base) => levelBases.includes(base)))
+    .map((era) => eraChoice(era, room));
   const subject = { techBase, year: yearTyped, era: eraChosen?.id, rulesLevel: draft.rulesLevel };
   const usable = (id: MechType) => MECH_TYPES.find((t) => t.id === id)?.ready === true && typeAvailable(id, subject);
   const unitType: MechType = draft.unitType !== undefined && usable(draft.unitType) ? draft.unitType : (MECH_TYPES.find((t) => usable(t.id))?.id ?? "mech");
@@ -866,6 +883,51 @@ export default function HomePage() {
                 },
               ]}
             />
+            <LevelSelect
+              id="bt-new-level"
+              record={draft}
+              onChange={(rulesLevel) => {
+                // A tech base the new level does not offer gives way to Inner Sphere (Clan below Standard, Mixed below Advanced).
+                const fits = techBaseChoices(rulesLevel, "inner-sphere", when).some(([value]) => value === draft.techBase);
+                setDraft({ ...draft, rulesLevel, techBase: fits ? draft.techBase : "inner-sphere" });
+              }}
+            />
+            <div className="bt-grid__wide bt-yearera">
+              <div className="bt-field">
+                <label htmlFor="bt-new-year">Year</label>
+                <input
+                  id="bt-new-year"
+                  inputMode="numeric"
+                  maxLength={4}
+                  value={yearText}
+                  aria-invalid={aboveIntroductory && yearTyped === null ? true : undefined}
+                  aria-describedby="bt-new-year-hint"
+                  onChange={(e) => { setYearText(e.target.value); }}
+                />
+              </div>
+              <div className="bt-field">
+                <label htmlFor="bt-new-era-pick">Era</label>
+                <select
+                  id="bt-new-era-pick"
+                  value={eraChosen?.id ?? ""}
+                  title={eraChosen ? eraFull(eraChosen) : undefined}
+                  onChange={(e) => {
+                    const d: When = { year: yearTyped };
+                    setEra(d, e.target.value);
+                    setEraPick(d.era ?? "");
+                    setYearText(d.year === null ? "" : String(d.year));
+                  }}
+                >
+                  <option value="">{aboveIntroductory && yearTyped !== null && eraChosen === undefined ? "Choose an era" : "Any era"}</option>
+                  {eraOptions.map((era) => (
+                    <option key={era.value} value={era.value} title={era.full}>{era.label}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <span id="bt-new-year-hint" className="bt-hint bt-grid__wide">
+              {aboveIntroductory ? "Needed. The year sets the era and hides the body types, parts and tech bases that did not exist yet." : "Optional at Introductory, which is 3025 technology. A year sets the era and hides what did not exist yet."}
+            </span>
             {!aeroPicked && !protoPicked && !vehiclePicked && !svPicked && !baPicked && !infantryPicked && (
             <div className="bt-field">
               <label htmlFor="bt-new-config">Configuration</label>
@@ -882,47 +944,6 @@ export default function HomePage() {
               </select>
             </div>
             )}
-            <LevelSelect
-              id="bt-new-level"
-              record={draft}
-              onChange={(rulesLevel) => {
-                // A tech base the new level does not offer gives way to Inner Sphere (Clan below Standard, Mixed below Advanced).
-                const fits = techBaseChoices(rulesLevel, "inner-sphere", when).some(([value]) => value === draft.techBase);
-                setDraft({ ...draft, rulesLevel, techBase: fits ? draft.techBase : "inner-sphere" });
-              }}
-            />
-            <div className="bt-field">
-              <label htmlFor="bt-new-year">Year</label>
-              <input
-                id="bt-new-year"
-                inputMode="numeric"
-                maxLength={4}
-                value={yearText}
-                aria-invalid={aboveIntroductory && yearTyped === null ? true : undefined}
-                aria-describedby="bt-new-year-hint"
-                onChange={(e) => { setYearText(e.target.value); }}
-              />
-              <span id="bt-new-year-hint" className="bt-hint">
-                {aboveIntroductory ? "Needed. The year sets the era and hides the body types, parts and tech bases that did not exist yet." : "Optional at Introductory, which is 3025 technology. A year sets the era and hides what did not exist yet."}
-              </span>
-            </div>
-            {yearEras.length === 1 && (
-              <div className="bt-field">
-                <span id="bt-new-era-label" className="bt-label">Era</span>
-                <span id="bt-new-era" aria-labelledby="bt-new-era-label">{yearEras[0] ? eraLabel(yearEras[0]) : ""}</span>
-              </div>
-            )}
-            {yearEras.length > 1 && (
-              <div className="bt-field">
-                <label htmlFor="bt-new-era-pick">Era</label>
-                <select id="bt-new-era-pick" value={eraChosen?.id ?? ""} onChange={(e) => { setEraPick(e.target.value); }}>
-                  <option value="">Choose an era</option>
-                  {yearEras.map((era) => (
-                    <option key={era.id} value={era.id}>{eraLabel(era)}</option>
-                  ))}
-                </select>
-              </div>
-            )}
             {protoPicked ? (
               <div className="bt-field">
                 <span className="bt-label">Tech base</span>
@@ -931,7 +952,7 @@ export default function HomePage() {
             ) : (
             <div className="bt-field">
               <label htmlFor="bt-new-tech">Tech base</label>
-              <select id="bt-new-tech" value={infantryPicked && techBase === "mixed" ? "inner-sphere" : techBase} onChange={(e) => setDraft({ ...draft, techBase: e.target.value as NewMechOptions["techBase"] })}>
+              <select id="bt-new-tech" value={infantryPicked && techBase === "mixed" ? "inner-sphere" : techBase} onChange={(e) => { setDraft({ ...draft, techBase: e.target.value as NewMechOptions["techBase"] }); if (erasOfYear(yearTyped, CLASSIC).length > 1) setEraPick(""); }}>
                 {techBaseChoices(draft.rulesLevel, techBase, when).filter(([value]) => !(infantryPicked && value === "mixed")).map(([value, label]) => (
                   <option key={value} value={value}>
                     {label}

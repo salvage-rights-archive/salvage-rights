@@ -74,7 +74,7 @@ describe("AeroTech pages", () => {
     const user = userEvent.setup();
     render(<RouterProvider router={createMemoryRouter([{ path: AERO_HOME, element: <AeroHomePage /> }], { initialEntries: [AERO_HOME] })} />);
     await user.type(await screen.findByLabelText("Name"), "Wasp");
-    const order = ["Rules level", "Year", "Tech base"].map((name) => screen.getByLabelText(name));
+    const order = ["Rules level", "Year", "Era", "Tech base"].map((name) => screen.getByLabelText(name));
     expect(order.every((field, i) => i === 0 || (order[i - 1]?.compareDocumentPosition(field) ?? 0) & Node.DOCUMENT_POSITION_FOLLOWING)).toBe(true);
     const start = screen.getByRole("button", { name: "Start building" }) as HTMLButtonElement;
     await waitFor(() => { expect(start.disabled).toBe(true); });
@@ -85,6 +85,8 @@ describe("AeroTech pages", () => {
     await user.selectOptions(screen.getByLabelText("Era"), "clan-golden-years");
     expect(optionsOf("Tech base")).toEqual(["Inner Sphere", "Clan"]);
     await waitFor(() => { expect(start.disabled).toBe(false); });
+    await user.selectOptions(screen.getByLabelText("Era"), "age-of-war");
+    expect((screen.getByLabelText("Year") as HTMLInputElement).value).toBe("2288"); // a year outside the era becomes the middle of its range
   });
 
   it("the editor offers only what the unit's edition builds", async () => {

@@ -32,6 +32,8 @@ import type { OmniChassis } from "../rules/omni";
 import { BaseBreaks, CompareView, ConfigurationBar, OMNI_PANEL_ID, PodSpacePanel, omniTabId } from "./editor/OmniBar";
 import type { OnChassis } from "./editor/OmniBar";
 import { eraLabel } from "../data/editions";
+import { eraChoice, useEraRoom } from "./eraChoice";
+import type { EraRoom } from "./eraChoice";
 import type { EraRow } from "../data/editions";
 import LevelSelect from "./editor/LevelSelect";
 import TypeSelect from "./editor/TypeSelect";
@@ -227,7 +229,8 @@ export function SelectField({
   id: string;
   label: string;
   value: string;
-  options: [value: string, label: string][];
+  /** `full`, where given, is the whole text of a choice shown short: its title and accessible name. */
+  options: [value: string, label: string, full?: string][];
   onChange: (value: string) => void;
   changed?: boolean;
   disabled?: boolean;
@@ -242,14 +245,15 @@ export function SelectField({
           id={id}
           value={value}
           disabled={disabled}
+          title={options.find(([key]) => key === value)?.[2]}
           style={{ "--bt-select-min": `${longest + 4}ch` } as CSSProperties}
           aria-describedby={describedBy}
           onChange={(event) => {
             onChange(event.target.value);
           }}
         >
-          {options.map(([key, text]) => (
-            <option key={key} value={key}>
+          {options.map(([key, text, full]) => (
+            <option key={key} value={key} title={full}>
               {text}
             </option>
           ))}
@@ -457,7 +461,7 @@ const CHASSIS_FIELDS: ChassisField[] = [
   { kind: "number", path: "chassis.heatSinks-count", label: "Heat sinks", read: (r) => r.chassis.heatSinks.count, write: (d, v) => void (d.chassis.heatSinks.count = v) },
 ];
 
-const eraChoices = (eras: EraRow[]): [string, string][] => [["", "Any era"], ...eras.map((era): [string, string] => [era.id, `${eraLabel(era)} (${String(era.startYear)}${era.endYear === undefined ? " on" : `-${String(era.endYear)}`})`])];
+const eraChoices = (eras: EraRow[], room: EraRoom): [string, string, string?][] => [["", "Any era"], ...eras.map((era): [string, string, string] => { const c = eraChoice(era, room); return [c.value, c.label, c.full]; })];
 
 // ---------------------------------------------------------------------------------------------------------------
 // What a finding or a changed marker can point at
@@ -778,9 +782,10 @@ function Editor({ initial, unsaved, startAt, catalog, storage }: { initial: Doc;
   const ruleset = rulesetOf(record.editionId);
   // The era drop-down: every era the tech base can use (hide, do not mark; the era the record already has stays), the first row "Choose an era" while the year is in two eras and none is picked.
   const eraNeeded = ruleset.dated && record.year !== null && eraNeedsPick(record);
-  const eraOptions: [string, string][] = [[ "", eraNeeded ? "Choose an era" : "Any era"], ...eraChoices(erasForTechBase([...ruleset.eras, ...(ruleset.subEras ?? [])], record.techBase)).slice(1)];
+  const room = useEraRoom();
+  const eraOptions: [string, string, string?][] = [[ "", eraNeeded ? "Choose an era" : "Any era"], ...eraChoices(erasForTechBase([...ruleset.eras, ...(ruleset.subEras ?? [])], record.techBase), room).slice(1)];
   const eraNow = eraOfRecord(record);
-  if (eraNow && !eraOptions.some(([id]) => id === eraNow.id)) eraOptions.push(...eraChoices([eraNow]).slice(1));
+  if (eraNow && !eraOptions.some(([id]) => id === eraNow.id)) eraOptions.push(...eraChoices([eraNow], room).slice(1));
   const gothic = ruleset.game === "gothic";
   const open = listsOpen(ruleset, record.rulesLevel); // Unlimited opens the whole catalog, Clan rows and every unit type included
   // Items whose weight we worked out because no book prints it (the Light Blazer), each named once for the weight list.
@@ -1020,7 +1025,7 @@ function Editor({ initial, unsaved, startAt, catalog, storage }: { initial: Doc;
                 </label>
               )}
               <LevelSelect record={record} ruleset={ruleset} onChange={(level) => { edit((d) => void (d.rulesLevel = level)); }} />
-              <div className="bt-grid__wide bt-grid">
+              <div className="bt-grid__wide bt-yearera">
               <NumberField
                 id="field-year"
                 label="Year"

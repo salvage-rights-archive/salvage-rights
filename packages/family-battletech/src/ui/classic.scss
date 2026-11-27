@@ -651,6 +651,28 @@ a.bt-button {
   }
 }
 
+// Year and Era share a row from 480 px (the year a narrow column, the era the rest); below that they stack.
+.bt-yearera {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--sr-space-1) var(--sr-space-3);
+  align-items: start;
+
+  @media (min-width: 480px) {
+    grid-template-columns: minmax(5.5rem, 7rem) minmax(0, 1fr);
+  }
+
+  .bt-field {
+    margin: 0;
+    align-content: start;
+
+    input,
+    select {
+      flex-basis: 4rem;
+    }
+  }
+}
+
 // The rules level selector takes a whole row of the grid: the select, then its description and page beside it.
 .bt-level {
   grid-column: 1 / -1;

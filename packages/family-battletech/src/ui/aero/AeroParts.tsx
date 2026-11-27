@@ -4,8 +4,8 @@
 // the edition prints none.
 import { ENGINE_TYPES } from "../../data/chassis";
 import { CAPITAL_ARMOR_TYPES, CAPITAL_FIGURES, CRAFT_FIGURES, DEFAULT_AERO_EDITION, FIGHTER_FIGURES, aeroTypesFor, fighterArmorTypes, fighterPatchworkTypes, figureOf, kindFigureOf } from "../../data/aero";
-import { ERAS, SUB_ERAS, eraLabel } from "../../data/editions";
-import type { EraRow } from "../../data/editions";
+import { ERAS, SUB_ERAS } from "../../data/editions";
+import { eraChoice, useEraRoom } from "../eraChoice";
 import { eraNeedsPick, eraOfRecord, erasForTechBase, erasOfYear, resolveEra, setEra, setYear } from "../../rules/availability";
 import {
   aeroLocationName,
@@ -44,7 +44,6 @@ const AT1 = "aerotech-1986";
 const num = (n: number): string => String(tidy(n));
 const plural = (n: number, word: string) => `${num(n)} ${word}${n === 1 ? "" : "s"}`;
 const TECH_BASE_LABELS: Record<string, string> = { "inner-sphere": "Inner Sphere", clan: "Clan", mixed: "Mixed" };
-const eraChoice = (era: EraRow): { value: string; label: string } => ({ value: era.id, label: `${eraLabel(era)} (${String(era.startYear)}${era.endYear === undefined ? " on" : `-${String(era.endYear)}`})` });
 const titleCase = (id: string): string => id.charAt(0).toUpperCase() + id.slice(1);
 
 /** A short list of derived figures, each a sentence, in the panel's own words. */
@@ -81,9 +80,10 @@ export function IdentityPanel({ record, catalog, onEdit }: PartProps & { catalog
   // The year sits above the tech base and decides the eras: one era holds it, or two (an Inner Sphere era and a Clan sub-era) and the era is picked. The current
   // rules ask for a year above Introductory; the older books have no levels, so none is asked for there.
   const yearEras = erasOfYear(record.year);
-  const eraOptions = [{ value: "", label: yearEras.length > 1 && eraNeedsPick(record) ? "Choose an era" : "Any era" }, ...erasForTechBase([...ERAS, ...SUB_ERAS], record.techBase).map(eraChoice)];
+  const room = useEraRoom();
+  const eraOptions = [{ value: "", label: yearEras.length > 1 && eraNeedsPick(record) ? "Choose an era" : "Any era" }, ...erasForTechBase([...ERAS, ...SUB_ERAS], record.techBase).map((era) => eraChoice(era, room))];
   const eraNow = eraOfRecord(record);
-  if (eraNow && !eraOptions.some((o) => o.value === eraNow.id)) eraOptions.push(eraChoice(eraNow));
+  if (eraNow && !eraOptions.some((o) => o.value === eraNow.id)) eraOptions.push(eraChoice(eraNow, room));
   const needsYear = current && record.year === null && level !== "introductory";
   return (
     <section className="bt-panel" aria-labelledby="aero-identity">
@@ -165,7 +165,7 @@ export function IdentityPanel({ record, catalog, onEdit }: PartProps & { catalog
             }}
           />
         )}
-        <div className="bt-grid__wide bt-grid">
+        <div className="bt-grid__wide bt-yearera">
           <NumberField
             id="field-year"
             label="Year"
