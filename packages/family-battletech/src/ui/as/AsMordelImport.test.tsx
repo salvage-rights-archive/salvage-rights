@@ -18,6 +18,7 @@ afterEach(cleanup);
 const client = (reply: MordelResult<unknown>): MordelClient => ({
   testKey: () => Promise.resolve({ ok: true, value: true }),
   unit: () => Promise.resolve(reply),
+  file: () => Promise.resolve({ ok: false, failure: "not-found", message: "no file" }),
   myUnits: () => Promise.resolve({ ok: true, value: { rows: [], truncated: false } }),
 });
 

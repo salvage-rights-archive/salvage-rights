@@ -8,6 +8,7 @@ import type { MechType } from "../data/chassis";
 import type { Catalog, EquipmentRow } from "./catalog";
 import { setYear } from "./availability";
 import { levelAtLeast, lowestLevelFor } from "./levels";
+import type { MtfActuators } from "./mtf-actuators";
 import { ARM_FULL, armorSpread, armsOf, configurationOf, layout, locationName, mountParts, partMountBase, slotsTaken, splitOf } from "./mech";
 import type { LocationCode, MechRecord, Mount, TechBase } from "./mech";
 import { canon, designKey } from "./official";
@@ -195,15 +196,15 @@ const own = <T>(table: Record<string, T>, key: string): T | undefined => (Object
 // The importer
 // ---------------------------------------------------------------------------------------------------------------
 /** `requested` is the unit type asked for (bm or im), used when the response does not say its own. */
-export function fromMordel(response: unknown, catalog: Catalog, editionId: string, now: string, newId: () => string, requested = "bm"): MordelImport {
+export function fromMordel(response: unknown, catalog: Catalog, editionId: string, now: string, newId: () => string, requested = "bm", mtf?: MtfActuators): MordelImport {
   try {
-    return convert(response, catalog, editionId, now, newId, requested);
+    return convert(response, catalog, editionId, now, newId, requested, mtf);
   } catch {
     return { ok: false, message: "This response could not be read as a Mordel unit." };
   }
 }
 
-function convert(response: unknown, catalog: Catalog, editionId: string, now: string, newId: () => string, requested: string): MordelImport {
+function convert(response: unknown, catalog: Catalog, editionId: string, now: string, newId: () => string, requested: string, mtf?: MtfActuators): MordelImport {
   const isObject = (x: unknown): x is Json => typeof x === "object" && x !== null && !Array.isArray(x);
   const top = isObject(response) ? response : undefined;
   if (!top) return { ok: false, message: "Mordel sent nothing this tool can read: the response is not an object." };
@@ -582,7 +583,7 @@ function convert(response: unknown, catalog: Catalog, editionId: string, now: st
     if (era !== undefined) values.era = era;
   }
 
-  placeMounts(record, catalog, note);
+  placeMounts(record, catalog, note, mtf);
   if (record.year !== null) setYear(record, record.year); // the era follows the year where one era holds it; a year in two is left for the player to pick
   record.rulesLevel = lowestLevelFor(record, catalog);
   // Mordel's own `canon` flag is the one thing that makes an import OFFICIAL: a unit it marks canon is the publisher's design, and the
@@ -611,9 +612,18 @@ const ARM_STEPS = [undefined, { lowerArm: true, hand: false }, { lowerArm: false
 
 /** Mordel does not say which arm actuators a design has. Where the equipment listed in an arm cannot fit with them all, the
  * hand actuator is taken out, and then the lower arm actuator, as far as the equipment needs. */
-function inferArms(record: MechRecord, catalog: Catalog, note: (text: string) => void) {
+function inferArms(record: MechRecord, catalog: Catalog, note: (text: string) => void, mtf?: MtfActuators) {
   if (record.configuration !== "biped" && record.configuration !== "tripod") return;
   for (const arm of ["LA", "RA"] as const) {
+    // The unit's own .mtf file says which actuators the arm has; no guessing then.
+    const given = mtf?.arms[arm];
+    if (given) {
+      if (!given.lowerArm || !given.hand) {
+        record.arms = { ...record.arms, [arm]: { lowerArm: given.lowerArm, hand: given.hand } };
+        note(`The unit's .mtf file leaves out the ${given.lowerArm ? "hand" : "lower arm and hand"} actuator${given.lowerArm ? "" : "s"} of the ${locationName(arm)}.`);
+      }
+      continue;
+    }
     const needed = record.mounts
       .filter((m) => !m.part)
       .flatMap((m) => mountParts(m, Math.max(0, slotsTaken(m, record, catalog.factsOf))))
@@ -644,8 +654,11 @@ function inferArms(record: MechRecord, catalog: Catalog, note: (text: string) =>
  * list order; then, in the fixed order of FILL_ORDER, the structure and armor slots and the items a part stands for that
  * Mordel did not place. The fixed cells come from layout(), so engine and gyro variants are the tables' business. Whatever
  * does not fit stays unplaced. */
-function placeMounts(record: MechRecord, catalog: Catalog, note: (text: string) => void) {
-  inferArms(record, catalog, note);
+function placeMounts(record: MechRecord, catalog: Catalog, note: (text: string) => void, mtf?: MtfActuators) {
+  inferArms(record, catalog, note, mtf);
+  for (const [code, missing] of Object.entries(mtf?.legsMissing ?? {})) {
+    note(`The unit's .mtf file leaves out the ${missing.join(", ").toLowerCase()} of the ${locationName(code as LocationCode)}. We keep every leg actuator, so our cost runs a little above the file's.`);
+  }
   const empty = layout({ ...record, mounts: [] }, catalog.factsOf);
   if (!empty.supported) {
     note(`The configuration "${record.configuration}" has no fixed slot layout here, so no item is placed in a slot.`);

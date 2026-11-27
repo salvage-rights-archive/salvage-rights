@@ -42,6 +42,16 @@ describe("mordel client", () => {
     expect(JSON.stringify(result)).not.toContain(KEY);
   });
 
+  it("reads a unit file as text through the same key and path, and follows no link that is not on the mordel.net API", async () => {
+    const fetchMock = answering(new Response("chassis:Test", { status: 200 }));
+    const client = createMordelClient({ key: KEY, fetch: fetchMock, wait: noWait });
+    expect(await client.file("https://www.mordel.net/api/v1/units/bm/7/files/megamek")).toEqual({ ok: true, value: "chassis:Test" });
+    expect(String(fetchMock.mock.calls[0]?.[0])).toBe(`${MORDEL_BASE}/units/bm/7/files/megamek`);
+    expect(fetchMock.mock.calls[0]?.[1]?.headers).toMatchObject({ "X-API-Key": KEY });
+    expect(await client.file("https://example.com/api/v1/units/bm/7/files/megamek")).toMatchObject({ ok: false, failure: "bad-request" });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
   it("retries once after a 429, and gives slow-down if the second answer is a 429 too", async () => {
     const wait = vi.fn(noWait);
     const failing = answering(status(429, { "Retry-After": "2" }), status(429));
