@@ -268,7 +268,9 @@ export const AMMUNITION: EquipmentGroup[] = [
     defaults: { kind: "ammunition", techBase: "inner-sphere", cite: { book: TO, page: 217 }, playCite: { book: TO, page: 216 }, checked: "page" },
     items: [
       // Ammunition for the weapons above (the Ammo column; the bin is one ton in one slot, TechManual p. 57), pp. 216-217
-      { id: "ammo-arrow-iv-is", name: "Arrow IV Ammo", tons: 1, slots: 1, shotsPerTon: 5, availability: [{ from: 3044 }], rulesLevel: "advanced" },
+      // Arrow IV ammunition is two munitions. This row is the standard, Non-Homing round (Core Rulebook printed p. 190, "Standard"; Tactical Operations: AUE printed pp. 226-227, latest intro 3044 / 2600, 10,000 a ton); the Homing round has its own row below. Records that held this id before the split keep it.
+      { id: "ammo-arrow-iv-is", name: "Arrow IV (Non-Homing) Ammo", aliases: ["Arrow IV Ammo", "Arrow IV Non-Homing Ammo"], tons: 1, slots: 1, shotsPerTon: 5, availability: [{ from: 3044 }], rulesLevel: "advanced", cite: { book: TO, page: 227 }, playCite: { book: TO, page: 226 } },
+      { id: "ammo-arrow-iv-homing-is", name: "Arrow IV (Homing) Ammo", aliases: ["Arrow IV Homing Ammo"], tons: 1, slots: 1, shotsPerTon: 5, availability: [{ from: 2600, to: 2830 }, { from: 3045 }], prototypeYear: 2593, rulesLevel: "advanced", cite: { book: TO, page: 227 }, playCite: { book: TO, page: 226 } },
       { id: "ammo-thumper-artillery-is", name: "Thumper Artillery Ammo", tons: 1, slots: 1, shotsPerTon: 20, availability: [{ from: 1950 }], rulesLevel: "advanced" },
       { id: "ammo-sniper-artillery-is", name: "Sniper Artillery Ammo", tons: 1, slots: 1, shotsPerTon: 10, availability: [{ from: 1950 }], rulesLevel: "advanced" },
       { id: "ammo-thumper-cannon-is", name: "Thumper Cannon Ammo", tons: 1, slots: 1, shotsPerTon: 20, availability: [{ from: 3079 }], prototypeYear: 3012, rulesLevel: "experimental" },
@@ -284,7 +286,8 @@ export const AMMUNITION: EquipmentGroup[] = [
     defaults: { kind: "ammunition", techBase: "clan", cite: { book: TO, page: 217 }, playCite: { book: TO, page: 216 }, checked: "page" },
     items: [
       // Ammunition for the weapons above (the Ammo column; the bin is one ton in one slot, TechManual p. 57), pp. 216-217
-      { id: "ammo-arrow-iv-clan", name: "Arrow IV Ammo", tons: 1, slots: 1, shotsPerTon: 5, availability: [{ from: 2850 }], rulesLevel: "advanced" },
+      { id: "ammo-arrow-iv-clan", name: "Arrow IV (Non-Homing) Ammo", aliases: ["Arrow IV Ammo", "Arrow IV Non-Homing Ammo"], tons: 1, slots: 1, shotsPerTon: 5, availability: [{ from: 2850 }], rulesLevel: "advanced", cite: { book: TO, page: 227 }, playCite: { book: TO, page: 226 } },
+      { id: "ammo-arrow-iv-homing-clan", name: "Arrow IV (Homing) Ammo", aliases: ["Arrow IV Homing Ammo"], tons: 1, slots: 1, shotsPerTon: 5, availability: [{ from: 2600 }], rulesLevel: "advanced", cite: { book: TO, page: 227 }, playCite: { book: TO, page: 226 } },
       { id: "ammo-thumper-artillery-clan", name: "Thumper Artillery Ammo", tons: 1, slots: 1, shotsPerTon: 20, availability: [{ from: 1950 }], rulesLevel: "advanced" },
       { id: "ammo-sniper-artillery-clan", name: "Sniper Artillery Ammo", tons: 1, slots: 1, shotsPerTon: 10, availability: [{ from: 1950 }], rulesLevel: "advanced" },
       { id: "ammo-thumper-cannon-clan", name: "Thumper Cannon Ammo", tons: 1, slots: 1, shotsPerTon: 20, availability: [{ from: 3032 }], rulesLevel: "experimental" },

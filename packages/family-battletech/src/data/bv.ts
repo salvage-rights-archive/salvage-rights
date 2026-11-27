@@ -592,7 +592,7 @@ export const WEAPON_BV: BvGroup[] = [
       ["enhanced-lrm-5-is", 52, 7], ["enhanced-lrm-10-is", 104, 13], ["enhanced-lrm-15-is", 157, 20], ["enhanced-lrm-20-is", 210, 26],
       ["extended-lrm-5-is", 67, 8], ["extended-lrm-10-is", 133, 17], ["extended-lrm-15-is", 200, 25], ["extended-lrm-20-is", 268, 34],
       ["thunderbolt-5-is", 64, 8], ["thunderbolt-10-is", 127, 16], ["thunderbolt-15-is", 229, 29], ["thunderbolt-20-is", 305, 38],
-      ["arrow-iv-is", 240, 30], ["sniper-artillery-is", 85, 11], ["thumper-artillery-is", 43, 5],
+      ["arrow-iv-is", 240, 30, { ammo: ["ammo-arrow-iv-is", "ammo-arrow-iv-homing-is"] }], ["sniper-artillery-is", 85, 11], ["thumper-artillery-is", 43, 5],
     ],
   },
   {
@@ -612,7 +612,7 @@ export const WEAPON_BV: BvGroup[] = [
       ["long-tom-cannon-clan", 329, 41], ["sniper-cannon-clan", 77, 10], ["thumper-cannon-clan", 41, 5],
       ["streak-lrm-5-clan", 86, 11, { heat: "streak" }], ["streak-lrm-10-clan", 173, 22, { heat: "streak" }],
       ["streak-lrm-15-clan", 259, 32, { heat: "streak" }], ["streak-lrm-20-clan", 345, 43, { heat: "streak" }],
-      ["arrow-iv-clan", 240, 30], ["sniper-artillery-clan", 96, 11], ["thumper-artillery-clan", 48, 5],
+      ["arrow-iv-clan", 240, 30, { ammo: ["ammo-arrow-iv-clan", "ammo-arrow-iv-homing-clan"] }], ["sniper-artillery-clan", 96, 11], ["thumper-artillery-clan", 48, 5],
     ],
   },
   {
@@ -681,6 +681,7 @@ export const WEAPON_BV: BvGroup[] = [
     rows: [["light-blazer-gothic", 148]],
   },
   {
+    // no printed BV/cost; inferred from Mordel unit totals, owner 2026-11-26.
     // The heavy plasma rifle (catalog row flagged `bvInferred`): no book we hold prints its Battle Value. 296 with ammunition at 36 is the pair that,
     // run through this table's method, reproduces Mordel's figure for the Atlas AS7-Ln (unit 99519, 2,386); of the pairs that land there it is the one
     // in the 8-to-1 weapon-to-ammunition ratio the plasma rifle (210, 26) and the other weapons keep. The light plasma rifle has no unit to work from.

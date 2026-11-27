@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { loadCatalog } from "./catalog";
 import { battleValue } from "./bv";
 import { unitCost } from "./cost";
+import { MUNITION_PRICE } from "../data/cost";
 import { mordelBiped, mordelWith } from "./fixtures";
 import { fromMordel } from "./mordel";
 
@@ -30,6 +31,16 @@ describe("heavy plasma rifle (Core Rulebook printed pp. 189, 248)", () => {
     const priced = unitCost(withRifle, catalog);
     expect(priced.unpriced).toEqual([]);
     expect(priced.lines.some((l) => l.cost === 320_000)).toBe(true);
+  });
+});
+
+describe("Arrow IV ammunition (Core Rulebook printed p. 190; Tactical Operations: AUE printed pp. 226-227)", () => {
+  it("is a Homing and a Non-Homing round: the old id is the Non-Homing one, Mordel's bin tags reach the right row, each has its own price", () => {
+    const record = load([entry(1, "Arrow IV System", "RT", 15), entry(2, "Arrow IV System (Ammo 5) [Homing]", "LT", 1), entry(3, "Arrow IV System (Ammo 5) [Non-Homing]", "LT", 1)]);
+    expect(record.mounts.filter((m) => m.equipmentId?.startsWith("ammo-arrow")).map((m) => m.equipmentId)).toEqual(["ammo-arrow-iv-homing-is", "ammo-arrow-iv-is"]);
+    expect(catalog.byId("ammo-arrow-iv-is")?.availability).toEqual([{ from: 3044 }]);
+    expect(catalog.byId("ammo-arrow-iv-homing-is")?.availability).toEqual([{ from: 2600, to: 2830 }, { from: 3045 }]);
+    expect([MUNITION_PRICE.rows["ammo-arrow-iv-homing"], MUNITION_PRICE.rows["ammo-arrow-iv"]]).toEqual([{ perTon: 15_000 }, { perTon: 10_000 }]);
   });
 });
 
