@@ -39,6 +39,12 @@ import { startTons as vehicleStartTons } from "./vehicle/edit";
 import { vehicleEditorHref } from "./vehicle/routes";
 import { openVehicleStorage } from "./vehicle/storage";
 import VehicleShelf from "./vehicle/VehicleShelf";
+import { SV_MOTIVES } from "../data/support-vehicle";
+import { newSvRecord, startTons as svStartTons } from "../rules/support-vehicle/sv";
+import type { SvMotiveId } from "../rules/support-vehicle/sv";
+import { svEditorHref } from "./support-vehicle/routes";
+import { openSvStorage } from "./support-vehicle/storage";
+import SvShelf from "./support-vehicle/SvShelf";
 import { WEIGHT_CLASSES } from "../data/battlearmor";
 import { newBaRecord } from "../rules/battlearmor/record";
 import { suitOffered, weightClassChoices } from "../rules/battlearmor/availability";
@@ -124,6 +130,10 @@ export default function HomePage() {
   const [vehicleType, setVehicleType] = useState<string>();
   const [vehicleTons, setVehicleTons] = useState<number>();
   const [vehicleCruise, setVehicleCruise] = useState(3);
+  /** The Support Vehicle chosen in the new-unit list, when one is: it opens the Support Vehicle editor. */
+  const [svType, setSvType] = useState<string>();
+  const [svTons, setSvTons] = useState<number>();
+  const [svCruise, setSvCruise] = useState(3);
   /** Battle armor chosen in the new-unit list: it opens the battle armor editor, with the weight class and body picked here. */
   const [baPick, setBaPick] = useState<string>();
   const [baClass, setBaClass] = useState<string>();
@@ -314,6 +324,30 @@ export default function HomePage() {
     void navigate(vehicleEditorHref(made.id));
   };
 
+  // The Support Vehicle motive types the rules level offers (hidden below, never marked).
+  const svOptions = SV_MOTIVES.filter((m) => levelAtLeast(draft.rulesLevel ?? "standard", m.level)).map((m) => ({ id: m.id, label: `Support vehicle: ${m.label}`, note: `${m.label}: a Support Vehicle of up to ${String(m.maxTons)} tons, built under TechManual and opened in the Support Vehicle editor.`, row: m }));
+  const svPicked = svOptions.find((option) => option.id === svType);
+  const svTonnage = svTons ?? svStartTons(svPicked?.id ?? "");
+  const buildSv = async () => {
+    if (!storage || !svPicked || !draft.chassis.trim() || svTonnage < 0.1 || missing !== "") return;
+    const made = newSvRecord({
+      id: crypto.randomUUID(),
+      chassis: draft.chassis.trim(),
+      model: draft.model.trim(),
+      motive: svPicked.row.id as SvMotiveId,
+      techBase,
+      tons: svTonnage,
+      cruise: svPicked.row.id === "airship" ? Math.min(2, svCruise) : svCruise,
+      year: yearTyped,
+      ...(eraChosen ? { era: eraChosen.id } : {}),
+      rulesLevel: draft.rulesLevel,
+      editionId: edition,
+    });
+    const svStorage = await openSvStorage().catch(() => undefined);
+    if (!svStorage || !(await attempt(STORAGE_WRITE_FAILED, () => svStorage.save(made)))) return;
+    void navigate(svEditorHref(made.id));
+  };
+
   // Battle armor: offered at the levels that include it (Standard and above) while some weight class exists for the year and tech base (hide, do not mark).
   const baSubject = { techBase: techBase === "clan" ? ("clan" as const) : ("inner-sphere" as const), year: yearTyped, era: eraChosen?.id, rulesLevel: draft.rulesLevel, editionId: edition };
   const baClasses = suitOffered(draft.rulesLevel) && techBase !== "mixed" ? weightClassChoices(baSubject) : [];
@@ -361,6 +395,7 @@ export default function HomePage() {
     if (baPicked) return buildBa();
     if (aeroPicked) return buildAero();
     if (vehiclePicked) return buildVehicle();
+    if (svPicked) return buildSv();
     if (infantryPicked) {
       if (missing !== "" || !draft.chassis.trim()) return;
       const id = await startInfantry({ name: draft.chassis.trim(), model: draft.model.trim(), techBase, year: yearTyped, era: eraChosen?.id, rulesLevel: draft.rulesLevel }).catch(() => undefined);
@@ -744,6 +779,7 @@ export default function HomePage() {
 
       <ProtoSavedUnits />
       <VehicleShelf />
+      <SvShelf />
       <SavedBattleArmor key={baListed} />
 
       <section className="bt-section" aria-labelledby="bt-add">
@@ -784,6 +820,18 @@ export default function HomePage() {
                   },
                 },
                 {
+                  prefix: "supportvehicle:",
+                  label: "Support vehicles (opens the Support Vehicle editor)",
+                  choices: {
+                    options: svOptions,
+                    chosen: svPicked?.id,
+                    onChoose: (id) => {
+                      setSvType(id);
+                      setSvTons(undefined);
+                    },
+                  },
+                },
+                {
                   prefix: "aero:",
                   label: "Aerospace (opens the AeroTech editor)",
                   choices: {
@@ -816,7 +864,7 @@ export default function HomePage() {
                 },
               ]}
             />
-            {!aeroPicked && !protoPicked && !vehiclePicked && !baPicked && !infantryPicked && (
+            {!aeroPicked && !protoPicked && !vehiclePicked && !svPicked && !baPicked && !infantryPicked && (
             <div className="bt-field">
               <label htmlFor="bt-new-config">Configuration</label>
               <select
@@ -914,6 +962,11 @@ export default function HomePage() {
                 <NumberField id="bt-new-vehicle-tons" label="Tonnage" value={vehicleTonnage} min={1} hint={`Whole tons, 1 to ${String(vehiclePicked.row.maxTons)}.`} onValid={(tons) => { setVehicleTons(tons ?? undefined); }} />
                 <NumberField id="bt-new-vehicle-cruise" label="Cruising MP" value={vehicleCruise} min={1} hint={vehiclePicked.row.minCruise === undefined ? undefined : `At least ${String(vehiclePicked.row.minCruise)}.`} onValid={(cruise) => { setVehicleCruise(cruise ?? 1); }} />
               </>
+            ) : svPicked ? (
+              <>
+                <NumberField id="bt-new-sv-tons" label="Tonnage" value={svTonnage} min={0.1} hint={`From 0.1 to ${String(svPicked.row.maxTons)} tons; under 5 tons is a Small unit, weighed to the kilogram.`} onValid={(tons) => { setSvTons(tons ?? undefined); }} />
+                <NumberField id="bt-new-sv-cruise" label={svPicked.row.air ? "Safe Thrust" : "Cruising MP"} value={svCruise} min={svPicked.row.id === "airship" ? 0.25 : 1} hint={svPicked.row.id === "airship" ? "At most 2, in steps of a quarter." : undefined} onValid={(cruise) => { setSvCruise(cruise ?? 1); }} />
+              </>
             ) : baPicked ? (
               <>
                 <div className="bt-field">
@@ -969,6 +1022,8 @@ export default function HomePage() {
               "You start with the chassis and an engine for the walking speed, no jump jets, no heat sinks, no armor and no equipment. The ProtoMech editor's rules check shows what is left to do."
             ) : vehiclePicked ? (
               "You start with a standard fusion engine and its ten free heat sinks (an internal combustion engine gives none), no armor, no turret and no equipment. The vehicle editor's rules check shows what is left to do."
+            ) : svPicked ? (
+              "You start with a standard chassis, an internal combustion engine, no fuel, no armor and no equipment. The Support Vehicle editor's rules check shows what is left to do."
             ) : baPicked ? (
               "You start with the chassis, its free ground MP, no armor and no equipment. The battle armor editor's rules check shows what is left to do."
             ) : aeroPicked ? (
@@ -981,7 +1036,7 @@ export default function HomePage() {
             )}
           </p>
           {missing !== "" && <p id="bt-new-missing" className="bt-hint">{missing}</p>}
-          <button type="submit" className="bt-button" disabled={!storage || missing !== "" || (aeroPicked !== undefined && (aeroTons ?? startTons(aeroRow)) <= 0) || (vehiclePicked !== undefined && vehicleTonnage < 1)} aria-describedby={missing === "" ? undefined : "bt-new-missing"}>
+          <button type="submit" className="bt-button" disabled={!storage || missing !== "" || (aeroPicked !== undefined && (aeroTons ?? startTons(aeroRow)) <= 0) || (vehiclePicked !== undefined && vehicleTonnage < 1) || (svPicked !== undefined && svTonnage < 0.1)} aria-describedby={missing === "" ? undefined : "bt-new-missing"}>
             Start building
           </button>
         </form>
