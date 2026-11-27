@@ -16,6 +16,7 @@ import { ammoRowOf } from "../data/aero-weapons";
 import type { EquipmentRow } from "./catalog";
 import { groupOf } from "./catalog";
 import type { Catalog } from "./catalog";
+import { bvEntryOf } from "./bv";
 import { engineTons } from "./mech";
 import type { OfficialMark, TechBase } from "./mech";
 import { own, roundHalfUp, tidy } from "./walk";
@@ -1428,7 +1429,9 @@ export function vessel(record: AeroRecord, catalog?: Catalog): Vessel | null {
 
 /**
  * The launchers an Artemis IV FCS links in the current rules: each Artemis IV mount raises one missile launcher in its arc (a wing that fires aft counts as its own arc), the
- * largest first. Their Aero Attack Value is the figure after the slash of the Total Warfare table. Empty under the older editions, whose Artemis is part of the weapon.
+ * most valuable first (by Battle Value, the larger size on a tie, then the order on the record). The books do not say which launcher a fighter's Artemis serves, so this is the app's one
+ * rule, used by the sheet (the Aero Attack Value after the slash of the Total Warfare table) and by the Battle Value (+20 percent, TechManual Battle Value v4.1): both read this set.
+ * Empty under the older editions, whose Artemis is part of the weapon.
  */
 export function artemisLinked(record: AeroRecord, catalog: Catalog): Set<string> {
   const linked = new Set<string>();
@@ -1439,7 +1442,7 @@ export function artemisLinked(record: AeroRecord, catalog: Catalog): Set<string>
   for (const [arc, n] of counts) {
     record.mounts
       .filter((m) => arcKey(m) === arc && /^(lrm|srm|mml)-\d+-(is|clan)$/.test(m.equipmentId ?? "") && catalog.byId(m.equipmentId ?? "") !== undefined)
-      .sort((a, b) => Number(/\d+/.exec(b.equipmentId ?? "")?.[0]) - Number(/\d+/.exec(a.equipmentId ?? "")?.[0]))
+      .sort((a, b) => (bvEntryOf(b.equipmentId ?? "")?.bv ?? 0) - (bvEntryOf(a.equipmentId ?? "")?.bv ?? 0) || Number(/\d+/.exec(b.equipmentId ?? "")?.[0]) - Number(/\d+/.exec(a.equipmentId ?? "")?.[0]))
       .slice(0, n)
       .forEach((m) => linked.add(m.id));
   }

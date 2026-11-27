@@ -34,6 +34,9 @@ describe("advanced armor on a fighter (TO:AUE p. 92)", () => {
     expect([offered("vehicular-stealth", {}), offered("vehicular-stealth", { year: 3060 }), offered("vehicular-stealth", { rulesLevel: "standard" })]).toEqual([true, false, false]);
     expect(offered("vehicular-stealth", { rulesLevel: "standard", armor: { type: "vehicular-stealth", tons: 0, points: {} } })).toBe(true);
     expect(offered("vehicular-stealth", { unitType: "small-craft" })).toBe(false);
+    const unset = fighter("standard");
+    delete unset.rulesLevel;
+    expect(fighterArmorOffered(unset, type("vehicular-stealth") ?? FIGHTER_ARMOR_TYPES[0]!)).toBe(false); // no level set reads as Standard
   });
   it("vehicular stealth needs an ECM suite and makes 10 heat; modular armor adds 10 points a ton to the Battle Value and is one to an arc", () => {
     const stealth = fighter("vehicular-stealth", [["NO", "medium-laser-is"]]);

@@ -1,7 +1,8 @@
 // Battle Value of a Combat Vehicle: TechManual's method in the Battle Value v4.1 replacement pages ("Calculating Vehicle BV"), with the Unit
 // Type Modifiers, Defensive Factors and Speed Factor tables (printed pp. 315-316) and the item values in data/bv.ts, which the 'Mech method
 // shares. Nothing here throws: an item the book prints no BV for is left out of the total and listed in `unvalued`, and `complete` says so.
-import { ADVANCED_BV_MODIFIERS, ARMOR_BV_MODIFIER, ARTEMIS_IDS, TARGET_MODIFIER, TARGETING_COMPUTER_IDS } from "../../data/bv";
+import { VEHICULAR_STEALTH } from "../../data/chassis";
+import { ADVANCED_BV_MODIFIERS, ARMOR_BV_MODIFIER, ARTEMIS_IDS, BV_METHOD, TARGET_MODIFIER, TARGETING_COMPUTER_IDS } from "../../data/bv";
 import { AIRBORNE_MOTIVES, VEHICLE_BV, motiveOf } from "../../data/vehicle";
 import { ammoBvEntryOf, bvEntryOf, defensiveMunitionBv, munitionAmmoEntry, retroStreakCap, skillMultiplier, speedFactor } from "../bv";
 import { bvWithMunition, chosenMunition, grenadeExtraBv } from "../munitions";
@@ -29,14 +30,17 @@ export interface VehicleBvResult {
   complete: boolean;
 }
 
-/** Target Movement Modifier for the hexes moved at flank (Total Warfare p. 117), and 1 more for a VTOL or WiGE (Total Warfare pp. 55 and 117; TechManual p. 316 note). */
-export function targetModifier(record: Pick<VehicleRecord, "cruise" | "motive">): number {
+/** Target Movement Modifier for the hexes moved at flank (Total Warfare p. 117), and 1 more for a VTOL or WiGE (Total Warfare pp. 55 and 117; TechManual p. 316 note). A vehicle with
+ * vehicular stealth armor uses the modifiers of a 'Mech with stealth armor (TO:AUE p. 192), which add the stealth armor's long-range modifier of 2; modular armor does not take it
+ * off, since stealth is counted as if it worked at full effect (same page). */
+export function targetModifier(record: Pick<VehicleRecord, "cruise" | "motive"> & { armor?: { type: string } }): number {
   const hexes = flankMP(record);
   const band = TARGET_MODIFIER.bands.find(([most]) => hexes <= most)?.[1] ?? 0;
-  return band + (AIRBORNE_MOTIVES.includes(record.motive as never) ? TARGET_MODIFIER.jumpBonus : 0);
+  const stealth = record.armor?.type === VEHICULAR_STEALTH.id ? BV_METHOD.stealthTargetModifier : 0;
+  return band + (AIRBORNE_MOTIVES.includes(record.motive as never) ? TARGET_MODIFIER.jumpBonus : 0) + stealth;
 }
 /** Defensive Factor: 1 + the modifier over 10 (the table's rows run 1.0 to 1.8, then 1 + modifier / 10). */
-export const defensiveFactor = (record: Pick<VehicleRecord, "cruise" | "motive">): number => 1 + targetModifier(record) / 10;
+export const defensiveFactor = (record: Pick<VehicleRecord, "cruise" | "motive"> & { armor?: { type: string } }): number => 1 + targetModifier(record) / 10;
 
 export function vehicleBv(record: VehicleRecord, catalog: Catalog, pilot: PilotSkills = { gunnery: 4, piloting: 5 }): VehicleBvResult {
   const lines: VehicleBvLine[] = [];

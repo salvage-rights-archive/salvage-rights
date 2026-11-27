@@ -910,7 +910,7 @@ export const VEHICULAR_STEALTH = {
   id: "vehicular-stealth",
   heat: 10,
   fighterTypeModifier: 0.3,
-  ecm: /^(prototype-)?guardian-ecm|^angel-ecm|^ecm-suite|^watchdog-cews/,
+  ecm: /^(prototype-)?guardian-ecm|^angel-ecm|^ecm-suite|^watchdog-cews|^nova-cews/,
   cite: { book: TO, page: 94 } as Cite,
   bvCite: { book: TO, page: 192 } as Cite,
 };

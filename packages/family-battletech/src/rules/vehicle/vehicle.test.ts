@@ -116,6 +116,10 @@ describe("advanced armor on a combat vehicle (TO:AUE p. 92, IO:AE p. 82)", () =>
     expect(vehicleCost(build(stealth), catalog).lines.find((l) => l.label === "Armor")?.cost).toBe(5 * 50_000);
     expect(checks(build(stealth))).toContain("armor:error"); // no ECM
     expect(checks(build(stealth, [["body", "guardian-ecm-suite-is"]]))).not.toContain("armor:error");
+    expect(checks(build(stealth, [["body", "nova-cews-clan"]]))).not.toContain("armor:error"); // an ECM suite of any type (p. 94)
+    // A vehicle with it uses the modifiers of a stealth armor BattleMech (p. 192): the target movement modifier is 2 more.
+    expect(targetModifier(stealth) - targetModifier(base)).toBe(2);
+    expect(vehicleBv(build(stealth, [["body", "guardian-ecm-suite-is"]]), catalog).defensive).toBeGreaterThan(vehicleBv(build(base, [["body", "guardian-ecm-suite-is"]]), catalog).defensive);
     expect(checks(build({ ...stealth, heatSinks: { count: 8 } }, [["body", "guardian-ecm-suite-is"]]))).toContain("heat:error"); // the 10 heat of the armor needs 10 sinks
   });
   it("modular armor adds its 10 points to the Battle Value without a value of its own, one to a location, and notes its penalties", () => {

@@ -10,7 +10,7 @@ import { modularPoints } from "./advanced-armor";
 import type { BvOptions } from "../data/bv";
 import { ARMOR_COST, ENGINE_COST } from "../data/cost";
 import { aeroCatalogFigures, aeroWeaponFigures } from "../data/aero-weapons";
-import { armorTypeAt, capitalKind, capitalSystems, engineRating, fighterHeat, fighterKind, fighterPatchworkActive, fighterSI, fighterTally, collarTotal, jumpSail, kfDrive, locationsOf, maxThrust, patchworkTonsAt, stationKeeping, subCompact, vessel } from "./aero";
+import { armorTypeAt, artemisLinked, capitalKind, capitalSystems, engineRating, fighterHeat, fighterKind, fighterPatchworkActive, fighterSI, fighterTally, collarTotal, jumpSail, kfDrive, locationsOf, maxThrust, patchworkTonsAt, stationKeeping, subCompact, vessel } from "./aero";
 import type { AeroMount, AeroRecord } from "./aero";
 import { ammoBvEntryOf, bvEntryOf, defensiveMunitionBv, munitionAmmoEntry, retroStreakCap, speedFactor } from "./bv";
 import type { Catalog, EquipmentRow } from "./catalog";
@@ -296,17 +296,10 @@ function ringOf(record: AeroRecord): string[] {
 }
 const arcKey = (m: AeroMount) => (m.aft === true && (m.arc === "LW" || m.arc === "RW") ? `${m.arc}*` : m.arc);
 
-/** Artemis IV on a current-edition unit is its own mount: each one raises one missile launcher in its arc, the most valuable first. */
-function applyArtemis(record: AeroRecord, weapons: Weapon[]): void {
-  const counts = new Map<string, number>();
-  for (const m of record.mounts) if (/^artemis-iv-(is|clan)$/.test(m.equipmentId ?? "")) counts.set(arcKey(m), (counts.get(arcKey(m)) ?? 0) + 1);
-  for (const [arc, n] of counts) {
-    weapons
-      .filter((w) => !w.defensive && arcKey(w.mount) === arc && /^(lrm|srm|mml)-\d+-(is|clan)$/.test(w.id))
-      .sort((a, b) => b.bv - a.bv)
-      .slice(0, n)
-      .forEach((w) => (w.bv = tidy(w.bv * TM_AERO_BV_RULES.artemis)));
-  }
+/** Artemis IV on a current-edition unit is its own mount: the launchers it links are the ones `artemisLinked` picks (rules/aero.ts: the one rule the sheet shares), each worth 20 percent more. */
+function applyArtemis(record: AeroRecord, catalog: Catalog, weapons: Weapon[]): void {
+  const linked = artemisLinked(record, catalog);
+  for (const w of weapons) if (!w.defensive && linked.has(w.mount.id)) w.bv = tidy(w.bv * TM_AERO_BV_RULES.artemis);
 }
 
 function tmBv(record: AeroRecord, catalog: Catalog, method: AeroBvMethod, frame: Frame, parts: Parts): AeroBv {
@@ -320,7 +313,7 @@ function tmBv(record: AeroRecord, catalog: Catalog, method: AeroBvMethod, frame:
   const modular = frame.kind === "fighter" ? modularPoints(record.mounts) : 0;
   const stealthExtra = frame.kind === "fighter" && record.armor.type === VEHICULAR_STEALTH.id && !fighterPatchworkActive(record) ? VEHICULAR_STEALTH.fighterTypeModifier : 0;
   if (fighterPatchworkActive(record)) notes.push("Patchwork armor: the aerospace method gives no armor type a modifier, so every armor point counts the same wherever it sits (TechManual Battle Value v4.1 p. 313, step 1; Tactical Operations: AUE p. 194 works the armor location by location, which here changes nothing).");
-  applyArtemis(record, parts.weapons);
+  applyArtemis(record, catalog, parts.weapons);
   const shares = ammoShares(parts);
   const defensiveAmmo = Math.min(
     parts.defensiveEquipment,

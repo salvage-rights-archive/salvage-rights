@@ -24,6 +24,13 @@ describe("aerospace figures from Total Warfare pp. 303-304 and IO:AE p. 190", ()
     expect(lines([["NO", "mml-9-is"], ["NO", "artemis-iv-is"]]).map((l) => l.damage).slice(0, 2)).toEqual(["7", "14"]);
     expect(lines([["NO", "medium-pulse-laser-is"], ["NO", "heavy-large-laser-clan"], ["NO", "lb-10-x-ac-is"], ["NO", "mrm-10-is"], ["NO", "medium-laser-is"]]).map((l) => l.toHit)).toEqual(["-2", "+1", "-1", "+1", ""]);
   });
+  it("the sheet and the Battle Value link the same launcher to an Artemis IV: the most valuable one in the arc", () => {
+    const mounts: Mount[] = [["NO", "lrm-5-is"], ["NO", "lrm-20-is"], ["NO", "artemis-iv-is"]];
+    expect(weaponLines(fighter(mounts), catalog).filter((l) => l.damage === "16" || l.damage === "3").map((l) => [l.name, l.damage])).toEqual([["lrm-5-is", "3"], ["lrm-20-is", "16"]]);
+    const bvOf = (list: Mount[], name: string) => aeroBattleValue(fighter(list), catalog)?.offensive.weapons.find((w) => w.name === name)?.bv ?? 0;
+    expect(bvOf(mounts, "LRM 20")).toBeGreaterThan(bvOf(mounts.slice(0, 2), "LRM 20"));
+    expect(bvOf(mounts, "LRM 5")).toBe(bvOf(mounts.slice(0, 2), "LRM 5"));
+  });
   it("Dead-Fire ammunition counts as its launcher's, Retro-Streak adds to the defense up to its Streak launchers", () => {
     const bv = (mounts: Mount[]) => aeroBattleValue(fighter(mounts), catalog);
     const withAmmo = bv([["NO", "lrm-10-is"], ["NO", "ammo-dead-fire-lrm-is", 1]]);

@@ -560,6 +560,6 @@ export function fighterArmorOffered(record: AeroRecord, type: AeroArmorType): bo
   if (type.id === record.armor.type) return true;
   if (type.fighterOnly === true && fighterKind(record) === undefined) return false;
   const row = own(ARMOR.types, type.like) ? ARMOR.types[type.like] : undefined;
-  if (row?.rulesLevel === undefined || row.rulesLevel === "standard" || record.rulesLevel === undefined) return true;
-  return partAvailable("armor", type.like, { techBase: record.techBase, year: record.year, era: record.era, rulesLevel: record.rulesLevel, unitType: "mech", editionId: record.editionId }, false, "aero");
+  if (row?.rulesLevel === undefined || row.rulesLevel === "standard") return true;
+  return partAvailable("armor", type.like, { techBase: record.techBase, year: record.year, era: record.era, rulesLevel: record.rulesLevel ?? DEFAULT_LEVEL, unitType: "mech", editionId: record.editionId }, false, "aero");
 }
