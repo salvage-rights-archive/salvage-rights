@@ -9,7 +9,7 @@ import { checkBa } from "../../rules/battlearmor/checks";
 import { build } from "../../rules/battlearmor/construct";
 import type { BaRecord } from "../../rules/battlearmor/record";
 import LeaveConfirm from "../editor/LeaveConfirm";
-import { useRecordHistory } from "../editor/useRecordHistory";
+import { DraftOffer, useRecordHistory } from "../editor/useRecordHistory";
 import { STORAGE_READ_FAILED } from "../storage";
 import "../aero/aero.scss";
 import "./ba.scss";
@@ -78,7 +78,7 @@ function Loader({ id }: { id: string }) {
 
 
 function Editor({ initial, catalog, storage }: { initial: BaRecord; catalog: Catalog; storage: BaStorage }) {
-  const { record, dirty, canUndo, canRedo, edit, undo, redo, save, endGroup, justSaved, status, setStatus, problem, blocker } = useRecordHistory(initial, (r) => storage.save(r));
+  const { record, dirty, canUndo, canRedo, edit, undo, redo, save, endGroup, justSaved, status, setStatus, problem, blocker, draft } = useRecordHistory(initial, (r) => storage.save(r));
   const [weightOpen, setWeightOpen] = useState(false);
 
   const findings = useMemo(() => checkBa(record, catalog), [record, catalog]);
@@ -123,6 +123,7 @@ function Editor({ initial, catalog, storage }: { initial: BaRecord; catalog: Cat
       </header>
 
       <div className="bt-editor__status">
+        <DraftOffer draft={draft} />
         <div role="status">{justSaved && !dirty ? "Saved." : status}</div>
         <div role="alert" className="bt-problem">{problem}</div>
       </div>

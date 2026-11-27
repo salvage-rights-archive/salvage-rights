@@ -12,7 +12,7 @@ import { vehicleTally } from "../../rules/vehicle/vehicle";
 import type { VehicleRecord } from "../../rules/vehicle/vehicle";
 import FindingsPanel from "../editor/FindingsPanel";
 import LeaveConfirm from "../editor/LeaveConfirm";
-import { useRecordHistory } from "../editor/useRecordHistory";
+import { DraftOffer, useRecordHistory } from "../editor/useRecordHistory";
 import { STORAGE_READ_FAILED } from "../storage";
 import VehicleBoundary from "./VehicleBoundary";
 import VehicleOfficialPanel, { VehicleOfficialBadge } from "./VehicleOfficial";
@@ -100,7 +100,7 @@ export function targetFor(where: Finding["where"], record: VehicleRecord): strin
 }
 
 function Editor({ initial, catalog, storage }: { initial: VehicleRecord; catalog: Catalog; storage: VehicleStorage }) {
-  const { record, dirty, canUndo, canRedo, edit, undo, redo, save, endGroup, justSaved, status, setStatus, problem, blocker } = useRecordHistory(initial, (r) => storage.save(r));
+  const { record, dirty, canUndo, canRedo, edit, undo, redo, save, endGroup, justSaved, status, setStatus, problem, blocker, draft } = useRecordHistory(initial, (r) => storage.save(r));
   const [weightOpen, setWeightOpen] = useState(false);
   const [selected, setSelected] = useState<string>();
 
@@ -155,6 +155,7 @@ function Editor({ initial, catalog, storage }: { initial: VehicleRecord; catalog
       </header>
 
       <div className="bt-editor__status">
+        <DraftOffer draft={draft} />
         <div role="status">{justSaved && !dirty ? "Saved." : status}</div>
         <div role="alert" className="bt-problem">
           {problem}

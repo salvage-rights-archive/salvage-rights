@@ -12,7 +12,7 @@ import type { AeroRecord } from "../../rules/aero";
 import { checkAero } from "../../rules/aero-checks";
 import type { AeroFinding } from "../../rules/aero-checks";
 import LeaveConfirm from "../editor/LeaveConfirm";
-import { useRecordHistory } from "../editor/useRecordHistory";
+import { DraftOffer, useRecordHistory } from "../editor/useRecordHistory";
 import AeroBoundary from "./AeroBoundary";
 import AeroOfficialPanel, { AeroOfficialBadge } from "./AeroOfficial";
 import { STORAGE_READ_FAILED } from "../storage";
@@ -111,7 +111,7 @@ export function targetFor(where: AeroFinding["where"], record: AeroRecord): stri
 }
 
 function Editor({ initial, catalog, storage }: { initial: AeroRecord; catalog: Catalog; storage: AeroStorage }) {
-  const { record, dirty, canUndo, canRedo, edit, undo, redo, save, endGroup, justSaved, status, setStatus, problem, blocker } = useRecordHistory(initial, (r) => storage.save(r));
+  const { record, dirty, canUndo, canRedo, edit, undo, redo, save, endGroup, justSaved, status, setStatus, problem, blocker, draft } = useRecordHistory(initial, (r) => storage.save(r));
   const [weightOpen, setWeightOpen] = useState(false);
 
   const findings = useMemo(() => checkAero(record, catalog), [record, catalog]);
@@ -186,6 +186,7 @@ function Editor({ initial, catalog, storage }: { initial: AeroRecord; catalog: C
       </header>
 
       <div className="bt-editor__status">
+        <DraftOffer draft={draft} />
         <div role="status">{justSaved && !dirty ? "Saved." : status}</div>
         <div role="alert" className="bt-problem">
           {problem}

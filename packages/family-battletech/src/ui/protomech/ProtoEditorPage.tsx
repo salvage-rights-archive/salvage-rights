@@ -10,7 +10,7 @@ import type { ProtoFinding } from "../../rules/protomech/checks";
 import type { ProtoRecord } from "../../rules/protomech/record";
 import { protoTitle } from "../../rules/protomech/record";
 import LeaveConfirm from "../editor/LeaveConfirm";
-import { useRecordHistory } from "../editor/useRecordHistory";
+import { DraftOffer, useRecordHistory } from "../editor/useRecordHistory";
 import { STORAGE_READ_FAILED } from "../storage";
 import UnitBoundary from "../UnitBoundary";
 import { fieldId } from "../aero/fields";
@@ -32,7 +32,7 @@ export default function ProtoEditorPage() {
   const [params] = useSearchParams();
   const id = params.get("id") ?? "";
   return (
-    <UnitBoundary key={id} id={id} unit="unit" home={CLASSIC_HOME} raw={async (key) => (await openProtoStorage()).raw(key)}>
+    <UnitBoundary key={id} id={id} unit="unit" home={CLASSIC_HOME} open={openProtoStorage}>
       <Loader id={id} />
     </UnitBoundary>
   );
@@ -86,7 +86,7 @@ export function targetFor(where: ProtoFinding["where"], record: ProtoRecord): st
 }
 
 function Editor({ initial, catalog, storage }: { initial: ProtoRecord; catalog: Catalog; storage: ProtoStorage }) {
-  const { record, dirty, canUndo, canRedo, edit, undo, redo, save, endGroup, justSaved, status, setStatus, problem, blocker } = useRecordHistory(initial, (r) => storage.save(r));
+  const { record, dirty, canUndo, canRedo, edit, undo, redo, save, endGroup, justSaved, status, setStatus, problem, blocker, draft } = useRecordHistory(initial, (r) => storage.save(r));
   const [weightOpen, setWeightOpen] = useState(false);
   // What an import from Mordel could not match, handed over by the Import page.
   const state: unknown = useLocation().state;
@@ -125,6 +125,7 @@ function Editor({ initial, catalog, storage }: { initial: ProtoRecord; catalog: 
       </header>
 
       <div className="bt-editor__status">
+        <DraftOffer draft={draft} />
         <div role="status">{justSaved && !dirty ? "Saved." : status}</div>
         <div role="alert" className="bt-problem">{problem}</div>
       </div>

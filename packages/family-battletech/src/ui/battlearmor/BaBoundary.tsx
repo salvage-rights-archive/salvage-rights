@@ -6,7 +6,7 @@ import { openBaStorage } from "./storage";
 
 export default function BaBoundary({ id, children }: { id: string; children: ReactNode }) {
   return (
-    <UnitBoundary id={id} unit="unit" home={BA_HOME} raw={async (key) => (await openBaStorage()).raw(key)}>
+    <UnitBoundary id={id} unit="unit" home={BA_HOME} open={openBaStorage}>
       {children}
     </UnitBoundary>
   );

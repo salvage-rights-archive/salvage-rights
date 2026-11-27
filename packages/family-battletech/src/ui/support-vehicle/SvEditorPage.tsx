@@ -12,7 +12,7 @@ import { svTally } from "../../rules/support-vehicle/sv";
 import type { SupportVehicleRecord } from "../../rules/support-vehicle/sv";
 import FindingsPanel from "../editor/FindingsPanel";
 import LeaveConfirm from "../editor/LeaveConfirm";
-import { useRecordHistory } from "../editor/useRecordHistory";
+import { DraftOffer, useRecordHistory } from "../editor/useRecordHistory";
 import { STORAGE_READ_FAILED } from "../storage";
 import SvBoundary from "./SvBoundary";
 import SvOfficialPanel, { SvOfficialBadge } from "./SvOfficial";
@@ -103,7 +103,7 @@ export function targetFor(where: Finding["where"], record: SupportVehicleRecord)
 }
 
 function Editor({ initial, catalog, storage }: { initial: SupportVehicleRecord; catalog: Catalog; storage: SvStorage }) {
-  const { record, dirty, canUndo, canRedo, edit, undo, redo, save, endGroup, justSaved, status, setStatus, problem, blocker } = useRecordHistory(initial, (r) => storage.save(r));
+  const { record, dirty, canUndo, canRedo, edit, undo, redo, save, endGroup, justSaved, status, setStatus, problem, blocker, draft } = useRecordHistory(initial, (r) => storage.save(r));
   const [weightOpen, setWeightOpen] = useState(false);
   const [selected, setSelected] = useState<string>();
 
@@ -158,6 +158,7 @@ function Editor({ initial, catalog, storage }: { initial: SupportVehicleRecord; 
       </header>
 
       <div className="bt-editor__status">
+        <DraftOffer draft={draft} />
         <div role="status">{justSaved && !dirty ? "Saved." : status}</div>
         <div role="alert" className="bt-problem">
           {problem}

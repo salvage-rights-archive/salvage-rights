@@ -68,4 +68,6 @@ export interface FamilyManifest {
   /** Family-wide pages, mounted at /<family id>/<path>. Game routes mount at /<family id>/<game id>/<path>. */
   routes: FamilyRoute[];
   credits: Credits;
+  /** Keys of the family's store that never leave the device: a backup leaves them out and a restore never writes them. */
+  privateKeys?: string[];
 }

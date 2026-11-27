@@ -6,7 +6,7 @@ import { openSvStorage } from "./storage";
 
 export default function SvBoundary({ id, children }: { id: string; children: ReactNode }) {
   return (
-    <UnitBoundary id={id} unit="Support Vehicle" home={SV_HOME} raw={async (key) => (await openSvStorage()).raw(key)}>
+    <UnitBoundary id={id} unit="Support Vehicle" home={SV_HOME} open={openSvStorage}>
       {children}
     </UnitBoundary>
   );
