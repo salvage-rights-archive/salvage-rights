@@ -436,6 +436,20 @@ function convert(response: unknown, catalog: Catalog, editionId: string, now: st
     else note(`${mount?.name ?? "An item"} is associated with item ${target}, which is not in the equipment list.`);
   }
 
+  // A unit whose jump jets are in the movement and the jump jet section but not in the equipment list (the live Tyson TYS1, bm 25466): the jets are added,
+  // unplaced, so the weight, cost and Battle Value carry them.
+  const jets = sect(unit["jump_jets"], "jump jets");
+  const jumpMP = num(sect(unit["movement"], "movement")?.["jump"], "jump movement");
+  const jetKind = jets ? str(jets["type"], "jump jet type") : undefined;
+  if (jets && jumpMP !== undefined && jumpMP > 0 && jetKind && !mounts.some((m) => /jump jet/i.test(m.name))) {
+    const jetTech: TechBase = techOf(jets["technology"], "jump jet technology") ?? (unitClan ? "clan" : "inner-sphere");
+    const jetRow = find(/^standard$/i.test(jetKind) ? "Jump Jet" : `${jetKind} Jump Jet`, jetTech).row;
+    if (jetRow) {
+      for (let i = 0; i < jumpMP; i++) mounts.push({ id: `jump-jet-${i + 1}`, equipmentId: jetRow.id, name: jetRow.name, techBase: jetTech, location: null, slot: null });
+      note(`Mordel gives the unit ${jumpMP} jump movement and its jump jets but lists no jump jet items, so ${jumpMP} ${jetRow.name} mounts were added and are not placed.`);
+    }
+  }
+
   // A mixed unit may list both kinds of double heat sink: the section names the main kind, and the other kind's sinks in the equipment
   // list become the second group (the owner's ruling of 2026-11-25). Whether the section's count is the total or the main kind alone is read
   // from the placed sinks: the engine holds floor(rating / 25) of them, and the rest are listed.

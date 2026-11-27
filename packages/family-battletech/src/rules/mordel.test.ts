@@ -330,6 +330,13 @@ describe("fromMordel: IndustrialMechs (unit type im)", () => {
     expect(notes.some((n) => /PPC Capacitor/.test(n) && /Inner Sphere technology only/.test(n))).toBe(true);
   });
 
+  it("adds the jump jets of a unit that gives its jump movement and jump jet kind but lists no jump jet item, unplaced, and says so", () => {
+    const { record, notes } = imported(withEquipment([entry(1, "Medium Laser", "LA")], { movement: { walk: 4, run: 6, jump: 3 }, jump_jets: { type: "Standard", technology: "Inner Sphere" } }));
+    expect(record.mounts.filter((m) => m.equipmentId === "jump-jet-is").map((m) => m.location)).toEqual([null, null, null]);
+    expect(notes.some((n) => /3 jump movement/.test(n) && /not placed/.test(n))).toBe(true);
+    expect(imported(withEquipment([entry(1, "Jump Jet", "LL")], { movement: { walk: 4, run: 6, jump: 1 }, jump_jets: { type: "Standard", technology: "Inner Sphere" } })).record.mounts).toHaveLength(1);
+  });
+
   it("keeps a partial wing's two entries as two mounts, one in each side torso, and prices its whole weight without rounding it up", () => {
     const { record } = imported(withEquipment([entry(7, "Partial Wing", "LT", { slots: 3 }), entry(7, "Partial Wing", "RT", { slots: 3 })], { tons: 45 }));
     const wings = record.mounts.filter((m) => m.equipmentId === "partial-wing-is");
