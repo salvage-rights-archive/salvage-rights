@@ -25,7 +25,6 @@ import VehiclePicker, { vehiclePickerSource } from "./VehiclePicker";
 
 const num = (n: number): string => String(tidy(n));
 const plural = (n: number, word: string) => `${num(n)} ${word}${n === 1 ? "" : "s"}`;
-const TECH_BASE_LABELS: Record<string, string> = { "inner-sphere": "Inner Sphere", clan: "Clan", mixed: "Mixed" };
 export const mountDomId = (id: string): string => `vehicle-mount-${id}`;
 export const locationFieldId = (code: string): string => `field-armor-${code}`;
 
@@ -101,7 +100,7 @@ export function IdentityPanel({ record, onEdit }: PartProps) {
           id="field-techBase"
           label="Tech base"
           value={record.techBase}
-          options={techBaseChoices(record.rulesLevel, record.techBase, record).map(([value]) => ({ value, label: TECH_BASE_LABELS[value] ?? value }))}
+          options={techBaseChoices(record.rulesLevel, record.techBase, record).map(([value, label]) => ({ value, label }))}
           onChange={(v) => { onEdit((d) => void (d.techBase = v === "clan" || v === "mixed" ? v : "inner-sphere")); }}
         />
         <NumberField id="field-tons" label="Tons" value={record.tons} min={1} hint={row ? `Whole tons, 1 to ${String(row.maxTons)}.` : undefined} onValid={(v) => { onEdit((d) => void (d.tons = v ?? d.tons), "tons"); }} />

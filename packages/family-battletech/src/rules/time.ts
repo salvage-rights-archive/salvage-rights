@@ -140,3 +140,10 @@ export function superheavyDates(record: Pick<MechRecord, "unitType" | "configura
   const tripod = record.configuration === "tripod";
   return SUPERHEAVY.dates[industrial ? (tripod ? "industrialTripod" : "industrialmech") : tripod ? "mechTripod" : "mech"];
 }
+
+/** Why an item offered at Unlimited would normally be hidden: its tech base is not the record's, it is introduced after the record's time, or it
+ * is outside the record's era (extinct before it, or an era that leaves its tech base out). */
+export type Outside = "other tech base" | "not yet introduced" | "outside era";
+
+/** A select label with the Unlimited marker: "Clan XL (other tech base)". */
+export const marked = (label: string, outside: Outside | undefined): string => (outside === undefined ? label : `${label} (${outside})`);

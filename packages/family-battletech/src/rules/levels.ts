@@ -9,7 +9,8 @@ import type { Catalog, EquipmentRow } from "./catalog";
 import { armorTypesUsed, configurationOf, mechTypeOf, patchworkActive, superheavyOf } from "./mech";
 import type { LocationCode, MechRecord } from "./mech";
 import { clanInTime, datesText, erasOfYear, partPrototype, partSpans, phaseIn, rowPhase, superheavyDates, superheavyPhase, windowOf } from "./time";
-import type { Phase, When } from "./time";
+import { marked } from "./time";
+import type { Outside, Phase, When } from "./time";
 
 export const LEVEL_ORDER: RulesLevel[] = RULES_LEVELS.map((row) => row.id);
 export const DEFAULT_LEVEL: RulesLevel = "standard";
@@ -87,7 +88,14 @@ export function techBaseChoices(level: RulesLevel | undefined, current: string, 
   const eraFits = (value: string) => picked?.techBases === undefined || value === "mixed" || picked.techBases.some((base) => base === value);
   // In the Succession Wars years the Clan and Inner Sphere technology bases do not cross (IO:AE p.9), so Mixed is hidden there, whichever era is picked.
   const noMixed = inYear.length > 0 ? inYear.every((era) => era.noMixed === true) : picked?.noMixed === true;
-  return all.filter(([value]) => value === current || (offered(value) && eraFits(value) && !(value === "mixed" && noMixed) && (value === "inner-sphere" || (value === "clan" ? clanFits : mixedFits))));
+  const normal = (value: string) => eraFits(value) && !(value === "mixed" && noMixed) && (value === "inner-sphere" || (value === "clan" ? clanFits : mixedFits));
+  // Unlimited offers every base the game offers; a base that would normally be hidden carries the reason.
+  const outside = (value: string): Outside | undefined => {
+    if (at !== "unlimited" || normal(value)) return undefined;
+    if (value === "clan") return clanFits ? "outside era" : "not yet introduced";
+    return noMixed || !eraFits(value) ? "outside era" : "not yet introduced";
+  };
+  return all.filter(([value]) => value === current || (offered(value) && (at === "unlimited" || normal(value)))).map(([value, label]): [string, string] => [value, marked(label, outside(value))]);
 }
 
 /** The level's row (label, description, cite), with the label the game shows where it has its own (Gothic's "Unofficial"). */

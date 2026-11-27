@@ -7,7 +7,7 @@ import { CAPITAL_ARMOR_TYPES, CAPITAL_FIGURES, CRAFT_FIGURES, DEFAULT_AERO_EDITI
 import { ERAS, SUB_ERAS } from "../../data/editions";
 import { eraChoice, eraList, useEraRoom } from "../eraChoice";
 import { eraCaptionText } from "../eraCaption";
-import { eraNeedsPick, eraOfRecord, erasForTechBase, erasOfYear, resolveEra, setEra, setYear } from "../../rules/availability";
+import { eraNeedsPick, eraOfRecord, eraOutside, erasForTechBase, erasOfYear, resolveEra, setEra, setYear } from "../../rules/availability";
 import {
   aeroLocationName,
   armorTypeAt,
@@ -37,14 +37,13 @@ import type { Catalog } from "../../rules/catalog";
 import { DEFAULT_LEVEL, levelAtLeast, levelRow } from "../../rules/levels";
 import { own, tidy } from "../../rules/walk";
 import LevelSelect from "../editor/LevelSelect";
-import { armorLocations, setFighterPatchwork, syncArmorLocations, techBasesFor, typeReady, typeRow, weightHint } from "./edit";
+import { armorLocations, setFighterPatchwork, syncArmorLocations, techBaseOptionsFor, typeReady, typeRow, weightHint } from "./edit";
 import type { AeroOnEdit } from "./edit";
 import { NumberField, SelectField, TextField, fieldId } from "./fields";
 
 const AT1 = "aerotech-1986";
 const num = (n: number): string => String(tidy(n));
 const plural = (n: number, word: string) => `${num(n)} ${word}${n === 1 ? "" : "s"}`;
-const TECH_BASE_LABELS: Record<string, string> = { "inner-sphere": "Inner Sphere", clan: "Clan", mixed: "Mixed" };
 const titleCase = (id: string): string => id.charAt(0).toUpperCase() + id.slice(1);
 
 /** A short list of derived figures, each a sentence, in the panel's own words. */
@@ -82,7 +81,7 @@ export function IdentityPanel({ record, catalog, onEdit }: PartProps & { catalog
   // rules ask for a year above Introductory; the older books have no levels, so none is asked for there.
   const yearEras = erasOfYear(record.year);
   const room = useEraRoom();
-  const eraOptions = [{ value: "", label: yearEras.length > 1 && eraNeedsPick(record) ? "Choose an era" : "Any era" }, ...eraList(erasForTechBase([...ERAS, ...SUB_ERAS], record.techBase), eraOfRecord(record)).map((era) => eraChoice(era, room))];
+  const eraOptions = [{ value: "", label: yearEras.length > 1 && eraNeedsPick(record) ? "Choose an era" : "Any era" }, ...eraList(erasForTechBase([...ERAS, ...SUB_ERAS], record.techBase, record.rulesLevel), eraOfRecord(record)).map((era) => eraChoice(era, room, eraOutside(era, record.techBase, record.rulesLevel)))];
   const eraNow = eraOfRecord(record);
   const needsYear = current && record.year === null && level !== "introductory";
   return (
@@ -196,7 +195,7 @@ export function IdentityPanel({ record, catalog, onEdit }: PartProps & { catalog
           id="field-techBase"
           label="Tech base"
           value={record.techBase}
-          options={techBasesFor(record).map((id) => ({ value: id, label: TECH_BASE_LABELS[id] ?? id }))}
+          options={techBaseOptionsFor(record).map(([value, label]) => ({ value, label }))}
           onChange={(v) => {
             onEdit((d) => {
               d.techBase = v === "clan" || v === "mixed" ? v : "inner-sphere";

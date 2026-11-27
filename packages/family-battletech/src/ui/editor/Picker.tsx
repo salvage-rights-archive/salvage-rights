@@ -2,7 +2,7 @@
 // is what rules/availability.ts says the record may use (rules level, tech base, era or year); the items are sorted into groups
 // (data/equipment/groups.ts), each a disclosure button over its list, so no one list runs on.
 import { useEffect, useId, useMemo, useRef, useState } from "react";
-import { equipmentAvailable, equipmentPhase } from "../../rules/availability";
+import { equipmentAvailable, equipmentOutside, equipmentPhase, marked } from "../../rules/availability";
 import { groupOf, groupRank, podMountable } from "../../rules/catalog";
 import type { Catalog, EquipmentRow, GroupKey } from "../../rules/catalog";
 import { DEFAULT_LEVEL, equipmentLevel, levelRow } from "../../rules/levels";
@@ -163,7 +163,7 @@ export default function Picker({
                               onChoose(row);
                             }}
                           >
-                            <strong>{row.name}</strong>
+                            <strong>{marked(row.name, equipmentOutside(row, record, catalog))}</strong>
                             <span className="bt-picker__detail">{factsLine(row)}</span>
                           </button>
                         </li>

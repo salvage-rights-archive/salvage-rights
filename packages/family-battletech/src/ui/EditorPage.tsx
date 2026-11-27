@@ -14,7 +14,7 @@ import type { Finding } from "../rules/checks";
 import { changedSinceImport } from "../rules/mordel";
 import { ARM_FULL, armorTypeAt, bodyOf, configurationOf, donorTons, editRecord, layout as buildLayout, locationName, mechTypeOf, partMountBase, patchworkActive, patchworkSlotsFor, setConfiguration, setMyomer, structurePoints, weights as buildWeights } from "../rules/mech";
 import type { Layout, LocationCode, MechRecord } from "../rules/mech";
-import { configurationChoices, eraNeedsPick, eraOfRecord, erasForTechBase, erasOfYear, partChoices, resolveEra, setEra, setYear } from "../rules/availability";
+import { configurationChoices, eraNeedsPick, eraOutside, eraOfRecord, erasForTechBase, erasOfYear, partChoices, resolveEra, setEra, setYear } from "../rules/availability";
 import type { PartKind } from "../rules/availability";
 import { frankenMechOffered, heatSinkMixAllowed, heatSinkMixPossible, levelOfRecord, levelRow, techBaseChoices, withLevel } from "../rules/levels";
 import {
@@ -468,7 +468,7 @@ const CHASSIS_FIELDS: ChassisField[] = [
   { kind: "number", path: "chassis.heatSinks-count", label: "Heat sinks", read: (r) => r.chassis.heatSinks.count, write: (d, v) => void (d.chassis.heatSinks.count = v) },
 ];
 
-const eraChoices = (eras: EraRow[], room: EraRoom): [string, string, string?][] => [["", "Any era"], ...eras.map((era): [string, string, string] => { const c = eraChoice(era, room); return [c.value, c.label, c.full]; })];
+const eraChoices = (eras: EraRow[], room: EraRoom, record: Pick<MechRecord, "techBase" | "rulesLevel">): [string, string, string?][] => [["", "Any era"], ...eras.map((era): [string, string, string] => { const c = eraChoice(era, room, eraOutside(era, record.techBase, record.rulesLevel)); return [c.value, c.label, c.full]; })];
 
 // ---------------------------------------------------------------------------------------------------------------
 // What a finding or a changed marker can point at
@@ -791,7 +791,7 @@ function Editor({ initial, unsaved, startAt, catalog, storage }: { initial: Doc;
   const eraNeeded = ruleset.dated && record.year !== null && eraNeedsPick(record);
   const room = useEraRoom();
   const eraNow = eraOfRecord(record);
-  const eraOptions: [string, string, string?][] = [[ "", eraNeeded ? "Choose an era" : "Any era"], ...eraChoices(eraList(erasForTechBase([...ruleset.eras, ...(ruleset.subEras ?? [])], record.techBase), eraNow), room).slice(1)];
+  const eraOptions: [string, string, string?][] = [[ "", eraNeeded ? "Choose an era" : "Any era"], ...eraChoices(eraList(erasForTechBase([...ruleset.eras, ...(ruleset.subEras ?? [])], record.techBase, record.rulesLevel), eraNow), room, record).slice(1)];
   const gothic = ruleset.game === "gothic";
   const open = listsOpen(ruleset, record.rulesLevel); // Unlimited opens the whole catalog, Clan rows and every unit type included
   // Items whose weight we worked out because no book prints it (the Light Blazer), each named once for the weight list.

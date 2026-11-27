@@ -23,10 +23,11 @@ import { SUPERHEAVY } from "../data/chassis";
 import { industrialRulesOf, mechTypeOf, primitiveRulesOf, requiredCockpit, superheavyOf } from "./mech";
 import type { MechRecord } from "./mech";
 import { datesText, eraOfRecord, eraOfYear, erasOfYear, partPrototype, partSpans, phaseIn, rowPhase, windowOf } from "./time";
-import type { Phase, When } from "./time";
+import { marked } from "./time";
+import type { Outside, Phase, When, Window } from "./time";
 
-export { eraNeedsPick, eraOfRecord, eraOfYear, erasOfYear, partSpans, spansFit, windowOf } from "./time";
-export type { Phase, When, Window } from "./time";
+export { eraNeedsPick, eraOfRecord, eraOfYear, erasOfYear, marked, partSpans, spansFit, windowOf } from "./time";
+export type { Outside, Phase, When, Window } from "./time";
 
 // ---------------------------------------------------------------------------------------------------------------
 // Eras and years: kept consistent, in the era table of the draft's game (its edition's; none: Classic)
@@ -35,10 +36,18 @@ export type { Phase, When, Window } from "./time";
 
 /** The eras a tech base can use out of `eras` (hide, do not mark): an era whose tech bases leave the base out is not offered, and a Mixed unit takes only an
  * era that allows Mixed. If that leaves nothing the list stays whole, since a year some era holds must offer something. */
-export function erasForTechBase(eras: EraRow[], techBase: string | undefined): EraRow[] {
-  if (techBase === undefined) return eras;
-  const fits = eras.filter((era) => (techBase === "mixed" ? era.noMixed !== true : era.techBases === undefined || (era.techBases as string[]).includes(techBase)));
+export function erasForTechBase(eras: EraRow[], techBase: string | undefined, level?: RulesLevel): EraRow[] {
+  if (techBase === undefined || level === "unlimited") return eras; // at Unlimited nothing is hidden
+  const fits = eras.filter((era) => eraFitsBase(era, techBase));
   return fits.length > 0 ? fits : eras;
+}
+
+/** Whether the era is one the tech base can use (an era whose tech bases leave the base out is not; a Mixed unit takes only an era that allows Mixed). */
+const eraFitsBase = (era: EraRow, techBase: string): boolean => (techBase === "mixed" ? era.noMixed !== true : era.techBases === undefined || (era.techBases as string[]).includes(techBase));
+
+/** Why an era offered at Unlimited would normally be hidden for the tech base: its tech bases leave the base out. */
+export function eraOutside(era: EraRow, techBase: string | undefined, level: RulesLevel | undefined): Outside | undefined {
+  return level === "unlimited" && techBase !== undefined && !eraFitsBase(era, techBase) ? "other tech base" : undefined;
 }
 
 /** The one era a year in several eras belongs to for a tech base, or undefined when that is still ambiguous. An Inner Sphere unit takes the Master Unit List era
@@ -94,7 +103,37 @@ export function setEra(draft: When, id: string): void {
 // `editionId` names the game whose lists, levels and dates apply (data/rulesets.ts); a subject without one is Classic.
 type Subject = Pick<MechRecord, "techBase" | "year" | "era" | "rulesLevel" | "unitType" | "frankenmech"> & { tons?: number; configuration?: string; chassis?: Pick<MechRecord["chassis"], "structure">; editionId?: string };
 // `everything`, where a function takes it, lifts the tech base and time limits (the picker's "Show everything") and never the rules level.
-const recordLevel = (record: Subject): RulesLevel => record.rulesLevel ?? DEFAULT_LEVEL;
+const recordLevel = (record: Pick<Subject, "rulesLevel">): RulesLevel => record.rulesLevel ?? DEFAULT_LEVEL;
+
+/** What decides an item by tech base and time, gathered once so that "is it available" and "why would it be hidden" read the same facts. */
+export interface Fit {
+  base: boolean;
+  capped: boolean;
+  phase: Phase | null;
+  /** The item's dates, to tell "not yet introduced" from "outside era". */
+  spans: Span[] | undefined;
+  window: Window | null;
+}
+
+/** Unlimited lifts the tech base and time limits for everything (the level itself is no limit there), as the picker's "Show everything" does. */
+const lifted = (record: Subject, everything: boolean): boolean => everything || recordLevel(record) === "unlimited";
+
+/** Whether a fit passes the tech base and time limits at the record's level (a prototype needs the level its phase asks for). */
+function fitsTime(fit: Fit, record: Subject, level: RulesLevel, prototypeLevel?: RulesLevel): boolean {
+  if (!fit.base || fit.capped) return false;
+  return fit.phase === "production" || (fit.phase === "prototype" && levelAtLeast(recordLevel(record), levelIn(level, fit.phase, prototypeLevel)));
+}
+
+/** The one place that says why a fit would be hidden at the lowest level that otherwise allows the item. Only a record at Unlimited has anything
+ * offered because of the level (below Unlimited the item is simply hidden), and a prototype is normal there (it is offered from Experimental). */
+export function outsideOf(fit: Fit, record: Pick<Subject, "rulesLevel">): Outside | undefined {
+  if (recordLevel(record) !== "unlimited") return undefined;
+  if (!fit.base) return "other tech base";
+  if (fit.capped) return "not yet introduced";
+  if (fit.phase !== null) return undefined;
+  const first = fit.spans === undefined || fit.spans.length === 0 ? undefined : Math.min(...fit.spans.map((s) => s.from));
+  return first !== undefined && fit.window !== null && fit.window.to < first ? "not yet introduced" : "outside era";
+}
 
 /** True when a part or row printed for `base` can be used by a record of `techBase`; no base printed, or "both", fits any. */
 export function baseFits(base: "inner-sphere" | "clan" | "both" | undefined, techBase: MechRecord["techBase"], spans?: Span[]): boolean {
@@ -134,18 +173,30 @@ export function equipmentBarredFor(row: EquipmentRow, record: Subject): boolean 
   return primitive.barredStems.includes(stem) || (first !== undefined && first > primitive.equipmentUntil);
 }
 
-export function equipmentAvailable(row: EquipmentRow, record: Subject & Pick<MechRecord, "editionId">, catalog: Catalog, everything = false): boolean {
-  if (!mountableOn(row, mechTypeOf(record).unit)) return false;
-  if (equipmentBarredFor(row, record)) return false; // the unit's own rules bar it: hidden, never marked (the Picker keeps the item a mount already is) // a row whose `units` leaves out the unit's type is never offered to it, not even with Show everything
-  if (CLAN_CASE_IDS.includes(row.id) && !clanCaseAllowed(record)) return false; // Clan CASE is for a Clan structure (TM p.210); hidden, never marked, even with Show everything
-  if (!inGame(row.games, rulesetOf(record.editionId), record.rulesLevel)) return false; // another game's row: hidden, never marked, even with Show everything
+function equipmentFit(row: EquipmentRow, record: Subject & Pick<MechRecord, "editionId">, catalog: Catalog): Fit {
+  const spans = (catalog.rowFor(row.id, record.editionId) ?? row).availability;
+  return { base: baseFits(row.techBase, record.techBase, spans), capped: pastEraCap(record, spans), phase: equipmentPhase(row, record, catalog), spans: ownSpans(record, row.techBase, spans), window: windowOf(record) };
+}
+
+/** The row's level when everything but tech base and time offers it to the record (the unit, game and level), else undefined. */
+function equipmentOffered(row: EquipmentRow, record: Subject & Pick<MechRecord, "editionId">, catalog: Catalog): RulesLevel | undefined {
+  if (!mountableOn(row, mechTypeOf(record).unit)) return undefined;
+  if (equipmentBarredFor(row, record)) return undefined; // the unit's own rules bar it: hidden, never marked (the Picker keeps the item a mount already is) // a row whose `units` leaves out the unit's type is never offered to it, not even with Show everything
+  if (CLAN_CASE_IDS.includes(row.id) && !clanCaseAllowed(record)) return undefined; // Clan CASE is for a Clan structure (TM p.210); hidden, never marked, even with Show everything
+  if (!inGame(row.games, rulesetOf(record.editionId), record.rulesLevel)) return undefined; // another game's row: hidden, never marked, even with Show everything
   const level = equipmentLevel(catalog.rowFor(row.id, record.editionId) ?? row);
-  if (!levelAtLeast(recordLevel(record), level)) return false;
-  if (everything) return true;
-  if (!baseFits(row.techBase, record.techBase, (catalog.rowFor(row.id, record.editionId) ?? row).availability)) return false;
-  if (pastEraCap(record, (catalog.rowFor(row.id, record.editionId) ?? row).availability)) return false;
-  const phase = equipmentPhase(row, record, catalog);
-  return phase === "production" || (phase === "prototype" && levelAtLeast(recordLevel(record), levelIn(level, phase, row.prototypeLevel)));
+  return levelAtLeast(recordLevel(record), level) ? level : undefined;
+}
+
+export function equipmentAvailable(row: EquipmentRow, record: Subject & Pick<MechRecord, "editionId">, catalog: Catalog, everything = false): boolean {
+  const level = equipmentOffered(row, record, catalog);
+  if (level === undefined) return false;
+  return lifted(record, everything) || fitsTime(equipmentFit(row, record, catalog), record, level, row.prototypeLevel);
+}
+
+/** Why an equipment row offered to a record at Unlimited would normally be hidden; none for anything normally available or not offered. */
+export function equipmentOutside(row: EquipmentRow, record: Subject & Pick<MechRecord, "editionId">, catalog: Catalog): Outside | undefined {
+  return equipmentOffered(row, record, catalog) === undefined ? undefined : outsideOf(equipmentFit(row, record, catalog), record);
 }
 
 export type PartKind = "engine" | "gyro" | "cockpit" | "structure" | "armor" | "heatSink" | "myomer";
@@ -167,40 +218,54 @@ export function partPhase(part: PartFacts, record: Pick<Subject, "techBase" | "y
   return phaseIn(ownSpans(record, part.techBase, partSpans(part, record.techBase)), partPrototype(part, record.techBase), windowOf(record));
 }
 
-/** A chassis part by table and key. A key the table does not have is available (we know nothing against it). */
+function partFit(part: PartRow, record: Subject): Fit {
+  return { base: baseFits(part.techBase, record.techBase, partSpans(part, "inner-sphere")), capped: pastEraCap(record, partSpans(part, record.techBase)), phase: partPhase(part, record), spans: partSpans(part, record.techBase), window: windowOf(record) };
+}
+
+/** A chassis part by table and key. A key the table does not have is available (we know nothing against it). `everything` and Unlimited lift the tech base and time limits. */
 export function partAvailable(kind: PartKind, key: string, record: Subject, everything = false, unit: PartUnit = "mech"): boolean {
   const part = partRow(kind, key);
   if (!part) return true;
-  if (part.units !== undefined && !part.units.includes(unit)) return false; // a part printed for other units only, never offered here even with Show everything
+  const level = partOffered(kind, key, record, unit);
+  return level !== undefined && (lifted(record, everything) || fitsTime(partFit(part, record), record, level, part.prototypeLevel));
+}
+
+/** Why a chassis part offered to a record at Unlimited would normally be hidden; none for anything normally available or not offered. */
+export function partOutside(kind: PartKind, key: string, record: Subject, unit: PartUnit = "mech"): Outside | undefined {
+  const part = partRow(kind, key);
+  return part && partOffered(kind, key, record, unit) !== undefined ? outsideOf(partFit(part, record), record) : undefined;
+}
+
+/** The part's level when everything but tech base and time offers it to the record, else undefined. */
+function partOffered(kind: PartKind, key: string, record: Subject, unit: PartUnit): RulesLevel | undefined {
+  const part = partRow(kind, key);
+  if (!part) return undefined;
+  if (part.units !== undefined && !part.units.includes(unit)) return undefined; // a part printed for other units only, never offered here even with Show everything
   // The type decides first: an IndustrialMech takes the parts its rules name, and any other 'Mech none printed for IndustrialMechs.
   const industrial = industrialRulesOf(record);
   // A superheavy 'Mech (more than 100 tons) takes the parts its own rules name: its gyro and cockpit, and a shorter list of structure, engine and
   // myomer (IO:AE printed pp.156-157). A part printed for a tonnage range is for 'Mechs in it only. A record with no tonnage yet is read as a standard one.
   const heavy = record.tons === undefined ? undefined : superheavyOf({ tons: record.tons });
-  if (part.tonnage && record.tons !== undefined && (record.tons < part.tonnage.min || record.tons > part.tonnage.max)) return false;
+  if (part.tonnage && record.tons !== undefined && (record.tons < part.tonnage.min || record.tons > part.tonnage.max)) return undefined;
   // A Primitive 'Mech takes the parts its own rules list (IO:AE printed pp.116-118), which include the engines printed for IndustrialMechs; a part printed
   // for the Primitive 'Mechs belongs to them alone.
   const primitive = primitiveRulesOf(record);
   if (primitive) {
-    if (!primitive.parts[kind].includes(key)) return false;
-  } else if (part.primitive) return false;
+    if (!primitive.parts[kind].includes(key)) return undefined;
+  } else if (part.primitive) return undefined;
   else if (!heavy || (kind !== "cockpit" && kind !== "gyro")) {
-    if (industrial ? !industrial.parts[kind].includes(key) : part.industrial) return false;
+    if (industrial ? !industrial.parts[kind].includes(key) : part.industrial) return undefined;
   }
   if (heavy) {
     const allowed = (heavy.parts[industrial ? "industrialmech" : "mech"] as Partial<Record<PartKind, string[]>>)[kind];
-    if (allowed && !allowed.includes(key)) return false;
-    if (kind === "cockpit" && key !== requiredCockpit({ tons: record.tons ?? 0, configuration: record.configuration ?? "biped", unitType: record.unitType })) return false;
+    if (allowed && !allowed.includes(key)) return undefined;
+    if (kind === "cockpit" && key !== requiredCockpit({ tons: record.tons ?? 0, configuration: record.configuration ?? "biped", unitType: record.unitType })) return undefined;
   }
-  if (!inGame(part.games, rulesetOf(record.editionId), record.rulesLevel)) return false; // another game's part: hidden, even with Show everything
+  if (!inGame(part.games, rulesetOf(record.editionId), record.rulesLevel)) return undefined; // another game's part: hidden, even with Show everything
   const level = partLevel(kind, key, part);
-  if (!levelAtLeast(recordLevel(record), level)) return false;
-  if (part.only !== undefined && part.only !== record.configuration) return false;
-  if (everything) return true;
-  if (!baseFits(part.techBase, record.techBase, partSpans(part, "inner-sphere"))) return false;
-  if (pastEraCap(record, partSpans(part, record.techBase))) return false;
-  const phase = partPhase(part, record);
-  return phase === "production" || (phase === "prototype" && levelAtLeast(recordLevel(record), levelIn(level, phase, part.prototypeLevel)));
+  if (!levelAtLeast(recordLevel(record), level)) return undefined;
+  if (part.only !== undefined && part.only !== record.configuration) return undefined;
+  return level;
 }
 
 const configurationRow = (key: string): ConfigurationRow | undefined => (Object.hasOwn(SHEET.configurations, key) ? (SHEET.configurations as Record<string, ConfigurationRow>)[key] : undefined);
@@ -219,21 +284,37 @@ export function configurationInTime(key: string, record: Pick<Subject, "techBase
   return configurationPhase(key, record) !== null;
 }
 
-/** A body configuration (biped, quad, tripod, LAM...). `everything` lifts the tech base and years, never the level. */
+function configurationFit(row: ConfigurationRow, key: string, record: Subject): Fit {
+  const primitive = primitiveRulesOf(record)?.configurations.includes(key) === true; // a Primitive 'Mech's own bodies carry its years, not the standard body's
+  return { base: primitive || baseFits(row.techBase, record.techBase, row.availability), capped: false, phase: configurationPhase(key, record), spans: ownSpans(record, row.techBase, row.availability), window: windowOf(record) };
+}
+
+/** The body type's level when everything but tech base and time offers it to the record, else undefined. */
+function configurationOffered(key: string, record: Subject): RulesLevel | undefined {
+  const row = configurationRow(key);
+  if (!row) return undefined;
+  const industrial = industrialRulesOf(record);
+  if (industrial && !industrial.configurations.includes(key)) return undefined;
+  // An OmniMech takes the bodies the books allow: not a Land-Air 'Mech (IO:AE p.108); the tripod's tech base is its own row's.
+  const omni = mechTypeOf(record).omni;
+  if (omni && !omni.bodies.includes(key)) return undefined;
+  if (!inGame(row.games, rulesetOf(record.editionId), record.rulesLevel)) return undefined; // another game's body type: hidden, even with Show everything
+  const level = partLevel("configuration", key, row);
+  return levelAtLeast(recordLevel(record), level) ? level : undefined;
+}
+
+/** A body configuration (biped, quad, tripod, LAM...). `everything` lifts the tech base and years, never the level; Unlimited lifts them too. */
 export function configurationAvailable(key: string, record: Subject, everything = false): boolean {
   const row = configurationRow(key);
   if (!row) return true;
-  const industrial = industrialRulesOf(record);
-  if (industrial && !industrial.configurations.includes(key)) return false;
-  // An OmniMech takes the bodies the books allow: not a Land-Air 'Mech (IO:AE p.108); the tripod's tech base is its own row's.
-  const omni = mechTypeOf(record).omni;
-  if (omni && !omni.bodies.includes(key)) return false;
-  if (!inGame(row.games, rulesetOf(record.editionId), record.rulesLevel)) return false; // another game's body type: hidden, even with Show everything
-  const level = partLevel("configuration", key, row);
-  if (!levelAtLeast(recordLevel(record), level)) return false;
-  if (everything) return true;
-  const phase = configurationPhase(key, record);
-  return phase === "production" || (phase === "prototype" && levelAtLeast(recordLevel(record), levelIn(level, phase)));
+  const level = configurationOffered(key, record);
+  return level !== undefined && (lifted(record, everything) || fitsTime(configurationFit(row, key, record), record, level));
+}
+
+/** Why a body configuration offered to a record at Unlimited would normally be hidden; none for anything normally available or not offered. */
+export function configurationOutside(key: string, record: Subject): Outside | undefined {
+  const row = configurationRow(key);
+  return row && configurationOffered(key, record) !== undefined ? outsideOf(configurationFit(row, key, record), record) : undefined;
 }
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -255,7 +336,7 @@ export function partChoices(kind: PartKind, record: Subject, current: string): [
   for (const [key, row] of Object.entries(PART_TABLES[kind].types)) {
     const name = (renamed && Object.hasOwn(renamed, key) ? renamed[key] : undefined) ?? row.name;
     const label = datedLabel(name, partPrototype(row, record.techBase), partSpans(row, record.techBase)?.[0]?.from, partPhase(row, record));
-    if (partAvailable(kind, key, record)) out.push([key, label]);
+    if (partAvailable(kind, key, record)) out.push([key, marked(label, partOutside(kind, key, record))]);
     else if (key === current) out.push([key, label + NOT_HERE]);
   }
   return out;
@@ -285,9 +366,18 @@ export function typeAvailable(id: MechType, record: Subject, everything = false)
   if (!ruleset.unitTypes.includes(id) && !listsOpen(ruleset, record.rulesLevel)) return false;
   if (!levelAtLeast(recordLevel(record), row.rulesLevel)) return false;
   if (row.industrial && !row.industrial.techBases.some((base) => base === record.techBase)) return false;
-  if (everything) return true;
-  const phase = typePhase(id, record);
-  return phase === "production" || (phase === "prototype" && levelAtLeast(recordLevel(record), levelIn(row.rulesLevel, phase)));
+  return lifted(record, everything) || fitsTime(typeFit(row, record), record, row.rulesLevel);
+}
+
+function typeFit(row: MechTypeRow, record: Subject): Fit {
+  const clan = record.techBase === "clan";
+  return { base: true, capped: false, phase: typePhase(row.id, record), spans: clan ? (row.clanAvailability ?? row.availability) : row.availability, window: windowOf(record) };
+}
+
+/** Why a 'Mech type offered to a record at Unlimited would normally be hidden; none for anything normally available or not offered. */
+export function typeOutside(id: MechType, record: Subject): Outside | undefined {
+  const row = MECH_TYPES.find((r) => r.id === id);
+  return row && typeAvailable(id, record) ? outsideOf(typeFit(row, record), record) : undefined;
 }
 
 export interface TypeChoice {
@@ -304,7 +394,8 @@ export function typeChoices(record: Subject): TypeChoice[] {
   for (const row of MECH_TYPES) {
     const clan = record.techBase === "clan";
     const label = datedLabel(row.label, clan ? (row.clanPrototypeYear ?? row.prototypeYear) : row.prototypeYear, (clan ? (row.clanAvailability ?? row.availability) : row.availability)[0]?.from, typePhase(row.id, record));
-    if (typeAvailable(row.id, record)) out.push(row.ready ? { id: row.id, label } : { id: row.id, label: `${label} (not built yet)`, disabled: row.notReady ?? "Its rules are not built yet." });
+    const shown = marked(label, typeOutside(row.id, record));
+    if (typeAvailable(row.id, record)) out.push(row.ready ? { id: row.id, label: shown } : { id: row.id, label: `${shown} (not built yet)`, disabled: row.notReady ?? "Its rules are not built yet." });
     else if (row.id === current) out.push({ id: row.id, label: label + NOT_HERE });
   }
   return out;
@@ -316,7 +407,7 @@ export function configurationChoices(record: Subject, current: string): [string,
   for (const [key, row] of Object.entries<ConfigurationRow>(SHEET.configurations)) {
     const clan = record.techBase === "clan";
     const label = datedLabel(row.name, clan ? (row.clanPrototypeYear ?? row.prototypeYear) : row.prototypeYear, (clan ? (row.clanAvailability ?? row.availability) : row.availability)[0]?.from, configurationPhase(key, record));
-    if (configurationAvailable(key, record)) out.push([key, label]);
+    if (configurationAvailable(key, record)) out.push([key, marked(label, configurationOutside(key, record))]);
     else if (key === current) out.push([key, label + NOT_HERE]);
   }
   return out;

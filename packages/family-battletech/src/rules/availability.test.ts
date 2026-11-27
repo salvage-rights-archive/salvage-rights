@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { ERAS, eraLabel } from "../data/editions";
 import type { Span } from "../data/chassis";
-import { configurationAvailable, configurationChoices, equipmentAvailable, eraOfRecord, erasForTechBase, erasOfYear, pastEraCap, partAvailable, partChoices, resolveEra, setEra, setYear, typeAvailable } from "./availability";
+import { configurationAvailable, configurationChoices, configurationOutside, equipmentAvailable, equipmentOutside, partOutside, eraOfRecord, erasForTechBase, erasOfYear, pastEraCap, partAvailable, partChoices, resolveEra, setEra, setYear, typeAvailable } from "./availability";
 import type { PartKind } from "./availability";
 import { expand, groupOf, loadCatalog } from "./catalog";
 import type { Catalog } from "./catalog";
@@ -310,12 +310,12 @@ describe("every era the year is in, and what the picked one allows", () => {
     expect(erasOfYear(2800).map((e) => e.id)).toEqual(["early-succession-war", "succession-wars-era", "clan-sub-eras", "star-league-in-exile", "clan-founding-years"]);
     expect(erasOfYear(2790).map((e) => e.id)).toEqual(["early-succession-war", "succession-wars-era", "star-league-in-exile"]);
     expect(erasOfYear(3100).map((e) => e.id)).toEqual(["early-republic", "dark-age-era", "republic-age", "clan-post-reaving"]);
-    const bases = (year: number, era: string) => techBaseChoices("unlimited", "inner-sphere", { year, era }).map(([v]) => v);
+    const bases = (year: number, era: string) => techBaseChoices("fan-made", "inner-sphere", { year, era }).map(([v]) => v);
     expect(bases(2790, "star-league-in-exile")).toEqual(["inner-sphere"]);
   });
 
   it("lets each era's own paragraph decide: the Dark Age keeps Clan open, Post-Reaving allows all three, the Succession Wars hide Mixed", () => {
-    const bases = (year: number, era: string) => techBaseChoices("unlimited", "", { year, era }).map(([v]) => v);
+    const bases = (year: number, era: string) => techBaseChoices("fan-made", "", { year, era }).map(([v]) => v);
     expect(bases(3100, "early-republic")).toEqual(["inner-sphere", "clan", "mixed"]);
     expect(bases(3100, "clan-post-reaving")).toEqual(["inner-sphere", "clan", "mixed"]);
     expect(bases(2900, "clan-golden-years")).toEqual(["inner-sphere", "clan"]);
@@ -357,7 +357,7 @@ describe("Clan sub-eras allow both bases, the book's own eras are choices, and a
   });
 
   it("follows the picked era with no year: the Star League in Exile offers Inner Sphere only", () => {
-    expect(techBaseChoices("unlimited", "", { year: null, era: "star-league-in-exile" }).map(([v]) => v)).toEqual(["inner-sphere"]);
+    expect(techBaseChoices("fan-made", "", { year: null, era: "star-league-in-exile" }).map(([v]) => v)).toEqual(["inner-sphere"]);
   });
 
   it("adds the book's umbrella and sub-eras beside the list's, with the book's other names in the label", () => {
@@ -365,5 +365,35 @@ describe("Clan sub-eras allow both bases, the book's own eras are choices, and a
     expect(ids).toEqual(expect.arrayContaining(["dark-age-era", "republic-age"]));
     expect(erasOfYear(2400).map((e) => e.id)).toEqual(["age-of-war", "star-league-era"]);
     expect([eraLabel(ERAS.find((e) => e.id === "civil-war")!), eraLabel(ERAS.find((e) => e.id === "jihad")!)]).toEqual(["Civil War (Late Invasion Era)", "Jihad (Wars of Reaving)"]);
+  });
+});
+
+describe("Unlimited lifts the faction, tech base and era limits and says what it lifted", () => {
+  const at = (rulesLevel: MechRecord["rulesLevel"], patch: Partial<MechRecord> = {}) => record({ year: 2000, rulesLevel, ...patch });
+  const outside = (id: string, patch: Partial<MechRecord>) => equipmentOutside(catalog.byId(id)!, at("unlimited", patch), catalog);
+
+  it("offers a body type that Experimental still hides before it existed, marked with why", () => {
+    expect([configurationAvailable("tripod", at("experimental")), configurationAvailable("tripod", at("unlimited"))]).toEqual([false, true]);
+    expect(configurationChoices(at("unlimited"), "biped").find(([key]) => key === "tripod")?.[1]).toMatch(/\(not yet introduced\)$/);
+    expect(configurationChoices(at("experimental"), "biped").some(([key]) => key === "tripod")).toBe(false);
+  });
+
+  it("names the reason: another tech base, not yet introduced, or outside the era", () => {
+    expect(outside("lrm-5-clan", { year: 3060, techBase: "inner-sphere" })).toBe("other tech base");
+    expect(outside("medium-laser-is", { year: 2000 })).toBe("not yet introduced");
+    expect(outside("double-heat-sink-is", { year: 2900 })).toBe("outside era");
+    expect(partOutside("engine", "xl", at("unlimited", { year: 2300 }))).toBe("not yet introduced");
+  });
+
+  it("marks nothing that would be offered anyway, nor at any other level", () => {
+    expect([outside("medium-laser-is", { year: 3025 }), partOutside("engine", "standard", at("unlimited", { year: 3025 })), configurationOutside("biped", at("unlimited", { year: 3025 }))]).toEqual([undefined, undefined, undefined]);
+    expect(equipmentOutside(catalog.byId("lrm-5-clan")!, record({ year: 3060, rulesLevel: "experimental" }), catalog)).toBeUndefined();
+    expect(offers("lrm-5-clan", { year: 3060, rulesLevel: "experimental" })).toBe(false);
+  });
+
+  it("offers every tech base with the reason marked, and every era a base leaves out", () => {
+    expect(techBaseChoices("unlimited", "inner-sphere", { year: 2400 }).map(([, label]) => label)).toEqual(["Inner Sphere", "Clan (not yet introduced)", "Mixed (not yet introduced)"]);
+    const era = ERAS.find((row) => row.techBases !== undefined && !row.techBases.includes("clan"))!;
+    expect([erasForTechBase(ERAS, "clan", "unlimited").some((row) => row.id === era.id), erasForTechBase(ERAS, "clan", "fan-made").some((row) => row.id === era.id)]).toEqual([true, false]);
   });
 });

@@ -5,7 +5,7 @@ import { ENGINE_WEIGHTS, INTERNAL_STRUCTURE, MECH_TYPES, SUPERHEAVY } from "../d
 import type { MechType } from "../data/chassis";
 import { baseOf, CLASSIC } from "../data/rulesets";
 import { DEFAULT_EDITION, EDITIONS, bookName, editionName } from "../data/editions";
-import { configurationAvailable, configurationChoices, erasForTechBase, erasOfYear, setEra, setYear, typeAvailable } from "../rules/availability";
+import { configurationAvailable, configurationChoices, eraOutside, erasForTechBase, erasOfYear, setEra, setYear, typeAvailable } from "../rules/availability";
 import type { When } from "../rules/availability";
 import { eraChoice, eraFull, eraList, useEraRoom } from "./eraChoice";
 import { EraCaption, eraCaptionId, eraCaptionText } from "./eraCaption";
@@ -275,7 +275,7 @@ export default function HomePage() {
   const missing = aboveIntroductory && yearTyped === null ? `A year is needed at ${levelRow(draft.rulesLevel ?? "standard").label} rules: it sets the era, and the era and year decide what is offered.` : aboveIntroductory && yearEras.length > 1 && eraChosen === undefined ? `The year ${String(yearTyped)} is in two eras; choose one, since it decides the tech base.` : "";
   const when = { year: yearTyped, era: eraChosen?.id };
   const levelBases = techBaseChoices(draft.rulesLevel, "", { year: null }).map(([value]) => value);
-  const eraOptions = eraList(erasForTechBase([...CLASSIC.eras, ...(CLASSIC.subEras ?? [])], techBase).filter((era) => era.techBases === undefined || era.techBases.some((base) => levelBases.includes(base))), eraChosen).map((era) => eraChoice(era, room));
+  const eraOptions = eraList(erasForTechBase([...CLASSIC.eras, ...(CLASSIC.subEras ?? [])], techBase, draft.rulesLevel).filter((era) => era.techBases === undefined || era.techBases.some((base) => levelBases.includes(base))), eraChosen).map((era) => eraChoice(era, room, eraOutside(era, techBase, draft.rulesLevel)));
   const subject = { techBase, year: yearTyped, era: eraChosen?.id, rulesLevel: draft.rulesLevel };
   const usable = (id: MechType) => MECH_TYPES.find((t) => t.id === id)?.ready === true && typeAvailable(id, subject);
   const unitType: MechType = draft.unitType !== undefined && usable(draft.unitType) ? draft.unitType : (MECH_TYPES.find((t) => usable(t.id))?.id ?? "mech");
