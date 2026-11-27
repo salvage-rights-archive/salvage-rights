@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { loadCatalog } from "./catalog";
 import { mordelBiped, mordelOdd, mordelQuad, mordelWith } from "./fixtures";
+import { unitCost } from "./cost";
 import { editRecord, layout, weights, type LocationCode, type MechRecord } from "./mech";
 import { changedSinceImport, fromMordel, importOmniSet, importOmniSingle, omniFacts, parseMordelRef } from "./mordel";
 
@@ -314,6 +315,39 @@ describe("fromMordel: IndustrialMechs (unit type im)", () => {
       industrial([entry(1, "MML 7 (Ammo 17) [LRM]", "LT"), entry(2, "MML 7 (Ammo 14) [SRM]", "LT"), entry(3, "Fluid Gun (Ammo 20) [Water]", "RT")]),
     );
     expect(record.mounts.map((m) => m.equipmentId)).toEqual(["ammo-mml-7-lrm-is", "ammo-mml-7-srm-is", "ammo-fluid-gun-is"]);
+  });
+
+  it("reads Mordel's names for improved heavy weapons and a bin tag with a munition after a slash, and a capacitor labelled Clan as the Inner Sphere one", () => {
+    const { record, notes } = imported(
+      industrial([
+        entry(1, "Improved Heavy Medium Laser", "RA", { technology: "Clan" }),
+        entry(2, "Improved Heavy Gauss Rifle", "LT"),
+        entry(3, "MML 7 (Ammo 14) [SRM / Artemis IV]", "LT"),
+        entry(4, "PPC Capacitor", "LA", { technology: "Clan" }),
+      ]),
+    );
+    expect(record.mounts.map((m) => m.equipmentId)).toEqual(["improved-heavy-laser-medium-clan", "improved-heavy-gauss-is", "ammo-mml-7-srm-is", "ppc-capacitor-is"]);
+    expect(notes.some((n) => /PPC Capacitor/.test(n) && /Inner Sphere technology only/.test(n))).toBe(true);
+  });
+
+  it("reads compact and laser heat sinks by their own keys", () => {
+    const sinks = (type: string, technology: string) => imported(withEquipment([], { heat_sinks: { type, technology, count: 10 } })).record.chassis.heatSinks.type;
+    expect([sinks("Compact", "Inner Sphere"), sinks("Laser", "Clan")]).toEqual(["compact", "laser"]);
+  });
+
+  it("adds the jump jets of a unit that gives its jump movement and jump jet kind but lists no jump jet item, unplaced, and says so", () => {
+    const { record, notes } = imported(withEquipment([entry(1, "Medium Laser", "LA")], { movement: { walk: 4, run: 6, jump: 3 }, jump_jets: { type: "Standard", technology: "Inner Sphere" } }));
+    expect(record.mounts.filter((m) => m.equipmentId === "jump-jet-is").map((m) => m.location)).toEqual([null, null, null]);
+    expect(notes.some((n) => /3 jump movement/.test(n) && /not placed/.test(n))).toBe(true);
+    expect(imported(withEquipment([entry(1, "Jump Jet", "LL")], { movement: { walk: 4, run: 6, jump: 1 }, jump_jets: { type: "Standard", technology: "Inner Sphere" } })).record.mounts).toHaveLength(1);
+  });
+
+  it("keeps a partial wing's two entries as two mounts, one in each side torso, and prices its whole weight without rounding it up", () => {
+    const { record } = imported(withEquipment([entry(7, "Partial Wing", "LT", { slots: 3 }), entry(7, "Partial Wing", "RT", { slots: 3 })], { tons: 45 }));
+    const wings = record.mounts.filter((m) => m.equipmentId === "partial-wing-is");
+    expect(wings.map((m) => [m.location, m.split])).toEqual([["LT", undefined], ["RT", undefined]]);
+    // 7 percent of 45 tons is 3.15, a 3.5 ton wing at 50,000 a ton.
+    expect(unitCost(record, catalog).lines.find((l) => l.label === "Partial Wing")?.cost).toBe(175_000);
   });
 
   it("takes the hand actuator out of an arm that carries a tool that replaces it, and both lower arm and hand for a pile driver", () => {

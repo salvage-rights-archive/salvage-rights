@@ -54,8 +54,8 @@ describe("fixed-count items", () => {
     const findings = runChecks(record, catalog).map((f) => f.message);
     expect(findings.some((f) => f.includes("once in each of Left Torso, Right Torso"))).toBe(true);
     const good = { ...record, mounts: [wing("LT"), wing("RT")] };
-    // 7 percent of 60 = 4.2, up to 4.5 tons in all, at 50,000 for each ton rounded up: 5 x 50,000 once, not once for each mount
-    expect(unitCost(good, catalog).equipment).toBe(250_000);
+    // 7 percent of 60 = 4.2, up to 4.5 tons in all, at 50,000 for each ton of its own weight (the table's xIT, not rounded up): 4.5 x 50,000 once, not once for each mount
+    expect(unitCost(good, catalog).equipment).toBe(225_000);
   });
 });
 

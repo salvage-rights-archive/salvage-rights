@@ -136,6 +136,14 @@ describe("the method's rules", () => {
     }
   });
 
+  it("CASE II takes the penalty off ammunition and Gauss weapons in its own location and one out, but not in the legs (TO:AUE p. 193)", () => {
+    const exposed = (ammo: LocationCode, caseIi: LocationCode) => battleValue(biped([m("ammo-ac-5-is", ammo), m("case-ii-is", caseIi)]), catalog).defensive.explosiveAmmo;
+    expect(exposed("CT", "CT")).toBe(0);
+    expect(exposed("LA", "LT")).toBe(0);
+    expect(exposed("LT", "CT")).toBe(0);
+    expect(exposed("LL", "LT")).toBe(15);
+  });
+
   it("prototype CASE leaves 8 points on a protected ammunition slot", () => {
     expect(battleValue(biped([m("ammo-ac-5-is", "LT"), m("prototype-case-is", "LT")]), catalog).defensive.explosiveAmmo).toBe(8);
   });
@@ -232,6 +240,25 @@ describe("the method's rules", () => {
     expect(bv.offensive.runMP).toBe(8); // walk 4 + 2 at 9 heat, less the 1 that heat takes: 5 x 1.5, rounded up
     expect(battleValue(biped([m("masc-is", "RT")]), catalog).offensive.runMP).toBe(8);
     expect(battleValue(biped([], { chassis: { ...bipedRecord().chassis, myomer: "masc" } }), catalog).offensive.runMP).toBe(6);
+  });
+
+  it("a Supercharger doubles the walking speed (Triple-Strength Myomer first), and 2.5 times with MASC, for the speed and defensive factors (TO:AUE pp. 157, 194)", () => {
+    expect(battleValue(biped([m("supercharger-is", "CT")]), catalog).offensive.runMP).toBe(8);
+    expect(battleValue(biped([m("supercharger-is", "CT"), m("masc-is", "RT")]), catalog).offensive.runMP).toBe(10);
+    expect(battleValue(biped([m("supercharger-is", "CT"), m("tsm-is", "LT")]), catalog).offensive.runMP).toBe(10);
+  });
+
+  it("a Partial Wing adds 2 Jumping MP to a light or medium Mech and 1 to a heavy one that can jump, and 3 to Heat Efficiency, without adding jump heat (TO:AUE pp. 106-107, 194)", () => {
+    const wings = [m("partial-wing-is", "LT"), m("partial-wing-is", "RT")];
+    const jumper = (extra: Mount[], tons = 50) => battleValue(biped([...many(4, "jump-jet-is", "LL"), ...extra], { tons }), catalog).offensive;
+    const plain = jumper([]);
+    const wing = jumper(wings);
+    expect(wing.jumpMP).toBe(plain.jumpMP + 2);
+    expect(wing.movementHeat).toBe(plain.movementHeat);
+    expect(wing.heatEfficiency).toBe(plain.heatEfficiency + 3);
+    expect(jumper(wings, 70).jumpMP).toBe(jumper([], 70).jumpMP + 1);
+    const noJets = battleValue(biped(wings), catalog).offensive;
+    expect([noJets.jumpMP, noJets.heatEfficiency]).toEqual([0, battleValue(biped([]), catalog).offensive.heatEfficiency + 3]);
   });
 
   it("a small cockpit takes 5 percent off the total", () => {

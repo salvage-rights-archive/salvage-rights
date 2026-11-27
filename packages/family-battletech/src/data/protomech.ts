@@ -221,6 +221,10 @@ export const PROTO_AMMO_KG: Sourced & { rows: Record<string, number> } = {
     "protomech-ac-2-clan": 25,
     "protomech-ac-4-clan": 50,
     "protomech-ac-8-clan": 100,
+    // Chemical lasers on a ProtoMech: ammunition by the shot, 1,000 kg over the shots a ton carries (60, 30 and 10), rounded up (TO:AUE p. 131).
+    "chemical-laser-small-clan": 17,
+    "chemical-laser-medium-clan": 34,
+    "chemical-laser-large-clan": 100,
   },
 };
 /** Catalog ids a ProtoMech may not mount although the catalog lists others of their kind: ATMs, MMLs, MRMs, rockets and one-shot launchers (TechManual p. 231 as amended by errata v8.0).
