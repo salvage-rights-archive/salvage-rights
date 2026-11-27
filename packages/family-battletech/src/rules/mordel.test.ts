@@ -317,6 +317,19 @@ describe("fromMordel: IndustrialMechs (unit type im)", () => {
     expect(record.mounts.map((m) => m.equipmentId)).toEqual(["ammo-mml-7-lrm-is", "ammo-mml-7-srm-is", "ammo-fluid-gun-is"]);
   });
 
+  it("reads Mordel's names for improved heavy weapons and a bin tag with a munition after a slash, and a capacitor labelled Clan as the Inner Sphere one", () => {
+    const { record, notes } = imported(
+      industrial([
+        entry(1, "Improved Heavy Medium Laser", "RA", { technology: "Clan" }),
+        entry(2, "Improved Heavy Gauss Rifle", "LT"),
+        entry(3, "MML 7 (Ammo 14) [SRM / Artemis IV]", "LT"),
+        entry(4, "PPC Capacitor", "LA", { technology: "Clan" }),
+      ]),
+    );
+    expect(record.mounts.map((m) => m.equipmentId)).toEqual(["improved-heavy-laser-medium-clan", "improved-heavy-gauss-is", "ammo-mml-7-srm-is", "ppc-capacitor-is"]);
+    expect(notes.some((n) => /PPC Capacitor/.test(n) && /Inner Sphere technology only/.test(n))).toBe(true);
+  });
+
   it("keeps a partial wing's two entries as two mounts, one in each side torso, and prices its whole weight without rounding it up", () => {
     const { record } = imported(withEquipment([entry(7, "Partial Wing", "LT", { slots: 3 }), entry(7, "Partial Wing", "RT", { slots: 3 })], { tons: 45 }));
     const wings = record.mounts.filter((m) => m.equipmentId === "partial-wing-is");

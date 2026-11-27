@@ -334,7 +334,9 @@ function convert(response: unknown, catalog: Catalog, editionId: string, now: st
     const bin = /^(.*\S)\s*\(Ammo\s+(\d+)\)(?:\s*\[([^\]]+)\])?$/i.exec(name);
     if (!bin) return {};
     const shots = Number(bin[2]);
-    const stems = [bin[3] ? `${bin[1]} ${bin[3]}` : undefined, bin[1]].filter((x): x is string => x !== undefined);
+    // A multiple-missile launcher's tag may carry the munition after a slash ("[SRM / Artemis IV]"): the part before it names the bin.
+    const tag = bin[3]?.split("/")[0]?.trim();
+    const stems = [bin[3] ? `${bin[1]} ${bin[3]}` : undefined, tag && tag !== bin[3] ? `${bin[1]} ${tag}` : undefined, bin[1]].filter((x): x is string => x !== undefined);
     // The tagged stem first: "LB 20-X AC (Ammo 5) [Cluster]" is the cluster bin, not the standard one (the live Barghest BGS-1T, bm 823).
     for (const stem of stems) {
       const bins = [catalog.match(`${stem} Ammo`, tech), catalog.match(`${stem} Ammo (Half Ton)`, tech)].filter((r): r is EquipmentRow => r !== undefined);
@@ -393,9 +395,21 @@ function convert(response: unknown, catalog: Catalog, editionId: string, now: st
       }
       return;
     }
-    const { row, why } = find(name, tech);
+    let { row, why } = find(name, tech);
+    let mountTech = tech;
+    // Mordel may label an item with the other tech base than the one the books print it for (a PPC capacitor is Inner Sphere only): an item
+    // found under the other base alone is taken as that one, with a note.
+    if (!row && !/\(Ammo\s+\d+\)/i.test(name)) {
+      const other: TechBase = tech === "clan" ? "inner-sphere" : "clan";
+      const found = find(name, other).row;
+      if (found) {
+        row = found;
+        mountTech = other;
+        note(`Mordel calls ${name} ${tech === "clan" ? "Clan" : "Inner Sphere"}, and the books print it for ${other === "clan" ? "Clan" : "Inner Sphere"} technology only; it was read as that.`);
+      }
+    }
     if (!row) note(why ?? `${name} is not in our equipment table.`);
-    const mount: Mount = { id: `mount-${index + 1}`, equipmentId: row?.id ?? null, name, techBase: tech, location: loc ?? null, slot: null };
+    const mount: Mount = { id: `mount-${index + 1}`, equipmentId: row?.id ?? null, name, techBase: mountTech, location: loc ?? null, slot: null };
     // An item that is not in the table keeps the slots Mordel gave it; one with no id and no location takes none.
     const slotless = entry["id"] == null && entry["location"] == null;
     // An item sold by size (cargo, communications equipment): Mordel gives its size as a count of the table's steps.
