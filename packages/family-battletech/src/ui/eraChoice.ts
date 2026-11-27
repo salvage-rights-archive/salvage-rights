@@ -4,6 +4,8 @@
 import { useSyncExternalStore } from "react";
 import { eraLabel } from "../data/editions";
 import type { EraRow } from "../data/editions";
+import { marked } from "../rules/time";
+import type { Outside } from "../rules/time";
 
 /** How much room the era choices have: 0 wide (years shown), 1 narrow (no years), 2 tight (the short name). */
 export type EraRoom = 0 | 1 | 2;
@@ -29,7 +31,7 @@ export const eraFull = (era: EraRow): string => `${eraLabel(era)} (${era.endYear
 const shortName = (era: EraRow): string => era.name.replace(/\s*\(.*\)$/, "").split(" - ").at(-1) ?? era.name;
 
 /** One era as a drop-down choice: `label` is what shows (name and years; no years when narrow; the last part of the name when tight), `full` the whole text (the option's title). */
-export const eraChoice = (era: EraRow, room: EraRoom): { value: string; label: string; full: string } => ({ value: era.id, label: room === 0 ? eraFull(era) : room === 1 ? eraLabel(era) : shortName(era), full: eraFull(era) });
+export const eraChoice = (era: EraRow, room: EraRoom, outside?: Outside): { value: string; label: string; full: string } => ({ value: era.id, label: marked(room === 0 ? eraFull(era) : room === 1 ? eraLabel(era) : shortName(era), outside), full: marked(eraFull(era), outside) });
 
 /** The eras to offer in a drop-down: the ones given, every era and sub-era, one row to a name (the first of two of one name stays), sorted by start year then end year. `keep`, the era
  * a record already holds (a sub-era it was saved with, say), stays on offer whatever. */

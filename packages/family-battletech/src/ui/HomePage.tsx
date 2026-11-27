@@ -5,12 +5,12 @@ import { ENGINE_WEIGHTS, INTERNAL_STRUCTURE, MECH_TYPES, SUPERHEAVY } from "../d
 import type { MechType } from "../data/chassis";
 import { baseOf, CLASSIC } from "../data/rulesets";
 import { DEFAULT_EDITION, EDITIONS, bookName, editionName } from "../data/editions";
-import { configurationAvailable, configurationChoices, erasForTechBase, erasOfYear, setEra, setYear, typeAvailable } from "../rules/availability";
+import { configurationAvailable, configurationChoices, eraOutside, erasForTechBase, erasOfYear, setEra, setYear, typeAvailable } from "../rules/availability";
 import type { When } from "../rules/availability";
 import { eraChoice, eraFull, eraList, useEraRoom } from "./eraChoice";
 import { EraCaption, eraCaptionId, eraCaptionText } from "./eraCaption";
 import { levelAtLeast, levelIn, levelRow, techBaseChoices, withLevel } from "../rules/levels";
-import { clanInTime, superheavyPhase } from "../rules/time";
+import { UNLIMITED_NOTE, clanInTime, superheavyPhase } from "../rules/time";
 import { DEFAULT_AERO_EDITION } from "../data/aero";
 import { newAeroRecord } from "../rules/aero";
 import type { AeroType } from "../data/aero";
@@ -275,7 +275,7 @@ export default function HomePage() {
   const missing = aboveIntroductory && yearTyped === null ? `A year is needed at ${levelRow(draft.rulesLevel ?? "standard").label} rules: it sets the era, and the era and year decide what is offered.` : aboveIntroductory && yearEras.length > 1 && eraChosen === undefined ? `The year ${String(yearTyped)} is in two eras; choose one, since it decides the tech base.` : "";
   const when = { year: yearTyped, era: eraChosen?.id };
   const levelBases = techBaseChoices(draft.rulesLevel, "", { year: null }).map(([value]) => value);
-  const eraOptions = eraList(erasForTechBase([...CLASSIC.eras, ...(CLASSIC.subEras ?? [])], techBase).filter((era) => era.techBases === undefined || era.techBases.some((base) => levelBases.includes(base))), eraChosen).map((era) => eraChoice(era, room));
+  const eraOptions = eraList(erasForTechBase([...CLASSIC.eras, ...(CLASSIC.subEras ?? [])], techBase, draft.rulesLevel).filter((era) => era.techBases === undefined || era.techBases.some((base) => levelBases.includes(base))), eraChosen).map((era) => eraChoice(era, room, eraOutside(era, techBase, draft.rulesLevel)));
   const subject = { techBase, year: yearTyped, era: eraChosen?.id, rulesLevel: draft.rulesLevel };
   const usable = (id: MechType) => MECH_TYPES.find((t) => t.id === id)?.ready === true && typeAvailable(id, subject);
   const unitType: MechType = draft.unitType !== undefined && usable(draft.unitType) ? draft.unitType : (MECH_TYPES.find((t) => usable(t.id))?.id ?? "mech");
@@ -927,7 +927,7 @@ export default function HomePage() {
               </div>
             </div>
             <span id="bt-new-year-hint" className="bt-hint bt-grid__wide">
-              {aboveIntroductory ? "Needed. The year sets the era and hides the body types, parts and tech bases that did not exist yet." : "Optional at Introductory, which is 3025 technology. A year sets the era and hides what did not exist yet."}
+              {draft.rulesLevel === "unlimited" ? UNLIMITED_NOTE : aboveIntroductory ? "Needed. The year sets the era and hides the body types, parts and tech bases that did not exist yet." : "Optional at Introductory, which is 3025 technology. A year sets the era and hides what did not exist yet."}
             </span>
             {!aeroPicked && !protoPicked && !vehiclePicked && !svPicked && !baPicked && !infantryPicked && (
             <div className="bt-field">

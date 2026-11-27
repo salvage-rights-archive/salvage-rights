@@ -1,5 +1,6 @@
 // The AeroTech home: the five editions as cards (oldest first, the current rules marked as the default), the saved units under their
 // editions, a build form that offers only what the chosen edition builds, and unit files in and out.
+import { UNLIMITED_NOTE } from "../../rules/time";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ChangeEvent } from "react";
 import { Link, useNavigate } from "react-router";
@@ -8,11 +9,11 @@ import { AERO_EDITIONS, DEFAULT_AERO_EDITION, aeroEditionName } from "../../data
 import { ERAS, SUB_ERAS, bookName } from "../../data/editions";
 import { eraChoice, eraList, useEraRoom } from "../eraChoice";
 import { eraCaptionText } from "../eraCaption";
-import { erasForTechBase, resolveEra, setEra } from "../../rules/availability";
+import { eraOutside, erasForTechBase, resolveEra, setEra } from "../../rules/availability";
 import LevelSelect from "../editor/LevelSelect";
 import GamePicture from "../GamePicture";
 import { MAX_LIBRARY_BYTES, STORAGE_READ_FAILED, STORAGE_WRITE_FAILED } from "../storage";
-import { draftMissing, newDraft, recordFromDraft, settle, techBasesFor, typeReady, typesAt, weightHint, yearErasOf } from "./edit";
+import { draftMissing, newDraft, recordFromDraft, settle, techBaseOptionsFor, typeReady, typesAt, weightHint, yearErasOf } from "./edit";
 import type { AeroDraft } from "./edit";
 import { NumberField, SelectField, TextField } from "./fields";
 import { sheetProfileFor } from "../../data/aero-sheet";
@@ -22,7 +23,6 @@ import type { AeroEntry, AeroStorage } from "./storage";
 import "./aero.scss";
 
 const nameOf = (entry: AeroEntry): string => `${entry.record?.name.chassis ?? ""} ${entry.record?.name.model ?? ""}`.trim() || "Unnamed unit";
-const TECH_BASE_LABELS: Record<string, string> = { "inner-sphere": "Inner Sphere", clan: "Clan", mixed: "Mixed" };
 const typeLabel = (editionId: string, unitType: string): string => AERO_EDITIONS.find((e) => e.id === editionId)?.types.find((t) => t.type === unitType)?.label ?? unitType;
 const bookLines = (edition: (typeof AERO_EDITIONS)[number]): string[] =>
   [...new Set(edition.books.map((b) => `${bookName(b.title)}, ${b.printing}${b.errata === undefined ? "" : `, errata ${b.errata}`}`))];
@@ -144,7 +144,7 @@ export default function AeroHomePage() {
   const yearEras = yearErasOf(draft);
   const room = useEraRoom();
   const eraNeeded = missing.startsWith("The year");
-  const eraOptions = [{ value: "", label: eraNeeded ? "Choose an era" : "Any era" }, ...eraList(erasForTechBase([...ERAS, ...SUB_ERAS], draft.techBase), [...ERAS, ...SUB_ERAS].find((era) => era.id === draft.era)).map((era) => eraChoice(era, room))];
+  const eraOptions = [{ value: "", label: eraNeeded ? "Choose an era" : "Any era" }, ...eraList(erasForTechBase([...ERAS, ...SUB_ERAS], draft.techBase, draft.rulesLevel), [...ERAS, ...SUB_ERAS].find((era) => era.id === draft.era)).map((era) => eraChoice(era, room, eraOutside(era, draft.techBase, draft.rulesLevel)))];
 
   return (
     <div className="sr-page">
@@ -398,13 +398,13 @@ export default function AeroHomePage() {
               />
             </div>
             {!missing.startsWith("A year") && (
-              <p className="bt-hint bt-grid__wide">{draft.editionId === DEFAULT_AERO_EDITION ? "The year sets the era and hides the tech bases and equipment that did not exist yet." : "Optional: these books print no dates, but a year still sets the era and the tech bases that existed."}</p>
+              <p className="bt-hint bt-grid__wide">{draft.editionId === DEFAULT_AERO_EDITION && draft.rulesLevel === "unlimited" ? UNLIMITED_NOTE : draft.editionId === DEFAULT_AERO_EDITION ? "The year sets the era and hides the tech bases and equipment that did not exist yet." : "Optional: these books print no dates, but a year still sets the era and the tech bases that existed."}</p>
             )}
             <SelectField
               id="bt-new-tech"
               label="Tech base"
               value={draft.techBase}
-              options={techBasesFor(draft).map((id) => ({ value: id, label: TECH_BASE_LABELS[id] ?? id }))}
+              options={techBaseOptionsFor(draft).map(([value, label]) => ({ value, label }))}
               onChange={(techBase) => {
                 const next: AeroDraft = { ...draft, techBase: techBase === "clan" || techBase === "mixed" ? techBase : "inner-sphere" };
                 if (yearEras.length > 1) resolveEra(next);

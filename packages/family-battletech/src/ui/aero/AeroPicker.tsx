@@ -9,7 +9,8 @@ import { groupOf, groupRank } from "../../rules/catalog";
 import type { Catalog, EquipmentRow, GroupKey } from "../../rules/catalog";
 import { DEFAULT_LEVEL, equipmentLevel, levelRow } from "../../rules/levels";
 import { dialogKeyDown } from "../editor/dialog";
-import { offeredEquipment } from "./edit";
+import { marked } from "../../rules/availability";
+import { aeroEquipmentOutside, offeredEquipment } from "./edit";
 
 const TECH_BASE_NAMES = { "inner-sphere": "Inner Sphere", clan: "Clan" };
 const plural = (n: number, word: string) => `${String(n)} ${word}${n === 1 ? "" : "s"}`;
@@ -160,7 +161,7 @@ export default function AeroPicker({
                               onChoose(row);
                             }}
                           >
-                            <strong>{row.name}</strong>
+                            <strong>{marked(row.name, aeroEquipmentOutside(row, record, catalog))}</strong>
                             <span className="bt-picker__detail">{factsLine(row, record, catalog)}</span>
                           </button>
                         </li>

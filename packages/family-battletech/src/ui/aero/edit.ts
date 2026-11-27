@@ -11,7 +11,8 @@ import { AERO_WEAPON_EDITIONS, aeroWeaponOffered, ammoRowOf } from "../../data/a
 import type { UnitId } from "../../data/units";
 import { fighterKind, locationsOf, newAeroRecord, vesselGroup } from "../../rules/aero";
 import type { AeroMount, AeroRecord } from "../../rules/aero";
-import { baseFits, erasOfYear, ownSpans, pastEraCap, setYear } from "../../rules/availability";
+import { baseFits, erasOfYear, outsideOf, ownSpans, pastEraCap, setYear } from "../../rules/availability";
+import type { Fit, Outside } from "../../rules/availability";
 import { mountableOn } from "../../rules/catalog";
 import type { Catalog, EquipmentRow } from "../../rules/catalog";
 import { phaseIn, windowOf } from "../../rules/time";
@@ -31,11 +32,14 @@ export const typeRow = (editionId: string, unitType: string): AeroTypeRow | unde
 /** The tech bases the unit may choose: Classic's rule (hide, do not mark): its rules level, its year and the era picked decide them (no Clan before the Clan sub-eras,
  * Mixed from its prototype years and at its level, none across the Succession Wars). Older editions have no level, so only the year and era limit them, and AeroTech (1986)
  * lists Inner Sphere weapons only (its p. 15 table). The base the record already has stays on offer. */
-export function techBasesFor(record: Pick<AeroRecord, "editionId" | "rulesLevel" | "year" | "era" | "techBase">, keepCurrent = true): string[] {
+export function techBaseOptionsFor(record: Pick<AeroRecord, "editionId" | "rulesLevel" | "year" | "era" | "techBase">, keepCurrent = true): [string, string][] {
   const listed = record.editionId === AERO_WEAPON_EDITIONS.at1 ? ["inner-sphere"] : ["inner-sphere", "clan", "mixed"];
-  const level = record.editionId === DEFAULT_AERO_EDITION ? record.rulesLevel : "unlimited";
-  return techBaseChoices(level, keepCurrent ? record.techBase : "", record).map(([id]) => id).filter((id) => (keepCurrent && id === record.techBase) || listed.includes(id));
+  const level = record.editionId === DEFAULT_AERO_EDITION ? record.rulesLevel : "fan-made";
+  return techBaseChoices(level, keepCurrent ? record.techBase : "", record).filter(([id]) => (keepCurrent && id === record.techBase) || listed.includes(id));
 }
+
+/** The ids of those tech bases. */
+export const techBasesFor = (record: Parameters<typeof techBaseOptionsFor>[0], keepCurrent = true): string[] => techBaseOptionsFor(record, keepCurrent).map(([id]) => id);
 
 /** The weight range a type is built in, in words; undefined where the book names none. */
 export function weightHint(weight: { min?: number; max?: number; step?: number } | undefined): string | undefined {
@@ -81,7 +85,7 @@ export function typesAt(draft: Pick<AeroDraft, "editionId" | "rulesLevel">): Aer
 /** The eras a typed year is in that the form offers: Classic's rule (an era whose tech bases the level does not offer is not a choice, so at Introductory only the
  * Inner Sphere era of a year in two). One means the era is settled; two, the player picks, and the era decides the tech base. */
 export function yearErasOf(draft: Pick<AeroDraft, "editionId" | "rulesLevel" | "year">): EraRow[] {
-  const level = draft.editionId === DEFAULT_AERO_EDITION ? draft.rulesLevel : "unlimited";
+  const level = draft.editionId === DEFAULT_AERO_EDITION ? draft.rulesLevel : "fan-made";
   const bases = techBaseChoices(level, "", { year: draft.year, editionId: draft.editionId }).map(([value]) => value);
   return erasOfYear(draft.year, rulesetOf(draft.editionId)).filter((era) => era.techBases === undefined || era.techBases.some((base) => bases.includes(base)));
 }
@@ -157,24 +161,34 @@ const UNIT_OF: Record<string, UnitId> = {
  * edition; in the current edition the unit's rules level and its year or era narrow it too. `everything` lifts the tech base, level and
  * date limits (not the edition's list); a row named in `keep` is always on offer. A unit type we do not know is offered nothing.
  */
+/** The tech base and time facts of an item for an Aero record, read the way Classic reads them. */
+function aeroFit(row: EquipmentRow, record: AeroRecord, catalog: Catalog): Fit {
+  const dates = (catalog.rowFor(row.id, record.editionId) ?? row).availability;
+  const window = windowOf({ era: record.era, year: record.year });
+  return { base: baseFits(row.techBase, record.techBase, dates), capped: pastEraCap(record, dates), phase: phaseIn(ownSpans(record, row.techBase, dates), row.prototypeYear, window), spans: ownSpans(record, row.techBase, dates), window };
+}
+
+/** Why an item offered to an Aero record at Unlimited would normally be hidden; none for anything normally available (the current rules only). */
+export function aeroEquipmentOutside(row: EquipmentRow, record: AeroRecord, catalog: Catalog): Outside | undefined {
+  return record.editionId === DEFAULT_AERO_EDITION ? outsideOf(aeroFit(row, record, catalog), record) : undefined;
+}
+
 export function offeredEquipment(record: AeroRecord, catalog: Catalog, everything = false, keep?: string): EquipmentRow[] {
   const unit = Object.hasOwn(UNIT_OF, record.unitType) ? UNIT_OF[record.unitType] : undefined;
   if (unit === undefined) return [];
   const edition = record.editionId;
   const current = edition === DEFAULT_AERO_EDITION;
-  const window = windowOf({ era: record.era, year: record.year });
   const seen = (row: EquipmentRow) => catalog.rowFor(row.id, edition) ?? row;
   const ammoOf = new Set<string>();
   const out: EquipmentRow[] = [];
   const narrow = (row: EquipmentRow): boolean => {
     if (everything || row.id === keep) return true;
     if (!current) return record.techBase === "mixed" || row.techBase === record.techBase;
-    const dates = seen(row).availability;
-    // The current rules read the unit as Classic does: the tech base (a Clan unit keeps the Star League items built before 2781), the level, the era's date limit, then the year.
-    if (!baseFits(row.techBase, record.techBase, dates)) return false;
+    // The current rules read the unit as Classic does: the tech base (a Clan unit keeps the Star League items built before 2781), the level, the date limit of the era, then the year. Unlimited lifts all but the level.
     if (record.rulesLevel !== undefined && !levelAtLeast(record.rulesLevel, equipmentLevel(row))) return false;
-    if (pastEraCap(record, dates)) return false;
-    return window === null || phaseIn(ownSpans(record, row.techBase, dates), row.prototypeYear, window) !== null;
+    if (record.rulesLevel === "unlimited") return true;
+    const fit = aeroFit(row, record, catalog);
+    return fit.base && !fit.capped && fit.phase !== null;
   };
   for (const base of catalog.all()) {
     if (base.kind === "weapon" && mountableOn(base, unit) && aeroWeaponOffered(edition, base.id)) {

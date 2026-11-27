@@ -140,3 +140,16 @@ export function superheavyDates(record: Pick<MechRecord, "unitType" | "configura
   const tripod = record.configuration === "tripod";
   return SUPERHEAVY.dates[industrial ? (tripod ? "industrialTripod" : "industrialmech") : tripod ? "mechTripod" : "mech"];
 }
+
+/** Why an item offered at Unlimited would normally be hidden: its tech base is not the record's, it is introduced after the record's time, or it
+ * is outside the record's era (extinct before it, or an era that leaves its tech base out). */
+export type Outside = "other tech base" | "not yet introduced" | "outside era";
+
+/** A select label with the Unlimited marker: "Clan XL (other tech base)". */
+export const marked = (label: string, outside: Outside | undefined): string => (outside === undefined ? label : `${label} (${TAGS[outside]})`);
+
+/** The short tags a marked option carries, so a select that cannot wrap still fits a phone; UNLIMITED_NOTE spells them out under the field. */
+const TAGS: Record<Outside, string> = { "other tech base": "other base", "not yet introduced": "not yet", "outside era": "outside era" };
+
+/** What Unlimited says about its markers, always shown under the Era and Year fields. */
+export const UNLIMITED_NOTE = "Nothing is hidden at Unlimited. A marked item is outside the usual rules: other base is another tech base, not yet was introduced after this year, outside era is gone before it.";
