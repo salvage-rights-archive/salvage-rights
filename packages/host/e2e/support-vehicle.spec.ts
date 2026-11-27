@@ -1,6 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import type { Page } from "@playwright/test";
-import { DEV, expect, expectPage, test } from "./fixtures";
+import { DEV, clippedSelects, expect, expectPage, test } from "./fixtures";
 
 const CLASSIC = "/battletech/classic";
 
@@ -30,6 +30,7 @@ test("build a wheeled Support Vehicle at 320 px: chassis, engine, fuel, armor, a
   await page.setViewportSize({ width: 320, height: 700 });
   await startSv(page, "Scan Hauler", "wheeled", "20");
   await expect(page.getByRole("heading", { name: "Rules check" })).toBeVisible();
+  expect(await clippedSelects(page)).toEqual([]);
   // The book's order: chassis (an off-road modification raises nothing here), engine and fuel, armor, then equipment.
   await page.getByLabel(/^Off-road/).check();
   await page.getByLabel("Cruising MP").fill("4");

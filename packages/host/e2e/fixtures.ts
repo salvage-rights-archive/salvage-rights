@@ -506,3 +506,18 @@ export async function answerQuestions(page: Page, done: RegExp | string): Promis
 }
 
 export { expect };
+
+/** The selects on the page whose chosen text is wider than the room the select has for it (a native select cannot wrap, so the text is cut). */
+export async function clippedSelects(page: Page): Promise<string[]> {
+  return page.evaluate(() => {
+    const canvas = document.createElement("canvas").getContext("2d");
+    if (!canvas) return [];
+    return [...document.querySelectorAll("select")].flatMap((select) => {
+      const style = getComputedStyle(select);
+      canvas.font = `${style.fontSize} ${style.fontFamily}`;
+      const text = select.options[select.selectedIndex]?.text ?? "";
+      const need = canvas.measureText(text).width + 34;
+      return need > select.clientWidth ? [`${select.id}: "${text}" needs ${String(Math.round(need))}, has ${String(select.clientWidth)}`] : [];
+    });
+  });
+}

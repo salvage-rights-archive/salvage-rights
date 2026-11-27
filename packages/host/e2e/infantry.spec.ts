@@ -1,6 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import type { Page } from "@playwright/test";
-import { DEV, expect, expectPage, test } from "./fixtures";
+import { DEV, clippedSelects, expect, expectPage, test } from "./fixtures";
 
 const HOME = `${DEV}/battletech/classic/home`;
 
@@ -20,6 +20,7 @@ test("build an infantry platoon at 320 px, save it, open its record sheet and fi
   await form.getByLabel("Year").fill("3050");
   await form.getByRole("button", { name: "Start building" }).click();
   await expect(page.getByRole("heading", { level: 1, name: "Rifle Platoon" })).toBeVisible();
+  expect(await clippedSelects(page)).toEqual([]);
   await page.getByLabel("Primary weapon").selectOption({ label: "Auto-Rifle: 0.52 damage, range 1, crew 1" });
   await expect(page.getByText(/Damage \d+ at full strength/)).toBeVisible();
   // Hide, do not mark: the Advanced options are not offered at the standard level.

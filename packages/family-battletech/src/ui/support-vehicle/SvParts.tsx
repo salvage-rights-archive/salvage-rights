@@ -3,7 +3,9 @@
 // rules/support-vehicle and is shown as a sentence in the panel's own words.
 import { UNLIMITED_NOTE } from "../../rules/time";
 import { useState } from "react";
+import { useEraRoom } from "../eraChoice";
 import { bookName } from "../../data/editions";
+import type { TechRating } from "../../data/support-vehicle";
 import { SV_PAGES, SV_FIRE_CONTROL, TECH_LEVEL_TEXT, TECH_RATINGS, svEngineOf, svMotiveOf } from "../../data/support-vehicle";
 import type { Catalog, EquipmentRow } from "../../rules/catalog";
 import { DEFAULT_LEVEL, techBaseChoices } from "../../rules/levels";
@@ -103,6 +105,7 @@ export function IdentityPanel({ record, onEdit }: PartProps) {
 }
 
 export function ChassisPanel({ record, onEdit }: PartProps) {
+  const room = useEraRoom();
   const min = minRatingOf(record);
   const chassis = structureTons(record);
   const si = structuralIntegrity(record);
@@ -115,8 +118,8 @@ export function ChassisPanel({ record, onEdit }: PartProps) {
           id="field-structure-rating"
           label="Structural Tech Rating"
           value={record.structure.rating}
-          options={TECH_RATINGS.filter((letter) => min === undefined || letter >= min || letter === record.structure.rating).map((letter) => ({ value: letter, label: `${letter}: ${TECH_LEVEL_TEXT[letter]}` }))}
-          hint="A higher rating makes the chassis lighter."
+          options={TECH_RATINGS.filter((letter) => min === undefined || letter >= min || letter === record.structure.rating).map((letter) => ({ value: letter, label: `${letter}: ${room === 0 ? TECH_LEVEL_TEXT[letter] : (TECH_LEVEL_TEXT[letter].split(" (")[0] ?? "")}` }))}
+          hint={`A higher rating makes the chassis lighter.${room === 0 ? "" : ` ${record.structure.rating}: ${TECH_LEVEL_TEXT[record.structure.rating as TechRating]}.`}`}
           onChange={(v) => { onEdit((d) => void (d.structure.rating = v)); }}
         />
         {canHaveTurret(record) && (

@@ -17,6 +17,7 @@ import LevelSelect from "../editor/LevelSelect";
 import { STORAGE_READ_FAILED, STORAGE_WRITE_FAILED } from "../storage";
 import { NumberField, SelectField, TextField } from "../aero/fields";
 import { YearEraFields, eraFollowsBase } from "../YearEraFields";
+import { useEraRoom } from "../eraChoice";
 import InfantryDiagram from "./InfantryDiagram";
 import { CLASSIC_HOME, sheetHref } from "./routes";
 import { downloadInfantry, openInfantryStorage } from "./storage";
@@ -79,9 +80,12 @@ interface History {
 const same = (a: InfantryRecord, b: InfantryRecord) => a === b || JSON.stringify(a) === JSON.stringify(b);
 const num = (n: number, digits = 2): string => String(Math.round(n * 10 ** digits) / 10 ** digits);
 const money = (n: number): string => n.toLocaleString("en-US", { maximumFractionDigits: 2 });
+/** An affiliation's first name, for a phone: "Generic, mercenary, House or major Periphery" is "Generic". */
+const shortAffiliation = (label: string): string => label.split(/,| or /)[0] ?? label;
 const weaponLabel = (row: EquipmentRow): string => `${row.name}${row.techBase === "clan" ? " (Clan)" : ""}: ${row.infantry ? `${num(row.infantry.damage)} damage, range ${String(row.infantry.baseRange)}, crew ${row.infantry.crew}` : ""}`;
 
 function Editor({ initial, catalog, storage }: { initial: InfantryRecord; catalog: Catalog; storage: InfantryStorage }) {
+  const room = useEraRoom();
   const [history, setHistory] = useState<History>({ past: [], present: initial, future: [] });
   const [saved, setSaved] = useState(initial);
   const [justSaved, setJustSaved] = useState(false);
@@ -264,7 +268,7 @@ function Editor({ initial, catalog, storage }: { initial: InfantryRecord; catalo
               <LevelSelect record={record} onChange={(lv) => { edit((d) => void (d.rulesLevel = lv)); }} />
               <YearEraFields record={record} onEdit={edit} hint={record.year === null ? "Without a year, no era limits what is offered." : undefined} />
               <SelectField id="field-techBase" label="Tech base" value={record.techBase} options={bases.map(([value, label]) => ({ value, label }))} onChange={(v) => { edit((d) => { d.techBase = v === "clan" ? "clan" : "inner-sphere"; eraFollowsBase(d); d.formation = d.techBase === "clan" ? "clan" : "generic"; resize(d); }); }} />
-              <SelectField id="field-formation" label="Affiliation" hint="Sets the standard squad and platoon size (TechManual, p. 147)." value={record.formation} options={FORMATIONS.filter((f) => (f.clan === true) === (record.techBase === "clan")).map((f) => ({ value: f.id, label: f.label }))} onChange={(v) => { edit((d) => { d.formation = v; resize(d); }); }} />
+              <SelectField id="field-formation" label="Affiliation" hint={`Sets the standard squad and platoon size (TechManual, p. 147).${room === 0 ? "" : ` ${FORMATIONS.find((f) => f.id === record.formation)?.label ?? ""}.`}`} value={record.formation} options={FORMATIONS.filter((f) => (f.clan === true) === (record.techBase === "clan")).map((f) => ({ value: f.id, label: room === 0 ? f.label : shortAffiliation(f.label) }))} onChange={(v) => { edit((d) => { d.formation = v; resize(d); }); }} />
             </div>
           </section>
 
