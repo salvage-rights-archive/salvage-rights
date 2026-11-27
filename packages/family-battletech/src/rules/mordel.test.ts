@@ -479,4 +479,22 @@ describe("Mordel's words for the superheavy, Primitive and QuadVee parts", () =>
     expect([quadvee.configuration, quadvee.chassis.cockpit, quadvee.mounts.filter((m) => m.name === "Conversion Gear")]).toEqual(["quadvee", "quadvee", []]);
     expect(imported(mordelWith(mordelBiped(), { gyro: part("Superheavy", "Inner Sphere"), cockpit: part("Superheavy", "Inner Sphere") })).record.chassis).toMatchObject({ gyro: "superheavy", cockpit: "superheavy" });
   });
+
+  it("reads a Land-Air 'Mech's configuration and leaves out its landing gear and avionics, which the layout fixes", () => {
+    const lam = imported(mordelWith(mordelBiped(), { configuration: "Land-Air (Standard)", equipment: [entry(1, "Landing Gear", "CT"), entry(2, "Avionics", "H"), entry(3, "Medium Laser", "RA")] })).record;
+    expect([lam.configuration, lam.mounts.map((m) => m.name)]).toEqual(["lam", ["Medium Laser"]]);
+    expect(imported(mordelWith(mordelBiped(), { configuration: "Land-Air (Bimodal)" })).record.configuration).toBe("bimodal-lam");
+  });
+
+  it("reads the interface cockpit by tech base and a 'Mech with no gyro, which weighs and costs nothing for it", () => {
+    const record = imported(mordelWith(mordelBiped(), { tech_base: "Clan", cockpit: part("Interface", "Clan"), gyro: part("None", "None") })).record;
+    expect(record.chassis).toMatchObject({ cockpit: "interface-clan", gyro: "none" });
+    expect(weights(record, catalog.factsOf).lines.find((l) => l.label === "Gyro")?.tons).toBe(0);
+    expect(unitCost(record, catalog).lines.find((l) => l.label === "Gyro (none)")?.cost).toBe(0);
+  });
+
+  it("reads the artillery cannons by the names Mordel gives them, with their ammunition bins", () => {
+    const { record } = imported(withEquipment([entry(1, "Long Tom Artillery Cannon", "LT"), entry(2, "Long Tom Artillery Cannon (Ammo 5)", "RT"), entry(3, "Sniper Artillery Cannon", "RA"), entry(4, "Sniper Artillery Cannon (Ammo 10)", "RT")]));
+    expect(record.mounts.map((m) => m.equipmentId)).toEqual(["long-tom-cannon-is", "ammo-long-tom-cannon-is", "sniper-cannon-is", "ammo-sniper-cannon-is"]);
+  });
 });

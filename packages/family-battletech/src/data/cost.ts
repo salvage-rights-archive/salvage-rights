@@ -156,7 +156,7 @@ export const ENGINE_COST: Sourced & { divisor: number; rows: Record<string, { pe
 export const GYRO_COST: Sourced & { rows: Record<string, { perGyroTon: number }> } = {
   cite: { book: TM, page: 278 },
   checked: "page",
-  rows: { standard: { perGyroTon: 300_000 }, compact: { perGyroTon: 400_000 }, "heavy-duty": { perGyroTon: 500_000 }, xl: { perGyroTon: 750_000 }, superheavy: { perGyroTon: 500_000 } },
+  rows: { standard: { perGyroTon: 300_000 }, compact: { perGyroTon: 400_000 }, "heavy-duty": { perGyroTon: 500_000 }, xl: { perGyroTon: 750_000 }, superheavy: { perGyroTon: 500_000 }, none: { perGyroTon: 0 } },
 };
 /** Jump jets: perJetSquared x (number of jets)^2 x unit tonnage (printed p.278, errata v8.0 only fixes the exponent's typesetting). */
 export const JUMP_JET_COST: Sourced & { rows: Record<string, { perJetSquared: number }> } = {
