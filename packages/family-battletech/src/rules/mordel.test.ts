@@ -330,6 +330,11 @@ describe("fromMordel: IndustrialMechs (unit type im)", () => {
     expect(notes.some((n) => /PPC Capacitor/.test(n) && /Inner Sphere technology only/.test(n))).toBe(true);
   });
 
+  it("reads compact and laser heat sinks by their own keys", () => {
+    const sinks = (type: string, technology: string) => imported(withEquipment([], { heat_sinks: { type, technology, count: 10 } })).record.chassis.heatSinks.type;
+    expect([sinks("Compact", "Inner Sphere"), sinks("Laser", "Clan")]).toEqual(["compact", "laser"]);
+  });
+
   it("adds the jump jets of a unit that gives its jump movement and jump jet kind but lists no jump jet item, unplaced, and says so", () => {
     const { record, notes } = imported(withEquipment([entry(1, "Medium Laser", "LA")], { movement: { walk: 4, run: 6, jump: 3 }, jump_jets: { type: "Standard", technology: "Inner Sphere" } }));
     expect(record.mounts.filter((m) => m.equipmentId === "jump-jet-is").map((m) => m.location)).toEqual([null, null, null]);

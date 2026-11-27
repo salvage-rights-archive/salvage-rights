@@ -133,6 +133,10 @@ const HEAT_SINK_WORDS: Record<string, Words> = {
   double: { is: "double", clan: "double-clan" },
   doubleheatsink: { is: "double", clan: "double-clan" },
   doubleclan: { is: "double-clan" },
+  compact: { is: "compact" },
+  compactheatsink: { is: "compact" },
+  laser: { is: "laser" },
+  laserheatsink: { is: "laser" },
 };
 
 const LOCATIONS: Record<string, LocationCode> = {
