@@ -14,6 +14,8 @@ const classicRoutes: FamilyRoute[] = [
   { path: "protomech-sheet", label: "ProtoMech record sheet", section: "workshop", load: () => import("./ui/protomech/ProtoSheetPage") },
   { path: "vehicle-editor", label: "Vehicle editor", section: "workshop", load: () => import("./ui/vehicle/VehicleEditorPage") },
   { path: "vehicle-sheet", label: "Vehicle record sheet", section: "workshop", load: () => import("./ui/vehicle/VehicleSheetPage") },
+  { path: "support-vehicle-editor", label: "Support vehicle editor", section: "workshop", load: () => import("./ui/support-vehicle/SvEditorPage") },
+  { path: "support-vehicle-sheet", label: "Support vehicle record sheet", section: "workshop", load: () => import("./ui/support-vehicle/SvSheetPage") },
   { path: "battlearmor-editor", label: "Battle armor editor", section: "workshop", load: () => import("./ui/battlearmor/BaEditorPage") },
   { path: "battlearmor-sheet", label: "Battle armor record sheet", section: "workshop", load: () => import("./ui/battlearmor/BaSheetPage") },
 ];
