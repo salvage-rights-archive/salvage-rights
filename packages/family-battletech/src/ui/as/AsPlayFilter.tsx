@@ -3,7 +3,11 @@ import { AS_EDITIONS } from "../../data/alpha-strike";
 import { RULES_LEVELS } from "../../data/chassis";
 import type { RulesLevel } from "../../data/chassis";
 import { playLevel } from "../../rules/as-force";
-import { eraOfYear } from "../../rules/time";
+import { ERAS, SUB_ERAS } from "../../data/editions";
+import { eraOfRecord, eraOutside, erasForTechBase, resolveEra, setEra } from "../../rules/availability";
+import type { When } from "../../rules/availability";
+import { EraCaption, eraCaptionId, eraCaptionText } from "../eraCaption";
+import { eraChoice, eraList, useEraRoom } from "../eraChoice";
 import { STORAGE_READ_FAILED, STORAGE_WRITE_FAILED } from "../storage";
 import { updatePlayFilter, usePlaySettings } from "./playSettings";
 
@@ -19,8 +23,13 @@ export default function AsPlayFilter({ rulesOnly = false }: { rulesOnly?: boolea
   const text = typed ?? (filter.year === undefined ? "" : String(filter.year));
 
   const bad = text.trim() !== "" && !/^\d{4}$/.test(text.trim());
-  const era = filter.year === undefined ? undefined : eraOfYear(filter.year);
+  // The era the year is in; a year in two eras (Inner Sphere and Clan) goes by the tech base, as in the editors.
+  const when: When & { techBase?: string } = { year: filter.year ?? null, techBase: filter.techBase };
+  resolveEra(when);
+  const era = filter.year === undefined ? undefined : eraOfRecord(when);
   const level = playLevel(filter);
+  const room = useEraRoom();
+  const eraOptions = eraList(erasForTechBase([...ERAS, ...SUB_ERAS], filter.techBase, filter.rulesLevel), era).map((row) => eraChoice(row, room, eraOutside(row, filter.techBase, filter.rulesLevel)));
 
   return (
     <div>
@@ -62,24 +71,53 @@ export default function AsPlayFilter({ rulesOnly = false }: { rulesOnly?: boolea
         </div>
         {!rulesOnly && (
           <>
-            <div className="bt-field">
-              <label htmlFor="as-year">Game year</label>
-              <input
-                id="as-year"
-                inputMode="numeric"
-                value={text}
-                disabled={!ready}
-                aria-invalid={bad || undefined}
-                aria-describedby="as-year-note"
-                onChange={(event) => {
-                  setTyped(event.target.value);
-                  const v = event.target.value.trim();
-                  if (v === "") updatePlayFilter({ year: undefined });
-                  else if (/^\d{4}$/.test(v)) updatePlayFilter({ year: Number.parseInt(v, 10) });
-                }}
-              />
+            <div className="as-aids__wide">
+              <div className="bt-yearera">
+                <div className="bt-field">
+                  <label htmlFor="as-year">Game year</label>
+                  <input
+                    id="as-year"
+                    inputMode="numeric"
+                    value={text}
+                    disabled={!ready}
+                    aria-invalid={bad || undefined}
+                    aria-describedby="as-year-note"
+                    onChange={(event) => {
+                      setTyped(event.target.value);
+                      const v = event.target.value.trim();
+                      if (v === "") updatePlayFilter({ year: undefined });
+                      else if (/^\d{4}$/.test(v)) updatePlayFilter({ year: Number.parseInt(v, 10) });
+                    }}
+                  />
+                </div>
+                <div className="bt-field">
+                  <label htmlFor="as-era">Era</label>
+                  <select
+                    id="as-era"
+                    value={era?.id ?? ""}
+                    disabled={!ready}
+                    title={eraOptions.find((option) => option.value === era?.id)?.full}
+                    aria-describedby={era ? eraCaptionId("as-era") : undefined}
+                    onChange={(event) => {
+                      // The play setting holds a year, not an era: an era chosen sets the year (the mean of its range) and no era clears it.
+                      const d: When = { year: filter.year ?? null };
+                      setEra(d, event.target.value);
+                      setTyped(undefined);
+                      updatePlayFilter({ year: event.target.value === "" || d.year === null ? undefined : d.year });
+                    }}
+                  >
+                    <option value="">Any era</option>
+                    {eraOptions.map((option) => (
+                      <option key={option.value} value={option.value} title={option.full}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  <EraCaption id="as-era" text={eraCaptionText(era)} />
+                </div>
+              </div>
               <p id="as-year-note" className="as-field-note bt-hint">
-                {bad ? "Write the year as four digits, such as 3052." : era ? `The ${era.name} era. Units dated after ${String(filter.year)} are left out of the force's unit list.` : filter.year !== undefined ? "That year is before the first era." : "Leave blank to pick from every unit."}
+                {bad ? "Write the year as four digits, such as 3052." : filter.year !== undefined && !era ? "That year is before the first era." : filter.year !== undefined ? `Units dated after ${String(filter.year)} are left out of the force's unit list.` : "Leave blank to pick from every unit."}
               </p>
             </div>
             <div className="bt-field">

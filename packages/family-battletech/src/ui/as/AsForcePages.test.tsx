@@ -108,6 +108,21 @@ describe("the game year and tech base", () => {
   });
 });
 
+describe("the game era", () => {
+  it("sits beside the game year, follows it, and an era chosen sets the year to the middle of its span", async () => {
+    const user = userEvent.setup();
+    const storage = await openAsStorage();
+    renderAt("/battletech/alpha-strike/home");
+    const era = await screen.findByLabelText("Era");
+    await waitFor(() => { expect((era as HTMLSelectElement).disabled).toBe(false); });
+    await user.type(screen.getByLabelText("Game year"), "3025");
+    expect((era as HTMLSelectElement).value).toBe("late-succession-war-renaissance");
+    await user.selectOptions(era, "dark-ages");
+    await waitFor(async () => { expect((await storage.getFilter()).year).toBe(3141); });
+    expect(era.closest(".bt-yearera")?.contains(screen.getByLabelText("Game year"))).toBe(true);
+  });
+});
+
 describe("the rules level", () => {
   it("leaves a unit above the level out of the unit list for a force, and brings it back when the level is raised", async () => {
     const user = userEvent.setup();

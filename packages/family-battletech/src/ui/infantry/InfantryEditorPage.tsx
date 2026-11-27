@@ -4,12 +4,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useBlocker, useSearchParams } from "react-router";
 import { ARMOR_KITS, BEASTS, FIELD_ARTILLERY_ID, FIELD_GUN_ID, FIELD_GUN_RULES, FORMATIONS, MOTIVES, SECONDARY_SLOT_TROOPS, SPECIALIZATIONS, XCT, XCT_ENVIRONMENTS, armorKitOf, beastOf, motiveOf } from "../../data/infantry-tables";
-import { eraLabel } from "../../data/editions";
-import { setEra, setYear } from "../../rules/availability";
 import { loadCatalog } from "../../rules/catalog";
 import type { Catalog, EquipmentRow } from "../../rules/catalog";
 import { DEFAULT_LEVEL, levelAtLeast, techBaseChoices } from "../../rules/levels";
-import { eraNeedsPick, erasOfYear } from "../../rules/time";
 import { checkInfantry } from "../../rules/infantry/checks";
 import type { InfantryFinding } from "../../rules/infantry/checks";
 import { beastSize, infantryBv, infantryCost, lineCode, offered as optionOffered, platoonOf, standardSize } from "../../rules/infantry/platoon";
@@ -19,6 +16,7 @@ import LeaveConfirm from "../editor/LeaveConfirm";
 import LevelSelect from "../editor/LevelSelect";
 import { STORAGE_READ_FAILED, STORAGE_WRITE_FAILED } from "../storage";
 import { NumberField, SelectField, TextField } from "../aero/fields";
+import { YearEraFields, eraFollowsBase } from "../YearEraFields";
 import InfantryDiagram from "./InfantryDiagram";
 import { CLASSIC_HOME, sheetHref } from "./routes";
 import { downloadInfantry, openInfantryStorage } from "./storage";
@@ -172,7 +170,6 @@ function Editor({ initial, catalog, storage }: { initial: InfantryRecord; catalo
   const showXct = optionOffered(level, record.year, XCT, record.xct !== null);
   const advancedHeld = record.armor !== null || record.specializations.length > 0 || record.paramedics > 0 || record.tagTroops > 0 || record.xct !== null || record.fieldGun.weapon !== null || record.fieldArtillery !== null;
   const when = { year: record.year, era: record.era, editionId: record.editionId };
-  const yearEras = erasOfYear(record.year);
   const bases = techBaseChoices(level, record.techBase, when).filter(([value]) => value !== "mixed");
   const mechanized = platoon.motive?.mechanized ?? false;
 
@@ -265,14 +262,8 @@ function Editor({ initial, catalog, storage }: { initial: InfantryRecord; catalo
               <TextField id="field-name" label="Name" value={record.name.chassis} onChange={(v) => { edit((d) => void (d.name.chassis = v), "name"); }} />
               <TextField id="field-name-model" label="Model" value={record.name.model} onChange={(v) => { edit((d) => void (d.name.model = v), "model"); }} />
               <LevelSelect record={record} onChange={(lv) => { edit((d) => void (d.rulesLevel = lv)); }} />
-              <NumberField id="field-year" label="Year" value={record.year} allowEmpty onValid={(v) => { edit((d) => { setYear(d, v); }, "year"); }} />
-              {record.year !== null && yearEras.length > 1 ? (
-                <SelectField id="field-era" label="Era" value={record.era ?? ""} options={[{ value: "", label: "Choose an era" }, ...yearEras.map((e) => ({ value: e.id, label: eraLabel(e) }))]} onChange={(v) => { edit((d) => { setEra(d, v); }); }} />
-              ) : (
-                <p className="bt-hint">{record.year !== null && yearEras[0] ? `Era: ${eraLabel(yearEras[0])}. The era follows the year.` : "Without a year, no era limits what is offered."}</p>
-              )}
-              {eraNeedsPick(when) && <p className="bt-hint">The year is in two eras: choose one.</p>}
-              <SelectField id="field-techBase" label="Tech base" value={record.techBase} options={bases.map(([value, label]) => ({ value, label }))} onChange={(v) => { edit((d) => { d.techBase = v === "clan" ? "clan" : "inner-sphere"; d.formation = d.techBase === "clan" ? "clan" : "generic"; resize(d); }); }} />
+              <YearEraFields record={record} onEdit={edit} hint={record.year === null ? "Without a year, no era limits what is offered." : undefined} />
+              <SelectField id="field-techBase" label="Tech base" value={record.techBase} options={bases.map(([value, label]) => ({ value, label }))} onChange={(v) => { edit((d) => { d.techBase = v === "clan" ? "clan" : "inner-sphere"; eraFollowsBase(d); d.formation = d.techBase === "clan" ? "clan" : "generic"; resize(d); }); }} />
               <SelectField id="field-formation" label="Affiliation" hint="Sets the standard squad and platoon size (TechManual, p. 147)." value={record.formation} options={FORMATIONS.filter((f) => (f.clan === true) === (record.techBase === "clan")).map((f) => ({ value: f.id, label: f.label }))} onChange={(v) => { edit((d) => { d.formation = v; resize(d); }); }} />
             </div>
           </section>
