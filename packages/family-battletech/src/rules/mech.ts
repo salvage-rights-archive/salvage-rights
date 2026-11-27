@@ -171,6 +171,9 @@ export interface MechRecord {
     gyro: string;
     cockpit: string;
     structure: string;
+    /** The tech base of a structure type printed for both bases (standard) on a mixed record, as an importer read it. Absent means the
+     * structure type's own base, or Inner Sphere for a standard one. Only the Clan reading changes anything (automatic CASE, TM p.210). */
+    structureTech?: "inner-sphere" | "clan";
     armorType: string;
     myomer: string;
     /** `type` and `count` are the main kind and hold the engine's free sinks. `extra` lists further kinds (an Inner Sphere double with a

@@ -312,11 +312,16 @@ function convert(response: unknown, catalog: Catalog, editionId: string, now: st
   const heat = sect(unit["heat_sinks"], "heat_sinks");
   const heatCount = num(heat?.["count"], "heat sink count");
   if (heatCount === undefined) note("Mordel gave no heat sink count; it is set to 0.");
+  // A standard structure is printed for both bases, so on a mixed record the base Mordel tags it with is kept (TM p.210: a Clan structure has automatic CASE).
+  const structureRaw = str(sect(unit["structure"], "structure")?.["type"], "structure type");
+  const structureWords = structureRaw ? own(STRUCTURE_WORDS, structureRaw.toLowerCase().replace(/[^a-z0-9]/g, "")) : undefined;
+  const structureTech = isMixed && structureWords && structureWords.clan === undefined ? techOf(sect(unit["structure"], "structure")?.["technology"], "structure technology") : undefined;
   const chassis: MechRecord["chassis"] = {
     engine: { type: mapPart(ENGINE_WORDS, "engine", unit["engine"]), rating: rating ?? 0 },
     gyro: mapPart(GYRO_WORDS, "gyro", unit["gyro"]),
     cockpit: mapPart(COCKPIT_WORDS, "cockpit", unit["cockpit"]),
     structure: mapPart(STRUCTURE_WORDS, "structure", unit["structure"]),
+    ...(structureTech ? { structureTech } : {}),
     armorType: mapPart(ARMOR_WORDS, "armor", unit["armor"]),
     myomer: mapPart(MYOMER_WORDS, "myomer", unit["myomer"]),
     heatSinks: { type: mapPart(HEAT_SINK_WORDS, "heat sink", unit["heat_sinks"]), count: heatCount ?? 0 },

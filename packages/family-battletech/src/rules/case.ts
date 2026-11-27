@@ -14,18 +14,20 @@ const FUEL_TANK_IDS = ["extended-fuel-tank-is", "extended-fuel-tank-clan"];
 const GAUSS_IDS = new Set([...WEAPON_BV, ...EQUIPMENT_BV].flatMap((g) => g.rows.filter((r) => r[3]?.gauss || r[3]?.gaussSlots).map((r) => r[0])));
 
 /** True when the record's internal structure is Clan: every part of a Clan record, and on a mixed record a structure type printed for the Clan
- * only (Clan endo steel). A standard structure on a mixed record has no tech base of its own, so it is read as Inner Sphere; a mixed
- * record cannot say otherwise yet (owner question). */
-export function clanStructure(record: Pick<MechRecord, "techBase"> & { chassis?: Pick<MechRecord["chassis"], "structure"> }): boolean {
+ * only (Clan endo steel). A standard structure on a mixed record is read as Inner Sphere unless the record says otherwise
+ * (`chassis.structureTech`, kept by the Mordel import; owner ruling 2026-11-26). */
+export function clanStructure(record: Pick<MechRecord, "techBase"> & { chassis?: Pick<MechRecord["chassis"], "structure" | "structureTech"> }): boolean {
   if (record.techBase === "clan") return true;
   if (record.techBase !== "mixed") return false;
-  return own(STRUCTURE_TYPES.types, record.chassis?.structure ?? "")?.techBase === "clan";
+  const printed = own(STRUCTURE_TYPES.types, record.chassis?.structure ?? "")?.techBase;
+  if (printed !== undefined) return printed === "clan"; // a type printed for one base (endo steel) keeps it; a stale structureTech is ignored
+  return record.chassis?.structureTech === "clan"; // a standard structure: the base the import read for it
 }
 
 /** True when a Clan CASE mount may be on this record. FrankenMech hook: a FrankenMech may carry it only where the CASE sits on Clan parts,
  * but FrankenMech parts have no tech base of their own yet (CO p.213; `record.frankenmech` holds donors by tonnage only). Until they do, a
  * FrankenMech is not refused here, so no false finding is raised; replace this line with the per-location test when the donors carry a base. */
-export function clanCaseAllowed(record: Pick<MechRecord, "techBase" | "frankenmech"> & { chassis?: Pick<MechRecord["chassis"], "structure"> }): boolean {
+export function clanCaseAllowed(record: Pick<MechRecord, "techBase" | "frankenmech"> & { chassis?: Pick<MechRecord["chassis"], "structure" | "structureTech"> }): boolean {
   return clanStructure(record) || record.frankenmech !== undefined;
 }
 
