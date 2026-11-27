@@ -232,7 +232,7 @@ const FUEL_TANK_IDS = ["extended-fuel-tank-is", "extended-fuel-tank-clan"];
 const ARMS: LocationCode[] = ["LA", "RA"];
 const INWARD: Partial<Record<LocationCode, LocationCode>> = { LA: "LT", RA: "RT" }; // Damage Transfer Diagram, Total Warfare p. 123
 /** Where damage goes on from each location, the legs apart (TO:AUE p. 193: CASE II covers its own location and one out, excepting the legs). */
-const TRANSFERS_TO: Partial<Record<LocationCode, LocationCode>> = { LA: "LT", RA: "RT", LT: "CT", RT: "CT", H: "CT" };
+const TRANSFERS_TO: Partial<Record<LocationCode, LocationCode>> = { LA: "LT", RA: "RT", LT: "CT", RT: "CT", HD: "CT" };
 const PARTIAL_WING_IDS = ["partial-wing-is", "partial-wing-clan"];
 const PARTIAL_WING_BV = { mediumMaxTons: 55, lightMedium: 2, heavyAssault: 1, heat: 3 };
 const SUPERCHARGER_IDS = ["supercharger-is", "supercharger-clan"];

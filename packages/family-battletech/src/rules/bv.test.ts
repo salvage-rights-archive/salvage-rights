@@ -141,6 +141,7 @@ describe("the method's rules", () => {
     expect(exposed("CT", "CT")).toBe(0);
     expect(exposed("LA", "LT")).toBe(0);
     expect(exposed("LT", "CT")).toBe(0);
+    expect(exposed("HD", "CT")).toBe(0);
     expect(exposed("LL", "LT")).toBe(15);
   });
 
