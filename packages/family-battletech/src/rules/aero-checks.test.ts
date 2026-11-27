@@ -38,7 +38,7 @@ describe("aerospace rules check", () => {
     expect(wants("tw-tm-so", { year: null, rulesLevel: "introductory" })).toEqual([]);
     expect(wants("aerotech2", { year: null })).toEqual([]);
     for (const editionId of ["tw-tm-so", "aerotech2"]) expect(wants(editionId, { year: 2750, techBase: "clan", rulesLevel: "advanced" }), editionId).toEqual([expect.objectContaining({ level: "error", where: { field: "techBase" } })]);
-    expect(wants("tw-tm-so", { year: 3000, era: "succession-wars-era", techBase: "clan", rulesLevel: "advanced" })).toEqual([expect.objectContaining({ where: { field: "techBase" } })]);
+    expect(wants("tw-tm-so", { year: 3000, era: "late-succession-war-lostech", techBase: "clan", rulesLevel: "advanced" })).toEqual([expect.objectContaining({ where: { field: "techBase" } })]);
   });
 
   it("a conventional fighter must carry sinks for its energy weapons (not its cannon) in the three later editions", () => {
