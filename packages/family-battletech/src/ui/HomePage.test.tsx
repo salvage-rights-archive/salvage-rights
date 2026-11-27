@@ -144,7 +144,7 @@ describe("Classic BattleTech home", () => {
     const user = userEvent.setup();
     renderHome();
     const form = await screen.findByRole("form", { name: "Build a new one" });
-    expect([...form.querySelectorAll("label")].map((l) => l.textContent).slice(0, 9)).toEqual(["Name", "Model", "Type", "Configuration", "Rules level", "Year", "Tech base", "Tonnage", "Walking MP"]);
+    expect([...form.querySelectorAll("label")].map((l) => l.textContent).slice(0, 10)).toEqual(["Name", "Model", "Type", "Rules level", "Year", "Era", "Configuration", "Tech base", "Tonnage", "Walking MP"]);
     const type = within(form).getByLabelText<HTMLSelectElement>("Type");
     const config = within(form).getByLabelText<HTMLSelectElement>("Configuration");
     const texts = (select: HTMLSelectElement) => [...select.options].map((o) => o.text);
@@ -280,7 +280,7 @@ describe("Classic BattleTech home", () => {
     });
   });
 
-  it("needs a year above Introductory and says so, shows one era as text, and makes a year in two eras pick one, which decides the tech base", async () => {
+  it("needs a year above Introductory and says so, and a typed year picks its era by the tech base without asking", async () => {
     const user = userEvent.setup();
     renderHome();
     const form = await screen.findByRole("form", { name: "Build a new one" });
@@ -289,21 +289,33 @@ describe("Classic BattleTech home", () => {
     expect(start().disabled).toBe(true);
     expect(within(form).getByText(/A year is needed at Standard rules/)).toBeTruthy();
     const year = within(form).getByLabelText("Year");
-    await user.type(year, "3060");
-    expect(within(form).getByText("Clan Invasion")).toBeTruthy(); // one era: text, no choice
-    expect(within(form).queryByRole("combobox", { name: "Era" })).toBeNull();
+    const era = within(form).getByLabelText<HTMLSelectElement>("Era");
+    await user.type(year, "3025");
+    expect(era.value).toBe("late-succession-war-renaissance"); // 3025 is in two eras; Inner Sphere, the first tech base, takes the main one
     expect(start().disabled).toBe(false);
+    expect(era.title).toBe("Late Succession War - Renaissance (3020-3049)");
     await user.clear(year);
     await user.type(year, "2900");
-    expect(start().disabled).toBe(true); // two eras: pick one
-    const era = within(form).getByLabelText<HTMLSelectElement>("Era");
-    expect([...era.options].map((o) => o.text)).toEqual(["Choose an era", "Early Succession War", "Succession Wars Era", "Clan Sub-Eras", "Clan Golden Years"]);
+    expect(era.value).toBe("early-succession-war");
     const bases = () => [...within(form).getByLabelText<HTMLSelectElement>("Tech base").options].map((o) => o.text);
     await user.selectOptions(era, "clan-golden-years");
     expect(bases()).toContain("Clan");
     await user.selectOptions(era, "early-succession-war");
     expect(bases()).not.toContain("Clan");
-    expect(start().disabled).toBe(false);
+  });
+
+  it("fills the year with the middle of a chosen era, and keeps a year already inside it", async () => {
+    const user = userEvent.setup();
+    renderHome();
+    const form = await screen.findByRole("form", { name: "Build a new one" });
+    const year = within(form).getByLabelText<HTMLInputElement>("Year");
+    const era = within(form).getByLabelText<HTMLSelectElement>("Era");
+    await user.selectOptions(era, "age-of-war");
+    expect(year.value).toBe("2288"); // the middle of 2005-2570
+    await user.clear(year);
+    await user.type(year, "2500");
+    await user.selectOptions(era, "age-of-war");
+    expect(year.value).toBe("2500");
   });
 
   it("cancels a delete on Escape and returns focus to its button; focus goes to the empty line after the last delete", async () => {

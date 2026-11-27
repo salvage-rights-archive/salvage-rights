@@ -26,13 +26,15 @@ test("year and era: a year in the new-unit form hides types that did not exist, 
   await form.getByLabel("Year").fill("3025");
   await expect(types.filter({ hasText: "OmniMech" })).toHaveCount(0);
   // The Clan tech base exists from 2800 (IO:AE p. 17): a typed year before that drops it from the list and from a choice already made.
+  await form.getByLabel("Era").selectOption("clan-golden-years"); // 3025 takes the Inner Sphere era, which leaves Clan out; the Clan sub-era offers it
   await form.getByLabel("Tech base").selectOption("clan");
   await form.getByLabel("Year").fill("2700");
   await expect(form.getByLabel("Tech base")).toHaveValue("inner-sphere");
   await expect(form.getByLabel("Tech base").locator("option[value=clan]")).toHaveCount(0);
   await form.getByLabel("Year").fill("3025");
   await form.getByLabel("Name").fill("Era Walker");
-  await form.getByLabel("Era").selectOption("late-succession-war-renaissance"); // 3025 is in two eras (an Inner Sphere one and a Clan sub-era): the pick decides the tech base
+  await form.getByLabel("Tech base").selectOption("inner-sphere");
+  await expect(form.getByLabel("Era")).toHaveValue("late-succession-war-renaissance"); // back to Inner Sphere, 3025 takes the main era again
   await form.getByRole("button", { name: "Start building" }).click();
   await expectPage(page.getByLabel("Year")).toHaveValue("3025");
   await expect(page.getByLabel("Era")).toHaveValue("late-succession-war-renaissance");
@@ -45,7 +47,7 @@ test("year and era: a year in the new-unit form hides types that did not exist, 
     return total;
   };
   const before = await picker();
-  await page.getByLabel("Year").fill(""); // with no year the era is a free choice again
+  await page.getByLabel("Year").fill(""); // a chosen era fills the year with the middle of its range
   await page.getByLabel("Era").selectOption("age-of-war");
   expect(await picker()).not.toBe(before);
 });

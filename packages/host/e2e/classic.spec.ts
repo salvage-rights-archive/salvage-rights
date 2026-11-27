@@ -309,7 +309,7 @@ test("pick an era and a tech base in the editor and see the picker's groups and 
 
   // An early era leaves out the groups that did not exist yet, and a closed group opens and closes by keyboard.
   await page.getByLabel("Tech base").selectOption("inner-sphere");
-  await page.getByLabel("Year").fill(""); // with no year the era is a free choice again
+  await page.getByLabel("Year").fill(""); // a chosen era fills the year with the middle of its range
   await page.getByLabel("Era").selectOption("age-of-war");
   await open();
   const early = await fullTotal();
@@ -372,8 +372,8 @@ test("build a QuadVee by keyboard, see its crew, conversion and weight, and reac
     await form.getByLabel("Name").fill("Horse");
     await form.getByLabel("Rules level").selectOption("advanced");
     await form.getByLabel("Year").fill("3140");
-    await form.getByLabel("Era").selectOption("dark-ages"); // 3140 is in two eras; the Clan Post-Reaving one stops Clan items at 3085
-    await form.getByLabel("Tech base").selectOption("clan");
+    await form.getByLabel("Tech base").selectOption("clan"); // 3140 is in two eras; the Clan tech base takes the Clan Post-Reaving one, which stops Clan items at 3085
+    await form.getByLabel("Era").selectOption("dark-ages"); // the year is inside it, so it stays
     await form.getByLabel("Configuration").selectOption({ label: "QuadVee" });
     await form.getByLabel("Tonnage").selectOption("50");
   });

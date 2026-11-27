@@ -396,37 +396,39 @@ export default function GothicHomePage() {
               <input id="bt-new-model" value={draft.model} onChange={(e) => setDraft({ ...draft, model: e.target.value })} />
             </div>
             <LevelSelect id="bt-new-level" record={draft} ruleset={GOTHIC} onChange={(rulesLevel) => { setDraft({ ...draft, rulesLevel }); }} />
-            <div className="bt-field">
-              <label htmlFor="bt-new-era">Era</label>
-              <select
-                id="bt-new-era"
-                value={when.era ?? ""}
-                onChange={(e) => {
-                  const next = { ...when, editionId: "gothic" };
-                  setEra(next, e.target.value);
-                  setWhen({ year: next.year, era: next.era });
-                }}
-              >
-                {GOTHIC.eras.map((era) => (
-                  <option key={era.id} value={era.id}>
-                    {era.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="bt-field">
-              <label htmlFor="bt-new-year">Year</label>
-              <input
-                id="bt-new-year"
-                type="number"
-                inputMode="numeric"
-                value={when.year ?? ""}
-                onChange={(e) => {
-                  const next = { ...when, editionId: "gothic" };
-                  setYear(next, e.target.value === "" ? null : Number(e.target.value));
-                  setWhen({ year: next.year, era: next.era });
-                }}
-              />
+            <div className="bt-grid__wide bt-yearera">
+              <div className="bt-field">
+                <label htmlFor="bt-new-year">Year</label>
+                <input
+                  id="bt-new-year"
+                  type="number"
+                  inputMode="numeric"
+                  value={when.year ?? ""}
+                  onChange={(e) => {
+                    const next = { ...when, editionId: "gothic" };
+                    setYear(next, e.target.value === "" ? null : Number(e.target.value));
+                    setWhen({ year: next.year, era: next.era });
+                  }}
+                />
+              </div>
+              <div className="bt-field">
+                <label htmlFor="bt-new-era">Era</label>
+                <select
+                  id="bt-new-era"
+                  value={when.era ?? ""}
+                  onChange={(e) => {
+                    const next = { ...when, editionId: "gothic" };
+                    setEra(next, e.target.value);
+                    setWhen({ year: next.year, era: next.era });
+                  }}
+                >
+                  {GOTHIC.eras.map((era) => (
+                    <option key={era.id} value={era.id}>
+                      {era.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
             <div className="bt-field">
               <label htmlFor="bt-new-config">Configuration</label>

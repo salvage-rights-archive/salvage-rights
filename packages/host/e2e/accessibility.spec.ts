@@ -424,9 +424,9 @@ test("a QuadVee, a superheavy 'Mech and a Primitive BattleMech: editor and sheet
     await form.getByLabel("Name").fill(spec.name);
     await form.getByLabel("Rules level").selectOption(spec.level);
     await form.getByLabel("Year").fill(spec.year);
+    if (spec.tech) await form.getByLabel("Tech base").selectOption(spec.tech);
     if (spec.tech) await form.getByLabel("Era").selectOption("dark-ages");
     if (spec.type) await form.getByLabel("Era").selectOption("age-of-war");
-    if (spec.tech) await form.getByLabel("Tech base").selectOption(spec.tech);
     if (spec.type) await form.getByLabel("Type", { exact: true }).selectOption({ label: spec.type });
     if (spec.config) await form.getByLabel("Configuration").selectOption({ label: spec.config });
     await form.getByLabel("Tonnage").selectOption(spec.tons);

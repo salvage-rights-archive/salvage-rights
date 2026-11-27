@@ -111,7 +111,8 @@ export function SelectField({
   id: string;
   label: string;
   value: string;
-  options: { value: string; label: string; disabled?: boolean }[];
+  /** `full`, where given, is the whole text of a choice shown short: its title and accessible name. */
+  options: { value: string; label: string; disabled?: boolean; full?: string }[];
   onChange: (value: string) => void;
   hint?: string;
   className?: string;
@@ -124,6 +125,7 @@ export function SelectField({
         <select
           id={id}
           value={value}
+          title={options.find((option) => option.value === value)?.full}
           style={{ "--bt-select-min": `${String(longest + 4)}ch` } as CSSProperties}
           aria-describedby={describedBy}
           onChange={(event) => {
@@ -131,7 +133,7 @@ export function SelectField({
           }}
         >
           {options.map((option) => (
-            <option key={option.value} value={option.value} disabled={option.disabled}>
+            <option key={option.value} value={option.value} disabled={option.disabled} title={option.full}>
               {option.label}
             </option>
           ))}
