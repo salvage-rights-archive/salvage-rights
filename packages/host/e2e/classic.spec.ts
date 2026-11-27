@@ -163,6 +163,21 @@ test("the home, import and editor pages do not scroll sideways at 320 px wide", 
   }
 });
 
+test("the chosen era's full name and years show under the Era select on a phone (412, 360 and 320 px) without a sideways scroll", async ({ page }) => {
+  for (const [width, height] of [[412, 915], [360, 740], [320, 700]]) {
+    await page.setViewportSize({ width, height });
+    await page.goto(HOME);
+    const form = page.getByRole("form", { name: "Build a new one" });
+    await form.getByLabel("Year").fill("3025");
+    await expect(form.getByLabel("Era")).toHaveValue("late-succession-war-renaissance");
+    const caption = form.getByText("Late Succession War - Renaissance (3020-3049)", { exact: true });
+    await expect(caption, `caption at ${String(width)} px`).toBeVisible();
+    await expect(form.getByLabel("Era")).toHaveAccessibleDescription(/3020-3049/);
+    const widths = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, client: document.documentElement.clientWidth }));
+    expect(widths.scroll, `scroll width at ${String(width)} px`).toBe(widths.client);
+  }
+});
+
 test("build a tripod through the form and reach its record sheet", async ({ page }) => {
   await page.goto(HOME);
   const form = page.getByRole("form", { name: "Build a new one" });

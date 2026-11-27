@@ -8,6 +8,13 @@
   color: var(--sr-ink-muted);
 }
 
+// The whole name of the era chosen, under the Era select: it wraps, and takes the column's width without widening it.
+.bt-era-caption {
+  flex: 1 1 100%;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 .bt-field {
   display: flex;
   flex-wrap: wrap;

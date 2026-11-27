@@ -6,7 +6,8 @@ import { Link, useNavigate } from "react-router";
 import { AERO_EDITION_ART, aiLabel } from "../../artwork/games";
 import { AERO_EDITIONS, DEFAULT_AERO_EDITION, aeroEditionName } from "../../data/aero";
 import { ERAS, SUB_ERAS, bookName } from "../../data/editions";
-import { eraChoice, useEraRoom } from "../eraChoice";
+import { eraChoice, eraList, useEraRoom } from "../eraChoice";
+import { eraCaptionText } from "../eraCaption";
 import { erasForTechBase, resolveEra, setEra } from "../../rules/availability";
 import LevelSelect from "../editor/LevelSelect";
 import GamePicture from "../GamePicture";
@@ -143,7 +144,7 @@ export default function AeroHomePage() {
   const yearEras = yearErasOf(draft);
   const room = useEraRoom();
   const eraNeeded = missing.startsWith("The year");
-  const eraOptions = [{ value: "", label: eraNeeded ? "Choose an era" : "Any era" }, ...erasForTechBase([...ERAS, ...SUB_ERAS], draft.techBase).map((era) => eraChoice(era, room))];
+  const eraOptions = [{ value: "", label: eraNeeded ? "Choose an era" : "Any era" }, ...eraList(erasForTechBase([...ERAS, ...SUB_ERAS], draft.techBase), [...ERAS, ...SUB_ERAS].find((era) => era.id === draft.era)).map((era) => eraChoice(era, room))];
 
   return (
     <div className="sr-page">
@@ -387,6 +388,7 @@ export default function AeroHomePage() {
                 label="Era"
                 value={eraNeeded ? "" : (yearEras.find((era) => era.id === draft.era)?.id ?? draft.era ?? "")}
                 options={eraOptions}
+                caption={eraNeeded ? undefined : eraCaptionText(yearEras.find((era) => era.id === draft.era) ?? [...ERAS, ...SUB_ERAS].find((era) => era.id === draft.era))}
                 hint={eraNeeded ? missing : undefined}
                 onChange={(era) => {
                   const next = { ...draft };
