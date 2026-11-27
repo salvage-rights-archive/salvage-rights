@@ -466,13 +466,13 @@ export const EQUIPMENT_COST: PriceGroup[] = [
   },
   {
     // TO:AUE p.217 (the melee items, motive systems, and the rest of the items whose weight a rule sets). `perUnitTon` is the table's
-    // "xTT" (the unit's tonnage); `perTon` the "xIT" (the item's own weight, all its mounts together).
+    // "xTT" (the unit's tonnage); `perWeight` the "xIT" (the item's own weight, exactly, all its mounts together).
     cite: { book: TO, page: 217 },
     checked: "page",
     prices: {
       "aes-arm": { perUnitTon: 500 }, "aes-leg": { perUnitTon: 700 }, "blue-shield": 1_000_000, "booby-trap": 100_000, "harjel": 120_000,
       "claws": { perUnitTon: 200 }, "lance": { perUnitTon: 150 }, "mace": 130_000, "talons": { perUnitTon: 300 },
-      "partial-wing": { perTon: 50_000 }, "jump-pack": { perTon: 20_000 },
+      "partial-wing": { perWeight: 50_000 }, "jump-pack": { perWeight: 20_000 },
     },
   },
   {

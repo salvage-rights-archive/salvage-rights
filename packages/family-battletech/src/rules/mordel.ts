@@ -378,7 +378,9 @@ function convert(response: unknown, catalog: Catalog, editionId: string, now: st
     // (checked live on the TechManual Barghest BGS-1T, bm 823, on 2026-11-25: LB 20-X AC, CT 2 and RT 9). They are one mount: the part
     // with more slots (the first on a tie) is its location, the other its `split`; the slots in each place are set when it is placed.
     const joined = theirId === undefined ? undefined : mounts.find((m) => m.id === idToMount.get(theirId));
-    if (joined && joined.name === name && joined.location && loc && joined.location !== loc && joined.split === undefined && theirSlots !== undefined && theirSlots > 0) {
+    // An item the table carries as one mount in each of several places (partial wing, talons) is not a split weapon: its two entries stay two mounts.
+    const joinedRow = joined?.equipmentId ? catalog.byId(joined.equipmentId) : undefined;
+    if (joined && joinedRow?.perMech === undefined && joined.name === name && joined.location && loc && joined.location !== loc && joined.split === undefined && theirSlots !== undefined && theirSlots > 0) {
       const before = partSlots.get(joined.id) ?? 1;
       const [main, other] = theirSlots > before ? [loc, joined.location] : [joined.location, loc];
       joined.location = main;

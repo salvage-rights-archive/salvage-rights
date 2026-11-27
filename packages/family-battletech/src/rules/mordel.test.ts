@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { loadCatalog } from "./catalog";
 import { mordelBiped, mordelOdd, mordelQuad, mordelWith } from "./fixtures";
+import { unitCost } from "./cost";
 import { editRecord, layout, weights, type LocationCode, type MechRecord } from "./mech";
 import { changedSinceImport, fromMordel, importOmniSet, importOmniSingle, omniFacts, parseMordelRef } from "./mordel";
 
@@ -314,6 +315,14 @@ describe("fromMordel: IndustrialMechs (unit type im)", () => {
       industrial([entry(1, "MML 7 (Ammo 17) [LRM]", "LT"), entry(2, "MML 7 (Ammo 14) [SRM]", "LT"), entry(3, "Fluid Gun (Ammo 20) [Water]", "RT")]),
     );
     expect(record.mounts.map((m) => m.equipmentId)).toEqual(["ammo-mml-7-lrm-is", "ammo-mml-7-srm-is", "ammo-fluid-gun-is"]);
+  });
+
+  it("keeps a partial wing's two entries as two mounts, one in each side torso, and prices its whole weight without rounding it up", () => {
+    const { record } = imported(withEquipment([entry(7, "Partial Wing", "LT", { slots: 3 }), entry(7, "Partial Wing", "RT", { slots: 3 })], { tons: 45 }));
+    const wings = record.mounts.filter((m) => m.equipmentId === "partial-wing-is");
+    expect(wings.map((m) => [m.location, m.split])).toEqual([["LT", undefined], ["RT", undefined]]);
+    // 7 percent of 45 tons is 3.15, a 3.5 ton wing at 50,000 a ton.
+    expect(unitCost(record, catalog).lines.find((l) => l.label === "Partial Wing")?.cost).toBe(175_000);
   });
 
   it("takes the hand actuator out of an arm that carries a tool that replaces it, and both lower arm and hand for a pile driver", () => {
