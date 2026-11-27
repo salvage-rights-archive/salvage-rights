@@ -11,7 +11,7 @@ import type { PilotSkills } from "../bv";
 import type { Catalog } from "../catalog";
 import { bvWithMunition, chosenMunition } from "../munitions";
 import { stemOf, tidy, roundHalfUp } from "../walk";
-import { armorLocations, assignedArmor, flankMP, isAir, itemFacts, rowOf, structuralIntegrity, structurePoints } from "./sv";
+import { armorLocations, assignedArmor, isAir, itemFacts, playFlank, rowOf, structuralIntegrity, structurePoints } from "./sv";
 import type { SupportVehicleRecord } from "./sv";
 
 export interface SvBvLine {
@@ -30,8 +30,8 @@ export interface SvBvResult {
 }
 
 /** Target Movement Modifier for the hexes moved at flank (Total Warfare p. 117), and 1 more for a VTOL or WiGE (Total Warfare pp. 55 and 117; TechManual p. 316 note). */
-export function targetModifier(record: Pick<SupportVehicleRecord, "cruise" | "motive">): number {
-  const hexes = flankMP(record);
+export function targetModifier(record: Pick<SupportVehicleRecord, "cruise" | "motive" | "structure" | "engine">): number {
+  const hexes = playFlank(record);
   const band = TARGET_MODIFIER.bands.find(([most]) => hexes <= most)?.[1] ?? 0;
   return band + (record.motive === "vtol" || record.motive === "wige" ? TARGET_MODIFIER.jumpBonus : 0);
 }
@@ -63,6 +63,7 @@ export function svBv(record: SupportVehicleRecord, catalog: Catalog, pilot: Pilo
     }
     if (facts.infantry) {
       // A Light or Medium weapon of a Small unit counts at the Conventional Infantry Weapons table's figure, once for each, and is not adjusted for fire control (the page).
+      // OUR INFERENCE: the book names no Battle Value table for these weapons; the infantry table is the only one that lists them (book panel 2026-11-26).
       const bv = INFANTRY_WEAPON_BV[stemOf(row.id)];
       if (bv === undefined) unvalued.push(row.name);
       else for (let n = 0; n < facts.qty; n += 1) weapons.push({ id: row.id, location: m.location, bv, direct: false, heavy: false });
@@ -128,9 +129,10 @@ export function svBv(record: SupportVehicleRecord, catalog: Catalog, pilot: Pilo
     if (w.heavy) w.bv *= fireControl;
   }
   // Rear-firing weapons count half; where the forward-arc ones are worth less, they are halved instead. The turret is in no arc.
-  const rear = weapons.filter((w) => w.location === "b").reduce((s, w) => s + w.bv, 0);
-  const forward = weapons.filter((w) => w.location !== "b" && w.location !== "t").reduce((s, w) => s + w.bv, 0);
-  const halved = forward < rear ? (w: { location: string }) => w.location !== "b" && w.location !== "t" : (w: { location: string }) => w.location === "b";
+  const isRear = (w: { location: string }) => w.location === "b" || w.location === "bl" || w.location === "br";
+  const rear = weapons.filter(isRear).reduce((s, w) => s + w.bv, 0);
+  const forward = weapons.filter((w) => !isRear(w) && w.location !== "t").reduce((s, w) => s + w.bv, 0);
+  const halved = forward < rear ? (w: { location: string }) => !isRear(w) && w.location !== "t" : isRear;
   let weaponBv = 0;
   for (const w of weapons) weaponBv += halved(w) ? w.bv * SV_BV.rearFactor : w.bv;
   const ammoByModel = new Map<string, number>();
@@ -154,12 +156,12 @@ export function svBv(record: SupportVehicleRecord, catalog: Catalog, pilot: Pilo
     { label: air ? "Structural integrity" : "Structure points", value: tidy(structure), note: air ? `${String(si ?? 0)} x ${String(SV_BV.siFactor)}` : `${String(structurePoints(record) * armorLocations(record).length)} x ${String(SV_BV.structureFactor)}` },
     { label: "Defensive equipment", value: tidy(defensiveEquipment + defensiveAmmoCounted) },
     { label: "Unit type modifier", value: typeModifier },
-    ...(air ? [] : [{ label: "Defensive factor", value: tidy(factor), note: `flank ${String(flankMP(record))} MP` }]),
+    ...(air ? [] : [{ label: "Defensive factor", value: tidy(factor), note: `flank ${String(playFlank(record))} MP` }]),
     { label: "Defensive Battle Rating", value: tidy(defensive) },
   );
   // Offensive: the weapons, their ammunition and the equipment, and (for a ground or naval unit) the tons over 2; times the speed factor of the flank MP (Maximum Thrust for an air unit).
   const weaponRating = weaponBv + ammoBv + otherEquipment + (air ? 0 : record.tons / SV_BV.tonsDivisor);
-  const speed = speedFactor(Math.ceil(flankMP(record)));
+  const speed = speedFactor(Math.ceil(playFlank(record)));
   const offensive = weaponRating * speed;
   lines.push(
     { label: "Weapons, ammunition and equipment", value: tidy(weaponBv + ammoBv + otherEquipment), note: `heavy weapons and their ammunition x ${String(fireControl)} for ${record.fireControl} fire control` },

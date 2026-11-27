@@ -1,7 +1,7 @@
 // The rules check for Support Vehicles: what is illegal or does not add up, each finding with the printed page it rests on. Findings are advice, never refusals:
 // nothing is removed from a record and nothing throws on one this version does not understand. They share the 'Mech check's `Finding` shape, so the same panel
 // shows them. Messages are our own words and state the numbers.
-import { SV_PAGES, SV_ROTOR_MAX, SV_WEIGHT_RULES, svEngineOf, svModOf } from "../../data/support-vehicle";
+import { SV_PAGES, SV_ROTOR_MAX, SV_WEIGHT_RULES, ULTRA_LIGHT_BAR, svEngineOf, svModOf } from "../../data/support-vehicle";
 import type { SvMod } from "../../data/support-vehicle";
 import type { Catalog, EquipmentRow } from "../catalog";
 import { mountableOn } from "../catalog";
@@ -42,7 +42,8 @@ const typeCheck: SvCheck = {
     else if (record.tons > max) out.push(finding("type", "error", `A ${row.label} Support Vehicle${max < row.maxTons ? " with the hydrofoil modification" : ""} weighs at most ${tons(max)}; this one is ${tons(record.tons)}.`, { where: { field: "tons" }, cite: SV_PAGES.motives }));
     else if (isSmall(record) ? !Number.isInteger(tidy(record.tons * 1000)) : !Number.isInteger(tidy(record.tons * 2))) out.push(finding("type", "error", isSmall(record) ? "A Small Support Vehicle is weighed to the kilogram." : "A Support Vehicle of 5 tons or more is weighed in half tons.", { where: { field: "tons" }, cite: SV_PAGES.weights }));
     else if (weightRowOf(record) === undefined) out.push(finding("type", "warning", `The Master Support Vehicle Weight Table has no ${row.label} row for ${tons(record.tons)}.`, { where: { field: "tons" }, cite: SV_PAGES.weights }));
-    if (record.turret && !canHaveTurret(record)) out.push(finding("type", "error", `A ${record.motive === "vtol" ? "VTOL" : row.air ? row.label.toLowerCase() : "convertible"} Support Vehicle may not carry a turret.`, { where: { field: "turret" }, cite: SV_PAGES.structure }));
+    // The turret flag is kept when the choice is hidden (a switch to a VTOL and back); it does nothing while the unit cannot carry one.
+    if (record.turret && !canHaveTurret(record)) out.push(finding("type", "note", `A ${record.motive === "vtol" ? "VTOL" : row.air ? row.label.toLowerCase() : "convertible"} Support Vehicle carries no turret, so the turret setting is kept but counts for nothing.`, { where: { field: "turret" }, cite: SV_PAGES.structure }));
     return out;
   },
 };
@@ -76,7 +77,7 @@ const chassisCheck: SvCheck = {
     }
     const chassis = structureTons(record);
     if (chassis !== null && record.structure.mods.includes("trailer") && record.engine.type !== "none") out.push(finding("chassis", "note", "A trailer needs no engine or controls unless it must move without a tractor; choose no engine to build it without.", { where: { field: "engine" }, cite: SV_PAGES.engine }));
-    if (record.structure.mods.includes("ultra-light") && record.armor.bar > 5) out.push(finding("armor", "error", "An ultra-light chassis may not carry armor better than BAR 5.", { where: { field: "armor.bar" }, cite: SV_PAGES.modifications }));
+    if (record.structure.mods.includes("ultra-light") && record.armor.bar > ULTRA_LIGHT_BAR) out.push(finding("armor", "error", `An ultra-light chassis may not carry armor better than BAR ${String(ULTRA_LIGHT_BAR)}.`, { where: { field: "armor.bar" }, cite: SV_PAGES.modifications }));
     if (record.structure.mods.includes("omni")) out.push(finding("chassis", "note", "The Omni modification is recorded and costed, but this editor does not split a unit into a base configuration and pods: build each configuration as its own unit.", { where: { field: "structure.mods" }, cite: SV_PAGES.modifications }));
     return out;
   },

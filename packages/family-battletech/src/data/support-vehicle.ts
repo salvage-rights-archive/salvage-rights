@@ -6,7 +6,6 @@
 import type { BookPage } from "./vehicle";
 
 const TM = "TechManual";
-const TM_ERRATA = "TechManual errata v8.0";
 const BV = "TechManual Battle Value v4.1";
 
 export type SvMotiveId = "airship" | "fixed-wing" | "hover" | "naval" | "tracked" | "vtol" | "wheeled" | "wige";
@@ -248,13 +247,7 @@ export const SV_ARMOR_DATES: Record<number, { prototype?: number; production: nu
   2: { production: 1950 }, 3: { production: 1950 }, 4: { production: 1950 }, 5: { production: 2200 }, 6: { production: 2200 },
   7: { prototype: 2250, production: 2300 }, 8: { prototype: 2425, production: 2435 }, 9: { prototype: 2440, production: 2450 }, 10: { prototype: 2460, production: 2470 },
 };
-export const SV_ARMOR_DATES_CITE: BookPage = { book: "Interstellar Operations: Alternate Eras", page: 29 };
 
-export interface SvArmorCost {
-  perPoint: Record<number, { cost: number; rating: TechRating; availability: string }>;
-  /** The final structural cost multiplier by structural Tech Rating (p. 280). */
-  structuralMultiplier: Record<TechRating, number>;
-}
 export const SV_COST = {
   cite: SV_PAGES.cost,
   chassisPerTon: 2_500,
@@ -292,8 +285,6 @@ export const SV_CREW = {
   officerEvery: 6,
   cite: SV_PAGES.crew,
 };
-/** Seating, per seat, in tons (p. 236). */
-export const SEAT_TONS = 0.075;
 
 /** BV v4.1: the Offensive BV Adjustment Table (fire control) and the armor rule (BAR over 10 in place of the armor factor's 2.5). */
 export const SV_BV = {
@@ -307,5 +298,3 @@ export const SV_BV = {
   artemis: 1.2,
   targetingComputer: 1.25,
 };
-export const SV_UNIT_TYPE_CITE: BookPage = SV_PAGES.unitTypeModifiers;
-export const SV_ERRATA: BookPage = { book: TM_ERRATA, page: 6 };

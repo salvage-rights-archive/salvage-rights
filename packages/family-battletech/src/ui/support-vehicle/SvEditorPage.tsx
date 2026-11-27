@@ -302,11 +302,11 @@ function FiguresPanel({ record, catalog }: { record: SupportVehicleRecord; catal
       </button>
       {open && (
         <ul id="sv-figure-lines" className="bt-list bt-readout">
-          {bv.lines.map((line) => (
-            <li key={`bv-${line.label}`} className="bt-hint">{`${line.label}: ${String(line.value)}${line.note ? ` (${line.note})` : ""}`}</li>
+          {bv.lines.map((line, i) => (
+            <li key={`bv-${String(i)}`} className="bt-hint">{`${line.label}: ${String(line.value)}${line.note ? ` (${line.note})` : ""}`}</li>
           ))}
-          {cost.lines.map((line) => (
-            <li key={`c-${line.label}`} className="bt-hint">{`${line.label}: ${line.cost === 0 ? "" : `${Math.round(line.cost).toLocaleString("en-US")} = `}${line.how}`}</li>
+          {cost.lines.map((line, i) => (
+            <li key={`c-${String(i)}`} className="bt-hint">{`${line.label}: ${line.cost === 0 ? "" : `${Math.round(line.cost).toLocaleString("en-US")} = `}${line.how}`}</li>
           ))}
         </ul>
       )}

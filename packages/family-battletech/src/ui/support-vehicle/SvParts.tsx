@@ -11,7 +11,7 @@ import { DEFAULT_LEVEL, techBaseChoices } from "../../rules/levels";
 import { chosenMunition, munitionShort, reloadCost } from "../../rules/munitions";
 import { barChoices, engineChoices, modChoices, motiveChoices } from "../../rules/support-vehicle/availability";
 import {
-  amplifierTons, armorCell, armorLocations, armorSlots, armorTons, assignedArmor, baseSlots, canHaveTurret, crewTally, energyHeat, engineMinimumNote, engineTons, flankMP, fuelPercent, fuelPoints, fuelPointKg, fuelTonsForRange, isAir, isSmall, itemFacts, maxArmorPoints, maxTonsOf, minRatingOf,
+  amplifierTons, armorCell, armorLocations, armorSlots, armorTons, assignedArmor, baseSlots, canHaveTurret, crewTally, energyHeat, engineMinimumNote, engineRating, engineTons, flankMP, fuelPercent, fuelPoints, fuelPointKg, fuelTonsForRange, isAir, isSmall, itemFacts, maxArmorPoints, maxTonsOf, minRatingOf,
   mountLocations, needsFuel, pointsPerTon, rangeKm, sizeOf, slotTally, structuralIntegrity, structurePoints, structureTons, svLocationName, weightRowOf,
 } from "../../rules/support-vehicle/sv";
 import type { SupportVehicleRecord } from "../../rules/support-vehicle/sv";
@@ -36,8 +36,8 @@ function Readout({ lines }: { lines: (string | undefined)[] }) {
   if (shown.length === 0) return null;
   return (
     <ul className="bt-list bt-readout">
-      {shown.map((line) => (
-        <li key={line} className="bt-hint">
+      {shown.map((line, i) => (
+        <li key={`${String(i)}-${line}`} className="bt-hint">
           {line}
         </li>
       ))}
@@ -208,7 +208,7 @@ export function EnginePanel({ record, onEdit }: PartProps) {
           id="field-engine"
           label="Engine"
           value={record.engine.type}
-          options={[...engineChoices(record).map(([value, label]) => ({ value, label })), ...(record.structure.mods.includes("trailer") ? [{ value: "none", label: "None (a trailer)" }] : [])]}
+          options={[...engineChoices(record).map(([value, label]) => ({ value, label })), ...(record.structure.mods.includes("trailer") || record.engine.type === "none" ? [{ value: "none", label: "None (a trailer)" }] : [])]}
           onChange={(v) => { onEdit((d) => void (d.engine.type = v)); }}
         />
         <SelectField
@@ -229,7 +229,7 @@ export function EnginePanel({ record, onEdit }: PartProps) {
       </div>
       <Readout
         lines={[
-          `${air ? "Maximum Thrust" : "Flank MP"} ${num(flankMP(record))}. Engine rating ${String(Math.min(500, Math.ceil(record.cruise * record.tons)))}.`,
+          `${air ? "Maximum Thrust" : "Flank MP"} ${num(flankMP(record))}. Engine rating ${String(engineRating(record))}.`,
           weight === null ? "We cannot work out the engine weight for these figures." : `The engine weighs ${tonsText(weight)}.`,
           note,
           !fuel ? "This engine burns no fuel." : air ? `${plural(points ?? 0, "Fuel Point")} (${String(fuelPointKg(record) ?? "?")} kg each).` : range === null ? undefined : `A range of ${String(range)} km${percent === null ? "" : ` (${num(percent)} percent of the engine's weight for each 100 km; ${num(wanted(500) ?? 0)} tons for 500 km)`}.`,

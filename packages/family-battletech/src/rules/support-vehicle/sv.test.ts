@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { loadCatalog } from "../catalog";
 import { checkSv, markSvOfficial, svOfficialState } from "./checks";
-import { svBv } from "./bv";
+import { svBv, targetModifier } from "./bv";
 import { svCost } from "./cost";
 import { barChoices, equipmentOffered, modChoices } from "./availability";
 import {
-  armorLocations, armorTons, baseSlots, crewTally, engineTons, flankMP, fuelPoints, fuelTonsForRange, itemFacts, maxArmorPoints, newSvRecord, rangeKm, sizeOf, slotTally, structuralIntegrity, structureTons, structurePoints, svTally, withDefaults,
+  armorLocations, armorTons, playFlank, baseSlots, crewTally, engineTons, flankMP, fuelPoints, fuelTonsForRange, itemFacts, maxArmorPoints, newSvRecord, rangeKm, sizeOf, slotTally, structuralIntegrity, structureTons, structurePoints, svTally, withDefaults,
 } from "./sv";
 import type { SupportVehicleRecord, SvMotiveId } from "./sv";
 
@@ -104,6 +104,26 @@ describe("cost and Battle Value by the book's examples", () => {
   it("itemFacts reads the Support Vehicle slot column: an AC/20 takes 10, a Beagle probe 2", () => {
     const r = build({ motive: "tracked", tons: 50 }, [["f", "ac-20-is"], ["f", "beagle-active-probe-is"]]);
     expect(r.mounts.map((m) => itemFacts(m, r, catalog).slots)).toEqual([10, 2]);
+  });
+});
+
+describe("review fixes", () => {
+  it("a fractional airship Safe Thrust rounds normally for structural integrity", () => {
+    const air = (cruise: number) => build({ motive: "airship", tons: 20, cruise });
+    expect([structuralIntegrity(air(1.5)), structuralIntegrity(air(1.25)), structuralIntegrity(air(0.75))]).toEqual([2, 1, 1]);
+  });
+  it("a kind of bay takes one slot however many cubicles: the Dixon uses 19 slots", () => {
+    expect(slotTally(dixon(), catalog)).toMatchObject({ available: 35, used: 19 });
+  });
+  it("Battle Value reads the hydrofoil's 1.25 x cruising MP, and a trailer with no engine counts flank 1", () => {
+    const boat = build({ motive: "naval", tons: 40, cruise: 8, structure: { rating: "D", mods: ["hydrofoil"] } });
+    expect([playFlank(boat), targetModifier(boat)]).toEqual([15, 4]);
+    expect(playFlank(build({ motive: "wheeled", tons: 20, cruise: 4, engine: { type: "none", rating: "D" }, structure: { rating: "D", mods: ["trailer"] } }))).toBe(1);
+  });
+  it("on a Large ground unit the rear-left weapons count as rear, like the rear ones", () => {
+    const at = (where: string) => svBv(build({ motive: "tracked", tons: 120, cruise: 3, fireControl: "advanced" }, [[where, "ac-5-is"], ["f", "ac-5-is"]]), catalog).offensive;
+    expect(at("bl")).toBe(at("b"));
+    expect(at("bl")).toBeLessThan(at("fl"));
   });
 });
 

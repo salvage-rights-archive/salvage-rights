@@ -11,10 +11,9 @@ import { svBv } from "../../rules/support-vehicle/bv";
 import { svOfficialState } from "../../rules/support-vehicle/checks";
 import { svCost } from "../../rules/support-vehicle/cost";
 import {
-  armorLocations, armorTons, assignedArmor, crewTally, engineTons, flankMP, fuelPoints, isAir, itemFacts, playCruise, rangeKm, rowOf, sizeOf, structuralIntegrity, structurePoints, structureTons, svLocationName, svTally,
+  armorLocations, armorTons, assignedArmor, crewTally, engineTons, flankMP, fuelPoints, isAir, itemFacts, playCruise, playFlank, rangeKm, rowOf, sizeOf, structuralIntegrity, structurePoints, structureTons, svLocationName, svTally,
 } from "../../rules/support-vehicle/sv";
 import type { SupportVehicleRecord } from "../../rules/support-vehicle/sv";
-import { tidy } from "../../rules/walk";
 import { TRADEMARK_LINE } from "../sheet/RecordSheet";
 import Frame from "../sheet/Frame";
 import type { Rect } from "../sheet/Frame";
@@ -30,6 +29,12 @@ const RECTS = {
   notes: { x: 30, y: 1895, w: 1640, h: 200 },
 } satisfies Record<string, Rect>;
 const ROWS = 12;
+
+/** The ammunition text in at most two lines; where it is cut the last line says the text copy has the rest. */
+function wrapAmmo(ammo: string[]): string[] {
+  const lines = wrap(ammo.length === 0 ? "none" : ammo.join("; "), 24, 1480);
+  return lines.length <= 2 ? lines : [lines[0] ?? "", `${(lines[1] ?? "").slice(0, 60)} ... (listed in the text copy)`];
+}
 
 export interface InventoryRow {
   qty: string;
@@ -127,7 +132,7 @@ export default function SvSheet({ record, catalog, textHeading }: { record: Supp
     ["Tonnage", `${String(record.tons)} tons`],
     ["Tech base", TECH[record.techBase]],
     ["Year", record.year === null ? "not set" : String(record.year)],
-    air ? ["Thrust", `Safe ${String(record.cruise)}, Maximum ${String(flankMP(record))}`] : ["Movement", `${String(playCruise(record))} cruising, ${String(Math.ceil(tidy(playCruise(record) * 1.5)))} flank`],
+    air ? ["Thrust", `Safe ${String(record.cruise)}, Maximum ${String(flankMP(record))}`] : ["Movement", `${String(playCruise(record))} cruising, ${String(playFlank(record))} flank`],
     ["Engine", `${engine?.label ?? record.engine.type}, Tech Rating ${record.engine.rating}${engineWeight === null ? "" : `, ${String(engineWeight)} tons`}`],
     ["Chassis", `Structural Tech Rating ${record.structure.rating}, ${String(structureTons(record) ?? "?")} tons${mods === "" ? "" : `; ${mods}`}`],
     ["Fuel", air ? (points === null ? "none needed" : `${String(record.fuelTons)} tons, ${String(points)} Fuel Points`) : range === null ? "none needed" : `${String(record.fuelTons)} tons, range ${String(range)} km`],
@@ -204,7 +209,7 @@ export default function SvSheet({ record, catalog, textHeading }: { record: Supp
           <text x={50} y={RECTS.inventory.y + 640} fontSize={24} fontWeight={700} fill={INK}>
             Ammo:
           </text>
-          {wrap(ammo.length === 0 ? "none" : ammo.join("; "), 24, 1480).slice(0, 2).map((line, i) => (
+          {wrapAmmo(ammo).map((line, i) => (
             <text key={line} x={150} y={RECTS.inventory.y + 640 + i * 30} fontSize={24} fill={INK}>
               {line}
             </text>

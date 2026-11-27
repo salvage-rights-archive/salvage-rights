@@ -33,7 +33,7 @@ export default function SvDiagram({ record, use, onSelect, selected, label, ink,
   if (isAir(record)) {
     const areas = locations.map((l) => ({ code: AIR_CODES[l.code] ?? l.code, name: l.name, points: l.armor, threshold: 0 }));
     const drawing = <ArmorDiagram rect={rect ?? { x: 0, y: 0, w: 640, h: 1000 }} profile={AIR_PROFILE} armor={areas} si={{ label: "STRUCTURAL INTEGRITY", value: String(structuralIntegrity(record) ?? 0) }} />;
-    if (rect) return <g aria-label={label}>{drawing}</g>;
+    if (rect) return <g role="group" aria-label={label}>{drawing}</g>;
     return (
       <svg className="bt-vehicle-diagram" viewBox="0 0 640 1000" role="img" aria-label={label ?? `${record.name.chassis} armor and structural integrity`}>
         {drawing}

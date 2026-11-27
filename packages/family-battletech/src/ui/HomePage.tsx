@@ -7,7 +7,7 @@ import { baseOf, CLASSIC } from "../data/rulesets";
 import { DEFAULT_EDITION, EDITIONS, bookName, editionName, eraLabel } from "../data/editions";
 import { configurationAvailable, configurationChoices, erasOfYear, setYear, typeAvailable } from "../rules/availability";
 import { levelAtLeast, levelIn, levelRow, techBaseChoices, withLevel } from "../rules/levels";
-import { superheavyPhase } from "../rules/time";
+import { clanInTime, superheavyPhase } from "../rules/time";
 import { DEFAULT_AERO_EDITION } from "../data/aero";
 import { newAeroRecord } from "../rules/aero";
 import type { AeroType } from "../data/aero";
@@ -325,7 +325,9 @@ export default function HomePage() {
   };
 
   // The Support Vehicle motive types the rules level offers (hidden below, never marked).
-  const svOptions = SV_MOTIVES.filter((m) => levelAtLeast(draft.rulesLevel ?? "standard", m.level)).map((m) => ({ id: m.id, label: `Support vehicle: ${m.label}`, note: `${m.label}: a Support Vehicle of up to ${String(m.maxTons)} tons, built under TechManual and opened in the Support Vehicle editor.`, row: m }));
+  // A Clan unit needs the Clan tech base to exist in the year (IO:AE p. 17); the book prints no motive type dates, so year and tech base cut the list only that far.
+  const svTimeOk = techBase !== "clan" || clanInTime({ editionId: edition, year: yearTyped, era: eraChosen?.id });
+  const svOptions = SV_MOTIVES.filter((m) => svTimeOk && levelAtLeast(draft.rulesLevel ?? "standard", m.level)).map((m) => ({ id: m.id, label: `Support vehicle: ${m.label}`, note: `${m.label}: a Support Vehicle of up to ${String(m.maxTons)} tons, built under TechManual and opened in the Support Vehicle editor.`, row: m }));
   const svPicked = svOptions.find((option) => option.id === svType);
   const svTonnage = svTons ?? svStartTons(svPicked?.id ?? "");
   const buildSv = async () => {
@@ -965,7 +967,7 @@ export default function HomePage() {
             ) : svPicked ? (
               <>
                 <NumberField id="bt-new-sv-tons" label="Tonnage" value={svTonnage} min={0.1} hint={`From 0.1 to ${String(svPicked.row.maxTons)} tons; under 5 tons is a Small unit, weighed to the kilogram.`} onValid={(tons) => { setSvTons(tons ?? undefined); }} />
-                <NumberField id="bt-new-sv-cruise" label={svPicked.row.air ? "Safe Thrust" : "Cruising MP"} value={svCruise} min={svPicked.row.id === "airship" ? 0.25 : 1} hint={svPicked.row.id === "airship" ? "At most 2, in steps of a quarter." : undefined} onValid={(cruise) => { setSvCruise(cruise ?? 1); }} />
+                <NumberField id="bt-new-sv-cruise" label={svPicked.row.air ? "Safe Thrust" : "Cruising MP"} value={svPicked.row.id === "airship" ? Math.min(2, svCruise) : svCruise} min={svPicked.row.id === "airship" ? 0.25 : 1} hint={svPicked.row.id === "airship" ? "At most 2, in steps of a quarter." : undefined} onValid={(cruise) => { setSvCruise(cruise ?? 1); }} />
               </>
             ) : baPicked ? (
               <>

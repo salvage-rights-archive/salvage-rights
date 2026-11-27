@@ -58,6 +58,7 @@ export function svCost(record: SupportVehicleRecord, catalog: Catalog): SvCost {
       add("Armor", perPoint * points, `${String(points)} points x ${money(perPoint)}`);
     }
   }
+  // The multiplier is the STRUCTURAL Tech Rating's: the worked examples say so (TM printed p. 276, the Dixon "Structural Tech Rating of D"; p. 277, the Simca) and the table (p. 280) heads the line "Tech Rating", the chassis rating.
   const rating = SV_COST.structuralMultiplier[record.structure.rating as keyof typeof SV_COST.structuralMultiplier];
   if (rating !== undefined) {
     add(`Tech Rating ${record.structure.rating} multiplier on the structure`, structural * (rating - 1), `x ${String(rating)}`);

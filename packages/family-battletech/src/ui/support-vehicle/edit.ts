@@ -3,7 +3,7 @@
 import type { Catalog, EquipmentRow } from "../../rules/catalog";
 import { asEquipment, defaultMunitionId, offeredChoices } from "../../rules/munitions";
 import { equipmentOffered } from "../../rules/support-vehicle/availability";
-import { SMALL_BIN, armorLocations, canHaveTurret } from "../../rules/support-vehicle/sv";
+import { SMALL_BIN, armorLocations } from "../../rules/support-vehicle/sv";
 import type { SupportVehicleRecord, SvMount } from "../../rules/support-vehicle/sv";
 
 /** An edit to a record, and the callback the page hands each panel: edits with the same `field` in a row (one visit to a field) are one Undo step. */
@@ -12,7 +12,6 @@ export type SvOnEdit = (change: SvChange, field?: string) => void;
 
 /** After the motive type, weight or turret changes: a zero entry for each armor location the unit now has; points on a location it lacks stay (the rules check reports them), unless they are zero. */
 export function syncArmorLocations(draft: SupportVehicleRecord): void {
-  if (!canHaveTurret(draft)) draft.turret = false;
   const known = armorLocations(draft);
   for (const loc of known) draft.armor.points[loc] ??= 0;
   for (const [loc, n] of Object.entries(draft.armor.points)) if (n === 0 && !known.includes(loc)) delete draft.armor.points[loc];

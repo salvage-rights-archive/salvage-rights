@@ -43,17 +43,6 @@ export function toSvFile(record: SupportVehicleRecord): SvFile {
   return { app: "salvage-rights", kind: "support-vehicle-unit", version: 1, record: structuredClone(record) };
 }
 
-/** Reads a unit file. A record without an id gets a fresh one. */
-export function fromSvFile(file: unknown, newId: () => string = () => crypto.randomUUID()): { ok: true; record: SupportVehicleRecord } | { ok: false; message: string } {
-  if (!isObject(file)) return { ok: false, message: "This is not a Salvage Rights file." };
-  if (file.app !== "salvage-rights") return { ok: false, message: "This file was not made by Salvage Rights." };
-  if (file.kind !== "support-vehicle-unit") return { ok: false, message: "This file does not hold a Support Vehicle." };
-  if (file.version !== 1) return { ok: false, message: "This file is from a version this app cannot read." };
-  const record = read(file.record, newId());
-  if (!record) return { ok: false, message: "The Support Vehicle in this file is damaged or from a later version." };
-  return { ok: true, record };
-}
-
 export function downloadSv(record: SupportVehicleRecord): void {
   const base = `${record.name.chassis}-${record.name.model}`.replace(/[^A-Za-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
   downloadJson(`${base || "support-vehicle"}.support-vehicle.json`, toSvFile(record));

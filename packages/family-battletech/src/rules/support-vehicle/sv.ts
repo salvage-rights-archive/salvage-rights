@@ -5,14 +5,14 @@
 import type { RulesLevel } from "../../data/chassis";
 import { DEFAULT_EDITION } from "../../data/editions";
 import {
-  AIR_FUEL_KG, AIR_FUEL_PROP_FACTOR, ALTERNATE_FUEL_PERCENT, BARS, ENGINE_MINIMUMS, SEAT_TONS, SV_AIRSHIP_SI, SV_ARMOR_BASE, SV_ARMOR_KG, SV_ARMOR_MAX, SV_BAR10_SLOTS, SV_CREW, SV_FIRE_CONTROL,
-  SV_ROTOR_MAX, SV_SLOTS, SV_SPEED, SV_STRUCTURE, SV_WEIGHTS, SV_WEIGHT_RULES, TECH_MULTIPLIER, svEngineOf, svModOf, svMotiveOf,
+  AIR_FUEL_KG, AIR_FUEL_PROP_FACTOR, ALTERNATE_FUEL_PERCENT, ENGINE_MINIMUMS, SV_AIRSHIP_SI, SV_ARMOR_BASE, SV_ARMOR_KG, SV_ARMOR_MAX, SV_BAR10_SLOTS, SV_CREW, SV_FIRE_CONTROL,
+  SV_SLOTS, SV_SPEED, SV_STRUCTURE, SV_WEIGHTS, SV_WEIGHT_RULES, TECH_MULTIPLIER, svEngineOf, svModOf, svMotiveOf,
 } from "../../data/support-vehicle";
 import type { SvMotive, SvMotiveId, SvSize, SvWeightRow, TechRating } from "../../data/support-vehicle";
 import { groupOf } from "../catalog";
 import type { Catalog, EquipmentRow } from "../catalog";
 import type { MechRecord, Mount, OfficialMark, TechBase } from "../mech";
-import { own, tidy } from "../walk";
+import { own, roundHalfUp, tidy } from "../walk";
 
 export type { SvMotiveId, SvSize, TechRating };
 
@@ -290,6 +290,12 @@ export function flankMP(record: Pick<SupportVehicleRecord, "cruise" | "motive">)
   if (record.motive === "airship") return Math.ceil(tidy(raw / SV_SPEED.airshipStep)) * SV_SPEED.airshipStep;
   return Math.ceil(raw);
 }
+/** Flank MP as played and as Battle Value counts it: from the hydrofoil's 1.25 x cruising MP; a trailer with no engine counts 1 (BV v4.1); an air unit's Maximum Thrust. */
+export function playFlank(record: Pick<SupportVehicleRecord, "cruise" | "motive" | "structure" | "engine">): number {
+  if (record.engine.type === "none") return 1;
+  return isAir(record) ? flankMP(record) : Math.ceil(tidy(playCruise(record) * SV_SPEED.flank));
+}
+
 /** Hydrofoil: the Cruising MP is multiplied by 1.25, rounded normally, for the play figure (p. 123). The engine is sized on the base figure. */
 export const playCruise = (record: Pick<SupportVehicleRecord, "cruise" | "motive" | "structure">): number => (record.motive === "naval" && record.structure.mods.includes("hydrofoil") ? Math.floor(tidy(record.cruise * 1.25) + 0.5) : record.cruise);
 
@@ -384,10 +390,10 @@ export function fuelTonsForRange(record: SupportVehicleRecord, km: number): numb
   return ceilLot(record, engine * (percent / 100) * (km / 100));
 }
 
-/** Structural integrity of an air unit (p. 130): a fixed-wing unit's Safe Thrust; an airship's Safe Thrust or a fiftieth of its tons (down), at least 1. Whole numbers: a part is taken up. null for other motive types. */
+/** Structural integrity of an air unit (p. 130): a fixed-wing unit's Safe Thrust; an airship's Safe Thrust or a fiftieth of its tons (down), at least 1. A fractional airship thrust rounds normally, .5 up (owner ruling; no book rule). null for other motive types. */
 export function structuralIntegrity(record: Pick<SupportVehicleRecord, "motive" | "cruise" | "tons">): number | null {
-  if (record.motive === "fixed-wing") return Math.max(1, Math.ceil(tidy(record.cruise)));
-  if (record.motive === "airship") return Math.max(SV_AIRSHIP_SI.min, Math.ceil(tidy(Math.max(record.cruise, Math.floor(tidy(record.tons * SV_AIRSHIP_SI.share))))));
+  if (record.motive === "fixed-wing") return Math.max(1, roundHalfUp(record.cruise));
+  if (record.motive === "airship") return Math.max(SV_AIRSHIP_SI.min, roundHalfUp(Math.max(record.cruise, Math.floor(tidy(record.tons * SV_AIRSHIP_SI.share)))));
   return null;
 }
 
@@ -421,7 +427,6 @@ export function pointsPerTon(record: Pick<SupportVehicleRecord, "armor">): numbe
 export function armorSlots(record: Pick<SupportVehicleRecord, "armor">): number {
   return record.armor.bar === 10 ? (own(SV_BAR10_SLOTS as Record<string, number>, record.armor.rating) ?? 0) : 0;
 }
-export const BAR_CHOICES: readonly number[] = BARS;
 
 // ---- Equipment (Step 5) ------------------------------------------------------------------------------------------------------------
 
@@ -621,7 +626,6 @@ export function seatsAboard(record: SupportVehicleRecord, catalog: Catalog): num
     return /^seating-(standard|pillion)-/.test(id) || /^ejection-seat-/.test(id) ? sum + Math.max(1, Math.floor(m.qty ?? 1)) : sum;
   }, 0);
 }
-export { SEAT_TONS, SV_ROTOR_MAX };
 
 // ---- Weight and slots --------------------------------------------------------------------------------------------------------------
 
@@ -671,6 +675,9 @@ export function svTally(record: SupportVehicleRecord, catalog: Catalog): SvTally
   return { lines, total: tidy(lines.reduce((sum, l) => sum + l.tons, 0)), unknown };
 }
 
+/** The transport bays and the infantry compartment (not the bay door). */
+const BAY_ID = /^(bay-(vehicle|mech|fighter|small-craft|protomech|infantry|battle-armor)-|compartment-infantry-)/;
+
 /** Quarters: one slot for every 50 steerage, 20 crew or second-class and 5 officer or first-class quarters (p. 132). */
 const QUARTERS_PER_SLOT: [RegExp, number][] = [[/^quarters-steerage-/, 50], [/^quarters-(second-class|crew)-/, 20], [/^quarters-(first-class|officer)-/, 5]];
 
@@ -683,8 +690,15 @@ export interface SlotTally {
 export function slotTally(record: SupportVehicleRecord, catalog: Catalog): SlotTally {
   const lost = [{ label: "armor", slots: armorSlots(record) }].filter((l) => l.slots !== 0);
   const available = baseSlots(record) - lost.reduce((sum, l) => sum + l.slots, 0);
+  // A kind of bay takes one slot however many cubicles it has (TM p. 239): count each distinct bay once.
+  const bays = new Set<string>();
   const used = record.mounts.reduce((sum, m) => {
     const facts = itemFacts(m, record, catalog);
+    if (facts.row !== undefined && BAY_ID.test(facts.row.id)) {
+      if (bays.has(facts.row.id)) return sum;
+      bays.add(facts.row.id);
+      return sum + facts.slots;
+    }
     // Quarters take a slot for each so many quarters (p. 132); every other item its own count.
     const places = QUARTERS_PER_SLOT.find(([pattern]) => pattern.test(facts.row?.id ?? ""))?.[1];
     return sum + (places === undefined ? facts.slots * facts.qty : Math.ceil(facts.qty / places));
