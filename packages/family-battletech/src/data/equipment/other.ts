@@ -1331,4 +1331,36 @@ export const OTHER: EquipmentGroup[] = [
       { id: "look-down-radar-clan", name: "Look-Down Radar", techBase: "clan", tons: 5, yearsInferred: true, units: ["vehicle", "aero", "smallcraft", "dropship", "ship", "building"], by: { vehicle: { slots: 1 }, aero: { slots: 1 }, smallcraft: { slots: 1 }, dropship: { slots: 1 }, ship: { slots: 1 }, building: { slots: 1 } } },
     ],
   },
+  // Transport bays (TechManual printed p. 239, Industrial Equipment table pp. 344-345, read against the page images; the bay entries pp. 239-240): a Support Vehicle gives a
+  // slot to each distinct kind of bay (p. 239). A cubicle weighs what the table prints for one cubicle (a ProtoMech bay holds five); an infantry or battle armor bay what it
+  // prints for its troopers; an infantry compartment (and a cargo bay, above) is chosen by weight. Dates are the cost table's "Introduced" column (printed pp. 293-294; "PS" is
+  // 1950, "ES" 2200); the Clan rows take the Inner Sphere year and are marked inferred, except where that table prints a Clan year. Prices are in data/cost.ts.
+  {
+    defaults: { kind: "other", cite: { book: "TechManual", page: 239 }, checked: "page", slots: 1, units: ["vehicle"], aliases: [] },
+    items: [
+      ...(["inner-sphere", "clan"] as const).flatMap((techBase) => {
+        const suffix = techBase === "clan" ? "clan" : "is";
+        const inferred = techBase === "clan" ? { yearsInferred: true as const } : {};
+        const row = (stem: string, name: string, tons: number | string, from: number, extra: Record<string, unknown> = {}) => ({ id: `${stem}-${suffix}`, name, techBase, tons, availability: [{ from }], ...inferred, ...extra });
+        return [
+          row("bay-vehicle-light", "Transport Bay, Light Vehicle (Cubicle)", 50, 2200),
+          row("bay-vehicle-heavy", "Transport Bay, Heavy Vehicle (Cubicle)", 100, 2200),
+          row("bay-vehicle-super-heavy", "Transport Bay, Super-Heavy Vehicle (Cubicle)", 200, 2200),
+          row("bay-mech", "Transport Bay, 'Mech (Cubicle)", 150, 2470),
+          row("bay-fighter", "Transport Bay, Fighter (Cubicle)", 150, 2050),
+          row("bay-small-craft", "Transport Bay, Small Craft (Cubicle)", 200, 2050),
+          row("bay-infantry-foot", "Transport Bay, Infantry (Foot)", 5, 1950),
+          row("bay-infantry-jump", "Transport Bay, Infantry (Jump)", 6, 1950),
+          row("bay-infantry-motorized", "Transport Bay, Infantry (Motorized)", 7, 1950),
+          row("bay-infantry-mechanized", "Transport Bay, Infantry (Mechanized)", 8, 1950),
+          row("compartment-infantry", "Infantry Compartment", "chosen-tons", 1950, { amount: { unit: "tons", min: 0.5, step: 0.5 } }),
+          // The vehicular sprayer (Industrial Equipment table, printed p. 344, read against the page image: 0.015 ton and 1 slot on a Support Vehicle, Combat Vehicles too; the 'Mech's weighs half a ton).
+          row("sprayer-vehicular", "Sprayer (Vehicular)", 0.015, 1950, { heat: 0, range: [0, 0, 0, 1], needs: "liquid-cargo", cite: { book: "TechManual", page: 344 } }),
+          ...(techBase === "clan"
+            ? [row("bay-protomech", "Transport Bay, ProtoMech (Five Cubicles)", 50, 3066), row("bay-battle-armor-5", "Transport Bay, Battle Armor (Clan, 5 Troopers)", 10, 2868, { aliases: [] })]
+            : [row("bay-battle-armor-4", "Transport Bay, Battle Armor (4 Troopers)", 8, 3050), row("bay-battle-armor-6", "Transport Bay, Battle Armor (6 Troopers)", 12, 3050)]),
+        ];
+      }),
+    ],
+  },
 ];

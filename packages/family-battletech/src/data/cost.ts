@@ -594,6 +594,17 @@ export const EQUIPMENT_COST: PriceGroup[] = [
     prices: { "bay-door": 1_000, "look-down-radar": 400_000 },
   },
   {
+    // TechManual pp.293-294 (Industrial Equipment cost table, Transport Bay): a cubicle's price is per cubicle (the ProtoMech bay's for its five); the infantry and battle armor bays
+    // cost 15,000 for each ton of the bay's weight; the compartment costs nothing
+    cite: { book: TM, page: 293 },
+    checked: "page",
+    prices: {
+      "sprayer-vehicular": 1_000, "bay-vehicle-light": 10_000, "bay-vehicle-heavy": 10_000, "bay-vehicle-super-heavy": 20_000, "bay-mech": 20_000, "bay-fighter": 20_000, "bay-small-craft": 20_000, "bay-protomech": 10_000,
+      "bay-infantry-foot": { perWeight: 15_000 }, "bay-infantry-jump": { perWeight: 15_000 }, "bay-infantry-motorized": { perWeight: 15_000 }, "bay-infantry-mechanized": { perWeight: 15_000 },
+      "bay-battle-armor-4": { perWeight: 15_000 }, "bay-battle-armor-6": { perWeight: 15_000 }, "bay-battle-armor-5": { perWeight: 15_000 }, "compartment-infantry": 0,
+    },
+  },
+  {
     // TechManual p.296 (Heavy Weapon Ammunition cost table, Fighter/Airborne Support Vehicle Hardpoint Weapons): a bomb's price is the second figure, the first prints NA
     cite: { book: TM, page: 296 },
     checked: "page",
