@@ -164,7 +164,8 @@ test("the home, import and editor pages do not scroll sideways at 320 px wide", 
 });
 
 test("the chosen era's full name and years show under the Era select on a phone (412, 360 and 320 px) without a sideways scroll", async ({ page }) => {
-  for (const [width, height] of [[412, 915], [360, 740], [320, 700]]) {
+  const sizes: [number, number][] = [[412, 915], [360, 740], [320, 700]];
+  for (const [width, height] of sizes) {
     await page.setViewportSize({ width, height });
     await page.goto(HOME);
     const form = page.getByRole("form", { name: "Build a new one" });
