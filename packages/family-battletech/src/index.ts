@@ -95,6 +95,8 @@ const manifest: FamilyManifest = {
   eras: ERAS, // the Master Unit List's twelve (data/editions.ts)
   measures: ["hexes"],
   routes: gothicPreviewRoutes,
+  // The player's Mordel key (ui/storage.ts).
+  privateKeys: ["mordel-key"],
   credits: {
     owner:
       // The non-affiliation notice fan projects for this game commonly carry, word for word, then two lines of our own.

@@ -1,7 +1,7 @@
 import "fake-indexeddb/auto";
 import { describe, expect, it } from "vitest";
 import { openStore } from "./store";
-import { exportStore, importStore } from "./store-transfer";
+import { exportBackup, exportStore, importBackup, importStore } from "./store-transfer";
 
 let counter = 0;
 const ns = () => `transfer-${String(++counter)}`;
@@ -64,5 +64,24 @@ describe("store transfer", () => {
     expect(result.problems).toHaveLength(1);
     expect(result.problems[0]).toMatch(reason);
     expect(await store.keys()).toEqual(["existing"]);
+  });
+
+  it("backs up several stores into one file and restores them, never carrying or writing a private key", async () => {
+    const a = await openStore(ns());
+    const b = await openStore(ns());
+    await a.set("settings", { theme: "dark" });
+    await b.set("unit:1", { record: { id: "1" } });
+    await b.set("secret", "key-one");
+    const file = JSON.parse(JSON.stringify(await exportBackup([{ store: a }, { store: b, omit: ["secret"] }]))) as { stores: { entries: Record<string, unknown> }[] };
+    expect(JSON.stringify(file)).not.toContain("key-one");
+
+    await b.delete("unit:1");
+    await b.set("secret", "key-two");
+    const forged = file.stores[1];
+    if (forged) forged.entries["secret"] = "planted";
+    expect(await importBackup([{ store: a }, { store: b, omit: ["secret"] }], file)).toEqual({ imported: 2, problems: [] });
+    expect(await b.get("unit:1")).toEqual({ record: { id: "1" } });
+    expect(await b.get("secret")).toBe("key-two");
+    expect((await importBackup([{ store: a }], { app: "salvage-rights", kind: "library" })).problems).toEqual(["That file is not a Salvage Rights backup."]);
   });
 });
