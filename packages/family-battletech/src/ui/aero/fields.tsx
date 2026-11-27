@@ -3,6 +3,7 @@
 // that one.
 import { useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
+import { EraCaption, eraCaptionId } from "../eraCaption";
 
 export const fieldId = (path: string): string => `field-${path.replace(/[^A-Za-z0-9]+/g, "-")}`;
 
@@ -107,6 +108,7 @@ export function SelectField({
   onChange,
   hint,
   className,
+  caption,
 }: {
   id: string;
   label: string;
@@ -116,29 +118,34 @@ export function SelectField({
   onChange: (value: string) => void;
   hint?: string;
   className?: string;
+  /** The whole text of the era chosen, under an Era select that shows it short; the select's description. */
+  caption?: string;
 }) {
   const known = options.some((option) => option.value === value);
   const longest = Math.max(...options.map((option) => option.label.length), known ? 0 : `${value} (as saved)`.length);
   return (
     <Field id={id} label={label} hint={hint} className={className}>
       {(describedBy) => (
-        <select
-          id={id}
-          value={value}
-          title={options.find((option) => option.value === value)?.full}
-          style={{ "--bt-select-min": `${String(longest + 4)}ch` } as CSSProperties}
-          aria-describedby={describedBy}
-          onChange={(event) => {
-            onChange(event.target.value);
-          }}
-        >
-          {options.map((option) => (
-            <option key={option.value} value={option.value} disabled={option.disabled} title={option.full}>
-              {option.label}
-            </option>
-          ))}
-          {!known && <option value={value}>{`${value === "" ? "none" : value} (as saved)`}</option>}
-        </select>
+        <>
+          <select
+            id={id}
+            value={value}
+            title={options.find((option) => option.value === value)?.full}
+            style={{ "--bt-select-min": `${String(longest + 4)}ch` } as CSSProperties}
+            aria-describedby={[describedBy, caption ? eraCaptionId(id) : undefined].filter(Boolean).join(" ") || undefined}
+            onChange={(event) => {
+              onChange(event.target.value);
+            }}
+          >
+            {options.map((option) => (
+              <option key={option.value} value={option.value} disabled={option.disabled} title={option.full}>
+                {option.label}
+              </option>
+            ))}
+            {!known && <option value={value}>{`${value === "" ? "none" : value} (as saved)`}</option>}
+          </select>
+          <EraCaption id={id} text={caption} />
+        </>
       )}
     </Field>
   );

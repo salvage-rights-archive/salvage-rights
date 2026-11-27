@@ -32,8 +32,9 @@ import type { OmniChassis } from "../rules/omni";
 import { BaseBreaks, CompareView, ConfigurationBar, OMNI_PANEL_ID, PodSpacePanel, omniTabId } from "./editor/OmniBar";
 import type { OnChassis } from "./editor/OmniBar";
 import { eraLabel } from "../data/editions";
-import { eraChoice, useEraRoom } from "./eraChoice";
+import { eraChoice, eraList, useEraRoom } from "./eraChoice";
 import type { EraRoom } from "./eraChoice";
+import { EraCaption, eraCaptionId, eraCaptionText } from "./eraCaption";
 import type { EraRow } from "../data/editions";
 import LevelSelect from "./editor/LevelSelect";
 import TypeSelect from "./editor/TypeSelect";
@@ -225,6 +226,7 @@ export function SelectField({
   onChange,
   changed,
   disabled,
+  caption,
 }: {
   id: string;
   label: string;
@@ -234,6 +236,8 @@ export function SelectField({
   onChange: (value: string) => void;
   changed?: boolean;
   disabled?: boolean;
+  /** The whole text of the era chosen, under an Era select that shows it short; the select's description. */
+  caption?: string;
 }) {
   const known = options.some(([key]) => key === value);
   // Wide enough for the longest choice, so the current value is never cut off.
@@ -241,24 +245,27 @@ export function SelectField({
   return (
     <Field id={id} label={label} changed={changed}>
       {(describedBy) => (
-        <select
-          id={id}
-          value={value}
-          disabled={disabled}
-          title={options.find(([key]) => key === value)?.[2]}
-          style={{ "--bt-select-min": `${longest + 4}ch` } as CSSProperties}
-          aria-describedby={describedBy}
-          onChange={(event) => {
-            onChange(event.target.value);
-          }}
-        >
-          {options.map(([key, text, full]) => (
-            <option key={key} value={key} title={full}>
-              {text}
-            </option>
-          ))}
-          {!known && <option value={value}>{`${value} (as imported)`}</option>}
-        </select>
+        <>
+          <select
+            id={id}
+            value={value}
+            disabled={disabled}
+            title={options.find(([key]) => key === value)?.[2]}
+            style={{ "--bt-select-min": `${longest + 4}ch` } as CSSProperties}
+            aria-describedby={[describedBy, caption ? eraCaptionId(id) : undefined].filter(Boolean).join(" ") || undefined}
+            onChange={(event) => {
+              onChange(event.target.value);
+            }}
+          >
+            {options.map(([key, text, full]) => (
+              <option key={key} value={key} title={full}>
+                {text}
+              </option>
+            ))}
+            {!known && <option value={value}>{`${value} (as imported)`}</option>}
+          </select>
+          <EraCaption id={id} text={caption} />
+        </>
       )}
     </Field>
   );
@@ -780,12 +787,11 @@ function Editor({ initial, unsaved, startAt, catalog, storage }: { initial: Doc;
     : [];
   const base = gameBase(record);
   const ruleset = rulesetOf(record.editionId);
-  // The era drop-down: every era the tech base can use (hide, do not mark; the era the record already has stays), the first row "Choose an era" while the year is in two eras and none is picked.
+  // The era drop-down: every era the tech base can use, one row to a name, by start year (hide, do not mark; the era the record already has stays), the first row "Choose an era" while the year is in two eras and none is picked.
   const eraNeeded = ruleset.dated && record.year !== null && eraNeedsPick(record);
   const room = useEraRoom();
-  const eraOptions: [string, string, string?][] = [[ "", eraNeeded ? "Choose an era" : "Any era"], ...eraChoices(erasForTechBase([...ruleset.eras, ...(ruleset.subEras ?? [])], record.techBase), room).slice(1)];
   const eraNow = eraOfRecord(record);
-  if (eraNow && !eraOptions.some(([id]) => id === eraNow.id)) eraOptions.push(...eraChoices([eraNow], room).slice(1));
+  const eraOptions: [string, string, string?][] = [[ "", eraNeeded ? "Choose an era" : "Any era"], ...eraChoices(eraList(erasForTechBase([...ruleset.eras, ...(ruleset.subEras ?? [])], record.techBase), eraNow), room).slice(1)];
   const gothic = ruleset.game === "gothic";
   const open = listsOpen(ruleset, record.rulesLevel); // Unlimited opens the whole catalog, Clan rows and every unit type included
   // Items whose weight we worked out because no book prints it (the Light Blazer), each named once for the weight list.
@@ -1051,6 +1057,7 @@ function Editor({ initial, unsaved, startAt, catalog, storage }: { initial: Doc;
                 label="Era"
                 value={ruleset.dated && record.year !== null && eraNeedsPick(record) ? "" : (eraOfRecord(record)?.id ?? "")}
                 options={eraOptions}
+                caption={ruleset.dated && record.year !== null && eraNeedsPick(record) ? undefined : eraCaptionText(eraNow)}
                 changed={mark("era")}
                 onChange={(v) => { edit((d) => { setEra(d, v); }, "era"); }}
               />

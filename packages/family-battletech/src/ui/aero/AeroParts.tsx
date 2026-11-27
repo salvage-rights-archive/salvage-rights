@@ -5,7 +5,8 @@
 import { ENGINE_TYPES } from "../../data/chassis";
 import { CAPITAL_ARMOR_TYPES, CAPITAL_FIGURES, CRAFT_FIGURES, DEFAULT_AERO_EDITION, FIGHTER_FIGURES, aeroTypesFor, fighterArmorTypes, fighterPatchworkTypes, figureOf, kindFigureOf } from "../../data/aero";
 import { ERAS, SUB_ERAS } from "../../data/editions";
-import { eraChoice, useEraRoom } from "../eraChoice";
+import { eraChoice, eraList, useEraRoom } from "../eraChoice";
+import { eraCaptionText } from "../eraCaption";
 import { eraNeedsPick, eraOfRecord, erasForTechBase, erasOfYear, resolveEra, setEra, setYear } from "../../rules/availability";
 import {
   aeroLocationName,
@@ -81,9 +82,8 @@ export function IdentityPanel({ record, catalog, onEdit }: PartProps & { catalog
   // rules ask for a year above Introductory; the older books have no levels, so none is asked for there.
   const yearEras = erasOfYear(record.year);
   const room = useEraRoom();
-  const eraOptions = [{ value: "", label: yearEras.length > 1 && eraNeedsPick(record) ? "Choose an era" : "Any era" }, ...erasForTechBase([...ERAS, ...SUB_ERAS], record.techBase).map((era) => eraChoice(era, room))];
+  const eraOptions = [{ value: "", label: yearEras.length > 1 && eraNeedsPick(record) ? "Choose an era" : "Any era" }, ...eraList(erasForTechBase([...ERAS, ...SUB_ERAS], record.techBase), eraOfRecord(record)).map((era) => eraChoice(era, room))];
   const eraNow = eraOfRecord(record);
-  if (eraNow && !eraOptions.some((o) => o.value === eraNow.id)) eraOptions.push(eraChoice(eraNow, room));
   const needsYear = current && record.year === null && level !== "introductory";
   return (
     <section className="bt-panel" aria-labelledby="aero-identity">
@@ -183,6 +183,7 @@ export function IdentityPanel({ record, catalog, onEdit }: PartProps & { catalog
             label="Era"
             value={yearEras.length > 1 ? (eraNeedsPick(record) ? "" : (eraOfRecord(record)?.id ?? "")) : (eraOfRecord(record)?.id ?? record.era ?? "")}
             options={eraOptions}
+            caption={yearEras.length > 1 && eraNeedsPick(record) ? undefined : eraCaptionText(eraNow)}
             hint={yearEras.length > 1 ? `The year ${String(record.year)} is in two eras; the era you choose decides the tech base.` : undefined}
             onChange={(v) => {
               onEdit((d) => {
