@@ -293,7 +293,6 @@ export const UNFIXED: Record<string, string> = {
   "radical-heat-sink-is": "the book prints two rules that disagree: its table adds the unit's heat sink count x 0.4 to Heat Efficiency, its text multiplies the capacity by 1.4, and the worked example gives both 42 and 36 (IO:AE pp.185, 190)",
   // Items whose BV is a modifier or a figure that depends on the unit, which the BV rules here do not compute (TO:AUE pp.192-197).
   "blue-shield-is": "it adds 0.2 to the armor type modifier and counts as a Gauss weapon for the defensive rating (TO:AUE pp.192, 194)",
-  "lance-is": "its BV is its damage (the unit's tonnage divided by 5, rounded up) times 1 (TO:AUE pp.101, 195), but the book does not say what Triple-Strength Myomer does to a Lance's damage",
   "talons-clan": "its BV is the kick damage after Triple-Strength Myomer times 1 (TO:AUE p.197), and the pair of Talons with their 1.5 on kicks (p.102) leaves the figure unclear",
   "mechanical-jump-booster-is": "it adds Jumping MP chosen by the designer, which the record does not hold (TO:AUE p.192)",
   "jump-pack-is": "it adds Jumping MP from the pack weight and the unit weight, not computed here (TO:AUE p.192)",
@@ -432,7 +431,7 @@ export const BV_RULE_ITEMS: {
 /** Rows that add to Heat Efficiency (RISC emergency coolant system: +4, IO:AE p. 190). */
 export const HEAT_EFFICIENCY_BONUS: Record<string, number> = { "risc-emergency-coolant-system-is": 4 };
 /** Physical weapons: BV is the weapon's damage times the factor (the table's footnote ** says damage after TSM). Damage by 'Mech tonnage: Total Warfare p. 146, TechManual pp. 220, 236, 237. */
-export const PHYSICAL_BV: Sourced & { rows: Record<string, { factor: number; damage: "hatchet" | "sword" | "blade" | "claws" | "mace" | number; fixed?: true }> } = {
+export const PHYSICAL_BV: Sourced & { rows: Record<string, { factor: number; damage: "hatchet" | "sword" | "blade" | "claws" | "mace" | "lance" | number; fixed?: true }> } = {
   cite: { book: TM, page: 317 },
   checked: "page",
   rows: {
@@ -447,6 +446,9 @@ export const PHYSICAL_BV: Sourced & { rows: Record<string, { factor: number; dam
     // Mace: 1 damage per 4 tons, rounded up (TO:AUE p.216, read on the page image); BV is that damage times 1 (TO:AUE p.195). It makes the
     // Gothic MAD-3H's printed Battle Value reproduce exactly (G-2).
     "mace-is": { factor: 1, damage: "mace" },
+    // Lance: the unit's tonnage over 5, rounded up (TO:AUE p.101), times 1 on the table's line "(Dmg x 1)*", whose footnote takes the damage after every
+    // modification such as TSM (p.197), so TSM doubles it as it does the others. A live 80-ton Lance IndustrialMech (Mordel, im 356) reproduces it exactly.
+    "lance-is": { factor: 1, damage: "lance" },
   },
 };
 

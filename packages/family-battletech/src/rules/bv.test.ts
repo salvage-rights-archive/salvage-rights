@@ -389,6 +389,11 @@ describe("Dark Age, signature and enhancement rules (TO:AUE pp. 192-194, IO:AE p
     expect(battleValue(biped([m("claws-is", "RA"), m("tsm-is", "LT")]), catalog).offensive.equipment).toBe(20.4);
   });
 
+  it("a lance is 1 damage per 5 tons rounded up, doubled by Triple-Strength Myomer, times 1", () => {
+    expect(battleValue(biped([m("lance-is", "RA")]), catalog).offensive.equipment).toBe(10);
+    expect(battleValue(biped([m("lance-is", "RA"), m("tsm-is", "LT")]), catalog).offensive.equipment).toBe(20);
+  });
+
   it("the bulldozer and the aquatic survival system are defensive equipment", () => {
     for (const [id, bv] of [["bulldozer-is", 10], ["aquatic-survival-system-clan", 9]] as const) expect(battleValue(biped([m(id, "RA")]), catalog).defensive.equipment, id).toBe(bv);
   });

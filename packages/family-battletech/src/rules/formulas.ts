@@ -135,9 +135,9 @@ export const FORMULAS: Record<string, Formula> = {
 /** The damage of a physical weapon as the record sheet prints it: the wielder's tonnage over a divisor, rounded up to the whole point.
  * Hatchet: tons over 5 (TechManual p. 220). Sword: tons over 10, plus 1 (p. 237). Retractable blade: tons over 10 (p. 237).
  * Claws: tons over 7 (TO:AUE p. 100). Mace: tons over 4 (TO:AUE p. 216, the combat data table's 1/4T). */
-export function physicalDamage(kind: "hatchet" | "sword" | "blade" | "claws" | "mace", tons: number): number {
+export function physicalDamage(kind: "hatchet" | "sword" | "blade" | "claws" | "mace" | "lance", tons: number): number {
   const up = (divisor: number) => Math.ceil(tons / divisor - 1e-9);
-  return kind === "hatchet" ? up(5) : kind === "sword" ? up(10) + 1 : kind === "claws" ? up(7) : kind === "mace" ? up(4) : up(10);
+  return kind === "hatchet" || kind === "lance" ? up(5) : kind === "sword" ? up(10) + 1 : kind === "claws" ? up(7) : kind === "mace" ? up(4) : up(10);
 }
 
 /** The value of a formula for a mount; undefined when the name is not a formula. */
