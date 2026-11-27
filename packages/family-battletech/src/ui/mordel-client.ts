@@ -34,6 +34,8 @@ const MESSAGES: Record<MordelFailure, string> = {
 };
 
 const MAX_PAGES = 20;
+/** The most of a unit file we read: a 'Mech file is a few kilobytes, so 1 MB is far past any real one. */
+const MAX_FILE_BYTES = 1_000_000;
 const DEFAULT_RETRY_SECONDS = 5;
 const MAX_RETRY_SECONDS = 60;
 
@@ -128,11 +130,26 @@ export function createMordelClient(options: {
       }
       const base = new URL(MORDEL_BASE);
       const bare = (host: string) => host.replace(/^www\./, "");
-      if (url.protocol !== "https:" || bare(url.hostname) !== bare(base.hostname) || !url.pathname.startsWith(base.pathname + "/")) return fail("bad-request");
+      const plain = url.protocol === "https:" && url.username === "" && url.password === "" && url.port === "";
+      if (!plain || bare(url.hostname) !== bare(base.hostname) || !url.pathname.startsWith(base.pathname + "/")) return fail("bad-request");
       const got = await request(url.pathname.slice(base.pathname.length), "text/plain, */*");
       if (!got.ok) return got;
       try {
-        return { ok: true, value: await got.value.text() };
+        // Read at most MAX_FILE_BYTES; a longer body is not a unit file.
+        const reader = got.value.body?.getReader();
+        if (!reader) return fail("server");
+        const decoder = new TextDecoder();
+        let text = "";
+        let size = 0;
+        for (let chunk = await reader.read(); !chunk.done; chunk = await reader.read()) {
+          size += chunk.value.byteLength;
+          if (size > MAX_FILE_BYTES) {
+            await reader.cancel();
+            return fail("server");
+          }
+          text += decoder.decode(chunk.value, { stream: true });
+        }
+        return { ok: true, value: text + decoder.decode() };
       } catch {
         return fail("server");
       }

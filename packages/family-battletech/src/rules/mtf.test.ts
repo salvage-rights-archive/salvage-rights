@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { loadCatalog } from "./catalog";
 import { mordelBiped, mordelWith } from "./fixtures";
 import { fromMordel } from "./mordel";
-import { megamekLink, parseMtfActuators } from "./mtf-actuators";
+import { megamekLink, parseMtfActuators } from "./mtf";
 
 // Trimmed copies of Mordel's own .mtf exports (limb sections only), one per case.
 const fixture = (name: string) => readFileSync(`packages/family-battletech/src/rules/mtf-fixtures/${name}`, "utf8");
@@ -30,6 +30,8 @@ describe("parseMtfActuators", () => {
   it("reads a leg that lacks an actuator, and text that is no 'Mech file as nothing", () => {
     expect(parseMtfActuators("Right Leg:\nHip\nUpper Leg Actuator\nLower Leg Actuator\n")?.legsMissing).toEqual({ RL: ["Foot Actuator"] });
     expect(parseMtfActuators("not a unit file")).toBeUndefined();
+    // No hand without a lower arm, whatever the file lists.
+    expect(parseMtfActuators("Left Arm:\nShoulder\nUpper Arm Actuator\nHand Actuator\n")?.arms.LA).toEqual({ lowerArm: false, hand: false, handDropped: true });
   });
 });
 

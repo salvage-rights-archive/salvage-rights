@@ -8,7 +8,7 @@ import type { MechType } from "../data/chassis";
 import type { Catalog, EquipmentRow } from "./catalog";
 import { setYear } from "./availability";
 import { levelAtLeast, lowestLevelFor } from "./levels";
-import type { MtfActuators } from "./mtf-actuators";
+import type { MtfActuators } from "./mtf";
 import { ARM_FULL, armorSpread, armsOf, configurationOf, layout, locationName, mountParts, partMountBase, slotsTaken, splitOf } from "./mech";
 import type { LocationCode, MechRecord, Mount, TechBase } from "./mech";
 import { canon, designKey } from "./official";
@@ -620,7 +620,12 @@ function inferArms(record: MechRecord, catalog: Catalog, note: (text: string) =>
     if (given) {
       if (!given.lowerArm || !given.hand) {
         record.arms = { ...record.arms, [arm]: { lowerArm: given.lowerArm, hand: given.hand } };
-        note(`The unit's .mtf file leaves out the ${given.lowerArm ? "hand" : "lower arm and hand"} actuator${given.lowerArm ? "" : "s"} of the ${locationName(arm)}.`);
+        const where = locationName(arm);
+        note(
+          given.handDropped
+            ? `The unit's .mtf file lists a hand actuator but no lower arm actuator in the ${where}. The books allow no hand without a lower arm, so both were left out.`
+            : `The unit's .mtf file leaves out the ${given.lowerArm ? "hand" : "lower arm and hand"} actuator${given.lowerArm ? "" : "s"} of the ${where}.`,
+        );
       }
       continue;
     }
