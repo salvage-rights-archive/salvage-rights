@@ -417,7 +417,7 @@ export const BV_RULE_ITEMS: {
     cite: { book: TO, page: 193 },
     checked: "page",
     longRangeIds: ["chameleon-lps-is", "null-signature-system-is"], // Chameleon p.193, Null-Signature p.194
-    heat: { "null-signature-system-is": 10, "chameleon-lps-is": 6 }, // heat while active, added to movement heat together (TO:AUE pp. 148 and 112; the BV pages do not name it, Mordel does)
+    heat: { "null-signature-system-is": 10, "chameleon-lps-is": 6 }, // heat while active, added to movement heat together (TO:AUE p. 148 Null-Signature System, 10; p. 112 Chameleon LPS, 6; each entry says the two are cumulative)
     longRangeModifier: 2, // the long-range to-hit modifier (Total Warfare p. 142)
     voidIds: ["void-signature-system-is"], // p.194
     voidModifier: 3,

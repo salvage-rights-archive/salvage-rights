@@ -8,7 +8,7 @@ import { bipedRecord } from "../rules/fixtures";
 import { editRecord, weights } from "../rules/mech";
 import type { MechRecord } from "../rules/mech";
 import { movementPenalty } from "../rules/walk";
-import { setPatchwork } from "./EditorPage";
+import { setPartType, setPatchwork } from "./EditorPage";
 
 let catalog: Catalog;
 beforeAll(async () => {
@@ -56,5 +56,14 @@ describe("patchwork armor", () => {
     expect(offered({ rulesLevel: "standard", year: 3080, patchwork: { RA: "ferro-fibrous" } })).toBe(true);
     const items = levelItems(bipedRecord({ rulesLevel: "advanced", year: 3080, patchwork: { RA: "reactive" } }), catalog);
     expect(items.filter((i) => i.what === "option" || i.name === "Reactive").map((i) => [i.name, i.level])).toEqual([["Patchwork armor", "advanced"], ["Reactive", "experimental"]]);
+  });
+});
+
+describe("setPartType", () => {
+  it("clears the structure tech base an import kept when the structure type changes, so it cannot come back stale", () => {
+    const mixed = bipedRecord({ techBase: "mixed", chassis: { ...bipedRecord().chassis, structureTech: "clan" } });
+    const back = editRecord(editRecord(mixed, (d) => setPartType(d, "structure", "endo-steel")), (d) => setPartType(d, "structure", "standard"));
+    expect(back.chassis.structure).toBe("standard");
+    expect(back.chassis.structureTech).toBeUndefined();
   });
 });

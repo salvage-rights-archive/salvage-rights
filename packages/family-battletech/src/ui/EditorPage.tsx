@@ -270,8 +270,10 @@ const armorRow = (type: string) => (Object.hasOwn(ARMOR.types, type) ? ARMOR.typ
 /** Sets the structure or armor type and brings that type's part-slot mounts to the count the type needs: surplus ones go
  * from the unplaced first, then from the highest slot; missing ones are added unplaced. One edit, so Undo is one step. */
 export function setPartType(draft: MechRecord, part: "structure" | "armor", type: string): void {
-  if (part === "structure") draft.chassis.structure = type;
-  else {
+  if (part === "structure") {
+    if (draft.chassis.structure !== type) delete draft.chassis.structureTech; // the import's tech base was for the old type
+    draft.chassis.structure = type;
+  } else {
     draft.chassis.armorType = type;
     syncArmorMounts(draft);
     return;
