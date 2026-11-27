@@ -284,8 +284,6 @@ export const UNFIXED: Record<string, string> = {
   "blue-shield-is": "it adds 0.2 to the armor type modifier and counts as a Gauss weapon for the defensive rating (TO:AUE pp.192, 194)",
   "lance-is": "its BV is its damage (the unit's tonnage divided by 5, rounded up) times 1 (TO:AUE pp.101, 195), but the book does not say what Triple-Strength Myomer does to a Lance's damage",
   "talons-clan": "its BV is the kick damage after Triple-Strength Myomer times 1 (TO:AUE p.197), and the pair of Talons with their 1.5 on kicks (p.102) leaves the figure unclear",
-  "partial-wing-is": "it adds Jumping MP by atmosphere and weight class, which the speed factor does not take yet (TO:AUE p.192)",
-  "partial-wing-clan": "it adds Jumping MP by atmosphere and weight class, which the speed factor does not take yet (TO:AUE p.192)",
   "mechanical-jump-booster-is": "it adds Jumping MP chosen by the designer, which the record does not hold (TO:AUE p.192)",
   "jump-pack-is": "it adds Jumping MP from the pack weight and the unit weight, not computed here (TO:AUE p.192)",
   "jump-pack-clan": "it adds Jumping MP from the pack weight and the unit weight, not computed here (TO:AUE p.192)",
@@ -763,6 +761,8 @@ export const EQUIPMENT_BV: BvGroup[] = [
       ["chameleon-lps-is", 0, undefined, { none: true }], ["null-signature-system-is", 0, undefined, { none: true }], ["void-signature-system-is", 0, undefined, { none: true }],
       // Supercharger: used in the unit ratings but with no BV of its own (note C, TO:AUE p.195)
       ["supercharger-is", 0, undefined, { none: true }], ["supercharger-clan", 0, undefined, { none: true }],
+      // The Partial Wing: no BV of its own; its Jumping MP bonus counts in the speed and defensive factors (TO:AUE p.194).
+      ["partial-wing-is", 0, undefined, { none: true }], ["partial-wing-clan", 0, undefined, { none: true }],
     ],
   },
 ];

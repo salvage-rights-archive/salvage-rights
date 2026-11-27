@@ -231,6 +231,12 @@ export function skillMultiplier(pilot: PilotSkills): number {
 const FUEL_TANK_IDS = ["extended-fuel-tank-is", "extended-fuel-tank-clan"];
 const ARMS: LocationCode[] = ["LA", "RA"];
 const INWARD: Partial<Record<LocationCode, LocationCode>> = { LA: "LT", RA: "RT" }; // Damage Transfer Diagram, Total Warfare p. 123
+/** Where damage goes on from each location, the legs apart (TO:AUE p. 193: CASE II covers its own location and one out, excepting the legs). */
+const TRANSFERS_TO: Partial<Record<LocationCode, LocationCode>> = { LA: "LT", RA: "RT", LT: "CT", RT: "CT", H: "CT" };
+const PARTIAL_WING_IDS = ["partial-wing-is", "partial-wing-clan"];
+const PARTIAL_WING_BV = { mediumMaxTons: 55, lightMedium: 2, heavyAssault: 1, heat: 3 };
+const SUPERCHARGER_IDS = ["supercharger-is", "supercharger-clan"];
+const CASE_II_IDS =["case-ii-is", "case-ii-clan"];
 
 // ---------------------------------------------------------------------------------------------------------------
 // The calculation
@@ -271,9 +277,15 @@ export function battleValue(record: MechRecord, catalog: Catalog, pilot: PilotSk
   const walkMax = tsm ? walk + BV_METHOD.tsmWalkBonus : walk;
   // Shields take Walking MP away (Running follows from it, above) and hardened armor takes Running MP alone; the Defensive and Speed
   // Factors count the result (TO:AUE p. 192); a large shield's "no jumping" is not counted, the jump rating is used as normal (p. 193).
-  const runMP = Math.max(0, (masc ? walk * 2 : Math.ceil(walkMax * 1.5)) - penalty.run); // MASC: double the Walking MP, Total Warfare p. 137; running: p. 53
+  // A Supercharger also doubles the Walking MP (the Triple-Strength Myomer bonus first), and with MASC the two give 2.5 times, rounded up; the Defensive and Speed Factors use that maximum (TO:AUE pp. 157, 194).
+  const supercharger = has(SUPERCHARGER_IDS);
+  const unpenalizedRun = masc && supercharger ? Math.ceil(walkMax * 2.5) : supercharger ? walkMax * 2 : masc ? walk * 2 : Math.ceil(walkMax * 1.5);
+  const runMP = Math.max(0, unpenalizedRun - penalty.run); // MASC: double the Walking MP, Total Warfare p. 137; running: p. 53
   // A UMU is calculated as if it were a jump jet (TO:AUE p.192, the BattleMech UMU System entry); the highest of the two movements counts.
-  const jumpMP = Math.max(jumpJets(items), items.filter((i) => BV_RULE_ITEMS.superCooledMyomer.umuIds.includes(i.row.id)).length);
+  const jumpBase = Math.max(jumpJets(items), items.filter((i) => BV_RULE_ITEMS.superCooledMyomer.umuIds.includes(i.row.id)).length);
+  // A Partial Wing adds Jumping MP to a unit that can jump, counted at standard atmosphere: 2 for a light or medium Mech, 1 for a heavy or assault one (TO:AUE pp. 107, 194).
+  const partialWing = has(PARTIAL_WING_IDS) && jumpBase > 0;
+  const jumpMP = jumpBase + (partialWing ? (record.tons <= PARTIAL_WING_BV.mediumMaxTons ? PARTIAL_WING_BV.lightMedium : PARTIAL_WING_BV.heavyAssault) : 0);
   const improvedJets = has(IMPROVED_JUMP_JET_IDS);
   const cruise = jumpMP * LAM_BV.cruisePerJumpMP;
   const flank = Math.ceil(cruise * LAM_BV.flankFactor);
@@ -357,6 +369,9 @@ export function battleValue(record: MechRecord, catalog: Catalog, pilot: PilotSk
   /** The fraction of the full penalty left on a slot in this location, as a multiplier (0 protected, 1 exposed); prototype CASE leaves 8 of 15. */
   const exposure = (loc: LocationCode | null): number => {
     if (loc === null) return 1;
+    // CASE II: nothing is taken off for ammunition or Gauss weapons in its own location or one out (TO:AUE p. 193).
+    const caseII = (at: LocationCode | undefined) => at !== undefined && items.some((i) => i.mount.location === at && CASE_II_IDS.includes(i.row.id));
+    if (caseII(loc) || caseII(TRANSFERS_TO[loc])) return 0;
     if (clanMech) return ["LT", "RT", "LA", "RA"].includes(loc) ? 0 : 1; // Clan 'Mechs are assumed to have CASE (the book's footnote)
     if (xlInnerSphere) return 1;
     const own1 = caseAt(loc);
@@ -417,8 +432,8 @@ export function battleValue(record: MechRecord, catalog: Catalog, pilot: PilotSk
   // Coolant pods: heat sinks x (pods / 5), rounded up, at most twice the heat sinks (TO:AUE p. 193).
   const sinkCount = totalHeatSinks(chassis.heatSinks);
   const coolant = pods === 0 ? 0 : Math.min(2 * sinkCount, Math.ceil((sinkCount * pods) / 5));
-  const capacity = sinks + coolant + items.reduce((sum, i) => sum + (own(HEAT_EFFICIENCY_BONUS, i.row.id) ?? 0), 0);
-  const jumpHeat = jumpMP === 0 ? 0 : Math.max(BV_METHOD.jumpHeatMinimum, improvedJets ? Math.ceil(jumpMP / 2) : jumpMP);
+  const capacity = sinks + coolant + (partialWing ? PARTIAL_WING_BV.heat : 0) + items.reduce((sum, i) => sum + (own(HEAT_EFFICIENCY_BONUS, i.row.id) ?? 0), 0);
+  const jumpHeat = jumpBase === 0 ? 0 : Math.max(BV_METHOD.jumpHeatMinimum, improvedJets ? Math.ceil(jumpBase / 2) : jumpBase); // the wing's bonus MP makes no jump heat (TO:AUE p. 106)
   const airMechHeat = standardLam ? Math.round(flank / 3) : 0; // one heat per 3 MP, IO:AE p. 102
   // RISC super-cooled myomer: no movement heat for a unit with no jump jets or UMU (IO:AE p. 185).
   const cool = BV_RULE_ITEMS.superCooledMyomer;
