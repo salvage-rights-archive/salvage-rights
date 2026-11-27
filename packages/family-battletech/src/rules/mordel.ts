@@ -69,6 +69,11 @@ const ENGINE_WORDS: Record<string, Words> = {
   internalcombustionengine: { is: "ice" },
   fuelcell: { is: "fuel-cell" },
   fission: { is: "fission" },
+  // The Primitive 'Mechs' engines are the standard ones built a fifth higher (IO:AE p.117); the rating Mordel lists is the one before that rise.
+  primitivefusion: { is: "standard" },
+  primitiveinternalcombustion: { is: "ice" },
+  primitivefuelcell: { is: "fuel-cell" },
+  primitivefission: { is: "fission" },
 };
 const GYRO_WORDS: Record<string, Words> = {
   standard: { is: "standard" },
@@ -76,6 +81,8 @@ const GYRO_WORDS: Record<string, Words> = {
   heavyduty: { is: "heavy-duty" },
   xl: { is: "xl" },
   extralight: { is: "xl" },
+  primitive: { is: "standard" }, // a primitive gyro is a standard one weighed at the raised rating (IO:AE p.117)
+  superheavy: { is: "superheavy" },
 };
 /** The unit types this importer reads, by Mordel's short code: bm is a BattleMech, im an IndustrialMech. */
 export const UNIT_TYPE_OF: Record<string, MechType> = { bm: "mech", im: "industrialmech" };
@@ -90,6 +97,13 @@ const COCKPIT_WORDS: Record<string, Words> = {
   industrial: { is: "industrial" },
   industrialafc: { is: "industrial-afc" },
   industrialadvancedfirecontrol: { is: "industrial-afc" },
+  primitive: { is: "primitive" },
+  primitiveindustrial: { is: "primitive-industrial" },
+  superheavy: { is: "superheavy" },
+  superheavytripod: { is: "superheavy-tripod" },
+  superheavyindustrial: { is: "superheavy-industrial" },
+  tripod: { is: "tripod" },
+  quadvee: { is: "quadvee" },
 };
 const STRUCTURE_WORDS: Record<string, Words> = {
   standard: { is: "standard" },
@@ -98,6 +112,8 @@ const STRUCTURE_WORDS: Record<string, Words> = {
   endocomposite: { is: "endo-composite", clan: "endo-composite-clan" },
   reinforced: { is: "reinforced" },
   industrial: { is: "industrial" },
+  primitive: { is: "standard" }, // a primitive 'Mech's structure is the standard kind (IO:AE p.117)
+  primitiveindustrial: { is: "industrial" },
 };
 const ARMOR_WORDS: Record<string, Words> = {
   standard: { is: "standard" },
@@ -114,6 +130,8 @@ const ARMOR_WORDS: Record<string, Words> = {
   heatdissipating: { is: "heat-dissipating" },
   impactresistant: { is: "impact-resistant" },
   commercial: { is: "commercial" },
+  primitive: { is: "primitive" },
+  primitivecommercial: { is: "commercial" },
   industrial: { is: "industrial" },
   heavyindustrial: { is: "standard" }, // the IndustrialMech chapter's name for standard armor (TechManual p.72)
 };
@@ -126,6 +144,8 @@ const MYOMER_WORDS: Record<string, Words> = {
   industrialtsm: { is: "industrial-tsm" },
   industrialtriplestrength: { is: "industrial-tsm" },
   industrialtriplestrengthmyomer: { is: "industrial-tsm" },
+  primitive: { is: "standard" },
+  superheavy: { is: "standard" }, // a superheavy 'Mech's own myomer, which is plain (IO:AE p.157)
 };
 const HEAT_SINK_WORDS: Record<string, Words> = {
   single: { is: "single" },
@@ -196,7 +216,10 @@ function convert(response: unknown, catalog: Catalog, editionId: string, now: st
   const unit = unitValue;
   // Mordel's unit type decides ours: bm is a BattleMech and im an IndustrialMech (the types it calls cv and pm are not built yet).
   const mordelType = typeof unit["unit_type_short"] === "string" ? unit["unit_type_short"].toLowerCase() : requested.toLowerCase();
-  const unitType = Object.hasOwn(UNIT_TYPE_OF, mordelType) ? UNIT_TYPE_OF[mordelType] : undefined;
+  const baseType = Object.hasOwn(UNIT_TYPE_OF, mordelType) ? UNIT_TYPE_OF[mordelType] : undefined;
+  // Mordel's Primitive tech base is our Primitive BattleMech or IndustrialMech (IO:AE p.116).
+  const primitiveBase = typeof unit["tech_base"] === "string" && unit["tech_base"].toLowerCase() === "primitive";
+  const unitType = primitiveBase && baseType === "mech" ? "primitive-mech" : primitiveBase && baseType === "industrialmech" ? "primitive-industrialmech" : baseType;
   if (unitType === undefined) {
     return { ok: false, message: `This is a ${String(unit["unit_type_short"])} unit; only BattleMechs (bm) and IndustrialMechs (im) can be imported.` };
   }
@@ -230,7 +253,7 @@ function convert(response: unknown, catalog: Catalog, editionId: string, now: st
     const t = str(word, label)?.toLowerCase();
     if (!t) return undefined;
     if (t.includes("clan")) return "clan";
-    if (t.includes("inner") || t === "is") return "inner-sphere";
+    if (t.includes("inner") || t === "is" || t === "primitive") return "inner-sphere"; // the Primitive tech base is confined to the Inner Sphere (IO:AE p.115)
     return undefined;
   };
 
@@ -369,6 +392,8 @@ function convert(response: unknown, catalog: Catalog, editionId: string, now: st
       note(`Equipment entry ${index + 1} has no usable name and was skipped.`);
       return;
     }
+    // A QuadVee's conversion gear is the fifth slot of each leg, fixed in its layout, so Mordel's entries for it are not mounts of ours.
+    if (/^conversion gear$/i.test(name) && configuration === "quadvee") return;
     if (/^advanced fire control system$/i.test(name) && entry["location"] == null && !catalog.match(name, unitClan ? "clan" : "inner-sphere")) {
       advancedFireControl = true;
       return;

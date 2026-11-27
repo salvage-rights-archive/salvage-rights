@@ -409,3 +409,39 @@ test("patchwork armor in the editor and on the record sheet: axe clean in both t
     expect(widths.scroll, `scroll width on ${address}`).toBe(widths.client);
   }
 });
+
+test("a QuadVee, a superheavy 'Mech and a Primitive BattleMech: editor and sheet have no axe violations in either theme", async ({ page }) => {
+  test.setTimeout(180_000);
+  const paths: string[] = [];
+  const specs: { name: string; level: string; year: string; tech?: string; config?: string; type?: string; tons: string }[] = [
+    { name: "Horse", level: "advanced", year: "3140", tech: "clan", config: "QuadVee", tons: "50" },
+    { name: "Omega", level: "advanced", year: "3080", tons: "150" },
+    { name: "Mackie", level: "advanced", year: "2445", type: "Primitive BattleMech", tons: "100" },
+  ];
+  for (const spec of specs) {
+    await page.goto(`${DEV}${CLASSIC}/home`);
+    const form = page.getByRole("form", { name: "Build a new one" });
+    await form.getByLabel("Name").fill(spec.name);
+    await form.getByLabel("Rules level").selectOption(spec.level);
+    await form.getByLabel("Year").fill(spec.year);
+    if (spec.tech) await form.getByLabel("Era").selectOption("dark-ages");
+    if (spec.type) await form.getByLabel("Era").selectOption("age-of-war");
+    if (spec.tech) await form.getByLabel("Tech base").selectOption(spec.tech);
+    if (spec.type) await form.getByLabel("Type", { exact: true }).selectOption({ label: spec.type });
+    if (spec.config) await form.getByLabel("Configuration").selectOption({ label: spec.config });
+    await form.getByLabel("Tonnage").selectOption(spec.tons);
+    await form.getByRole("button", { name: "Start building" }).click();
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText(spec.name);
+    const editor = new URL(page.url());
+    paths.push(`${editor.pathname.replace(/^\/salvage-rights/, "")}${editor.search}`);
+  }
+  for (const theme of ["Light", "Dark"] as const) {
+    await chooseTheme(page, DEV, theme);
+    for (const path of paths) {
+      await page.goto(`${DEV}${path}`);
+      await scan(page, theme, path);
+      await page.goto(`${DEV}${path.replace("/editor", "/sheet")}`);
+      await scan(page, theme, path.replace("/editor", "/sheet"));
+    }
+  }
+});

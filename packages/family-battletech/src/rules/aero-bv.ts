@@ -3,14 +3,16 @@
 // and the total then says "at least". Where the book leaves a choice to the table (two sides that tie), the breakdown notes the one we took.
 import { AERO_BAY_PRICES, DROPSHIP_COLLAR_BY_YEAR, AERO_BV_METHOD, AERO_BV_OVERLAYS, AERO_CAPITAL_COST, AERO_COST, AERO_PRICE_OVERLAYS, AT2_BV_RULES, STATION_MULTIPLIERS, STATION_MULTIPLIER_CITE, TM_AERO_BV_RULES } from "../data/aero-bv";
 import type { AeroBvMethod, AeroCostFigures, CapitalCostFigures } from "../data/aero-bv";
-import { CAPITAL_FIGURES, CAPITAL_SYSTEMS, craftBaysFor, capitalSystemFigure, fighterPatchworkTypes, figureOf } from "../data/aero";
-import { HEAT_MULTIPLIER } from "../data/bv";
+import { CAPITAL_FIGURES, CAPITAL_SYSTEMS, craftBaysFor, capitalSystemFigure, fighterArmorTypes, fighterPatchworkTypes, figureOf } from "../data/aero";
+import { ADVANCED_BV_MODIFIERS, ARMOR_BV_MODIFIER, HEAT_MULTIPLIER } from "../data/bv";
+import { VEHICULAR_STEALTH } from "../data/chassis";
+import { modularPoints } from "./advanced-armor";
 import type { BvOptions } from "../data/bv";
 import { ARMOR_COST, ENGINE_COST } from "../data/cost";
 import { aeroCatalogFigures, aeroWeaponFigures } from "../data/aero-weapons";
-import { armorTypeAt, capitalKind, capitalSystems, engineRating, fighterHeat, fighterKind, fighterPatchworkActive, fighterSI, fighterTally, collarTotal, jumpSail, kfDrive, locationsOf, maxThrust, patchworkTonsAt, stationKeeping, subCompact, vessel } from "./aero";
+import { armorTypeAt, artemisLinked, capitalKind, capitalSystems, engineRating, fighterHeat, fighterKind, fighterPatchworkActive, fighterSI, fighterTally, collarTotal, jumpSail, kfDrive, locationsOf, maxThrust, patchworkTonsAt, stationKeeping, subCompact, vessel } from "./aero";
 import type { AeroMount, AeroRecord } from "./aero";
-import { ammoBvEntryOf, bvEntryOf, speedFactor } from "./bv";
+import { ammoBvEntryOf, bvEntryOf, defensiveMunitionBv, munitionAmmoEntry, retroStreakCap, speedFactor } from "./bv";
 import type { Catalog, EquipmentRow } from "./catalog";
 import { priceOf } from "./cost";
 import { own, roundHalfUp, stemOf, tidy } from "./walk";
@@ -115,11 +117,19 @@ interface Parts {
   equipment: number;
   defensiveEquipment: number;
   hasCase: boolean;
+  /** Retro-Streak ammunition: its Defensive BV a ton (IO:AE p. 190), held to the Streak launchers' BV (panel ruling). */
+  retroStreak: number;
+  /** The launcher rows on the unit, for the munitions that take their figure from the launcher that fires them. */
+  launchers: EquipmentRow[];
   unvalued: AeroUnvalued[];
 }
 
 function partsOf(record: AeroRecord, catalog: Catalog): Parts {
-  const parts: Parts = { weapons: [], ammo: [], equipment: 0, defensiveEquipment: 0, hasCase: false, unvalued: [] };
+  const parts: Parts = { weapons: [], ammo: [], equipment: 0, defensiveEquipment: 0, hasCase: false, retroStreak: 0, launchers: [], unvalued: [] };
+  parts.launchers = record.mounts.flatMap((m) => {
+    const r = m.equipmentId === null ? undefined : catalog.byId(m.equipmentId.replace(ARTEMIS, ""));
+    return r?.kind === "weapon" ? [r] : [];
+  });
   for (const mount of record.mounts) {
     const id = mount.equipmentId;
     const row = id === null ? undefined : catalog.byId(id.replace(ARTEMIS, ""));
@@ -130,6 +140,20 @@ function partsOf(record: AeroRecord, catalog: Catalog): Parts {
     }
     if (/^case(-ii)?-(is|clan)$/.test(id)) parts.hasCase = true;
     if (isAmmo(mount, row)) {
+      const retro = defensiveMunitionBv(row);
+      if (retro !== undefined) {
+        parts.retroStreak += retro * (mount.amount ?? 1);
+        continue;
+      }
+      const special = munitionAmmoEntry(row, parts.launchers);
+      if (special !== undefined) {
+        if (typeof special === "string") parts.unvalued.push({ mountId: mount.id, name, why: special });
+        else {
+          const tons = mount.amount ?? 1;
+          parts.ammo.push({ mount, weaponId: special.id, bv: (special.ammoBv ?? 0) * tons, explosive: special.options.inert !== true, defensive: special.options.defensiveAmmo === true, tons });
+        }
+        continue;
+      }
       const entry = ammoBvEntryOf(id);
       const weaponId = entry?.id;
       const value = weaponId === undefined ? undefined : itemBv(weaponId, record.editionId, catalog);
@@ -272,35 +296,36 @@ function ringOf(record: AeroRecord): string[] {
 }
 const arcKey = (m: AeroMount) => (m.aft === true && (m.arc === "LW" || m.arc === "RW") ? `${m.arc}*` : m.arc);
 
-/** Artemis IV on a current-edition unit is its own mount: each one raises one missile launcher in its arc, the most valuable first. */
-function applyArtemis(record: AeroRecord, weapons: Weapon[]): void {
-  const counts = new Map<string, number>();
-  for (const m of record.mounts) if (/^artemis-iv-(is|clan)$/.test(m.equipmentId ?? "")) counts.set(arcKey(m), (counts.get(arcKey(m)) ?? 0) + 1);
-  for (const [arc, n] of counts) {
-    weapons
-      .filter((w) => !w.defensive && arcKey(w.mount) === arc && /^(lrm|srm|mml)-\d+-(is|clan)$/.test(w.id))
-      .sort((a, b) => b.bv - a.bv)
-      .slice(0, n)
-      .forEach((w) => (w.bv = tidy(w.bv * TM_AERO_BV_RULES.artemis)));
-  }
+/** Artemis IV on a current-edition unit is its own mount: the launchers it links are the ones `artemisLinked` picks (rules/aero.ts: the one rule the sheet shares), each worth 20 percent more. */
+function applyArtemis(record: AeroRecord, catalog: Catalog, weapons: Weapon[]): void {
+  const linked = artemisLinked(record, catalog);
+  for (const w of weapons) if (!w.defensive && linked.has(w.mount.id)) w.bv = tidy(w.bv * TM_AERO_BV_RULES.artemis);
 }
 
 function tmBv(record: AeroRecord, catalog: Catalog, method: AeroBvMethod, frame: Frame, parts: Parts): AeroBv {
   const capital = frame.kind === "capital";
   const smallUnit = frame.kind === "fighter" || frame.kind === "craft";
   const notes: string[] = [];
+  // The Armor Type Modifier of a fighter's armor (TO:AUE p. 192: aerospace units apply the same table), the modular armor it carries (counted at that modifier, its penalties not counted),
+  // and the 0.3 a fighter with vehicular stealth armor adds to its unit type modifier.
+  const armorType = frame.kind === "fighter" && !fighterPatchworkActive(record) ? fighterArmorTypes(record.editionId).find((t) => t.id === record.armor.type) : undefined;
+  const armorMod = armorType === undefined ? 1 : (own(ARMOR_BV_MODIFIER.values, armorType.like) ?? own(ADVANCED_BV_MODIFIERS.armor, armorType.like)?.value ?? 1);
+  const modular = frame.kind === "fighter" ? modularPoints(record.mounts) : 0;
+  const stealthExtra = frame.kind === "fighter" && record.armor.type === VEHICULAR_STEALTH.id && !fighterPatchworkActive(record) ? VEHICULAR_STEALTH.fighterTypeModifier : 0;
   if (fighterPatchworkActive(record)) notes.push("Patchwork armor: the aerospace method gives no armor type a modifier, so every armor point counts the same wherever it sits (TechManual Battle Value v4.1 p. 313, step 1; Tactical Operations: AUE p. 194 works the armor location by location, which here changes nothing).");
-  applyArtemis(record, parts.weapons);
+  applyArtemis(record, catalog, parts.weapons);
   const shares = ammoShares(parts);
   const defensiveAmmo = Math.min(
     parts.defensiveEquipment,
     [...shares.keys()].filter((a) => a.defensive).reduce((s, a) => s + a.bv, 0),
   );
   const lines: AeroBvLine[] = [
-    { label: `Armor (${String(frame.armor)} x ${String(capital ? method.capitalArmor : method.armor)})`, value: frame.armor * (capital ? method.capitalArmor : method.armor) },
+    { label: `Armor (${String(frame.armor + modular)} x ${String(capital ? method.capitalArmor : method.armor)}${armorMod === 1 ? "" : ` x ${String(armorMod)} armor type`})`, value: (frame.armor + modular) * (capital ? method.capitalArmor : method.armor) * armorMod },
     { label: `Structural Integrity (${String(frame.si)} x ${String(capital ? method.capitalSi : method.si)})`, value: frame.si * (capital ? method.capitalSi : method.si) },
     { label: "Defensive equipment and its ammunition", value: parts.defensiveEquipment + defensiveAmmo },
   ];
+  const retro = Math.min(parts.retroStreak, retroStreakCap(parts.launchers));
+  if (parts.retroStreak > 0) lines.push({ label: "Retro-Streak ammunition (no more than its launchers)", value: retro });
   let subtotal = tidy(lines.reduce((s, l) => s + l.value, 0));
   if (smallUnit && record.techBase !== "clan" && !parts.hasCase) {
     const types = new Set(parts.ammo.filter((a) => a.explosive && !a.defensive).map((a) => a.mount.equipmentId)).size;
@@ -311,7 +336,7 @@ function tmBv(record: AeroRecord, catalog: Catalog, method: AeroBvMethod, frame:
       subtotal = Math.max(1, tidy(subtotal - cut));
     }
   }
-  const modifier = method.typeModifier[record.unitType as keyof AeroBvMethod["typeModifier"]] ?? 1;
+  const modifier = tidy((method.typeModifier[record.unitType as keyof AeroBvMethod["typeModifier"]] ?? 1) + stealthExtra);
   const defRating = tidy(subtotal * modifier);
 
   const offensive = parts.weapons.filter((w) => !w.defensive);
@@ -537,7 +562,7 @@ export function aeroCost(record: AeroRecord, catalog: Catalog): AeroCost | null 
       else if (typeTons > 0) add(`Armor (${type?.name ?? id})`, each * typeTons, `${n(each)} x ${n(typeTons)} t`);
     }
   } else {
-    const armorEach = Object.hasOwn(costs.armorPerTon, record.armor.type) ? costs.armorPerTon[record.armor.type] : undefined;
+    const armorEach = Object.hasOwn(costs.armorPerTon, record.armor.type) ? costs.armorPerTon[record.armor.type] : own(ARMOR_COST.rows, fighterArmorTypes(record.editionId).find((t) => t.id === record.armor.type)?.like ?? "")?.perTon;
     if (armorEach === undefined) unpriced.push({ id: null, name: "Armor", why: "no price for this armor type" });
     else add("Armor", armorEach * record.armor.tons, `${n(armorEach)} x ${n(record.armor.tons)} t`);
   }

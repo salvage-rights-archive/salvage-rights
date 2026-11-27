@@ -16,6 +16,7 @@ import { ammoRowOf } from "../data/aero-weapons";
 import type { EquipmentRow } from "./catalog";
 import { groupOf } from "./catalog";
 import type { Catalog } from "./catalog";
+import { bvEntryOf } from "./bv";
 import { engineTons } from "./mech";
 import type { OfficialMark, TechBase } from "./mech";
 import { own, roundHalfUp, tidy } from "./walk";
@@ -997,7 +998,7 @@ export function craftPartsNotOffered(record: AeroRecord): ("engine" | "armor" | 
   if (craftKind(record) === undefined) return [];
   const out: ("engine" | "armor" | "heat-sinks")[] = [];
   if (record.engine.type !== "standard") out.push("engine");
-  if (!fighterArmorTypes(record.editionId).some((t) => t.id === record.armor.type)) out.push("armor");
+  if (!fighterArmorTypes(record.editionId).some((t) => t.id === record.armor.type && !t.fighterOnly)) out.push("armor");
   const sinks = kindFigureOf(FIGHTER_FIGURES.heatSinkTypes, "aerospace", record.editionId);
   if (sinks !== undefined && !sinks.includes(record.heatSinks.type)) out.push("heat-sinks");
   return out;
@@ -1424,4 +1425,26 @@ export function vessel(record: AeroRecord, catalog?: Catalog): Vessel | null {
     };
   }
   return null;
+}
+
+/**
+ * The launchers an Artemis IV FCS links in the current rules: each Artemis IV mount raises one missile launcher in its arc (a wing that fires aft counts as its own arc), the
+ * most valuable first (by Battle Value, the larger size on a tie, then the order on the record). The books do not say which launcher a fighter's Artemis serves, so this is the app's one
+ * rule, used by the sheet (the Aero Attack Value after the slash of the Total Warfare table) and by the Battle Value (+20 percent, TechManual Battle Value v4.1): both read this set.
+ * Empty under the older editions, whose Artemis is part of the weapon.
+ */
+export function artemisLinked(record: AeroRecord, catalog: Catalog): Set<string> {
+  const linked = new Set<string>();
+  if (record.editionId !== DEFAULT_AERO_EDITION) return linked;
+  const arcKey = (m: AeroMount) => `${m.arc}${m.aft === true ? "*" : ""}`;
+  const counts = new Map<string, number>();
+  for (const m of record.mounts) if (/^artemis-iv-(is|clan)$/.test(m.equipmentId ?? "")) counts.set(arcKey(m), (counts.get(arcKey(m)) ?? 0) + 1);
+  for (const [arc, n] of counts) {
+    record.mounts
+      .filter((m) => arcKey(m) === arc && /^(lrm|srm|mml)-\d+-(is|clan)$/.test(m.equipmentId ?? "") && catalog.byId(m.equipmentId ?? "") !== undefined)
+      .sort((a, b) => (bvEntryOf(b.equipmentId ?? "")?.bv ?? 0) - (bvEntryOf(a.equipmentId ?? "")?.bv ?? 0) || Number(/\d+/.exec(b.equipmentId ?? "")?.[0]) - Number(/\d+/.exec(a.equipmentId ?? "")?.[0]))
+      .slice(0, n)
+      .forEach((m) => linked.add(m.id));
+  }
+  return linked;
 }

@@ -24,16 +24,17 @@ import {
   SHEET,
   SHIELDS,
   STRUCTURE_TYPES,
+  SUPERHEAVY,
 } from "../data/chassis";
 import type { Cite, PartFacts, RulesLevel, Span } from "../data/chassis";
 import { configurationInTime, equipmentPhase, eraOfRecord, erasOfYear, pastEraCap, partPhase, partSpans, typeInTime, windowOf } from "./availability";
 import { listed, RULESETS, rulesetOf } from "../data/rulesets";
 import { CLAN_CASE_IDS, clanCaseAllowed } from "./case";
-import { locationsFor, mountableOn, mountsRequired, podMountable } from "./catalog";
+import { heatSinkTypeOf, locationsFor, mountableOn, mountsRequired, podMountable } from "./catalog";
 import { heatSinkMixAllowed, levelAtLeast, levelIn, levelItems, levelOfRecord, levelRow, mixedPhase } from "./levels";
-import { clanInTime, datesText, partIsPrototypeOnly, partPrototype } from "./time";
+import { clanInTime, datesText, partIsPrototypeOnly, partPrototype, superheavyDates, superheavyPhase } from "./time";
 import type { Catalog, EquipmentRow } from "./catalog";
-import { ARM_FULL, armorSpread, armorTypeAt, armorTypesUsed, armsOf, canSplitBetween, configurationOf, donorTons, engineTons, freeHeatSinks, industrialRulesOf, layout as buildLayout, maxArmor, mechTypeOf, mountCanFireRear, patchworkActive, patchworkSlotsFor, slotsTaken, splitOf, structurePoints, walkMP, weights } from "./mech";
+import { ARM_FULL, armorSpread, armorTypeAt, armorTypesUsed, armsOf, canSplitBetween, configurationOf, donorTons, engineRatingOf, engineTons, freeHeatSinks, industrialRulesOf, layout as buildLayout, maxArmor, mechTypeOf, mountCanFireRear, patchworkActive, patchworkSlotsFor, primitiveRulesOf, requiredCockpit, slotsFor, slotsTaken, splitOf, structurePoints, superheavyOf, walkMP, weights } from "./mech";
 import { locationName, type Layout, type LocationCode, type MechRecord, type Mount } from "./mech";
 import { mountedShields, missingActuators, shieldStats } from "./shields";
 import { equipmentItems, mascOf, movementPenalty, rowOf, stemOf, TSM_ROWS, tsmOf } from "./walk";
@@ -93,12 +94,6 @@ const finding = (check: string, level: Finding["level"], message: string, extra:
   ...extra,
 });
 
-/** The heat sink type key a row stands for. */
-function heatSinkTypeOf(row: EquipmentRow): string {
-  if (row.id.startsWith("compact")) return "compact";
-  if (row.id.startsWith("laser")) return "laser";
-  return row.id.startsWith("double") ? (row.techBase === "clan" ? "double-clan" : "double") : "single";
-}
 
 // What an item that `needs` something must be paired with, the book's page for it, and the size class a pairing is made
 // within. A `needs` with no entry here (liquid cargo space) has nothing in the record to check against and is left alone.
@@ -130,11 +125,14 @@ function weightCheck({ record, layout, catalog }: CheckInput): Finding[] {
   const where = { field: "tons" };
   const type = mechTypeOf(record);
   const limits = type.tonnage;
-  if (isPositive(record.tons) && !(record.tons >= limits.min && record.tons <= limits.max && record.tons % limits.step === 0)) {
+  const standard = record.tons >= limits.min && record.tons <= limits.max && record.tons % limits.step === 0;
+  const heavy = type.superheavy === true && record.tons >= SUPERHEAVY.minTons && record.tons <= SUPERHEAVY.maxTons && record.tons % SUPERHEAVY.step === 0;
+  if (isPositive(record.tons) && !(standard || heavy)) {
+    const more = type.superheavy === true ? `, or ${SUPERHEAVY.minTons} to ${SUPERHEAVY.maxTons} tons as a superheavy 'Mech` : "";
     out.push(
-      finding("weight", "error", `${/^[AEIOU]/i.test(type.label) ? "An" : "A"} ${type.label} weighs ${limits.min} to ${limits.max} tons in steps of ${limits.step}; ${num(record.tons)} is not allowed.`, {
+      finding("weight", "error", `${/^[AEIOU]/i.test(type.label) ? "An" : "A"} ${type.label} weighs ${limits.min} to ${limits.max} tons in steps of ${limits.step}${more}; ${num(record.tons)} is not allowed.`, {
         where,
-        cite: limits.cite,
+        cite: record.tons > limits.max && type.superheavy === true ? SUPERHEAVY.cite : limits.cite,
       }),
     );
   }
@@ -216,7 +214,7 @@ function slotsCheck({ record, layout }: CheckInput): Finding[] {
     const anyUnplaced = armorMounts.some((m) => !m.location);
     for (const loc of layout.locations) {
       const type = armorTypeAt(record, loc);
-      const wanted = patchworkSlotsFor(type) ?? 0;
+      const wanted = slotsFor(record, patchworkSlotsFor(type) ?? 0);
       const found = armorMounts.filter((m) => m.location === loc).length;
       if (found === wanted || (found < wanted && anyUnplaced)) continue;
       out.push(
@@ -233,7 +231,7 @@ function slotsCheck({ record, layout }: CheckInput): Finding[] {
     const anyUnplaced = armorMounts.some((m) => !m.location);
     const type = partName(ARMOR, record.chassis.armorType);
     for (const loc of layout.locations) {
-      const wanted = spread[loc] ?? 0;
+      const wanted = slotsFor(record, spread[loc] ?? 0);
       const found = armorMounts.filter((m) => m.location === loc).length;
       if (found === wanted || (found < wanted && anyUnplaced)) continue;
       out.push(
@@ -309,8 +307,12 @@ function engineCheck({ record }: CheckInput): Finding[] {
   }
   if (!isPositive(rating)) {
     out.push(finding("engine", "error", `The engine rating is ${num(rating)}; it must be a positive number.`, { where, cite: tm(PAGE.engineRating) }));
-  } else if (!own(ENGINE_WEIGHTS.rows, rating) && own(ENGINE_TYPES.types, type)) {
-    out.push(finding("engine", "error", `An engine rated ${rating} is not in the engine table.`, { where, cite: ENGINE_WEIGHTS.cite }));
+  } else if (!own(ENGINE_WEIGHTS.rows, engineRatingOf(record)) && own(ENGINE_TYPES.types, type)) {
+    const built = engineRatingOf(record);
+    out.push(finding("engine", "error", built === rating ? `An engine rated ${rating} is not in the engine table.` : `A Primitive 'Mech's engine rated ${rating} is built as a ${built}, which is not in the engine table.`, { where, cite: ENGINE_WEIGHTS.cite }));
+  }
+  if (primitiveRulesOf(record) && isPositive(rating) && engineRatingOf(record) !== rating) {
+    out.push(finding("engine", "note", `A Primitive 'Mech's engine rating is multiplied by 1.2 and rounded up to the engine table: the engine is built as a ${engineRatingOf(record)}, and it and the gyro are weighed at that rating.`, { where, cite: primitiveRulesOf(record)?.cite }));
   }
   if (!own(ENGINE_TYPES.types, type)) {
     out.push(finding("engine", "error", `Engine type ${quoted(type)} is not one we know.`, { where, cite: ENGINE_TYPES.cite }));
@@ -367,7 +369,7 @@ function heatSinkCheck({ record, catalog }: CheckInput): Finding[] {
     out.push(finding("heat-sinks", "error", `The chassis has ${count} heat sinks; a 'Mech has at least the ${free} heat sinks its engine provides.`, { where, cite: industrialRulesOf(record)?.cites.heatSinks ?? cite }));
   }
   const sinks = record.mounts.filter((m) => rowOf(catalog, record, m)?.kind === "heat-sink");
-  const rating = record.chassis.engine.rating;
+  const rating = engineRatingOf(record);
   if (isPositive(rating)) {
     // An OmniMech's engine holds only the base's sinks critical-free: every sink a configuration adds takes slots (TechManual p.54).
     const held = Math.min(record.omni ? record.omni.baseHeatSinks : count, count, Math.floor(rating / HEAT_SINK_RULES.ratingPerHeldSink));
@@ -485,7 +487,8 @@ function placementCheck({ record, layout, catalog }: CheckInput): Finding[] {
       }
     }
     if (!row || !mount.location) continue;
-    const allowed = locationsFor(row, record.configuration);
+    // A superheavy 'Mech may mount the Heavy Gauss rifle in an arm (IO:AE printed p.157).
+    const allowed = superheavyOf(record) && /^heavy-gauss-rifle-/.test(row.id) ? undefined : locationsFor(row, record.configuration);
     // Both parts of a split weapon must be in places the item may go (the heavy Gauss rifle's torsos, p.219).
     const second = splitOf(mount)?.location;
     const places = second === undefined ? [mount.location] : [mount.location, second];
@@ -715,12 +718,25 @@ function configurationCheck({ record }: CheckInput): Finding[] {
     );
   }
   const cockpit = own(COCKPITS.types, record.chassis.cockpit) ? COCKPITS.types[record.chassis.cockpit] : undefined;
-  if (row.cockpit && record.chassis.cockpit !== row.cockpit) {
-    const needed = partName(COCKPITS, row.cockpit);
+  const required = requiredCockpit(record);
+  const gyro = own(GYROS.types, record.chassis.gyro) ? GYROS.types[record.chassis.gyro] : undefined;
+  if (!superheavyOf(record) && gyro?.tonnage && gyro.tonnage.min > SUPERHEAVY.standardMaxTons) {
+    out.push(finding("configuration", "error", `The ${gyro.name} gyro is for a superheavy 'Mech of ${gyro.tonnage.min} tons or more; this one weighs ${num(record.tons)}.`, { where: { field: "chassis.gyro" }, cite: gyro.cite ?? GYROS.cite }));
+  }
+  if (required && record.chassis.cockpit !== required) {
+    const needed = partName(COCKPITS, required);
+    const body = superheavyOf(record) ? `superheavy ${record.configuration}` : record.configuration;
     out.push(
-      finding("configuration", "error", `A ${record.configuration} must mount the ${needed} cockpit; ${partName(COCKPITS, record.chassis.cockpit)} is not allowed.`, {
+      finding("configuration", "error", `A ${body} must mount the ${needed} cockpit; ${partName(COCKPITS, record.chassis.cockpit)} is not allowed.`, {
         where: { field: "chassis.cockpit" },
-        cite: COCKPITS.types[row.cockpit]?.cite ?? COCKPITS.cite,
+        cite: COCKPITS.types[required]?.cite ?? COCKPITS.cite,
+      }),
+    );
+  } else if (!superheavyOf(record) && cockpit?.tonnage && cockpit.tonnage.min > SUPERHEAVY.standardMaxTons) {
+    out.push(
+      finding("configuration", "error", `The ${cockpit.name} cockpit is for a superheavy 'Mech of ${cockpit.tonnage.min} tons or more; this one weighs ${num(record.tons)}.`, {
+        where: { field: "chassis.cockpit" },
+        cite: cockpit.cite ?? COCKPITS.cite,
       }),
     );
   } else if (cockpit?.only && cockpit.only !== record.configuration) {
@@ -829,11 +845,14 @@ function partsCheck({ record, catalog }: CheckInput): Finding[] {
       const needs = levelRow(levelIn("standard", phase, part.prototypeLevel), rulesetOf(record.editionId)).label;
       out.push(finding("parts", "note", `${part.name} ${what} is a prototype in ${when} (${datesText(partPrototype(part, record.techBase), spans?.[0]?.from).toLowerCase()}); it needs ${needs} rules.`, { where, cite: IO_UTA }));
     }
-    if (part.industrial && industrialRulesOf(record) === undefined) {
+    if (part.industrial && industrialRulesOf(record) === undefined && primitiveRulesOf(record) === undefined) {
       out.push(finding("parts", "error", `${part.name} ${what} is printed for IndustrialMechs; a ${mechTypeOf(record).label} may not use it.`, { where, cite }));
     }
-    if (part.primitive) {
-      out.push(finding("parts", "warning", `${part.name} ${what} is printed for Primitive BattleMechs, which have their own construction rules this tool does not check.`, { where, cite }));
+    if (part.units !== undefined && !part.units.includes("mech")) {
+      out.push(finding("parts", "error", `${part.name} ${what} is printed for combat vehicles and fighters; a BattleMech may not use it.`, { where, cite: part.rulesCite ?? cite }));
+    }
+    if (part.primitive && primitiveRulesOf(record) === undefined) {
+      out.push(finding("parts", "error", `${part.name} ${what} is printed for Primitive 'Mechs; ${aOrAn(mechTypeOf(record).label).toLowerCase()} may not use it.`, { where, cite }));
     }
     if (part.rules) out.push(finding("parts", "note", `${part.name} ${what}${part.rulesLevel && part.rulesLevel !== "standard" ? ` (${part.rulesLevel} rules)` : ""}: ${part.rules}`, { where, cite: part.rulesCite ?? cite }));
   }
@@ -938,7 +957,10 @@ function unitTypeCheck({ record, catalog }: CheckInput): Finding[] {
     ["armor", ARMOR, chassis.armorType, rules.parts.armor, "chassis.armorType", rules.cites.armor, rules.armorNames],
   ];
   for (const group of chassis.heatSinks.extra ?? []) parts.push(["heat sink", HEAT_SINKS, group.type, rules.parts.heatSink, "chassis.heatSinks", rules.cites.heatSinks]);
+  const heavy = superheavyOf(record) !== undefined;
   for (const [what, table, key, allowed, field, cite, renamed] of parts) {
+    // A superheavy IndustrialMech's gyro and cockpit are its own (the superheavy and configuration checks name them).
+    if (heavy && (what === "gyro" || what === "cockpit")) continue;
     if (own(table.types, key) && !allowed.includes(key)) {
       const name = renamed !== undefined && own(renamed, key) ? (renamed[key] ?? key) : partName(table, key);
       add(`${name} ${what} is not allowed on an ${unit}; it has ${names(table, allowed, renamed)}.`, cite, { field });
@@ -1203,7 +1225,9 @@ function armCheck({ record, catalog }: CheckInput): Finding[] {
     const arm = location === "LA" || location === "RA";
     const has = { ...ARM_FULL, ...(arm ? armsOf(record)?.[location] : undefined) };
     const place = locationName(location);
-    const seen = new Set<string>();
+    const seen = new Map<string, number>();
+    // A superheavy 'Mech may mount up to two items of industrial equipment per location (IO:AE printed p.157).
+    const most = superheavyOf(record) ? 2 : 1;
     for (const { mount, row, stem } of items) {
       const where = { location, mountId: mount.id };
       const blade = own(BLADE_PAGES, stem);
@@ -1218,10 +1242,10 @@ function armCheck({ record, catalog }: CheckInput): Finding[] {
           out.push(finding("arms", "error", `${mount.name} in the ${place} replaces the hand; remove the hand actuator from that arm first.`, { where, cite }));
         }
       }
-      if (seen.has(stem)) {
-        out.push(finding("arms", "error", `The ${place} holds more than one ${row.name}; the book allows one of each kind per ${arm ? "arm" : "location"}.`, { where, cite }));
+      if ((seen.get(stem) ?? 0) >= most) {
+        out.push(finding("arms", "error", `The ${place} holds more than ${most === 1 ? "one" : "two"} ${row.name}; the book allows ${most === 1 ? "one" : "two"} of each kind per ${arm ? "arm" : "location"}${most === 1 ? "" : " on a superheavy 'Mech"}.`, { where, cite }));
       }
-      seen.add(stem);
+      seen.set(stem, (seen.get(stem) ?? 0) + 1);
     }
     const kinds = [...new Set(items.filter((i) => isExclusiveTool(i.row)).map((i) => i.stem))];
     if (kinds.length > 1) {
@@ -1321,6 +1345,145 @@ function splitCheck({ record, catalog }: CheckInput): Finding[] {
   return out;
 }
 
+/** The superheavy 'Mech construction changes (Interstellar Operations: Alternate Eras, printed pp.153-157): Inner Sphere, the three body types, no
+ * jump equipment or speed and strength enhancements, the parts its rules name, and its own years. The weight limits are in the weight check, the
+ * cockpit in the configuration check, the half-size slots and the structure table in mech.ts. */
+function superheavyCheck({ record, catalog }: CheckInput): Finding[] {
+  if (!superheavyOf(record)) return [];
+  const out: Finding[] = [];
+  const type = mechTypeOf(record);
+  const industrial = type.industrial !== undefined;
+  const add = (level: Finding["level"], message: string, where?: Finding["where"], cite: Cite = SUPERHEAVY.cite) => out.push(finding("superheavy", level, message, { where, cite }));
+  if (type.superheavy !== true) add("error", `${aOrAn(type.label)} cannot be a superheavy 'Mech; this one weighs ${num(record.tons)} tons.`, { field: "tons" }, SUPERHEAVY.levelCite);
+  if (record.techBase !== "inner-sphere") add("error", "Superheavy 'Mechs use Inner Sphere technology only; the Clans do not build them.", { field: "techBase" }, SUPERHEAVY.cite);
+  if (record.configuration !== "biped" && record.configuration !== "quad" && record.configuration !== "tripod") {
+    add("error", `A superheavy 'Mech is a biped, a quad or a tripod; the ${record.configuration} configuration is not allowed.`, { field: "configuration" }, SUPERHEAVY.cite);
+  }
+  if (industrial && (record.omni || record.unitType === "omnimech")) add("error", "A superheavy IndustrialMech may not be an OmniMech.", { field: "unitType" }, SUPERHEAVY.cite);
+  const allowed = SUPERHEAVY.parts[industrial ? "industrialmech" : "mech"];
+  const parts: [string, { types: Record<string, { name: string }> }, string, string[] | undefined, string][] = [
+    ["structure", STRUCTURE_TYPES, record.chassis.structure, allowed.structure, "chassis.structure"],
+    ["engine", ENGINE_TYPES, record.chassis.engine.type, allowed.engine, "chassis.engine"],
+    ["gyro", GYROS, record.chassis.gyro, allowed.gyro, "chassis.gyro"],
+    ["myomer", MYOMER, record.chassis.myomer, allowed.myomer, "chassis.myomer"],
+  ];
+  const kind = industrial ? "IndustrialMech" : "BattleMech";
+  for (const [what, table, key, keys, field] of parts) {
+    if (!keys || !own(table.types, key) || keys.includes(key)) continue;
+    const reason: Record<string, string> = {
+      structure: "its structure is a superheavy kind",
+      engine: "only fusion engines have the power to move one",
+      gyro: "every superheavy 'Mech needs the superheavy gyro",
+      myomer: "a machine this big cannot use MASC, Triple-Strength Myomer or any other speed or strength booster",
+    };
+    add("error", `${partName(table, key)} ${what} is not allowed on a superheavy ${kind}; ${reason[what]}. It may use ${keys.map((k) => partName(table, k)).join(", ")}.`, { field });
+  }
+  for (const mount of record.mounts) {
+    const row = rowOf(catalog, record, mount);
+    if (!row) continue;
+    const stem = stemOf(row.id);
+    const where = { mountId: mount.id, location: mount.location ?? undefined };
+    const bar = SUPERHEAVY.barred.find((b) => b.stems.includes(stem));
+    if (bar) add("error", `${mount.name} cannot be mounted on a superheavy 'Mech: ${bar.why}.`, where);
+    else if (SUPERHEAVY.noEffect.stems.includes(stem)) add("warning", `${mount.name} has no effect on a superheavy 'Mech: ${SUPERHEAVY.noEffect.why}.`, where);
+    else if (stem === "cockpit-command-console" && (record.configuration === "tripod" || industrial)) {
+      add("error", `${mount.name} cannot be mounted on a superheavy ${record.configuration === "tripod" ? "tripod" : "IndustrialMech"}; ${record.configuration === "tripod" ? "its cockpit already does the console's work" : "only a superheavy BattleMech may"}.`, where);
+    }
+  }
+  const phase = superheavyPhase(record);
+  if (phase === null) {
+    const when = record.year !== null ? String(record.year) : `the ${eraOfRecord(record)?.name ?? "chosen"} era`;
+    const dates = superheavyDates(record);
+    add("error", `A superheavy ${kind} is not available in ${when}; ${datesText(dates.prototypeYear, dates.availability[0]?.from).toLowerCase()}.`, { field: "tons" }, SUPERHEAVY.datesCite);
+  }
+  return out;
+}
+
+/**
+ * The Primitive 'Mech construction changes (Interstellar Operations: Alternate Eras, printed pp.115-118): Inner Sphere, a biped or quad, the parts the type's rules
+ * list, jump jets only from their prototype year and only on a fusion or fission engine, no improved jets, boosters or speed and strength enhancements, and equipment
+ * introduced by 2500. The engine rating's rise is in `engineRatingOf`; the armor, cockpit and structure weights and prices are the standard ones.
+ */
+function primitiveCheck({ record, catalog }: CheckInput): Finding[] {
+  const rules = primitiveRulesOf(record);
+  if (!rules) return [];
+  const out: Finding[] = [];
+  const type = mechTypeOf(record);
+  const add = (level: Finding["level"], message: string, where?: Finding["where"], cite: Cite = rules.cite) => out.push(finding("primitive", level, message, { where, cite }));
+  if (!rules.techBases.some((base) => base === record.techBase)) add("error", `A ${type.label} is Inner Sphere; a ${techBaseName(record.techBase).toLowerCase()} technology 'Mech is not allowed.`, { field: "techBase" });
+  if (!rules.configurations.includes(record.configuration)) add("error", `A ${type.label} is a biped or a quad; the ${record.configuration} configuration is not allowed.`, { field: "configuration" });
+  if (record.omni || record.unitType === "omnimech") add("error", `A ${type.label} cannot be an OmniMech.`, { field: "unitType" });
+  const { chassis } = record;
+  const parts: [string, { types: Record<string, { name: string }> }, string, string[], string][] = [
+    ["structure", STRUCTURE_TYPES, chassis.structure, rules.parts.structure, "chassis.structure"],
+    ["engine", ENGINE_TYPES, chassis.engine.type, rules.parts.engine, "chassis.engine"],
+    ["gyro", GYROS, chassis.gyro, rules.parts.gyro, "chassis.gyro"],
+    ["cockpit", COCKPITS, chassis.cockpit, rules.parts.cockpit, "chassis.cockpit"],
+    ["heat sink", HEAT_SINKS, chassis.heatSinks.type, rules.parts.heatSink, "chassis.heatSinks"],
+    ["myomer", MYOMER, chassis.myomer, rules.parts.myomer, "chassis.myomer"],
+    ["armor", ARMOR, chassis.armorType, rules.parts.armor, "chassis.armorType"],
+  ];
+  for (const group of chassis.heatSinks.extra ?? []) parts.push(["heat sink", HEAT_SINKS, group.type, rules.parts.heatSink, "chassis.heatSinks"]);
+  for (const [what, table, key, allowed, field] of parts) {
+    if (own(table.types, key) && !allowed.includes(key)) {
+      add("error", `${partName(table, key)} ${what} is not allowed on a ${type.label}; it may use ${allowed.map((k) => partName(table, k)).join(", ")}.`, { field }, rules.restrictedCite);
+    }
+  }
+  const jets = record.mounts.filter((m) => rowOf(catalog, record, m)?.kind === "jump-jet");
+  // The prototype jump jet is introduced in 2464 and the standard one produced from 2471 (IO:AE printed p.114), so a Primitive 'Mech may jump from 2464, on the staged
+  // dates the jump jet row carries. The Mackie example (p.117) says jump jets do not appear "even in prototype form" until 2471; the rule text and p.114 stand (conflict 122).
+  if (jets.length > 0 && record.year !== null && record.year < rules.jumpFrom) {
+    add("error", `A Primitive 'Mech cannot jump before ${rules.jumpFrom}, when the prototype jump jet appears; this one is dated ${record.year}.`, { field: "year" }, IO_PRIMITIVE_JUMP);
+  }
+  if (jets.length > 0 && own(ENGINE_TYPES.types, chassis.engine.type) && !rules.jumpEngines.includes(chassis.engine.type)) {
+    add("error", `A Primitive 'Mech may mount jump jets only with a fusion or fission engine; this one has ${partName(ENGINE_TYPES, chassis.engine.type)}.`, { field: "chassis.engine" });
+  }
+  for (const mount of record.mounts) {
+    const row = rowOf(catalog, record, mount);
+    if (!row) continue;
+    const where = { mountId: mount.id, location: mount.location ?? undefined };
+    if (rules.barredStems.includes(stemOf(row.id))) {
+      add("error", `${mount.name} cannot be mounted on a Primitive 'Mech; improved jump jets, jump boosters and speed or strength enhancements do not work with primitive technology.`, where, rules.restrictedCite);
+      continue;
+    }
+    const first = row.availability.length === 0 ? undefined : Math.min(...row.availability.map((s) => s.from));
+    if (first !== undefined && first > rules.equipmentUntil) {
+      add("error", `${mount.name} was introduced in ${first}; a Primitive 'Mech may mount only equipment introduced by ${rules.equipmentUntil}.`, where, rules.equipmentCite);
+    }
+  }
+  return out;
+}
+const IO_PRIMITIVE_JUMP: Cite = { book: "Interstellar Operations: Alternate Eras", page: 114 };
+
+/**
+ * The QuadVee construction rules (Interstellar Operations: Alternate Eras, printed p.128): Clan technology only, and tracks or wheels (one kind) in each of
+ * the four legs, the unit's way of moving in vehicle mode. The conversion equipment's weight and slots are in weights() and the configuration's fixed
+ * layout; the 4-ton cockpit is the configuration check's. Wheels are for a QuadVee alone.
+ */
+function quadveeCheck({ record, catalog }: CheckInput): Finding[] {
+  const out: Finding[] = [];
+  const cite = { book: "Interstellar Operations: Alternate Eras", page: 128 };
+  const add = (message: string, where?: Finding["where"]) => out.push(finding("quadvee", "error", message, { where, cite }));
+  const movers = record.mounts.flatMap((m) => {
+    const stem = stemOf(rowOf(catalog, record, m)?.id ?? "");
+    return stem === "tracks" || stem === "wheels" ? [{ mount: m, stem }] : [];
+  });
+  if (record.configuration !== "quadvee") {
+    for (const { mount, stem } of movers) if (stem === "wheels") add(`${mount.name} are for a QuadVee; this is not one.`, { mountId: mount.id });
+    return out;
+  }
+  if (record.techBase !== "clan") add("A QuadVee uses Clan technology only.", { field: "techBase" });
+  const kinds = new Set(movers.map((m) => m.stem));
+  if (kinds.size > 1) add("A QuadVee has tracks or wheels, not both.", { field: "configuration" });
+  const legs: LocationCode[] = ["FLL", "FRL", "RLL", "RRL"];
+  const missing = legs.filter((leg) => !movers.some((m) => m.mount.location === leg));
+  if (movers.length !== 4 || missing.length > 0) {
+    const placed = movers.length > 0 && movers.every((m) => m.mount.location !== null);
+    if (movers.length === 0 || placed || movers.length < 4) add(`A QuadVee needs tracks or wheels in each of its four legs; this one has ${movers.length}${placed && missing.length > 0 ? `, and none in the ${missing.map((l) => locationName(l)).join(", ")}` : ""}.`, { field: "configuration" });
+  }
+  return out;
+}
+
 export const CHECKS: Check[] = [
   { id: "weight", editions: "all", run: weightCheck },
   { id: "slots", editions: "all", run: slotsCheck },
@@ -1338,6 +1501,9 @@ export const CHECKS: Check[] = [
   { id: "era", editions: "all", run: eraCheck },
   { id: "shields", editions: "all", run: shieldCheck },
   { id: "lam", editions: "all", run: lamCheck },
+  { id: "superheavy", editions: "all", run: superheavyCheck },
+  { id: "primitive", editions: "all", run: primitiveCheck },
+  { id: "quadvee", editions: "all", run: quadveeCheck },
   { id: "unsupported", editions: "all", run: unsupportedCheck },
   { id: "omni", editions: "all", run: omniCheck },
   { id: "frankenmech", editions: "all", run: frankenCheck },

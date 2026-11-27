@@ -84,6 +84,9 @@ export function sheetNameVariants(name: string): string[] {
   if (tidy !== name) out.push(tidy);
   const prototype = /^(.*?)\s*\(P\)$/.exec(tidy);
   if (prototype?.[1]) out.push(`Prototype ${prototype[1]}`, `Prototype ${prototype[1].replace(/^Ultra AC\/(\d+)$/i, "Ultra Autocannon/$1")}`);
+  // Mordel's name for an Age of War prototype: "PPC (Prototype)" is our "Primitive Prototype PPC"; a prototype jump jet is the jump jet of the book (IO:AE p.114).
+  const early = /^(.*?)\s*\(Prototype\)$/i.exec(tidy);
+  if (early?.[1]) out.push(`Primitive Prototype ${early[1]}`, early[1]);
   const counted = /^(.*?)\s*\(\d+\)$/.exec(tidy);
   if (counted?.[1]) out.push(counted[1]);
   // Items sold by size carry the size in the sheet's name: "Cargo (2 tons)", "Liquid Storage:1t", "CommsGear:2t"

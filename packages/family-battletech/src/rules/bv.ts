@@ -28,6 +28,7 @@ import {
   PHYSICAL_BV,
   SKILL_MULTIPLIER,
   SPECIAL_MUNITIONS,
+  SUPERHEAVY_ENGINE_BV_MODIFIER,
   SPEED_FACTOR,
   STRUCTURE_BV_MODIFIER,
   TARGET_MODIFIER,
@@ -41,7 +42,7 @@ import {
 import type { BvGroup, BvOptions } from "../data/bv";
 import { clanStructure } from "./case";
 import { physicalDamage } from "./formulas";
-import { arcLocation, armorTypeAt, armorTypesUsed, industrialRulesOf, mountParts, patchworkActive, totalHeatSinks, walkMP } from "./mech";
+import { arcLocation, armorTypeAt, armorTypesUsed, industrialRulesOf, mountParts, patchworkActive, superheavyOf, totalHeatSinks, walkMP } from "./mech";
 import type { LocationCode, MechRecord, Mount } from "./mech";
 import type { Catalog, EquipmentRow } from "./catalog";
 import { armorPoints, equipmentItems, heatSinkCapacity, jumpMP as jumpJets, mascOf, movementPenalty, own, roundHalfUp, stemOf, structureTotal, tidy, tsmOf } from "./walk";
@@ -294,7 +295,8 @@ export function battleValue(record: MechRecord, catalog: Catalog, pilot: PilotSk
   const armorModOf = (type: string) => own(ARMOR_BV_MODIFIER.values, type) ?? own(ADVANCED_BV_MODIFIERS.armor, type)?.value;
   const armorMod = armorModOf(chassis.armorType);
   const structureMod = own(STRUCTURE_BV_MODIFIER.values, chassis.structure) ?? own(ADVANCED_BV_MODIFIERS.structure, chassis.structure)?.value;
-  const engineMod = own(ENGINE_BV_MODIFIER.values, chassis.engine.type) ?? own(ADVANCED_BV_MODIFIERS.engine, chassis.engine.type)?.value;
+  // A superheavy 'Mech has an engine table of its own (IO:AE printed p.188).
+  const engineMod = (superheavyOf(record) ? own(SUPERHEAVY_ENGINE_BV_MODIFIER.values, chassis.engine.type) : undefined) ?? own(ENGINE_BV_MODIFIER.values, chassis.engine.type) ?? own(ADVANCED_BV_MODIFIERS.engine, chassis.engine.type)?.value;
   const gyroMod = own(GYRO_BV_MODIFIER.values, chassis.gyro);
   for (const [what, value, key] of [
     ...armorTypesUsed(record).map((type) => ["armor type", armorModOf(type), type] as const),
@@ -397,6 +399,8 @@ export function battleValue(record: MechRecord, catalog: Catalog, pilot: PilotSk
     mountParts(item.mount, slots).reduce((sum, part) => sum + part.count * BV_METHOD.gaussPerSlot * (exposure(part.location) > 0 ? 1 : 0), 0);
 
   let explosive = 0;
+  // A superheavy 'Mech's explosive slots count once each, however many rounds of ammunition share the cell (IO:AE printed p.188: "per slot").
+  const packedCells = new Set<string>();
   // A PPC with its capacitor is treated as a Gauss weapon (the table's double dagger, TO:AUE p. 194): every slot of the pair.
   for (const [cap, host] of capacitors) if (host) explosive += gaussPoints(cap, cap.slots) + gaussPoints(host, host.slots);
   for (const item of items) {
@@ -404,7 +408,9 @@ export function battleValue(record: MechRecord, catalog: Catalog, pilot: PilotSk
     const ammoEntry = row.kind === "ammunition" ? AMMO.get(row.id) : undefined;
     const fuel = (isLam && LAM_BV.fuelSlotIds.includes(row.id)) || FUEL_TANK_IDS.includes(row.id);
     if ((row.kind === "ammunition" && !ammoEntry?.options.inert) || fuel) {
-      explosive += slots * BV_METHOD.explosiveAmmoPerSlot * exposure(mount.location);
+      const cell = superheavyOf(record) && mount.location !== null && mount.slot !== null ? `${mount.location}:${mount.slot}` : undefined;
+      if (cell === undefined || !packedCells.has(cell)) explosive += slots * BV_METHOD.explosiveAmmoPerSlot * exposure(mount.location);
+      if (cell !== undefined) packedCells.add(cell);
     }
     const entry = WEAPONS.get(row.id) ?? EQUIPMENT.get(row.id);
     if (entry?.options.gauss || entry?.options.gaussSlots) explosive += gaussPoints(item, entry.options.gaussSlots ?? slots);

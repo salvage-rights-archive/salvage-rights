@@ -23,11 +23,13 @@ import {
   ROUNDING,
   SENSORS_COST,
   STRUCTURE_COST,
+  PRIMITIVE_COST,
+  SUPERHEAVY_COST,
 } from "../data/cost";
 import type { Price } from "../data/cost";
 import type { Catalog, EquipmentRow } from "./catalog";
 import { CLAN_CASE_IDS, clanStructure, explosiveLocations } from "./case";
-import { armorTypeAt, armorTypesUsed, armsOf, configurationOf, industrialRulesOf, patchworkActive, patchworkTons } from "./mech";
+import { armorTypeAt, armorTypesUsed, armsOf, configurationOf, engineRatingOf, industrialRulesOf, patchworkActive, patchworkTons, primitiveRulesOf, superheavyOf } from "./mech";
 import type { LocationCode, MechRecord, Mount } from "./mech";
 import { equipmentItems, mascOf, own, stemOf, tsmOf, TSM_ROWS, weightLine } from "./walk";
 
@@ -139,12 +141,17 @@ export function unitCost(record: MechRecord, catalog: Catalog, options: CostOpti
     add(structural, "Sensors", SENSORS_COST.perTon * tons, `${money(SENSORS_COST.perTon)} x ${tons}`, SENSORS_COST);
     const tsm = tsmOf(record, items);
     const key = tsm === "prototype" ? "prototype-tsm" : tsm ? "tsm" : own(MUSCULATURE_COST.rows, chassis.myomer) ? chassis.myomer : "standard";
-    const musculature = MUSCULATURE_COST.rows[key];
+    // A superheavy 'Mech's musculature is priced by its own formula (IO:AE printed p.217).
+    const heavy = superheavyOf(record) !== undefined;
+    const primitive = primitiveRulesOf(record) !== undefined;
+    const musculature = heavy ? { perTon: SUPERHEAVY_COST.musculaturePerTon, cite: SUPERHEAVY_COST.cite } : primitive ? { perTon: PRIMITIVE_COST.musculaturePerTon, cite: PRIMITIVE_COST.cite } : MUSCULATURE_COST.rows[key];
     if (musculature) add(structural, key === "standard" ? "Musculature" : `Musculature (${key})`, musculature.perTon * tons, `${money(musculature.perTon)} x ${tons}`, { cite: musculature.cite ?? MUSCULATURE_COST.cite, checked: MUSCULATURE_COST.checked });
   } else skip("Sensors and musculature", "the tonnage is not a positive number");
 
   // Internal structure (a tripod's costs more)
-  const structure = own(STRUCTURE_COST.rows, chassis.structure);
+  const heavySuper = superheavyOf(record) !== undefined;
+  const heavyPrice = heavySuper ? own(SUPERHEAVY_COST.structurePerTon, chassis.structure) : undefined;
+  const structure = heavySuper ? (heavyPrice === undefined ? undefined : { perTon: heavyPrice, cite: SUPERHEAVY_COST.cite }) : own(STRUCTURE_COST.rows, chassis.structure);
   if (structure && tonsKnown) {
     const factor = special?.structureFactor ?? 1;
     if (structure.assumed) assume(`Internal structure "${chassis.structure}"`);
@@ -170,7 +177,9 @@ export function unitCost(record: MechRecord, catalog: Catalog, options: CostOpti
         parts.push(`${loc} ${each}`);
       }
     }
-    add(structural, "Actuators", actuators, `(${parts.join(" + ")}) x ${tons}`, ACTUATOR_COST);
+    // A superheavy 'Mech's actuators cost twice a standard one's (IO:AE printed p.183).
+    const factor = superheavyOf(record) ? SUPERHEAVY_COST.actuatorFactor : 1;
+    add(structural, "Actuators", actuators * factor, `(${parts.join(" + ")}) x ${tons}${factor === 1 ? "" : ` x ${factor}`}`, factor === 1 ? ACTUATOR_COST : { cite: SUPERHEAVY_COST.textCite, checked: SUPERHEAVY_COST.checked });
     if (record.configuration === "tripod") notes.push("Tripod actuators: the book prints no list for the center leg; it is priced with the same upper leg, lower leg and foot actuators as the other two.");
   } else if (tonsKnown) skip("Actuators", `no limb layout for the "${record.configuration}" configuration`);
 
@@ -178,7 +187,9 @@ export function unitCost(record: MechRecord, catalog: Catalog, options: CostOpti
   const engine = own(ENGINE_COST.rows, chassis.engine.type);
   if (engine && tonsKnown && Number.isFinite(chassis.engine.rating)) {
     if (engine.assumed) assume(`Engine "${chassis.engine.type}"`);
-    add(structural, `Engine (${chassis.engine.type} ${chassis.engine.rating})`, engineCost(engine.perRating, chassis.engine.rating, tons), `${money(engine.perRating)} x ${chassis.engine.rating} x ${tons} / ${ENGINE_COST.divisor}`, { cite: engine.cite ?? ENGINE_COST.cite, checked: ENGINE_COST.checked });
+    // A Primitive 'Mech's engine is the rating raised a fifth (IO:AE printed p.117); that is the engine bought.
+    const built = engineRatingOf(record);
+    add(structural, `Engine (${chassis.engine.type} ${built})`, engineCost(engine.perRating, built, tons), `${money(engine.perRating)} x ${built} x ${tons} / ${ENGINE_COST.divisor}`, { cite: engine.cite ?? ENGINE_COST.cite, checked: ENGINE_COST.checked });
   } else skip(`Engine "${chassis.engine.type}" ${chassis.engine.rating}`, engine ? "the tonnage or rating is not a number" : "the cost table has no such engine");
 
   // Gyro: its cost is per ton of gyro, and the weight rules already work that out
@@ -206,7 +217,8 @@ export function unitCost(record: MechRecord, catalog: Catalog, options: CostOpti
   }
 
   // Armor
-  const armor = own(ARMOR_COST.rows, chassis.armorType);
+  // A Primitive IndustrialMech's commercial armor is bought at the primitive armor price, the table's "Primitive 'Mech/Industrial Armor" (IO:AE printed pp.181, 215).
+  const armor = own(ARMOR_COST.rows, primitiveRulesOf(record) !== undefined ? "primitive" : chassis.armorType);
   const armorTons = weightLine(record, catalog, "Armor");
   if (patchworkActive(record)) {
     // Patchwork armor is priced a type at a time, on the tons of the locations that wear it (each rounded up to the half ton, TO:AUE p.189).
@@ -244,6 +256,12 @@ export function unitCost(record: MechRecord, catalog: Catalog, options: CostOpti
     if (stemOf(row.id) === "environmental-sealing") {
       if (!tonsKnown) skip(mount.name, "the tonnage is not a positive number", row.id);
       else add(structural, "Environmental sealing", INDUSTRIAL_COST.sealingPerTon * tons, `${money(INDUSTRIAL_COST.sealingPerTon)} x ${tons}`, INDUSTRIAL_COST);
+      continue;
+    }
+    // A QuadVee's wheels: 750 x engine rating x tonnage over 75 (IO:AE printed p.181).
+    if (stemOf(row.id) === "wheels") {
+      if (!tonsKnown || !Number.isFinite(chassis.engine.rating)) skip(mount.name, "the tonnage or engine rating is not a number", row.id);
+      else add(equipment, "Wheels", engineCost(750, chassis.engine.rating, tons), `${money(750)} x ${chassis.engine.rating} x ${tons} / ${ENGINE_COST.divisor}`, { cite: { book: "Interstellar Operations: Alternate Eras", page: 181 }, checked: "page" });
       continue;
     }
     if (stemOf(row.id) === "tracks") {

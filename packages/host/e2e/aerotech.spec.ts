@@ -247,3 +247,29 @@ test("patchwork armor on a fighter: hidden at Standard, offered at Advanced from
     expect(widths.scroll, path).toBe(widths.client);
   }
 });
+
+test("fighter armor of the Advanced Armor Table: vehicular stealth is hidden at Standard and offered from 3084 at Experimental, asks for an ECM suite, and the editor is axe clean in both themes and fits 320 px", async ({ page }) => {
+  test.setTimeout(180_000);
+  const editor = await startUnit(page, "tw-tm-so", "Stealth Sabre");
+  const types = page.getByLabel("Armor type", { exact: true });
+  await expect(types.locator("option[value=vehicular-stealth]")).toHaveCount(0);
+  await page.getByLabel("Rules level").selectOption("experimental");
+  await page.getByLabel("Year", { exact: true }).fill("3090");
+  await types.selectOption("vehicular-stealth");
+  await expect(page.getByText(/Vehicular stealth armor needs a working ECM suite/)).toBeVisible();
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(page.getByText("Saved.")).toBeVisible();
+  for (const theme of ["Light", "Dark"] as const) {
+    await chooseTheme(page, theme);
+    await page.goto(`${DEV}${editor}`);
+    await expectPage(page.getByRole("heading", { level: 1 })).toBeVisible();
+    await expect(page.getByLabel("Armor type", { exact: true })).toHaveValue("vehicular-stealth");
+    const results = await new AxeBuilder({ page }).analyze();
+    expect(results.violations, `${theme} theme`).toEqual([]);
+  }
+  await page.setViewportSize({ width: 320, height: 700 });
+  await page.goto(`${DEV}${editor}`);
+  await expectPage(page.getByRole("heading", { level: 1 })).toBeVisible();
+  const widths = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, client: document.documentElement.clientWidth }));
+  expect(widths.scroll).toBe(widths.client);
+});

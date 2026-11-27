@@ -1,14 +1,14 @@
 // Rules levels: the order they come in, which level an item belongs to, and the lowest level that accepts everything a
 // 'Mech uses. Pure functions over the tables in data/chassis.ts and the catalog; nothing here throws on what it does not
 // know (an unknown part or an unmatched mount simply asks nothing of the level).
-import { INTRODUCTORY_PARTS, ARMOR, FRANKENMECH, COCKPITS, ENGINE_TYPES, GYROS, HEAT_SINK_RULES, HEAT_SINKS, MIXED_TECHNOLOGY, PATCHWORK_ARMOR, RULES_LEVELS, STRUCTURE_TYPES } from "../data/chassis";
+import { INTRODUCTORY_PARTS, ARMOR, FRANKENMECH, COCKPITS, ENGINE_TYPES, GYROS, HEAT_SINK_RULES, HEAT_SINKS, MIXED_TECHNOLOGY, PATCHWORK_ARMOR, RULES_LEVELS, STRUCTURE_TYPES, SUPERHEAVY } from "../data/chassis";
 import type { PartFacts, RulesLevel, RulesLevelRow, Span } from "../data/chassis";
 import { CLASSIC, inGame, listed, listsOpen, rulesetOf } from "../data/rulesets";
 import type { Ruleset } from "../data/rulesets";
 import type { Catalog, EquipmentRow } from "./catalog";
-import { armorTypesUsed, configurationOf, mechTypeOf, patchworkActive } from "./mech";
+import { armorTypesUsed, configurationOf, mechTypeOf, patchworkActive, superheavyOf } from "./mech";
 import type { LocationCode, MechRecord } from "./mech";
-import { clanInTime, datesText, erasOfYear, partPrototype, partSpans, phaseIn, rowPhase, windowOf } from "./time";
+import { clanInTime, datesText, erasOfYear, partPrototype, partSpans, phaseIn, rowPhase, superheavyDates, superheavyPhase, windowOf } from "./time";
 import type { Phase, When } from "./time";
 
 export const LEVEL_ORDER: RulesLevel[] = RULES_LEVELS.map((row) => row.id);
@@ -171,6 +171,12 @@ export function levelItems(record: MechRecord, catalog: Catalog): LevelItem[] {
     items.push(asListed({ what: "type", name: type.label, ...inPhase(type.rulesLevel, typePhase, prototype, record.techBase === "clan" ? (type.clanAvailability ?? type.availability) : type.availability), cite: type.cite, where: { field: "unitType" } }, typeListed, ruleset));
   }
   if (isFrankenMech(record)) items.push(asListed({ what: "option", name: "FrankenMech", level: FRANKENMECH.rulesLevel, cite: FRANKENMECH.levelCite, where: { field: "frankenmech" } }, listed(undefined, ruleset), ruleset));
+  // A superheavy 'Mech is an Advanced option (IO:AE printed p.153), Experimental in its prototype years.
+  if (superheavyOf(record)) {
+    const phase = superheavyPhase(record);
+    const dates = superheavyDates(record);
+    items.push(asListed({ what: "option", name: "Superheavy 'Mech", ...inPhase(SUPERHEAVY.rulesLevel, phase, dates.prototypeYear, dates.availability), cite: SUPERHEAVY.levelCite, where: { field: "tons" } }, listed(undefined, ruleset), ruleset));
+  }
   const config = configurationOf(record.configuration);
   if (config) {
     const level = config.rulesLevel === DEFAULT_LEVEL ? partLevel("configuration", record.configuration) : config.rulesLevel;

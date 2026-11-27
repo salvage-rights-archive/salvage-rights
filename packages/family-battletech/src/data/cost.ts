@@ -85,6 +85,7 @@ export const COCKPIT_COST: Sourced & { rows: Record<string, { cost: number; cite
     "interface-clan": { cost: 1_500_000, cite: { book: IO, page: 213 } },
     vrpp: { cost: 1_250_000, cite: { book: IO, page: 213 } },
     primitive: { cost: 100_000, cite: { book: IO, page: 215 } },
+    "primitive-industrial": { cost: 50_000, cite: { book: IO, page: 215 } },
     "superheavy-tripod": { cost: 500_000, cite: { book: IO, page: 217 } },
     superheavy: { cost: 300_000, cite: { book: IO, page: 215 } },
     "superheavy-industrial": { cost: 200_000, cite: { book: IO, page: 215 } },
@@ -199,6 +200,7 @@ export const ARMOR_COST: Sourced & { rows: Record<string, PerTon> } = {
     "laser-reflective": { perTon: 30_000, cite: { book: TO, page: 217 } },
     "laser-reflective-clan": { perTon: 30_000, cite: { book: TO, page: 217 } },
     modular: { perTon: 10_000, cite: { book: TO, page: 217 } },
+    "vehicular-stealth": { perTon: 50_000, cite: { book: TO, page: 217 } },
     reactive: { perTon: 30_000, cite: { book: TO, page: 217 } },
     "reactive-clan": { perTon: 30_000, cite: { book: TO, page: 217 } },
     // Interstellar Operations: Alternate Eras pp.211 and 215 (primitive, prototype ferro-fibrous, and the Dark Age armors)
@@ -219,8 +221,27 @@ export const ARMOR_COST: Sourced & { rows: Record<string, PerTon> } = {
 //     equipment and internal structure; the text's worked example uses the structural, weapon and equipment total, which
 //     we follow (see the report).
 // ---------------------------------------------------------------------------------------------------------------
+/**
+ * Superheavy 'Mech components (IO:AE printed p.183, the Additional Alternate Era Weapons and Equipment cost table p.217, read against the
+ * page images): the musculature and the four structure types are priced by the unit's tonnage in place of a standard 'Mech's, and each
+ * actuator costs twice a standard one. The cockpits and the gyro are in COCKPIT_COST and GYRO_COST.
+ */
+export const SUPERHEAVY_COST: Sourced & { musculaturePerTon: number; actuatorFactor: number; structurePerTon: Record<string, number>; textCite: Cite } = {
+  cite: { book: IO, page: 217 },
+  checked: "page",
+  textCite: { book: IO, page: 183 },
+  musculaturePerTon: 12_000,
+  actuatorFactor: 2,
+  structurePerTon: { standard: 4_000, "endo-composite": 6_400, "endo-steel": 16_000, industrial: 3_000 },
+};
+
+/** Primitive 'Mech musculature: 1,000 x the unit's tonnage (IO:AE printed p.181 and the cost table p.215, "Primitive 'Mech Musculature"). */
+export const PRIMITIVE_COST: Sourced & { musculaturePerTon: number } = { cite: { book: IO, page: 215 }, checked: "page", musculaturePerTon: 1_000 };
+
 export const CONFIGURATION_COST: Record<string, { structureFactor?: number; conversion?: number; cite: Cite; checked: Checked }> = {
   tripod: { structureFactor: 1.2, cite: { book: IO, page: 183 }, checked: "page" },
+  // The QuadVee: the conversion equipment costs half the structural, weapon and equipment cost, added before the final multiplier (IO:AE printed p.181, table p.215).
+  quadvee: { conversion: 0.5, cite: { book: IO, page: 181 }, checked: "page" },
   lam: { conversion: 0.75, cite: { book: IO, page: 181 }, checked: "page" },
   "bimodal-lam": { conversion: 0.65, cite: { book: IO, page: 181 }, checked: "page" },
 };
@@ -253,7 +274,7 @@ export const EQUIPMENT_COST: PriceGroup[] = [
     prices: {
       "battlemech-turret-shoulder": { perWeight: 10_000 }, "battlemech-turret-head": { perWeight: 10_000 }, "battlemech-turret-quad": { perWeight: 10_000 },
       "dual-turret": { perWeight: 5_000 }, "sponson-turret": { perWeight: 4_000 }, "vtol-chin-turret": { perWeight: 5_000 },
-      "armored-component": { perWeight: 300_000 }, "armored-motive-system": { perWeight: 100_000 },
+      "armored-component": { perWeight: 300_000 }, "armored-motive-system": { perWeight: 100_000 }, "modular-armor": 10_000,
       // p.221: sub-capital cannons, lasers and missiles (the ammunition price beside the cannons and missiles is not kept), cruise missiles (p.217), minesweeper,
       // field base, hyperpulse generators, comm-scanner suites, tug adaptor, space mine dispenser, ProtoMech Streak tube; the VTOL jet booster is 10,000 an engine rating point (the sub-capital weapons are on p. 223, the rest p. 221)
       "light-scc": 330_000, "medium-scc": 780_000, "heavy-scc": 1_300_000, "scl-1": 220_000, "scl-2": 335_000, "scl-3": 450_000,

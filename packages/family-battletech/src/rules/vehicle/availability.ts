@@ -39,7 +39,7 @@ export function enginePossible(key: string, record: VehicleRecord, everything = 
 }
 export function armorPossible(key: string, record: VehicleRecord, everything = false): boolean {
   if (!VEHICLE_ARMOR.some((a) => a.id === key)) return false;
-  return partAvailable("armor", key, subjectOf(record), everything);
+  return partAvailable("armor", key, subjectOf(record), everything, "vehicle");
 }
 
 /** Select options: the engines the record may use, and its own even when it may not. */

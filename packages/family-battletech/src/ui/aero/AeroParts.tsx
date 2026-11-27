@@ -31,7 +31,7 @@ import {
   vessel,
 } from "../../rules/aero";
 import type { AeroRecord } from "../../rules/aero";
-import { aeroLowestLevel, fighterPatchworkOffered } from "../../rules/aero-checks";
+import { aeroLowestLevel, fighterArmorOffered, fighterPatchworkOffered } from "../../rules/aero-checks";
 import type { Catalog } from "../../rules/catalog";
 import { DEFAULT_LEVEL, levelAtLeast, levelRow } from "../../rules/levels";
 import { own, tidy } from "../../rules/walk";
@@ -361,7 +361,7 @@ export function ArmorPanel({ record, onEdit }: PartProps) {
   const locations = armorLocations(record, known);
   const types = (ship?.group === "capital"
     ? CAPITAL_ARMOR_TYPES.filter((t) => t.editions.includes(edition)).map((t) => ({ id: t.id, name: t.name, techBase: "both" as const }))
-    : fighterArmorTypes(edition)
+    : fighterArmorTypes(edition).filter((t) => fighterArmorOffered(record, t))
   ).filter((t) => record.techBase === "mixed" || t.techBase === "both" || t.techBase === record.techBase || t.id === record.armor.type)
     .map((t) => ({ value: t.id, label: t.name }));
   const armor = fighter ? fighterArmor(record) : (ship?.armor ?? null);

@@ -81,6 +81,7 @@ export function bayLines(record: AeroRecord, catalog: Catalog): WeaponLine[] {
       av: shown,
       damage: "",
       hexes: "",
+      toHit: "",
     };
   });
 }
