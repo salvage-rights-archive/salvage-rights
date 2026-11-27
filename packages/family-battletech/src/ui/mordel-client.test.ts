@@ -42,6 +42,31 @@ describe("mordel client", () => {
     expect(JSON.stringify(result)).not.toContain(KEY);
   });
 
+  it("reads a unit file as text through the same key and path, and follows no link that is not on the mordel.net API", async () => {
+    const fetchMock = answering(new Response("chassis:Test", { status: 200 }));
+    const client = createMordelClient({ key: KEY, fetch: fetchMock, wait: noWait });
+    expect(await client.file("https://www.mordel.net/api/v1/units/bm/7/files/megamek")).toEqual({ ok: true, value: "chassis:Test" });
+    expect(String(fetchMock.mock.calls[0]?.[0])).toBe(`${MORDEL_BASE}/units/bm/7/files/megamek`);
+    expect(fetchMock.mock.calls[0]?.[1]?.headers).toMatchObject({ "X-API-Key": KEY });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const tooBig = createMordelClient({ key: KEY, fetch: answering(new Response("x".repeat(1_000_001), { status: 200 })), wait: noWait });
+    expect(await tooBig.file("https://www.mordel.net/api/v1/units/bm/7/files/megamek")).toMatchObject({ ok: false });
+  });
+
+  it("refuses a file link that is http, on a look-alike host, protocol-relative or carries userinfo, and never calls fetch", async () => {
+    const fetchMock = vi.fn<typeof fetch>();
+    const client = createMordelClient({ key: KEY, fetch: fetchMock, wait: noWait });
+    for (const link of [
+      "http://mordel.net/api/v1/units/bm/7/files/megamek",
+      "https://mordel.net.evil.com/api/v1/units/bm/7/files/megamek",
+      "//evil.com/api/v1/units/bm/7/files/megamek",
+      "https://u:p@evil.com/api/v1/units/bm/7/files/megamek",
+    ]) {
+      expect(await client.file(link)).toMatchObject({ ok: false, failure: "bad-request" });
+    }
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it("retries once after a 429, and gives slow-down if the second answer is a 429 too", async () => {
     const wait = vi.fn(noWait);
     const failing = answering(status(429, { "Retry-After": "2" }), status(429));

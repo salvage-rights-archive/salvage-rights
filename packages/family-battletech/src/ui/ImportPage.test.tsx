@@ -35,6 +35,7 @@ function fakeClient(over: Partial<MordelClient> = {}): MordelClient {
   return {
     testKey: () => Promise.resolve({ ok: true, value: true }),
     unit: () => Promise.resolve({ ok: true, value: mordelBiped() }),
+    file: () => Promise.resolve({ ok: false, failure: "not-found", message: "no file" }),
     myUnits: () => Promise.resolve({ ok: true, value: { rows: [], truncated: false } }),
     ...over,
   };
@@ -154,6 +155,20 @@ describe("Import from Mordel", () => {
     expect(where.textContent).toBe(`/battletech/classic/editor?id=${saved[0]?.id ?? ""}`);
     const state = JSON.parse(screen.getByTestId("state").textContent) as { notes: string[] };
     expect(state.notes).toContain("Frobnicator 9000 is not in our equipment table.");
+  });
+
+  it("goes on from the JSON alone, with a note, when the unit's .mtf file cannot be fetched", async () => {
+    const user = userEvent.setup();
+    await (await openFamilyStorage()).setKey("abc123");
+    const linked = { ...(mordelBiped() as { unit: object }), unit: { ...(mordelBiped() as { unit: object }).unit, files: { megamek: "https://www.mordel.net/api/v1/units/bm/9/files/megamek" } } };
+    const file = vi.fn(() => Promise.resolve<MordelResult<string>>(failure("offline", "offline")));
+    renderImport(fakeClient({ unit: () => Promise.resolve({ ok: true, value: linked }), file }));
+    await user.type(await screen.findByLabelText("Unit number or address"), "9");
+    await user.click(screen.getByRole("button", { name: "Import" }));
+    await screen.findByTestId("where");
+    expect(file).toHaveBeenCalledWith("https://www.mordel.net/api/v1/units/bm/9/files/megamek");
+    const state = JSON.parse(screen.getByTestId("state").textContent) as { notes: string[] };
+    expect(state.notes).toContainEqual(expect.stringMatching(/\.mtf file for this unit could not be read/));
   });
 
   it("imports a ProtoMech into the ProtoMech store and opens the ProtoMech editor with the import notes", async () => {

@@ -6,6 +6,8 @@ import { loadCatalog } from "../rules/catalog";
 import { DEFAULT_LEVEL, levelRow } from "../rules/levels";
 import { UNIT_TYPE_OF, fromMordel, importOmniSet, importOmniSingle, omniFacts, parseMordelRef } from "../rules/mordel";
 import type { OmniImport } from "../rules/mordel";
+import { megamekLink, parseMtfActuators } from "../rules/mtf";
+import type { MtfActuators } from "../rules/mtf";
 import { fromMordelProto } from "../rules/protomech/mordel";
 import { editorHref } from "./protomech/routes";
 import { openProtoStorage } from "./protomech/storage";
@@ -159,12 +161,26 @@ export default function ImportPage({ makeClient = defaultMakeClient }: ImportPag
           void navigate(editorHref(proto.id), { state: { notes: [`Rules level set to ${levelRow(proto.rulesLevel ?? DEFAULT_LEVEL).label}, the lowest level that accepts everything this design uses.`, ...made.notes] } });
           return;
         }
-        const result = fromMordel(fetched.value, catalog, edition, now, newId, unitType);
+        const facts = omniFacts(fetched.value);
+        // One more request (of the 120 a minute) for the unit's .mtf file, which says which arm actuators it has. Optional: advice, not refusal.
+        let mtf: MtfActuators | undefined;
+        let mtfNote: string | undefined;
+        if (!facts.omni) {
+          const link = megamekLink(fetched.value);
+          if (link) {
+            setStatus("Loading the unit's .mtf file…");
+            const file = await makeClient(storedKey, waiting).file(link);
+            mtf = file.ok ? parseMtfActuators(file.value) : undefined;
+            if (!mtf) mtfNote = "Mordel's .mtf file for this unit could not be read, so the arm actuators are worked out from the equipment instead.";
+          } else mtfNote = "Mordel gave no .mtf file for this unit, so the arm actuators are worked out from the equipment instead.";
+          setStatus("");
+        } else mtfNote = "The .mtf file is not read for OmniMechs yet, so the arms come from Mordel's figures alone.";
+        const result = fromMordel(fetched.value, catalog, edition, now, newId, unitType, mtf);
         if (!result.ok) {
           setProblem(result.message);
           return;
         }
-        const facts = omniFacts(fetched.value);
+        if (mtfNote) result.notes.push(mtfNote);
         if (facts.omni) {
           // An OmniMech: a [BASE] unit and its variants become one chassis. Any unit that cannot be had is left out with a note; with no
           // base at all the one unit comes in as a one-configuration chassis (the labelled fallback).
@@ -213,6 +229,7 @@ export default function ImportPage({ makeClient = defaultMakeClient }: ImportPag
             made.notes.push(...base.notes);
           }
           setStatus("");
+          if (mtfNote) made.notes.push(mtfNote);
           const chassis = made.chassis;
           if (!(await attempt(STORAGE_WRITE_FAILED, () => storage.saveOmni(chassis)))) return;
           void navigate(`/battletech/classic/editor?id=${encodeURIComponent(chassis.id)}`, { state: { notes: made.notes } });

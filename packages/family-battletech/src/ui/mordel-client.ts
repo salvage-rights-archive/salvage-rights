@@ -18,6 +18,8 @@ export interface MordelListRow {
 export interface MordelClient {
   testKey(): Promise<MordelResult<true>>;
   unit(unitType: string, id: number): Promise<MordelResult<unknown>>;
+  /** The text of a file a unit links in its `files` list (the .mtf at `files.megamek`). Only a mordel.net API link is followed. */
+  file(link: string): Promise<MordelResult<string>>;
   /** All or nothing: a failure on any page returns only the failure. After 20 pages it stops and says `truncated`. */
   myUnits(): Promise<MordelResult<{ rows: MordelListRow[]; truncated: boolean }>>;
 }
@@ -32,6 +34,8 @@ const MESSAGES: Record<MordelFailure, string> = {
 };
 
 const MAX_PAGES = 20;
+/** The most of a unit file we read: a 'Mech file is a few kilobytes, so 1 MB is far past any real one. */
+const MAX_FILE_BYTES = 1_000_000;
 const DEFAULT_RETRY_SECONDS = 5;
 const MAX_RETRY_SECONDS = 60;
 
@@ -58,21 +62,21 @@ export function createMordelClient(options: {
   const doFetch = options.fetch ?? ((...args: Parameters<typeof fetch>) => globalThis.fetch(...args));
   const wait = options.wait ?? ((ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)));
 
-  const send = (path: string): Promise<Response> =>
+  const send = (path: string, accept: string): Promise<Response> =>
     doFetch(MORDEL_BASE + path, {
       method: "GET",
-      headers: { "X-API-Key": options.key, Accept: "application/json" },
+      headers: { "X-API-Key": options.key, Accept: accept },
       redirect: "error",
     });
 
-  async function get(path: string): Promise<MordelResult<unknown>> {
+  async function request(path: string, accept: string): Promise<MordelResult<Response>> {
     let response: Response;
     try {
-      response = await send(path);
+      response = await send(path, accept);
       if (response.status === 429) {
         options.onWait?.();
         await wait(retrySeconds(response.headers.get("Retry-After")) * 1000);
-        response = await send(path);
+        response = await send(path, accept);
       }
     } catch {
       // A refused redirect (redirect: "error") lands here too, and is reported as offline.
@@ -84,9 +88,15 @@ export function createMordelClient(options: {
     // Any other 4xx means our own request was wrong (the list answers 400 to a parameter it does not know).
     if (response.status >= 400) return fail(response.status >= 500 ? "server" : "bad-request");
     if (!response.ok) return fail("server");
+    return { ok: true, value: response };
+  }
+
+  async function get(path: string): Promise<MordelResult<unknown>> {
+    const got = await request(path, "application/json");
+    if (!got.ok) return got;
     let body: unknown;
     try {
-      body = await response.json();
+      body = await got.value.json();
     } catch {
       return fail("server");
     }
@@ -110,6 +120,39 @@ export function createMordelClient(options: {
     testKey: async () => {
       const result = await get("/key");
       return result.ok ? { ok: true, value: true } : result;
+    },
+    file: async (link) => {
+      let url: URL;
+      try {
+        url = new URL(link);
+      } catch {
+        return fail("bad-request");
+      }
+      const base = new URL(MORDEL_BASE);
+      const bare = (host: string) => host.replace(/^www\./, "");
+      const plain = url.protocol === "https:" && url.username === "" && url.password === "" && url.port === "";
+      if (!plain || bare(url.hostname) !== bare(base.hostname) || !url.pathname.startsWith(base.pathname + "/")) return fail("bad-request");
+      const got = await request(url.pathname.slice(base.pathname.length), "text/plain, */*");
+      if (!got.ok) return got;
+      try {
+        // Read at most MAX_FILE_BYTES; a longer body is not a unit file.
+        const reader = got.value.body?.getReader();
+        if (!reader) return fail("server");
+        const decoder = new TextDecoder();
+        let text = "";
+        let size = 0;
+        for (let chunk = await reader.read(); !chunk.done; chunk = await reader.read()) {
+          size += chunk.value.byteLength;
+          if (size > MAX_FILE_BYTES) {
+            await reader.cancel();
+            return fail("server");
+          }
+          text += decoder.decode(chunk.value, { stream: true });
+        }
+        return { ok: true, value: text + decoder.decode() };
+      } catch {
+        return fail("server");
+      }
     },
     unit: (unitType, id) => get(`/units/${encodeURIComponent(unitType)}/${encodeURIComponent(String(id))}`),
     myUnits: async () => {
