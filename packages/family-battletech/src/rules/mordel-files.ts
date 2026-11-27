@@ -6,6 +6,7 @@
 import { ERAS } from "../data/editions";
 import type { Catalog } from "./catalog";
 import { fromMordel } from "./mordel";
+import { armActuators, FIXED_LINES, hasShoulder, readMtf, SECTION_NAMES } from "./mtf";
 import { LOCATION_NAMES } from "./mech";
 import type { LocationCode, MechRecord, MordelSource } from "./mech";
 import { newAsUnit, parseDamage, parseMove, parseSpecials } from "./as-unit";
@@ -53,7 +54,6 @@ export const UNNAMED_MEMBER = "a mordel.net member";
 export type MtfImport = { ok: true; record: MechRecord; notes: string[] } | { ok: false; message: string };
 type Json = Record<string, unknown>;
 
-const SECTION_NAMES = new Map<string, LocationCode>((Object.entries(LOCATION_NAMES) as [LocationCode, string][]).map(([code, name]) => [name.toLowerCase(), code]));
 /** Armor lines name the three rear torso facings. */
 const ARMOR_CODES: Record<string, { code: LocationCode; rear: boolean }> = {
   RTL: { code: "LT", rear: true },
@@ -61,59 +61,9 @@ const ARMOR_CODES: Record<string, { code: LocationCode; rear: boolean }> = {
   RTC: { code: "CT", rear: true },
 };
 const ARMOR_FRONT: LocationCode[] = ["HD", "CT", "LT", "RT", "LA", "RA", "LL", "RL", "CL", "FLL", "FRL", "RLL", "RRL"];
-/** Slots every 'Mech of that part has by construction: the layout draws them, so the file's lines for them are not items. */
-const FIXED_LINES = new Set(
-  ["Shoulder", "Upper Arm Actuator", "Lower Arm Actuator", "Hand Actuator", "Hip", "Upper Leg Actuator", "Lower Leg Actuator", "Foot Actuator", "Fusion Engine", "Engine", "Gyro", "Life Support", "Sensors", "Cockpit"].map((s) =>
-    s.toLowerCase(),
-  ),
-);
 
 const tidy = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
 const techWord = (s: string): "Clan" | "Inner Sphere" | undefined => (/\bclan\b|\bcl\b/i.test(s) ? "Clan" : /\binner sphere\b|\bis\b/i.test(s) ? "Inner Sphere" : undefined);
-
-interface Parsed {
-  keys: Map<string, string>;
-  slots: Map<LocationCode, string[]>;
-  weapons: { name: string; where: string }[];
-}
-
-function readLines(text: string): Parsed {
-  const out: Parsed = { keys: new Map(), slots: new Map(), weapons: [] };
-  let current: LocationCode | undefined;
-  let inWeapons = false;
-  for (const raw of text.split(/\r?\n/)) {
-    const line = raw.trim();
-    if (line === "") {
-      current = undefined;
-      inWeapons = false;
-      continue;
-    }
-    const section = /^([A-Za-z ]+?)\s*:$/.exec(line);
-    const sectionCode = section ? SECTION_NAMES.get((section[1] ?? "").toLowerCase()) : undefined;
-    if (sectionCode) {
-      current = sectionCode;
-      inWeapons = false;
-      out.slots.set(sectionCode, out.slots.get(sectionCode) ?? []);
-      continue;
-    }
-    if (current) {
-      out.slots.get(current)?.push(line);
-      continue;
-    }
-    if (/^weapons\s*:\s*\d*$/i.test(line)) {
-      inWeapons = true;
-      continue;
-    }
-    if (inWeapons) {
-      const at = line.lastIndexOf(",");
-      if (at > 0) out.weapons.push({ name: line.slice(0, at).trim(), where: line.slice(at + 1).trim() });
-      continue;
-    }
-    const kv = /^([^:]+?)\s*:\s*(.*)$/.exec(line);
-    if (kv && !out.keys.has((kv[1] ?? "").toLowerCase())) out.keys.set((kv[1] ?? "").toLowerCase(), kv[2] ?? "");
-  }
-  return out;
-}
 
 /** Spellings of an item's line to try against the equipment table, with the tech base a prefix (IS, CL or Clan) names. */
 function spellings(line: string): { names: string[]; tech?: "inner-sphere" | "clan" } {
@@ -150,7 +100,7 @@ export function fromMtf(text: string, catalog: Catalog, editionId: string, now: 
 }
 
 function convertMtf(text: string, catalog: Catalog, editionId: string, now: string, newId: () => string): MtfImport {
-  const file = readLines(text);
+  const file = readMtf(text);
   const key = (k: string) => file.keys.get(k)?.trim() || undefined;
   const chassisName = key("chassis");
   const tons = Number(key("mass"));
@@ -276,7 +226,7 @@ function convertMtf(text: string, catalog: Catalog, editionId: string, now: stri
   const LEVEL_NAMES = ["Introductory", "Standard", "Advanced", "Experimental"];
   const year = Number(key("era"));
   const era = Number.isFinite(year) ? ERAS.find((e) => year >= e.startYear && (e.endYear === undefined || year <= e.endYear))?.name : undefined;
-  const hasActuators = (loc: LocationCode) => (file.slots.get(loc) ?? []).some((l) => /^shoulder$/i.test(l));
+  const hasActuators = (loc: LocationCode) => hasShoulder(file.slots.get(loc));
   const fluff: Json = {};
   for (const k of ["overview", "capabilities", "deployment", "variants", "notables"]) if (key(k)) fluff[k] = key(k);
   const designer = DESIGNER_KEYS.map(key).find((v) => v !== undefined) ?? UNNAMED_MEMBER;
@@ -348,9 +298,8 @@ function convertMtf(text: string, catalog: Catalog, editionId: string, now: stri
   if ((record.configuration === "biped" || record.configuration === "tripod") && hasActuators("LA") && hasActuators("RA")) {
     const arms: NonNullable<MechRecord["arms"]> = {};
     for (const arm of ["LA", "RA"] as const) {
-      const lines = (file.slots.get(arm) ?? []).map((l) => l.toLowerCase());
-      const state = { lowerArm: lines.includes("lower arm actuator"), hand: lines.includes("hand actuator") };
-      if (!state.lowerArm || !state.hand) arms[arm] = state;
+      const { lowerArm, hand } = armActuators(file.slots.get(arm) ?? []);
+      if (!lowerArm || !hand) arms[arm] = { lowerArm, hand };
     }
     if (Object.keys(arms).length > 0) record.arms = arms;
     else delete record.arms;
