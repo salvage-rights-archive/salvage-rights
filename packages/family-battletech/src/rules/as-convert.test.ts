@@ -181,7 +181,7 @@ describe("the conversion tables", () => {
       expect(row.superheavy).toHaveLength(20);
     }
     // Every armor, structure and engine type of our tables is mapped or deliberately left to a finding.
-    const unmapped = Object.keys(ARMOR.types).filter((id) => !ARMOR_RULES.some((r) => r.armorType === id));
+    const unmapped = Object.keys(ARMOR.types).filter((id) => ARMOR.types[id]?.units === undefined).filter((id) => !ARMOR_RULES.some((r) => r.armorType === id));
     expect(unmapped).toEqual([]);
     expect(Object.keys(ENGINE_TYPES.types).filter((id) => !ENGINE_MAPPING.some((m) => m.engineType === id))).toEqual([]);
     expect(Object.keys(STRUCTURE_TYPES.types).length).toBeGreaterThan(0);

@@ -484,6 +484,8 @@ export interface AeroArmorType {
   like: string;
   /** Arcs that lose one weapon slot to the armor (a fighter only). */
   lostSlots: string[];
+  /** True for a type only fighters wear (the Advanced Armor Table prints NA for small craft and DropShips). */
+  fighterOnly?: true;
   /** The editions that offer it, with their pages. */
   editions: string[];
   cite: Record<string, string>;
@@ -497,7 +499,18 @@ export const FIGHTER_ARMOR_TYPES: AeroArmorType[] = [
   { id: "ferro-aluminum-clan", name: "Ferro-Aluminum (Clan)", techBase: "clan", like: "ferro-fibrous-clan", lostSlots: ["LW", "RW"], ...typeOffer({ [E.at2]: "46-47", [E.at2r]: "64, 66", [E.current]: "192" }) },
   { id: "light-ferro-aluminum", name: "Light Ferro-Aluminum", techBase: "inner-sphere", like: "light-ferro-fibrous", lostSlots: ["AF"], ...typeOffer({ [E.current]: "192" }) },
   { id: "heavy-ferro-aluminum", name: "Heavy Ferro-Aluminum", techBase: "inner-sphere", like: "heavy-ferro-fibrous", lostSlots: ["NO", "LW", "RW", "AF"], ...typeOffer({ [E.current]: "192" }) },
+  // The Advanced Armor Table (TO:AUE printed p. 92, with the cost table p. 217): fighter slots are one in each wing (L/R) or one aft. Hardened armor is NA for fighters.
+  // The Clan reactive (1 aft) and modular (1 slot a ton) figures are p. 92's; p. 217's F column prints 2 for both (conflict, archive ledger).
+  { id: "ferro-lamellor", name: "Ferro-Lamellor", techBase: "clan", like: "ferro-lamellor", lostSlots: ["LW", "RW"], ...toOffer("92, 217") },
+  { id: "laser-reflective", name: "Laser-Reflective (I.S.)", techBase: "inner-sphere", like: "laser-reflective", lostSlots: ["LW", "RW"], ...toOffer("92-93, 217") },
+  { id: "laser-reflective-clan", name: "Laser-Reflective (Clan)", techBase: "clan", like: "laser-reflective-clan", lostSlots: ["AF"], ...toOffer("92-93, 217") },
+  { id: "reactive", name: "Reactive (I.S.)", techBase: "inner-sphere", like: "reactive", lostSlots: ["LW", "RW", "AF"], ...toOffer("92, 94, 217") },
+  { id: "reactive-clan", name: "Reactive (Clan)", techBase: "clan", like: "reactive-clan", lostSlots: ["AF"], ...toOffer("92, 94, 217") },
+  { id: "vehicular-stealth", name: "Vehicular Stealth", techBase: "inner-sphere", like: "vehicular-stealth", lostSlots: ["LW", "RW"], ...toOffer("92, 94, 217") },
 ];
+function toOffer(pages: string): Pick<AeroArmorType, "editions" | "cite" | "checked" | "fighterOnly"> {
+  return { fighterOnly: true, editions: [E.current], cite: { [E.current]: cite("Tactical Operations: Advanced Units and Equipment", pages) }, checked: "page" };
+}
 function typeOffer(pages: Partial<Record<string, string>>): Pick<AeroArmorType, "editions" | "cite" | "checked"> {
   return { editions: Object.keys(pages), cite: pagesOf(pages), checked: "page" };
 }
@@ -757,7 +770,7 @@ export function craftArmorPointsPerTon(typeId: string, editionId: string, shape:
   const bands = figureOf(CRAFT_FIGURES.armorBands, editionId)?.[shape];
   const multiplier = type && Object.hasOwn(ARMOR.types, type.like) ? ARMOR.types[type.like]?.multiplier : undefined;
   const band = bands?.filter(([from]) => tons >= from).at(-1);
-  if (!type || !band || multiplier === undefined) return undefined;
+  if (!type || type.fighterOnly || !band || multiplier === undefined) return undefined;
   const clan = techBase === "clan" || (techBase === "mixed" && type.techBase === "clan");
   return Math.round(band[clan ? 1 : 2] * multiplier * 1e6) / 1e6;
 }

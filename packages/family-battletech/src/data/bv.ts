@@ -162,6 +162,7 @@ export const ADVANCED_BV_MODIFIERS: { armor: Record<string, ModifierRow>; struct
   armor: {
     hardened: row(2.0, TO_ARMOR_MODIFIERS),
     "ferro-lamellor": row(1.2, TO_ARMOR_MODIFIERS),
+    "vehicular-stealth": row(1.0, TO_ARMOR_MODIFIERS, "stealth"),
     "laser-reflective": row(1.5, TO_ARMOR_MODIFIERS),
     "laser-reflective-clan": row(1.5, TO_ARMOR_MODIFIERS),
     reactive: row(1.5, TO_ARMOR_MODIFIERS),

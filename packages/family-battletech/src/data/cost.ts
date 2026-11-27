@@ -200,6 +200,7 @@ export const ARMOR_COST: Sourced & { rows: Record<string, PerTon> } = {
     "laser-reflective": { perTon: 30_000, cite: { book: TO, page: 217 } },
     "laser-reflective-clan": { perTon: 30_000, cite: { book: TO, page: 217 } },
     modular: { perTon: 10_000, cite: { book: TO, page: 217 } },
+    "vehicular-stealth": { perTon: 50_000, cite: { book: TO, page: 217 } },
     reactive: { perTon: 30_000, cite: { book: TO, page: 217 } },
     "reactive-clan": { perTon: 30_000, cite: { book: TO, page: 217 } },
     // Interstellar Operations: Alternate Eras pp.211 and 215 (primitive, prototype ferro-fibrous, and the Dark Age armors)
@@ -273,7 +274,7 @@ export const EQUIPMENT_COST: PriceGroup[] = [
     prices: {
       "battlemech-turret-shoulder": { perWeight: 10_000 }, "battlemech-turret-head": { perWeight: 10_000 }, "battlemech-turret-quad": { perWeight: 10_000 },
       "dual-turret": { perWeight: 5_000 }, "sponson-turret": { perWeight: 4_000 }, "vtol-chin-turret": { perWeight: 5_000 },
-      "armored-component": { perWeight: 300_000 }, "armored-motive-system": { perWeight: 100_000 },
+      "armored-component": { perWeight: 300_000 }, "armored-motive-system": { perWeight: 100_000 }, "modular-armor": 10_000,
       // p.221: sub-capital cannons, lasers and missiles (the ammunition price beside the cannons and missiles is not kept), cruise missiles (p.217), minesweeper,
       // field base, hyperpulse generators, comm-scanner suites, tug adaptor, space mine dispenser, ProtoMech Streak tube; the VTOL jet booster is 10,000 an engine rating point (the sub-capital weapons are on p. 223, the rest p. 221)
       "light-scc": 330_000, "medium-scc": 780_000, "heavy-scc": 1_300_000, "scl-1": 220_000, "scl-2": 335_000, "scl-3": 450_000,

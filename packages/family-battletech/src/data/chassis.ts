@@ -40,6 +40,7 @@ interface Sourced {
  * for IndustrialMechs and not BattleMechs; `primitive` marks one printed for the Age of War's Primitive 'Mechs.
  * A row whose figures come from another page than its table's keeps that page in `cite` (with `checked`).
  */
+export type PartUnit = "mech" | "vehicle" | "aero";
 export interface PartFacts {
   techBase?: "inner-sphere" | "clan" | "both";
   rulesLevel?: "standard" | "advanced" | "experimental";
@@ -61,6 +62,8 @@ export interface PartFacts {
   rulesCite?: Cite;
   industrial?: true;
   primitive?: true;
+  /** The kinds of unit the part is for, where it is not for BattleMechs (vehicular stealth armor: combat vehicles and fighters). Absent: a BattleMech's part. */
+  units?: PartUnit[];
   cite?: Cite;
   checked?: Checked;
   /** The games that offer the part (data/rulesets.ts); absent means Classic only. */
@@ -763,6 +766,23 @@ export const ARMOR: Sourced & { basePointsPerTon: number; types: Record<string, 
       rules: "Halves damage (rounded down, at least 1) from missiles, mortars and artillery; a critical hit on one of its slots can destroy all the armor in the location.",
       rulesCite: { book: TO, page: 94 },
     },
+    // Combat vehicles and fighters only (TO:AUE printed pp.92 and 94, read against the page images): 16 points a ton; the vehicle and fighter slots are in
+    // VEHICLE_ARMOR and FIGHTER_ARMOR_TYPES, the BattleMech columns print NA. Dates: IO:AE printed p.29 (prototype 3067, production 3084).
+    "vehicular-stealth": {
+      name: "Vehicular Stealth",
+      multiplier: 1,
+      slots: 0,
+      techBase: "inner-sphere",
+      rulesLevel: "experimental",
+      introduced: { is: 3084 },
+      prototypeYear: 3067,
+      units: ["vehicle", "aero"],
+      cite: TO_ARMOR,
+      checked: "page",
+      rules:
+        "Gives the stealth modifiers of a BattleMech's stealth armor. Needs a working ECM suite of any type and makes 10 heat while active, so the unit needs heat sinks for it; no fusion engine or power amplifier is needed. A fighter loses the benefit above the space/atmosphere interface when it spends Thrust.",
+      rulesCite: { book: TO, page: 94 },
+    },
     "anti-penetrative-ablation": {
       name: "Anti-Penetrative Ablation",
       multiplier: 12 / 16,
@@ -867,6 +887,32 @@ export const ARMOR: Sourced & { basePointsPerTon: number; types: Record<string, 
       rules: "Barrier Armor Rating 5: a hit of 6 or more points at a time may cause a critical hit. Printed for IndustrialMechs.",
     },
   },
+};
+
+/**
+ * Modular armor is an item, not an armor type (TO:AUE printed pp.92-93, read against the page images): each one is a ton, a slot and 10 armor points in the location it is
+ * mounted in, over whatever armor the location wears (the points count at that armor's Battle Value modifier, never toward the unit's armor limit). One to a location, never on
+ * a head or rotor. While any of its points stand the unit takes +1 on its Piloting or Driving rolls (a fighter's control rolls) and 1 less Walking or Cruise MP (Safe Thrust), and
+ * stealth armor does not work. The speed penalty is not counted in Battle Value (p.192). Catalog rows: `modular-armor-is` and `-clan`.
+ */
+export const MODULAR_ARMOR = {
+  stem: "modular-armor",
+  pointsEach: 10,
+  piloting: 1,
+  speed: 1,
+  cite: { book: TO, page: 93 } as Cite,
+  armorCite: { book: TO, page: 92 } as Cite,
+};
+
+/** Vehicular stealth armor (TO:AUE printed pp.92, 94 and 192): 10 heat while active, and a working ECM suite of any type. In Battle Value a vehicle takes a BattleMech's stealth armor modifier
+ * and a fighter adds 0.3 to its unit type modifier besides. `ecm` matches the catalog ids of the ECM suites a unit may carry. */
+export const VEHICULAR_STEALTH = {
+  id: "vehicular-stealth",
+  heat: 10,
+  fighterTypeModifier: 0.3,
+  ecm: /^(prototype-)?guardian-ecm|^angel-ecm|^ecm-suite|^watchdog-cews|^nova-cews/,
+  cite: { book: TO, page: 94 } as Cite,
+  bvCite: { book: TO, page: 192 } as Cite,
 };
 
 /**

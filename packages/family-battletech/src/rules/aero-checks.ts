@@ -4,14 +4,15 @@
 // from a record and nothing throws on one this version does not understand. Each edition keeps its own figures and errata, so a unit is
 // always read against the edition asked for. Messages are our own words and state the numbers; a finding names the deciding book through
 // its cite. Older editions predate the seven rules levels and show none.
-import { ARMOR, ENGINE_TYPES, MIXED_TECHNOLOGY, PATCHWORK_ARMOR } from "../data/chassis";
+import { ARMOR, ENGINE_TYPES, MIXED_TECHNOLOGY, MODULAR_ARMOR, PATCHWORK_ARMOR, VEHICULAR_STEALTH } from "../data/chassis";
+import { crowdedModular, hasStealthEcm, modularItems, modularPoints } from "./advanced-armor";
 import type { RulesLevel } from "../data/chassis";
 import { CAPITAL_FIGURES, CAPITAL_SYSTEMS, CRAFT_FIGURES, DEFAULT_AERO_EDITION, capitalSystemFigure, FIGHTER_ARMOR_TYPES, FIGHTER_FIGURES, fighterPatchworkTypes, aeroEditionName, aeroTypesFor, figureOf, kindFigureOf } from "../data/aero";
-import type { AeroTypeRow, FigureGroup, FighterKind, FighterPatchworkType } from "../data/aero";
+import type { AeroArmorType, AeroTypeRow, FigureGroup, FighterKind, FighterPatchworkType } from "../data/aero";
 import { AERO_WEAPON_EDITIONS, aeroWeaponOffered } from "../data/aero-weapons";
 import { armorTypeAt, capitalKind, fighterArcs, fighterArmor, fighterArmorLimit, fighterArmorTons, fighterPatchworkActive, energyWeaponHeat, fighterHeat, fighterKind, fighterPartsNotOffered, fighterTally, engineRating, fuelPoints, locationsOf, subCompact, vessel, wingsMatch, aeroLocationName } from "./aero";
 import type { AeroRecord } from "./aero";
-import { baseFits, ownSpans, partPhase, pastEraCap } from "./availability";
+import { baseFits, ownSpans, partAvailable, partPhase, pastEraCap } from "./availability";
 import type { Catalog } from "./catalog";
 import { VESSEL_CHECKS } from "./aero-vessel-checks";
 import { DEFAULT_LEVEL, LEVEL_ORDER, equipmentLevel, levelAtLeast, levelIn, levelRow, mixedPhase, partLevel, patchworkPhase } from "./levels";
@@ -155,6 +156,12 @@ const armorCheck: AeroCheck = {
     const kind = fighterKind(record);
     if (!kind) return [];
     const out: AeroFinding[] = [];
+    if (record.armor.type === VEHICULAR_STEALTH.id && !hasStealthEcm(record.mounts)) out.push({ check: "armor", level: "error", message: "Vehicular stealth armor needs a working ECM suite of any type; the fighter carries none.", where: { field: "armor.type" }, ...withCite(bookPage(VEHICULAR_STEALTH.cite)) });
+    const modular = modularItems(record.mounts);
+    if (modular.length > 0) {
+      out.push({ check: "armor", level: "note", message: `Modular armor adds ${num(modularPoints(record.mounts))} armor points. While any of it stands the fighter takes +1 on control rolls and has 1 less Safe Thrust (Maximum Thrust follows, in an atmosphere hex), and stealth armor does not work; Battle Value counts the points and not the penalties.`, where: { field: "armor.type" }, ...withCite(bookPage(MODULAR_ARMOR.cite)) });
+      for (const arc of crowdedModular(record.mounts, (m) => m.arc)) out.push({ check: "armor", level: "error", message: `The ${aeroLocationName(arc)} arc holds more than one modular armor item; the book allows one to a location.`, where: { arc }, ...withCite(bookPage(MODULAR_ARMOR.armorCite)) });
+    }
     const armor = fighterArmor(record);
     const cite = pageOf(FIGHTER_FIGURES.armorBasePoints, record.editionId);
     if (armor.over !== null && armor.over > 0) out.push({ check: "armor", level: "error", message: `${num(armor.allocated)} armor points are set but the armor gives ${num(armor.available ?? 0)}: ${num(armor.over)} too many.`, where: { field: "armor.points" }, ...withCite(cite) });
@@ -184,16 +191,17 @@ const heatCheck: AeroCheck = {
   run({ record, catalog }) {
     if (!fighterKind(record) || record.mounts.length === 0) return [];
     const heat = fighterHeat(record);
+    const stealthHeat = record.armor.type === VEHICULAR_STEALTH.id ? VEHICULAR_STEALTH.heat : 0; // the stealth armor makes 10 heat while it runs (TO:AUE p. 92)
     // A conventional fighter makes heat only from its energy weapons, and its sinks must cover all of it.
     if (fighterKind(record) === "conventional" && figureOf(FIGHTER_FIGURES.energyHeatSinks, record.editionId) !== undefined) {
-      const energy = energyWeaponHeat(record, catalog);
+      const energy = tidy(energyWeaponHeat(record, catalog) + stealthHeat);
       return energy > heat.capacity ? [{ check: "heat", level: "error", message: `The energy weapons make ${num(energy)} heat and the sinks take away ${num(heat.capacity)}: a conventional fighter needs sinks for all of it.`, where: { field: "heatSinks" }, ...withCite(pageOf(FIGHTER_FIGURES.energyHeatSinks, record.editionId)) }] : [];
     }
     const generated = tidy(
       record.mounts.reduce((sum, m) => {
         const row = m.equipmentId === null ? undefined : catalog.byId(m.equipmentId);
         return sum + (row?.kind === "weapon" ? (row.by?.aero?.heat ?? row.heat ?? 0) : 0);
-      }, 0),
+      }, 0) + stealthHeat,
     );
     return generated > heat.capacity ? [{ check: "heat", level: "note", message: `Firing every weapon makes ${num(generated)} heat and the sinks take away ${num(heat.capacity)}.`, where: { field: "heatSinks" }, ...withCite(pageOf(FIGHTER_FIGURES.freeHeatSinks, record.editionId)) }] : [];
   },
@@ -345,7 +353,7 @@ const datesCheck: AeroCheck = {
     if (engine) say(engine.name, partPhase(engine, { ...when, techBase: record.techBase }), { field: "engine" }, bookPage(ENGINE_TYPES.cite));
     const armorType = FIGHTER_ARMOR_TYPES.find((t) => t.id === record.armor.type);
     const armorRow = armorType && own(ARMOR.types, armorType.like) ? ARMOR.types[armorType.like] : undefined;
-    if (armorType && armorRow) say(armorType.name, partPhase(armorRow, { ...when, techBase: record.techBase }), { field: "armor.type" }, bookPage(ARMOR.cite));
+    if (armorType && armorRow) say(armorType.name, partPhase(armorRow, { ...when, techBase: record.techBase }), { field: "armor.type" }, bookPage(armorRow.cite ?? ARMOR.cite));
     if (fighterPatchworkActive(record)) {
       say("Patchwork armor", patchworkPhase(when), { field: "armor.patchwork" }, bookPage(PATCHWORK_ARMOR.cite));
       for (const type of patchworkTypesUsed(record)) {
@@ -398,7 +406,7 @@ export function aeroLevelItems(record: AeroRecord, catalog: Catalog): AeroLevelI
   };
   if (own(ENGINE_TYPES.types, record.engine.type)) part("engine", ENGINE_TYPES.types[record.engine.type]?.name ?? record.engine.type, ENGINE_TYPES.types[record.engine.type] ?? {}, record.engine.type, "engine", bookPage(ENGINE_TYPES.cite), "engine");
   const armorType = FIGHTER_ARMOR_TYPES.find((t) => t.id === record.armor.type);
-  if (armorType && own(ARMOR.types, armorType.like)) part("armor", armorType.name, ARMOR.types[armorType.like] ?? {}, armorType.like, "armor", bookPage(ARMOR.cite), "armor.type");
+  if (armorType && own(ARMOR.types, armorType.like)) part("armor", armorType.name, ARMOR.types[armorType.like] ?? {}, armorType.like, "armor", bookPage(ARMOR.types[armorType.like]?.cite ?? ARMOR.cite), "armor.type");
   if (fighterPatchworkActive(record)) {
     // Patchwork armor is an Advanced option (TO:AUE p. 189), Experimental before its production year (IO:AE p. 45); each type it brings has its own level.
     const phase = patchworkPhase(record);
@@ -542,4 +550,16 @@ export function checkAero(record: AeroRecord, catalog: Catalog): AeroFinding[] {
 export function checkUnder(record: AeroRecord, editionId: string, catalog: Catalog): AeroFinding[] {
   const { rulesLevel, ...rest } = record;
   return checkAero({ ...rest, editionId, ...(editionId === DEFAULT_AERO_EDITION && rulesLevel !== undefined ? { rulesLevel } : {}) }, catalog);
+}
+
+/**
+ * Whether the editor offers a fighter armor type: a type only fighters wear is for a fighter alone, and an Advanced or Experimental type (the Tactical Operations ones) shows
+ * only where the unit level, tech base and year reach it. The older types stay as they were, and the type a record already holds stays listed (hide, do not mark).
+ */
+export function fighterArmorOffered(record: AeroRecord, type: AeroArmorType): boolean {
+  if (type.id === record.armor.type) return true;
+  if (type.fighterOnly === true && fighterKind(record) === undefined) return false;
+  const row = own(ARMOR.types, type.like) ? ARMOR.types[type.like] : undefined;
+  if (row?.rulesLevel === undefined || row.rulesLevel === "standard") return true;
+  return partAvailable("armor", type.like, { techBase: record.techBase, year: record.year, era: record.era, rulesLevel: record.rulesLevel ?? DEFAULT_LEVEL, unitType: "mech", editionId: record.editionId }, false, "aero");
 }

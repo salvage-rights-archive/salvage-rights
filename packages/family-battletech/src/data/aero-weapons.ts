@@ -251,3 +251,43 @@ export function aeroWeaponFigures(catalog: Catalog, id: string, editionId: strin
   const at2 = layer(own, AT2_WEAPONS[id]);
   return editionId === AERO_WEAPON_EDITIONS.at2 ? at2 : layer(at2, AT2R_WEAPONS[id]);
 }
+
+// ---------------------------------------------------------------------------------------------------------------------------------
+// Total Warfare, Inner Sphere and Clan Weapons and Equipment Tables (printed pp. 303-304, read against the page images; 11th printing): the parts of the aerospace columns
+// the catalog has no field for. The Aero Attack Value column prints a missile weapon as two numbers, the second for a launcher linked to an Artemis IV FCS; a multi-mode
+// launcher has a line for each mode (the catalog row holds the LRM mode, the SRM mode is here, range Short); the To-Hit Modifier column is a number for every weapon.
+// Keys are catalog ids without the tech base, the figures the same for the Inner Sphere and the Clan table.
+// ---------------------------------------------------------------------------------------------------------------------------------
+export const AERO_TW_CITE = "Total Warfare, pp. 303-304";
+
+/** The Aero Attack Value of a launcher linked to Artemis IV (the number after the slash), by catalog stem. */
+export const AERO_ARTEMIS_AV: Record<string, number> = {
+  "lrm-5": 4, "lrm-10": 8, "lrm-15": 12, "lrm-20": 16,
+  "srm-2": 4, "srm-4": 6, "srm-6": 10,
+  // A multi-mode launcher in its LRM mode (the row it is catalogued by).
+  "mml-3": 2, "mml-5": 4, "mml-7": 6, "mml-9": 7,
+};
+
+/** A multi-mode launcher in SRM mode: its Aero Attack Value alone and linked to Artemis IV, by catalog stem; its aerospace range is Short. */
+export const AERO_MML_SRM: Record<string, { attack: number; linked: number }> = {
+  "mml-3": { attack: 4, linked: 4 }, "mml-5": { attack: 6, linked: 8 }, "mml-7": { attack: 8, linked: 12 }, "mml-9": { attack: 10, linked: 14 },
+};
+
+/** The To-Hit Modifier column, for the weapons whose figure is not 0: pulse lasers -2, LB-X autocannon -1 (aerospace units always take it, as for cluster ammunition), heavy lasers, MRMs and rocket launchers +1, Barracuda -2. */
+export const AERO_TO_HIT: Record<string, number> = {
+  "small-pulse-laser": -2, "medium-pulse-laser": -2, "large-pulse-laser": -2, "micro-pulse-laser": -2,
+  "lb-2-x-ac": -1, "lb-5-x-ac": -1, "lb-10-x-ac": -1, "lb-20-x-ac": -1,
+  "heavy-small-laser": 1, "heavy-medium-laser": 1, "heavy-large-laser": 1,
+  "mrm-10": 1, "mrm-20": 1, "mrm-30": 1, "mrm-40": 1,
+  "rocket-launcher-10": 1, "rocket-launcher-15": 1, "rocket-launcher-20": 1,
+  barracuda: -2,
+};
+
+/** The to-hit modifier the table prints for the item (0 where it prints none). */
+export const aeroToHit = (id: string): number => AERO_TO_HIT[id.replace(/-(is|clan)$/, "")] ?? 0;
+
+/** The Aero Attack Value of a launcher linked to Artemis IV, or undefined where the table prints none for it. */
+export const aeroArtemisAttack = (id: string): number | undefined => AERO_ARTEMIS_AV[id.replace(/-(is|clan)$/, "")];
+
+/** The SRM-mode figures of a multi-mode launcher, or undefined for any other item. */
+export const aeroMmlSrm = (id: string): { attack: number; linked: number } | undefined => AERO_MML_SRM[id.replace(/-(is|clan)$/, "")];

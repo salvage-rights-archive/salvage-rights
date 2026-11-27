@@ -99,7 +99,7 @@ export const ENGINE_SLOTS_CITE: BookPage = { book: TM, page: 101 };
 /** The armor a Combat Vehicle may wear: the slots lost (the multiplier on 16 points a ton is the armor row's). Keys are `ARMOR.types` ids (data/chassis.ts).
  * The first five are TM p. 105; the others are the Combat Vehicle (CV) column of the Advanced Armor Tables, TO:AUE printed p. 92 and IO:AE printed p. 82
  * (read against the page images), which name the same armor rows the 'Mech uses. Heat-dissipating and impact-resistant armor print N/A for vehicles, so
- * they are not here; modular armor is an item and vehicular stealth armor has no row yet. */
+ * they are not here; modular armor is an item (MODULAR_ARMOR in data/chassis.ts) and vehicular stealth armor is the last row (TO:AUE p. 92: 2 slots). */
 export const VEHICLE_ARMOR: { id: string; slots: number; cite?: BookPage }[] = [
   { id: "standard", slots: 0 },
   { id: "light-ferro-fibrous", slots: 1 },
@@ -112,6 +112,7 @@ export const VEHICLE_ARMOR: { id: string; slots: number; cite?: BookPage }[] = [
   { id: "laser-reflective-clan", slots: 1, cite: { book: TO, page: 92 } },
   { id: "reactive", slots: 2, cite: { book: TO, page: 92 } },
   { id: "reactive-clan", slots: 1, cite: { book: TO, page: 92 } },
+  { id: "vehicular-stealth", slots: 2, cite: { book: TO, page: 92 } },
   { id: "anti-penetrative-ablation", slots: 1, cite: { book: IO, page: 82 } },
   { id: "ballistic-reinforced", slots: 1, cite: { book: IO, page: 82 } },
 ];

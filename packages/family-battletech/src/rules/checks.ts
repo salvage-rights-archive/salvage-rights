@@ -848,6 +848,9 @@ function partsCheck({ record, catalog }: CheckInput): Finding[] {
     if (part.industrial && industrialRulesOf(record) === undefined && primitiveRulesOf(record) === undefined) {
       out.push(finding("parts", "error", `${part.name} ${what} is printed for IndustrialMechs; a ${mechTypeOf(record).label} may not use it.`, { where, cite }));
     }
+    if (part.units !== undefined && !part.units.includes("mech")) {
+      out.push(finding("parts", "error", `${part.name} ${what} is printed for combat vehicles and fighters; a BattleMech may not use it.`, { where, cite: part.rulesCite ?? cite }));
+    }
     if (part.primitive && primitiveRulesOf(record) === undefined) {
       out.push(finding("parts", "error", `${part.name} ${what} is printed for Primitive 'Mechs; ${aOrAn(mechTypeOf(record).label).toLowerCase()} may not use it.`, { where, cite }));
     }
