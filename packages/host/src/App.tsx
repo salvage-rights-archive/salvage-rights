@@ -10,6 +10,14 @@ import { SettingsProvider, useSettings } from "./settings-context";
 
 const SITE_NAME = "Salvage Rights";
 
+/** Puts focus on the page's heading, or on the page itself while it has none yet. */
+function focusHeading(container: HTMLElement | null) {
+  const target = container?.querySelector("h1") ?? container;
+  if (!target) return;
+  target.tabIndex = -1;
+  target.focus();
+}
+
 function Frame({ families, editionId }: { families: FamilyManifest[]; editionId: string }) {
   const { settings } = useSettings();
   const { pathname, key } = useLocation();
@@ -48,9 +56,20 @@ function Frame({ families, editionId }: { families: FamilyManifest[]; editionId:
 
   return (
     <div className="sr-frame">
+      {/* First in the tab order: past the header to the page. The heading takes focus, as it does on a route change. */}
+      <a
+        className="sr-skip"
+        href="#sr-content"
+        onClick={(event) => {
+          event.preventDefault();
+          focusHeading(main.current);
+        }}
+      >
+        Skip to content
+      </a>
       <Header />
       <PwaBar />
-      <main ref={main} className="sr-content">
+      <main ref={main} id="sr-content" className="sr-content">
         <AppRoutes families={families} editionId={editionId} />
       </main>
       <Footer />

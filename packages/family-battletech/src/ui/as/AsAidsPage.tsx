@@ -217,12 +217,13 @@ export default function AsAidsPage() {
                         id={`aid-dmg-${r.id}`}
                         inputMode="text"
                         aria-invalid={invalid(damage[r.id as "S" | "M" | "L"]) || undefined}
+                        aria-describedby={invalid(damage[r.id as "S" | "M" | "L"]) ? `aid-dmg-${r.id}-problem` : undefined}
                         value={damage[r.id as "S" | "M" | "L"]}
                         onChange={(event) => { setDamage({ ...damage, [r.id]: event.target.value }); }}
                       />
                     </div>
                   )}
-                  {r.id !== "E" && invalid(damage[r.id as "S" | "M" | "L"]) && <span className="bt-problem">Use a whole number, 0* or a dash.</span>}
+                  {r.id !== "E" && invalid(damage[r.id as "S" | "M" | "L"]) && <span id={`aid-dmg-${r.id}-problem`} className="bt-problem">Use a whole number, 0* or a dash.</span>}
                   {r.none && r.id !== "E" && <span>No attack at this range.</span>}
                   {r.expected !== undefined && <span>{`Expected damage ${r.expected.toFixed(2)} (the chance to hit times ${r.minimal ? "0.5 for 0*" : String(r.damage)}).`}</span>}
                 </li>

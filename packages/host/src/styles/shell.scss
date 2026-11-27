@@ -42,6 +42,27 @@ h1:focus {
   outline: none;
 }
 
+// Out of sight until the keyboard reaches it, then over the header's corner in the header's own colours.
+.sr-skip {
+  position: absolute;
+  left: var(--sr-space-2);
+  top: var(--sr-space-2);
+  z-index: 10;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 var(--sr-space-3);
+  background: var(--sr-header-bg);
+  color: var(--sr-header-ink);
+  border-radius: var(--sr-radius);
+  transform: translateY(-200%);
+
+  &:focus {
+    transform: none;
+    outline-color: var(--sr-header-focus);
+  }
+}
+
 .sr-header {
   display: flex;
   flex-wrap: wrap;
@@ -250,6 +271,7 @@ h1:focus {
     color: #000;
   }
 
+  .sr-skip,
   .sr-header,
   .sr-pwa-bar,
   .sr-footer {
